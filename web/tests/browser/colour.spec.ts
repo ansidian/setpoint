@@ -273,4 +273,30 @@ for (const theme of ['night', 'light'] as const) {
       await setpoint.stop();
     }
   });
+
+  test(`${theme}: Attention's band, label and dots are caution, a read row not yet Done keeps a caution ring; Noise recedes (#130, #131)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await inbox(page, setpoint.base, theme);
+      await page.mouse.move(700, 28);
+      const caution = await colourOf(page, 'var(--caution)');
+      const band = page.locator('.list .gh.att');
+      assert.equal(await style(band, 'backgroundColor'), await colourOf(page, `color-mix(in srgb, var(--caution) ${theme === 'light' ? 6 : 8}%, var(--panel))`));
+      assert.equal(await style(band, 'color'), caution, 'its label');
+      const dot = (row: Locator) => row.locator('.ud').evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::before').boxShadow]);
+      assert.deepEqual(await dot(page.locator('.arow.unread', {hasText: 'Northwind Talent'})), [caution, 'none'], 'an unread Attention row');
+      assert.deepEqual(await dot(page.locator('.arow:not(.unread)', {hasText: 'Contoso University'})), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
+
+      // Noise's rows at the list's foot: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
+      const noise = page.locator('.row.noise.unread', {hasText: 'Tailspin Toys'});
+      assert.deepEqual(await noise.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink2)'), '400']);
+      assert.equal((await dot(noise))[0], await colourOf(page, 'var(--ink3)'));
+      const delivery = page.locator('.row.unread', {hasText: 'Consolidated Messenger'});
+      assert.deepEqual(await delivery.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink)'), '500']);
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
 }

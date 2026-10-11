@@ -89,8 +89,8 @@ Personal, which are account names). The UI says "Done", never "handled".
 
 - **Roles** (#126): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
-  it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count
-  and health warnings, nothing else. **`alert`** says danger and now: protected
+  it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
+  Attention's band and dots, and health warnings, nothing else. **`alert`** says danger and now: protected
   mail, failed changes, destructive actions, offline, the now-line and today's disc. **`ink`** is the
   primary action (New, sign-in, OK: solid ink pills). The identity swatches show only as dots, chip
   tints and bars, never as control fills, and the AI has no hue of its own.
@@ -101,9 +101,10 @@ Personal, which are account names). The UI says "Done", never "handled".
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
   (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
-  colour, and by 28% while pressed (#145). A neutral (an ink or a surface) mixes in `srgb` or is an
-  alpha token, never in oklch, which tints it (#123). On the calendar, coloured text on its own tint
-  caps its lightness at `--tintL` (Night 1, Light .43), keeping its hue and chroma (#122).
+  colour, and by 28% while pressed (#145); Attention's band (`caution` 8% on `panel` in srgb, Light
+  6%). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
+  tints it (#123). On the calendar, coloured text on its own tint caps its lightness at `--tintL`
+  (Night 1, Light .43), keeping its hue and chroma (#122).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -172,8 +173,10 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
   stroke (12 px, `ink2` on the grid); done is darma's filled disc with the check knocked out, in
   **`good`**, title struck through in `ink3`.
-- **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start; unread sender and subject are
-  `ink` at 500, read are `ink2` at 400.
+- **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
+  read Attention row not yet Done keeps a 6 px `caution` ring, #130); unread sender and subject are
+  `ink` at 500, read are `ink2` at 400. A Noise row recedes: unread, `ink2` at 400 with an `ink3` dot;
+  read, `ink3` (#131).
 - **The mark** is **Day stack** (decision 44, #87): three calendar chips stacked, `cool` on top,
   `caution` lifted and tilted −6° in the middle, a shorter `violet` below. A bare 18 px glyph before
   the name, no tile, in the theme's tokens; they are the brand's and stay put when an account or
@@ -257,7 +260,9 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   glyph in `ink3` 8 px before the label (Pinned `keep`, Attention `flag` in `caution`, Unsorted
   `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career `work`, People
   `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #160), 11.5 uppercase
-  .08em `ink3`, count in `ink2` (Attention's in `caution`). A collapsed group adds the first three
+  .08em `ink3`, count in `ink2`. Attention's band is the loudest: `caution` 8% into its `panel`
+  (Light 6%), label and count in `caution`, a `caution` 20% line under it (#130). A collapsed group
+  adds the first three
   organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge Video") and a chevron; under the pointer it lays
   `sub` over its band, and the keyboard cursor `sub2`, as a row does over the page (#121). Every group
   starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
@@ -273,7 +278,7 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
   (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
   line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
-  12.5). Read-but-not-Done rows lose the dot and stay.
+  12.5). Read-but-not-Done rows keep a `caution` ring in place of the dot and stay (#130).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
   MacBook Pro · Los Angeles"). A **code** row shows the code (Geist Mono, two groups of three), a
   **Copy** button and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival
@@ -1754,3 +1759,12 @@ it changes what's on screen.
     measured 1.06–1.09:1 apart as `sub2` and `sub`, so pointing at Calendar from the Inbox drew two
     near-identical pills. List rows keep `sub2`. While an account filters the Inbox, Inbox reads as
     its parent, label and icon in `ink`, no fill (Andy, 2026-10-11, polish audit shell-02).
+130. **Attention is the loudest block:** its header band takes `caution` into its `panel` (8% in srgb,
+    6% in Light, where 8% reads salmon), its label and count in `caution` over a `caution` 20% line;
+    its unread dots are `caution`, matching the sidebar's pill, and a row read but not Done keeps a
+    6 px `caution` ring where the dot was, since the pill still counts it. All's Attention lane
+    label is `caution` too (Andy, 2026-10-11, polish audit inbox-03).
+131. **Noise recedes:** an unread Noise row's sender and subject are `ink2` at 400 with an `ink3` dot,
+    a read one's `ink3`; height, columns, cursor and actions don't change. In Unread nearly every row
+    is unread, so the bold no longer ranked anything and the list's foot weighed as much as its top
+    (Andy, 2026-10-11, polish audit inbox-07).

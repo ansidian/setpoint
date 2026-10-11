@@ -132,6 +132,8 @@ export const evhover = {night: 18, light: 14} as const;
  * Night's aren't capped.
  */
 export const tintL = {night: 1, light: 0.43} as const;
+/** Attention's band: `caution` mixed into its `panel` at this share (#130); 8% reads salmon in Light. */
+export const attTint = {night: 8, light: 6} as const;
 
 /** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
 export const glyphColour = {
@@ -349,6 +351,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--evhover'] = `${light ? evhover.light : evhover.night}%`;
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
+  vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
   return vars;
 }
 

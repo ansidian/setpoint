@@ -98,7 +98,7 @@ function Part({entry, first, ...props}: ListProps & {entry: Folded<Part>; first:
   }
   if (item.kind === 'prompt') return <Prompt prompt={item.prompt} onAnswer={props.onAnswer} leaving={leaving} fold={ref} />;
   const rowProps = {...props, row: item.row, rowKey: entry.key, leaving, fold: ref, ...(leaving ? {cursor: null, openId: null} : {})};
-  return item.view.group === 'attention' ? <AttentionRow {...rowProps} /> : <Row {...rowProps} pinnedShelf={item.view.group === 'pinned'} />;
+  return item.view.group === 'attention' ? <AttentionRow {...rowProps} /> : <Row {...rowProps} pinnedShelf={item.view.group === 'pinned'} noise={item.view.group === 'noise'} />;
 }
 
 /** Scrolls the list just enough to show a group's last row, never past its header (Decided while building #70). */
@@ -149,6 +149,8 @@ interface RowProps extends ListProps {
   row: MessageRowOut;
   rowKey: string;
   pinnedShelf?: boolean;
+  // A Noise row recedes (DESIGN.md #131).
+  noise?: boolean;
   leaving: boolean;
   fold: FoldRef;
 }
@@ -168,14 +170,14 @@ function Account({account}: {account: AccountOut | undefined}) {
 }
 
 function Row(props: RowProps) {
-  const {row, accounts, now, timeZone, pinnedShelf} = props;
+  const {row, accounts, now, timeZone, pinnedShelf, noise} = props;
   const line = rowLine(row);
   const unpin = (event: MouseEvent) => {
     event.stopPropagation();
     props.onUnpin(row.id);
   };
   return (
-    <div className={`${rowClasses('row', props)}${pinnedShelf ? ' shelf' : ''}`} title={line.title ?? undefined} {...rowAttributes(props)}>
+    <div className={`${rowClasses('row', props)}${pinnedShelf ? ' shelf' : ''}${noise ? ' noise' : ''}`} title={line.title ?? undefined} {...rowAttributes(props)}>
       <span className="ud" />
       <span className="from">{line.from}</span>
       {line.code ? <CodeLine code={line.code} now={now} /> : (
@@ -229,7 +231,7 @@ function Prompt({prompt, onAnswer, leaving, fold}: {prompt: PatternPrompt; onAns
 function AttentionRow(props: RowProps) {
   const {row, accounts, now, timeZone} = props;
   return (
-    <div className={rowClasses('arow', props)} {...rowAttributes(props)}>
+    <div className={`${rowClasses('arow', props)} att`} {...rowAttributes(props)}>
       <span className="ud" />
       <div className="l1">
         <span className="from">{sender(row)}</span>

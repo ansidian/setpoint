@@ -442,7 +442,8 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
     assert.match(pinned[0]!.motion[0]!, MOTION);
 
     // Opening an unread email fades its dot over 120 ms.
-    assert.equal(await page.locator('.arow.unread .ud').first().evaluate(dot => getComputedStyle(dot, '::before').transitionDuration), '0.12s');
+    // Its fill and, on Attention, the ring it leaves (#130).
+    assert.match(await page.locator('.arow.unread .ud').first().evaluate(dot => getComputedStyle(dot, '::before').transitionDuration), /^0\.12s(, 0\.12s)*$/);
 
     // Mark all as read: the read FYI rows fold out together.
     const before = (await folds(page)).filter(fold => fold.fold === 'out').length;

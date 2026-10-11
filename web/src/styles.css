@@ -140,6 +140,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .gh .chev { margin-left: auto; color: var(--ink3); }
 .gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Attention is the loudest block (#130): its band takes `caution` into its panel, its label and count
+   `caution` over a 20% caution line; its unread dots are `caution`, and a row read but not Done keeps
+   a 6 px caution ring, as it's still counted in the pill. */
+.gh.att { background: color-mix(in srgb, var(--caution) var(--attTint), var(--panel)); color: var(--caution); border-bottom-color: color-mix(in srgb, var(--caution) 20%, transparent); }
 .gh.att .n { color: var(--caution); }
 .gh.first { border-top: 0; }
 /* Each group's glyph before its label (#160): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
@@ -156,7 +160,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ud::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; }
 .row.unread .ud::before, .arow.unread .ud::before { background: var(--ink); }
 /* Opening an unread email fades its dot out (DESIGN.md › Decided while building #13). */
-.ud::before { transition: background-color var(--dur-fast) var(--ease); }
+.ud::before { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.arow.att.unread .ud::before { background: var(--caution); }
+.arow.att:not(.unread) .ud::before { box-shadow: inset 0 0 0 1.5px var(--caution); }
+/* Noise recedes (#131): an unread Noise row's sender and subject `ink2` at 400 and its dot `ink3`; a read one's `ink3`. */
+.row.noise.unread .from, .row.noise.unread .subj b { color: var(--ink2); font-weight: 400; }
+.row.noise.unread .ud::before { background: var(--ink3); }
+.row.noise:not(.unread) .from, .row.noise:not(.unread) .subj b { color: var(--ink3); }
 /* A row (or header, or the prompt) leaving folds away under app/fold.ts's motion, out of the pointer's way. */
 .list .leaving { overflow: hidden; pointer-events: none; }
 .row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -254,7 +264,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
 .lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
-.lh.att .n { color: var(--caution); }
+.lh.att, .lh.att .n { color: var(--caution); }
 .nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .nfold .chev { margin-left: auto; }
