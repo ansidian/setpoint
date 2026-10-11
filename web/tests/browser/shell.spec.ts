@@ -4,7 +4,7 @@
 // elsewhere.
 import assert from 'node:assert/strict';
 import {after, describe, test} from 'node:test';
-import type {MailCountsOut} from '@setpoint/shared';
+import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
@@ -193,6 +193,71 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     assert.match(new URL(page.url()).pathname, /^\/calendar\/item\/\d+$/);
     const counts = await setpoint.api<MailCountsOut>('GET', '/mail/counts');
     assert.equal(counts.attention, 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a Today task\'s ring shows the done check for 360 ms before its line folds away, a double-click completes only it, and Undo unfolds it', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
+    // Pay rent's line from the press on, in the page's time: too quick to read after each step.
+    await page.evaluate(() => {
+      const block = document.querySelector('.sb .today')!;
+      const log: {at: number; state: string}[] = [];
+      (window as unknown as {rent: typeof log}).rent = log;
+      const note = (state: string) => {
+        if (log.at(-1)?.state !== state) log.push({at: performance.now(), state});
+      };
+      document.addEventListener('pointerdown', () => note('pressed'), {capture: true, once: true});
+      new MutationObserver(() => {
+        const line = [...block.querySelectorAll('.today-row')].find(row => row.textContent === 'Pay rent');
+        if (!line) return note('gone');
+        if (line.classList.contains('leaving')) return note('folding');
+        if (line.classList.contains('completing')) {
+          const title = getComputedStyle(line.querySelector('.title')!);
+          const check = line.querySelector('.task-glyph.done');
+          return note(`done: ${check ? getComputedStyle(check).color : 'no check'}, ${title.textDecorationLine} in ${title.color}`);
+        }
+        // Back from Undo: its height opens (app/fold.ts), not a hover's transition.
+        return note(line.getAnimations().some(animation => animation.constructor === Animation) ? 'unfolding' : 'open');
+      }).observe(block, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style']});
+    });
+    const [good, ink3] = await page.evaluate(() => ['--good', '--ink3'].map(token => {
+      const probe = document.body.appendChild(document.createElement('i'));
+      probe.style.color = `var(${token})`;
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    }));
+    const log = () => page.evaluate(() => (window as unknown as {rent: {at: number; state: string}[]}).rent);
+
+    await lines.filter({hasText: 'Pay rent'}).getByRole('button', {name: 'Complete Pay rent'}).dblclick();
+    await until('Pay rent folded away', log, seen => seen.at(-1)?.state === 'gone');
+    const seen = await log();
+    assert.deepEqual(seen.map(step => step.state), ['pressed', `done: ${good}, line-through in ${ink3}`, 'folding', 'gone']);
+    const [pressed, done, folding, gone] = seen.map(step => step.at) as [number, number, number, number];
+    assert.ok(folding - pressed >= 360, `the done check showed for ${Math.round(folding - done)} ms`);
+    assert.ok(gone - folding >= 179, `the line folded over ${Math.round(gone - folding)} ms`);
+    await page.locator('.toast', {hasText: 'Completed Pay rent'}).waitFor();
+    // The second click completed nothing more.
+    await setpoint.idle();
+    const tasks = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-09')).items.filter(item => item.kind === 'task');
+    await until('the completion lands', tasks, list => list.every(task => !task.command));
+    assert.deepEqual((await tasks()).map(task => [task.title, task.done]).sort(), [['CS 101 lab report', false], ['Pay rent', true], ['Renew car registration', false]]);
+    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Renew car registrationTomorrow']);
+
+    // Undo unfolds it where it was.
+    await page.mouse.move(800, 600);
+    await page.locator('.toast button', {hasText: 'Undo'}).click();
+    await until('Pay rent back', log, steps => steps.at(-1)?.state === 'open');
+    assert.deepEqual((await log()).slice(4).map(step => step.state), ['unfolding', 'open']);
+    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

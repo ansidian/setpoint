@@ -33,6 +33,12 @@ export interface Today {
 /** How many task lines show before the rest fold into one line. */
 export const TODAY_TASKS = 3;
 
+/**
+ * How long a completed task's line shows its done check before it folds away (DESIGN.md › The
+ * Today block).
+ */
+export const DONE_MOMENT_MS = 360;
+
 /** The range to load for it: today and tomorrow, `to` exclusive. */
 export function todayRange(now: number, timeZone: string): {from: string; to: string} {
   const from = localDate(now, timeZone);
@@ -70,7 +76,7 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
  * The task lines to show: every one when they fit or the block's been opened; otherwise the first
  * two and "3 more due tomorrow" for the rest, which opens them all.
  */
-export function shownTasks(tasks: TodayTask[], open: boolean): {shown: TodayTask[]; more: string | null} {
+export function shownTasks<T extends TodayTask>(tasks: T[], open: boolean): {shown: T[]; more: string | null} {
   if (open || tasks.length <= TODAY_TASKS) return {shown: tasks, more: null};
   const shown = tasks.slice(0, TODAY_TASKS - 1);
   const rest = tasks.slice(TODAY_TASKS - 1);

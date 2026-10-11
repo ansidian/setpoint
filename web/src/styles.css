@@ -82,6 +82,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
 .today-row .check:hover .ring { border-color: var(--ink); }
+/* A completed task's done check lands (TaskGlyph, `good`) with its title struck through, for
+   DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then the line folds
+   away (app/fold.ts). */
+.today-row.completing, .today-row.leaving { pointer-events: none; }
+.today-row.completing .title { color: var(--ink3); text-decoration: line-through; }
+.today-row.completing .check .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
+@keyframes ring-done { from { transform: scale(.6); opacity: .4; } }
+.today-row.leaving { overflow: hidden; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
 .today-more .ring-space { width: 17px; flex: none; }
 /* The floating detail's card beside the sidebar (detail.css draws it). */

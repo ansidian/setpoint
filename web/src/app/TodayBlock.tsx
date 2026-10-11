@@ -4,18 +4,22 @@
 // A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
-// closes it; it follows a click on another line.
+// closes it; it follows a click on another line. A completed task shows its done check for a moment,
+// then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds it back.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent} from 'react';
 import {createPortal} from 'react-dom';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
 import {CALENDARS_PATH, completeItem, deleteItem, itemsPath} from '../api/items.ts';
+import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {shownTasks, todayBlock, todayRange} from '../logic/today.ts';
+import {DONE_MOMENT_MS, shownTasks, todayBlock, todayRange} from '../logic/today.ts';
+import type {TodayTask} from '../logic/today.ts';
+import {TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {useRingColour} from './calendar/Chip.tsx';
 import {DetailContent} from './calendar/detail/DetailContent.tsx';
@@ -23,6 +27,7 @@ import type {DetailActions} from './calendar/detail/DetailContent.tsx';
 import './calendar/detail/detail.css';
 import {rectIn} from './calendar/geometry.ts';
 import {useNow} from './clock.ts';
+import {foldIn, foldOut, useFold} from './fold.ts';
 import {navigate} from './router.ts';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -32,6 +37,14 @@ const itemRoute = (item: ItemOut, edit = false): Route => ({page: 'calendar', da
 function follows(event: MouseEvent): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0;
 }
+
+/** A task's line, and whether it's showing its done check. */
+interface TaskLine extends TodayTask {
+  done: boolean;
+}
+
+// Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
+const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
 export function TodayBlock() {
   const now = useNow();
@@ -46,14 +59,23 @@ export function TodayBlock() {
   const [openKey, setOpenKey] = useState<string | null>(null);
   // Tasks being completed and items being deleted here, off the block until the server has the change.
   const [gone, setGone] = useState<Set<string>>(new Set());
+  // Tasks just completed, by key, showing their done check where they were for DONE_MOMENT_MS,
+  // whatever the server's list says meanwhile.
+  const [ticked, setTicked] = useState<ReadonlyMap<string, {line: TodayTask; at: number}>>(new Map());
 
-  const items = (data?.items ?? []).filter(item => !gone.has(item.key));
-  const today = todayBlock(items, now, zone);
-  const {shown, more} = shownTasks(today.tasks, all);
+  const today = useMemo(() => todayBlock((data?.items ?? []).filter(item => !gone.has(item.key)), now, zone), [data, gone, now, zone]);
+  const tasks = useMemo(() => {
+    const listed: TaskLine[] = today.tasks.filter(task => !ticked.has(task.item.key)).map(task => ({...task, done: false}));
+    for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
+    return listed;
+  }, [today, ticked]);
+  const {shown, more} = useMemo(() => shownTasks(tasks, all), [tasks, all]);
+  const entries = useMemo(() => shown.map((line): Entry<TaskLine> => ({key: line.item.key, id: line.item.id, item: line})), [shown]);
+  const folded = useFold(entries, FOLDS);
   const lines = [...(today.event ? [today.event.item] : []), ...today.tasks.map(task => task.item)];
   const opened = lines.find(item => item.key === openKey) ?? null;
 
-  if (!data || (!today.event && !today.tasks.length)) return null;
+  if (!data || (!today.event && !folded.length)) return null;
 
   // The card goes with its item.
   const hide = (item: ItemOut) => {
@@ -66,8 +88,22 @@ export function TodayBlock() {
     return next;
   });
 
-  /** Completes a task: its line goes at once, with Undo; a refusal brings it back and says why. */
+  /**
+   * Completes a task: its line shows the done check for a moment, then folds away, with Undo; a
+   * refusal brings it back and says why. A repeating task's line then shows its next date, if due.
+   */
   const complete = (task: ItemOut) => {
+    // Already on its way: a second click (a double-click) completes nothing more.
+    if (gone.has(task.key)) return;
+    const line = tasks.find(one => one.item.key === task.key);
+    if (line) {
+      setTicked(map => new Map(map).set(task.key, {line, at: tasks.indexOf(line)}));
+      window.setTimeout(() => setTicked(map => {
+        const next = new Map(map);
+        next.delete(task.key);
+        return next;
+      }), DONE_MOMENT_MS);
+    }
     hide(task);
     void completeItem(task.id, true, task.recurring ? task.due_date : null)
       .then(() => showToast(`Completed ${task.title}`, task.recurring ? null : {
@@ -111,21 +147,26 @@ export function TodayBlock() {
           <span className="in num">{today.event.in}</span>
         </a>
       )}
-      {shown.map(({item, title, label}) => (
-        <a key={item.key} className={lineClass(item)} data-key={item.key} href={routePath(itemRoute(item))} onClick={toggle(item)}
-          aria-haspopup="dialog" aria-expanded={openKey === item.key}>
-          <button className="check" type="button" aria-label={`Complete ${title}`} title="Complete"
-            onClick={event => {
-              event.preventDefault();
-              event.stopPropagation();
-              complete(item);
-            }}>
-            <span className="ring" style={ring(item.project)} />
-          </button>
-          <span className="ell title" title={title}>{title}</span>
-          {label && <span className="in">{label}</span>}
-        </a>
-      ))}
+      {folded.map(({key, item: {item, title, label, done}, fold}) => {
+        // A line folding away keeps its look, without its key or the pointer.
+        const leaving = fold === 'out';
+        const classes = [lineClass(item), done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
+        return (
+          <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
+            href={routePath(itemRoute(item))} onClick={toggle(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
+            <button className="check" type="button" aria-label={`Complete ${title}`} title="Complete"
+              onClick={event => {
+                event.preventDefault();
+                event.stopPropagation();
+                complete(item);
+              }}>
+              {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
+            </button>
+            <span className="ell title" title={title}>{title}</span>
+            {label && <span className="in">{label}</span>}
+          </a>
+        );
+      })}
       {more && (
         <button className="today-row today-more" type="button" onClick={() => setAll(true)}>
           <span className="ring-space" />

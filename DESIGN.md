@@ -191,9 +191,11 @@ line.
 A line opens the floating detail's card (without its grip) 8 px right of the sidebar, its title
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
 Calendar's editor on the item; a task's ring, or Complete on its card, completes it in place with
-"Completed Pay rent · Undo"; an item that isn't a repeating event deletes; **Open in Calendar** shows
-it there with its card. Clone, Copy and Colour stay on Calendar. Esc, × or a click elsewhere closes
-it; another line moves it there (#78).
+"Completed Pay rent · Undo": its done check lands and its title is struck through for 360 ms, then
+the line folds away over 180 ms, and Undo folds it back
+([Decided while building](#decided-while-building) #106); an item that isn't a repeating event
+deletes; **Open in Calendar** shows it there with its card. Clone, Copy and Colour stay on Calendar.
+Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 ## Mail
 
@@ -1297,6 +1299,13 @@ it changes what's on screen.
     the button it switches to, and ⌘K's Show All or Show Unread carries it. `1` goes to the Inbox
     from another page; on the Inbox it does nothing, except from a search or on the phone, where it
     goes back to the Inbox (Andy, 2026-10-11).
+106. **A completed Today task shows it's done before it goes:** a ring's click, or Complete on the
+    card, swaps the ring for the done check (13 px, `good`, landing from 60% over 120 ms) and
+    strikes the title through in `ink3` for 360 ms, then the line folds away over 180 ms as the mail
+    list's rows do (#13), and Undo or a refusal folds it back. While it shows done, the line takes
+    no clicks, so a double-click completes that task alone, not the one that moves up under the
+    pointer. A repeating task does the same, then shows its next date if it's due by tomorrow (Andy,
+    2026-10-11, polish audit shell-01).
 110. **A line longer than the editor's field shows where it's typed:** its marks move with its
     letters as the field scrolls, so the words being typed and what they parse to stay in view, with
     the caret on its letter, and a side cut short fades over 14 px (Andy, 2026-10-11, polish audit
