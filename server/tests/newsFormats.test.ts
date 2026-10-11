@@ -110,6 +110,34 @@ describe('article pages', () => {
     ]);
   });
 
+  test('a public broadcaster\'s article: its lists kept as items, its membership appeals left out (the polish audit\'s extra-10)', () => {
+    const page = extractArticle(newsFixture('public-media-article.html', BASE), `${BASE}/news/cooling-centers/`);
+    expect(page.text!.split('\n\n')).toEqual([
+      'The county opened cooling centers in every district on Monday as afternoon temperatures were forecast to pass 105 degrees through Thursday, officials said.',
+      'Cooling centers are open from 10 a.m. to 8 p.m. at these sites:',
+      '• Fabrikam Park Recreation Center, 1200 Ocean Blvd.',
+      '• Contoso Beach Fire Station 12, 40 Harbor Way',
+      '• Northwind Library, 300 Pine Ave.',
+      'Pets on a leash are welcome, and each center has water, chairs and phone chargers.',
+      'Health officials suggest two habits for the hottest hours:',
+      '1. Drink water before you feel thirsty.',
+      '2. Check on neighbors who live alone.',
+      // A list of links to the outlet's other stories isn't the story's.
+      'Forecasters expect the heat to ease on Friday, when an ocean breeze returns to the coast.',
+    ]);
+  });
+
+  test.each([
+    ['the lead-in', 'If our reporting matters to you, please become a member and keep it free for everyone.', true],
+    ['the closing ask', 'The station is 100% listener-supported. Increase your existing membership with the form below.', true],
+    ['a story about giving keeps its words', 'Organizers asked residents to donate blood at the community center through Friday, when the drive ends.', false],
+    ['a story about a station\'s funding keeps its words', 'The station said it lost a fifth of its budget when a federal grant ended last year.', false],
+  ])('a membership appeal: %s', (_, paragraph, appeal) => {
+    const story = 'The county opened three cooling centers on Tuesday as temperatures climbed past 100 degrees in the valleys, officials said, and more may open later this week if the heat holds through the weekend as forecast.';
+    const text = extractArticle(`<article><p>${story}</p><p>${paragraph}</p></article>`, BASE).text;
+    expect(text).toBe(appeal ? story : `${story}\n\n${paragraph}`);
+  });
+
   test('a newsroom that writes its paragraphs as divs, with no image', () => {
     const page = extractArticle(newsFixture('newsroom-article.html', BASE), `${BASE}/newsroom/2026/10/fold-2/`);
     expect(page.imageUrl).toBeNull();

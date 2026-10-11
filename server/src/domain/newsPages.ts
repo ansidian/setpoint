@@ -38,6 +38,9 @@ const NOISE_WORDS = new Set([
 ]);
 // A paragraph that is the page talking about itself, not the article.
 const NOISE_TEXT = /^(advertisement|sponsored|sign up|subscribe|read more|related:|click here|share this|copyright|©|all rights reserved|follow us|this story has been updated)/i;
+// The outlet asking the reader to become a member, as a public broadcaster does before its story and
+// after it: the ask itself, not a story about giving or a station's funding (the polish audit's extra-10).
+const APPEAL = /\b(?:please become a (?:\w+ )?member|become a (?:\w+ )?member today|increase your (?:existing )?membership|100% (?:community|listener|reader|member)[- ](?:funded|supported))\b/i;
 
 const words = (element: Element) => `${attr(element, 'class') ?? ''} ${attr(element, 'id') ?? ''}`.toLowerCase().split(/[^a-z]+/).filter(Boolean);
 const LONG_PARAGRAPH = 200;
@@ -63,23 +66,46 @@ function stripNoise(root: Document | Element) {
 const BLOCK_TAGS = new Set(['p', 'div', 'section', 'article', 'main', 'ul', 'ol', 'li', 'table', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'header', 'footer', 'figure']);
 const hasBlockChild = (element: Element) => element.children.some(node => isTag(node) && BLOCK_TAGS.has(node.name.toLowerCase()));
 
+/** An element's text outside its links. */
+const ownText = (node: ChildNode): string => (node instanceof Text ? node.data : node instanceof Element && node.name.toLowerCase() !== 'a' ? node.children.map(ownText).join('') : '');
+
+/**
+ * A list item of the article's own: not one holding a list of its own (its items are counted), and
+ * not only links, as a list of the outlet's other stories is.
+ */
+const isItem = (element: Element) => !findOne(node => node.name.toLowerCase() === 'li', element.children) && /[\p{L}\p{N}]/u.test(ownText(element));
+
+/** A list item's marker in the text: "• ", or its number in a numbered list. */
+function marker(item: Element): string {
+  const list = item.parent instanceof Element ? item.parent : null;
+  if (list?.name.toLowerCase() !== 'ol') return '• ';
+  return `${list.children.filter(node => isTag(node) && node.name.toLowerCase() === 'li').indexOf(item) + 1}. `;
+}
+
 /**
  * The text blocks of a container, in order: its paragraphs, and divs that hold only inline text
  * (Apple's newsroom writes its paragraphs as divs), long enough to be prose and not the page's own.
+ * With `lists`, each list item is a block too, marked as one ("• Fabrikam Park, 1200 Ocean Blvd."),
+ * however short, and what's inside it counts once, as the item; choosing the container leaves lists
+ * out, so a page's link lists can't outweigh its story.
  */
-function blockElements(root: Document | Element): {element: Element; text: string}[] {
+function blockElements(root: Document | Element, lists = false): {element: Element; text: string}[] {
   const found = all(root, element => {
     const name = element.name.toLowerCase();
+    if (lists && name === 'li') return isItem(element);
+    if (lists && insideListItem(element)) return false;
     if (name === 'p') return true;
     // A div holding a paragraph deeper down is counted once, as the paragraph.
     return name === 'div' && !hasBlockChild(element) && !findOne(node => node.name === 'p', element.children) && textOf(element).length >= 80;
   });
-  return found.map(element => ({element, text: textOf(element)})).filter(({text}) => text.length >= 25 && !NOISE_TEXT.test(text));
+  return found.map(element => ({element, text: textOf(element), item: element.name.toLowerCase() === 'li'}))
+    .filter(({text, item}) => (item ? text.length > 0 : text.length >= 25) && !NOISE_TEXT.test(text) && !APPEAL.test(text))
+    .map(({element, text, item}) => ({element, text: item ? `${marker(element)}${text}` : text}));
 }
 
-function blocks(container: Element): string[] {
+function blocks(container: Element, lists = false): string[] {
   const texts: string[] = [];
-  for (const {text} of blockElements(container)) if (texts.at(-1) !== text) texts.push(text);
+  for (const {text} of blockElements(container, lists)) if (texts.at(-1) !== text) texts.push(text);
   return texts;
 }
 
@@ -167,9 +193,10 @@ const joinParagraphs = (paragraphs: string[]) => {
 };
 
 /**
- * An article page's readable text, paragraphs only (no navigation, sharing, promotions or the page's
- * own lines), and its image. A page that yields too little (a teaser, a consent wall, an app shell
- * that draws itself with scripts) has no text, and the article falls back to its feed summary.
+ * An article page's readable text, paragraphs and list items only (no navigation, sharing,
+ * promotions, appeals or the page's own lines), and its image. A page that yields too little (a
+ * teaser, a consent wall, an app shell that draws itself with scripts) has no text, and the article
+ * falls back to its feed summary.
  */
 export function extractArticle(html: string, pageUrl: string): ExtractedArticle {
   const document = parseDocument(html);
@@ -177,10 +204,10 @@ export function extractArticle(html: string, pageUrl: string): ExtractedArticle 
   const ld = jsonLdBody(document);
   stripNoise(document);
   const container = articleContainer(document);
-  const paragraphs = container ? blocks(container) : [];
+  const paragraphs = container ? blocks(container, true) : [];
   let text = length(paragraphs) >= MIN_ARTICLE_CHARS ? joinParagraphs(paragraphs) : null;
   if (!text && ld.text) {
-    const fromLd = ld.text.split(/\n\s*\n|\r\n\s*\r\n|\n/).map(paragraph => clip(paragraph)).filter(paragraph => paragraph.length > 0);
+    const fromLd = ld.text.split(/\n\s*\n|\r\n\s*\r\n|\n/).map(paragraph => clip(paragraph)).filter(paragraph => paragraph.length > 0 && !APPEAL.test(paragraph));
     if (length(fromLd) >= MIN_ARTICLE_CHARS) text = joinParagraphs(fromLd);
   }
   return {text, imageUrl: imageUrl ?? absolute(ld.image, pageUrl)};

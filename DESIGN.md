@@ -557,7 +557,8 @@ navigation.
   - Tools: **Back to story** `Esc`, then a spacer and **Open at NBC Los Angeles** `O`.
   - Head: a 22 px outlet badge, the outlet, the time and the byline; then the outlet's headline (20
     / 500).
-  - The image (240 tall), then the extracted text at 14.5 / 1.6, max 600.
+  - The image (240 tall), then the extracted text at 14.5 / 1.6, max 600: its paragraphs and list
+    items, without the outlet's membership appeals (#114).
 - **An article that can't be read in-app** (board 26b):
   - A note (radius 12, `sub`, `info`): "KTLA's page can't be read here, so this is its feed
     summary", with a solid small **Read at KTLA**.
@@ -1341,3 +1342,7 @@ it changes what's on screen.
     Undo" in the toast. A month cell whose items are all hidden stays empty. With every calendar
     off, a 16 px `ink3` `visibility_off` follows the header's title, so a filtered view shows from
     any day (Andy, 2026-10-11, polish audit states-12).
+114. **An article's text keeps its lists and leaves out the outlet's appeals:** each list item is a
+    line of its own, marked "•" or with its number (a line ending "at these sites:" is followed by the
+    sites), and a list of nothing but links (the outlet's other stories) stays out. A paragraph asking the reader to become a member, before the story or after
+    it, is left out (Andy, 2026-10-11, polish audit extra-10).
