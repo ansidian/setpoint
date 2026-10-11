@@ -3,7 +3,7 @@
 // matched and its matches highlighted, Ask Alfred ⌘Enter last, and the no-results line with each
 // chip removable. Kept thin: the rules are logic/search.ts's, and the state is state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
-import {Fragment, useEffect, useRef, useState} from 'react';
+import {Fragment, useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine} from '../../logic/search.ts';
@@ -61,6 +61,9 @@ export function selectSearch() {
  */
 export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
+  // The field is a label for its words: a click on a chip, the glyph or the hint goes to them, and
+  // its hover lights no chip's ×, which, as the label's first button, would otherwise be its control.
+  const inputId = useId();
   // The chips are selected with the words (selectSearch) until the next key, click or blur.
   const [whole, setWhole] = useState(false);
   useEffect(() => {
@@ -101,19 +104,19 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     }
   };
   return (
-    <label className={search.active ? 'search active' : 'search'}>
+    <label className={search.active ? 'search active' : 'search'} htmlFor={inputId}>
       <Icon name="search" size={16} />
       {search.chips.map((chip, index) => (
         <span className={whole ? 'qchip sel' : 'qchip'} key={chipKey(chip)}>
           <span className="k">{negated(chip) ? `Not ${CHIP_KEYS[chip.kind]}` : CHIP_KEYS[chip.kind]}</span>{chip.label}
-          {/* The field is a label: a click it saw would go on to its first button, another chip's ×. */}
+          {/* Its own click stays its own: the label would send it on to the words. */}
           <button className="x" type="button" aria-label={`Remove ${chip.label}`} onClick={event => {
             event.preventDefault();
             search.removeChip(index);
           }}><Icon name="close" size={14} /></button>
         </span>
       ))}
-      <input ref={input} className="grow" placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
+      <input ref={input} id={inputId} className="grow" placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
         onChange={event => search.setText(event.target.value)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onBlur={() => setWhole(false)} />
       <span className="kbd">{search.active ? 'Esc' : '/'}</span>
     </label>

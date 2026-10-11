@@ -120,6 +120,35 @@ test('search: words become chips, results replace the list, J / K / Enter open t
   }
 });
 
+test('a click on a chip, the search glyph or the Esc hint keeps every chip and goes to the words; the pointer over the field lights no ×', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await page.keyboard.type('northwind rejection march');
+    await page.keyboard.press('Enter');
+    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection | DateMar 2026');
+    const field = page.locator('.hd .search');
+    const first = field.locator('.qchip').first().locator('.x');
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? null);
+    for (const [what, part] of [['the third chip', field.locator('.qchip', {hasText: 'Mar 2026'}).locator('.k')], ['the glyph', field.locator('svg.icon').first()], ['the hint', field.locator('.kbd')]] as const) {
+      await page.locator('.hd-title').click();
+      await until(`the words left before ${what}`, focused, label => label !== 'Search mail');
+      await part.hover();
+      assert.equal(await first.evaluate(x => x.matches(':hover')), false, `over ${what}, the first chip's × isn't lit`);
+      await part.click();
+      await until(`${what} goes to the words`, focused, label => label === 'Search mail');
+      assert.deepEqual(await chips(page), ['OrgNorthwind', 'TypeRejection', 'DateMar 2026'], `a click on ${what}`);
+    }
+    // Only a chip's own × removes it.
+    await first.click();
+    await until('the first chip gone', () => chips(page), shown => shown.join(' | ') === 'TypeRejection | DateMar 2026');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('"!" leaves out what a word names: a Not chip, or the mail with a word kept as typed (SV-31)', async () => {
   const setpoint = await startSetpoint();
   try {
