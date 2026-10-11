@@ -174,9 +174,29 @@ export function proposalAt(item: ProposalItemOut, when: ProposalWhen & {date: st
   return {...item, all_day: false, starts_at: instantAt(when.date, when.start, zone), ends_at: instantAt(when.date, when.end ?? when.start + DEFAULT_LENGTH, zone), start_date: null, end_date: null};
 }
 
-/** The projects Project's menu offers for what's typed: those whose name holds it, any case; all of them for nothing typed. */
-export const projectMatches = <T extends {name: string}>(text: string, projects: T[]): T[] =>
-  projects.filter(project => project.name.toLowerCase().includes(text.trim().toLowerCase()));
+/**
+ * The names holding what's typed, any case, best first (SV-56): those starting with it, then those
+ * with a word starting with it, then the rest, each in list order; all of them for nothing typed.
+ * The line reads "#ho" as the name it starts, so the menu's first row is the one it reads.
+ */
+export function rankMatches<T>(text: string, list: T[], name: (one: T) => string): T[] {
+  const typed = text.trim().toLowerCase();
+  const tier = (one: T): number | null => {
+    const lower = name(one).toLowerCase();
+    if (lower.startsWith(typed)) return 0;
+    let at = lower.indexOf(typed, 1);
+    if (at < 0) return null;
+    for (; at >= 0; at = lower.indexOf(typed, at + 1)) if (!/[\p{L}\p{N}]/u.test(lower[at - 1]!)) return 1;
+    return 2;
+  };
+  return list.map(one => ({one, tier: tier(one)}))
+    .filter((entry): entry is {one: T; tier: number} => entry.tier !== null)
+    .sort((a, b) => a.tier - b.tier)
+    .map(entry => entry.one);
+}
+
+/** The projects Project's menu offers for what's typed: those whose name holds it, any case, best first (rankMatches); all of them for nothing typed. */
+export const projectMatches = <T extends {name: string}>(text: string, projects: T[]): T[] => rankMatches(text, projects, project => project.name);
 
 /** Whether what's typed names a project exactly, any case, so the menu offers no New project. */
 export const namesProject = (text: string, projects: {name: string}[]) => projects.some(project => project.name.toLowerCase() === text.trim().toLowerCase());

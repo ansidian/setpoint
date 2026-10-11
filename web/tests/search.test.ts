@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, ProposalItemOut, SearchChip, SearchResultOut} f
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  alfredQuestion, alfredStepLine, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownSources,
+  alfredQuestion, alfredStepLine, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -184,10 +184,27 @@ describe('a task proposal\'s project (SV-24, D50)', () => {
     expect(projectMatches('', projects)).toHaveLength(3);
     expect([namesProject('school', projects), namesProject('Scho', projects)]).toEqual([true, false]);
   });
+  // SV-56: names starting with what's typed come first, then those with a word starting with it, then
+  // those merely holding it, each in list order, so the menu's first row is what the line reads.
+  test.each<[string, string[]]>([
+    ['ho', ['Home', 'School']],
+    ['h', ['Home', 'School']],
+    ['sch', ['School']],
+    ['o', ['Inbox', 'School', 'Home']],
+    ['', ['Inbox', 'School', 'Home']],
+  ])('the menu ranks %j: %j', (text, names) => expect(projectMatches(text, projects).map(project => project.name)).toEqual(names));
+  test.each<[string, string[], string[]]>([
+    ['pro', ['Approvals', 'Side projects', 'Projects'], ['Projects', 'Side projects', 'Approvals']],
+    ['job', ['Odd jobs', 'Jobs', 'Bluejobs board'], ['Jobs', 'Odd jobs', 'Bluejobs board']],
+    ['cal', ['Local', 'Club-calendar', 'Calendar'], ['Calendar', 'Club-calendar', 'Local']],
+    ['  JOB ', ['Odd jobs', 'Jobs'], ['Jobs', 'Odd jobs']],
+    ['x', ['Jobs'], []],
+  ])('%j among %j ranks %j', (text, names, ranked) => expect(rankMatches(text, names.map(name => ({name})), one => one.name).map(one => one.name)).toEqual(ranked));
   // SV-25: once New project is picked for a name, the menu doesn't offer it again.
   test.each<[string, boolean, string[]]>([
     ['', false, ['Inbox', 'School', 'Home']],
     ['o', false, ['Inbox', 'School', 'Home', 'New project “o”']],
+    ['ho', false, ['Home', 'School', 'New project “ho”']],
     ['school', false, ['School']],
     ['Work', false, ['New project “Work”']],
     ['Work', true, []],

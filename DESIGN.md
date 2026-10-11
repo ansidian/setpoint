@@ -1294,3 +1294,9 @@ it changes what's on screen.
     the button it switches to, and ⌘K's Show All or Show Unread carries it. `1` goes to the Inbox
     from another page; on the Inbox it does nothing, except from a search or on the phone, where it
     goes back to the Inbox (Andy, 2026-10-11).
+111. **The line's menus put first what the line reads** (amending #43 and #46): Project's menu and an
+    event's Calendar menu list the names starting with what's typed, then those with a word starting
+    with it, then those merely holding it, each in the list's order, with the cursor on the first,
+    so "#ho" then Enter is Home, not School. A project's mark in the line takes its project's colour,
+    as its dot does; one not yet named, or new, stays `ink2` (Andy, 2026-10-11, polish audit
+    calflows-07).

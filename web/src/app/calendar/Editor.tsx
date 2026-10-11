@@ -12,6 +12,7 @@
 // what it was ("Was 7:00 – 8:00 AM"), and a recurring event asks This event, This and following or
 // All events in place of the footer before it saves. Nothing is created or changed until ⌘Enter.
 import type {CalendarOut, Colour, ItemChanges, ItemCreateInput, ItemKind, ItemOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
+import {TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -27,7 +28,7 @@ import {remindersLine} from '../../logic/detail.ts';
 import {addDays, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
-import {projectChoice, projectMenu} from '../../logic/search.ts';
+import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar} from '../accounts.ts';
@@ -281,12 +282,17 @@ const accepts = (event: ReactKeyboardEvent) => event.key === 'Tab' && !event.shi
 
 const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', calendar: 'tok-c', project: 'tok-j'};
 
-function Marked({text, marks, calendarColour}: {text: string; marks: Mark[]; calendarColour?: Colour | null}) {
+/**
+ * The line's text with its marks: a #calendar in its calendar's colour, a #project in its project's
+ * (SV-56; `ink2` while it names no project yet, or a new one).
+ */
+function Marked({text, marks, calendarColour, projectColour}: {text: string; marks: Mark[]; calendarColour?: Colour | null; projectColour?: string | null}) {
   const parts: ReactNode[] = [];
   let at = 0;
   for (const mark of marks) {
     if (mark.start > at) parts.push(text.slice(at, mark.start));
-    parts.push(<span key={mark.start} className={markClass[mark.kind]} style={mark.kind === 'calendar' ? {'--c': colourVar(calendarColour ?? undefined)} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
+    const colour = mark.kind === 'calendar' ? colourVar(calendarColour ?? undefined) : mark.kind === 'project' && projectColour ? projectColour : null;
+    parts.push(<span key={mark.start} className={markClass[mark.kind]} style={colour ? {'--c': colour} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
     at = mark.end;
   }
   parts.push(text.slice(at));
@@ -425,12 +431,15 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     : draft.kind === 'task' ? (draft.pickedProject === null && !draft.manual.includes('project') ? parsed.project : null)
       : draft.pickedCalendar === null && !draft.manual.includes('calendar') ? draft.text.slice(hashMark.start + 1, hashMark.end).replace(/\s*,$/, '') : null;
   const projectLine = draft.kind === 'task' && lineQuery !== null ? projectMenu(lineQuery, projects ?? [], draft.newProject) : [];
-  const calendarLine = draft.kind === 'event' && lineQuery !== null ? google.filter(one => one.name.toLowerCase().includes(lineQuery.toLowerCase())) : [];
+  // Both menus put the names starting with what's typed first, as the line reads them (SV-56).
+  const calendarLine = draft.kind === 'event' && lineQuery !== null ? rankMatches(lineQuery, google, one => one.name) : [];
   const lineCount = projectLine.length + calendarLine.length;
   const lineCur = Math.min(lineMenu?.query === lineQuery ? lineMenu.cur : 0, lineCount - 1);
   const lineOpen = lineCount > 0 && !(lineMenu?.query === lineQuery && lineMenu.closed);
   // An unknown project not picked as new isn't sent (D50): Create waits, and the line under Project says why.
   const projectChosen = draft.kind === 'task' && projects && draft.project !== original?.project ? projectChoice(draft.project ?? '', projects, draft.newProject) : null;
+  // The line's #project in its project's colour, as the Project field's dot (SV-56).
+  const projectTodoist = draft.kind === 'task' && !draft.newProject && draft.project ? projects?.find(one => one.name.toLowerCase() === draft.project!.toLowerCase())?.colour : null;
   const projectProblem = projectChosen && 'problem' in projectChosen ? projectChosen.problem : null;
 
   useEffect(() => {
@@ -646,7 +655,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <label className="field big"><input ref={title} className="grow" aria-label="Title" value={draft.title} onChange={event => change({title: event.target.value}, ['title'])} /></label>
           ) : (
             <label className="field big nl">
-              <span className="nl-marks" aria-hidden="true"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} /></span>
+              <span className="nl-marks" aria-hidden="true"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null} /></span>
               <input ref={line} className="nl-input" aria-label={`Describe the ${noun}`} value={draft.text} spellCheck={false} autoComplete="off"
                 placeholder={kind === 'event' ? 'Dinner with Sam fri 7-9pm @Blue Door' : 'Pay rent fri'}
                 onChange={event => typeLine(event.target.value)} />

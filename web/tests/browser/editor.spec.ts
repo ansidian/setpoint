@@ -514,6 +514,36 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
   }
 });
 
+test('SV-56: "#ho" puts Home first in Project\'s menu, as the line reads it; Enter picks it, and its mark takes Home\'s colour', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('d');
+    const line = page.getByLabel('Describe the task');
+    await line.waitFor();
+    const menu = page.getByRole('listbox', {name: 'Projects'});
+    const mark = page.locator('.nl .tok-j');
+    const markColour = () => mark.evaluate(element => getComputedStyle(element).getPropertyValue('--c').trim());
+    // School holds "ho" too, but Home starts with it: Home first, with the cursor on it.
+    await line.pressSequentially('Buy printer ink #ho');
+    await mark.filter({hasText: '#ho'}).waitFor();
+    assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'School', 'New project “ho”']);
+    // Not a project yet: the mark is ink2.
+    assert.equal(await markColour(), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim()));
+    await page.keyboard.press('Enter');
+    await menu.waitFor({state: 'detached'});
+    assert.equal(await line.inputValue(), 'Buy printer ink #Home ');
+    assert.equal(await page.getByLabel('Project', {exact: true}).inputValue(), 'Home');
+    // Home's orange, as its dot in the Project field and menu (TODOIST_COLOURS.orange).
+    await mark.filter({hasText: '#Home'}).waitFor();
+    assert.equal(await markColour(), '#c77100');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('D57: an event\'s #calendar in the line filters the Calendar menu; typing alone takes the first, a pick ends it, and #1 stays a title', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
