@@ -53,15 +53,19 @@ export const IMAGE_SIZES: Record<ImageVariant, {width: number; height: number}> 
 };
 
 /**
- * The copies an expired story keeps: only the thumbnail of its own image, for the archive's rows
- * (search, Missed). Every large copy, and every other article's thumbnail, goes with the page. All of
- * them go when the archive does.
+ * The copies an expired story keeps of its own image: in Missed (it left unseen), the large copy and
+ * the thumbnail, so each day's lead is drawn from the large one as on the page, never a thumbnail
+ * stretched to fit (the polish audit's news-09); in the archive, only the thumbnail, for its rows in
+ * search. Every other article's copy goes with the page, and all of them when the archive does.
  */
-export function keepsImage(stage: 'page' | 'archive' | 'purge', image: {articleId: number; variant: ImageVariant}, storyImageArticleId: number | null): boolean {
+export function keepsImage(stage: 'page' | 'missed' | 'archive' | 'purge', image: {articleId: number; variant: ImageVariant}, storyImageArticleId: number | null): boolean {
   if (stage === 'page') return true;
-  if (stage === 'purge') return false;
-  return image.variant === 'thumb' && image.articleId === storyImageArticleId;
+  if (stage === 'purge' || image.articleId !== storyImageArticleId) return false;
+  return stage === 'missed' || image.variant === 'thumb';
 }
+
+/** A story seen out of Missed keeps its large copy this long, so the visit that saw it keeps its leads' images. */
+export const CAUGHT_UP_MS = HOUR;
 
 /** A block shows at least this many stories, when it has them, … */
 export const BLOCK_MIN = 3;

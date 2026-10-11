@@ -113,7 +113,7 @@ describe('the archive', () => {
     const ktla = addArticle(w, source.id, {outlet: 'KTLA', at: ago(30)});
     const nbc = addArticle(w, source.id, {outlet: 'NBC Los Angeles', at: ago(31), text: 'A brush fire in the hills…'});
     for (const article of [ktla, nbc]) for (const variant of ['large', 'thumb'] as const) saveNewsImage(w.store, images, article, variant, copy);
-    const story = addStory(w, [ktla, nbc], {lastFact: ago(30), image: ktla, facts: [[ago(40), 'About 60 acres'], [ago(30), 'Grew to 400 acres']]});
+    const story = addStory(w, [ktla, nbc], {lastFact: ago(30), image: ktla, seenAt: ago(29), facts: [[ago(40), 'About 60 acres'], [ago(30), 'Grew to 400 acres']]});
     expect(files(images)).toEqual([`${ktla}-large.png`, `${ktla}-thumb.png`, `${nbc}-large.png`, `${nbc}-thumb.png`]);
     expect(storyDetail(w.store, story).facts).toHaveLength(2);
     expect(articleDetail(w.store, nbc).text).toBe('A brush fire in the hills…');
@@ -128,6 +128,30 @@ describe('the archive', () => {
     expect(archived.image).toMatchObject({large: null, outlet: 'KTLA', thumb: {width: 4, height: 3}});
     // The full text goes; the feed's summary and the link stay.
     expect(articleDetail(w.store, nbc)).toMatchObject({text: null, feed_summary: 'The feed\'s summary', image: null});
+  });
+
+  test('a story that leaves unseen keeps its large copy for Missed\'s lead until it\'s seen (the polish audit\'s news-09)', () => {
+    const {w, images, source} = newsWorld();
+    const ktla = addArticle(w, source.id, {outlet: 'KTLA', at: ago(30)});
+    const nbc = addArticle(w, source.id, {outlet: 'NBC Los Angeles', at: ago(31)});
+    for (const article of [ktla, nbc]) for (const variant of ['large', 'thumb'] as const) saveNewsImage(w.store, images, article, variant, copy);
+    const story = addStory(w, [ktla, nbc], {lastFact: ago(30), image: ktla});
+
+    w.advance(18 * HOUR);
+    expect(expireNews(w.store, images)).toMatchObject({missed: [story]});
+    expect(files(images)).toEqual([`${ktla}-large.png`, `${ktla}-thumb.png`]);
+    const lead = missedSchema.parse(missed(w.store)).days[0]!.stories[0]!;
+    expect(lead.image).toMatchObject({large: {width: 4, height: 3}, thumb: {width: 4, height: 3}});
+
+    // Seen, it leaves Missed; its large copy stays while the visit that saw it may still show it,
+    // then goes, as the archive keeps only the thumbnail.
+    markSeen(w.store, [story]);
+    w.advance(59 * 60_000);
+    expect(expireNews(w.store, images).files).toEqual([]);
+    w.advance(60_000);
+    expect(expireNews(w.store, images).files).toEqual([`${ktla}-large.png`]);
+    expect(files(images)).toEqual([`${ktla}-thumb.png`]);
+    expect(storySchema.parse(storyDetail(w.store, story)).image).toMatchObject({large: null, thumb: {width: 4, height: 3}});
   });
 
   test('goes 90 days after the last fact, with its articles and files; articles never sorted go then too', () => {

@@ -7,7 +7,7 @@
 //   Local", "7 more in Tech", "4 more in AI" and "9 more in General" (one AI story is also General's).
 // - Missed: 14 stories that left the page unseen on Tuesday (Local 3, Tech 2, AI 4, General 5): their
 //   last facts came on Sunday, 48 hours before. They're archived as the expiry leaves them: no facts,
-//   no text, only their thumbnail.
+//   no text, only their own image's large copy and thumbnail.
 // - Upcoming: the Apple event, Tue Oct 20 at 10 AM, from the invites story.
 // - Sources: the built-in list and the local stand-ins, with invented `.example` URLs for anything
 //   not on the built-in list, all `dev` so nothing ever fetches them. FOX 11 is failing (board 30a).
@@ -395,9 +395,9 @@ export function seedNews(store: Store, imagesDir: string | null) {
         articleIds.push(row.id);
         if (article.image !== undefined) {
           imageArticle ??= {id: row.id, hue: article.image};
-          // An archived story keeps only its own thumbnail.
-          if (!story.missed) saveNewsImage(store, imagesDir, row.id, 'large', {bytes: tintedImage(LARGE_SIZE.width, LARGE_SIZE.height, article.image), mimeType: 'image/png', ...LARGE_SIZE});
+          // A story in Missed keeps only its own image's copies, as the expiry leaves them (keepsImage).
           if (!story.missed || imageArticle.id === row.id) {
+            saveNewsImage(store, imagesDir, row.id, 'large', {bytes: tintedImage(LARGE_SIZE.width, LARGE_SIZE.height, article.image), mimeType: 'image/png', ...LARGE_SIZE});
             saveNewsImage(store, imagesDir, row.id, 'thumb', {bytes: tintedImage(THUMB_SIZE.width, THUMB_SIZE.height, article.image), mimeType: 'image/png', ...THUMB_SIZE});
           }
         }

@@ -154,9 +154,10 @@ describe('Missed', () => {
       '● Overnight closures on the 10 Freeway through Friday · KTLA +2 · img',
     ]);
     for (const story of stories) {
-      // Each left 48 hours after its last fact, and keeps only its thumbnail and no timeline.
+      // Each left 48 hours after its last fact, and keeps only its own image (large, for a day's lead,
+      // and its thumbnail) and no timeline.
       expect(Date.parse(story.expired_at) - Date.parse(story.last_new_fact_at)).toBe(48 * 3_600_000);
-      expect(story.image?.large ?? null).toBeNull();
+      if (story.image) expect(story.image.large).not.toBeNull();
       expect(storyDetail(store, story.id).facts).toEqual([]);
     }
   });

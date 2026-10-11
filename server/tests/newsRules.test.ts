@@ -67,6 +67,9 @@ describe('image copies', () => {
     ['archived: the story\'s thumbnail stays for its rows', 'archive', 'thumb', 1, true],
     ['archived: the story\'s large copy goes', 'archive', 'large', 1, false],
     ['archived: another source\'s thumbnail goes', 'archive', 'thumb', 2, false],
+    ['in Missed: the story\'s large copy stays for its lead (news-09)', 'missed', 'large', 1, true],
+    ['in Missed: the story\'s thumbnail stays', 'missed', 'thumb', 1, true],
+    ['in Missed: another source\'s large copy goes', 'missed', 'large', 2, false],
     ['purged: even the thumbnail goes', 'purge', 'thumb', 1, false],
   ])('%s', (_, stage, variant, articleId, kept) => {
     expect(keepsImage(stage, {articleId, variant}, 1)).toBe(kept);

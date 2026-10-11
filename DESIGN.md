@@ -571,7 +571,8 @@ Board 28 replaces All's list.
   the count in `ink3` on the right.
 - **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right).
 - Under each day, up to 5 stories per section, biggest first, the first as a lead. Each row names
-  its section in the meta.
+  its section in the meta. A lead's image is its story's large copy, kept while the story is in
+  Missed, never its thumbnail stretched (#115).
 - A story leaves Missed once it's seen. When Missed empties, the strip goes and the view returns
   to All.
 
@@ -1346,3 +1347,8 @@ it changes what's on screen.
     line of its own, marked "•" or with its number (a line ending "at these sites:" is followed by the
     sites), and a list of nothing but links (the outlet's other stories) stays out. A paragraph asking the reader to become a member, before the story or after
     it, is left out (Andy, 2026-10-11, polish audit extra-10).
+115. **Missed's leads keep their large images:** a story that leaves the page unseen keeps its own
+    image's large copy as well as its thumbnail, so each day's lead in Catch up is drawn as sharply
+    as on the page rather than from a 144 × 96 thumbnail stretched to 232 × 130. The large copy goes
+    an hour after the story is seen (so the visit that saw it keeps its images), and every other copy
+    goes with the page as before (Andy, 2026-10-11, polish audit news-09).
