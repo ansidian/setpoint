@@ -225,6 +225,40 @@ test('a calendar toggled off leaves the grid and the agenda, and comes back on',
   }
 });
 
+/** A token's colour as the page computes it, to compare with an element's. */
+const tokenColour = (page: Page, token: string) => page.evaluate(name => {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--${name})`;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+}, token);
+
+test('SV-56: a day outside the month takes the outside tint, a weekend among them too; a weekend in the month takes the weekend one', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const cell = (date: string) => page.locator(`.cell[data-date="${date}"]`);
+    const fill = (date: string) => cell(date).evaluate(element => getComputedStyle(element).backgroundColor);
+    // Sun Sep 27 and Sat Nov 7 are both outside October and weekends.
+    assert.match((await cell('2026-09-27').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
+    assert.match((await cell('2026-11-07').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
+    assert.equal(await fill('2026-09-27'), await fill('2026-09-28'), 'Sun Sep 27 as Mon Sep 28');
+    assert.equal(await fill('2026-11-07'), await fill('2026-11-02'), 'Sat Nov 7 as Mon Nov 2');
+    assert.notEqual(await fill('2026-10-04'), await fill('2026-09-27'), 'Sun Oct 4 takes the weekend tint');
+    // Selected, Sun Sep 27 is `sub` like any selected day.
+    await cell('2026-09-27').click({position: {x: 100, y: 150}});
+    await until('Sun Sep 27 selected', () => cell('2026-09-27').getAttribute('class'), cls => !!cls?.split(' ').includes('sel'));
+    assert.equal(await fill('2026-09-27'), await tokenColour(page, 'sub'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('selecting a day updates the right pane; an item turns solid; Esc lets it go', async () => {
   const setpoint = await startSetpoint();
   try {
