@@ -13,7 +13,7 @@ import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import path from 'node:path';
 import {after, test} from 'node:test';
-import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {choose, cleanUp, matchGolden, ROOT, startSetpoint, until} from './harness.ts';
 
@@ -40,6 +40,11 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     await page.locator('.settings [data-source="todoist"]', {hasText: 'Inbox · 3 projects'}).waitFor();
     await page.locator('.settings .precision', {hasText: '82%'}).waitFor();
     await page.locator('.hbar.caution').waitFor();
+    // Each day's bar names its day as the app writes dates, "Tue, Oct 6", not "2026-10-06".
+    const {days} = await setpoint.api<PrecisionOut>('GET', '/mail/precision');
+    assert.deepEqual(await page.locator('.settings .spark span').evaluateAll(bars => bars.map(bar => bar.getAttribute('title'))),
+      days.map(day => new Date(`${day.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})));
+    assert.match((await page.locator('.settings .spark span').last().getAttribute('title'))!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
     await page.mouse.move(1500, 1000);

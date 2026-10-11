@@ -11,6 +11,7 @@ import {refresh, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {authorizeGmail, checkSource, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
+import {dayTitle} from '../../logic/calendar.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
 import {mergeSources, moved, precisionText, sparkHeights} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
@@ -90,7 +91,7 @@ export function AccountsPage() {
           </div>
           {precision && (
             <div className="spark" aria-label="Attention precision, last 30 days">
-              {sparkHeights(precision.days).map((height, index) => <span key={precision.days[index]!.date} style={{height}} title={precision.days[index]!.date} />)}
+              {sparkHeights(precision.days).map((height, index) => <span key={precision.days[index]!.date} style={{height}} title={dayTitle(precision.days[index]!.date)} />)}
             </div>
           )}
         </div>
