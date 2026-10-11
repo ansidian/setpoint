@@ -21,9 +21,12 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   when they change the screen, in DESIGN.md › Decided while building, with Andy's agreement.
 - Commit one logical change at a time with a single-line `feat:`, `fix:` or `chore:` message.
   Never add an agent co-author.
-- Anything outward-facing needs Andy's go-ahead first: creating a remote, pushing, deploying,
-  provider consoles (redirect URIs, Pub/Sub, the Todoist webhook), mantel or Home Assistant, and
-  every cutover step.
+- Pushing `master` needs no go-ahead (D119): push once a change's checks pass and its diff has been
+  looked over for private details (Public repository, below). Never push tags; `pre-public` stays
+  local.
+- Anything else outward-facing needs Andy's go-ahead first: deploying (only a pushed commit),
+  creating a remote, provider consoles (redirect URIs, Pub/Sub, the Todoist webhook), mantel or
+  Home Assistant.
 
 ## Verification
 
@@ -77,7 +80,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Public repository
 
-This folder becomes the public `setpoint` repository at cutover. Never commit private domains,
-addresses, account addresses or tailnet names; host details live in the private ops
-workspace. Sample data is invented (example domains), and secrets, `.env` files and `data/` stay
-out of git.
+This folder is the public `ansidian/setpoint` repository (since 2026-10-11, SV-9), so every
+commit on `master` is public once pushed. Never commit private domains, addresses, account
+addresses or tailnet names; host details live in the private ops workspace. Code calls its owner
+"the user", not Andy (D115). Sample data is invented (example domains and Microsoft's fictional
+companies), and secrets, `.env` files and `data/` stay out of git.
