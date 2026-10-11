@@ -168,6 +168,12 @@ export function connectNote(page: string, search: string): string | null {
   return null;
 }
 
+/** Whether connectNote's line says the connection failed, so the toast leads with the failure's glyph. */
+export function connectFailed(page: string, search: string): boolean {
+  const query = new URLSearchParams(search);
+  return page === 'todoist' && query.get('connected') !== null ? query.get('connected') !== '1' : query.has('error');
+}
+
 /** The settings with a change applied, as they show at once before the server answers: each section's fields over its own. */
 export function withPatch(settings: Settings, patch: SettingsPatch): Settings {
   const next = {...settings} as Record<string, object>;

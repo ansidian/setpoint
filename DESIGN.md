@@ -764,7 +764,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   cursor, as in darma. Enter opens.
 - **Done** (`H`) leaves Attention; whether the email was opened first is recorded for triage, never
   asked. Only Attention mail not yet Done offers it (#93). **Trash** (`E`) offers Undo for 6 seconds, as v1 does, in the export's `.toast` (a 40 px pill
-  at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board).
+  at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
+  six seconds drain as a hairline and wait while the pointer rests on the toast (#140).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (Unread or All, #105) ⇧I ⇧U ⌘Enter;
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
@@ -1566,3 +1567,13 @@ it changes what's on screen.
 264. **On the phone the sign-in card sits 18% from the top** rather than near the middle, so the
     keyboard never covers Sign in; the mark shown while Setpoint can't be reached (#118) stands there
     too. The desktop is unchanged (Andy, 2026-10-11, polish audit phone-08; darma D145).
+140. **The one toast says what happened** (amending #13 and #32): it drops in over 180 ms (from 8 px
+    above at .96, from below on the phone), and again when a new one replaces the last, so two Trashes
+    read as two; going, it fades over 120 ms. It leads with a 16 px glyph by what it says: `check` in
+    `good` for a thing done ("Marked Done", "Marked 14 as read", "Completed Pay rent"), `delete` in
+    `ink3` for one taken away ("Moved to Trash", "Deleted Dentist"), and `error` in `alert` for a
+    failure, which also wears an `alert` ring (40%) and an 8% `alert` wash on its fill, its words
+    staying `ink`, and stays 8 seconds rather than 6 so the provider's words can be read. Any other
+    line has no glyph. A line with an action shows its time draining as a 2 px hairline (`ink3` at
+    45%) along its foot, and both wait while the pointer rests on it (Andy, 2026-10-11, polish audit
+    shell-03, shell-04, shell-12, motion-03, states-07).

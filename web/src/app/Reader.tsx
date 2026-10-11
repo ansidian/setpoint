@@ -91,7 +91,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
   const toggleRead = () => {
     setUnreadFor(markedUnread ? null : id);
     setToggles({id, count: toggled + 1});
-    void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message));
+    void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread.
@@ -194,7 +194,7 @@ function useCards(id: number) {
         proposal => settle(current => (current?.kind === kind ? {kind, proposal} : current)),
         (error: Error) => {
           settle(current => (current?.kind === kind ? null : current));
-          showToast(error.message);
+          showToast(error.message, null, 'failed');
         },
       );
     },

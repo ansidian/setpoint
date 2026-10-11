@@ -5,8 +5,10 @@
 // opens it over the Inbox. Below 640 px the phone's shell (Phone.tsx) takes the sidebar's place,
 // Calendar is the agenda, and Settings, ⌘K and News stay on the desktop (a News address opens the Inbox).
 import {useEffect} from 'react';
+import type {CSSProperties} from 'react';
 import {useOfflineSince} from '../api/live.ts';
-import {connectNote} from '../logic/settings.ts';
+import {connectFailed, connectNote} from '../logic/settings.ts';
+import {Icon} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
@@ -21,7 +23,7 @@ import {openSettings} from './settings/store.ts';
 import {Sidebar} from './Sidebar.tsx';
 import {OfflinePill} from './states/States.tsx';
 import {toInbox} from './toInbox.ts';
-import {dismissToast, showToast, useToast} from './toast.ts';
+import {dismissToast, holdToast, showToast, useToast} from './toast.ts';
 
 export function App() {
   const route = useRoute();
@@ -34,7 +36,7 @@ export function App() {
     if (!settingsLink) return;
     // Back from Google's or Todoist's consent: say how it went.
     const note = connectNote(settingsLink, window.location.search);
-    if (note) showToast(note);
+    if (note) showToast(note, null, connectFailed(settingsLink, window.location.search) ? 'failed' : null);
     openSettings(settingsLink);
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
@@ -98,13 +100,22 @@ export function App() {
   );
 }
 
-/** The one toast, over every page and above Settings; its action runs once, then it goes. */
+const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error'} as const;
+
+/**
+ * The one toast, over every page and above Settings; its action runs once, then it goes. Keyed by
+ * its id, so one replacing another drops in afresh. It leads with its tone's glyph, and a line with
+ * an action shows its time draining as a hairline, both waiting while the pointer rests on it.
+ */
 function ToastPill() {
   const toast = useToast();
   if (!toast) return null;
-  const {action} = toast;
+  const {action, tone} = toast;
+  const className = ['toast', tone, action && 'timed', toast.held && 'held', toast.leaving && 'leaving'].filter(Boolean).join(' ');
   return (
-    <div className="toast" role="status">
+    <div key={toast.id} className={className} role="status" style={{'--toast-ms': `${toast.ms}ms`} as CSSProperties}
+      onPointerEnter={() => holdToast(toast.id, true)} onPointerLeave={() => holdToast(toast.id, false)}>
+      {tone && <span className="tone"><Icon name={TONE_GLYPHS[tone]} size={16} /></span>}
       <span>{toast.text}</span>
       {action && <button className="btn ghost sm" type="button" onClick={() => {
         action.run();

@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, minutesBefore, moved, placed, precisionText, ruleWords, senderMatch, shifts, sparkHeights, splitRules, taskTime, withPatch,
+  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, minutesBefore, moved, placed, precisionText, ruleWords, senderMatch, shifts, sparkHeights, splitRules, taskTime, withPatch,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -106,10 +106,13 @@ describe('Settings', () => {
   test.each([[5, '5 min'], [15, '15 min'], [60, '1 hour']])('code expiry %i reads %s', (minutes, text) => expect(expiryLabel(minutes)).toBe(text));
 
   test.each([
-    ['accounts', '', null], ['accounts', '?connected=6', 'Gmail is connected'], ['accounts', '?error=access_denied', 'Gmail couldn’t be connected, access denied'],
-    ['accounts', '?error=google_not_configured', 'Google sign-in isn’t set up on this Setpoint'],
-    ['todoist', '?connected=1', 'Todoist is connected'], ['todoist', '?connected=0', 'Todoist couldn’t be connected, try again'], ['notifications', '', null],
-  ])('back at /settings/%s%s: %j', (page, search, note) => expect(connectNote(page, search)).toBe(note));
+    ['accounts', '', null, false], ['accounts', '?connected=6', 'Gmail is connected', false], ['accounts', '?error=access_denied', 'Gmail couldn’t be connected, access denied', true],
+    ['accounts', '?error=google_not_configured', 'Google sign-in isn’t set up on this Setpoint', true],
+    ['todoist', '?connected=1', 'Todoist is connected', false], ['todoist', '?connected=0', 'Todoist couldn’t be connected, try again', true], ['notifications', '', null, false],
+  ])('back at /settings/%s%s: %j, a failure %s', (page, search, note, failed) => {
+    expect(connectNote(page, search)).toBe(note);
+    expect(connectFailed(page, search)).toBe(failed);
+  });
 });
 
 describe('usageLine: Settings › AI\'s 30 days, saying what it counts', () => {

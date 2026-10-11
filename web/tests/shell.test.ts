@@ -1,5 +1,5 @@
 // The shell's small rules as tables: the Today block, the tab title, the routes, a plain-text
-// body's paragraphs, and what a live event refreshes.
+// body's paragraphs, what a live event refreshes, and the toast's tone.
 import type {ItemOut, LiveEvent} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE, deepLinkPath} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -9,6 +9,7 @@ import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
 import {shownTasks, todayBlock, todayRange} from '../src/logic/today.ts';
+import {toastMs, toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -186,5 +187,20 @@ describe('live events refresh only what they name', () => {
     ['nothing named, sorting\'s state changed: the Unsorted and first-run lines', {type: 'news', stories: [], sections: [], sources: []}, ['/news/status', '/news/unsorted']],
   ] as [string, LiveEvent, string[]][])('news: %s', (_name, event, expected) => {
     expect(pathsForEvent(event, news)).toEqual(expected);
+  });
+});
+
+describe('the toast\'s tone by its words (the one toast: done, taken away, failed)', () => {
+  test.each([
+    ['Marked Done', 'done'], ['Marked 14 as read', 'done'], ['Completed Pay rent', 'done'],
+    ['Moved to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Deleted 2 items', 'gone'],
+    ['Couldn\'t pin it, Gmail didn\'t answer in time.', 'failed'], ['Couldn\'t copy it', 'failed'], ['Couldn’t reorder rules, Can’t reach Setpoint', 'failed'],
+    // Every other line has no glyph.
+    ['Moved Dentist to Thu, Oct 8', null], ['Reopened Pay rent', null], ['Added to Classes', null], ['Copied Dentist, ⌘V pastes on the selected day', null],
+    ['Showed 4 calendars', null], ['Created Haircut, Fri, Oct 9', null], ['Sign out of Setpoint?', null], ['Create or cancel the draft first', null],
+  ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
+
+  test('a toast stays six seconds, a failure eight', () => {
+    expect([toastMs(null), toastMs('done'), toastMs('gone'), toastMs('failed')]).toEqual([6000, 6000, 6000, 8000]);
   });
 });

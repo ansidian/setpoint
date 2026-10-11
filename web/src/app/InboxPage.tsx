@@ -347,7 +347,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         undos.splice(at, 1);
         dismissToast();
         setKept(state => (state.visit === from ? {...state, out: new Set([...state.out].filter(one => !ids.includes(one))), held: [...state.held, ...places]} : state));
-        ids.forEach(id => void markUnread(id).catch((error: Error) => showToast(error.message)));
+        ids.forEach(id => void markUnread(id).catch((error: Error) => showToast(error.message, null, 'failed')));
       };
       undos.push(back);
       showToast(`Marked ${ids.length} as read`, {label: 'Undo', run: back});

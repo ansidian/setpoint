@@ -76,7 +76,8 @@ test('Done on the open email opens the next, which reads it; the pill drops for 
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await page.locator('.arow.open', {hasText: 'Northwind Talent'}).waitFor();
     await until('the pill comes back', () => pill(page), text => text === '2');
-    assert.equal(await page.locator('.toast').count(), 0);
+    // Undo takes the toast away: it fades out over 120 ms, then goes.
+    await page.locator('.toast').waitFor({state: 'detached'});
     // FYI mail has no Done (#93): opening it already read it. Fabrikam, in Career, opens with Trash
     // first in the tools, and H leaves it where it is, with no toast.
     await page.locator('.row', {hasText: 'Fabrikam'}).click();
@@ -150,7 +151,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     await until('back from the trash', () => inAll(setpoint, signIn), present => present, 5000);
-    assert.equal(await page.locator('.toast').count(), 0);
+    await page.locator('.toast').waitFor({state: 'detached'});
 
     // Trash from the cursor row, no reader: nothing opens, and Undo is offered for 6 seconds.
     await page.keyboard.press('Escape');
@@ -429,7 +430,7 @@ test('Mark all as read says how many it read, with Undo; ⌘K\'s runs the same (
     await until('the server read them', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '3,5', 5000);
     // Undo marks those 14 unread again, and they come back to the list.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
-    assert.equal(await page.locator('.toast').count(), 0);
+    await page.locator('.toast').waitFor({state: 'detached'});
     await until('unread again', () => counts(setpoint).then(value => value.unread), value => value === 19, 15000);
     // Back in the list, not the header still folding away from before.
     await page.locator('.gh:not(.leaving)', {hasText: 'Noise'}).waitFor({timeout: 5000});
@@ -1281,7 +1282,8 @@ test('UX #16 and #17: Mark all as read\'s footer goes once nothing is left to ma
     await until('the footer goes', () => footer.count(), count => count === 0);
     await page.keyboard.press('Meta+z');
     await until('unread again', () => counts(setpoint).then(value => value.unread), value => value === 19, 15000);
-    assert.equal(await page.locator('.toast').count(), 0);
+    // ⌘Z takes the toast away as its Undo does: it fades out over 120 ms, then goes.
+    await page.locator('.toast').waitFor({state: 'detached'});
     await footer.waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
