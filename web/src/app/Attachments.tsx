@@ -1,15 +1,21 @@
 // An email's attachments (DESIGN.md › The reader): 44 px cards, radius 14, 280 wide, with the type's
-// icon, the name and "PDF · 184 KB". PDF, image and CSV open a preview over the reading pane, which
-// Esc or × closes. Every card and the preview's head offer Download; a card with no preview is one
-// Download link (SV-25).
+// tile (its colour and glyph, #163), the name and "PDF · 184 KB". PDF, image and CSV open a preview
+// over the reading pane, which Esc or × closes. Every card and the preview's head offer Download; a
+// card with no preview is one Download link (SV-25).
 import type {AttachmentOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import {attachmentBlob, attachmentUrl} from '../api/mail.ts';
-import {attachmentLabel, parseCsv, previewKind} from '../logic/reader.ts';
-import type {PreviewKind} from '../logic/reader.ts';
+import {attachmentLabel, attachmentType, parseCsv, previewKind} from '../logic/reader.ts';
+import type {AttachmentType, PreviewKind} from '../logic/reader.ts';
+import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 
 const CSV_ROWS = 500;
+
+/** Each type's glyph on its tile; the tile's colour is the stylesheet's, by `data-type`. */
+const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
+  pdf: 'picture_as_pdf', image: 'image', sheet: 'table_chart', doc: 'description', archive: 'folder_zip', calendar: 'calendar_month', other: 'draft',
+};
 
 export function Attachments({messageId, files}: {messageId: number; files: AttachmentOut[]}) {
   const [open, setOpen] = useState<AttachmentOut | null>(null);
@@ -19,9 +25,10 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
       <div className="attachments">
         {files.map(file => {
           const kind = previewKind(file);
+          const type = attachmentType(file);
           const about = (
             <>
-              <span className="type"><Icon name={kind === 'pdf' ? 'picture_as_pdf' : 'layers'} /></span>
+              <span className="type"><Icon name={TYPE_GLYPHS[type]} /></span>
               <span className="grow names">
                 <span className="ell name selectable">{file.filename}</span>
                 <span className="size num">{attachmentLabel(file)}</span>
@@ -29,12 +36,12 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
             </>
           );
           return kind ? (
-            <div key={file.id} className="attach" data-id={file.id}>
+            <div key={file.id} className="attach" data-id={file.id} data-type={type}>
               <button type="button" className="open" onClick={() => setOpen(file)}>{about}<span className="look"><Icon name="visibility" size={16} /></span></button>
               <Download messageId={messageId} file={file} />
             </div>
           ) : (
-            <a key={file.id} className="attach" data-id={file.id} href={attachmentUrl(messageId, file.id)} download={file.filename}>{about}<span className="dl">Download</span></a>
+            <a key={file.id} className="attach" data-id={file.id} data-type={type} href={attachmentUrl(messageId, file.id)} download={file.filename}>{about}<span className="dl"><Icon name="download" size={16} />Download</span></a>
           );
         })}
       </div>
@@ -44,7 +51,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
 }
 
 function Download({messageId, file}: {messageId: number; file: AttachmentOut}) {
-  return <a className="dl" href={attachmentUrl(messageId, file.id)} download={file.filename}>Download</a>;
+  return <a className="dl" href={attachmentUrl(messageId, file.id)} download={file.filename}><Icon name="download" size={16} />Download</a>;
 }
 
 type Loaded = {state: 'loading'} | {state: 'failed'; message: string} | {state: 'ready'; url: string; rows: string[][] | null};

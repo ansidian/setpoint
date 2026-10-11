@@ -3,7 +3,7 @@
 import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, factRows, fileSize, hasRemoteContent, paneWidth, parseCsv, previewKind, readerActions, remoteImages, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, parseCsv, previewKind, readerActions, remoteImages, senderLine, whenLabel} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -128,6 +128,33 @@ describe('attachments', () => {
   ])('%s', (_name, file, label, kind) => {
     expect(attachmentLabel(file)).toBe(label);
     expect(previewKind(file)).toBe(kind);
+  });
+
+  // Each card's type tile (#163): its colour and glyph say what the file is before its name does.
+  test.each([
+    ['a PDF', 'Renewal agreement.pdf', 'application/pdf', 'pdf'],
+    ['a PDF by its MIME type alone', 'statement', 'application/pdf', 'pdf'],
+    ['a PNG', 'Unit 4B floor plan.png', 'image/png', 'image'],
+    ['a photo', 'IMG_2041.JPG', 'image/jpeg', 'image'],
+    ['an SVG, though it has no preview', 'logo.svg', 'image/svg+xml', 'image'],
+    ['a CSV', 'Rent ledger.csv', 'text/csv', 'sheet'],
+    ['an Excel file', 'Budget.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'sheet'],
+    ['an old Excel file', 'Budget.xls', 'application/vnd.ms-excel', 'sheet'],
+    ['a Numbers file', 'Trip.numbers', 'application/octet-stream', 'sheet'],
+    ['a Word file', 'Cover letter.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'doc'],
+    ['an old Word file', 'Lease.doc', 'application/msword', 'doc'],
+    ['a Pages file', 'Essay.pages', 'application/octet-stream', 'doc'],
+    ['rich text', 'Notes.rtf', 'application/rtf', 'doc'],
+    ['plain text', 'readme.txt', 'text/plain', 'doc'],
+    ['a ZIP', 'Photos.zip', 'application/zip', 'archive'],
+    ['a gzip', 'logs.tar.gz', 'application/gzip', 'archive'],
+    ['a RAR', 'Scans.rar', 'application/vnd.rar', 'archive'],
+    ['a 7z', 'Backup.7z', 'application/x-7z-compressed', 'archive'],
+    ['an invitation', 'invite.ics', 'text/calendar', 'calendar'],
+    ['an invitation without an extension', 'invite', 'text/calendar', 'calendar'],
+    ['anything else', 'setup.dmg', 'application/x-apple-diskimage', 'other'],
+  ])('%s is %s', (_name, filename, mime_type, type) => {
+    expect(attachmentType({filename, mime_type})).toBe(type);
   });
 
   test.each([

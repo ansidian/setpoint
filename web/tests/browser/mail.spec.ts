@@ -754,10 +754,57 @@ test('every attachment downloads: its card\'s Download, the preview\'s, and a ca
     await other.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     const zip = other.locator('a.attach', {hasText: 'Renewal agreement.zip'});
     assert.equal(await zip.locator('.dl').textContent(), 'Download');
+    // An archive's tile is warm, with folder_zip (#163).
+    assert.deepEqual(await glyphs(zip.locator('.type .icon')), [['folder_zip', '18', await tokenColour(other, 'warm')]]);
     download = other.waitForEvent('download');
     await zip.click();
     await download;
     assert.equal(await other.locator('.attach-preview').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** A background as the page computes it, mixes included. */
+const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
+  const probe = document.createElement('div');
+  probe.style.background = value;
+  document.body.append(probe);
+  const computed = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return computed;
+}, background);
+
+test('#163: an attachment\'s type tile says what it is in its colour and glyph, Download carries its glyph, and the pointer lifts the card', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
+    const card = page.locator('.attach', {hasText: 'Renewal agreement.pdf'});
+    const tile = card.locator('.type');
+    await tile.waitFor();
+    assert.equal(await card.evaluate(element => getComputedStyle(element).padding), '0px 8px 0px 7px');
+    // 30 px, radius 8, concentric in the 44 px card (7 px from its edges), 12 px before the name.
+    assert.deepEqual(await tile.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const outer = element.closest('.attach')!.getBoundingClientRect();
+      const names = element.closest('.attach')!.querySelector('.names')!.getBoundingClientRect();
+      return [box.width, box.height, getComputedStyle(element).borderRadius, box.left - outer.left, box.top - outer.top, names.left - box.right];
+    }), [30, 30, '8px', 7, 7, 12]);
+    const alert = await tokenColour(page, 'alert');
+    assert.deepEqual(await glyphs(tile.locator('.icon')), [['picture_as_pdf', '18', alert]]);
+    assert.equal(await tile.evaluate(element => getComputedStyle(element).backgroundColor), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)'));
+    const download = card.locator('.dl');
+    assert.deepEqual(await glyphs(download.locator('.icon')), [['download', '16', await tokenColour(page, 'ink2')]]);
+    assert.deepEqual(await download.evaluate(element => [getComputedStyle(element).columnGap, getComputedStyle(element).padding]), ['6px', '0px 10px 0px 8px']);
+    // Under the pointer: the tile deepens to 22%, the eye turns ink, and in Night the card lifts to cardOn.
+    await card.locator('.names').hover();
+    const deeper = await backgroundOf(page, 'color-mix(in oklch, var(--alert) 22%, transparent)');
+    await until('the tile deepens', () => tile.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === deeper);
+    const [ink, cardOn] = [await tokenColour(page, 'ink'), await backgroundOf(page, 'var(--cardOn)')];
+    await until('the eye turns ink', () => card.locator('.look').evaluate(element => getComputedStyle(element).color), colour => colour === ink);
+    await until('the card lifts', () => card.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === cardOn);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

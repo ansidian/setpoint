@@ -103,6 +103,29 @@ export function previewKind(file: Pick<AttachmentOut, 'mime_type' | 'filename'>)
   return null;
 }
 
+export type AttachmentType = 'pdf' | 'image' | 'sheet' | 'doc' | 'archive' | 'calendar' | 'other';
+
+const TYPE_EXTENSIONS: [Exclude<AttachmentType, 'other'>, RegExp][] = [
+  ['pdf', /^pdf$/], ['image', /^(png|jpe?g|gif|webp|heic|heif|svg|bmp|tiff?)$/], ['sheet', /^(csv|xlsx?|numbers)$/],
+  ['doc', /^(docx?|pages|rtf|txt)$/], ['archive', /^(zip|gz|tgz|rar|7z)$/], ['calendar', /^ics$/],
+];
+const TYPE_MIMES: [Exclude<AttachmentType, 'other'>, RegExp][] = [
+  ['pdf', /^application\/pdf$/], ['image', /^image\//], ['sheet', /^(text\/csv|application\/vnd\.ms-excel|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.)/],
+  ['doc', /^(text\/plain|application\/(msword|rtf)|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.)/],
+  ['archive', /^application\/(zip|gzip|x-gzip|vnd\.rar|x-rar-compressed|x-7z-compressed)$/], ['calendar', /^text\/calendar$/],
+];
+
+/**
+ * What an attachment is, for its card's type tile (#163): by its name's extension, else its MIME
+ * type. PDF, image, spreadsheet (CSV, Excel, Numbers), document (Word, Pages, RTF, text), archive
+ * (ZIP, gzip, RAR, 7z), invitation (ICS), or anything else.
+ */
+export function attachmentType(file: Pick<AttachmentOut, 'filename' | 'mime_type'>): AttachmentType {
+  const extension = /\.([a-z0-9]{1,8})$/i.exec(file.filename)?.[1]?.toLowerCase();
+  const byName = extension ? TYPE_EXTENSIONS.find(([, pattern]) => pattern.test(extension))?.[0] : undefined;
+  return byName ?? TYPE_MIMES.find(([, pattern]) => pattern.test(file.mime_type.toLowerCase()))?.[0] ?? 'other';
+}
+
 /** "184 KB", "1.2 MB", "312 bytes": binary units, as mail clients show them. */
 export function fileSize(bytes: number): string {
   if (bytes < 1024) return bytes === 1 ? '1 byte' : `${bytes} bytes`;

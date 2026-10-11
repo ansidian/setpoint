@@ -265,8 +265,9 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
   **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
   contosocoffee.example" (trust per domain).
-- **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with type
-  icon, name and size; PDF, image and CSV open a preview.
+- **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
+  type's tile (#163), name and size, then the preview's eye and **Download** with its glyph; PDF,
+  image and CSV open a preview.
 
 ### Search
 
@@ -1404,3 +1405,12 @@ it changes what's on screen.
     before the headline instead. An outlet's story without an image still leaves the column empty,
     never a placeholder. The story's lead names its hazard source (`hazard` in the API) (Andy,
     2026-10-11, polish audit news-08).
+163. **An attachment's tile says what it is:** each card leads with a 30 px tile, radius 8, concentric
+    in the card (padding 0 8 0 7, 12 px before the name), the type's colour at 14% with its glyph
+    in that colour: PDF `alert` `picture_as_pdf`, image `violet` `image`, spreadsheet (CSV, Excel,
+    Numbers) `comf` `table_chart`, document (Word, Pages, RTF, text) `cool` `description`, archive
+    (ZIP, gzip, RAR, 7z) `warm` `folder_zip`, invitation (ICS) `caution` `calendar_month`, anything
+    else `ink2` `draft`; the type from the name's extension, else the MIME type. **Download** carries
+    a 16 px `download` (gap 6, padding 0 10 0 8). Under the pointer the ring stays `edgeHover`, the
+    tile deepens to 22%, the eye turns `ink`, and in Night the card fills `cardOn` (Light stays
+    white) (Andy, 2026-10-11, polish audit reader-07).
