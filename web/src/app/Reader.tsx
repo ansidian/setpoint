@@ -11,7 +11,7 @@
 // On the phone (DESIGN.md › Phone; board 21) it covers the page: Back and Pin at the top, the email
 // full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
 import type {AccountOut, ItemKind, MessageOut, MessageRowOut, ProposalOut} from '@setpoint/shared';
-import {Fragment, useEffect, useRef, useState} from 'react';
+import {Fragment, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties} from 'react';
 import {useResource} from '../api/client.ts';
 import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
@@ -68,6 +68,16 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
   // Done only on Attention mail not yet Done (#93).
   const listed = message ?? (row?.id === id ? row : undefined);
   const doneable = listed ? readerActions(listed).done : false;
+  // The tools draw from the email's row until the email itself is in, so they're right at once:
+  // Unpin on pinned mail, and Open in Gmail on Gmail's mail only, its place held while that's unknown.
+  const pinned = listed?.pinned ?? false;
+  const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
+  const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
+  // Each email opens at its top, one shown before (straight from the cache) too.
+  const scroller = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = 0;
+  }, [id]);
   const phone = usePhone();
   // Mark unread on the phone keeps the email open and offers Mark read.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
@@ -98,19 +108,21 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
         <div className="ph-top">
           <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />Inbox</button>
           <span className="grow" />
-          <button className="ibtn ph-icon" type="button" aria-label={message?.pinned ? 'Unpin' : 'Pin'} aria-pressed={message?.pinned ?? false} onClick={actions.pin}>
-            <Icon name={message?.pinned ? 'keep-fill' : 'keep'} size={20} />
+          <button className="ibtn ph-icon" type="button" aria-label={pinned ? 'Unpin' : 'Pin'} aria-pressed={pinned} onClick={actions.pin}>
+            <Icon name={pinned ? 'keep-fill' : 'keep'} size={20} />
           </button>
         </div>
       )}
       <div className="rd-tools">
         {doneable && <button className="tool" type="button" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         <button className="tool" type="button" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
-        <button className={message?.pinned ? 'tool active' : 'tool'} type="button" aria-pressed={message?.pinned ?? false} onClick={actions.pin}>
-          <Icon name={message?.pinned ? 'keep-fill' : 'keep'} />{message?.pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
+        <button className={pinned ? 'tool active' : 'tool'} type="button" aria-pressed={pinned} onClick={actions.pin}>
+          <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
         </button>
-        {message?.open_url !== null && (
-          <button className="tool" type="button" onClick={actions.openInGmail}><Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span></button>
+        {gmail !== false && (
+          <button className="tool" type="button" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
+            <Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span>
+          </button>
         )}
         <span className="reply-slot" />
         <span className="grow" />
@@ -126,7 +138,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
           </span>
         )}
       </div>
-      <div className="rd-scroll">
+      <div className="rd-scroll" ref={scroller}>
         {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} />}
       </div>
       {phone && (
@@ -134,7 +146,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
           {doneable && <button type="button" onClick={actions.done}><Icon name="check" size={22} />Done</button>}
           <button type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
           <button type="button" onClick={toggleRead}><Icon name={markedUnread ? 'mark_email_read' : 'mark_email_unread'} size={22} />{markedUnread ? 'Mark read' : 'Mark unread'}</button>
-          {message?.open_url !== null && <button type="button" onClick={actions.openInGmail}><Icon name="open_in_new" size={22} />Open in Gmail</button>}
+          {gmail !== false && <button type="button" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}><Icon name="open_in_new" size={22} />Open in Gmail</button>}
         </div>
       )}
     </section>

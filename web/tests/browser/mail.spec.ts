@@ -282,6 +282,58 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
   }
 });
 
+test('the reader\'s tools come from the email\'s row before the email has loaded: Unpin on pinned mail, no Open in Gmail on iCloud mail; each email opens at its top', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, '/inbox/all');
+    // The email's own answers are held at the server's door until the tools have been read.
+    let release = () => {};
+    const hold = () => new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let held = hold();
+    await page.route(/\/api\/mail\/messages\/\d+(\/open)?$/, async route => {
+      await held;
+      await route.continue();
+    });
+    const tools = () => page.locator('.rd-tools .tool').evaluateAll(buttons => buttons.map(button => [button.textContent, button.getAttribute('aria-pressed')]));
+    await page.locator('.list.all .row.shelf', {hasText: 'Parkside Apartments'}).click();
+    await page.locator('.list.all .row.shelf.open').waitFor();
+    assert.deepEqual(await tools(), [['TrashE', null], ['UnpinP', 'true'], ['Open in GmailO', null]]);
+    release();
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    assert.deepEqual(await tools(), [['TrashE', null], ['UnpinP', 'true'], ['Open in GmailO', null]]);
+
+    held = hold();
+    await page.locator('.list.all .row', {hasText: 'Apple'}).click();
+    await page.locator('.list.all .row.open', {hasText: 'Apple'}).waitFor();
+    assert.deepEqual(await tools(), [['TrashE', null], ['PinP', 'false']]);
+    release();
+    await page.locator('.rd-subj', {hasText: 'Your iCloud storage is almost full'}).waitFor();
+    assert.deepEqual(await tools(), [['TrashE', null], ['PinP', 'false']]);
+    await page.unroute(/\/api\/mail\/messages\/\d+(\/open)?$/);
+
+    // Each email opens at its top, one shown before (drawn at once, from the cache) too.
+    const short = await setpoint.page({width: 1677, height: 480});
+    await short.goto(`${setpoint.base}/inbox`);
+    const scroller = short.locator('.rd-scroll');
+    const recovery = short.locator('.arow', {hasText: 'Your recovery email was changed'});
+    await recovery.click();
+    await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
+    assert.ok(await scroller.evaluate(element => element.scrollHeight > element.clientHeight + 40), 'the email is taller than the pane');
+    await short.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
+    await short.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await scroller.evaluate(element => element.scrollTo(0, element.scrollHeight));
+    assert.ok(await scroller.evaluate(element => element.scrollTop > 40), 'scrolled down the lease');
+    await recovery.click();
+    await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
+    assert.equal(await scroller.evaluate(element => element.scrollTop), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a key pressed as soon as the hover has moved the cursor acts on the row under the pointer', async () => {
   const setpoint = await startSetpoint();
   try {
