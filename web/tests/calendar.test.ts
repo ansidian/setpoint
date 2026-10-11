@@ -5,7 +5,7 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, hangFrom, isPast, monthEdges, isWeekend, itemDays, itemKey,
+  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, hangFrom, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
   itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
 } from '../src/logic/calendar.ts';
 
@@ -125,6 +125,26 @@ describe('items on days', () => {
     const titles = (cals: CalendarOut[]) => itemsByDay(items, cals, zone).get('2026-10-07')!.map(one => one.title);
     expect(titles(calendars)).toEqual(['Fall break', 'Gym', 'Dentist', 'Lecture', 'CS 101 lab report', 'Pay rent']);
     expect(titles(calendars.map(cal => (cal.name === 'Personal' || cal.name === 'Todoist' ? {...cal, visible: false} : cal)))).toEqual(['Lecture']);
+  });
+
+  // SV-56: what the calendars toggled off hide on a day, so an empty day can say so rather than "No events".
+  test.each<[string, string[], string, number]>([
+    ['every calendar on', [], '2026-10-07', 0],
+    ['Personal and Todoist off: Gym, Dentist and two tasks', ['Personal', 'Todoist'], '2026-10-07', 4],
+    ['every calendar off', ['Personal', 'Classes', 'Todoist'], '2026-10-07', 5],
+    ['Classes off: the lecture alone', ['Classes'], '2026-10-07', 1],
+    ['an all-day event hidden on each of its days', ['Personal'], '2026-10-09', 1],
+    ['a day with nothing on it', ['Personal', 'Classes', 'Todoist'], '2026-10-20', 0],
+  ])('hidden: %s', (_name, off, date, count) => {
+    const items = [
+      task('Pay rent', '2026-10-07'), task('CS 101 lab report', '2026-10-07'),
+      event('Dentist', '2026-10-07', '14:30', '15:30'), event('Gym', '2026-10-07', '07:00', '08:00'),
+      event('Lecture', '2026-10-07', '18:00', '19:15', {calendar_id: 2}),
+      item({title: 'Fall break', all_day: true, start_date: '2026-10-08', end_date: '2026-10-10'}),
+    ];
+    // Loaded twice (two months' ranges), Gym still counts once.
+    const loaded = [...items, {...items[3]!}];
+    expect(hiddenOn(date, loaded, calendars.map(cal => (off.includes(cal.name) ? {...cal, visible: false} : cal)), zone)).toBe(count);
   });
 
   test('an item loaded twice (two months\' ranges) shows once', () => {

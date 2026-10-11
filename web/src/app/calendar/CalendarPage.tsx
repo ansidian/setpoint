@@ -21,7 +21,7 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, updateItem} from '../../api/items.ts';
-import {addMonths, dayTitle, itemDays, itemKey, itemsByDay, monthOf, timeRange} from '../../logic/calendar.ts';
+import {addMonths, dayTitle, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, timeRange} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
 import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating} from '../../logic/manipulate.ts';
@@ -41,6 +41,7 @@ import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
 import {dismissToast, showToast, toastFailure, UNDO_MS} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
+import {showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
 import {DayPane} from './DayPane.tsx';
@@ -216,6 +217,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const {data: dayMonth} = useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)));
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
   const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, calendars, zone, selectedDay]);
+  // What the calendars toggled off hide on that day, so its pane doesn't call it free (SV-56).
+  const paneHidden = useMemo(() => hiddenOn(selectedDay, present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone), [dayMonth, present, calendars, zone, selectedDay]);
+  // Every calendar off: the header says the view is filtered, whatever the day (SV-56).
+  const allHidden = !!calendars?.length && calendars.every(calendar => !calendar.visible);
 
   const solidKey = useSolidKey(selectedKey);
   const selectedItem = useMemo(() => (selectedKey ? drawn.find(item => item.key === selectedKey) ?? paneItems.find(item => item.key === selectedKey) ?? null : null),
@@ -695,7 +700,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   return (
     <>
       <header className="hd">
-        <span className="hd-title cal-title num">{searching ? 'Search' : title}</span>
+        <span className="hd-title cal-title num">
+          {searching ? 'Search' : title}
+          {!searching && allHidden && <span className="cal-hidden ink3" title="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}
+        </span>
         <span className="cal-step">
           <button className="ibtn sm" aria-label={`Previous ${mode}`} title={`Previous ${mode} · ←`} onClick={() => page(-1)}><Icon name="chevron_left" /></button>
           <button className="btn ghost sm" title="Today · T" onClick={goToday}>Today</button>
@@ -746,8 +754,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
         ) : (
-          <DayPane date={selectedDay} today={today} items={paneItems} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
-            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)} />
+          <DayPane date={selectedDay} today={today} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
+            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
+            onShowAll={() => showHidden(calendars ?? [])} />
         )}
       </div>
     </>

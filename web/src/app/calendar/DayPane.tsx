@@ -6,7 +6,8 @@
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
 // waiting for its provider (a spinner, board 19b). SV-20 adds the calendar's sources' stale and
-// failing lines at the top (board 19b). The editor (Editor.tsx) takes the pane's place.
+// failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
+// all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place.
 import type {CalendarOut, ItemOut, SourceOut, WeatherDayOut} from '@setpoint/shared';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -24,6 +25,8 @@ interface DayPaneProps {
   date: string;
   today: string;
   items: ItemOut[];
+  // The day's items the calendars toggled off hide.
+  hidden: number;
   forecast: WeatherDayOut | undefined;
   calendars: CalendarOut[] | undefined;
   selected: Set<string>;
@@ -34,11 +37,13 @@ interface DayPaneProps {
   onSelectItem: (item: ItemOut) => void;
   onNew: (kind: 'event' | 'task') => void;
   onComplete: (task: ItemOut) => void;
+  // Turns every hidden calendar back on.
+  onShowAll: () => void;
 }
 
 const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
-export function DayPane({date, today, items, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete}: DayPaneProps) {
+export function DayPane({date, today, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onShowAll}: DayPaneProps) {
   const ring = useRingColour();
   const title = dayTitle(date);
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
@@ -90,9 +95,9 @@ export function DayPane({date, today, items, forecast, calendars, selected, now,
             {task.command?.state === 'pending' ? <Spinner /> : task.project && <span className="ink3 project">{task.project}</span>}
           </a>
         ))}
-        {!day.events.length && !day.tasks.length && (
-          <div className="ag-empty">No events · <button onClick={() => onNew('event')}>New event</button></div>
-        )}
+        {!day.events.length && !day.tasks.length && (hidden > 0
+          ? <div className="ag-empty"><Icon name="visibility_off" size={16} />{hidden} hidden · <button onClick={onShowAll}>Show all</button></div>
+          : <div className="ag-empty">No events · <button onClick={() => onNew('event')}>New event</button></div>)}
       </div>
 
       <div className="rp-foot">

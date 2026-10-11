@@ -301,6 +301,56 @@ test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and t
   }
 });
 
+test('SV-56: a day whose items are only hidden says how many and offers Show all, with Undo; every calendar off marks the header', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
+    const empty = page.locator('.rpane .ag-empty');
+    const hiddenMark = page.locator('.hd .cal-hidden');
+    const names = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).map(calendar => calendar.name);
+    assert.deepEqual(names, ['Personal', 'Classes', 'Jobs', 'Todoist']);
+    // Some calendars off: the day still has what's shown, and the header is as it was.
+    await page.locator('.calrow', {hasText: 'Personal'}).click();
+    await until('Gym and Dentist leave the pane', () => page.locator('.rpane .ag-item').allTextContents(), rows => rows.length === 2);
+    assert.equal(await empty.count(), 0);
+    assert.equal(await hiddenMark.count(), 0);
+    // Every calendar off: Wed Oct 7's Gym, Dentist and two tasks are hidden, not gone, and the header says the view is filtered.
+    for (const name of names.slice(1)) await page.locator('.calrow', {hasText: name}).click();
+    await until('the pane says what\'s hidden', () => empty.textContent(), line => line === '4 hidden · Show all');
+    assert.equal(await empty.locator('.icon').count(), 1, 'with the visibility_off glyph');
+    assert.deepEqual(await empty.locator('.icon').evaluate(icon => [icon.getAttribute('width'), getComputedStyle(icon).color]), ['16', await tokenColour(page, 'ink3')]);
+    await hiddenMark.waitFor();
+    assert.equal(await hiddenMark.locator('.icon').getAttribute('width'), '16');
+    assert.equal(await hiddenMark.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'ink3'));
+    assert.equal(await page.locator('.hd-title').textContent(), 'October 2026');
+    // The grid stays quiet: Wed Oct 7's cell has nothing in it.
+    assert.deepEqual(await chips(page, '2026-10-07'), []);
+    // A day with nothing on it at all still reads No events.
+    await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
+    await until('Sat, Oct 24', () => text(page, '.rp-date'), title => title === 'Sat, Oct 24');
+    assert.equal(await empty.textContent(), 'No events · New event');
+    await page.locator('.cell[data-date="2026-10-07"]').click({position: {x: 100, y: 150}});
+    await until('Wed, Oct 7 again', () => empty.textContent(), line => line === '4 hidden · Show all');
+
+    // Show all turns every calendar back on, and Undo in the toast turns them off again.
+    await empty.getByRole('button', {name: 'Show all'}).click();
+    await until('Wed Oct 7 shows all four again', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report,Pay rent');
+    assert.equal(await hiddenMark.count(), 0);
+    const toast = page.locator('.toast');
+    await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 4 calendars') ?? false);
+    await until('kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.every(calendar => calendar.visible));
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await until('Undo hides them again', () => empty.textContent(), line => line === '4 hidden · Show all');
+    await hiddenMark.waitFor();
+    await until('kept hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.every(calendar => !calendar.visible));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('selecting a day updates the right pane; an item turns solid; Esc lets it go', async () => {
   const setpoint = await startSetpoint();
   try {

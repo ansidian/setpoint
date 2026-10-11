@@ -12,10 +12,23 @@ import {localDate} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {colourVar} from '../accounts.ts';
 import {useNow} from '../clock.ts';
-import {toastFailure} from '../toast.ts';
+import {showToast, toastFailure} from '../toast.ts';
 import {navigate} from '../router.ts';
 import {MiniMonth} from './Pickers.tsx';
 import {revealDay, stepMini, useCalendarView} from './view.ts';
+
+/**
+ * Show all, from a day whose items are only hidden (SV-56): turns every hidden calendar back on, and
+ * Undo in the toast turns the same ones off again.
+ */
+export function showHidden(calendars: CalendarOut[]) {
+  const hidden = calendars.filter(calendar => !calendar.visible);
+  if (!hidden.length) return;
+  const what = hidden.length === 1 ? hidden[0]!.name : `${hidden.length} calendars`;
+  const show = (visible: boolean) => Promise.all(hidden.map(calendar => setCalendarVisible(calendar.id, visible)));
+  showToast(`Showed ${what}`, {label: 'Undo', run: () => void show(false).catch(toastFailure(`Couldn't hide ${what}`))});
+  void show(true).catch(toastFailure(`Couldn't show ${what}`));
+}
 
 export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar'}>}) {
   const now = useNow();

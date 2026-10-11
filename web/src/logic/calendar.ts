@@ -194,6 +194,13 @@ export function itemsByDay(items: ItemOut[], calendars: CalendarOut[] | undefine
   return days;
 }
 
+/** How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events" (SV-56). */
+export function hiddenOn(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, timeZone: string): number {
+  const hidden = new Set((calendars ?? []).filter(calendar => !calendar.visible).map(calendar => calendar.id));
+  if (!hidden.size) return 0;
+  return itemsByDay(items.filter(item => hidden.has(item.calendar_id)), undefined, timeZone).get(day)?.length ?? 0;
+}
+
 /** Whether an event is over (past items show at .55 on the grid); tasks never are, done or not. */
 export function isPast(item: ItemOut, now: number, timeZone: string): boolean {
   if (item.kind === 'task') return false;

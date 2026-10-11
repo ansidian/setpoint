@@ -324,7 +324,7 @@ offered for protected mail.
 The **mini-month** (26 px day cells; today an `ink` disc; the visible week or selected day `sub`; no
 other marks) with ‹ › stepping. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
 on the left (off: an outline), the name; **Todoist** has the same checkbox with its ring glyph as its
-mark.
+mark. With every calendar off, a 16 px `ink3` `visibility_off` follows the header's title (#113).
 
 ### Right pane
 
@@ -332,7 +332,7 @@ Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61
 a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", recurring glyph; "in 5h" on the next; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), the **now-line** in `alert` with the time, then **Tasks · due today** with their
-projects. The footer holds "New event C · New task D". The pane also holds the
+projects. A day whose items are only hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
 editor and calendar search results.
 
 ### The floating detail
@@ -708,7 +708,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
-All", "No events · New event". The UI says "Done".
+All", "No events · New event"; a day whose items are only hidden, "4 hidden · Show all" (#113). The
+UI says "Done".
 
 ## Overrides to the export
 
@@ -1310,3 +1311,9 @@ it changes what's on screen.
     until the event starts, the right pane's "Leave by" line and its car are `caution`, and so is the
     floating detail's Time to Leave; once the event has started, neither shows it. The words don't
     change (Andy, 2026-10-11, polish audit calpanes-02).
+113. **A day whose items are only hidden says so:** when calendars toggled off leave the selected
+    day empty, its pane reads a 16 px `visibility_off` and "4 hidden" in `ink3`, then **Show all**
+    (`ink2`, `ink` under the pointer), which turns every calendar back on, "Showed 4 calendars ·
+    Undo" in the toast. A month cell whose items are all hidden stays empty. With every calendar
+    off, a 16 px `ink3` `visibility_off` follows the header's title, so a filtered view shows from
+    any day (Andy, 2026-10-11, polish audit states-12).
