@@ -4,6 +4,7 @@
 // keyboard cursor can stop, and the counts' at-once changes (DESIGN.md › Interaction rules).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
+import {countdownChange} from './format.ts';
 import type {MailView} from './route.ts';
 
 export const GROUP_LABELS: Record<InboxGroup, string> = {
@@ -357,6 +358,18 @@ export function nextAfterLeaving(stops: Stop[], key: string | null, id: number):
 
 /** Whether a code's row has expired: it leaves the Inbox then (DESIGN.md › The list), before the server's next answer. */
 export const codeExpired = (row: Pick<MessageRowOut, 'code'>, now: number) => row.code !== null && Date.parse(row.code.expires_at) <= now;
+
+/**
+ * The next moment a code row changes by itself, its countdown's words or its leaving at expiry, so
+ * the list moves on then rather than on the app's next 15 s tick; null with no code showing.
+ */
+export function nextCodeChange(rows: Pick<MessageRowOut, 'code'>[], now: number): number | null {
+  const moments = rows.flatMap(row => {
+    const at = row.code ? countdownChange(row.code.expires_at, now) : null;
+    return at === null ? [] : [at];
+  });
+  return moments.length ? Math.min(...moments) : null;
+}
 
 /** The Inbox without code rows past their expiry; a group they leave empty goes too. */
 export function withoutExpiredCodes(groups: InboxGroupOut[], now: number): InboxGroupOut[] {

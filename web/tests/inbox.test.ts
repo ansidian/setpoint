@@ -5,7 +5,7 @@ import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpo
 import {describe, expect, test} from 'vitest';
 import {
   accountColumn, arrivalView, caughtUp, codeExpired, countsAfterOpen, cursorStops, groupViews, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
-  promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
+  nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {Collapse, PatternPrompt} from '../src/logic/inbox.ts';
 import type {Stop} from '../src/logic/inbox.ts';
@@ -353,6 +353,15 @@ describe('a code leaves the Inbox at its expiry', () => {
 
   test('a row without a code never expires', () => {
     expect(codeExpired(signIn, Number.MAX_SAFE_INTEGER)).toBe(false);
+  });
+
+  test('the list moves on when the soonest code changes its words or leaves, not on the next tick', () => {
+    const later = row({code: {value: '111222', expires_at: '2026-10-07T16:40:40.000Z'}});
+    // 9:12 AM: the 9:23 code next reads "Expires in 10 min" at 9:13.
+    expect(nextCodeChange([signIn, code], Date.parse('2026-10-07T16:12:00.000Z'))).toBe(Date.parse('2026-10-07T16:13:00.000Z'));
+    // 9:22:50: it leaves at 9:23, before the other's next minute at 9:23:40.
+    expect(nextCodeChange([later, code], Date.parse('2026-10-07T16:22:50.000Z'))).toBe(Date.parse('2026-10-07T16:23:00.000Z'));
+    expect(nextCodeChange([signIn], Date.parse('2026-10-07T16:12:00.000Z'))).toBeNull();
   });
 
   test('a group the code leaves empty goes, and nothing else changes', () => {

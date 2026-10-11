@@ -24,7 +24,7 @@ import {
 import {dayStops, dayView, groupByDay} from '../logic/all.ts';
 import {readerMarks} from '../logic/search.ts';
 import {
-  allStops, arrivalView, caughtUp, codeExpired, cursorStops, groupViews, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
+  allStops, arrivalView, caughtUp, codeExpired, cursorStops, groupViews, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
 import {readerActions} from '../logic/reader.ts';
 import type {Collapse, GroupView, HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
@@ -71,7 +71,9 @@ interface Kept {
 }
 
 export function InboxPage({route}: {route: InboxRoute}) {
-  const now = useNow();
+  // The next moment a code row changes by itself, so its countdown and its leaving are on time.
+  const [codeMoment, setCodeMoment] = useState<number | null>(null);
+  const now = useNow(codeMoment);
   const zone = timeZone();
   const {list: accountList, byId: accounts} = useAccounts();
   const filteredTo = route.account ? accounts.get(route.account)?.label ?? null : null;
@@ -122,6 +124,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   if (current !== kept) setKept(current);
   // A code's row leaves at its expiry all the same.
   const held = useMemo(() => current.held.filter(one => !codeExpired(one.row, now)), [current.held, now]);
+  const nextCode = nextCodeChange(withHeld(groups ?? [], held).flatMap(group => group.rows), now);
+  if (nextCode !== codeMoment) setCodeMoment(nextCode);
   const takeOut = (ids: number[]) => setKept(state => ({...state, out: new Set([...state.out, ...ids]), held: state.held.filter(one => !ids.includes(one.row.id))}));
   const views = useMemo(() => {
     const shown = groups ? groupViews(groups, collapse, held) : [];

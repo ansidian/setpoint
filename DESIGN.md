@@ -220,7 +220,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
   MacBook Pro · Los Angeles"). A **code** row shows the code (Geist Mono, two groups of three), a
   **Copy** button and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival
-  (Settings › Mail sets this).
+  (Settings › Mail sets this). A copy the browser refuses says "Couldn't copy it"
+  ([Decided while building](#decided-while-building) #109).
 - **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
   email's line is its subject and summary.
 - **Footer:** "Mark all as read ⇧I" at the end of the list.
@@ -1311,6 +1312,9 @@ it changes what's on screen.
     keys still work, and ⌘K lists them) and their padding goes from 10 to 9 px, so previous, next
     and More stay in view down to the pane's 480 px (#22), with Done and More both shown. News's
     story pane, which shares the tools, does the same (Andy, 2026-10-11, polish audit reader-05).
+109. **A copy the browser refuses says so:** a code row's Copy that the clipboard refuses shows
+    "Couldn't copy it" in the toast, and the button stays Copy, as #41 has every refused change do
+    (Andy, 2026-10-11, polish audit extra-03).
 110. **A line longer than the editor's field shows where it's typed:** its marks move with its
     letters as the field scrolls, so the words being typed and what they parse to stay in view, with
     the caret on its letter, and a side cut short fades over 14 px (Andy, 2026-10-11, polish audit

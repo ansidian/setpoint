@@ -14,6 +14,7 @@ import {Icon} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
 import {foldIn, foldOut, useFold} from './fold.ts';
 import {TriageNote, useHealthBars} from './states/States.tsx';
+import {showToast} from './toast.ts';
 
 export interface ListProps {
   views: GroupView[];
@@ -198,9 +199,11 @@ function CodeLine({code, now}: {code: {value: string; expires_at: string}; now: 
     const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
     return () => window.clearTimeout(timer);
   }, [copied]);
+  // A clipboard that refuses says so (#41).
   const copy = (event: MouseEvent) => {
     event.stopPropagation();
-    void navigator.clipboard?.writeText(code.value).then(() => setCopied(true), () => {});
+    const writing = navigator.clipboard ? navigator.clipboard.writeText(code.value) : Promise.reject(new Error('No clipboard'));
+    writing.then(() => setCopied(true), () => showToast('Couldn\'t copy it'));
   };
   return (
     <span className="subj code-line">

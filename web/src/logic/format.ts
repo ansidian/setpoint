@@ -116,6 +116,16 @@ export function expiresIn(at: string, now: number): string {
   return minutes <= 0 ? 'Expired' : `Expires in ${minutes} min`;
 }
 
+/**
+ * When expiresIn's words next change: the end of the current minute ("Expires in 11 min" reads 10),
+ * and in the last minute the expiry itself, when the row leaves; null once expired.
+ */
+export function countdownChange(at: string, now: number): number | null {
+  const expires = Date.parse(at);
+  const minutes = Math.ceil((expires - now) / MINUTE);
+  return minutes <= 0 ? null : expires - (minutes - 1) * MINUTE;
+}
+
 /** A verification code in two groups: "482913" → "482 913", "12345678" → "1234 5678"; others as they are. */
 export function codeGroups(code: string): string {
   if (!/^\w+$/.test(code) || code.length < 6 || code.length % 2) return code;

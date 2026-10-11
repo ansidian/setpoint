@@ -410,7 +410,7 @@ test('Mark all as read\'s Undo brings the 14 back at once, before the server\'s 
   }
 });
 
-test('a code row: Copy puts the code on the clipboard, and the row leaves at its expiry', async () => {
+test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and the row leaves at its expiry', async () => {
   // The fixture's code expires 12 seconds after the seed's moment. The server's clock stays there and
   // the page's is the check's, so a slow start or a busy machine can't spend those seconds first.
   const setpoint = await startSetpoint({fixtures: ['code-expiring'], clock: 'frozen'});
@@ -419,9 +419,12 @@ test('a code row: Copy puts the code on the clipboard, and the row leaves at its
     await page.clock.install();
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row, .list .arow').first().waitFor();
+    // The page took the seed's moment from the server before this, so the code expires no later
+    // than 12 seconds from here (and the app's 15 s clock first ticks later than that).
+    const loaded = await page.evaluate(() => Date.now());
     // The page's clock runs on until the pause reaches it, and a pause can't go back, so it pauses a
     // little ahead of the time read: past what one round trip can take, well inside the 12 seconds.
-    await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 2000);
+    await page.clock.pauseAt(loaded + 2000);
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
     const row = page.locator('.row', {hasText: 'Contoso Insurance'});
     assert.equal(await row.locator('.code').textContent(), '482 913');
@@ -432,10 +435,21 @@ test('a code row: Copy puts the code on the clipboard, and the row leaves at its
     // "Copied" for a second and a half.
     await page.clock.runFor(1500);
     await row.locator('button', {hasText: 'Copy'}).waitFor();
-    // At its expiry it leaves the Inbox, without a reload (the server's own list is mail.test.ts's).
-    await page.clock.fastForward(12_000);
+    // A clipboard that refuses the code says so (#41), and the button stays Copy.
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
+    });
+    await row.locator('button', {hasText: 'Copy'}).click();
+    await page.locator('.toast', {hasText: 'Couldn\'t copy it'}).waitFor();
+    assert.equal(await row.locator('.copy').textContent(), 'Copy');
+    // It leaves the Inbox at its expiry, without a reload (the server's own list is mail.test.ts's),
+    // and not up to 15 s later on the app's clock, still saying "Expires in 1 min".
+    assert.equal(await row.locator('.sum').textContent(), 'Expires in 1 min');
+    await page.clock.runFor(loaded + 12_000 + 400 - await page.evaluate(() => Date.now()));
+    // Its fold out has begun (its end waits on the paused clock).
+    await until('the code row leaves', () => page.locator('.row:not(.leaving)', {hasText: 'Contoso Insurance'}).count(), count => count === 0);
     await page.clock.resume();
-    await until('the code row leaves', () => row.count(), count => count === 0);
+    await until('the code row gone', () => row.count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

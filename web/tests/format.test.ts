@@ -2,7 +2,7 @@
 // Pacific) so the brief's ages come out: 20m, 2h, 7h, Yesterday, Mon, Sep 30.
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {addDays, age, clockTime, codeGroups, daysBetween, expiresIn, fullTimestamp, localDate, monthName, readerTime, startsIn} from '../src/logic/format.ts';
+import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, fullTimestamp, localDate, monthName, readerTime, startsIn} from '../src/logic/format.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -75,6 +75,19 @@ test.each([
   ['past', '2026-10-07T16:11:00.000Z', now, 'Expired'],
 ])('expiresIn: %s', (_name, at, at_now, expected) => {
   expect(expiresIn(at, at_now)).toBe(expected);
+});
+
+// When "Expires in 11 min" next changes its words, so the row moves on then, not on the app's next
+// 15 s tick: a minute's end, and the last minute at its expiry, when the row leaves.
+test.each([
+  ['11 minutes left: when it reads 10', '2026-10-07T16:23:00.000Z', now, '2026-10-07T16:13:00.000Z'],
+  ['part of a minute in: still that minute\'s end', '2026-10-07T16:23:00.000Z', now + 5_000, '2026-10-07T16:13:00.000Z'],
+  ['on a minute\'s end: the next one', '2026-10-07T16:23:00.000Z', Date.parse('2026-10-07T16:13:00.000Z'), '2026-10-07T16:14:00.000Z'],
+  ['the last minute: its expiry', '2026-10-07T16:12:30.000Z', now, '2026-10-07T16:12:30.000Z'],
+  ['expired: never', '2026-10-07T16:11:00.000Z', now, null],
+  ['expiring now: never', '2026-10-07T16:12:00.000Z', now, null],
+])('countdownChange: %s', (_name, at, at_now, expected) => {
+  expect(countdownChange(at, at_now)).toBe(expected === null ? null : Date.parse(expected));
 });
 
 test.each([

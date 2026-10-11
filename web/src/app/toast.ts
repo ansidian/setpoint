@@ -1,9 +1,10 @@
 // The app's one toast (DESIGN.md › Interaction rules: Trash offers Undo for 6 seconds, as v1 does,
-// in the export's `.toast`, a 40 px pill at the bottom centre), drawn once by App.tsx above every
-// page and Settings. Any page shows a line with showToast("Added to Classes"), an error with
-// showToast(error.message), or a line with its action: showToast("Moved to Trash", {label: 'Undo',
-// run}) or {label: 'Try again', run}. One at a time: a new one replaces the last, whose action is
-// then gone. A failed change says what failed and why with toastFailure("Couldn't pin it").
+// in the export's `.toast`, a 40 px pill at the top centre, at the bottom on the phone, #92), drawn
+// once by App.tsx above every page and Settings. Any page shows a line with showToast("Added to
+// Classes"), an error with showToast(error.message), or a line with its action: showToast("Moved to
+// Trash", {label: 'Undo', run}) or {label: 'Try again', run}. One at a time: a new one replaces the
+// last, whose action is then gone. A failed change says what failed and why with
+// toastFailure("Couldn't pin it").
 import {useSyncExternalStore} from 'react';
 import {ApiFailure} from '../api/client.ts';
 
