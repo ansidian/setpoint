@@ -384,6 +384,44 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
   }
 });
 
+test('Alfred about one email: its first line reads "Reading this email…", and the follow-up field dims until the answer lands', async () => {
+  const fake = await fakeAlfred(leaseAlfred, {delayMs: 1500});
+  const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
+    await fake.close();
+    throw error;
+  });
+  try {
+    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
+    const page = await load(setpoint);
+    await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
+    const field = page.locator('.pane .answer .field');
+    await field.locator('input').waitFor();
+    const opacity = () => field.evaluate(element => getComputedStyle(element).opacity);
+    assert.equal(await opacity(), '1');
+    let asks = 0;
+    page.on('request', request => {
+      if (request.url().endsWith('/api/alfred/ask')) asks += 1;
+    });
+    await page.keyboard.type('When does my lease renewal need to be signed?');
+    await page.keyboard.press('Enter');
+    await until('Alfred\'s first line', () => page.locator('.pane .answer .waiting').allTextContents(), lines => lines.join() === 'Reading this email…');
+    await until('the field dimmed while Alfred answers', opacity, value => value === '0.5');
+    // A follow-up typed meanwhile stays in the field, unsent, until the answer is in.
+    await page.keyboard.type('what\'s the new rent?');
+    await page.keyboard.press('Enter');
+    await page.locator('.pane .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    await until('the field back', opacity, value => value === '1');
+    assert.equal(asks, 1);
+    assert.equal(await field.locator('input').inputValue(), 'what\'s the new rent?');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+    await fake.close();
+  }
+});
+
 test('the proposal card: Add to calendar pre-fills from the email, Create waits for Google Calendar, More options opens the editor', async () => {
   const setpoint = await startSetpoint();
   try {

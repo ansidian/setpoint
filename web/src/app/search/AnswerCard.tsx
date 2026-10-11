@@ -3,8 +3,8 @@
 // follow-up field. "Couldn't find that in your mail" says what it searched; a failure shows the
 // server's words and puts the question back in the field. With no key, the card says so as it opens,
 // and "Settings › AI" in any of its lines opens Settings there. Answers aren't streamed, so a
-// question waits on one line saying what Alfred is doing (the search it runs, the email it reads).
-// A long list of sources shows its first five and Show all. Proposals in an answer show as the
+// question waits on one line saying what Alfred is doing (the search it runs, the email it reads),
+// the follow-up field dimmed until the answer is in. A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card.
 import type {AccountOut, AiOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';
@@ -93,11 +93,12 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
           <>
             {turns.length > 0 && <div className="turn-sep" />}
             {showsQuestion(turns.length, scoped) && <div className="q">{waiting}</div>}
-            <div className="waiting"><span className="spin"><Icon name="progress_activity" size={16} /></span>{alfredStepLine(alfred.step)}</div>
+            <div className="waiting"><span className="spin"><Icon name="progress_activity" size={16} /></span>{alfredStepLine(alfred.step, scoped)}</div>
           </>
         )}
         {failure && <div className="failed-line"><Icon name="error" size={16} /><span><SettingsLink text={failure} /></span></div>}
-        <label className="field">
+        {/* Dimmed while Alfred answers: Enter waits until the answer is in, the follow-up kept. */}
+        <label className={asking ? 'field asking' : 'field'}>
           <input ref={field} className="grow" aria-label="Ask a follow-up" placeholder={scoped && !turns.length && !asking ? 'Ask about this email…' : 'Ask a follow-up…'}
             value={draft} onChange={event => setDraft(event.target.value)}
             onKeyDown={event => {

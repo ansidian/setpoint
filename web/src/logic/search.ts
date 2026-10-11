@@ -119,9 +119,12 @@ export function searchedLine(searched: readonly string[]): string | null {
   return `Searched ${quoted.length > 1 ? `${quoted.slice(0, -1).join(', ')} and ${quoted.at(-1)}` : quoted[0]}`;
 }
 
-/** The Answer card while Alfred works: what it's doing, from the tool it last ran. */
-export function alfredStepLine(step: AskStep | null): string {
-  if (!step) return 'Looking through your mail…';
+/**
+ * The Answer card while Alfred works: what it's doing, from the tool it last ran; before its first,
+ * reading the email a scoped card (Ask about this email) is about, or looking through the mail.
+ */
+export function alfredStepLine(step: AskStep | null, scoped = false): string {
+  if (!step) return scoped ? 'Reading this email…' : 'Looking through your mail…';
   if (step.tool === 'search_mail') return `Searching “${step.query}”…`;
   if (step.tool === 'get_email') return `Reading ${step.from}’s email…`;
   if (step.tool === 'list_items') return 'Checking your calendar…';

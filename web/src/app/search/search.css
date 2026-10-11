@@ -69,7 +69,9 @@ mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: v
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
 .q { align-self: flex-end; max-width: 70%; padding: 6px 12px; border-radius: var(--r-card); background: var(--sub2); color: var(--ink); user-select: text; -webkit-user-select: text; }
 .waiting { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; height: 22px; }
-.answer .card-b > .field { margin-top: 4px; }
+.answer .card-b > .field { margin-top: 4px; transition: opacity var(--dur-fast) var(--ease); }
+/* While Alfred answers, the follow-up field waits at half strength. */
+.answer .card-b > .field.asking { opacity: .5; }
 
 /* The proposal (board 08): at the top of the reading pane, or under the answer that proposed it. */
 .prop { margin: 16px 20px 0; }

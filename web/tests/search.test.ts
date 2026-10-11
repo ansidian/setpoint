@@ -283,6 +283,13 @@ describe('the Answer card while Alfred works, and its sources', () => {
     expect(alfredStepLine(step)).toBe(line);
   });
 
+  test.each<[string, Parameters<typeof alfredStepLine>[0], string]>([
+    ['Ask about this email, before its first tool', null, 'Reading this email…'],
+    ['then the tool it runs, as anywhere', {tool: 'get_email', from: 'Parkside Apartments'}, 'Reading Parkside Apartments’s email…'],
+  ])('alfredStepLine, scoped to one email: %s', (_name, step, line) => {
+    expect(alfredStepLine(step, true)).toBe(line);
+  });
+
   const ids = (count: number) => Array.from({length: count}, (_, index) => index + 1);
   test.each<[string, number, boolean, number[], string | null]>([
     ['five or fewer show whole, with no button', 5, false, ids(5), null],

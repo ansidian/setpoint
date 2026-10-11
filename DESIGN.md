@@ -287,7 +287,8 @@ in the reading pane), each follow-up turn below the last, and a follow-up field 
 the reader, **Ask about this email** opens the same card scoped to that email. "Couldn't find that
 in your mail" says what it searched. While Alfred works, its line says what it's doing; more than
 five sources show the first five and **Show all** ([Decided while building](#decided-while-building)
-#80).
+#80). About one email, its first line is "Reading this email…", and the follow-up field waits at
+half strength until the answer is in (#108).
 
 ### Proposal
 
@@ -1312,6 +1313,11 @@ it changes what's on screen.
     keys still work, and ⌘K lists them) and their padding goes from 10 to 9 px, so previous, next
     and More stay in view down to the pane's 480 px (#22), with Done and More both shown. News's
     story pane, which shares the tools, does the same (Andy, 2026-10-11, polish audit reader-05).
+108. **Alfred about one email starts by reading it, and the follow-up field waits:** a question from
+    Ask about this email first says "Reading this email…" rather than "Looking through your mail…".
+    While Alfred answers, the follow-up field shows at half strength and Enter in it waits; what's
+    typed meanwhile stays there, to send once the answer is in (Andy, 2026-10-11, polish audit
+    extra-05, extra-06).
 109. **A copy the browser refuses says so:** a code row's Copy that the clipboard refuses shows
     "Couldn't copy it" in the toast, and the button stays Copy, as #41 has every refused change do
     (Andy, 2026-10-11, polish audit extra-03).
