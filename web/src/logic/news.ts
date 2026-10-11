@@ -13,10 +13,14 @@ import type {
   SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {news} from '../tokens.ts';
+import type {IconName} from '../ui/glyphs.ts';
 import {age, clockTime, daysBetween, localDate} from './format.ts';
 import {asOf, every} from './health.ts';
 
 export const SECTION_LABELS: Record<NewsSection, string> = {local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'};
+
+/** Each section's glyph wherever it's named, its header and the story pane's tags (#161): shape alone, in `ink3`. */
+export const SECTION_GLYPHS: Record<NewsSection, IconName> = {local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'};
 
 const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});
 

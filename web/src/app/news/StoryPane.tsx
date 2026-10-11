@@ -12,7 +12,7 @@ import {useResource} from '../../api/client.ts';
 import {articlePath, storyPath} from '../../api/news.ts';
 import {paragraphs} from '../../logic/body.ts';
 import {age, fullTimestamp, readerTime} from '../../logic/format.ts';
-import {articleNote, dayWord, factsSince, initials, SECTION_LABELS, stamp, storyMeta} from '../../logic/news.ts';
+import {articleNote, dayWord, factsSince, initials, SECTION_GLYPHS, SECTION_LABELS, stamp, storyMeta} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {PaneEdge} from '../Reader.tsx';
@@ -71,7 +71,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
           <>
             <div className="st-head">
               <div className="st-secs">
-                {story.sections.map(section => <span key={section} className="tag">{SECTION_LABELS[section]}</span>)}
+                {story.sections.map(section => <span key={section} className="tag"><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</span>)}
                 {fresh.length > 0 && <span className="tag cool">Updated</span>}
               </div>
               <h1 className="rd-subj">{story.headline}</h1>

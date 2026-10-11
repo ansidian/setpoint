@@ -486,7 +486,8 @@ navigation.
 ### The list
 
 - **Section header** (32 px): mail's group header without a count (`panel`, `hair` above and below,
-  none above the first; 11.5 uppercase .08em `ink3`).
+  none above the first; 11.5 uppercase .08em), its label in `ink2` after the section's 14 px glyph
+  in `ink3` (Local `location_on`, Tech `computer`, AI `auto_awesome`, General `public`; #161).
   - In All, the blocks come in a fixed order: Local, Tech, AI, General. A story in more than one
     section shows once, in its main section's block (#96).
   - Each block shows its **top 3–5 stories, biggest first**, then "12 more in Local". That's a 36 px
@@ -540,7 +541,8 @@ navigation.
 - **Tools** (48 px): **Open at KTLA** `O` (the leading outlet's article), then a spacer, previous,
   next and More.
 - **Head** (padding 18 28 14):
-  - its sections as tags, plus "Updated" as a `cool` tag when it changed since Andy last looked
+  - its sections as tags, each with its section's 14 px glyph in `ink3` (#161), plus "Updated" as a
+    `cool` tag when it changed since Andy last looked
   - the headline (20 / 500)
   - the meta in `ink3` 12.5: "5 outlets · first reported 6:12 AM · updated 8:40 AM"
 - **Image:** inset 28 px, 220 tall, radius 14. The outlet's name sits in a caption pill at the
@@ -575,7 +577,7 @@ navigation.
 Board 28 replaces All's list.
 - **Back row** (44 px): the back arrow (back to All), "Missed since Mon 10:40 PM" (14 / 500), and
   the count in `ink3` on the right.
-- **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right).
+- **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right), on `history` (#161).
 - Under each day, up to 5 stories per section, biggest first, the first as a lead. Each row names
   its section in the meta. A lead's image is its story's large copy, kept while the story is in
   Missed, never its thumbnail stretched (#115).
@@ -1384,3 +1386,10 @@ it changes what's on screen.
     column draws the same glyph at 13 px before the kind word, the column 100 px wide to hold it.
     Shape alone, no colour per kind: the account colours already mean accounts (Andy, 2026-10-11,
     polish audit inbox-04).
+161. **Each News section carries its glyph wherever it's named:** a section header leads with its
+    14 px glyph in `ink3`, its optical edge on the list's 24 px line (Local `location_on`, Tech
+    `computer`, AI `auto_awesome`, as Settings › AI, General `public`), and its label lifts from
+    `ink3` to `ink2`, so the faintest text in the list becomes a landmark; mail's group headers keep
+    `ink3`. The story pane's section tags take the same glyph, Missed's day headers `history` and
+    Show headlines' Unsorted header `pending`, as mail's Unsorted. No colour per section: the
+    account colours already mean accounts (Andy, 2026-10-11, polish audit news-07).

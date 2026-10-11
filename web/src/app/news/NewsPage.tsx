@@ -31,7 +31,7 @@ import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, S
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
   dueSeen, emptySectionLine, firstRunLine, keyStory, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
-  pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
+  pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
   unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
 import {resultsLine} from '../../logic/search.ts';
@@ -337,7 +337,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
           <div className="list" ref={list}>
             {showHeadlines && (
               <>
-                <div className="nw-sec first">Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
+                <div className="nw-sec first"><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
                 {waitingOut?.articles.map(article => (
                   <a key={article.id} className="nw-raw" href={article.url} target="_blank" rel="noopener noreferrer">
                     <span className="hl">{article.headline}</span>
@@ -369,8 +369,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
               const empty = own && latest ? emptySectionLine(own, shelfRows.length, shelf.more, firstRun, now, zone) : null;
               return (
                 <Fragment key={shelf.key}>
-                  {section && <div className={header}>{SECTION_LABELS[section]}</div>}
-                  {view === 'missed' && <div className={header}>{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
+                  {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
+                  {view === 'missed' && <div className={header}><Icon name="history" size={14} />{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
                   {line && <div className={`nw-line ${line.state}`}><span className="num ell" title={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
                   {empty && <div className="nw-empty">{empty}</div>}

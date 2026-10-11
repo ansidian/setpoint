@@ -9,7 +9,8 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after, test} from 'node:test';
 import type {MissedOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -56,6 +57,11 @@ const colourOf = (page: Page, colour: string) => page.evaluate(value => {
   probe.remove();
   return computed;
 }, colour);
+
+const GLYPH_NAMES = new Map<string, string>(Object.entries(ICONS).map(([name, path]) => [path, name]));
+/** Each glyph's name (from its bundled path), size and colour. */
+const glyphs = async (icons: Locator) => (await icons.evaluateAll(all => all.map(icon => [icon.querySelector('path')!.getAttribute('d')!, icon.getAttribute('width'), getComputedStyle(icon).color])))
+  .map(([path, size, colour]) => [GLYPH_NAMES.get(path!) ?? 'unknown', size, colour]);
 
 /** A background as the page computes it, mixes included. */
 const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
@@ -116,6 +122,10 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
     // The blocks in their fixed order, each with its "N more".
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
+    // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#161).
+    const ink3 = await colourOf(page, 'var(--ink3)');
+    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
+    assert.equal(await page.locator('.nw-sec').first().evaluate(header => getComputedStyle(header).color), await colourOf(page, 'var(--ink2)'));
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '7 more in Tech', '4 more in AI', '9 more in General']);
     assert.equal(await page.locator('.nw-missed').textContent(), '14 stories you missed since MonCatch up');
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
@@ -188,7 +198,8 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     assert.equal(await colourOf(page, 'var(--ink)'), 'rgb(29, 30, 33)', 'Light\'s ink');
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
     assert.equal(await style('.nw-sec', 'backgroundColor'), await backgroundOf(page, 'var(--panel)'));
-    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink3)'));
+    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink2)'), 'the section\'s name in ink2 (#161)');
+    assert.equal(await style('.nw-sec > .icon', 'color'), await colourOf(page, 'var(--ink3)'), 'its glyph in ink3');
     assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--cool) 9%, var(--page))'));
     assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--cool)'));
     assert.equal(await style('.nw-pill', 'backgroundColor'), await backgroundOf(page, 'var(--cardOn)'));
@@ -227,6 +238,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await pane.locator('.src-row').first().waitFor();
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
+    assert.deepEqual(await glyphs(pane.locator('.st-secs .tag .icon')), [['location_on', '14', await colourOf(page, 'var(--ink3)')]], 'the section\'s tag leads with its glyph (#161)');
     assert.equal(await pane.locator('.st-meta').textContent(), '5 outlets·first reported Mon 6:12 AM·updated 8:40 AM');
     assert.equal(await pane.locator('.st-img .cap').textContent(), 'KTLA');
     assert.deepEqual(await pane.locator('.st-img').evaluate(box => [box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).marginLeft]), [220, '14px', '28px']);
@@ -324,6 +336,7 @@ test('Missed (28): Catch up lists the stories that left unseen, by day, each row
     await page.locator('.nw-back .t', {hasText: 'Missed since Mon 10:40 PM'}).waitFor();
     assert.equal(await page.locator('.nw-back .n').textContent(), '14 stories');
     assert.equal(await page.locator('.nw-sec').textContent(), 'TuesdayOct 6');
+    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['history', '14', await colourOf(page, 'var(--ink3)')]], 'a day of Missed leads with history (#161)');
     assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
     const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
     assert.match(await tornado.getAttribute('class') ?? '', /^nw-lead/);

@@ -7,7 +7,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   articleNote, dueSeen, factsSince, initials, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
-  rowMeta, sameLayout, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
+  rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
 import type {Layout} from '../src/logic/news.ts';
@@ -26,6 +26,10 @@ function story(fields: Partial<StoryRowOut> = {}): StoryRowOut {
   };
 }
 const lead = (outlet_short: string, more: number, published_at = '2026-10-07T15:02:00.000Z') => ({...story().lead, outlet_short, more, published_at});
+
+test('each section\'s glyph (#161): Local location_on, Tech computer, AI auto_awesome, General public', () => {
+  expect(SECTION_GLYPHS).toEqual({local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'});
+});
 
 describe('meta copy', () => {
   test.each([
