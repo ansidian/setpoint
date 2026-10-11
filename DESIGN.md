@@ -330,16 +330,17 @@ mark.
 
 Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61°"), **Events** (time,
 a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", recurring glyph; "in 5h" on the next; "Leave
-by 2:05 PM · 18 min" for Time to Leave), the **now-line** in `alert` with the time, then **Tasks · due
-today** with their projects. The footer holds "New event C · New task D". The pane also holds the
+by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
+then gone, #112), the **now-line** in `alert` with the time, then **Tasks · due today** with their
+projects. The footer holds "New event C · New task D". The pane also holds the
 editor and calendar search results.
 
 ### The floating detail
 
 - **Card:** 280 px wide (decision 46), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
   at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
-  Leave, attendees, reminder, calendar; then **Edit E** and icon actions (duplicate, copy, colour,
-  delete).
+  Leave (as the right pane's, #112), attendees, reminder, calendar; then **Edit E** and icon actions
+  (duplicate, copy, colour, delete).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt.
@@ -1305,3 +1306,7 @@ it changes what's on screen.
     so "#ho" then Enter is Home, not School. A project's mark in the line takes its project's colour,
     as its dot does; one not yet named, or new, stays `ink2` (Andy, 2026-10-11, polish audit
     calflows-07).
+112. **Leave by turns `caution` when it's time to go, then goes:** from 15 minutes before its time
+    until the event starts, the right pane's "Leave by" line and its car are `caution`, and so is the
+    floating detail's Time to Leave; once the event has started, neither shows it. The words don't
+    change (Andy, 2026-10-11, polish audit calpanes-02).

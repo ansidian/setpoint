@@ -1,8 +1,9 @@
-// The floating detail's lines as tables (boards 12a and 12b; DESIGN.md › Right pane for Time to Leave).
+// The floating detail's lines as tables (boards 12a and 12b; DESIGN.md › Right pane for Time to Leave,
+// and when its line turns `caution` and when it goes, SV-56).
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attendeesLine, detailWhen, leaveLine, remindersLine, travelTime} from '../src/logic/detail.ts';
+import {attendeesLine, detailWhen, leaveLine, leaveState, remindersLine, travelTime} from '../src/logic/detail.ts';
 
 const zone = SEED_TIME_ZONE;
 const at = (date: string, time: string) => new Date(Date.parse(`${date}T${time}:00-07:00`)).toISOString();
@@ -26,12 +27,35 @@ describe('date and time', () => {
 });
 
 describe('Time to Leave', () => {
+  // The seed's moment, Wed Oct 7 at 9:12 AM.
+  const morning = Date.parse(at('2026-10-07', '09:12'));
   test.each([
     ['Dentist', {leave_at: at('2026-10-07', '14:05'), travel_minutes: 18, checked_at: at('2026-10-07', '09:00')}, 'Leave by 2:05 PM · 18 min'],
     ['Dinner with Sam', {leave_at: at('2026-10-09', '18:35'), travel_minutes: 21, checked_at: at('2026-10-07', '09:00')}, 'Leave by 6:35 PM · 21 min'],
     ['a long drive', {leave_at: at('2026-10-09', '08:00'), travel_minutes: 65, checked_at: at('2026-10-07', '09:00')}, 'Leave by 8:00 AM · 1 hr 5 min'],
     ['none', null, null],
-  ])('%s', (_, leave, line) => expect(leaveLine(item({time_to_leave: leave}), zone)).toBe(line));
+  ])('%s', (_, leave, line) => expect(leaveLine(item({time_to_leave: leave}), zone, morning)?.text ?? null).toBe(line));
+
+  // SV-56: Dentist at 2:30 PM, leave by 2:05 PM. The line turns `caution` 15 minutes before
+  // leaving and stays so until the event starts; from then it's gone.
+  const dentist = item({starts_at: at('2026-10-07', '14:30'), ends_at: at('2026-10-07', '15:30'),
+    time_to_leave: {leave_at: at('2026-10-07', '14:05'), travel_minutes: 18, checked_at: at('2026-10-07', '09:00')}});
+  test.each([
+    ['9:12 AM, the morning', '09:12', 'later'],
+    ['1:49 PM, 16 min before leaving', '13:49', 'later'],
+    ['1:50 PM, 15 min before leaving', '13:50', 'due'],
+    ['2:05 PM, time to leave', '14:05', 'due'],
+    ['2:10 PM, 5 min late', '14:10', 'due'],
+    ['2:29 PM, a minute before it starts', '14:29', 'due'],
+    ['2:30 PM, it starts', '14:30', 'gone'],
+    ['2:45 PM, under way', '14:45', 'gone'],
+    ['4:00 PM, over', '16:00', 'gone'],
+  ])('at %s: %s', (_, time, state) => {
+    const when = Date.parse(at('2026-10-07', time));
+    expect(leaveState(dentist, when)).toBe(state);
+    expect(leaveLine(dentist, zone, when)).toEqual(state === 'gone' ? null : {text: 'Leave by 2:05 PM · 18 min', state});
+  });
+  test('without Time to Leave there is no state', () => expect(leaveState(item({starts_at: at('2026-10-07', '14:30')}), morning)).toBeNull());
   test.each([[1, '1 min'], [59, '59 min'], [60, '1 hr'], [125, '2 hr 5 min']])('%i min of travel reads "%s"', (minutes, text) => expect(travelTime(minutes)).toBe(text));
 });
 

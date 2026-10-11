@@ -93,7 +93,9 @@
 .ag-item .title { display: block; color: var(--ink); font-weight: 500; }
 .ag-item.past .title { font-weight: 400; }
 .ag-item .line { font-size: 12.5px; }
-.ag-item .leave { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.ag-item .leave { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink2); transition: color var(--dur-fast) var(--ease); }
+/* SV-56: from 15 minutes before leaving until the event starts, Leave by and its car are `caution`. */
+.ag-item .leave.due { color: var(--caution); }
 .ag-item .in { font-size: 12px; }
 .ag-item .repeat { color: var(--ink3); }
 .ag-task { align-items: center; }

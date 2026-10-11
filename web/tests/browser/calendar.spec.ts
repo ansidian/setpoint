@@ -259,6 +259,48 @@ test('SV-56: a day outside the month takes the outside tint, a weekend among the
   }
 });
 
+test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and the card, and goes once the event starts', async () => {
+  // Dentist at 2:30 PM, leave by 2:05 PM (the time-to-leave fixture). The server's clock holds at
+  // 9:12 AM and the page's is the check's, moved on to 2:10 PM and then 2:45 PM.
+  const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/calendar`);
+    const row = page.locator('.ag-item', {hasText: 'Dentist'});
+    const leave = row.locator('.leave');
+    await leave.waitFor();
+    await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).click();
+    const fact = page.locator('.fd .fact.leave');
+    await fact.waitFor();
+    const colours = async () => [
+      await leave.evaluate(element => getComputedStyle(element).color),
+      await leave.locator('.icon').evaluate(element => getComputedStyle(element).color),
+      await fact.locator('.icon').evaluate(element => getComputedStyle(element).color),
+      await fact.locator('.v').evaluate(element => getComputedStyle(element).color),
+    ];
+    // 9:12 AM: the line is ink2, the card's fact its usual ink3 glyph and ink time.
+    const [ink, ink2, ink3, caution] = [await tokenColour(page, 'ink'), await tokenColour(page, 'ink2'), await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
+    assert.deepEqual(await colours(), [ink2, ink2, ink3, ink]);
+    assert.equal(await leave.textContent(), 'Leave by 2:05 PM · 18 min');
+
+    // 2:10 PM: five minutes past leaving, twenty before Dentist: the line and its glyph turn caution, and the card's fact with them.
+    await page.clock.fastForward((4 * 60 + 58) * 60_000);
+    await until('the now-line at 2:10 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:10 PM');
+    await until('Leave by in caution', colours, list => list.every(colour => colour === caution));
+    assert.equal(await leave.textContent(), 'Leave by 2:05 PM · 18 min', 'the same words');
+
+    // 2:45 PM: Dentist is under way, and Leave by is gone from both.
+    await page.clock.fastForward(35 * 60_000);
+    await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
+    await until('Leave by gone from the pane', () => leave.count(), count => count === 0);
+    await until('and from the card', () => fact.count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('selecting a day updates the right pane; an item turns solid; Esc lets it go', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -1,5 +1,6 @@
 // What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
-// colour dot and title, the date and time, the place and its address, Time to Leave, attendees,
+// colour dot and title, the date and time, the place and its address, Time to Leave (in `caution`
+// once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees,
 // reminders and the calendar; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
@@ -15,6 +16,7 @@ import {placeLines} from '../../../logic/place.ts';
 import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
 import {colourVar} from '../../accounts.ts';
+import {useNow} from '../../clock.ts';
 import type {DetailTarget} from './motion.ts';
 
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
@@ -36,19 +38,20 @@ interface DetailContentProps {
   onEdit: () => void;
 }
 
-function Fact({icon, children}: {icon: IconName; children: ReactNode}) {
-  return <div className="fact"><Icon name={icon} size={17} />{children}</div>;
+function Fact({icon, className, children}: {icon: IconName; className?: string; children: ReactNode}) {
+  return <div className={className ? `fact ${className}` : 'fact'}><Icon name={icon} size={17} />{children}</div>;
 }
 
 export function DetailContent({target, timeZone, actions, onClose, onEdit}: DetailContentProps) {
   const {item, calendar} = target;
   const [picking, setPicking] = useState(false);
+  const now = useNow();
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
   // Without actions (Google's own kinds, the phone) every one is drawn, unavailable.
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !actions || !!actions[action];
-  const leave = item.time_to_leave ? leaveBy(item.time_to_leave, timeZone) : null;
+  const leave = leaveBy(item, timeZone, now);
   const attendees = attendeesLine(item.attendees);
   const reminders = remindersLine(item.reminders);
   const place = placeLines(item.place, item.address);
@@ -68,7 +71,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
             <span className="grow"><span className="v fd-place">{place.name}</span>{place.address && <span className="ink3 fd-address">{place.address}</span>}</span>
           </Fact>
         )}
-        {leave && <Fact icon="directions_car"><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
+        {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
         {item.kind === 'task' && item.project && <Fact icon="work"><span>{item.project}</span></Fact>}
         {item.due_string && item.recurring && <Fact icon="repeat"><span>{describeTaskRepeat(item.due_string)}</span></Fact>}
