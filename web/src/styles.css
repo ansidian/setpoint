@@ -227,9 +227,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .rd-tools .tool { padding: 0 9px; }
   .rd-tools .tool .kbd { display: none; }
 }
-/* Done is Attention mail's verb: its check `good`, its label `ink` (#126). */
+/* Done is Attention mail's verb: its check `good`, its label `ink` (#126). Trash warns under the pointer
+   in `alert` and presses in it (#132); every tool presses as pills do (below). */
 .rd-tools .tool.done { color: var(--ink); }
 .rd-tools .tool.done .icon { color: var(--good); }
+.rd-tools .tool.trash:hover { color: var(--alert); background: color-mix(in oklch, var(--alert) 12%, transparent); }
+.rd-tools .tool.trash:hover .kbd { color: var(--alert); background: color-mix(in oklch, var(--alert) 16%, transparent); }
 /* Reply's place, after Open in Gmail, empty until reply exists. */
 .rd-tools .reply-slot { display: contents; }
 .rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
@@ -277,6 +280,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .row .subj .code { font-size: 13px; }
 /* Other chips drop while the reading pane is open; the account never does. */
 .content:has(> .pane) .list.all .row .kd { display: none; }
+/* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
+   (#132): the floating detail's Delete and Complete, the editor's More › Delete. */
+.ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
+.ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
 /* The app's one toast: the export's `.toast`, a 40 px pill at the top centre, in the header's band (#92), above Settings (30–31). */
 .toast { position: absolute; left: 50%; top: calc((var(--header) - 40px) / 2); transform: translateX(-50%); height: 40px; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 16px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35; }
 /* A line with no button keeps the same room on both sides. */
@@ -427,6 +434,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   :root[data-theme="night"] .attach:hover { background: var(--cardOn); }
   .menu-i:not(:disabled):hover { background: var(--sub2); color: var(--ink); }
   .menu-i:not(:disabled):hover .icon { color: var(--ink); }
+  /* A destructive item (the editor's More › Delete) turns `alert` under the pointer (#132). */
+  .menu-i.danger:not(:disabled):hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
+  .menu-i.danger:not(:disabled):hover .icon { color: var(--alert); }
 }
 
 /* ---------- The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; #258) ---------- */
@@ -500,3 +510,5 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .btn.out:not(:disabled):is(:active, [data-echo]) { background: var(--sub2); }
 :is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .listfoot .lnk, .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
 :is(.row, .arow, .nav, .acct, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }
+/* Trash presses in its own `alert`, 20% (#132). */
+.rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }

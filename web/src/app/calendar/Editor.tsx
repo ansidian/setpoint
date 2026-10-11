@@ -670,7 +670,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <button type="button" className="ibtn" aria-label="More" aria-expanded={menu === 'more'} onClick={() => setMenu(menu === 'more' ? null : 'more')}><Icon name="more_horiz" /></button>
             {menu === 'more' && (
               <div ref={menuRef} className="pop menu right" role="menu">
-                <button type="button" role="menuitem" className="menu-i" onClick={() => onDelete(editing)}><Icon name="delete" size={16} />Delete<span className="kbd">Del</span></button>
+                <button type="button" role="menuitem" className="menu-i danger" onClick={() => onDelete(editing)}><Icon name="delete" size={16} />Delete<span className="kbd">Del</span></button>
               </div>
             )}
           </span>

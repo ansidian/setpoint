@@ -125,7 +125,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
         {/* Only in the compact tier, where the reader covers the list (#258). */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
-        <button className="tool" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
+        <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
         <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
           <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
         </button>
@@ -159,7 +159,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
           {listed && gmail !== null && (
             <>
               {doneable && <button className="ph-done" type="button" onClick={actions.done}><Icon name="check" size={22} />Done</button>}
-              <button type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
+              <button className="trash" type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
               <button type="button" onClick={toggleRead}>
                 <span key={toggled} className={toggled ? 'ph-swap' : undefined}><Icon name={markedUnread ? 'mark_email_read' : 'mark_email_unread'} size={22} /></span>
                 {markedUnread ? 'Mark read' : 'Mark unread'}

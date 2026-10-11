@@ -33,6 +33,9 @@
 .fd-title, .fd-place, .fd-address, .fd-when { user-select: text; -webkit-user-select: text; }
 .fd .card-acts { display: flex; align-items: center; gap: 2px; padding: 8px 10px 10px 12px; border-top: 1px solid var(--hair); }
 .fd .card-acts .ibtn[aria-disabled="true"]:hover { background: none; color: var(--ink2); }
+/* Delete stands apart: 9 px further, after a 1 × 14 px `hair` divider (#132). */
+.fd .card-acts .ibtn.danger { position: relative; margin-left: 9px; }
+.fd .card-acts .ibtn.danger::before { content: ""; position: absolute; left: -6px; top: 6px; width: 1px; height: 14px; background: var(--hair); }
 .fd .card-acts .btn.ghost[aria-disabled="true"]:hover { background: var(--sub2); }
 
 /* Colour (F6): the calendar's own, then the swatches an event can take. */

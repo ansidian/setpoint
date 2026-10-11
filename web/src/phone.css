@@ -115,6 +115,8 @@
   .rd-subj .rd-unread { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--ink); margin-right: 10px; vertical-align: .3em; animation: ph-pop var(--dur-fast) var(--ease); }
   .ph-acts .ph-swap { display: block; animation: ph-pop var(--dur-fast) var(--ease); }
   @keyframes ph-pop { from { transform: scale(.4); } }
+  /* Trash turns `alert` as it's pressed (#132). */
+  .ph-acts > button.trash:active, .ph-acts > button.trash:active .icon { color: var(--alert); }
   .attach { width: 100%; }
 
   /* The reader slides in over the list, which moves a fifth left and dims under it, and back off it

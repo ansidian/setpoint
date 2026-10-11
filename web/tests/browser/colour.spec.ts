@@ -19,7 +19,17 @@ const colourOf = (page: Page, colour: string) => page.evaluate(value => {
   return computed;
 }, colour);
 
-const style = (target: Locator, property: 'color' | 'backgroundColor' | 'boxShadow' | 'borderTopColor' | 'opacity') =>
+/** A background as the page computes it, mixes included. */
+const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
+  const probe = document.createElement('div');
+  probe.style.background = value;
+  document.body.append(probe);
+  const computed = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return computed;
+}, background);
+
+const style = (target: Locator, property: 'color' | 'backgroundColor' | 'boxShadow' | 'borderTopColor' | 'opacity' | 'transform' | 'marginLeft' | 'filter') =>
   target.evaluate((element, name) => getComputedStyle(element)[name], property);
 
 /** The colour the screen shows at a point of the page, [r, g, b]: a 1 px screenshot's first pixel. */
@@ -294,6 +304,61 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal((await dot(noise))[0], await colourOf(page, 'var(--ink3)'));
       const delivery = page.locator('.row.unread', {hasText: 'Consolidated Messenger'});
       assert.deepEqual(await delivery.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink)'), '500']);
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: Trash and Delete turn alert under the pointer and Complete good, neutral at rest; a reader tool presses in; Delete stands apart (#132)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await inbox(page, setpoint.base, theme);
+      const alert = await colourOf(page, 'var(--alert)');
+      const good = await colourOf(page, 'var(--good)');
+      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      const trash = page.locator('.rd-tools .tool.trash');
+      await trash.waitFor();
+      assert.equal(await style(trash, 'color'), await colourOf(page, 'var(--ink2)'), 'Trash at rest');
+      await trash.hover();
+      await until('Trash turns alert', () => style(trash, 'color'), colour => colour === alert);
+      assert.equal(await style(trash, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 12%, transparent)'));
+      // Pressed, it gives: .96 and a stronger alert, eased over 120 ms; let go elsewhere, nothing's trashed.
+      await page.mouse.down();
+      await until('Trash pressed in', () => style(trash, 'transform'), transform => transform === 'matrix(0.96, 0, 0, 0.96, 0, 0)');
+      assert.equal(await style(trash, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 20%, transparent)'));
+      await page.mouse.move(700, 28);
+      await page.mouse.up();
+
+      await calendar(page, setpoint.base, theme);
+      await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).click();
+      const del = page.locator('.fd .card-acts .ibtn.danger');
+      await del.waitFor();
+      assert.equal(await style(del, 'marginLeft'), '9px');
+      assert.deepEqual(await del.evaluate(button => [getComputedStyle(button, '::before').width, getComputedStyle(button, '::before').height]), ['1px', '14px'], 'its divider');
+      assert.equal(await style(del, 'color'), await colourOf(page, 'var(--ink2)'), 'Delete at rest');
+      await del.hover();
+      await until('Delete turns alert', () => style(del, 'color'), colour => colour === alert);
+      assert.equal(await style(del, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)'));
+      await page.keyboard.press('Escape');
+      await page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'}).click();
+      const complete = page.locator('.fd .card-acts .ibtn.affirm');
+      await complete.hover();
+      await until('Complete turns good', () => style(complete, 'color'), colour => colour === good);
+      assert.equal(await style(complete, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--good) 16%, transparent)'));
+      await page.keyboard.press('Escape');
+
+      // The editor's More › Delete.
+      await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).click();
+      await page.keyboard.press('e');
+      await page.locator('.editor').getByRole('button', {name: 'More'}).click();
+      const item = page.locator('.editor .menu-i.danger');
+      await item.hover();
+      await until('More › Delete turns alert', () => style(item, 'color'), colour => colour === alert);
+      assert.equal(await style(item.locator('.icon'), 'color'), alert);
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();

@@ -307,7 +307,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **Tools** (48 px, `hair` below): Done `H` (on Attention mail not yet Done, #93), Trash `E`, Pin
   `P`, Open in Gmail `O` (each a 30 px pill with its key hint), then previous and next and More. Reply has a reserved place after Open in
   Gmail, empty until reply exists. In a pane under 600 px the key hints drop and the labels stay
-  ([Decided while building](#decided-while-building) #107).
+  ([Decided while building](#decided-while-building) #107). Done's check is `good` and its label
+  `ink`, the others `ink2` (#126); Trash turns `alert` under the pointer and presses in `alert` (#132).
 - **Head** (padding 20 28 16): the subject (20 / 500), then a 32 px avatar, the sender's name, " ·
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
@@ -418,7 +419,8 @@ editor and calendar search results.
   at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
   Fri", #167), reminder, calendar (its glyph in the item's colour, #167); then **Edit E** and icon
-  actions (duplicate, copy, colour, delete).
+  actions (duplicate, copy, colour, delete). Delete stands apart after a `hair` divider and turns
+  `alert` under the pointer, a task's Complete `good` (#132).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt.
@@ -1768,3 +1770,10 @@ it changes what's on screen.
     a read one's `ink3`; height, columns, cursor and actions don't change. In Unread nearly every row
     is unread, so the bold no longer ranked anything and the list's foot weighed as much as its top
     (Andy, 2026-10-11, polish audit inbox-07).
+132. **Destructive actions warn under the pointer, affirming ones reward it, and a press lands:**
+    the reader's Trash turns `alert` with a 12% `alert` fill (its key hint 16%), the floating
+    detail's and the Today card's Delete and the editor's More › Delete `alert` on 14%, and a task's
+    Complete `good` on 16%; all are neutral at rest, as Delete is undoable (#76). The card's Delete
+    sits 9 px further right after a 1 × 14 px `hair` divider. Every reader tool presses as pills do
+    (#143), Trash on 20% `alert` in `alert`, and the phone's Trash turns `alert` as
+    it's pressed (Andy, 2026-10-11, polish audit reader-02, calflows-04).

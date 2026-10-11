@@ -87,7 +87,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         </button>
         <span className="grow" />
         {item.kind === 'task' && (
-          <button className="ibtn sm" aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || !!item.command || (item.done && item.recurring) || undefined}
+          <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || !!item.command || (item.done && item.recurring) || undefined}
             title={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
             onClick={act(task => !task.command && !(task.done && task.recurring) && actions!.complete(task))}>
             <Icon name={item.done ? 'undo' : 'task_alt'} size={16} />
@@ -102,7 +102,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
             <span className="dot" style={{...colour, width: 12, height: 12}} />
           </button>
         )}
-        {offers('remove') && <button className="ibtn sm" aria-label="Delete" aria-disabled={fixed || undefined} title="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
+        {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} title="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
       </div>
       {picking && (
         <div className="fd-swatches" role="radiogroup" aria-label="Colour">
