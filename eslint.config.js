@@ -86,7 +86,7 @@ const browserChecks = {
 };
 
 export default tseslint.config(
-  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/']},
+  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/']},
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
