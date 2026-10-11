@@ -207,9 +207,22 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.keyboard.press('Meta+,');
     await page.locator('.settings').waitFor();
     assert.equal(new URL(page.url()).pathname, '/calendar', 'the page under it keeps the address');
+    // The current page keeps its `sub2` fill with the keys in the nav, opened with ⌘, or after ↓;
+    // the keyboard's own fill is `sub`, on any other page it reaches.
+    const sub2 = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('i'));
+      probe.style.background = 'var(--sub2)';
+      const fill = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return fill;
+    });
+    const current = page.locator('.settings .set-nav .nav.on');
+    const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav, getComputedStyle(nav).backgroundColor]);
+    await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true, sub2]));
     // ↓ in the nav changes page; keys inside never reach the page (2 would go to Calendar, J would move a cursor).
     await page.keyboard.press('ArrowDown');
     await page.locator('.settings .set-title', {hasText: 'Calendar'}).waitFor();
+    await until('Calendar marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Calendar', true, sub2]));
     await page.keyboard.press('1');
     assert.equal(new URL(page.url()).pathname, '/calendar');
 
