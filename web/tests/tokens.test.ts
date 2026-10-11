@@ -6,7 +6,7 @@ import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
-  placement, radius, themeVariables, tintL, type, type Theme, viewport, attTint,
+  placement, radius, themeVariables, tintL, type, type Theme, viewport, attTint, mailDim,
 } from '../src/tokens.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -46,7 +46,7 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
 /** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #120–#149, and the scrollbar's). */
-const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL', '--attTint'];
+const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--mailEdge', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL', '--attTint', '--mailDim'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 
@@ -179,6 +179,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`deepening under the pointer by \`--evhover\` (Night ${evhover.night}%, Light ${evhover.light}%)`);
     expect(flat).toContain(`coloured text on its own tint caps its lightness at \`--tintL\` (Night ${tintL.night}, Light ${String(tintL.light).replace(/^0/, '')})`);
     expect(flat).toContain(`Attention's band (\`caution\` ${attTint.night}% on \`panel\` in srgb, Light ${attTint.light}%)`);
+    expect(flat).toContain(`the email frame's brightness \`--mailDim\` (Night ${String(mailDim.night).replace(/^0/, '')}, Light ${mailDim.light})`);
     expect(flat).toContain(`search highlight (${mix.searchHighlight.fill}% mix)`);
   });
 

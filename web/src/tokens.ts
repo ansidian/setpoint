@@ -46,6 +46,8 @@ export const colour = {
   // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub` (#129).
   navOn: 'rgba(255,255,255,.10)',
   navOnEdge: 'rgba(255,255,255,.07)',
+  // The HTML email frame's ring (#134): none in Night, a hairline in Light, where white meets the page.
+  mailEdge: 'transparent',
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
@@ -92,6 +94,7 @@ export const lightColour: Record<ColourToken, string> = {
   accent: 'oklch(0.54 0.12 235)',
   navOn: '#ffffff',
   navOnEdge: 'rgba(29,30,33,.10)',
+  mailEdge: 'rgba(29,30,33,.1)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
 };
@@ -134,6 +137,8 @@ export const evhover = {night: 18, light: 14} as const;
 export const tintL = {night: 1, light: 0.43} as const;
 /** Attention's band: `caution` mixed into its `panel` at this share (#130); 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
+/** The HTML email frame's brightness (#134): Night takes the glare off its white, Light leaves it. */
+export const mailDim = {night: 0.95, light: 1} as const;
 
 /** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
 export const glyphColour = {
@@ -352,6 +357,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
+  vars['--mailDim'] = String(light ? mailDim.light : mailDim.night);
   return vars;
 }
 

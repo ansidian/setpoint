@@ -365,3 +365,29 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 }
+
+test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the pointer) and the body starts 12 px under them; the email frame dims to 95% in Night and takes an edge in Light (#133, #134)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['recovery-html'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    for (const theme of ['night', 'light'] as const) {
+      await inbox(page, setpoint.base, theme);
+      await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+      const frame = page.locator('iframe.mailframe');
+      await page.frameLocator('iframe.mailframe').locator('body > *').first().waitFor();
+      assert.equal(await style(frame, 'filter'), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
+      assert.equal(await style(frame, 'boxShadow'), theme === 'night' ? 'rgba(0, 0, 0, 0) 0px 0px 0px 1px' : 'rgba(29, 30, 33, 0.1) 0px 0px 0px 1px', `${theme}: its edge`);
+      const ask = page.locator('.rd-acts .btn.out', {hasText: 'Ask about this email'});
+      await page.mouse.move(1, 1);
+      assert.equal(await style(ask, 'color'), await colourOf(page, 'var(--ink2)'), `${theme}: an action's label`);
+      assert.equal(await style(page.locator('.rd-acts .btn.out').first().locator('.icon'), 'color'), await colourOf(page, 'var(--ink3)'), `${theme}: its icon`);
+      await ask.hover();
+      const ink = await colourOf(page, 'var(--ink)');
+      await until('ink under the pointer', () => style(ask, 'color'), colour => colour === ink);
+      assert.equal(await page.locator('.rd-body').evaluate(body => getComputedStyle(body).paddingTop), '12px');
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -84,6 +84,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
+| `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
@@ -103,8 +104,10 @@ Personal, which are account names). The UI says "Done", never "handled".
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
   colour, and by 28% while pressed (#145); Attention's band (`caution` 8% on `panel` in srgb, Light
   6%). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
-  tints it (#123). On the calendar, coloured text on its own tint caps its lightness at `--tintL`
-  (Night 1, Light .43), keeping its hue and chroma (#122).
+  tints it (#123).
+- **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`
+  (Night 1, Light .43), keeping its hue and chroma (#122); the email frame's brightness `--mailDim`
+  (Night .95, Light 1) (#134).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -313,7 +316,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
   ([Decided while building](#decided-while-building) #88).
-- **Actions** (28 px outline buttons): **Add to calendar**, **Add as task**, **Ask about this email**.
+- **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #133):
+  **Add to calendar**, **Add as task**, **Ask about this email**.
   Security mail has no Add to calendar; it shows the **facts card** instead (board 03: what happened,
   when, device, location, "not a place you use" in `alert`), and protected mail says "Protected ·
   always stays in Attention".
@@ -321,7 +325,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   ([Decided while building](#decided-while-building) #4).
 - **Body:** plain text at 14 / 1.55, max 600 px; HTML in a sandboxed frame as wide as the reading
   pane and as tall as the email, with radius 14 on white
-  ([Decided while building](#decided-while-building) #77).
+  ([Decided while building](#decided-while-building) #77), dimmed to 95% in Night and ringed with a
+  1 px `mailEdge` hairline in Light (#134). The body starts 12 px under the actions (#133).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
   **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
   contosocoffee.example" (trust per domain).
@@ -1777,3 +1782,12 @@ it changes what's on screen.
     sits 9 px further right after a 1 × 14 px `hair` divider. Every reader tool presses as pills do
     (#143), Trash on 20% `alert` in `alert`, and the phone's Trash turns `alert` as
     it's pressed (Andy, 2026-10-11, polish audit reader-02, calflows-04).
+133. **The reader's actions step back:** Add to calendar, Add as task and Ask about this email draw
+    their labels in `ink2` and icons in `ink3`, `ink` under the pointer; ring, hover fill and the
+    held state don't change. The body starts 12 px under them (was 4), so the eye runs subject,
+    sender, then words (Andy, 2026-10-11, polish audit reader-11).
+134. **The HTML email frame loses its glare in Night and gains an edge in Light:** in Night it's dimmed
+    to 95% brightness (`--mailDim`, white becomes `#f2f2f2`; 90% looked dirty), and in Light it takes
+    a 1 px `mailEdge` ring (`rgba(29,30,33,.1)`), a hairline rather than a shadow, so its boundary
+    reads stronger than the email's own borders. `color-scheme` stays light (Andy, 2026-10-11, polish
+    audit reader-08).

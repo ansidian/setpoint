@@ -247,7 +247,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--sub2); color: var(--ink); display: grid; place-items: center; font-weight: 500; font-size: 13px; flex: none; }
 .rd-acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .rd-acts .btn { height: 28px; font-size: 12.5px; padding: 0 12px; }
-.rd-body { padding: 4px 28px 28px; flex: 1 0 auto; display: flex; flex-direction: column; gap: 12px; }
+/* The actions step back so subject, sender and body lead (#133): labels ink2, icons ink3, ink under the pointer. */
+.rd-acts .btn.out { color: var(--ink2); }
+.rd-acts .btn.out .icon { color: var(--ink3); }
+.rd-acts .btn.out:enabled:hover, .rd-acts .btn.out:enabled:hover .icon { color: var(--ink); }
+.rd-body { padding: 12px 28px 28px; flex: 1 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
 .mailtext p { margin: 0 0 12px; }
 
@@ -333,6 +337,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @media (hover: hover) { .imgbar .lnk:hover { background: var(--sub2); } }
 /* An HTML email: a sandboxed frame as wide as the reading pane, radius 14 on white, as tall as its page says it is. */
 .mailframe { display: block; width: 100%; border: 0; border-radius: var(--r-card); background: #ffffff; flex: none; color-scheme: light; }
+/* Night takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow (#134). */
+.mailframe { filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge); }
 /* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10; Decided while building #61). */
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
 .attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 7px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; --t: var(--ink2); --t-mix: 14%; }
