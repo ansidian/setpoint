@@ -7,17 +7,17 @@ import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
 
-/** Night. Keys are DESIGN.md's token names. */
+/** Night. Keys are DESIGN.md's token names; `panel` and `ink3` are the polish audit's (override 29). */
 export const colour = {
   page: '#050506',
-  panel: '#08090a',
+  panel: '#0b0c0e',
   card: '#0c0d0f',
   cardOn: '#131417',
   chip: '#0f1013',
   modal: '#0c0d0f',
   ink: '#ecebe7',
   ink2: '#a3a4a8',
-  ink3: '#707277',
+  ink3: '#7d7f84',
   onInk: '#050506',
   onAccent: '#050506',
   onAlert: '#1a0806',
@@ -45,16 +45,19 @@ export const colour = {
 
 export type ColourToken = keyof typeof colour;
 
-/** Light: darma's Light tokens exactly (decision 45), with `page` #f6f6f4 (DESIGN.md override 5). */
+/**
+ * Light: darma's Light tokens (decision 45), with `page` #f6f6f4 (DESIGN.md override 5) and the polish
+ * audit's own (override 29): a deeper `ink2` and a white `cardOn`.
+ */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',
   panel: '#f1f1ee',
   card: '#ffffff',
-  cardOn: '#f4f4f2',
+  cardOn: '#ffffff',
   chip: '#ffffff',
   modal: '#ffffff',
   ink: '#1d1e21',
-  ink2: '#56585d',
+  ink2: '#4b4d52',
   ink3: '#6d6f74',
   onInk: '#ffffff',
   onAccent: '#ffffff',

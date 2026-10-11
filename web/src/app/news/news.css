@@ -39,7 +39,7 @@
 .upd > .nd::before { background: var(--cool); }
 
 /* Setpoint's copies, cropped to fill; a story without one leaves its place empty. */
-.nw-img { display: block; object-fit: cover; flex: none; background: var(--cardOn); }
+.nw-img { display: block; object-fit: cover; flex: none; background: var(--sub2); }
 
 /* A block's top story. */
 .nw-lead { display: grid; grid-template-columns: 12px 232px minmax(0, 1fr); column-gap: 14px; padding: 14px 16px 14px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }

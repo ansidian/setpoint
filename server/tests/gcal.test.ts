@@ -499,7 +499,7 @@ describe('SV-20: a calendar\'s colour, written to Google', () => {
     await run();
     w.advance(16 * 60_000);
     await run();
-    expect(google.calendar(PERSONAL)).toMatchObject({backgroundColor: '#707277', foregroundColor: '#ffffff'});
+    expect(google.calendar(PERSONAL)).toMatchObject({backgroundColor: '#7d7f84', foregroundColor: '#ffffff'});
     expect(calendar(PERSONAL).colour).toBe('ink3');
     // A colour changed in Google's own app arrives with the next sync.
     google.calendar(PERSONAL)!.backgroundColor = '#16a765';

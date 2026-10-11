@@ -71,7 +71,7 @@
   /* Taps, not a pointer or keys: no keyboard cursor stays behind on a row (hover fills only answer a
      pointer that hovers, styles.css). */
   .row.cur:not(.open), .arow.cur:not(.open) { background: none; }
-  .gh.collapsed.cur { background: var(--panel); }
+  .gh.collapsed.cur { box-shadow: none; }
   .nfold.cur { background: none; }
   /* A tap lands at once, `sub2` under the thumb, and its release fades over 180 ms, as a native list's;
      the reader's bottom bar takes the fill in its 14 px shape and its glyph gives a little, as do the

@@ -61,12 +61,12 @@ Personal, which are account names). The UI says "Done", never "handled".
 | Token | Night | Light | Use |
 | --- | --- | --- | --- |
 | `page` | `#050506` | `#f6f6f4` | app background |
-| `panel` | `#08090a` | `#f1f1ee` | sidebar, group headers, Settings nav |
-| `card` | `#0c0d0f` | `#ffffff` | floating detail, proposal, Answer card, prompt, attachments |
-| `cardOn` | `#131417` | `#f4f4f2` | focused search, focused field, toast, collapsed group hover |
+| `panel` | `#0b0c0e` | `#f1f1ee` | sidebar, group headers, Settings nav |
+| `card` | `#0c0d0f` | `#ffffff` | floating detail, prompt, attachments; in Light the proposal and Answer card |
+| `cardOn` | `#131417` | `#ffffff` | focused search and fields, toast, drag tip, News's pill; in Night the proposal and Answer card |
 | `chip` | `#0f1013` | `#ffffff` | inputs, tags |
 | `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
-| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#707277` | `#1d1e21` / `#56585d` / `#6d6f74` | primary / secondary / tertiary text and icons |
+| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#7d7f84` | `#1d1e21` / `#4b4d52` / `#6d6f74` | primary / secondary / tertiary text and icons |
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the attention pill and on solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
@@ -244,7 +244,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career `work`, People
   `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #160), 11.5 uppercase
   .08em `ink3`, count in `ink2` (Attention's in `caution`). A collapsed group adds the first three
-  organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge Video") and a chevron, and hovers `cardOn`. Every group
+  organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge Video") and a chevron; under the pointer it lays
+  `sub` over its band, and the keyboard cursor `sub2`, as a row does over the page (#121). Every group
   starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
 - **Order:** Pinned (only with pins), Attention, Unsorted (only when triage is down), Security,
   Deliveries, Money, Career, People, Updates, Other, Noise. Empty groups are left out. Collapsed,
@@ -863,6 +864,12 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 30. **The glide's contents crossfade**: old content fades out 0–120 ms and new content in 70–220 ms
     (#149), overlapping by 50 ms, where `motion/glide.json` has 0–90 and 90–220 and the card travels
     blank between them.
+
+**The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #120–#139).
+
+29. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
+    `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
+    (`#f4f4f2`). The boards keep the export's values.
 
 ## Not designed yet
 
@@ -1662,3 +1669,19 @@ it changes what's on screen.
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
     (Andy, 2026-10-11, polish audit calflows-12).
+120. **The ink ladder is re-spaced, and Night's panel lifts a step:** Night `ink3` is `#7d7f84`
+    (5.1:1 on the page, 4.3:1 on a cursor row, 3.8:1 for key hints in the search field), so ages,
+    account labels, counts, summaries and key hints read at a glance while `ink2` stays 1.6× it.
+    Light `ink2` is `#4b4d52` (7.8:1), the same step over `ink3`, so read mail and seen headlines no
+    longer look like their own summaries. Night `panel` is `#0b0c0e` (1.04:1 on the page, near
+    Light's step), so the sidebar, group bands and Settings' nav read as layers. `CALENDAR_HEX`
+    writes the new `ink3` to Google and still reads the old one back (Andy, 2026-10-11, polish audit
+    color-04, color-07, news-14).
+121. **Light's raised surfaces are white, and a band has its own hover and cursor:** Light `cardOn` is
+    `#ffffff`, so the toast, the drag tip, News's pill, a focused field, and Alfred's Answer and
+    proposal cards lift off the page as Light's other cards do; Night keeps `#131417` for them, its
+    one deliberate lift. A collapsed group header (and one that collapses on a click) lays `sub`
+    over its `panel` band under the pointer and `sub2` under the keyboard cursor, fading as fills do,
+    and All's folded Noise line takes a row's `sub` and `sub2`; `cardOn` sank below the band in Light,
+    so J landing on a folded group showed nothing. News's image placeholder is `sub2` (Andy,
+    2026-10-11, polish audit color-03, inbox-02, shell-05, search-07).

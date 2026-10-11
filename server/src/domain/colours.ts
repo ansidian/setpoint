@@ -36,9 +36,11 @@ export function oklch(hex: string): {l: number; c: number; h: number} | null {
  * back as its swatch: exactly (ink3 is a grey, which hue alone would read as ink2).
  */
 export const CALENDAR_HEX: Record<Colour, string> = {
-  ink2: '#a3a4a8', ink3: '#707277', cool: '#71c9fa', warm: '#f5ab77', caution: '#ff865b', comf: '#73d4ac', good: '#7cd591', sun: '#f7cd3a', alert: '#fd736d', violet: '#c8aefa', cyan: '#57d4d4',
+  ink2: '#a3a4a8', ink3: '#7d7f84', cool: '#71c9fa', warm: '#f5ab77', caution: '#ff865b', comf: '#73d4ac', good: '#7cd591', sun: '#f7cd3a', alert: '#fd736d', violet: '#c8aefa', cyan: '#57d4d4',
 };
-const WRITTEN = new Map(Object.entries(CALENDAR_HEX).map(([swatch, hex]) => [hex, swatch as Colour]));
+/** What earlier builds wrote for a swatch since moved (SV-58): calendars already carrying it read back as it. */
+const WRITTEN_BEFORE: Record<string, Colour> = {'#707277': 'ink3'};
+const WRITTEN = new Map([...Object.entries(WRITTEN_BEFORE), ...Object.entries(CALENDAR_HEX).map(([swatch, hex]) => [hex, swatch as Colour] as const)]);
 
 /** Text on a calendar's colour in Google's app: dark on the light swatches, white on ink3. */
 export const foregroundFor = (hex: string) => ((oklch(hex)?.l ?? 1) > 0.6 ? '#000000' : '#ffffff');
