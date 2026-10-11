@@ -914,6 +914,28 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
     await page.reload();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     assert.equal(await paneWidth(), 496, 'kept across a reload');
+
+    // At its narrowest, the tools keep previous, next and More in the pane, with Done and More both
+    // shown: the key hints drop (the keys still work), the labels stay.
+    await page.locator('.pane-edge').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await paneWidth(), 480);
+    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
+    const tools = page.locator('.rd-tools');
+    const hints = () => tools.locator('.tool .kbd').evaluateAll(kbds => kbds.map(kbd => kbd.checkVisibility()));
+    assert.deepEqual((await tools.locator('.tool').allInnerTexts()).map(text => text.trim()), ['Done', 'Trash', 'Pin', 'Open in Gmail']);
+    assert.deepEqual(await hints(), [false, false, false, false]);
+    const right = (await pane.boundingBox())!.x + 480;
+    for (const name of ['Previous email', 'Next email', 'More']) {
+      const button = (await tools.getByRole('button', {name, exact: true}).boundingBox())!;
+      assert.ok(button.x + button.width <= right, `${name} ends at ${button.x + button.width}, inside the pane's ${right}`);
+    }
+    // Wide enough again, the hints come back.
+    await page.locator('.pane-edge').focus();
+    for (let step = 0; step < 8; step += 1) await page.keyboard.press('ArrowLeft');
+    assert.equal(await paneWidth(), 608);
+    assert.deepEqual(await hints(), [true, true, true, true]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

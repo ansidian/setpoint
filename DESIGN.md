@@ -242,7 +242,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
 
 - **Tools** (48 px, `hair` below): Done `H` (on Attention mail not yet Done, #93), Trash `E`, Pin
   `P`, Open in Gmail `O` (each a 30 px pill with its key hint), then previous and next and More. Reply has a reserved place after Open in
-  Gmail, empty until reply exists.
+  Gmail, empty until reply exists. In a pane under 600 px the key hints drop and the labels stay
+  ([Decided while building](#decided-while-building) #107).
 - **Head** (padding 20 28 16): the subject (20 / 500), then a 32 px avatar, the sender's name, " ·
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
@@ -1306,6 +1307,10 @@ it changes what's on screen.
     no clicks, so a double-click completes that task alone, not the one that moves up under the
     pointer. A repeating task does the same, then shows its next date if it's due by tomorrow (Andy,
     2026-10-11, polish audit shell-01).
+107. **The reader's tools fit a narrow pane:** under 600 px of pane the tools' key hints drop (the
+    keys still work, and ⌘K lists them) and their padding goes from 10 to 9 px, so previous, next
+    and More stay in view down to the pane's 480 px (#22), with Done and More both shown. News's
+    story pane, which shares the tools, does the same (Andy, 2026-10-11, polish audit reader-05).
 110. **A line longer than the editor's field shows where it's typed:** its marks move with its
     letters as the field scrolls, so the words being typed and what they parse to stay in view, with
     the caret on its letter, and a side cut short fades over 14 px (Andy, 2026-10-11, polish audit
