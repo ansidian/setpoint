@@ -544,6 +544,51 @@ test('SV-56: "#ho" puts Home first in Project\'s menu, as the line reads it; Ent
   }
 });
 
+test('SV-56: a line longer than the field shows its typed end and marks, faded where it\'s cut; Home goes back to its start', async () => {
+  const setpoint = await startSetpoint({fixtures: ['no-dinner'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    await line.waitFor();
+    const marks = page.locator('.editor .nl-marks');
+    const place = page.locator('.nl .tok-p', {hasText: '@Blue Door'});
+    await line.pressSequentially('Coffee with Ana and the study group tomorrow 3-4pm @Blue Door');
+    await place.waitFor();
+    // The caret is at the end, and so is what shows: the place's mark is inside the field.
+    const inView = async (mark: typeof place) => {
+      const [field, box] = [(await marks.boundingBox())!, (await mark.boundingBox())!];
+      // A mark draws 2 px either side of its text, and the caret takes a pixel past it.
+      return box.x + 2 >= field.x && box.x + box.width - 2 <= field.x + field.width + 2;
+    };
+    await until('@Blue Door in view', () => inView(place), shown => shown);
+    const scrolled = await line.evaluate(input => (input as HTMLInputElement).scrollLeft);
+    assert.ok(scrolled > 0, `the input scrolled ${scrolled} px`);
+    const shift = () => marks.locator('.nl-text').evaluate(element => new DOMMatrix(getComputedStyle(element).transform).m41);
+    assert.equal(await shift(), -scrolled, 'the marks moved with the text');
+    const clipped = () => marks.evaluate(element => [element.hasAttribute('data-clip-left'), element.hasAttribute('data-clip-right')]);
+    assert.deepEqual(await clipped(), [true, false]);
+    // The cut side fades over 14 px.
+    assert.equal(await marks.evaluate(element => getComputedStyle(element).maskImage), 'linear-gradient(90deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
+    // Home: the start shows again, the end is cut and fades.
+    await page.keyboard.press('Home');
+    await until('back at the start', clipped, clip => !clip[0] && !!clip[1]);
+    assert.equal(await shift(), 0);
+    assert.equal(await marks.evaluate(element => getComputedStyle(element).maskImage), 'linear-gradient(270deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
+    assert.equal(await inView(place), false, '@Blue Door is past the end');
+    // However the field scrolls (a drag past its edge), the marks follow: scrolled partway, both sides are cut.
+    await line.evaluate(input => {
+      input.scrollLeft = 80;
+    });
+    await until('cut both sides', clipped, clip => !!clip[0] && !!clip[1]);
+    assert.equal(await shift(), -80);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('D57: an event\'s #calendar in the line filters the Calendar menu; typing alone takes the first, a pick ends it, and #1 stays a title', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

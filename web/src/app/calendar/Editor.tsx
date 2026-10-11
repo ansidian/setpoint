@@ -14,7 +14,7 @@
 import type {CalendarOut, Colour, ItemChanges, ItemCreateInput, ItemKind, ItemOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
 import {TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
+import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject} from 'react';
 import {useResource} from '../../api/client.ts';
 import {placeSuggestions, proposalFrom, SETTINGS_PATH, TODOIST_LABELS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {newsProposal} from '../../api/news.ts';
@@ -299,6 +299,38 @@ function Marked({text, marks, calendarColour, projectColour}: {text: string; mar
   return <>{parts}</>;
 }
 
+const MIRROR_EVENTS = ['scroll', 'input', 'select', 'keyup', 'focus', 'blur'] as const;
+
+/**
+ * Keeps the line's marks under its letters (SV-56): a line longer than the field scrolls inside the
+ * input, so the mirror moves with it, and says which sides are cut short, which fade.
+ */
+function useMirror(input: RefObject<HTMLInputElement | null>, mirror: RefObject<HTMLSpanElement | null>, text: string) {
+  useEffect(() => {
+    const field = input.current;
+    const marks = mirror.current;
+    const inner = marks?.firstElementChild;
+    if (!field || !marks || !(inner instanceof HTMLElement)) return;
+    let frame = 0;
+    const follow = () => {
+      cancelAnimationFrame(frame);
+      // Chromium moves the input's scroll after its caret, so it's read a frame later.
+      frame = requestAnimationFrame(() => {
+        const left = field.scrollLeft;
+        inner.style.transform = left ? `translateX(${-left}px)` : '';
+        marks.toggleAttribute('data-clip-left', left > 0);
+        marks.toggleAttribute('data-clip-right', field.scrollWidth - field.clientWidth - left > 1);
+      });
+    };
+    for (const name of MIRROR_EVENTS) field.addEventListener(name, follow);
+    follow();
+    return () => {
+      cancelAnimationFrame(frame);
+      for (const name of MIRROR_EVENTS) field.removeEventListener(name, follow);
+    };
+  }, [input, mirror, text]);
+}
+
 // ---------- The editor ----------
 
 interface EditorProps {
@@ -357,6 +389,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const [lineMenu, setLineMenu] = useState<{query: string; cur: number; closed: boolean} | null>(null);
   const [sessionToken, setSessionToken] = useState(() => crypto.randomUUID());
   const line = useRef<HTMLInputElement>(null);
+  const lineMarks = useRef<HTMLSpanElement>(null);
   const title = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const filled = useMemo(() => drafts.map(one => withDefaults(one, fallbackCalendar, defaultReminders)), [drafts, fallbackCalendar, defaultReminders]);
@@ -440,6 +473,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const projectChosen = draft.kind === 'task' && projects && draft.project !== original?.project ? projectChoice(draft.project ?? '', projects, draft.newProject) : null;
   // The line's #project in its project's colour, as the Project field's dot (SV-56).
   const projectTodoist = draft.kind === 'task' && !draft.newProject && draft.project ? projects?.find(one => one.name.toLowerCase() === draft.project!.toLowerCase())?.colour : null;
+  useMirror(line, lineMarks, draft.text);
   const projectProblem = projectChosen && 'problem' in projectChosen ? projectChosen.problem : null;
 
   useEffect(() => {
@@ -655,7 +689,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <label className="field big"><input ref={title} className="grow" aria-label="Title" value={draft.title} onChange={event => change({title: event.target.value}, ['title'])} /></label>
           ) : (
             <label className="field big nl">
-              <span className="nl-marks" aria-hidden="true"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null} /></span>
+              <span ref={lineMarks} className="nl-marks" aria-hidden="true">
+                <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null} /></span>
+              </span>
               <input ref={line} className="nl-input" aria-label={`Describe the ${noun}`} value={draft.text} spellCheck={false} autoComplete="off"
                 placeholder={kind === 'event' ? 'Dinner with Sam fri 7-9pm @Blue Door' : 'Pay rent fri'}
                 onChange={event => typeLine(event.target.value)} />

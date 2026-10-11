@@ -372,7 +372,8 @@ The card's side is chosen first and may flip on landing (board 12c).
 ### Editor
 
 In the right pane (board 13): the **title field** parses as you type ("Dinner with Sam fri 7-9pm
-@Blue Door" → date, time and end, place, calendar, each parsed token marked), **Places**
+@Blue Door" → date, time and end, place, calendar, each parsed token marked; a line longer than the
+field shows where it's typed, the cut side fading, #110), **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
@@ -1294,6 +1295,10 @@ it changes what's on screen.
     the button it switches to, and ⌘K's Show All or Show Unread carries it. `1` goes to the Inbox
     from another page; on the Inbox it does nothing, except from a search or on the phone, where it
     goes back to the Inbox (Andy, 2026-10-11).
+110. **A line longer than the editor's field shows where it's typed:** its marks move with its
+    letters as the field scrolls, so the words being typed and what they parse to stay in view, with
+    the caret on its letter, and a side cut short fades over 14 px (Andy, 2026-10-11, polish audit
+    calflows-01).
 111. **The line's menus put first what the line reads** (amending #43 and #46): Project's menu and an
     event's Calendar menu list the names starting with what's typed, then those with a word starting
     with it, then those merely holding it, each in the list's order, with the cursor on the first,

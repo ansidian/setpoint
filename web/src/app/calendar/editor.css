@@ -27,6 +27,12 @@
 .editor .nl .nl-input { position: absolute; left: 12px; right: 12px; top: 0; width: calc(100% - 24px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
 .editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--cool) 30%, transparent); }
+/* SV-56: a line longer than the field scrolls inside the input, and the marks move with it
+   (Editor.tsx's useMirror); a side cut short fades over 14 px, so the cut reads as more. */
+.editor .nl-text { display: inline-block; }
+.editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
+.editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
+.editor .nl-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
 /* A mark draws 2 px either side of its text without moving it. */
 .editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
 .editor .tok-d { background: color-mix(in oklch, var(--cool) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--cool) 60%, transparent); }
