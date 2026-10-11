@@ -274,7 +274,9 @@ test('SV-56: a day outside the month takes the outside tint, a weekend among the
     // Selected, Sun Sep 27 is `sub` like any selected day.
     await cell('2026-09-27').click({position: {x: 100, y: 150}});
     await until('Sun Sep 27 selected', () => cell('2026-09-27').getAttribute('class'), cls => !!cls?.split(' ').includes('sel'));
-    assert.equal(await fill('2026-09-27'), await tokenColour(page, 'sub'));
+    // A cell eases its fill over 180 ms (#123); it's read once it has.
+    const sub = await tokenColour(page, 'sub');
+    await until('Sun Sep 27 is sub', () => fill('2026-09-27'), value => value === sub);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
