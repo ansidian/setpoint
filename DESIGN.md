@@ -77,17 +77,25 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line |
 | `warm` | `oklch(0.8 0.11 55)` | `oklch(0.54 0.12 55)` | Business |
 | `cool` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | Personal (account and calendar), rain |
+| `accent` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | "you are here": the open email's bar, the current page's icon, today's month boundary, a date range, selected search chips, News's updates |
 | `comf` | `oklch(0.8 0.11 165)` | `oklch(0.54 0.1 165)` | Work |
-| `good` | `oklch(0.8 0.13 150)` | `oklch(0.53 0.13 150)` | the done glyph |
+| `good` | `oklch(0.8 0.13 150)` | `oklch(0.53 0.13 150)` | done or healthy: the done glyph, the reader's Done check |
 | `sun` | `oklch(0.86 0.16 92)` | `oklch(0.63 0.125 92)` | sun, search highlight (26% mix) |
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
+- **Roles** (#126): each colour has one job, so a screen has two or three anchors. **`accent`**
+  says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
+  it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count
+  and health warnings, nothing else. **`alert`** says danger and now: protected
+  mail, failed changes, destructive actions, offline, the now-line and today's disc. **`ink`** is the
+  primary action (New, sign-in, OK: solid ink pills). The identity swatches show only as dots, chip
+  tints and bars, never as control fills, and the AI has no hue of its own.
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
-  **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from darma's 11
-  swatches in Settings.
+  **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
+  darma's 11 swatches in Settings, not `caution` or `alert` (#126); one picked before still shows.
 - **Mixes** of a hue are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
   (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
@@ -256,8 +264,9 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Row** 38 px, padding 0 16 0 12: unread gutter (12), sender or organisation (172, ellipsis),
   subject then " · " and the summary in `ink3` (ellipsis), the **account** (dot and label in `ink3`
   12, 76 px, on every row and never dropped, decision 41), the age (64, right, `ink3` 12). Hover
-  `sub`; the keyboard cursor and the open email `sub2`. Other chips drop while the reading pane is
-  open; the account never does.
+  `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
+  edge, and a press `sub3` at once (#127). Other chips drop while the reading pane is open; the
+  account never does.
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
   (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
   line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
@@ -362,7 +371,7 @@ offered for protected mail.
   have `hair` right and bottom lines; weekends take `dayOff`, days outside the month `dayOut` (an
   outside weekend too), the selected day `sub` (#123).
 - **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#124); today a 22 px
-  `ink` disc with `onInk` 600; "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
+  `alert` disc with `onAlert` 600 (#128); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
   sun `sun`, cloud `ink2`, rain `cool`).
 - **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text, its
   lightness capped at `--tintL` (#122) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
@@ -379,7 +388,7 @@ offered for protected mail.
 
 ### Sidebar on Calendar
 
-The **mini-month** (26 px day cells; today an `ink` disc; the visible week or selected day `sub`; no
+The **mini-month** (26 px day cells; today an `alert` disc (#128); the visible week or selected day `sub`; no
 other marks) with ‹ › stepping. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
 on the left (off: an outline), the name; **Todoist** has the same checkbox with its ring glyph as its
 mark. With every calendar off, a 16 px `ink3` `visibility_off` follows the header's title (#113).
@@ -467,7 +476,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Layout:** a 56 px gutter, then seven columns filling the width (139 px at the design target,
   down to about 90 with titles cut). The **day heads** (48 px) and the **all-day row** stay put while
   the hours scroll under them. The right pane stays.
-- **Day head:** the weekday (11.5 uppercase `ink3`), the date (today the 22 px `ink` disc), the
+- **Day head:** the weekday (11.5 uppercase `ink3`), the date (today the 22 px `alert` disc, #128), the
   weather icon. A click selects the day.
 - **All-day row:** all-day events as tinted bars spanning their days, then each day's tasks (a timed
   one prefixed "9:00 AM"), 20 px lines 2 px apart, at least two lines and at most three: a day with
@@ -1716,3 +1725,23 @@ it changes what's on screen.
     told apart: 1.26:1 against `cool` in Night and 1.21:1 in Light, up from 1.03 and 1.02, and 53° of
     hue. Setpoint writes `#74e9d6` to Google for it and still reads `#57d4d4` back as cyan, and
     Google's Peacock still lands on it by hue (Andy, 2026-10-11, polish audit color-05).
+126. **Colour has fixed roles, and `accent` says "you are here":** a token `accent` (`cool`'s values,
+    named for its job) marks the open email's bar, the current page's icon (the sidebar's and
+    Settings'), today's month boundary, a date range's band, search's selected chips, the parse
+    field's selection, and News's updated dots, pill, Updated tag, New since you looked, Missed bar
+    and Upcoming's tile (which borrowed Jobs' `violet`). `good` is done or healthy: the reader's Done
+    shows its check in `good` and its label in `ink` beside the `ink2` tools, so on Attention mail Done
+    reads as the verb. `caution` is only "needs you", and accounts and calendars pick from nine
+    swatches, without `caution` and `alert`, though one picked before still shows; Google's Tomato and
+    Flamingo still read as `alert` for an event. `alert` is danger and now, `ink` the primary action,
+    the identity swatches dots, tints and bars, and the AI has no hue (Andy, 2026-10-11, polish
+    audit color-01).
+127. **The open email has its own state:** `sub3` with a 2 px `accent` bar at its left edge, fading
+    in with the row's 120 ms box-shadow, while the keyboard cursor (and so the pointer's row) stays
+    `sub2` and hover `sub`; with an email open, the row under the pointer no longer looks like the one
+    in the reader. A press on a row is `sub3` at once, before the email opens. Unread, All and search
+    results alike (Andy, 2026-10-11, polish audit inbox-01, reader-06, color-01).
+128. **Today is a disc in the now-line's `alert`:** in the month, the week's day heads and the
+    mini-month (the date pickers' too), with `onAlert` 600 (7.3:1 in Night, 5.7:1 in Light), so today
+    and now are one red thread across the grid and the right pane's now-line (Andy, 2026-10-11,
+    polish audit grids-03).

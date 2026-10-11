@@ -660,7 +660,9 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
 
     await personal.getByRole('button', {name: 'Personal colour'}).click();
-    assert.equal(await page.locator('.settings .swatches .sw').count(), 11);
+    // Nine of darma's swatches: caution and alert keep their jobs (#126).
+    assert.deepEqual(await page.locator('.settings .swatches .sw').evaluateAll(swatches => swatches.map(swatch => swatch.getAttribute('aria-label'))),
+      ['ink2', 'ink3', 'cool', 'warm', 'comf', 'good', 'sun', 'violet', 'cyan']);
     await page.locator('.settings .swatches .sw[aria-label="violet"]').click();
     await personal.locator('.spin').waitFor({state: 'attached'});
     assert.equal(await personal.getAttribute('class'), 'set-row one cal-row pending');
@@ -669,12 +671,12 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     const violet = 'oklch(0.8 0.11 300)';
     assert.equal(await personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim()), violet);
 
-    // Google refuses alert (the dev provider's rule): failed in place, in Google's words.
+    // Google refuses sun (the dev provider's rule): failed in place, in Google's words.
     await personal.getByRole('button', {name: 'Personal colour'}).click();
-    await page.locator('.settings .swatches .sw[aria-label="alert"]').click();
+    await page.locator('.settings .swatches .sw[aria-label="sun"]').click();
     const refusal = personal.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Google Calendar, The caller does not have permission (403 Forbidden)'});
     await refusal.waitFor();
-    assert.equal(await personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim()), 'oklch(0.72 0.17 25)', 'the colour picked stays in place');
+    assert.equal(await personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim()), 'oklch(0.86 0.16 92)', 'the colour picked stays in place');
     // Try again: pending once more, then refused again.
     await personal.getByRole('button', {name: 'Try again'}).click();
     await personal.locator('.spin').waitFor({state: 'attached'});

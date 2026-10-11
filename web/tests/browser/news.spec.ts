@@ -147,7 +147,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
     // The General block's rows are below the fold, so they're still new or updated here.
     assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
-    assert.equal(await dot('Four killed in a warehouse shooting'), await colourOf(page, 'var(--cool)'), 'updated: cool');
+    assert.equal(await dot('Four killed in a warehouse shooting'), await colourOf(page, 'var(--accent)'), 'updated: accent');
 
     const seen = await seenSettled(page, setpoint);
     assert.ok(seen.includes(await storyId(setpoint, 'Red Flag Warning for the valleys until Thu 6 PM')), 'Red Flag Warning was seen');
@@ -201,23 +201,24 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     assert.equal(await style('.nw-sec', 'backgroundColor'), await backgroundOf(page, 'var(--panel)'));
     assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink2)'), 'the section\'s name in ink2 (#161)');
     assert.equal(await style('.nw-sec > .icon', 'color'), await colourOf(page, 'var(--ink3)'), 'its glyph in ink3');
-    assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--cool) 9%, var(--page))'));
-    assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 9%, var(--page))'));
+    assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--accent)'));
     assert.equal(await style('.nw-pill', 'backgroundColor'), await backgroundOf(page, 'var(--cardOn)'));
-    assert.equal(await style('.nw-pill .upd', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.nw-pill .upd', 'color'), await colourOf(page, 'var(--accent)'));
     assert.equal(await dot('Red Flag Warning'), await colourOf(page, 'var(--ink)'), 'new: ink');
-    assert.equal(await dot('Man arrested after a stabbing'), await colourOf(page, 'var(--cool)'), 'updated: cool');
+    assert.equal(await dot('Man arrested after a stabbing'), await colourOf(page, 'var(--accent)'), 'updated: accent');
     assert.equal(await style('.nw-row.new .hl', 'color'), await colourOf(page, 'var(--ink)'));
     assert.equal(await style('.nw-row .sm', 'color'), await colourOf(page, 'var(--ink3)'));
-    assert.equal(await style('.nw-meta .upd', 'color'), await colourOf(page, 'var(--cool)'));
-    assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--violet)'));
+    assert.equal(await style('.nw-meta .upd', 'color'), await colourOf(page, 'var(--accent)'));
+    // Upcoming's tile is the accent, not Jobs' violet (#126).
+    assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--accent)'));
 
     await lead.click();
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     await page.locator('.pane .st-img img').evaluate((image: HTMLImageElement) => image.decode());
-    assert.equal(await style('.st-new', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--cool) 8%, var(--card))'));
-    assert.equal(await style('.st-new .lab', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.st-new', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))'));
+    assert.equal(await style('.st-new .lab', 'color'), await colourOf(page, 'var(--accent)'));
     assert.equal(await style('.src-list', 'backgroundColor'), await backgroundOf(page, 'var(--sub)'));
     await seenSettled(page, setpoint);
     await settle(page);

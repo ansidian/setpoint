@@ -62,7 +62,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .nav .icon { color: var(--ink3); }
 @media (hover: hover) { .nav:hover { background: var(--sub); } }
 .nav.on { background: var(--sub2); color: var(--ink); }
-.nav.on .icon { color: var(--ink); }
+/* The current page's icon is the accent, "you are here" (#126). */
+.nav.on .icon { color: var(--accent); }
 .nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
 .apill { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
 .acct { height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; border-radius: 10px; color: var(--ink2); flex: none; }
@@ -146,7 +147,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh.collapsed.cur { box-shadow: inset 0 0 0 100vmax var(--sub2); }
 .row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
 @media (hover: hover) { .row:hover { background: var(--sub); } }
-.row.cur, .row.open { background: var(--sub2); }
+.row.cur { background: var(--sub2); }
 .ud { width: 12px; flex: none; display: grid; place-items: center; }
 .ud::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; }
 .row.unread .ud::before, .arow.unread .ud::before { background: var(--ink); }
@@ -170,7 +171,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px 16px 10px 12px; color: var(--ink2); position: relative; flex: none; border-bottom: 1px solid var(--hair); }
 .arow:last-child { border-bottom: 0; }
 @media (hover: hover) { .arow:hover { background: var(--sub); } }
-.arow.cur, .arow.open { background: var(--sub2); }
+.arow.cur { background: var(--sub2); }
+/* The open email (#127): `sub3`, stronger than the cursor's `sub2`, with a 2 px `accent` bar that ties
+   it to the reading pane and fades in with the row's 120 ms box-shadow. A press is the rows' shared
+   `sub3` at --dur-press (below). */
+.row.open, .arow.open { background: var(--sub3); box-shadow: inset 2px 0 0 var(--accent); }
 .arow .ud { grid-row: 1; height: 18px; }
 .arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
 .arow .l1 .from { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -208,6 +213,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .rd-tools .tool { padding: 0 9px; }
   .rd-tools .tool .kbd { display: none; }
 }
+/* Done is Attention mail's verb: its check `good`, its label `ink` (#126). */
+.rd-tools .tool.done { color: var(--ink); }
+.rd-tools .tool.done .icon { color: var(--good); }
 /* Reply's place, after Open in Gmail, empty until reply exists. */
 .rd-tools .reply-slot { display: contents; }
 .rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }

@@ -3,7 +3,7 @@
 // on or off, the forecast's Pirate Weather key (the weather source's credential, D16) and the Google
 // Maps key that Places and Time to Leave's routes use, both write-only.
 import type {CalendarOut, PlaceSuggestionOut, SecretOut, Settings, SourceOut} from '@setpoint/shared';
-import {COLOURS} from '@setpoint/shared';
+import {SWATCH_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, placeSuggestions, setCalendarColour, setCalendarVisible, settleCalendarColour, SETTINGS_PATH} from '../../api/items.ts';
@@ -77,7 +77,7 @@ function CalendarRow({calendar, onShow}: {calendar: CalendarOut; onShow: (on: bo
         <Menu label={`${calendar.name} colour`} align="left" button={<button className="sw" type="button" style={dotStyle(calendar.colour)} aria-label={`${calendar.name} colour`} disabled={!!command} />}>
           {close => (
             <div className="swatches">
-              {COLOURS.map(colour => (
+              {SWATCH_COLOURS.map(colour => (
                 <button key={colour} type="button" className={colour === calendar.colour ? 'sw on' : 'sw'} style={dotStyle(colour)} aria-label={colour} onClick={() => {
                   close();
                   if (colour !== calendar.colour) void pick.attempt(() => setCalendarColour(calendar.id, colour));

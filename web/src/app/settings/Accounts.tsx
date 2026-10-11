@@ -3,7 +3,7 @@
 // it syncs and its state, Reconnect when it needs sign-in; then the sources (Google Calendar,
 // Todoist, Weather) the same way; then attention precision with its 30-day sparkline.
 import type {AccountOut, CalendarOut, PrecisionOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
-import {COLOURS} from '@setpoint/shared';
+import {SWATCH_COLOURS} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import type {FormEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -123,7 +123,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
       <Menu label={`${account.label} colour`} align="left" button={<button className="sw" type="button" style={dotStyle(account.colour)} aria-label={`${account.label} colour`} />}>
         {close => (
           <div className="swatches">
-            {COLOURS.map(colour => (
+            {SWATCH_COLOURS.map(colour => (
               <button key={colour} type="button" className={colour === account.colour ? 'sw on' : 'sw'} style={dotStyle(colour)} aria-label={colour} onClick={() => {
                 close();
                 void updateAccount(account.id, {colour}).catch(toastFailure(`Couldn't change ${account.label}'s colour`));

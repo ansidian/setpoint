@@ -26,7 +26,7 @@
 .editor .nl-marks { position: absolute; left: 12px; right: 12px; top: 0; bottom: 0; font-size: 16px; font-weight: 500; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
 .editor .nl .nl-input { position: absolute; left: 12px; right: 12px; top: 0; width: calc(100% - 24px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
-.editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--cool) 30%, transparent); }
+.editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
 /* SV-56: a line longer than the field scrolls inside the input, and the marks move with it
    (Editor.tsx's useMirror); a side cut short fades over 14 px, so the cut reads as more. */
 .editor .nl-text { display: inline-block; }

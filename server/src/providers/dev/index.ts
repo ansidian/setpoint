@@ -79,8 +79,9 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
  * to Saturday, Oct 10 is refused with Google Calendar's 409.
  */
 export function boardRefusals(store: Store, command: CommandRow): string | null {
-  // SV-20's failed colour, for Settings › Calendar: Google refuses `alert` as a calendar's colour.
-  if (command.kind === 'calendar_colour') return command.payload.colour === 'alert' ? 'The caller does not have permission (403 Forbidden)' : null;
+  // SV-20's failed colour, for Settings › Calendar: Google refuses `sun` as a calendar's colour (one
+  // Settings offers, which `alert` no longer is, #126).
+  if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
   // SV-25's failed colour, for Settings › Todoist: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
   if (command.kind !== 'item_update') return null;

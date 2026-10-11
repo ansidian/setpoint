@@ -176,3 +176,68 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 }
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: the open email is sub3 with a 2 px accent bar, the pointer's row the cursor's sub2; a press lands at once; the current page's icon is the accent; Done's check is good (#126, #127)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await inbox(page, setpoint.base, theme);
+      const accent = await colourOf(page, 'var(--accent)');
+      assert.equal(accent, await colourOf(page, theme === 'light' ? 'oklch(0.54 0.12 235)' : 'oklch(0.8 0.11 235)'));
+      assert.equal(await style(page.locator('.nav.on .icon'), 'color'), accent, 'Inbox, the current page');
+
+      const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
+      const exams = page.locator('.arow', {hasText: 'Contoso University'});
+      await northwind.click();
+      await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
+      // The pointer rests on another row while reading: it's the cursor, Northwind still the open one.
+      await point(exams);
+      // Fills and the bar ease in over 120 ms; each is read once it's there.
+      const [sub2, sub3] = [await colourOf(page, 'var(--sub2)'), await colourOf(page, 'var(--sub3)')];
+      await until('the open row\'s bar', () => style(northwind, 'boxShadow'), shadow => shadow === `${accent} 2px 0px 0px 0px inset`);
+      await until('the open row\'s sub3', () => style(northwind, 'backgroundColor'), fill => fill === sub3);
+      await until('the cursor\'s sub2', () => style(exams, 'backgroundColor'), fill => fill === sub2);
+      const [x, y] = await blank(northwind, 400);
+      const [x2, y2] = await blank(exams, 400);
+      assert.notDeepEqual(await pixel(page, x, y), await pixel(page, x2, y2), 'the open row and the cursor\'s look different');
+
+      // A press: sub3 at once, before the email opens.
+      await page.mouse.down();
+      assert.deepEqual([await style(exams, 'backgroundColor'), await exams.evaluate(row => getComputedStyle(row).transitionDuration)], [await colourOf(page, 'var(--sub3)'), '0s']);
+      await page.mouse.up();
+      await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+
+      // The reader's tools on Attention mail: Done's check good and its label ink; Trash stays ink2.
+      const done = page.locator('.rd-tools .tool', {hasText: 'Done'});
+      assert.equal(await style(done.locator('.icon'), 'color'), await colourOf(page, 'var(--good)'));
+      assert.equal(await style(done, 'color'), await colourOf(page, 'var(--ink)'));
+      await page.mouse.move(1, 1);
+      assert.equal(await style(page.locator('.rd-tools .tool', {hasText: 'Trash'}), 'color'), await colourOf(page, 'var(--ink2)'));
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}
+
+test('today is the now-line\'s alert disc in the month, the week\'s heads and the mini-month, in both themes (#128)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    for (const theme of ['night', 'light'] as const) {
+      await calendar(page, setpoint.base, theme);
+      const disc = async (target: Locator) => [await style(target, 'backgroundColor'), await style(target, 'color')];
+      const alert = [await colourOf(page, 'var(--alert)'), await colourOf(page, 'var(--onAlert)')];
+      assert.deepEqual(await disc(page.locator('.cell[data-date="2026-10-07"] .dn.today')), alert, `${theme}: the month`);
+      assert.deepEqual(await disc(page.locator('.mini > .t')), alert, `${theme}: the mini-month`);
+      await page.keyboard.press('w');
+      await page.locator('.wk-dhead .dn.today').waitFor();
+      assert.deepEqual(await disc(page.locator('.wk-dhead .dn.today')), alert, `${theme}: the week`);
+      await page.keyboard.press('m');
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -29,14 +29,15 @@
 .cell.sel { background: var(--sub); }
 /* A day that's over keeps its number in ink3 (#124). */
 .cell.past .dn:not(.today, .month) { color: var(--ink3); }
-/* Each month's boundary, as v1 traces it: today's month in `cool`, the others fainter. */
-.cell.edge-top::after, .cell.edge-left::after { content: ''; position: absolute; inset: 0; pointer-events: none; --edge: color-mix(in oklch, var(--cool) 32%, transparent); }
-.cell.edge-now::after { --edge: var(--cool); }
+/* Each month's boundary, as v1 traces it: today's month in `accent`, the others fainter. */
+.cell.edge-top::after, .cell.edge-left::after { content: ''; position: absolute; inset: 0; pointer-events: none; --edge: color-mix(in oklch, var(--accent) 32%, transparent); }
+.cell.edge-now::after { --edge: var(--accent); }
 .cell.edge-top::after { border-top: 1.5px solid var(--edge); }
 .cell.edge-left::after { border-left: 1.5px solid var(--edge); }
 .dhead { display: flex; align-items: center; gap: 4px; height: var(--dayHead); padding: 0 2px 0 4px; flex: none; }
 .dn { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 999px; }
-.dn.today { background: var(--ink); color: var(--onInk); font-weight: 600; }
+/* Today is a disc in the now-line's `alert` (#128), in the month, the week's heads and the mini-month. */
+.dn.today { background: var(--alert); color: var(--onAlert); font-weight: 600; }
 .dn.month { width: auto; padding: 0 6px; color: var(--ink); font-weight: 500; }
 .cell.out .dn.month { color: var(--ink2); }
 .wx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
@@ -150,7 +151,7 @@
 .mini > button:hover { background: var(--sub); }
 .mini > .h { font-size: 11px; color: var(--ink3); height: 22px; }
 .mini > .o { color: var(--ink3); opacity: .6; }
-.mini > .t, .mini > .t:hover { background: var(--ink); color: var(--onInk); font-weight: 600; }
+.mini > .t, .mini > .t:hover { background: var(--alert); color: var(--onAlert); font-weight: 600; }
 .mini > .vis { background: var(--sub); }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }

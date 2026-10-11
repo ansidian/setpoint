@@ -5,7 +5,7 @@
 /* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc. */
 .search.active { width: 520px; }
 .search .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
-.search .qchip.sel { background: color-mix(in oklch, var(--cool) 30%, transparent); }
+.search .qchip.sel { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 .search .qchip .k { color: var(--ink3); font-size: 11px; }
 .search .qchip .x, .no-results .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); flex: none; }
 .search .qchip .x:hover, .no-results .x:hover { background: var(--sub3); color: var(--ink); }

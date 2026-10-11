@@ -7,11 +7,11 @@
 .menu-anchor > .pop.menu.timelist { min-width: 0; width: max-content; max-height: 248px; overflow-y: auto; }
 .menu-anchor > .pop.menu.timelist > .menu-i { flex: none; }
 /* SV-29: an event's days as one band, its ends rounded and so each week's edge, as a range picker draws them,
-   in `cool` (#104): the days between at 28%, its first and last day at 50%. */
-.mini > .in:not(.t) { background: color-mix(in oklch, var(--cool) 28%, transparent); color: var(--ink); border-radius: 0; }
+   in `accent` (#104, #126): the days between at 28%, its first and last day at 50%. */
+.mini > .in:not(.t) { background: color-mix(in oklch, var(--accent) 28%, transparent); color: var(--ink); border-radius: 0; }
 .mini > .in:nth-child(7n + 1), .mini > .in.rs { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
 .mini > .in:nth-child(7n), .mini > .in.re { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
 .mini > .in.rs, .mini > .in.re { font-weight: 600; }
-.mini > .in.rs:not(.t), .mini > .in.re:not(.t) { background: color-mix(in oklch, var(--cool) 50%, transparent); }
-.mini > .in:not(.t):hover { background: color-mix(in oklch, var(--cool) 38%, transparent); }
-.mini > .in.rs:not(.t):hover, .mini > .in.re:not(.t):hover { background: color-mix(in oklch, var(--cool) 60%, transparent); }
+.mini > .in.rs:not(.t), .mini > .in.re:not(.t) { background: color-mix(in oklch, var(--accent) 50%, transparent); }
+.mini > .in:not(.t):hover { background: color-mix(in oklch, var(--accent) 38%, transparent); }
+.mini > .in.rs:not(.t):hover, .mini > .in.re:not(.t):hover { background: color-mix(in oklch, var(--accent) 60%, transparent); }

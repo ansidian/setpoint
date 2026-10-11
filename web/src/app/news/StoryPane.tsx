@@ -75,7 +75,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
             <div className="st-head">
               <div className="st-secs">
                 {story.sections.map(section => <span key={section} className="tag"><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</span>)}
-                {fresh.length > 0 && <span className="tag cool">Updated</span>}
+                {fresh.length > 0 && <span className="tag accent">Updated</span>}
               </div>
               <h1 className="rd-subj">{story.headline}</h1>
               <div className="st-meta">{storyMeta(story, now, timeZone).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span>{part}</span></Fragment>)}</div>
