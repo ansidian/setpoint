@@ -1,0 +1,97 @@
+{
+  "$source": "Board 12c (source/project/Glide-motion.dc.html) and BRIEF.md decisions 36–37",
+  "glide": {
+    "position": {
+      "property": "transform: translate(x, y) (FLIP)",
+      "easing": "cubic-bezier(.22, 1.3, .36, 1)",
+      "overshoot": "≈3% of travel, position only",
+      "duration": {
+        "baseMs": 280,
+        "perPx": "40 ms per 400 px of travel",
+        "capMs": 380,
+        "formula": "min(380, 280 + 40 * distancePx / 400)",
+        "examples": {
+          "454px": 325,
+          "600px": 340,
+          "724px": 352,
+          "1000px": 380
+        }
+      }
+    },
+    "height": {
+      "durationMs": 220,
+      "easing": "cubic-bezier(.2, 0, 0, 1)"
+    },
+    "oldContent": {
+      "fadeOut": "0–90 ms",
+      "easing": "cubic-bezier(.2, 0, 0, 1)"
+    },
+    "newContent": {
+      "fadeIn": "90–220 ms (130 ms)",
+      "slidePx": 6,
+      "slideDirection": "direction of travel",
+      "easing": "cubic-bezier(.2, 0, 0, 1)"
+    },
+    "selection": {
+      "newItem": "tinted → solid fill swap at 60 ms",
+      "oldItem": "back to tinted at 0 ms"
+    },
+    "interruption": "a click on a third item mid-glide retargets from the card's current position and velocity; no restart, no close",
+    "edges": "the overshoot may pass the month's edge briefly (≈9 px at 724 px of travel)"
+  },
+  "placement": {
+    "rule": "per click, the side covering the fewest other items; try right, left, above, below in that order; stay inside the month section",
+    "gapPx": 8,
+    "cardWidthPx": 280,
+    "verticalAlign": "centred on the item"
+  },
+  "open": {
+    "durationMs": 180,
+    "from": "the anchor",
+    "scale": [
+      0.96,
+      1
+    ],
+    "opacity": [
+      0,
+      1
+    ],
+    "easing": "cubic-bezier(.2, 0, 0, 1)"
+  },
+  "close": {
+    "durationMs": 120,
+    "toward": "the anchor",
+    "scale": [
+      1,
+      0.98
+    ],
+    "opacity": [
+      1,
+      0
+    ],
+    "triggers": [
+      "Esc",
+      "click on empty grid"
+    ],
+    "easing": "cubic-bezier(.2, 0, 0, 1)"
+  },
+  "drag": {
+    "handle": "the card's grip",
+    "lift": "shadow deepens",
+    "follow": "1:1 with the pointer",
+    "drop": "stays where dropped, detached",
+    "nextClick": "glides from the dropped position to the new anchor (board 12d)"
+  },
+  "edit": {
+    "durationMs": 220,
+    "card": "shrinks and fades toward the right pane",
+    "editorSlidePx": 12
+  },
+  "tokens": {
+    "durS": 120,
+    "durM": 180,
+    "durL": 260,
+    "ease": "cubic-bezier(.2, 0, 0, 1)",
+    "note": "everything except the glide stays on these"
+  }
+}

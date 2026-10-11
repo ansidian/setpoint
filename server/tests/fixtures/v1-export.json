@@ -1,0 +1,70 @@
+{
+  "format": "setpoint-v1-export",
+  "version": 1,
+  "exported_at": "2026-10-20T17:00:00.000Z",
+  "owner": {
+    "password_hash": "$2b$04$/NB2JnssvCyVI2i5UmcMI.6Nmy9BgDprm68KwtvENW9loVWj/U0ES",
+    "auth_mode": "password_plus_passkey",
+    "passkeys": [
+      {
+        "credential_id": "ZmFrZS1jcmVkZW50aWFsLW9uZQ", "label": "Laptop", "public_key": "ZmFrZS1wdWJsaWMta2V5LW9uZQ",
+        "sign_count": 7, "transports": ["internal", "hybrid"], "backed_up": true, "device_type": "multiDevice",
+        "created_at": "2026-06-01T10:00:00.000Z", "last_used_at": "2026-10-19T08:30:00.000Z"
+      }
+    ],
+    "recovery_codes": [
+      {"hash": "sha256:29121e1b547300f0a9e907af47eddc3575f4e08cd3fd41f1b23d4bd82c549c06", "generated_at": "2026-06-01T10:00:00.000Z"},
+      {"hash": "sha256:b9f3cf8ffd81d0daf27342c2482a74f53dcb2cdd0541cce9808ea580deec71e1", "generated_at": "2026-06-01T10:00:00.000Z"}
+    ]
+  },
+  "accounts": [
+    {
+      "provider": "gmail", "address": "User@Example.com", "label": "Personal", "color": "#e8a23a", "icon": "Mail",
+      "calendar_enabled": true, "needs_reauth": false,
+      "refresh_token": "fake-refresh-personal", "access_token": "fake-access-personal", "expires_at": "2026-10-20T17:30:00.000Z",
+      "scope": "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly"
+    },
+    {
+      "provider": "gmail", "address": "user.jobs@example.com", "label": "Jobs", "color": "#5b8def", "icon": "Rocket",
+      "calendar_enabled": false, "needs_reauth": true,
+      "refresh_token": "fake-refresh-jobs", "access_token": null, "expires_at": null, "scope": null
+    },
+    {
+      "provider": "gmail", "address": "old@example.com", "label": "Old", "color": null, "icon": null,
+      "calendar_enabled": false, "needs_reauth": true,
+      "refresh_token": null, "access_token": null, "expires_at": null, "scope": null
+    },
+    {
+      "provider": "icloud", "address": "user@icloud.example", "label": "iCloud", "color": "#a259ff", "icon": "Apple",
+      "needs_reauth": false, "app_password": "fake-app-password"
+    }
+  ],
+  "todoist": {"token": "fake-todoist-token", "expires_at": null},
+  "secrets": {
+    "anthropic_api_key": "fake-anthropic-key", "openai_api_key": null,
+    "places_api_key": "fake-places-key", "pirate_weather_api_key": "fake-weather-key"
+  },
+  "models": {"triage_cheap": "claude-haiku-4-5", "triage_strong": "claude-opus-5-5", "alfred": "mystery-model"},
+  "home": {"label": "Home", "address": "1 Example Street", "lat": 34.1016, "lng": -118.3267},
+  "rules": [
+    {
+      "name": "Fabrikam news", "enabled": true, "priority": 80, "rule_type": "sender",
+      "match": {"from_addresses": ["News@Fabrikam.example"]}, "lane": "noise", "category": "marketing", "route_to_model": null, "reason": "Newsletter."
+    }
+  ],
+  "corrections": [
+    {
+      "account": "user.jobs@example.com", "from_name": "Adatum Careers", "from_address": "careers@adatum.example",
+      "subject": "Adatum Careers newsletter · August", "received_at": "2026-08-05T15:00:00.000Z",
+      "from_lane": "needs_attention", "to_lane": "fyi", "corrected_at": "2026-08-05T16:00:00.000Z"
+    }
+  ],
+  "trusted_senders": ["news@mail.contoso.example", "offers@contoso.example", "promo@news.fabrikam.co.uk", "not-an-address"],
+  "pins": [
+    {"account": "user@example.com", "provider_id": "gmail-already-here", "message_id": "<lease@parkside.example>", "pinned_at": "2026-09-30T18:02:00.000Z"},
+    {"account": "user@example.com", "provider_id": "gmail-arrives-later", "message_id": null, "pinned_at": "2026-09-28T10:30:00.000Z"},
+    {"account": "user@icloud.example", "provider_id": null, "message_id": "<registration@dmv.example>", "pinned_at": "2026-09-20T09:00:00.000Z"},
+    {"account": "user@icloud.example", "provider_id": null, "message_id": null, "pinned_at": "2026-09-21T09:00:00.000Z"},
+    {"account": "old@example.com", "provider_id": "gmail-gone", "message_id": null, "pinned_at": "2026-09-22T09:00:00.000Z"}
+  ]
+}

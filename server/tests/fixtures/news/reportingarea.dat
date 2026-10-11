@@ -1,0 +1,14 @@
+﻿10/07/26|10/07/26||PDT|0|F|Y|Example Valley|CA|34.1000|-118.2000|OZONE|175|Unhealthy|Yes|Smoke from the Fabrikam Fire may drift into the valley.|Example Air District
+10/07/26|10/08/26||PDT|1|F|Y|Example Valley|CA|34.1000|-118.2000|PM2.5||Moderate|No||Example Air District
+10/07/26|10/06/26||PDT|-1|Y|Y|Example Valley|CA|34.1000|-118.2000|PM2.5|190|Unhealthy|No||Example Air District
+10/07/26|10/07/26|07:00|PDT|0|O|Y|Example Valley|CA|34.1000|-118.2000|PM2.5|205|Very Unhealthy|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|N|Example Valley|CA|34.1000|-118.2000|OZONE|62|Moderate|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|Y|Example Valley|CA|34.1000|-118.2000|PM2.5|160|Unhealthy|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|Y|Example Coast|CA|33.9800|-118.4500|PM2.5|120|Unhealthy for Sensitive Groups|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|Y|Example Foothills|CA|34.2000|-118.1000|OZONE|156|Unhealthy|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|N|Example Foothills|CA|34.2000|-118.1000|PM10|40|Good|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|N|Example Foothills|CA|34.2000|-118.1000|PM2.5||Good|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|Y|Example Desert|CA|34.9000|-116.9000|PM10|210|Very Unhealthy|No||Example Desert Air District
+10/07/26|10/07/26|08:00|XYZ|0|O|Y|Example Harbor|CA|33.7500|-118.2700|PM2.5|180|Unhealthy|No||Example Air District
+10/07/26|10/07/26|08:00|PDT|0|O|Y|Example Ridge|CA|north|-118.2000|PM2.5|170|Unhealthy|No||Example Air District
+not a reporting area line

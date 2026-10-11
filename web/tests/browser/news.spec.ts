@@ -1,0 +1,590 @@
+// News (N4; DESIGN.md › News, boards 25–28) against the seed's sample (BRIEF.md › Sample data ›
+// News): All's blocks with the Missed strip, Upcoming and the pill; the story pane, its Sources, an
+// article (26a) and one that can't be read here (26b); a section (27); Missed (28); seen; the held
+// order with the pill; Add to calendar; the keys; and board 31, board 25 in Light (N5). A change to News arrives as ingest's will: the
+// server's database changes, then a `news` live event names stories (here, seeing one already seen
+// sends it, as nothing else in the server writes News yet).
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {after, test} from 'node:test';
+import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
+import type {Page} from 'playwright-core';
+import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import type {Setpoint} from './harness.ts';
+
+after(cleanUp);
+
+const list = (page: Page) => page.locator('.nw-list .list');
+const row = (page: Page, headline: string) => page.locator('.nw-list [data-story]', {hasText: headline}).first();
+
+/** A story's id by its headline, as the server has it. */
+async function storyId(setpoint: Setpoint, headline: string): Promise<number> {
+  for (const section of ['local', 'tech', 'ai', 'general']) {
+    const found = (await setpoint.api<NewsSectionOut>('GET', `/news/sections/${section}`)).stories.find(story => story.headline === headline);
+    if (found) return found.id;
+  }
+  throw new Error(`No story "${headline}".`);
+}
+
+const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<StoryOut>('GET', `/news/stories/${id}`)).state;
+
+/**
+ * Waits until the server has seen every story whose row is wholly in the list's view with a dot
+ * (DESIGN.md › Keys and behaviour: about a second); the dots stay for the visit (#95). Resolves with
+ * those stories.
+ */
+async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
+  const ids = await list(page).evaluate(scroller => {
+    const box = scroller.getBoundingClientRect();
+    return [...new Set([...scroller.querySelectorAll<HTMLElement>('[data-key]')].filter(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= box.top - 0.5 && rect.bottom <= box.bottom + 0.5 && (element.classList.contains('new') || element.classList.contains('upd'));
+    }).map(element => Number(element.dataset.story)))];
+  });
+  for (const id of ids) await until(`story ${id} seen on the server`, () => stateOf(setpoint, id), state => state === 'seen');
+  await setpoint.idle();
+  return ids;
+}
+
+/** A colour as the page computes it, to compare with a computed style. */
+const colourOf = (page: Page, colour: string) => page.evaluate(value => {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  document.body.append(probe);
+  const computed = getComputedStyle(probe).color;
+  probe.remove();
+  return computed;
+}, colour);
+
+/** A background as the page computes it, mixes included. */
+const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
+  const probe = document.createElement('div');
+  probe.style.background = value;
+  document.body.append(probe);
+  const computed = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return computed;
+}, background);
+
+async function settle(page: Page) {
+  await page.evaluate(() => document.fonts.ready);
+  // Out of the way of every row, so no hover fill shows.
+  await page.mouse.move(700, 28);
+  // Lets a hover fill the move left fade out (120 ms) before the screenshot.
+  await page.waitForTimeout(250);
+}
+
+/**
+ * Changes News as ingest and ranking would, in the server's own database, then sends a `news` event
+ * naming a story: seeing Council's story, which the user saw on Monday, changes nothing else.
+ */
+async function newsChange(setpoint: Setpoint, sql: string) {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    database.exec(sql);
+  } finally {
+    database.close();
+  }
+  const council = await storyId(setpoint, 'Council approves a 120-unit housing project on a former parking lot');
+  await setpoint.api('POST', '/news/seen', {story_ids: [council]});
+}
+
+// The pill as board 25 draws it: three stories ranked into view that the user hasn't seen (Water main
+// into Local, visionOS into Tech, Hugging Face into AI), and the cooling centers, seen on Monday,
+// with a new fact that ranks it second in Local.
+const THREE_NEW_ONE_UPDATED = `
+  UPDATE news_stories SET score = 99 WHERE headline IN ('Water main break floods an intersection; repairs through Thursday',
+    'visionOS 26.1 brings shared Personas to group FaceTime calls', 'Hugging Face adds hosted inference for open video models');
+  UPDATE news_stories SET score = 98, last_new_fact_at = '2026-10-07T16:05:00.000Z' WHERE headline = 'County opens cooling centers as temperatures reach 100°';
+  INSERT INTO news_facts (story_id, at, text) SELECT id, '2026-10-07T16:05:00.000Z', 'Two more centers open in the valleys' FROM news_stories
+    WHERE headline = 'County opens cooling centers as temperatures reach 100°';`;
+
+test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, and the brush fire story open', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210 grows to 400 acres').waitFor();
+    await page.locator('.today-row').first().waitFor();
+    assert.equal(await page.title(), 'News');
+    // The shell: News under Calendar, current, with no count.
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Settings⌘,']);
+    assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
+    assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
+    assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
+    // The blocks in their fixed order, each with its "N more".
+    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
+    assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '7 more in Tech', '4 more in AI', '9 more in General']);
+    assert.equal(await page.locator('.nw-missed').textContent(), '14 stories you missed since MonCatch up');
+    assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
+    // The meta: the lead's on one line, a row's on two.
+    assert.equal(await row(page, 'Brush fire near the 210').locator('.nw-meta').textContent(), 'KTLA +4·1h·Updated 8:40 AM');
+    assert.deepEqual(await row(page, 'Man arrested after a stabbing').locator('.side .nw-meta').allTextContents(), ['NBC LA +2', 'Updated 7:55 AM']);
+    assert.deepEqual(await row(page, 'Federal agents detain 9').locator('.side .nw-meta').allTextContents(), ['LAist +3', 'Yesterday']);
+
+    // The single values: the lead's image, a row's grid and thumbnail, and the dots.
+    const lead = row(page, 'Brush fire near the 210');
+    assert.deepEqual(await lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]),
+      [232, 130, 'cover', '12px']);
+    assert.equal(await lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 232px');
+    const redFlag = row(page, 'Red Flag Warning');
+    assert.match(await redFlag.evaluate(element => getComputedStyle(element).gridTemplateColumns), /^12px \S+ \S+ 72px$/);
+    assert.deepEqual(await row(page, 'Federal agents detain 9').locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).borderRadius]), [72, 48, '8px']);
+    assert.equal(await redFlag.locator('img').count(), 0, 'a story without an image leaves its column empty');
+    const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
+    // The General block's rows are below the fold, so they're still new or updated here.
+    assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
+    assert.equal(await dot('Four killed in a warehouse shooting'), await colourOf(page, 'var(--cool)'), 'updated: cool');
+
+    const seen = await seenSettled(page, setpoint);
+    assert.ok(seen.includes(await storyId(setpoint, 'Red Flag Warning for the valleys until Thu 6 PM')), 'Red Flag Warning was seen');
+    // Seen, its dot stays for the visit (#95).
+    assert.equal(await dot('Red Flag Warning'), await colourOf(page, 'var(--ink)'));
+    await newsChange(setpoint, THREE_NEW_ONE_UPDATED);
+    const pill = page.locator('.nw-pill');
+    await until('the pill', () => pill.textContent(), text => text === '3 new · 1 updatedN');
+    const pillBox = await pill.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const strip = document.querySelector('.nw-missed')!.getBoundingClientRect();
+      return {height: box.height, below: box.top - strip.bottom, centred: Math.abs((box.left + box.right) / 2 - (strip.left + strip.right) / 2) < 1};
+    });
+    assert.deepEqual(pillBox, {height: 32, below: 10, centred: true}, 'a 32 px pill, centred, 10 px under the Missed strip');
+
+    await lead.click();
+    await page.locator('.pane .rd-subj', {hasText: 'Brush fire near the 210 grows to 400 acres'}).waitFor();
+    await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
+    await page.locator('.pane .src-row').first().waitFor();
+    assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
+    await seenSettled(page, setpoint);
+    await settle(page);
+    await matchGolden(page, '25-news-a-typical-morning', 'main');
+    await matchGolden(page, '25-news-a-typical-morning.sidebar', 'sidebar');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.emulateMedia({colorScheme: 'light'});
+    await page.goto(`${setpoint.base}/news`);
+    const lead = row(page, 'Brush fire near the 210 grows to 400 acres');
+    await lead.waitFor();
+    await page.locator('.today-row').first().waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
+    // Board 25's state: the pill, then the brush fire story open.
+    await seenSettled(page, setpoint);
+    await newsChange(setpoint, THREE_NEW_ONE_UPDATED);
+    await page.locator('.nw-pill', {hasText: '3 new · 1 updated'}).waitFor();
+
+    // The single values, each Light's own token.
+    const style = (selector: string, property: 'color' | 'backgroundColor') => page.locator(selector).first().evaluate((element, name) => getComputedStyle(element)[name], property);
+    const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
+    assert.equal(await colourOf(page, 'var(--ink)'), 'rgb(29, 30, 33)', 'Light\'s ink');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
+    assert.equal(await style('.nw-sec', 'backgroundColor'), await backgroundOf(page, 'var(--panel)'));
+    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink3)'));
+    assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--cool) 9%, var(--page))'));
+    assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.nw-pill', 'backgroundColor'), await backgroundOf(page, 'var(--cardOn)'));
+    assert.equal(await style('.nw-pill .upd', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await dot('Red Flag Warning'), await colourOf(page, 'var(--ink)'), 'new: ink');
+    assert.equal(await dot('Man arrested after a stabbing'), await colourOf(page, 'var(--cool)'), 'updated: cool');
+    assert.equal(await style('.nw-row.new .hl', 'color'), await colourOf(page, 'var(--ink)'));
+    assert.equal(await style('.nw-row .sm', 'color'), await colourOf(page, 'var(--ink3)'));
+    assert.equal(await style('.nw-meta .upd', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--violet)'));
+
+    await lead.click();
+    await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
+    await page.locator('.pane .src-row').first().waitFor();
+    await page.locator('.pane .st-img img').evaluate((image: HTMLImageElement) => image.decode());
+    assert.equal(await style('.st-new', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--cool) 8%, var(--card))'));
+    assert.equal(await style('.st-new .lab', 'color'), await colourOf(page, 'var(--cool)'));
+    assert.equal(await style('.src-list', 'backgroundColor'), await backgroundOf(page, 'var(--sub)'));
+    await seenSettled(page, setpoint);
+    await settle(page);
+    await matchGolden(page, '31-light-news');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the story pane: its head, New since you looked, Sources; an article (26a), Back, and one that can\'t be read here (26b)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    const fire = row(page, 'Brush fire near the 210 grows to 400 acres');
+    await fire.click();
+    const pane = page.locator('section.pane');
+    await pane.locator('.src-row').first().waitFor();
+    assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
+    assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
+    assert.equal(await pane.locator('.st-meta').textContent(), '5 outlets·first reported Mon 6:12 AM·updated 8:40 AM');
+    assert.equal(await pane.locator('.st-img .cap').textContent(), 'KTLA');
+    assert.deepEqual(await pane.locator('.st-img').evaluate(box => [box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).marginLeft]), [220, '14px', '28px']);
+    assert.deepEqual(await pane.locator('.st-new .it').allTextContents(), ['8:40 AMGrew from 150 to 400 acres overnight; evacuation warnings widened', '6:55 AMTwo schools in the warning area are closed for the day']);
+    assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['KTLASummary only', 'NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
+    assert.deepEqual(await pane.locator('.src-row .fav').allTextContents(), ['K', 'NBC', 'CBS', '7', '11']);
+    assert.equal(await pane.locator('.src-row', {hasText: 'NBC Los Angeles'}).evaluate(element => element.getBoundingClientRect().height >= 52), true);
+    // The pane's body is one 600 px column at the reading measure, however wide the pane (#98).
+    const column = async (selector: string) => pane.locator(selector).first().evaluate((box, paneLeft) => {
+      const rect = box.getBoundingClientRect();
+      return [Math.round(rect.left - paneLeft), Math.round(rect.width)];
+    }, await pane.evaluate(element => element.getBoundingClientRect().left + element.clientLeft));
+    assert.deepEqual(await Promise.all(['.st-img', '.st-new', '.st-sum', '.src-list'].map(column)), [[28, 600], [28, 600], [28, 600], [28, 600]]);
+    // Opening it saw it: its dot goes at once, and the server has it.
+    const fireId = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
+    await until('seen on the server', () => stateOf(setpoint, fireId), state => state === 'seen');
+    assert.match(await fire.getAttribute('class') ?? '', /\bseen\b/);
+    // Still new since the user's last look before this visit.
+    await pane.locator('.st-new').waitFor();
+
+    // An article in the pane (26a).
+    await pane.locator('.src-row', {hasText: 'NBC Los Angeles'}).click();
+    await page.waitForURL(/\/news\/story\/\d+\/article\/\d+$/);
+    await pane.locator('.ar-text p').first().waitFor();
+    assert.equal(await pane.locator('.rd-tools').textContent(), 'Back to storyEscOpen at NBC Los AngelesO');
+    assert.equal(await pane.locator('.ar-out').textContent(), 'NBCNBC Los Angeles·7:10 AM·Staff report');
+    assert.equal(await pane.locator('.ar-title').textContent(), 'Fire burns 400 acres in the foothills; evacuation warnings issued');
+    assert.equal(await pane.locator('.ar-text p').count(), 5);
+    assert.equal(await pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height), 240);
+    assert.deepEqual(await Promise.all(['.st-img.article', '.ar-text'].map(column)), [[28, 600], [28, 600]]);
+    await page.locator('.st-img.article img').evaluate((image: HTMLImageElement) => image.decode());
+    await settle(page);
+    await matchGolden(page, '26a-an-article-in-the-pane', 'reader');
+    // Esc goes back to the story.
+    await page.keyboard.press('Escape');
+    await pane.locator('.st-head').waitFor();
+    assert.match(page.url(), /\/news\/story\/\d+$/);
+
+    // One that can't be read here (26b): its note, Read at, the feed summary, and the other sources.
+    await pane.locator('.src-row', {hasText: 'KTLA'}).click();
+    await pane.locator('.ar-note').waitFor();
+    assert.equal(await pane.locator('.ar-note').textContent(), 'KTLA\'s page can\'t be read here, so this is its feed summaryRead at KTLA');
+    assert.match(await pane.locator('.ar-text').textContent() ?? '', /^A brush fire burning above the 210 Freeway grew to roughly 400 acres overnight/);
+    assert.equal(await pane.locator('.st-label').textContent(), 'Also in this story');
+    assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
+    await settle(page);
+    await matchGolden(page, '26b-an-article-that-cant-be-read-in-app', 'reader');
+    // The Back tool, then Esc closes the pane.
+    await pane.locator('.tool', {hasText: 'Back to story'}).click();
+    await pane.locator('.st-head').waitFor();
+    await page.keyboard.press('Escape');
+    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    assert.equal(await page.title(), 'News');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a section (27): "12 more in Local" opens Local\'s full list, biggest first, the first as a lead; the stories behind it stay new until it shows them', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const water = await storyId(setpoint, 'Water main break floods an intersection; repairs through Thursday');
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210').waitFor();
+    await seenSettled(page, setpoint);
+    assert.equal(await stateOf(setpoint, water), 'new', 'behind "12 more", it stays new');
+    await page.locator('.nw-more', {hasText: '12 more in Local'}).click();
+    await page.waitForURL(/\/news\/local$/);
+    await until('Local\'s whole list', () => page.locator('.nw-list [data-story]').count(), count => count === 17);
+    assert.equal(await page.locator('.hd .seg .on').textContent(), 'Local');
+    assert.equal(await page.locator('.nw-sec').count(), 0);
+    assert.equal(await page.locator('.nw-missed').count(), 0);
+    assert.deepEqual(await page.locator('.nw-list [data-story]').evaluateAll(rows => rows.map(element => element.className.split(' ')[0])).then(classes => classes.slice(0, 3)), ['nw-lead', 'nw-row', 'nw-row']);
+    // Shown now, Water main is seen after its second on screen.
+    await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
+    await seenSettled(page, setpoint);
+    await settle(page);
+    await matchGolden(page, '27-a-section-local', 'news');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Missed (28): Catch up lists the stories that left unseen, by day, each row naming its section; Back returns to All', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await page.locator('.nw-missed').waitFor();
+    await page.locator('.nw-missed .btn', {hasText: 'Catch up'}).click();
+    await page.waitForURL(/\/news\/missed$/);
+    await page.locator('.nw-back .t', {hasText: 'Missed since Mon 10:40 PM'}).waitFor();
+    assert.equal(await page.locator('.nw-back .n').textContent(), '14 stories');
+    assert.equal(await page.locator('.nw-sec').textContent(), 'TuesdayOct 6');
+    assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
+    const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
+    assert.match(await tornado.getAttribute('class') ?? '', /^nw-lead/);
+    // Ages follow DESIGN.md › Copy: Tuesday is "Yesterday" on a Wednesday.
+    assert.equal(await tornado.locator('.nw-meta').textContent(), 'General·NPR +9·Yesterday');
+    assert.deepEqual(await row(page, 'Google DeepMind releases Gemini 3.5 Flash').locator('.side .nw-meta').allTextContents(), ['AI·Google +6', 'Yesterday']);
+    const tornadoId = (await setpoint.api<{days: {stories: {id: number; headline: string}[]}[]}>('GET', '/news/missed')).days[0]!.stories[0]!.id;
+    await seenSettled(page, setpoint);
+    // A story leaves Missed once it's seen; the list holds while it's open.
+    assert.equal((await setpoint.api<{days: {stories: {id: number}[]}[]}>('GET', '/news/missed')).days.flatMap(day => day.stories).some(story => story.id === tornadoId), false);
+    assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
+    assert.equal(await tornado.locator('.nw-meta').textContent(), 'General·NPR +9·Yesterday', 'seen, it still names its section');
+    await settle(page);
+    await matchGolden(page, '28-missed', 'news');
+    await page.getByRole('button', {name: 'Back to All'}).click();
+    await page.waitForURL(/\/news$/);
+    await until('the strip counts what\'s left', () => page.locator('.nw-missed b').textContent(), text => text !== '14 stories');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('seen: about a second fully on screen, or opened; flicking past doesn\'t count; the dots stay for the visit and are gone in the next', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const hurricane = await storyId(setpoint, 'Hurricane Teresa makes landfall in the Florida Panhandle as a Category 3');
+    const pixel = await storyId(setpoint, 'Pixel Watch 5 goes on sale with two-day battery life');
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210').waitFor();
+    await seenSettled(page, setpoint);
+    assert.equal(await stateOf(setpoint, hurricane), 'new', 'below the fold');
+    // Flicking past: General's lead is drawn fully on screen for a few frames, then scrolled away.
+    const flicked = await list(page).evaluate(async scroller => {
+      const frame = () => new Promise(next => requestAnimationFrame(next));
+      scroller.scrollTo({top: scroller.scrollHeight});
+      await frame();
+      await frame();
+      const row = [...scroller.querySelectorAll('[data-key]')].find(element => element.textContent?.startsWith('Hurricane Teresa'))!;
+      const box = scroller.getBoundingClientRect();
+      const rect = row.getBoundingClientRect();
+      const shown = rect.top >= box.top && rect.bottom <= box.bottom;
+      scroller.scrollTo({top: 0});
+      return shown;
+    });
+    assert.equal(flicked, true, 'Hurricane was fully on screen');
+    // Nothing should happen: a second and more passes with Hurricane off screen.
+    await page.waitForTimeout(1500);
+    await setpoint.idle();
+    await setpoint.idle();
+    assert.equal(await stateOf(setpoint, hurricane), 'new', 'flicking past doesn\'t count');
+    // Scrolled to and left there, it's seen.
+    await row(page, 'Hurricane Teresa').scrollIntoViewIfNeeded();
+    await until('Hurricane seen', () => stateOf(setpoint, hurricane), state => state === 'seen');
+    await setpoint.idle();
+    // Its dot stays for the visit (#95), and the rows seen on arrival keep theirs.
+    assert.match(await row(page, 'Hurricane Teresa').getAttribute('class') ?? '', /\bnew\b/);
+    assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bnew\b/);
+    // A reload is a new visit: the stories seen have no dot.
+    await page.reload();
+    await row(page, 'Red Flag Warning').waitFor();
+    assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bseen\b/);
+    assert.match(await row(page, 'Hurricane Teresa').getAttribute('class') ?? '', /\bseen\b/);
+    // Seen by Pixel Watch's opening, even off screen.
+    await page.goto(`${setpoint.base}/news/story/${pixel}`);
+    await until('Pixel Watch seen', () => stateOf(setpoint, pixel), state => state === 'seen');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the order holds: a change updates rows on screen in place, the rest waits behind the pill; the pill and N take it, scrolled to the top', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210').waitFor();
+    await seenSettled(page, setpoint);
+    const order = () => page.locator('.nw-list [data-story]').evaluateAll(rows => rows.map(element => (element as HTMLElement).dataset.story));
+    const before = await order();
+    // A new fact for the car wash story on screen, and a new line for the Red Flag Warning's.
+    const carWash = row(page, 'Federal agents detain 9 at a car wash');
+    const classes = await watch(carWash, 'class');
+    await newsChange(setpoint, `${THREE_NEW_ONE_UPDATED}
+      UPDATE news_stories SET last_new_fact_at = '2026-10-07T16:06:00.000Z' WHERE headline = 'Federal agents detain 9 at a car wash';
+      UPDATE news_stories SET one_line = 'Gusts to 60 mph, humidity under 8%' WHERE headline = 'Red Flag Warning for the valleys until Thu 6 PM';`);
+    await page.locator('.nw-pill', {hasText: '3 new · 1 updated'}).waitFor();
+    await row(page, 'Red Flag Warning').locator('.sm', {hasText: 'Gusts to 60 mph, humidity under 8%'}).waitFor();
+    await until('the car wash turns updated in place', classes, seen => seen.some(value => /\bupd\b/.test(value ?? '')));
+    assert.deepEqual(await order(), before, 'nothing moved');
+    await list(page).evaluate(scroller => scroller.scrollTo({top: 400}));
+    // N takes the new order and scrolls to the top.
+    await page.keyboard.press('n');
+    await until('the new order', () => page.locator('.nw-list [data-story]').first().textContent(), text => text?.startsWith('Water main break floods an intersection') ?? false);
+    assert.equal(await page.locator('.nw-pill').count(), 0);
+    assert.equal(await list(page).evaluate(scroller => scroller.scrollTop), 0);
+    assert.deepEqual((await page.locator('.nw-list [data-story]').allTextContents()).slice(0, 2).map(text => text.slice(0, 20)), ['Water main break flo', 'County opens cooling']);
+    // Opening the page always shows the latest order.
+    const latest = await setpoint.api<NewsPageOut>('GET', '/news');
+    await page.reload();
+    await until('the latest order on opening', () => order(), ids => ids.slice(0, 5).join() === latest.blocks[0]!.stories.map(story => String(story.id)).join());
+    assert.equal(await page.locator('.nw-pill').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('keys: 3 opens News; J and K move; Enter opens; J opens the next with one open; O opens the original; Esc closes', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    await page.keyboard.press('3');
+    await page.waitForURL(/\/news$/);
+    await row(page, 'Brush fire near the 210').waitFor();
+    await page.evaluate(() => {
+      (window as unknown as {opened: string[]}).opened = [];
+      window.open = (url?: string | URL) => {
+        (window as unknown as {opened: string[]}).opened.push(String(url));
+        return null;
+      };
+    });
+    await page.mouse.move(700, 28);
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await until('the cursor on the second row', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Red Flag Warning') ?? false);
+    await page.keyboard.press('k');
+    await until('back on the first', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Brush fire') ?? false);
+    await page.keyboard.press('Enter');
+    await page.locator('.pane .rd-subj', {hasText: 'Brush fire near the 210'}).waitFor();
+    await page.keyboard.press('o');
+    await until('KTLA\'s article opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
+    assert.match((await page.evaluate(() => (window as unknown as {opened: string[]}).opened))[0]!, /^https:\/\/ktla\.example\//);
+    await page.keyboard.press('j');
+    await page.locator('.pane .rd-subj', {hasText: 'Red Flag Warning for the valleys'}).waitFor();
+    assert.equal(await page.locator('.nw-list .open').textContent().then(text => text?.slice(0, 16)), 'Red Flag Warning');
+    await page.keyboard.press('Escape');
+    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    // 1 and 2 still leave for the Inbox and Calendar.
+    await page.keyboard.press('2');
+    await page.waitForURL(/\/calendar/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Upcoming\'s Add to calendar opens Calendar\'s editor on the Apple event, Tue Oct 20 at 10 AM, from the keynote\'s proposal', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    // One path, as an email's: the server's proposal for the keynote (N3), its calendar picked as an email's is.
+    const proposed = page.waitForResponse(response => /\/api\/news\/events\/\d+\/proposal$/.test(new URL(response.url()).pathname) && response.request().method() === 'POST');
+    await page.locator('.nw-up .btn', {hasText: 'Add to calendar'}).click();
+    const proposal = await (await proposed).json() as {item: {calendar_id: number | null}; from_email: string[]};
+    await page.waitForURL(/\/calendar\/new\?kind=event&upcoming=\d+$/);
+    const editor = page.locator('.editor');
+    await until('the keynote in the editor', () => editor.getByLabel('Title', {exact: true}).inputValue(), value => value === 'Apple event');
+    assert.deepEqual([await editor.getByLabel('Date', {exact: true}).inputValue(), await editor.getByLabel('Start', {exact: true}).inputValue(), await editor.getByLabel('End', {exact: true}).inputValue()],
+      ['Tue, Oct 20', '10:00 AM', '11:00 AM']);
+    assert.deepEqual(proposal.from_email, ['title', 'date', 'time']);
+    assert.notEqual(proposal.item.calendar_id, null);
+    // The news gave the fields, but they carry no "from the email" mark (N5).
+    assert.equal(await editor.locator('.srcm').count(), 0, 'no "from the email" marks');
+    assert.equal(await editor.locator('.legend').count(), 0, 'no "From the email" legend');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Upcoming\'s row opens a popover with the story behind the keynote, which opens it; Esc or a press outside puts it away (#100)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    const upcoming = page.locator('.nw-up');
+    const popover = page.locator('.nw-up-pop');
+    await upcoming.locator('.what').click();
+    await popover.waitFor();
+    assert.equal(await popover.getAttribute('aria-label'), 'The story behind Apple event');
+    assert.deepEqual(await popover.locator('.nw-up-story').evaluate(story => [...story.children].map(part => part.textContent)),
+      ['Apple sends invites for an Oct 20 event', 'Expected: new iPads and Macs', 'MacRumors +6·Yesterday']);
+    assert.match(await upcoming.getAttribute('class') ?? '', /\bon\b/);
+    // Esc puts it away, and nothing else: no story was open to close.
+    await page.keyboard.press('Escape');
+    await until('Esc puts it away', () => popover.count(), count => count === 0);
+    assert.equal(new URL(page.url()).pathname, '/news');
+    // So does a press outside it.
+    await upcoming.locator('.what').click();
+    await popover.waitFor();
+    await page.locator('.nw-sec', {hasText: 'Local'}).click();
+    await until('a press outside puts it away', () => popover.count(), count => count === 0);
+    // The story opens it, at its row in the list.
+    await upcoming.locator('.what').click();
+    await popover.locator('.nw-up-story').click();
+    const id = await storyId(setpoint, 'Apple sends invites for an Oct 20 event');
+    await page.waitForURL(new RegExp(`/news/story/${id}$`));
+    await page.locator('.pane .rd-subj', {hasText: 'Apple sends invites for an Oct 20 event'}).waitFor();
+    assert.equal(await popover.count(), 0);
+    assert.match(await row(page, 'Apple sends invites for an Oct 20 event').getAttribute('class') ?? '', /\bopen\b/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one line, name · date cut short, and the leads\' images shrink to 160 × 90', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page({width: 1280, height: 800});
+    await page.goto(`${setpoint.base}/news`);
+    const fire = row(page, 'Brush fire near the 210 grows to 400 acres');
+    await fire.click();
+    await page.locator('.pane .src-row').first().waitFor();
+    // The pane at its cap leaves the list its 420 px.
+    assert.equal(await page.locator('.nw-list').evaluate(element => element.getBoundingClientRect().width), 420);
+
+    const upcoming = page.locator('.nw-up');
+    assert.equal(await upcoming.evaluate(element => element.getBoundingClientRect().height), 46);
+    const what = upcoming.locator('span:has(> .what)');
+    assert.deepEqual(await what.evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).textOverflow, element.scrollWidth > element.clientWidth]),
+      ['nowrap', 'ellipsis', true], 'name · date is one line, cut short with an ellipsis');
+    assert.equal(await what.getAttribute('title'), 'Apple event · Tue Oct 20 · 10 AM');
+    assert.equal(await upcoming.locator('.lab').isVisible(), false, 'no UPCOMING label');
+    assert.equal(await upcoming.locator('.nw-meta').isVisible(), false, 'no outlet');
+    const inside = await upcoming.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      return [...element.children].every(child => {
+        const rect = child.getBoundingClientRect();
+        return rect.width === 0 || (rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom);
+      });
+    });
+    assert.equal(inside, true, 'everything in the row stays inside it');
+    assert.equal(await upcoming.locator('.btn', {hasText: 'Add to calendar'}).isVisible(), true);
+
+    assert.deepEqual(await fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height]), [160, 90]);
+    assert.equal(await fire.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 160px');
+    await seenSettled(page, setpoint);
+    await settle(page);
+    await matchGolden(page, 'news-narrow', 'news');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the phone: News isn\'t in the navigation, and its address opens the Inbox', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/news`);
+    await page.waitForURL(/\/inbox$/);
+    assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

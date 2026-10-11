@@ -1,0 +1,145 @@
+// One flat config for every workspace, with React's hook rules for web/ and the boundaries
+// BUILD-PLAN.md › Stack and layout asks the lint to enforce.
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+// Provider SDKs: only server/src/providers/ may import them.
+const providerSdks = {
+  group: [
+    'googleapis', '@googleapis/*', 'google-auth-library', '@google-cloud/*', '@googlemaps/*',
+    'imapflow', 'imap', 'node-imap', 'mailparser', '@doist/*', 'openai', '@anthropic-ai/*',
+  ],
+  message: 'Provider SDKs belong in server/src/providers/ (BUILD-PLAN.md › Boundaries the lint enforces).',
+};
+// ntfy is notify()'s delivery: nothing outside server/src/notify/ knows about it.
+const ntfy = {
+  group: ['**/ntfy', '**/ntfy.ts', '**/ntfy/**', 'ntfy*'],
+  message: 'Only server/src/notify/ knows about ntfy; send through notify().',
+};
+// Rules stay pure: no provider adapters in server/src/domain/.
+const providers = {
+  group: ['**/providers', '**/providers/**'],
+  message: 'Domain rules never import providers; the sync engine and commands call them.',
+};
+// The web app reaches the server only over HTTP, through web/src/api/.
+const serverCode = {
+  group: ['@setpoint/server', '@setpoint/server/**', '**/server/src/**'],
+  message: 'The web app talks to the server through web/src/api/ and shares types through @setpoint/shared.',
+};
+const network = ['fetch', 'EventSource', 'XMLHttpRequest', 'WebSocket'].map(name => ({
+  name,
+  message: 'Only web/src/api/ talks to the server (BUILD-PLAN.md › Boundaries the lint enforces).',
+}));
+const windowNetwork = ['window', 'globalThis', 'self'].flatMap(object => network.map(({name, message}) => ({object, property: name, message})));
+
+// The browser checks' own rules. A fixed pause says why on the line before it (SV-40): one that
+// waits for something to happen should wait for it (`until`, a waiting locator), as a pause long
+// enough on an idle machine is too short on a busy one; a "nothing happened" check, or a hover
+// fading before a screenshot, keeps its pause and says so. A bound shorter than the 5 s default
+// says why too (SV-49): "at once" is proven by holding the server's answer, not by a short limit,
+// which only adds a way for a slow machine to fail.
+const SHORT_BOUND_MS = 5000;
+const explainedOnLineBefore = (context, node) => {
+  let statement = node;
+  while (statement.parent && !['Program', 'BlockStatement', 'SwitchCase'].includes(statement.parent.type)) statement = statement.parent;
+  const comment = context.sourceCode.getCommentsBefore(statement).at(-1);
+  return comment?.loc.end.line === statement.loc.start.line - 1;
+};
+const isShort = node => node?.type === 'Literal' && typeof node.value === 'number' && node.value < SHORT_BOUND_MS;
+const browserChecks = {
+  rules: {
+    'explained-pause': {
+      meta: {
+        type: 'problem',
+        schema: [],
+        messages: {unexplained: 'Say why this pause on the line before it, or wait for what it waits for (`until`, a waiting locator) (SV-40).'},
+      },
+      create(context) {
+        return {
+          'CallExpression[callee.property.name="waitForTimeout"]'(node) {
+            if (!explainedOnLineBefore(context, node)) context.report({node, messageId: 'unexplained'});
+          },
+        };
+      },
+    },
+    'explained-short-bound': {
+      meta: {
+        type: 'problem',
+        schema: [],
+        messages: {unexplained: 'A bound under 5 s says why on the line before it; to show "at once", hold the server\'s answer and use the default bound (SV-49).'},
+      },
+      create(context) {
+        const check = (node, bound) => {
+          if (isShort(bound) && !explainedOnLineBefore(context, node)) context.report({node: bound, messageId: 'unexplained'});
+        };
+        return {
+          // until(what, read, check, timeoutMs)
+          'CallExpression[callee.name="until"]'(node) { check(node, node.arguments[3]); },
+          // {timeout: …} given to any call: waitFor, waitForResponse, expect's matchers, …
+          'CallExpression > ObjectExpression > Property[key.name="timeout"]'(property) { check(property.parent.parent, property.value); },
+        };
+      },
+    },
+  },
+};
+
+export default tseslint.config(
+  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/']},
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', ignoreRestSiblings: true}],
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
+  },
+  {
+    files: ['server/**', 'shared/**', '*.js', '*.ts', 'web/*.ts', 'web/tests/**'],
+    languageOptions: {globals: globals.node},
+  },
+  {
+    files: ['web/src/**/*.{ts,tsx}'],
+    plugins: {'react-hooks': reactHooks},
+    rules: reactHooks.configs.recommended.rules,
+    languageOptions: {globals: globals.browser},
+  },
+
+  // Boundaries. ESLint replaces a rule's options per matching block rather than merging them, so
+  // each block lists every pattern that applies to its files.
+  {
+    files: ['server/src/**/*.ts'],
+    ignores: ['server/src/providers/**', 'server/src/notify/**', 'server/src/domain/**'],
+    rules: {'no-restricted-imports': ['error', {patterns: [providerSdks, ntfy]}]},
+  },
+  {
+    files: ['server/src/notify/**/*.ts'],
+    rules: {'no-restricted-imports': ['error', {patterns: [providerSdks]}]},
+  },
+  {
+    files: ['server/src/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {patterns: [providerSdks, ntfy, providers]}],
+      'no-restricted-globals': ['error', ...network.map(({name}) => ({name, message: 'Domain rules are pure: no network.'}))],
+    },
+  },
+  {
+    files: ['web/src/**/*.{ts,tsx}'],
+    ignores: ['web/src/api/**'],
+    rules: {
+      'no-restricted-globals': ['error', ...network],
+      'no-restricted-properties': ['error', ...windowNetwork],
+      'no-restricted-imports': ['error', {patterns: [serverCode]}],
+    },
+  },
+  {
+    files: ['web/src/api/**/*.{ts,tsx}'],
+    rules: {'no-restricted-imports': ['error', {patterns: [serverCode]}]},
+  },
+  {
+    files: ['web/tests/browser/**/*.ts'],
+    plugins: {'browser-checks': browserChecks},
+    rules: {'browser-checks/explained-pause': 'error', 'browser-checks/explained-short-bound': 'error'},
+  },
+);

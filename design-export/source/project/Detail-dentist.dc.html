@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar · Dentist detail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./setpoint.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&amp;family=Geist+Mono:wght@400..600&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..24,300,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp .grip{display:flex;align-items:center;justify-content:center;width:100%;height:18px;cursor:grab}
+.sp .grip::before{content:"";width:28px;height:4px;border-radius:999px;background:var(--sub3)}
+.sp .card-acts{display:flex;align-items:center;gap:2px;padding:8px 10px 10px 12px;border-top:1px solid var(--hair)}
+.sp .card.float .v{color:var(--ink)}
+</style>
+</helmet>
+<div class="sp app" style="width: 1677px; height: 1050px">
+
+<aside class="sb">
+  <div class="sb-top">
+    <span class="mark"><svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="31 10" stroke-linecap="round" transform="rotate(-38 11 11)"></circle><circle cx="15.6" cy="6.4" r="2" fill="currentColor"></circle></svg></span>
+    <span class="sb-name">Setpoint</span>
+  </div>
+  <a class="nav" href="#"><span class="ms">inbox</span><span class="grow">Inbox</span><span class="apill num">3</span><span class="cnt num">19</span></a>
+  <a class="nav on" href="#"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>
+
+  <div class="sb-sec">
+    <div class="sb-label" style="justify-content: space-between; padding-right: 2px"><span style="text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); font-weight: 500">October 2026</span><span style="display: inline-flex"><button class="ibtn sm" aria-label="Previous month"><span class="ms s16">chevron_left</span></button><button class="ibtn sm" aria-label="Next month"><span class="ms s16">chevron_right</span></button></span></div>
+    <div class="mini num">
+      <span class="h">M</span><span class="h">T</span><span class="h">W</span><span class="h">T</span><span class="h">F</span><span class="h">S</span><span class="h">S</span>
+      <span class="o">28</span><span class="o">29</span><span class="o">30</span><span>1</span><span>2</span><span>3</span><span>4</span>
+      <span>5</span><span>6</span><span class="t">7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+      <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+      <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+      <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span><span class="o">1</span>
+    </div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-label">Calendars</div>
+    <label class="calrow" style="--c: var(--c-personal)"><span class="chk"></span><span class="grow">Personal</span></label>
+    <label class="calrow" style="--c: var(--c-classes)"><span class="chk"></span><span class="grow">Classes</span></label>
+    <label class="calrow" style="--c: var(--c-jobs)"><span class="chk"></span><span class="grow">Jobs</span></label>
+    <label class="calrow" style="--c: var(--ink2)"><span class="chk"></span><span class="grow">Todoist</span><span class="ring" style="width: 13px; height: 13px; border-color: var(--ink2)"></span></label>
+  </div>
+
+  <div class="sb-foot">
+    <a class="nav" href="#"><span class="ms">settings</span><span class="grow">Settings</span><span class="kbd">⌘,</span></a>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="hd">
+    <span class="hd-title" style="min-width: 128px">October 2026</span>
+    <span style="display: inline-flex; align-items: center; gap: 2px">
+      <button class="ibtn sm" aria-label="Previous month"><span class="ms">chevron_left</span></button>
+      <button class="btn ghost sm">Today</button>
+      <button class="ibtn sm" aria-label="Next month"><span class="ms">chevron_right</span></button>
+    </span>
+    <span class="seg" style="margin-left: 8px"><span class="on">Month</span><span>Week</span></span>
+    <span class="grow"></span>
+    <button class="ibtn" aria-label="Search calendar"><span class="ms">search</span></button>
+    <button class="btn"><span class="ms">add</span>New<span class="kbd" style="background: color-mix(in oklch, var(--onInk) 12%, transparent); color: var(--onInk)">C</span></button>
+  </header>
+
+  <div class="content">
+    <section style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden" aria-label="Month">
+      <div class="cal-dow"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+      <div class="cal-grid" style="grid-auto-rows: 176px; flex: none">
+        <!-- Sep 28 – Oct 4 -->
+        <div class="cell out"><div class="dhead"><span class="dn">28</span></div></div>
+        <div class="cell out"><div class="dhead"><span class="dn">29</span></div></div>
+        <div class="cell out"><div class="dhead"><span class="dn">30</span></div></div>
+        <div class="cell"><div class="dhead"><span class="dn month">Oct 1</span></div>
+          <div class="ev past" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">2</span></div>
+          <div class="ev past" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">3</span></div></div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">4</span></div></div>
+        <!-- Oct 5 – 11 -->
+        <div class="cell"><div class="dhead"><span class="dn">5</span></div>
+          <div class="ev past" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+          <div class="tk done"><span class="ring"></span>Return library books</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">6</span></div>
+          <div class="ev past" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell sel"><div class="dhead"><span class="dn today">7</span><span class="ms wx sun">sunny</span></div>
+          <div class="ev past" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+          <div class="ev sel" style="--c: var(--c-personal)"><span class="t">2:30 PM</span>Dentist</div>
+          <div class="tk"><span class="ring"></span>CS 101 lab report</div>
+          <div class="tk"><span class="ring"></span>Pay rent</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">8</span><span class="ms wx cloud">cloud</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+          <div class="tk"><span class="ring"></span>Renew car registration</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">9</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6:30 PM</span>Study group</div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 PM</span>Dinner with Sam</div>
+        </div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">10</span></div></div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">11</span></div></div>
+        <!-- Oct 12 – 18 -->
+        <div class="cell"><div class="dhead"><span class="dn">12</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">13</span><span class="ms wx rain">rainy</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">14</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">15</span></div>
+          <div class="ev" style="--c: var(--c-jobs)"><span class="t">10 AM</span>Career fair</div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">16</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">17</span></div></div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">18</span></div></div>
+        <!-- Oct 19 – 25 -->
+        <div class="cell"><div class="dhead"><span class="dn">19</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">20</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">21</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">22</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">23</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">24</span></div></div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">25</span></div></div>
+        <!-- Oct 26 – Nov 1 -->
+        <div class="cell"><div class="dhead"><span class="dn">26</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">27</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">28</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">29</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell"><div class="dhead"><span class="dn">30</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell weekend"><div class="dhead"><span class="dn">31</span></div></div>
+        <div class="cell weekend out"><div class="dhead"><span class="dn month" style="color: var(--ink2)">Nov 1</span></div></div>
+        <!-- Nov 2 – 8, scrolling in -->
+        <div class="cell out"><div class="dhead"><span class="dn">2</span></div>
+          <div class="ev" style="--c: var(--c-personal)"><span class="t">7 AM</span>Gym</div>
+        </div>
+        <div class="cell out"><div class="dhead"><span class="dn">3</span></div>
+          <div class="ev" style="--c: var(--c-classes)"><span class="t">6 PM</span>CS 101 lecture</div>
+        </div>
+        <div class="cell out"><div class="dhead"><span class="dn">4</span></div></div>
+        <div class="cell out"><div class="dhead"><span class="dn">5</span></div></div>
+        <div class="cell out"><div class="dhead"><span class="dn">6</span></div></div>
+        <div class="cell out weekend"><div class="dhead"><span class="dn">7</span></div></div>
+        <div class="cell out weekend"><div class="dhead"><span class="dn">8</span></div></div>
+      </div>
+    </section>
+
+    <section class="rpane" aria-label="Wed, Oct 7">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 18px 16px 4px 20px">
+        <div class="grow">
+          <div style="font-size: 15px; font-weight: 500">Wed, Oct 7</div>
+          <div class="ink2" style="font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 2px"><span class="ms s16" style="color: var(--sun)">sunny</span><span class="num">Sunny · 78° / 61°</span></div>
+        </div>
+        <button class="ibtn" aria-label="New event on Oct 7"><span class="ms">add</span></button>
+      </div>
+
+      <div class="ag-day">Events</div>
+      <a class="ag-item" href="#" style="--c: var(--c-personal); opacity: .5">
+        <span class="when num">7:00 AM</span><span class="cbar"></span>
+        <span class="grow"><span style="display: block; color: var(--ink)">Gym</span><span class="ink3" style="font-size: 12.5px">7:00 – 8:00 AM · Personal</span></span>
+        <span class="ms s16 ink3">repeat</span>
+      </a>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 6px 20px 6px 20px">
+        <span class="num" style="width: 64px; color: var(--alert); font-size: 12px; font-weight: 500">9:12 AM</span>
+        <span style="height: 1px; flex: 1; background: var(--alert); opacity: .7"></span>
+      </div>
+      <a class="ag-item" href="#" style="--c: var(--c-personal); background: var(--sub2)">
+        <span class="when num">2:30 PM</span><span class="cbar"></span>
+        <span class="grow"><span style="display: block; color: var(--ink); font-weight: 500">Dentist</span><span class="ink3" style="font-size: 12.5px">2:30 – 3:30 PM · Smile Dental</span><span class="ink2" style="font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px"><span class="ms s16">directions_car</span>Leave by 2:05 PM · 18 min</span></span>
+        <span class="ink3 num" style="font-size: 12px">in 5h</span>
+      </a>
+
+      <div class="ag-day">Tasks · due today</div>
+      <a class="ag-item" href="#" style="align-items: center">
+        <span class="ring" style="width: 15px; height: 15px; border-color: var(--ink2); margin-left: 2px"></span>
+        <span class="grow" style="color: var(--ink)">CS 101 lab report</span>
+        <span class="ink3" style="font-size: 12px">School</span>
+      </a>
+      <a class="ag-item" href="#" style="align-items: center">
+        <span class="ring" style="width: 15px; height: 15px; border-color: var(--ink2); margin-left: 2px"></span>
+        <span class="grow" style="color: var(--ink)">Pay rent</span>
+        <span class="ink3" style="font-size: 12px">Home</span>
+      </a>
+
+      <div style="margin-top: auto; padding: 12px 16px 16px 20px; border-top: 1px solid var(--hair); display: flex; gap: 8px; align-items: center" class="ink3">
+        <span class="ms s16">keyboard</span><span style="font-size: 12px">New event</span><span class="kbd">C</span><span style="font-size: 12px; margin-left: 6px">New task</span><span class="kbd">D</span>
+      </div>
+    </section>
+
+    <!-- Placement, card 280 × 252, 8 px off the chip, centred on it. Items covered:
+         right 5 (Thu: CS 101 lecture, Renew car registration; Fri: Gym, Study group, Dinner with Sam),
+         left 3 (Mon: Gym, Return library books; Tue: CS 101 lecture),
+         above 4 (and it doesn't fit under the day row), below 6. Left wins. -->
+    <div class="card float" role="dialog" aria-label="Dentist" style="position: absolute; left: 12px; top: 144px; width: 280px; z-index: 4">
+      <button class="grip" aria-label="Drag card"></button>
+      <div class="card-h" style="padding: 0 10px 0 16px">
+        <span style="width: 17px; display: grid; place-items: center; flex: none"><span class="dot" style="--c: var(--c-personal); width: 10px; height: 10px"></span></span>
+        <span class="grow ell" style="font-size: 16px; font-weight: 500; letter-spacing: -.005em">Dentist</span>
+        <button class="ibtn sm" aria-label="Close"><span class="ms s16">close</span></button>
+      </div>
+      <div class="card-b" style="padding-top: 2px">
+        <div class="ink2 num" style="padding-left: 27px">Wed, Oct 7 · 2:30 – 3:30 PM</div>
+        <div class="fact"><span class="ms">location_on</span><span class="grow"><span class="v" style="display: block">Smile Dental</span><span class="ink3" style="font-size: 12.5px">1420 Elm St</span></span></div>
+        <div class="fact"><span class="ms">directions_car</span><span class="num"><span class="v">Leave by 2:05 PM</span> · 18 min</span></div>
+        <div class="fact"><span class="ms">notifications</span><span>30 min before</span></div>
+        <div class="fact"><span class="ms">calendar_today</span><span>Personal</span></div>
+      </div>
+      <div class="card-acts">
+        <button class="btn ghost sm"><span class="ms s16">edit</span>Edit<span class="kbd">E</span></button>
+        <span class="grow"></span>
+        <button class="ibtn sm" aria-label="Clone"><span class="ms s16">control_point_duplicate</span></button>
+        <button class="ibtn sm" aria-label="Copy"><span class="ms s16">content_copy</span></button>
+        <button class="ibtn sm" aria-label="Colour"><span class="dot" style="--c: var(--c-personal); width: 12px; height: 12px"></span></button>
+        <button class="ibtn sm" aria-label="Delete"><span class="ms s16">delete</span></button>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1677,"height":1050}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

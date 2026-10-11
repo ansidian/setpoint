@@ -1,0 +1,94 @@
+// `npm run test:browser [-- mail search ...]`: builds the web app and runs the browser checks, all
+// spec files or the ones named, six at a time, one run at a time on this machine (lock.ts): a run
+// waits for the lock, saying whose run it waits for. The build and the checks together get LIMIT
+// minutes, then everything is stopped, so a hung run can't sit for hours. At the end it prints the
+// run's time against BUDGET and the slowest checks (slowest.ts).
+import {spawn} from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {acquire, clock, handDown, release} from './lock.ts';
+
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+const HERE = fileURLToPath(new URL('./', import.meta.url));
+const minutes = (name: string, fallback: number) => Number(process.env[name] ?? fallback) * 60_000;
+const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', 15);
+// A full run alone, with some room; past it, the run says so (it doesn't fail).
+const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
+
+/** The spec files to run: those named (`mail`, `mail.spec.ts` or a path), else every one. */
+function specs(names: string[]): string[] {
+  if (!names.length) return fs.readdirSync(HERE).filter(file => file.endsWith('.spec.ts')).sort().map(file => path.join(HERE, file));
+  return names.map(name => {
+    const file = name.includes('/') ? path.resolve(name) : path.join(HERE, name.endsWith('.ts') ? name : `${name}.spec.ts`);
+    if (!fs.existsSync(file)) throw new Error(`No spec file ${path.relative(ROOT, file)}.`);
+    return file;
+  });
+}
+
+let child: ReturnType<typeof spawn> | null = null;
+
+/** Runs a command in its own process group, so stopping it stops everything it started. */
+function run(command: string, args: string[]): Promise<number> {
+  return new Promise((resolve, reject) => {
+    child = spawn(command, args, {cwd: ROOT, stdio: 'inherit', detached: true});
+    child.on('error', reject);
+    child.on('exit', (code, signal) => resolve(code ?? (signal ? 1 : 0)));
+  });
+}
+
+function stop() {
+  if (child?.pid) {
+    try {
+      process.kill(-child.pid, 'SIGKILL');
+    } catch {
+      // Already gone.
+    }
+  }
+}
+
+async function main(): Promise<number> {
+  const files = specs(process.argv.slice(2));
+  const waited = await acquire();
+  if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
+  handDown();
+  const started = Date.now();
+  const timer = setTimeout(() => {
+    console.error(`\nThe browser run passed its ${clock(LIMIT)} limit (SETPOINT_BROWSER_LIMIT_MIN) and was stopped.`);
+    stop();
+  }, LIMIT);
+  try {
+    const built = await run('npm', ['run', 'build']);
+    if (built !== 0) return built;
+    const building = Date.now() - started;
+    const code = await run(process.execPath, [
+      '--test', `--test-global-setup=${path.join(HERE, 'globalSetup.ts')}`, '--test-concurrency=6', '--test-timeout=180000',
+      '--test-reporter=spec', '--test-reporter-destination=stdout',
+      `--test-reporter=${path.join(HERE, 'slowest.ts')}`, '--test-reporter-destination=stdout',
+      ...files,
+    ]);
+    const took = Date.now() - started;
+    const whole = files.length === specs([]).length;
+    console.log(`\nBrowser run: ${clock(took)} (build ${clock(building)}, checks ${clock(took - building)})${whole ? `, budget ${clock(BUDGET)}` : ''}.`);
+    if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
+    return Date.now() - started >= LIMIT ? 1 : code;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+  process.on(signal, () => {
+    stop();
+    release();
+    process.exit(130);
+  });
+}
+process.on('exit', () => release());
+
+main().then(code => {
+  process.exitCode = code;
+}, (error: Error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

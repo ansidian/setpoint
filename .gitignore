@@ -1,0 +1,16 @@
+node_modules/
+data/
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+dist/
+.DS_Store
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.claude/worktrees/
+.claude/launch.json
+# News's local sources name Andy's area; only the example is committed (D91).
+server/news/local-sources.json

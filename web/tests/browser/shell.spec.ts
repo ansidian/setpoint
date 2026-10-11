@@ -1,0 +1,230 @@
+// The shell in the browser: signing in (claiming with a setup token, then the password, or a
+// recovery code), the layout's fixed sizes (DESIGN.md › Layout) at both desktop sizes, no focus
+// rings, the account filter, the page keys, the tab title, and live updates from a change made
+// elsewhere.
+import assert from 'node:assert/strict';
+import {after, describe, test} from 'node:test';
+import type {MailCountsOut} from '@setpoint/shared';
+import type {Page} from 'playwright-core';
+import {cleanUp, SIZES, startSetpoint, until} from './harness.ts';
+import type {SizeName} from './harness.ts';
+
+after(cleanUp);
+
+const box = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!;
+
+test('the sign-in card claims Setpoint with the setup token, then signs in with the password', async () => {
+  const setpoint = await startSetpoint({claim: false});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox/5`);
+    await page.getByLabel('Setup token').fill(setpoint.setupToken);
+    await page.getByLabel('New password').fill('short');
+    await page.getByRole('button', {name: 'Claim Setpoint'}).click();
+    await page.locator('.sign-in-line.failed', {hasText: 'At least 12 characters'}).waitFor();
+    await page.getByLabel('New password').fill('a long enough password');
+    await page.getByRole('button', {name: 'Claim Setpoint'}).click();
+    // The recovery codes, once; then the app, at the address it was asked for.
+    await page.locator('.recovery').waitFor();
+    assert.equal((await page.locator('.recovery').textContent())!.trim().split('\n').length, 8);
+    await page.getByRole('button', {name: 'Continue'}).click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+
+    // Signed out (another tab, or the session ending): the card asks for the password.
+    await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
+    await page.reload();
+    const top = async () => (await page.locator('.sign-in').boundingBox())!.y;
+    await page.getByLabel('Password').waitFor();
+    const before = await top();
+    await page.getByLabel('Password').fill('not the password');
+    await page.keyboard.press('Enter');
+    await page.locator('.sign-in-line.failed', {hasText: 'Wrong password'}).waitFor();
+    assert.equal(await top(), before, 'the card grows down; it doesn\'t jump up');
+    await page.getByLabel('Password').fill('a long enough password');
+    await page.keyboard.press('Enter');
+    await page.locator('.arow').first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a recovery code signs in when the password is lost: a new password, then new codes, shown once', async () => {
+  const setpoint = await startSetpoint({claim: false});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.getByLabel('Setup token').fill(setpoint.setupToken);
+    await page.getByLabel('New password').fill('a long enough password');
+    await page.getByRole('button', {name: 'Claim Setpoint'}).click();
+    const codes = (await page.locator('.recovery').textContent())!.trim().split('\n');
+    await page.getByRole('button', {name: 'Continue'}).click();
+    await page.locator('.arow').first().waitFor();
+
+    await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
+    await page.reload();
+    await page.getByRole('button', {name: 'Use a recovery code'}).click();
+    await page.getByLabel('Recovery code').fill('not-a-code');
+    await page.getByLabel('New password').fill('another long password');
+    await page.getByRole('button', {name: 'Sign in'}).click();
+    await page.locator('.sign-in-line.failed', {hasText: 'Recovery failed'}).waitFor();
+    await page.getByLabel('Recovery code').fill(codes[0]!);
+    await page.getByRole('button', {name: 'Sign in'}).click();
+    await page.locator('.recovery').waitFor();
+    const fresh = (await page.locator('.recovery').textContent())!.trim().split('\n');
+    assert.equal(fresh.length, 8);
+    assert.ok(!fresh.includes(codes[1]!), 'the old codes are replaced');
+    await page.getByRole('button', {name: 'Continue'}).click();
+    await page.locator('.arow').first().waitFor();
+
+    // The new password is the password now; Back returns to it from the code.
+    await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
+    await page.reload();
+    await page.getByRole('button', {name: 'Use a recovery code'}).click();
+    await page.getByRole('button', {name: 'Use the password'}).click();
+    await page.getByLabel('Password').fill('another long password');
+    await page.keyboard.press('Enter');
+    await page.locator('.arow').first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+for (const size of ['target', 'large'] as SizeName[]) {
+  describe(`the shell at ${SIZES[size].width} × ${SIZES[size].height}`, () => {
+    test('sidebar 248, header 56, reading pane 680 only while an email is open; the shell never scrolls; no focus rings', async () => {
+      const setpoint = await startSetpoint();
+      try {
+        const page = await setpoint.page(size);
+        await page.goto(`${setpoint.base}/inbox`);
+        await page.locator('.arow').first().waitFor();
+        assert.equal((await box(page, '.sb')).width, 248);
+        assert.equal((await box(page, '.hd')).height, 56);
+        assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
+        assert.equal((await box(page, '.list')).width, SIZES[size].width - 248);
+        await page.locator('.arow', {hasText: 'Contoso University'}).click();
+        await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+        assert.equal((await box(page, '.pane')).width, 680);
+        assert.equal((await box(page, '.list')).width, SIZES[size].width - 248 - 680);
+        // Every row keeps its account while the pane is open (decision 41).
+        for (const label of await page.locator('.list .row .ac, .list .arow .r1').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
+        const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+        assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
+        // Focus on a control draws no ring.
+        await page.locator('.rd-tools .tool').first().focus();
+        const outline = await page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle);
+        assert.equal(outline, 'none');
+        assert.deepEqual(setpoint.pageErrors, []);
+      } finally {
+        await setpoint.stop();
+      }
+    });
+  });
+}
+
+test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab title follows', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    assert.equal(await page.title(), '(3) Inbox');
+    await page.locator('.acct', {hasText: 'Jobs'}).click();
+    await until('only Jobs mail', () => page.locator('.list .ac .label, .list .r1 .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
+    assert.equal(new URL(page.url()).search, '?account=4');
+    // The counts stay every account's.
+    assert.equal(await page.locator('.nav:has-text("Inbox") .cnt').textContent(), '19');
+    await page.keyboard.press('2');
+    await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
+    assert.equal(await page.title(), 'October 2026 · Calendar');
+    await page.keyboard.press('1');
+    await page.locator('.arow').first().waitFor();
+    assert.equal(new URL(page.url()).pathname, '/inbox');
+    // The Today block's lines open their card over the page (#78), not Calendar.
+    await page.locator('.today-row', {hasText: 'Dentist'}).click();
+    await page.locator('.today-card', {hasText: 'Dentist'}).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/inbox');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('#78: the Today block names its tasks, and a line opens its card over the open email; E edits it on Calendar, not Trash', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
+    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
+
+    // The card sits 8 px right of the sidebar, level with its line; the email stays open behind it.
+    await lines.filter({hasText: 'Renew car registration'}).click();
+    const card = page.locator('.today-card');
+    await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
+    assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
+    assert.equal(Math.round((await box(page, '.today-card')).x), Math.round((await box(page, '.sb')).width) + 8);
+    assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
+      ['EditE', 'Complete', 'Open in Calendar', 'Delete']);
+    // Another line moves the same card; Esc closes it and leaves the email open.
+    await lines.filter({hasText: 'Dentist'}).click();
+    await card.locator('.fd-title', {hasText: 'Dentist'}).waitFor();
+    await page.keyboard.press('Escape');
+    await until('the card closed', () => card.count(), count => count === 0);
+    assert.equal(await page.locator('.rd-subj').count(), 1);
+
+    // A ring completes its task in place, with Undo.
+    await lines.filter({hasText: 'Pay rent'}).getByRole('button', {name: 'Complete Pay rent'}).click();
+    await page.locator('.toast', {hasText: 'Completed Pay rent'}).waitFor();
+    await until('Pay rent gone', () => lines.allTextContents(), texts => !texts.includes('Pay rent'));
+    await page.locator('.toast button', {hasText: 'Undo'}).click();
+    await until('Pay rent back', () => lines.allTextContents(), texts => texts.includes('Pay rent'));
+
+    // E on the card edits its item on Calendar; the open email isn't trashed.
+    await lines.filter({hasText: 'Renew car registration'}).click();
+    await card.waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit task"]').waitFor();
+    assert.equal(await page.locator('.editor').getByLabel('Title', {exact: true}).inputValue(), 'Renew car registration');
+    assert.match(new URL(page.url()).pathname, /^\/calendar\/item\/\d+$/);
+    const counts = await setpoint.api<MailCountsOut>('GET', '/mail/counts');
+    assert.equal(counts.attention, 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('live updates: an email read elsewhere loses its dot and leaves the counts without a reload, and the Inbox with the visit', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.row', {hasText: 'New sign-in'}).waitFor();
+    const inbox = await setpoint.api<{groups: {rows: {id: number; subject: string}[]}[]}>('GET', '/mail/inbox');
+    const signIn = inbox.groups.flatMap(group => group.rows).find(item => item.subject === 'Security alert')!;
+    // Read in another client (Gmail's app would arrive the same way, through sync).
+    await setpoint.api('POST', `/mail/messages/${signIn.id}/read`, {unread: false});
+    await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .cnt').textContent(), text => text === '18');
+    assert.equal((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread, 18);
+    // Unread keeps it in its place, read, until the user leaves the view (2026-10-09).
+    const signInRow = page.locator('.row', {hasText: 'New sign-in'});
+    await until('the dot goes', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
+    await page.keyboard.press('2');
+    await page.waitForURL(/\/calendar/);
+    await page.keyboard.press('1');
+    await until('it leaves with the visit', () => signInRow.count(), count => count === 0);
+    // Done elsewhere drops the pill and the title.
+    const google = inbox.groups.flatMap(group => group.rows).find(item => item.subject.startsWith('Your recovery email'))!;
+    await setpoint.api('POST', `/mail/messages/${google.id}/done`, {done: true});
+    await until('the pill drops', () => page.locator('.apill').textContent(), text => text === '2');
+    await until('the title follows', () => page.title(), title => title === '(2) Inbox');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

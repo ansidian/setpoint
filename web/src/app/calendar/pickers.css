@@ -1,0 +1,17 @@
+/* The date and time pickers under their fields (SV-25), in the host's `.pop.menu` (the editor's or
+   the proposal card's, hence the anchor in each selector): the sidebar's mini month, and the
+   15-minute list. */
+.menu-anchor > .pop.menu.datepop { min-width: 0; width: 236px; padding: 6px 4px 8px; gap: 0; }
+.menu-anchor > .pop.menu.datepop .mini-head { display: flex; align-items: center; height: 30px; padding: 0 2px 2px 10px; }
+.mini > .cur { box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.menu-anchor > .pop.menu.timelist { min-width: 0; width: max-content; max-height: 248px; overflow-y: auto; }
+.menu-anchor > .pop.menu.timelist > .menu-i { flex: none; }
+/* SV-29: an event's days as one band, its ends rounded and so each week's edge, as a range picker draws them,
+   in `cool` (#104): the days between at 28%, its first and last day at 50%. */
+.mini > .in:not(.t) { background: color-mix(in oklch, var(--cool) 28%, transparent); color: var(--ink); border-radius: 0; }
+.mini > .in:nth-child(7n + 1), .mini > .in.rs { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
+.mini > .in:nth-child(7n), .mini > .in.re { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
+.mini > .in.rs, .mini > .in.re { font-weight: 600; }
+.mini > .in.rs:not(.t), .mini > .in.re:not(.t) { background: color-mix(in oklch, var(--cool) 50%, transparent); }
+.mini > .in:not(.t):hover { background: color-mix(in oklch, var(--cool) 38%, transparent); }
+.mini > .in.rs:not(.t):hover, .mini > .in.re:not(.t):hover { background: color-mix(in oklch, var(--cool) 60%, transparent); }

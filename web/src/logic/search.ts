@@ -1,0 +1,253 @@
+// Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
+// card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
+// what the reader highlights, and how a proposal's time reads.
+import type {AnswerOut, AskStep, CalendarSearchResultOut, HighlightOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SourceProvider} from '@setpoint/shared';
+import {timeRange} from './calendar.ts';
+import {describeRule, describeTaskRepeat} from './compose.ts';
+import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
+import {placeName} from './place.ts';
+
+export interface Run {
+  start: number;
+  end: number;
+}
+
+export interface Segment {
+  text: string;
+  mark: boolean;
+}
+
+/**
+ * A text cut into plain and highlighted parts. Runs that overlap, touch or have only spaces between
+ * them become one mark ("Lease renewal", as the boards draw it).
+ */
+export function segments(text: string, runs: readonly Run[]): Segment[] {
+  const merged: Run[] = [];
+  for (const run of [...runs].filter(item => item.end > item.start).sort((a, b) => a.start - b.start)) {
+    const last = merged.at(-1);
+    if (last && /^\s*$/.test(text.slice(last.end, run.start))) last.end = Math.max(last.end, run.end);
+    else if (last && run.start < last.end) last.end = Math.max(last.end, run.end);
+    else merged.push({...run});
+  }
+  const out: Segment[] = [];
+  let at = 0;
+  for (const run of merged) {
+    if (run.start > at) out.push({text: text.slice(at, run.start), mark: false});
+    out.push({text: text.slice(run.start, run.end), mark: true});
+    at = run.end;
+  }
+  if (at < text.length || !out.length) out.push({text: text.slice(at), mark: false});
+  return out;
+}
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Every place a phrase starts a word, ignoring case ("Northwind", "$2,140", "Oct 31, 2026"). */
+export function phraseRuns(text: string, phrases: readonly string[]): Run[] {
+  const runs: Run[] = [];
+  for (const phrase of phrases) {
+    if (!phrase.trim()) continue;
+    for (const match of text.matchAll(new RegExp(`(?<![\\p{L}\\p{N}])${escape(phrase.trim())}`, 'giu'))) runs.push({start: match.index, end: match.index + match[0].length});
+  }
+  return runs;
+}
+
+/** The sender a result row shows (its organisation, else its name), with that field's highlights. */
+export function resultSender(result: Pick<SearchResultOut, 'organisation' | 'from_name' | 'highlights'>): Segment[] {
+  const field: HighlightOut['field'] = result.organisation ? 'organisation' : 'from_name';
+  return segments(result.organisation ?? result.from_name, result.highlights.filter(run => run.field === field));
+}
+
+export const fieldSegments = (result: Pick<SearchResultOut, 'subject' | 'excerpt' | 'highlights'>, field: 'subject' | 'excerpt') =>
+  segments(result[field], result.highlights.filter(run => run.field === field));
+
+/** "Org Northwind" → Org, Northwind: the label's first word is its kind (`ink3`), the rest what matched. */
+export function reasonParts(label: string): {key: string; value: string} {
+  const space = label.indexOf(' ');
+  return space < 0 ? {key: label, value: ''} : {key: label.slice(0, space), value: label.slice(space + 1)};
+}
+
+/** The results line's parts: "2 results", then "newest first" when chips order them so (the calendar's have no order). */
+export function resultsLine(out: Pick<SearchOut, 'total'> & Partial<Pick<SearchOut, 'order' | 'partial'>>): string[] {
+  // A search that fell back to any word says so, rather than showing a near miss as a match (UX #10).
+  const count = out.partial && out.total
+    ? ['No email has every word', `${out.total} ${out.total === 1 ? 'has' : 'have'} some of them`]
+    : [`${out.total} ${out.total === 1 ? 'result' : 'results'}`];
+  return [...count, ...(out.order === 'newest' ? ['newest first'] : [])];
+}
+
+/** "Indexing · 62% · showing what's indexed so far", during the first backfill. */
+export const indexingLine = (indexing: SearchOut['indexing']) =>
+  indexing ? `Indexing · ${Math.round(indexing.progress * 100)}% · showing what’s indexed so far` : null;
+
+/** A chip as words: its label, with "!" before a Not chip's ("!Confirmation"), which the grammar reads as the same chip. */
+export const chipWords = (chip: SearchChip) => (chip.not ? `!${chip.label}` : chip.label);
+
+/** The query as one phrase: the chips' labels, then the text ("Northwind · Rejection · Mar 2026"). */
+export const queryParts = (chips: readonly SearchChip[], text: string) => [...chips.map(chipWords), ...(text.trim() ? [text.trim()] : [])];
+
+/**
+ * What ⌘Enter asks Alfred: the words in the field. Chips go back as their words, which the grammar
+ * reads as the same chips.
+ */
+export const alfredQuestion = (chips: readonly SearchChip[], text: string) => queryParts(chips, text).join(' ');
+
+/** Whether the field holds a search: chips, or words. */
+export const isSearching = (chips: readonly unknown[], text: string) => chips.length > 0 || text.trim().length > 0;
+
+/** An answer's text with its bold runs. */
+export const answerSegments = (turn: Pick<AnswerOut, 'answer' | 'emphasis'>) => segments(turn.answer ?? '', turn.emphasis);
+
+/**
+ * What the reader highlights in the open email's body: the bold phrases of the answers it's a source
+ * of (board 07); else the words the search matched in it (board 06).
+ */
+export function readerMarks(open: number | null, results: readonly SearchResultOut[], turns: readonly AnswerOut[]): string[] {
+  if (open === null) return [];
+  const cited = turns.filter(turn => turn.answer && turn.sources.some(source => source.message_id === open));
+  if (cited.length) return cited.flatMap(turn => turn.emphasis.map(run => turn.answer!.slice(run.start, run.end)));
+  return results.find(result => result.id === open)?.reasons.flatMap(reason => reason.matched) ?? [];
+}
+
+/** Whether the turn shows its question: every follow-up, and the first when it isn't in the search field. */
+export const showsQuestion = (index: number, scoped: boolean) => index > 0 || scoped;
+
+/** Couldn't find that: what Alfred searched, each phrase quoted ("Searched “lease renewal”"). */
+export function searchedLine(searched: readonly string[]): string | null {
+  if (!searched.length) return null;
+  const quoted = searched.map(phrase => `“${phrase}”`);
+  return `Searched ${quoted.length > 1 ? `${quoted.slice(0, -1).join(', ')} and ${quoted.at(-1)}` : quoted[0]}`;
+}
+
+/** The Answer card while Alfred works: what it's doing, from the tool it last ran. */
+export function alfredStepLine(step: AskStep | null): string {
+  if (!step) return 'Looking through your mail…';
+  if (step.tool === 'search_mail') return `Searching “${step.query}”…`;
+  if (step.tool === 'get_email') return `Reading ${step.from}’s email…`;
+  if (step.tool === 'list_items') return 'Checking your calendar…';
+  return `Preparing the ${step.kind}…`;
+}
+
+const SOURCES_SHOWN = 5;
+
+/** A turn's sources: the first five and "Show all 26", or every one and "Show fewer". */
+export function shownSources<T>(sources: readonly T[], all: boolean): {shown: T[]; more: string | null} {
+  if (sources.length <= SOURCES_SHOWN) return {shown: [...sources], more: null};
+  return all ? {shown: [...sources], more: 'Show fewer'} : {shown: sources.slice(0, SOURCES_SHOWN), more: `Show all ${sources.length}`};
+}
+
+// An event the email gave a start and no end lasts an hour, as the editor's do.
+const DEFAULT_LENGTH = 60;
+
+const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});
+
+/** A proposal's day as its field shows it: "Wed, Dec 9"; another year's "Wed, Dec 9, 2027". */
+export function proposalDay(date: string, now: number, timeZone: string): string {
+  const options: Intl.DateTimeFormatOptions = {weekday: 'short', month: 'short', day: 'numeric'};
+  return onDay(date, date.startsWith(localDate(now, timeZone).slice(0, 4)) ? options : {...options, year: 'numeric'});
+}
+
+/** A proposal's day and times as its fields hold them: minutes after the day's midnight, null for all day or no time; no day when the email gave none. */
+export interface ProposalWhen {
+  date: string | null;
+  start: number | null;
+  end: number | null;
+}
+
+export function proposalWhen(item: ProposalItemOut, timeZone: string): ProposalWhen {
+  const zone = item.time_zone ?? timeZone;
+  if (item.kind === 'task') return {date: item.due_date, start: item.due_at ? minutesOf(item.due_at, zone) : null, end: null};
+  if (item.all_day || !item.starts_at) return {date: item.all_day ? item.start_date : null, start: null, end: null};
+  const start = minutesOf(item.starts_at, zone);
+  const length = item.ends_at ? Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : DEFAULT_LENGTH;
+  return {date: localDate(item.starts_at, zone), start, end: start + length};
+}
+
+/** The proposal's item on the day and at the times the user left in its fields (SV-24); an all-day event keeps its length in days. */
+export function proposalAt(item: ProposalItemOut, when: ProposalWhen & {date: string}, timeZone: string): ProposalItemOut {
+  const zone = item.time_zone ?? timeZone;
+  if (item.kind === 'task') return {...item, due_date: when.date, due_at: when.start === null ? null : instantAt(when.date, when.start, zone)};
+  if (when.start === null) {
+    const days = item.all_day && item.start_date && item.end_date ? Math.max(1, Math.round((Date.parse(item.end_date) - Date.parse(item.start_date)) / 86_400_000)) : 1;
+    return {...item, all_day: true, starts_at: null, ends_at: null, start_date: when.date, end_date: addDays(when.date, days)};
+  }
+  return {...item, all_day: false, starts_at: instantAt(when.date, when.start, zone), ends_at: instantAt(when.date, when.end ?? when.start + DEFAULT_LENGTH, zone), start_date: null, end_date: null};
+}
+
+/** The projects Project's menu offers for what's typed: those whose name holds it, any case; all of them for nothing typed. */
+export const projectMatches = <T extends {name: string}>(text: string, projects: T[]): T[] =>
+  projects.filter(project => project.name.toLowerCase().includes(text.trim().toLowerCase()));
+
+/** Whether what's typed names a project exactly, any case, so the menu offers no New project. */
+export const namesProject = (text: string, projects: {name: string}[]) => projects.some(project => project.name.toLowerCase() === text.trim().toLowerCase());
+
+/**
+ * Project's menu for what's typed: the matching projects, then New project for a name none has
+ * exactly, unless it's already picked as new (SV-25).
+ */
+export const projectMenu = (text: string, projects: {name: string}[], isNew: boolean): {name: string; isNew: boolean}[] => [
+  ...projectMatches(text, projects).map(project => ({name: project.name, isNew: false})),
+  ...(text.trim() && !isNew && !namesProject(text, projects) ? [{name: text.trim(), isNew: true}] : []),
+];
+
+/**
+ * A task proposal's project as Create sends it (SV-24, D50): none typed is Settings' default; a
+ * project's name in any case is that project; a new one is made only when the user picked New project,
+ * and otherwise the card says so rather than guessing.
+ */
+export function projectChoice(text: string, projects: {name: string}[], create: boolean): {project: string | null; create_project: boolean} | {problem: string} {
+  const name = text.trim();
+  if (!name) return {project: null, create_project: false};
+  const found = projects.find(project => project.name.toLowerCase() === name.toLowerCase());
+  if (found) return {project: found.name, create_project: false};
+  return create ? {project: name, create_project: true} : {problem: `No project named “${name}”, pick one or create it`};
+}
+
+/** The reminder choices on the proposal card, in minutes before; Settings' default is chosen first. */
+export const REMINDER_CHOICES = [0, 10, 30, 60, 1440] as const;
+
+const PROVIDER_NAMES: Record<SourceProvider, string> = {gmail: 'Gmail', icloud: 'iCloud', google_calendar: 'Google Calendar', todoist: 'Todoist', weather: 'Weather'};
+
+/** A failed Create, with the provider's own words: "Google Calendar, The calendar is read-only. (403)". */
+export const failedLine = (provider: SourceProvider | null, message: string | null) =>
+  [provider ? PROVIDER_NAMES[provider] : null, message ?? 'It wasn’t created.'].filter(Boolean).join(', ');
+
+// ---------- SV-23: calendar search ----------
+
+/** Before typing, the calendar's search says what it finds (DESIGN.md › Decided while building #24). */
+export const CALENDAR_SEARCH_HINT = 'Search events and tasks by title, place, people or calendar, or a date like ‘march’';
+
+/** The results under Upcoming, then Past, leaving out an empty heading. */
+export function calendarResultGroups<R extends Pick<CalendarSearchResultOut, 'upcoming'>>(results: readonly R[]): {heading: 'Upcoming' | 'Past'; results: R[]}[] {
+  return ([['Upcoming', true], ['Past', false]] as const)
+    .map(([heading, upcoming]) => ({heading, results: results.filter(result => result.upcoming === upcoming)}))
+    .filter(group => group.results.length > 0);
+}
+
+/** A result's day in the row's time column: "Oct 9", with the year under it outside this one. */
+export function resultDay(date: string, today: string): {day: string; year: string | null} {
+  const day = new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'});
+  return {day, year: date.slice(0, 4) === today.slice(0, 4) ? null : date.slice(0, 4)};
+}
+
+/**
+ * A result's line under its title, as the agenda's: an event's time, its series' rule as the editor
+ * words it ("Weekly on Mon, Wed") and its place or calendar; a task's time, repeat and project.
+ */
+export function calendarResultLine(result: Pick<CalendarSearchResultOut, 'item' | 'rule' | 'date'>, calendar: string | undefined, timeZone: string): string {
+  const {item} = result;
+  const parts = item.kind === 'task'
+    ? [item.due_at ? clockTime(item.due_at, timeZone) : null, item.repeat ? describeTaskRepeat(item.repeat) : null, item.project]
+    : [timeRange(item, timeZone), result.rule ? describeRule(result.rule, result.date) : null, placeName(item) ?? calendar];
+  return parts.filter(Boolean).join(' · ');
+}
+
+/**
+ * The words before the last when the field's text doesn't end in a space ("northwind rejection" and
+ * "march"), or null when there's only one word or a "quote" is still open.
+ */
+export function finishedWords(text: string): {words: string; last: string} | null {
+  const match = /^(.*\S)\s+(\S+)$/s.exec(text.trimStart());
+  if (!match || (match[1]!.split('"').length - 1) % 2 === 1) return null;
+  return {words: `${match[1]!} `, last: match[2]!};
+}

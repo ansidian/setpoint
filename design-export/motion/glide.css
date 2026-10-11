@@ -1,0 +1,15 @@
+/* Floating detail glide · values from board 12c. Duration is per glide: min(380, 280 + 40 * distance / 400) ms. */
+:root {
+  --glide-ease: cubic-bezier(.22, 1.3, .36, 1);   /* position only, ≈3% overshoot */
+  --glide-min: 280ms;
+  --glide-max: 380ms;
+  --glide-height-dur: 220ms;
+  --glide-content-out: 90ms;                       /* old content: 0–90 ms */
+  --glide-content-in: 130ms;                       /* new content: 90–220 ms, 6 px slide */
+  --glide-content-slide: 6px;
+  --glide-select-at: 60ms;                         /* new item tinted → solid */
+  --detail-open: 180ms;                            /* scale .96 → 1 + fade, from the anchor */
+  --detail-close: 120ms;                           /* scale → .98 + fade, toward the anchor */
+  --detail-edit: 220ms;                            /* card → right pane; editor slides 12 px */
+  --ease: cubic-bezier(.2, 0, 0, 1);
+}

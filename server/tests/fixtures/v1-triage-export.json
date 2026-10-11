@@ -1,0 +1,92 @@
+{
+  "format": "setpoint-v1-triage",
+  "version": 1,
+  "exported_at": "2026-10-20T17:00:00.000Z",
+  "rules": [
+    {
+      "name": "Woodgrove statements",
+      "enabled": true,
+      "priority": 40,
+      "rule_type": "sender",
+      "match": {"mode": "finalize", "from_domain_suffixes": ["woodgrovebank.example"], "subject_regex": "statement", "none_includes": ["past due", "declined"]},
+      "lane": "fyi",
+      "category": "finance",
+      "route_to_model": null,
+      "reason": "Routine statement."
+    },
+    {
+      "name": "Registrar deadlines",
+      "enabled": true,
+      "priority": 20,
+      "rule_type": "sender",
+      "match": {"mode": "finalize", "from_domains": ["registrar.contosou.example"], "subject_includes": ["deadline", "registration"]},
+      "lane": "needs_attention",
+      "category": "school",
+      "route_to_model": null,
+      "reason": "Registration deadlines need action."
+    },
+    {
+      "name": "Fabrikam news",
+      "enabled": true,
+      "priority": 70,
+      "rule_type": "sender",
+      "match": {"mode": "finalize", "from_addresses": ["news@fabrikam.example"]},
+      "lane": "noise",
+      "category": "marketing",
+      "route_to_model": null,
+      "reason": "Newsletter."
+    },
+    {
+      "name": "Body-only receipt (never turned on)",
+      "enabled": true,
+      "priority": 60,
+      "rule_type": "content",
+      "match": {"mode": "finalize", "from_name_includes": ["proseware"], "body_includes": ["thank you for your payment"]},
+      "lane": "fyi",
+      "category": "utilities",
+      "route_to_model": null,
+      "reason": "Payment receipt."
+    },
+    {
+      "name": "Weak security to the model",
+      "enabled": true,
+      "priority": 20,
+      "rule_type": "routing",
+      "match": {"action": "route_model", "any_includes": ["new sign-in"]},
+      "lane": null,
+      "category": "security",
+      "route_to_model": "strong",
+      "reason": "Ask the model."
+    },
+    {
+      "name": "Return audit",
+      "enabled": true,
+      "priority": 62,
+      "rule_type": "audit",
+      "match": {"mode": "audit", "from_domain_suffixes": ["wingtiptoys.example"], "subject_regex": "return"},
+      "lane": "fyi",
+      "category": "delivery",
+      "route_to_model": null,
+      "reason": "Audit only."
+    },
+    {
+      "name": "Broad promo words",
+      "enabled": true,
+      "priority": 90,
+      "rule_type": "content",
+      "match": {"mode": "finalize", "any_includes": ["limited time"]},
+      "lane": "noise",
+      "category": "marketing",
+      "route_to_model": null,
+      "reason": "Promotions."
+    }
+  ],
+  "corrections": [
+    {"account": "user.jobs@example.com", "from_name": "Adatum Careers", "from_address": "careers@adatum.example", "subject": "Adatum Careers newsletter · August", "received_at": "2026-08-05T15:00:00.000Z", "from_lane": "needs_attention", "to_lane": "fyi", "corrected_at": "2026-08-05T16:00:00.000Z"},
+    {"account": "user.jobs@example.com", "from_name": "Adatum Careers", "from_address": "careers@adatum.example", "subject": "Adatum Careers newsletter · September", "received_at": "2026-09-02T15:00:00.000Z", "from_lane": "needs_attention", "to_lane": "fyi", "corrected_at": "2026-09-02T16:00:00.000Z"},
+    {"account": "user.jobs@example.com", "from_name": "Adatum Careers", "from_address": "careers@adatum.example", "subject": "Adatum Careers newsletter · mid-September", "received_at": "2026-09-16T15:00:00.000Z", "from_lane": "needs_attention", "to_lane": "noise", "corrected_at": "2026-09-16T16:00:00.000Z"},
+    {"account": "user@example.com", "from_name": "Woodgrove Bank", "from_address": "alerts@woodgrovebank.example", "subject": "Low balance alert", "received_at": "2026-09-20T15:00:00.000Z", "from_lane": "fyi", "to_lane": "needs_attention", "corrected_at": "2026-09-20T16:00:00.000Z"},
+    {"account": "user@example.com", "from_name": "Tailspin Toys", "from_address": "deals@tailspintoys.example", "subject": "Weekend deals", "received_at": "2026-09-21T15:00:00.000Z", "from_lane": "fyi", "to_lane": "noise", "corrected_at": "2026-09-21T16:00:00.000Z"},
+    {"account": "user@example.com", "from_name": "Tailspin Toys", "from_address": "deals@tailspintoys.example", "subject": "Weekend deals", "received_at": "2026-09-22T15:00:00.000Z", "from_lane": "noise", "to_lane": "noise", "corrected_at": "2026-09-22T16:00:00.000Z"}
+  ]
+}

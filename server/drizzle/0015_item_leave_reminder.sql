@@ -1,0 +1,1 @@
+ALTER TABLE `items` ADD `leave_reminder` integer DEFAULT false NOT NULL;

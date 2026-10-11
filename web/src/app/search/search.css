@@ -1,0 +1,114 @@
+/* Search, Alfred's Answer card and the proposal card (boards 06, 07 and 08), on the export's values
+   (design-export/styles/setpoint.css › .qchip, mark.hl, .bar, .card, .field) and the boards' own. */
+
+/* ---------- The field ---------- */
+/* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc. */
+.search.active { width: 520px; }
+.search .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
+.search .qchip.sel { background: color-mix(in oklch, var(--cool) 30%, transparent); }
+.search .qchip .k { color: var(--ink3); font-size: 11px; }
+.search .qchip .x, .no-results .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); flex: none; }
+.search .qchip .x:hover, .no-results .x:hover { background: var(--sub3); color: var(--ink); }
+mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: var(--ink); border-radius: 3px; padding: 0 1px; }
+
+/* ---------- Results ---------- */
+.search-list .bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; }
+.search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
+.search-list .bar.after-card { border-top: 1px solid var(--hair); }
+.search-list .bar.failing { color: var(--caution); }
+.arow.result .l1 .pin { color: var(--ink3); display: grid; }
+/* A Done result stays, quieter, with its tag (UX #9). */
+.arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
+.arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }
+.arow .why b { font-weight: 400; color: var(--ink2); }
+.ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink2); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
+.ask:hover { background: var(--sub); }
+.ask > .icon { color: var(--ink); }
+.no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
+.no-results b { color: var(--ink); font-weight: 500; }
+.no-results .part { display: inline-flex; align-items: center; gap: 2px; }
+
+/* ---------- Cards: the Answer card and the proposal ---------- */
+.answer, .prop { background: var(--cardOn); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
+.answer .card-h, .prop .card-h { display: flex; align-items: center; gap: 10px; padding: 14px 14px 0 16px; }
+.answer .card-b, .prop .card-b { padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.card-title { font-size: 12.5px; font-weight: 500; }
+.card-sub { font-size: 12.5px; color: var(--ink3); }
+.answer .field, .prop .field { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); min-width: 0; }
+.answer .field:focus-within, .prop .field:focus-within { box-shadow: inset 0 0 0 1px var(--edgeOn); background: var(--cardOn); }
+.answer .field input, .prop .field input { min-width: 0; }
+.answer .field input::placeholder, .prop .field input::placeholder { color: var(--ink3); opacity: 1; }
+.failed-line { display: flex; align-items: center; gap: 8px; color: var(--alert); font-size: 12.5px; }
+.failed-line .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.spin { display: inline-grid; }
+.spin .icon { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* The Answer card (board 07): above the results, or at the top of the reading pane. */
+.answer { margin: 14px 16px 12px 24px; }
+.pane .answer { margin: 16px 20px 0; }
+.answer .card-h > .icon { color: var(--ink); }
+.ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
+.ans b { font-weight: 500; }
+.ans-none { display: flex; flex-direction: column; gap: 2px; }
+.ans-none .ans { color: var(--ink2); }
+.ans-none .searched { color: var(--ink3); font-size: 12.5px; }
+/* The sources share their columns, so each account and age lines up with the rest however long
+   the longest is ("Business (Studio)", "Dec 20, 2025"); the sender and subject take what's left. */
+.srcs { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 10px; row-gap: 4px; }
+.src { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; height: 34px; padding: 0 12px 0 10px; border-radius: var(--r-row); background: var(--sub); color: var(--ink2); text-align: left; min-width: 0; }
+.src:hover, .src.open { background: var(--sub2); }
+.src .line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.src .who { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; max-width: 50%; }
+.src .pin { color: var(--ink3); display: grid; flex: none; }
+.src .age { color: var(--ink3); font-size: 12px; min-width: 44px; text-align: right; white-space: nowrap; }
+.src .ac { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 180px; color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.src .ac .label { overflow: hidden; text-overflow: ellipsis; }
+.srcs .more { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 6px; border-radius: var(--r-row); color: var(--ink3); font-size: 12.5px; }
+.srcs .more:hover { background: var(--sub); color: var(--ink2); }
+.turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
+.q { align-self: flex-end; max-width: 70%; padding: 6px 12px; border-radius: var(--r-card); background: var(--sub2); color: var(--ink); user-select: text; -webkit-user-select: text; }
+.waiting { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; height: 22px; }
+.answer .card-b > .field { margin-top: 4px; }
+
+/* The proposal (board 08): at the top of the reading pane, or under the answer that proposed it. */
+.prop { margin: 16px 20px 0; }
+.prop.in-answer { margin: 0; }
+.prop.pending { opacity: .5; }
+.prop .card-b { gap: 12px; padding-top: 12px; }
+.pgrid { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; column-gap: 10px; row-gap: 8px; align-items: center; }
+.pgrid > .icon { color: var(--ink3); }
+.pgrid .srcm { color: var(--ink3); display: grid; }
+.prop .prow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.prop .field.title { height: 40px; }
+.prop .field.title input { font-size: 15px; font-weight: 500; }
+.prop .pick-date { flex: 0 1 150px; min-width: 0; }
+.prop .pick-time { flex: 0 1 96px; min-width: 0; }
+.prop .pick-date > .field, .prop .pick-time > .field { width: 100%; }
+.prop .field .icon { color: var(--ink3); }
+.prop .field.pick { width: 180px; flex: none; text-align: left; }
+.prop .conflict { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
+.prop .conflict.free .icon { color: var(--good); }
+.prop-foot { display: flex; align-items: center; gap: 8px; padding: 4px 0 0 30px; }
+.prop-foot .btn.quiet .kbd { margin-left: 4px; }
+.prop-foot .legend { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
+.prop .failed-line { padding-left: 30px; }
+.menu-anchor { position: relative; display: inline-flex; }
+.prop .pop.menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 4; min-width: 100%; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.prop .pop.menu[data-up] { top: auto; bottom: calc(100% + 4px); }
+.prop .pop.menu[data-right] { left: auto; right: 0; }
+.prop .menu-i { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: var(--r-row); color: var(--ink2); white-space: nowrap; text-align: left; }
+.prop .menu-i:hover, .prop .menu-i.cur { background: var(--sub2); color: var(--ink); }
+.prop .menu-i .kbd { margin-left: auto; }
+
+/* The reader's More menu (2026-10-08): a popover under its button, 32 px items. */
+.more-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+.more-i { height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: var(--r-row); color: var(--ink2); white-space: nowrap; text-align: left; }
+.more-i .icon { color: var(--ink3); }
+.more-i:hover, .more-i:focus { background: var(--sub); color: var(--ink); }
+
+/* The pointer (DESIGN.md › Decided while building #12): fields take an `edgeHover` border. */
+.ask, .src, .srcs .more, .prop .menu-i, .more-i, .search .qchip .x, .no-results .x, .answer .field, .prop .field { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .answer .field:not(:focus-within):hover, .prop .field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+}

@@ -1,0 +1,62 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Main.dc.html": {"h": 1050, "title": "01 Inbox · a typical morning", "w": 1677, "x": 0, "y": 0},
+    "Inbox-deliveries.dc.html": {"h": 1050, "title": "02 Deliveries expanded · images hidden", "w": 1677, "x": 1757, "y": 0},
+    "Inbox-security.dc.html": {"h": 1050, "title": "03 Security", "w": 1677, "x": 3514, "y": 0},
+    "Inbox-caught-up.dc.html": {"h": 1050, "title": "04 All caught up", "w": 1677, "x": 5271, "y": 0},
+    "All-view.dc.html": {"h": 1050, "title": "05 All, grouped by day", "w": 1677, "x": 0, "y": 1170},
+    "Search.dc.html": {"h": 1050, "title": "06 Search with chips", "w": 1677, "x": 1757, "y": 1170},
+    "Alfred.dc.html": {"h": 1050, "title": "07 Alfred's Answer card", "w": 1677, "x": 3514, "y": 1170},
+    "Proposal.dc.html": {"h": 1050, "title": "08 Proposal · Add to calendar", "w": 1677, "x": 5271, "y": 1170},
+    "Pattern-prompt.dc.html": {"h": 1050, "title": "09 Pattern prompt", "w": 1677, "x": 0, "y": 2340},
+    "Pinned.dc.html": {"h": 1050, "title": "10 Pinned shelf", "w": 1677, "x": 1757, "y": 2340},
+    "Command-K.dc.html": {"h": 1050, "title": "20 ⌘K on an open email", "w": 1677, "x": 3514, "y": 2340},
+    "States-inbox.dc.html": {"h": 1050, "title": "19a States · reconnect, offline, Unsorted", "w": 1677, "x": 5271, "y": 2340},
+    "Calendar-month.dc.html": {"h": 1050, "title": "11 Calendar · October 2026", "w": 1677, "x": 0, "y": 3810},
+    "Detail-dentist.dc.html": {"h": 1050, "title": "12a Floating detail · Dentist", "w": 1677, "x": 1757, "y": 3810},
+    "Detail-dinner.dc.html": {"h": 1050, "title": "12b Floating detail · glided to Dinner with Sam", "w": 1677, "x": 3514, "y": 3810},
+    "Glide-motion.dc.html": {"h": 1050, "title": "12c The glide · motion", "w": 1677, "x": 5271, "y": 3810},
+    "Editor-new.dc.html": {"h": 1050, "title": "13 Editor · new event", "w": 1677, "x": 0, "y": 4980},
+    "Editor-recurring.dc.html": {"h": 1050, "title": "14 Editing a recurring event", "w": 1677, "x": 1757, "y": 4980},
+    "Drag.dc.html": {"h": 1050, "title": "15 Drag in progress", "w": 1677, "x": 3514, "y": 4980},
+    "Week.dc.html": {"h": 1050, "title": "16 Week view (after 2.0)", "w": 1677, "x": 5271, "y": 4980},
+    "Calendar-busy.dc.html": {"h": 1050, "title": "11b A busy day · +3 and its popover", "w": 1677, "x": 0, "y": 6150},
+    "Detail-dragged.dc.html": {"h": 1050, "title": "12d Dragged aside, then glides to Dinner with Sam", "w": 1677, "x": 1757, "y": 6150},
+    "Drag-drop.dc.html": {"h": 1050, "title": "15b Dropped · this, following or all", "w": 1677, "x": 3514, "y": 6150},
+    "Settings-accounts.dc.html": {"h": 1050, "title": "17 Settings › Accounts", "w": 1677, "x": 0, "y": 7620},
+    "Settings-mail.dc.html": {"h": 1050, "title": "18a Settings › Mail", "w": 1677, "x": 1757, "y": 7620},
+    "Settings-notifications.dc.html": {"h": 1050, "title": "18b Settings › Notifications", "w": 1677, "x": 3514, "y": 7620},
+    "States-calendar.dc.html": {"h": 1050, "title": "19b States · a change that failed", "w": 1677, "x": 5271, "y": 7620},
+    "Inbox-light.dc.html": {"h": 1050, "title": "22a Light · Inbox", "w": 1677, "x": 0, "y": 9090},
+    "Calendar-light.dc.html": {"h": 1050, "title": "22b Light · Calendar", "w": 1677, "x": 1757, "y": 9090},
+    "Phone.dc.html": {"h": 1020, "title": "21 Phone · Inbox, reader, agenda", "w": 1394, "x": 3514, "y": 9090},
+    "Mantel-chip.dc.html": {"h": 900, "title": "23 mantel's mail chip", "w": 1400, "x": 0, "y": 10260},
+    "Mark.dc.html": {"h": 900, "title": "24 Setpoint's mark (placeholder)", "w": 1400, "x": 1480, "y": 10260}
+  },
+  "createdOnFiles": {"at": "2026-10-08T00:42:00Z", "v": 1},
+  "designSystems": [
+    {"copiedAt": "2026-10-08T00:42:00Z", "namespace": "mantel", "title": "mantel", "version": "1791259078-2d47"}
+  ],
+  "launch": {"view": "canvas"},
+  "notes": {
+    "mail": {"kind": "title1", "maxW": 6948, "text": "Mail", "w": 240, "x": 0, "y": -300},
+    "calendar": {"kind": "title1", "maxW": 6948, "text": "Calendar", "w": 240, "x": 0, "y": 3510},
+    "settings": {"kind": "title1", "maxW": 6948, "text": "Settings and states", "w": 240, "x": 0, "y": 7320},
+    "other": {"kind": "title1", "maxW": 6948, "text": "Light, phone, mantel and the mark", "w": 240, "x": 0, "y": 8790}
+  },
+  "order": [
+    "Main.dc.html", "Inbox-deliveries.dc.html", "Inbox-security.dc.html", "Inbox-caught-up.dc.html",
+    "All-view.dc.html", "Search.dc.html", "Alfred.dc.html", "Proposal.dc.html",
+    "Pattern-prompt.dc.html", "Pinned.dc.html", "Command-K.dc.html", "States-inbox.dc.html",
+    "Calendar-month.dc.html", "Detail-dentist.dc.html", "Detail-dinner.dc.html", "Glide-motion.dc.html",
+    "Editor-new.dc.html", "Editor-recurring.dc.html", "Drag.dc.html", "Week.dc.html",
+    "Calendar-busy.dc.html", "Detail-dragged.dc.html", "Drag-drop.dc.html",
+    "Settings-accounts.dc.html", "Settings-mail.dc.html", "Settings-notifications.dc.html", "States-calendar.dc.html",
+    "Inbox-light.dc.html", "Calendar-light.dc.html", "Phone.dc.html",
+    "Mantel-chip.dc.html", "Mark.dc.html"
+  ],
+  "pages": [],
+  "title": "Setpoint v2"
+}

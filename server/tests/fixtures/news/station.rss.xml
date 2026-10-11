@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- An invented TV station's local feed, shaped like the WordPress feeds stations publish: Media RSS
+     images, dc:creator, a short description and the full content:encoded. {{BASE}} is the station. -->
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Channel 4 &#8211; Local News</title>
+    <atom:link href="{{BASE}}/news/local/feed/" rel="self" type="application/rss+xml" />
+    <link>{{BASE}}/news/local/</link>
+    <description>Local news from Channel 4</description>
+    <lastBuildDate>Wed, 07 Oct 2026 15:40:00 +0000</lastBuildDate>
+    <language>en-US</language>
+    <item>
+      <title>Brush fire near Fabrikam Ridge grows to 400 acres</title>
+      <link>{{BASE}}/news/local/brush-fire-fabrikam-ridge/?utm_source=rss&amp;utm_medium=rss&amp;utm_campaign=brush-fire</link>
+      <dc:creator><![CDATA[Dana Whitfield]]></dc:creator>
+      <pubDate>Wed, 07 Oct 2026 14:05:00 +0000</pubDate>
+      <category><![CDATA[Local News]]></category>
+      <guid isPermaLink="false">{{BASE}}/?p=1100231</guid>
+      <description><![CDATA[<p>Evacuation warnings were issued for foothill homes as the fire spread overnight.</p>
+<p>The post <a href="{{BASE}}/news/local/brush-fire-fabrikam-ridge/">Brush fire near Fabrikam Ridge grows to 400 acres</a> appeared first on <a href="{{BASE}}">Channel 4</a>.</p>]]></description>
+      <content:encoded><![CDATA[<p>Evacuation warnings were issued for foothill homes as the fire spread overnight.</p><p>Crews worked through the night.</p>]]></content:encoded>
+      <media:content url="{{BASE}}/images/fire-1200.jpg" medium="image" width="1200" height="675">
+        <media:title type="html">Smoke over the ridge</media:title>
+      </media:content>
+      <media:thumbnail url="{{BASE}}/images/fire-150.jpg" width="150" height="84" />
+    </item>
+    <item>
+      <title>Crews close Contoso Avenue after a water main break</title>
+      <link>{{BASE}}/news/local/contoso-avenue-water-main/?fbclid=IwAR0example</link>
+      <dc:creator><![CDATA[Station staff]]></dc:creator>
+      <pubDate>Wed, 07 Oct 2026 12:30:00 +0000</pubDate>
+      <guid isPermaLink="false">{{BASE}}/?p=1100198</guid>
+      <description><![CDATA[Contoso Avenue is closed between 3rd and 5th streets &amp; drivers are asked to avoid the area.]]></description>
+      <enclosure url="{{BASE}}/images/water-main.jpg" length="84211" type="image/jpeg" />
+    </item>
+    <item>
+      <title>Brush fire near Fabrikam Ridge grows to 400 acres</title>
+      <link>{{BASE}}/news/local/brush-fire-fabrikam-ridge/?utm_source=twitter#comments</link>
+      <pubDate>Wed, 07 Oct 2026 14:05:00 +0000</pubDate>
+      <guid isPermaLink="false">{{BASE}}/?p=1100231-repost</guid>
+      <description>The same post again, with other tracking.</description>
+    </item>
+    <item>
+      <title>Farmers market returns to the plaza</title>
+      <link>{{BASE}}/news/local/farmers-market-returns/</link>
+      <pubDate>Thu, 01 Oct 2026 18:00:00 +0000</pubDate>
+      <guid isPermaLink="false">{{BASE}}/?p=1099001</guid>
+      <description>A week-old item the feed still holds.</description>
+    </item>
+    <item>
+      <link>{{BASE}}/news/local/untitled/</link>
+      <pubDate>Wed, 07 Oct 2026 11:00:00 +0000</pubDate>
+      <description>An item with no title.</description>
+    </item>
+  </channel>
+</rss>

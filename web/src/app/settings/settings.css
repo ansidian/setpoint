@@ -1,0 +1,163 @@
+/* Settings (DESIGN.md › Settings; boards 17, 18a, 18b): the export's .scrim, .modal, .set-* and
+   .switch, and the boards' own rules, all scoped to the modal. */
+.settings-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
+.settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
+
+.settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
+.settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.settings .set-nav .nav { width: 100%; text-align: left; }
+.settings .set-nav .nav:focus-visible { background: var(--sub); }
+.settings .set-nav .nav .warn { color: var(--caution); }
+.settings .set-nav .foot { margin-top: auto; }
+
+.settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 20px 28px 24px 32px; position: relative; overflow-y: auto; }
+.settings .set-head { height: 40px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-right: 40px; flex: none; }
+.settings .set-title { font-size: 18px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
+.settings .set-x { position: absolute; top: 24px; right: 20px; }
+.settings .set-label { height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
+.settings .set-label .r { margin-left: auto; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.settings .set-sec { flex: none; }
+.settings .set-sec + .set-sec { margin-top: 14px; }
+/* The group doesn't clip, so a row's menu shows whole over what follows (darma SV-21); its first and
+   last rows take its corners instead. */
+.settings .set-group { border-radius: var(--settingsGroupRadius); background: var(--sub); }
+.settings .set-group > :first-child { border-top-left-radius: inherit; border-top-right-radius: inherit; }
+.settings .set-group > :last-child { border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
+.settings .set-row { min-height: var(--settingsRow); display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--hair); }
+.settings .set-row:last-child { border-bottom: 0; }
+.settings .set-row.one { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+.settings .set-row.ctl { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
+.settings .set-row.warn { background: color-mix(in oklch, var(--caution) 7%, transparent); }
+.settings .set-row.dragging { opacity: .5; }
+/* While a row is dragged the others make room, easing (app/settings/order.ts). */
+.settings .reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
+.settings .t { color: var(--ink); }
+.settings .s { color: var(--ink3); font-size: 12.5px; }
+.settings .lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.settings .line { margin: 0; padding: 6px 4px 0; color: var(--ink3); font-size: 12.5px; }
+.settings .line.failed { color: var(--alert); }
+.settings .line.caution { color: var(--caution); }
+.settings .note { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 4px; color: var(--ink3); font-size: 12.5px; flex: none; }
+
+/* A switch: 34 × 20. */
+.settings .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
+.settings .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink2); transition: left var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+.settings .switch.on { background: var(--ink); }
+.settings .switch.on::after { left: 16px; background: var(--onInk); }
+.settings .switch:disabled { opacity: .5; }
+
+/* Accounts (board 17). */
+.settings .handle { color: var(--ink3); margin: 0 -4px 0 -6px; display: grid; cursor: grab; }
+.settings .sw { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex: none; }
+.settings .sw::before { content: ""; width: 12px; height: 12px; border-radius: 999px; background: var(--c); }
+.settings .sw:enabled:hover, .settings .sw.on { background: var(--sub2); }
+.settings .aico { width: 30px; height: 30px; border-radius: var(--r-row); display: grid; place-items: center; flex: none; color: var(--ink2); background: var(--sub2); }
+.settings .prov { width: 186px; flex: none; color: var(--ink2); font-size: 12.5px; white-space: nowrap; }
+.settings .state { width: 214px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
+.settings .state.caution { color: var(--caution); }
+.settings .state .ell { min-width: 0; }
+.settings .spark { display: flex; align-items: flex-end; gap: 2px; height: 28px; flex: none; }
+.settings .spark > span { width: 4px; border-radius: 1.5px; background: var(--sub3); }
+.settings .spark > span:last-child { background: var(--ink3); }
+.settings .precision { display: flex; align-items: center; gap: 24px; padding: 13px 16px; }
+.settings .anchor { position: relative; display: inline-flex; flex: none; }
+.settings .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; min-width: 180px; padding: 6px; display: flex; flex-direction: column; background: var(--modal); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
+.settings .menu.left { right: auto; left: 0; }
+/* No room below in the page: it opens upward (ui/popover.ts). */
+.settings .menu[data-up] { top: auto; bottom: calc(100% + 6px); }
+.settings .menu .mi { height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; white-space: nowrap; }
+.settings .menu .mi:hover, .settings .menu .mi:focus-visible { background: var(--sub2); color: var(--ink); }
+.settings .menu .mi .icon { color: var(--ink3); }
+/* A select's menu (parts.tsx › Select): the current choice in ink with its check at the end, and a
+   long list scrolls. */
+.settings .menu.pick { max-height: 320px; overflow-y: auto; }
+.settings .menu .mi[aria-checked="true"] { color: var(--ink); }
+.settings .menu .mi[aria-checked] .icon { margin-left: auto; color: var(--ink); }
+/* A choice that can't be picked yet (an AI model without its key, UX #14). */
+.settings .menu .mi:disabled { opacity: .5; background: none; color: var(--ink2); }
+.settings .swatches { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; padding: 4px; min-width: 0; }
+/* Todoist's 20 colours (SV-25), in four rows of five. */
+.settings .swatches.todoist { grid-template-columns: repeat(5, 24px); }
+.settings .icons { display: grid; grid-template-columns: repeat(5, 30px); gap: 4px; padding: 4px; min-width: 0; }
+.settings .icons button { width: 30px; height: 30px; border-radius: var(--r-row); display: grid; place-items: center; color: var(--ink2); }
+.settings .icons button:hover, .settings .icons button.on { background: var(--sub2); color: var(--ink); }
+
+/* Fields: the export's .field, as an input. */
+.settings .fld { height: 34px; padding: 0 10px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); min-width: 0; }
+.settings .fld:focus { box-shadow: inset 0 0 0 1px var(--edgeOn); background: var(--cardOn); }
+.settings .fld::placeholder { color: var(--ink3); opacity: 1; }
+.settings .fld.url { width: 300px; }
+.settings .fld.mono { font-family: var(--mono); font-size: 12.5px; }
+.settings .form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Mail (board 18a). */
+.settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
+.settings .rule b { font-weight: 500; color: var(--ink); }
+.settings .rule .to { color: var(--ink3); display: grid; }
+.settings .rule.off { opacity: .5; }
+/* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
+   Inbox's centred All caught up, which would stack it in a tall box. */
+.settings .set-empty button { color: var(--ink2); }
+.settings .set-empty button:focus-visible { color: var(--ink); }
+.settings .when { width: 120px; flex: none; text-align: right; color: var(--ink3); font-size: 12.5px; }
+.settings .doms { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 6px; }
+.settings .dom { height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 4px 0 10px; border-radius: var(--r-row); color: var(--ink2); min-width: 0; }
+.settings .dom:hover { background: var(--sub); }
+.settings .dom .x { margin-left: auto; width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); opacity: .7; flex: none; }
+.settings .dom:hover .x { opacity: 1; background: var(--sub2); color: var(--ink); }
+.settings .dom.more { color: var(--ink); }
+.settings .dom.more .icon { color: var(--ink3); margin-left: 2px; }
+.settings .dom .ell { flex: 0 1 auto; }
+.settings .mini-field { height: 26px; width: 180px; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); }
+.settings .mini-field input { color: var(--ink); font-size: 12.5px; min-width: 0; flex: 1; }
+.settings .mini-field input::placeholder { color: var(--ink3); opacity: 1; }
+
+/* Notifications (board 18b). */
+.settings .topic { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.settings .select { position: relative; height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); white-space: nowrap; flex: none; }
+.settings .select .icon { color: var(--ink3); }
+.settings .select:focus-visible, .settings [aria-expanded="true"] > .select { box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.settings .stepper { height: 30px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); flex: none; }
+.settings .stepper .v { min-width: 52px; text-align: center; color: var(--ink); }
+.settings .okdot { width: 7px; height: 7px; border-radius: 999px; background: var(--good); flex: none; }
+.settings .okdot.off { background: var(--ink3); }
+.settings .okdot.bad { background: var(--alert); }
+
+/* Security: recovery codes, shown once. */
+.settings .codes { margin: 0; padding: 12px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; -webkit-user-select: text; columns: 2; }
+
+/* Calendar (SV-20) and Todoist's projects (SV-25): a colour waiting for its provider, and one it refused. */
+.settings .cal-row.pending .sw { opacity: .5; }
+.settings .cal-row .spin { margin-left: 0; }
+.settings .cal-row .s.failed { color: var(--alert); }
+/* Todoist's ring sits where the others' swatch buttons (24 px) do. */
+.settings .cal-row > .ring { margin: 0 5.5px; }
+
+/* The pointer (DESIGN.md › Decided while building #12): rows that are buttons (Home's suggestions,
+   Appearance's choices) take a `sub` fill, fields an `edgeHover` border, the handle darkens, and a
+   switch's knob (off) or track (on) turns as the primary button does. */
+.settings button.set-row, .settings .set-empty button, .settings .menu .mi, .settings .sw, .settings .icons button, .settings .dom, .settings .dom .x, .settings .handle,
+.settings .fld, .settings .select, .settings .mini-field { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .settings button.set-row:hover { background: var(--sub); }
+  .settings .set-empty button:hover { color: var(--ink); }
+  .settings .handle:hover { color: var(--ink); }
+  .settings .fld:not(:focus):hover, .settings .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+  .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
+  .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--modal)); }
+}
+
+/* News (board 30a): the head's counts, each section's count by its label, 44 px rows, and a state as
+   wide as "Failing, 404 since 6:02 AM". */
+.settings .set-head .head-note { color: var(--ink3); font-size: 12.5px; }
+.settings .set-label .n { letter-spacing: 0; color: var(--ink2); }
+.settings .set-row.slim { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+.settings .news-src .state { width: 230px; }
+/* AI's News group (board 30b): a model in use, this month's 160 × 6 meter (`caution` at the cap) and its amount. */
+.settings .val { color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; }
+.settings .meter { width: 160px; height: 6px; border-radius: 999px; background: var(--sub3); overflow: hidden; flex: none; }
+.settings .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--ink2); }
+.settings .meter.capped > span { background: var(--caution); }
+.settings .amount { color: var(--ink2); font-size: 12.5px; width: 92px; text-align: right; flex: none; white-space: nowrap; }
+.settings .cost { color: var(--ink2); flex: none; }
+.settings .s > .caution { color: var(--caution); }

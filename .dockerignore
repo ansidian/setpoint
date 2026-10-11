@@ -1,0 +1,22 @@
+# Only what the image builds from; never databases, keys, exports or env files.
+**
+!package.json
+!package-lock.json
+!tsconfig.base.json
+!shared/
+!shared/**
+!server/package.json
+!server/src/
+!server/src/**
+!server/drizzle/
+!server/drizzle/**
+!web/
+!web/**
+**/node_modules
+**/dist
+**/.env*
+**/*.sqlite*
+**/*.key
+**/*.pem
+**/*export*.json
+web/tests

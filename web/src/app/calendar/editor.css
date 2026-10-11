@@ -1,0 +1,129 @@
+/* The editor in the right pane (DESIGN.md › Editor; boards 13 and 14). Values are the boards' own
+   (`.field`, `.flabel`, `.qchip`, `.menu-i`, `.eg`, `.prow`, `.tl`, `.tok-d`, `.tok-p`) and
+   setpoint.css's. */
+.editor { position: relative; }
+.editor .ed-head { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 12px 0 20px; flex: none; }
+.editor .ed-title { font-size: 15px; font-weight: 500; }
+.editor .ed-head .ibtn + .ibtn, .editor .menu-host + .ibtn { margin-left: -4px; }
+.editor .ed-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 16px; }
+.editor .ed-line { padding: 0 20px; }
+
+.editor .field { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 10px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--ink); width: 100%; min-width: 0; text-align: left; transition: box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
+.editor .field.focus, .editor .field:focus-within { box-shadow: inset 0 0 0 1px var(--edgeOn); background: var(--cardOn); }
+.editor .field.changed { box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.editor .field input { min-width: 0; height: 100%; outline: none; color: var(--ink); }
+.editor .field input::placeholder { color: var(--ink3); opacity: 1; }
+.editor .field .left { text-align: left; }
+.editor .field.big { height: 48px; padding: 0 12px; }
+.editor .field.big input { font-size: 16px; font-weight: 500; }
+.editor .field .clear { width: 22px; height: 22px; margin-right: -4px; }
+.editor .flabel { font-size: 12px; color: var(--ink3); }
+
+/* The line that parses as it's typed: the text shows through a mirror holding the marks, under an
+   input whose own text is clear, so the caret stays on its letter. */
+.editor .nl { position: relative; display: block; line-height: 48px; white-space: pre; overflow: hidden; }
+.editor .nl-marks { position: absolute; left: 12px; right: 12px; top: 0; bottom: 0; font-size: 16px; font-weight: 500; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
+.editor .nl .nl-input { position: absolute; left: 12px; right: 12px; top: 0; width: calc(100% - 24px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
+.editor .nl .nl-input::placeholder { color: var(--ink3); }
+.editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--cool) 30%, transparent); }
+/* A mark draws 2 px either side of its text without moving it. */
+.editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
+.editor .tok-d { background: color-mix(in oklch, var(--cool) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--cool) 60%, transparent); }
+.editor .tok-p { background: color-mix(in oklch, var(--comf) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--comf) 60%, transparent); }
+.editor .tok-j { --c: var(--ink2); }
+.editor .tok-c, .editor .tok-j { background: color-mix(in oklch, var(--c) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c) 60%, transparent); }
+
+.editor .eg { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; align-items: center; padding: 16px 20px 0; }
+.editor .eg > .icon { color: var(--ink3); justify-self: center; }
+.editor .prow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* The date and times shrink from these widths so the row and its × fit the column (SV-25). */
+.editor .prow .pick-date { flex: 0 1 118px; min-width: 0; }
+.editor .prow .pick-time { flex: 0 1 84px; min-width: 0; }
+.editor .prow .pick-date > .field, .editor .prow .pick-time > .field { width: 100%; }
+/* SV-29: an event's days take the row, its times under them. */
+.editor .prow.days { flex-wrap: wrap; row-gap: 8px; }
+.editor .prow.days .pick-date { flex: 1 1 100%; }
+.editor .was { font-size: 12px; margin-top: -2px; }
+
+.editor .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
+.editor .qchip .icon { color: var(--ink2); }
+.editor .qchip .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
+.editor .qchip .x:hover { background: var(--sub3); color: var(--ink); }
+
+/* Menus under a field: places, calendars, repeats, reminders, projects. */
+.editor .menu-host { position: relative; display: block; min-width: 0; }
+.editor .prow .menu-host { display: inline-block; }
+.editor .menu { position: absolute; left: 0; top: calc(100% + 4px); min-width: 220px; padding: 6px; z-index: 5; display: flex; flex-direction: column; }
+.editor .menu.right { left: auto; right: 0; min-width: 160px; }
+.editor .menu[data-up] { top: auto; bottom: calc(100% + 4px); }
+.editor .menu[data-right] { left: auto; right: 0; }
+.editor .menu-i { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: var(--ink2); width: 100%; text-align: left; white-space: nowrap; flex: none; }
+.editor .menu-i .icon { color: var(--ink3); }
+.editor .menu-i:hover { background: var(--sub); }
+.editor .menu-i.cur { background: var(--sub2); color: var(--ink); }
+.editor .menu-i.cur .icon { color: var(--ink); }
+.editor .menu-i .kbd { margin-left: auto; }
+.editor .places { padding: 6px; margin-top: -2px; }
+.editor .places .menu-i { height: 44px; }
+.editor .place-text { display: flex; flex-direction: column; min-width: 0; }
+.editor .place-name { color: var(--ink); }
+.editor .place-name b { font-weight: 600; }
+.editor .place-address { font-size: 12px; }
+/* A picked place's address, under the Place field (SV-27); why a project can't be sent (SV-25). */
+.editor .eg > .place-address, .editor .eg > .field-note { padding: 0 10px; margin-top: -4px; font-size: 12px; }
+
+/* The conflict preview: a small timeline of the day. */
+.editor .conflict { padding: 18px 20px 0 50px; }
+.editor .conflict .flabel { margin-bottom: 6px; }
+.editor .tl { position: relative; height: 30px; border-radius: 10px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); overflow: hidden; }
+.editor .tl.two { height: 50px; }
+.editor .tl .hr { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--hair); }
+.editor .tl .bk { position: absolute; top: 6px; height: 18px; border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 500; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c); }
+.editor .tl .bk.other { background: color-mix(in oklch, var(--c) var(--evtint), var(--chip)); box-shadow: inset 3px 0 0 var(--c); }
+.editor .tl.two .bk.self { top: 26px; }
+.editor .tl .bk.self { background: var(--c); color: var(--onInk); }
+.editor .tl .bk.self.new { background: color-mix(in oklch, var(--c) 16%, var(--chip)); outline: 1.5px dashed var(--c); outline-offset: -1.5px; color: var(--c); }
+.editor .tl .hatch { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--caution) 60%, transparent) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 1px var(--caution); }
+.editor .tlx { position: relative; height: 16px; font-size: 11px; color: var(--ink3); }
+.editor .tlx > span { position: absolute; top: 3px; transform: translateX(-50%); }
+.editor .verdict { display: flex; align-items: center; gap: 6px; margin-top: 8px; color: var(--caution); font-size: 12.5px; }
+.editor .verdict.free { color: var(--ink2); }
+.editor .verdict.free .icon { color: var(--good); }
+
+/* Batch drafts: the others, folded, then Add another. */
+.editor .batch { margin: 18px 20px 0; padding-top: 12px; border-top: 1px solid var(--hair); display: flex; flex-direction: column; gap: 6px; }
+.editor .drafted-row { display: flex; align-items: center; gap: 4px; }
+.editor .drafted-row .drafted { flex: 1; min-width: 0; }
+.editor .field.drafted { height: 40px; }
+.editor .field.drafted .when { font-size: 12px; }
+.editor .batch .another { align-self: flex-start; padding-left: 6px; }
+
+.editor .ed-foot { margin-top: auto; padding: 12px 16px 16px 20px; border-top: 1px solid var(--hair); display: flex; gap: 8px; align-items: center; flex: none; }
+.editor .ed-foot .btn:not(.quiet) .kbd { background: color-mix(in oklch, var(--onInk) 12%, transparent); color: var(--onInk); }
+.editor .ed-foot .btn.quiet .kbd { margin-left: 4px; }
+/* ⌘Enter on a recurring event: the chooser takes the footer's place, and its Save is the only Save. */
+.editor .scope-pop { margin: auto 16px 16px; padding: 6px; flex: none; }
+
+/* Edit hands the item over from the floating detail (F5): the editor slides in 12 px. */
+@keyframes ed-in { from { opacity: 0; transform: translateX(var(--detail-editor-slide)); } }
+.editor.handed { animation: ed-in var(--detail-edit) var(--ease); }
+
+/* F6b: "from the email" marks (the proposal card's, board 08) on the fields an email gave, and its
+   legend in the footer; the labels row's empty line. */
+.editor .srcm { color: var(--ink3); display: grid; flex: none; }
+.editor .prow .srcm { margin-left: auto; }
+.editor .ed-foot .legend { margin-left: auto; display: inline-flex; white-space: nowrap; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; min-width: 0; }
+/* In a narrow editor the legend gives way, its words cut short, inside the footer's padding (UX #23). */
+.editor .ed-foot .legend > span { overflow: hidden; text-overflow: ellipsis; }
+.editor .ed-foot .btn { flex: none; }
+.editor .prow .none { font-size: 12.5px; }
+
+/* The editor takes focus back after a menu pick (for ⌘Enter and Esc); it draws no ring for it. */
+.editor:focus { outline: none; }
+
+/* The pointer (DESIGN.md › Decided while building #12): fields take an `edgeHover` border. */
+.editor .menu-i, .editor .qchip .x { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .editor .field:not(.focus, :focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- An invented lab's news page with no feed, shaped like a server-rendered listing: a featured post
+     linked twice (its image and its title), a grid of cards with dates as text or <time>, category
+     filters, and the site's navigation and footer, which link to /news too. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Newsroom \ Northwind</title>
+</head>
+<body>
+  <header><nav><a href="/">Northwind</a><a href="/news">Newsroom</a><a href="/research">Research</a></nav></header>
+  <main>
+    <h1>Newsroom</h1>
+    <div class="filters"><a href="/news/category/announcements">Announcements</a><a href="/news/category/policy">Policy</a></div>
+    <section class="featured">
+      <a href="/news/northwind-breeze-3"><img src="/images/breeze-3.png" alt=""></a>
+      <div class="featured-text">
+        <a href="/news/northwind-breeze-3"><h2>Introducing Breeze 3</h2></a>
+        <p>Our most capable speech model yet.</p>
+        <span class="date">Oct 7, 2026</span>
+      </div>
+    </section>
+    <ul class="post-grid">
+      <li><a class="card" href="/news/safety-report-fall-2026"><span class="subject">Policy</span><h3>Our fall 2026 safety report</h3><time datetime="2026-10-06T17:00:00Z">Oct 6, 2026</time></a></li>
+      <li><a class="card" href="/news/northwind-in-europe?utm_source=newsroom"><span class="subject">Announcements</span><h3>Northwind opens an office in Example City</h3><span>September 2, 2026</span></a></li>
+      <li><div class="card"><h3>Partnering with Fabrikam on research compute</h3><a href="/news/fabrikam-partnership">Read more</a></div></li>
+    </ul>
+    <a href="/news?page=2">More posts</a>
+  </main>
+  <footer><a href="/news">News</a><a href="/careers">Careers</a></footer>
+</body>
+</html>

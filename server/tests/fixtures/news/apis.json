@@ -1,0 +1,42 @@
+{
+  "about": "Invented answers shaped like USGS's GeoJSON event query, Cal Fire's incident list, and Algolia's Hacker News search. Places are invented or Los Angeles-level; the test's home point is 34.05, -118.25.",
+  "usgs": {
+    "type": "FeatureCollection",
+    "metadata": {"generated": 1791389520000, "url": "https://earthquake.example.org/fdsnws/event/1/query", "title": "USGS Earthquakes", "status": 200, "api": "1.14.1", "count": 4},
+    "features": [
+      {"type": "Feature", "id": "ci90000001",
+        "properties": {"mag": 3.4, "place": "12 km NE of Example Valley, CA", "time": 1791374400000, "updated": 1791375000000, "url": "https://earthquake.example.org/earthquakes/eventpage/ci90000001", "status": "reviewed", "tsunami": 0, "alert": null, "type": "earthquake", "title": "M 3.4 - 12 km NE of Example Valley, CA", "magType": "ml"},
+        "geometry": {"type": "Point", "coordinates": [-118.16, 34.11, 8.2]}},
+      {"type": "Feature", "id": "ci90000002",
+        "properties": {"mag": 2.1, "place": "3 km S of Example Valley, CA", "time": 1791370800000, "url": "https://earthquake.example.org/earthquakes/eventpage/ci90000002", "type": "earthquake", "title": "M 2.1 - 3 km S of Example Valley, CA"},
+        "geometry": {"type": "Point", "coordinates": [-118.25, 34.02, 5.0]}},
+      {"type": "Feature", "id": "nc90000003",
+        "properties": {"mag": 4.5, "place": "20 km W of Example Bay, CA", "time": 1791370800000, "url": "https://earthquake.example.org/earthquakes/eventpage/nc90000003", "type": "earthquake", "title": "M 4.5 - 20 km W of Example Bay, CA"},
+        "geometry": {"type": "Point", "coordinates": [-122.6, 37.8, 10.0]}},
+      {"type": "Feature", "id": "ci90000004",
+        "properties": {"mag": 3.8, "place": "Quarry blast near Example Valley, CA", "time": 1791370800000, "url": "https://earthquake.example.org/earthquakes/eventpage/ci90000004", "type": "quarry blast", "title": "M 3.8 Quarry Blast"},
+        "geometry": {"type": "Point", "coordinates": [-118.2, 34.1, 0.0]}},
+      {"type": "Feature", "id": "ci90000005",
+        "properties": {"mag": 3.9, "place": "8 km N of Example Valley, CA", "time": 1790956800000, "url": "https://earthquake.example.org/earthquakes/eventpage/ci90000005", "type": "earthquake", "title": "M 3.9 - 8 km N of Example Valley, CA"},
+        "geometry": {"type": "Point", "coordinates": [-118.24, 34.12, 7.0]}}
+    ]
+  },
+  "calFire": [
+    {"Name": "Fabrikam Fire", "Final": false, "Updated": "2026-10-07T08:30:00", "Started": "2026-10-06T18:05:00", "AdminUnit": "Example County Fire", "County": "Example", "Location": "Fabrikam Ridge, north of Example Valley",
+      "AcresBurned": 400, "PercentContained": 10, "ControlStatement": "Evacuation warnings are in place for foothill homes.", "AgencyNames": "Example County Fire",
+      "Longitude": -118.21, "Latitude": 34.19, "Type": "Wildfire", "UniqueId": "00000000-0000-0000-0000-000000000001", "Url": "/incidents/2026/10/6/fabrikam-fire/", "IsActive": true},
+    {"Name": "Contoso Fire", "Final": false, "Updated": "2026-10-07T06:00:00Z", "Started": "2026-10-05T12:00:00Z", "County": "Example North", "Location": "Far north",
+      "AcresBurned": 12000, "PercentContained": 40, "Longitude": -121.5, "Latitude": 39.7, "UniqueId": "00000000-0000-0000-0000-000000000002", "Url": "https://incidents.example.org/incidents/2026/10/5/contoso-fire/", "IsActive": true},
+    {"Name": "Northwind Fire", "Final": true, "Updated": "2026-10-07T07:00:00", "Started": "2026-10-04T09:00:00", "County": "Example",
+      "AcresBurned": 35, "PercentContained": 100, "Longitude": -118.3, "Latitude": 34.0, "UniqueId": "00000000-0000-0000-0000-000000000003", "Url": "/incidents/2026/10/4/northwind-fire/", "IsActive": false}
+  ],
+  "hackerNews": {
+    "hits": [
+      {"created_at": "2026-10-07T13:20:00Z", "title": "Breeze 3: an open speech model that runs on a laptop", "url": "https://northwind.example.com/blog/breeze-3?utm_source=hn", "author": "invented_user", "points": 412, "story_text": null, "num_comments": 188, "created_at_i": 1791379200, "objectID": "90000001", "_tags": ["story", "author_invented_user", "story_90000001"]},
+      {"created_at": "2026-10-07T09:00:00Z", "title": "Ask HN: How do you run evaluations for speech models?", "url": null, "author": "another_user", "points": 205, "story_text": "<p>We're trying to measure word error rate &amp; latency together.</p>", "num_comments": 97, "created_at_i": 1791363600, "objectID": "90000002", "_tags": ["story", "ask_hn"]},
+      {"created_at": "2026-10-07T10:00:00Z", "title": "A small story", "url": "https://blog.example.org/small", "author": "third_user", "points": 90, "num_comments": 12, "created_at_i": 1791367200, "objectID": "90000003", "_tags": ["story"]},
+      {"created_at": "2026-10-01T10:00:00Z", "title": "An old story", "url": "https://blog.example.org/old", "author": "third_user", "points": 900, "num_comments": 400, "created_at_i": 1790848800, "objectID": "90000004", "_tags": ["story"]}
+    ],
+    "nbHits": 4, "page": 0, "nbPages": 1, "hitsPerPage": 100, "processingTimeMS": 3
+  }
+}

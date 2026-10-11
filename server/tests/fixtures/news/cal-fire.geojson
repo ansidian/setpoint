@@ -1,0 +1,82 @@
+{
+  "about": "An invented answer shaped like Cal Fire's GeoJSON list of incidents (GeoJsonList?inactive=false): a FeatureCollection whose features carry a Point at [lng, lat] and the list's fields as properties. One has no geometry but its own Latitude and Longitude, one is far away, one is over, one can't be placed. The test's home point is 34.05, -118.25.",
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-118.12, 34.28]},
+      "properties": {
+        "Name": "Tailspin Fire",
+        "Final": false,
+        "Updated": "2026-10-07T07:45:00",
+        "Started": "2026-10-06T21:10:00",
+        "AdminUnit": "Example County Fire",
+        "County": "Example",
+        "Location": "Tailspin Canyon, east of Example Valley",
+        "AcresBurned": 1250,
+        "PercentContained": 35,
+        "Type": "Wildfire",
+        "UniqueId": "00000000-0000-0000-0000-000000000011",
+        "Url": "https://incidents.example.org/incidents/2026/10/6/tailspin-fire/",
+        "IsActive": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": null,
+      "properties": {
+        "Name": "Wingtip Fire",
+        "Final": false,
+        "Updated": "2026-10-07T12:00:00Z",
+        "Started": "2026-10-07T03:30:00Z",
+        "County": "Example",
+        "AcresBurned": "60",
+        "PercentContained": "80",
+        "ControlStatement": "Forward progress has been stopped.",
+        "Latitude": 34.1,
+        "Longitude": -118.4,
+        "UniqueId": "00000000-0000-0000-0000-000000000012",
+        "Url": "/incidents/2026/10/7/wingtip-fire/",
+        "IsActive": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-121.5, 39.7]},
+      "properties": {
+        "Name": "Contoso Fire",
+        "Final": false,
+        "Updated": "2026-10-07T06:00:00Z",
+        "County": "Example North",
+        "AcresBurned": 12000,
+        "PercentContained": 40,
+        "Url": "https://incidents.example.org/incidents/2026/10/5/contoso-fire/",
+        "IsActive": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [-118.3, 34.0]},
+      "properties": {
+        "Name": "Northwind Fire",
+        "Final": true,
+        "Updated": "2026-10-07T07:00:00",
+        "County": "Example",
+        "AcresBurned": 35,
+        "PercentContained": 100,
+        "Url": "/incidents/2026/10/4/northwind-fire/",
+        "IsActive": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": []},
+      "properties": {
+        "Name": "Unplaced Fire",
+        "Updated": "2026-10-07T07:00:00",
+        "AcresBurned": 5,
+        "IsActive": true
+      }
+    }
+  ]
+}

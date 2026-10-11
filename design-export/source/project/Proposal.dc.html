@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Proposal · CS 101 final exam</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./setpoint.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&amp;family=Geist+Mono:wght@400..600&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..24,300,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp .prop { margin: 16px 20px 0; background: var(--cardOn); flex: none; }
+.sp .prop .card-b { gap: 12px; padding-top: 12px; }
+.sp .pgrid { display: grid; grid-template-columns: 20px minmax(0,1fr) 16px; column-gap: 10px; row-gap: 8px; align-items: center; }
+.sp .pgrid > .ms { color: var(--ink3); font-size: 17px; }
+.sp .pgrid > .ms.srcm { font-size: 14px; color: var(--ink3); }
+.sp .prow { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sp .field input { min-width: 0; }
+.sp .field .ms { color: var(--ink3); }
+.sp .fin { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; margin: 4px 0 16px; }
+.sp .fin th { text-align: left; font-weight: 500; color: var(--ink3); font-size: 12px; padding: 0 12px 6px; border-bottom: 1px solid var(--hair); }
+.sp .fin td { padding: 7px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); white-space: nowrap; }
+.sp .fin tr.me td { background: color-mix(in oklch, var(--sun) 11%, transparent); color: var(--ink); }
+.sp .fin tr.me td:first-child { border-radius: 8px 0 0 8px; }
+.sp .fin tr.me td:last-child { border-radius: 0 8px 8px 0; }
+</style>
+</helmet>
+<div class="sp app" style="width: 1677px; height: 1050px">
+
+<aside class="sb">
+  <div class="sb-top">
+    <span class="mark"><svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="31 10" stroke-linecap="round" transform="rotate(-38 11 11)"></circle><circle cx="15.6" cy="6.4" r="2" fill="currentColor"></circle></svg></span>
+    <span class="sb-name">Setpoint</span>
+  </div>
+  <a class="nav on" href="#"><span class="ms">inbox</span><span class="grow">Inbox</span><span class="apill num">3</span><span class="cnt num">19</span></a>
+  <a class="acct" href="#" style="--c: var(--a-business)"><span class="dot sm"></span>Business<span class="cnt num">7</span></a>
+  <a class="acct" href="#" style="--c: var(--a-personal)"><span class="dot sm"></span>Personal<span class="cnt num">8</span></a>
+  <a class="acct" href="#" style="--c: var(--a-work)"><span class="dot sm"></span>Work<span class="cnt num">1</span></a>
+  <a class="acct" href="#" style="--c: var(--a-jobs)"><span class="dot sm"></span>Jobs<span class="cnt num">2</span></a>
+  <a class="acct" href="#" style="--c: var(--a-icloud)"><span class="dot sm"></span>iCloud<span class="cnt num">1</span></a>
+  <a class="nav" href="#" style="margin-top: 2px"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>
+
+  <div class="sb-sec">
+    <div class="sb-label">Today</div>
+    <a class="today-row" href="#"><span class="t num">2:30 PM</span><span class="ell" style="color: var(--ink)">Dentist</span><span class="in num">in 5h</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>2 due today</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>1 due tomorrow</span></a>
+  </div>
+
+  <div class="sb-foot">
+    <a class="nav" href="#"><span class="ms">settings</span><span class="grow">Settings</span><span class="kbd">⌘,</span></a>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="hd">
+    <span class="hd-title">Inbox</span>
+    <span class="seg"><span class="on">Unread</span><span>All</span></span>
+    <span class="grow"></span>
+    <label class="search"><span class="ms s16">search</span><input class="grow" placeholder="Search mail" aria-label="Search mail" style="color: var(--ink)"><span class="kbd">/</span></label>
+  </header>
+
+  <div class="content">
+    <section class="list" aria-label="Inbox">
+      <div class="gh first"><span class="ms s16" style="color: var(--ink3)">keep</span>Pinned <span class="n">1</span></div>
+      <div class="row">
+        <span class="ud"></span>
+        <span class="from">Parkside Apartments</span>
+        <span class="subj"><b>Lease renewal terms</b> <span class="sum">· Renewal offer for the lease ending Nov 30 · sign by Oct 31</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">Sep 30</span>
+      </div>
+
+      <div class="gh att">Attention <span class="n">3</span></div>
+      <div class="arow unread protected">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Google</span><span class="tag alert"><span class="ms">shield</span>Protected</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-personal)"></span><span>Personal</span><span class="num" style="width: 44px; text-align: right">20m</span></div>
+        <div class="l2">Your recovery email was changed</div>
+        <div class="l3">If you didn't make this change, secure your account now</div>
+      </div>
+      <div class="arow unread">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Northwind Talent</span><span class="ink3" style="font-size: 12px">via Greenhouse</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-jobs)"></span><span>Jobs</span><span class="num" style="width: 44px; text-align: right">2h</span></div>
+        <div class="l2">Interview availability for Software Engineer I</div>
+        <div class="l3">Pick a 30-minute slot this week</div>
+      </div>
+      <div class="arow open">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Contoso University</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-personal)"></span><span>Personal</span><span class="num" style="width: 44px; text-align: right">Mon</span></div>
+        <div class="l2">Final exam schedule · CS 101</div>
+        <div class="l3">Fall 2026 finals, rooms and times</div>
+      </div>
+
+      <div class="gh">Security <span class="n">3</span></div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Google</span>
+        <span class="subj"><b>New sign-in</b> <span class="sum">· MacBook Pro · Los Angeles</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-business)"></span>Business</span>
+        <span class="age">1h</span>
+      </div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Google</span>
+        <span class="subj"><b>Access granted</b> <span class="sum">· Claude</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-work)"></span>Work</span>
+        <span class="age">3h</span>
+      </div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Contoso Insurance</span>
+        <span class="subj" style="display: flex; align-items: center; gap: 10px"><span class="code">482 913</span><button class="btn ghost sm" style="height: 22px; padding: 0 8px; font-size: 12px"><span class="ms s16" style="font-size: 14px">content_copy</span>Copy</button><span class="sum" style="font-size: 12px">Expires in 11 min</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">4m</span>
+      </div>
+
+      <div class="gh collapsed">Deliveries <span class="n">4</span><span style="text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px">Wingtip Toys · Consolidated Messenger · Southridge Video</span><span class="ms chev">chevron_right</span></div>
+      <div class="gh collapsed">Money <span class="n">3</span><span style="text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px">Woodgrove Bank · Woodgrove Pay · Proseware</span><span class="ms chev">chevron_right</span></div>
+      <div class="gh">Career <span class="n">1</span></div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Fabrikam</span>
+        <span class="subj"><b>Application received · Data Analyst</b> <span class="sum">· via Workday</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-jobs)"></span>Jobs</span>
+        <span class="age">7h</span>
+      </div>
+      <div class="gh collapsed">Noise <span class="n">6</span><span class="ms chev">chevron_right</span></div>
+
+      <div class="listfoot"><a class="lnk" href="#">Mark all as read <span class="kbd">⇧I</span></a></div>
+    </section>
+
+    <section class="pane" aria-label="Reading pane">
+      <div class="rd-tools">
+        <button class="tool"><span class="ms">check</span>Done<span class="kbd">H</span></button>
+        <button class="tool"><span class="ms">delete</span>Trash<span class="kbd">E</span></button>
+        <button class="tool"><span class="ms">keep</span>Pin<span class="kbd">P</span></button>
+        <button class="tool"><span class="ms">open_in_new</span>Open in Gmail<span class="kbd">O</span></button>
+        <span class="grow"></span>
+        <button class="ibtn" aria-label="Previous email"><span class="ms">keyboard_arrow_up</span></button>
+        <button class="ibtn" aria-label="Next email"><span class="ms">keyboard_arrow_down</span></button>
+        <button class="ibtn" aria-label="More"><span class="ms">more_horiz</span></button>
+      </div>
+
+      <form class="card prop" aria-label="Proposal: add to calendar">
+        <div class="card-h">
+          <span class="ms s16" style="color: var(--c-classes)">event</span>
+          <span style="font-size: 12.5px; font-weight: 500">Proposal</span>
+          <span class="ink3" style="font-size: 12.5px">· from this email</span>
+        </div>
+        <div class="card-b">
+          <div class="pgrid">
+            <span></span>
+            <label class="field focus" style="height: 40px">
+              <input class="grow" aria-label="Title" value="CS 101 final exam" style="font-size: 15px; font-weight: 500">
+            </label>
+            <span class="ms srcm" title="From the email">mail</span>
+
+            <span class="ms">schedule</span>
+            <div class="prow">
+              <label class="field" style="width: 150px"><input class="grow" aria-label="Date" value="Wed, Dec 9"></label>
+              <label class="field" style="width: 96px"><input class="grow num" aria-label="Start" value="7:00 PM"></label>
+              <span class="ink3">–</span>
+              <label class="field" style="width: 96px"><input class="grow num" aria-label="End" value="9:00 PM"></label>
+              <span class="ink3" style="font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px"><span class="ms s16" style="color: var(--good)">check_circle</span>Free that evening</span>
+            </div>
+            <span class="ms srcm" title="From the email">mail</span>
+
+            <span class="ms">location_on</span>
+            <label class="field"><input class="grow" aria-label="Place" value="Contoso University · Room 214"></label>
+            <span class="ms srcm" title="From the email">mail</span>
+
+            <span class="ms">calendar_today</span>
+            <div class="prow">
+              <button type="button" class="field" style="width: 180px" aria-label="Calendar"><span class="dot sm" style="--c: var(--c-classes)"></span><span class="grow" style="text-align: left">Classes</span><span class="ms s16">expand_more</span></button>
+              <button type="button" class="field" style="width: 180px" aria-label="Reminder"><span class="ms s16">notifications</span><span class="grow" style="text-align: left">1 day before</span><span class="ms s16">expand_more</span></button>
+            </div>
+            <span></span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0 0 30px">
+            <button type="button" class="btn">Create</button>
+            <button type="button" class="btn out"><span class="ms">open_in_new</span>More options</button>
+            <button type="button" class="btn quiet">Cancel<span class="kbd" style="margin-left: 4px">Esc</span></button>
+            <span class="grow"></span>
+            <span class="ink3" style="font-size: 12px; display: inline-flex; align-items: center; gap: 5px"><span class="ms" style="font-size: 14px">mail</span>From the email</span>
+          </div>
+        </div>
+      </form>
+
+      <div class="rd-head">
+        <h1 class="rd-subj">Final exam schedule · CS 101</h1>
+        <div class="rd-meta">
+          <span class="avatar" style="background: color-mix(in oklch, var(--cool) 22%, var(--cardOn)); color: var(--cool)">C</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0" class="grow">
+            <div><span style="color: var(--ink); font-weight: 500">Office of the Registrar</span> <span class="ink3">· Contoso University</span></div>
+            <div class="ink3" style="font-size: 12px">to you</div>
+          </div>
+          <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+          <span class="ink3 num" style="font-size: 12.5px">Mon</span>
+        </div>
+        <div class="rd-acts">
+          <button class="btn ghost"><span class="ms">event</span>Add to calendar</button>
+          <button class="btn out"><span class="ms">task_alt</span>Add as task</button>
+          <button class="btn out"><span class="ms">forum</span>Ask about this email</button>
+        </div>
+      </div>
+      <div class="rd-body">
+        <div class="mailtext">
+          <p>Hi there,</p>
+          <p>Fall 2026 final exams for Computer Science are below. Exams run two hours and start on time; bring your student ID.</p>
+          <table class="fin">
+            <thead>
+              <tr><th>Course</th><th>Date</th><th>Time</th><th>Room</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>CS 2010 · Intro to programming</td><td>Mon, Dec 7</td><td>5:00 – 7:00 PM</td><td>108</td></tr>
+              <tr><td>CS 3310 · Data structures</td><td>Tue, Dec 8</td><td>7:00 – 9:00 PM</td><td>214</td></tr>
+              <tr class="me"><td>CS 101 · Software engineering</td><td>Wed, Dec 9</td><td>7:00 – 9:00 PM</td><td>214</td></tr>
+              <tr><td>CS 4410 · Operating systems</td><td>Thu, Dec 10</td><td>5:00 – 7:00 PM</td><td>120</td></tr>
+              <tr><td>CS 4660 · Databases</td><td>Fri, Dec 11</td><td>7:00 – 9:00 PM</td><td>108</td></tr>
+            </tbody>
+          </table>
+          <p>If two of your exams overlap, contact the department office by Nov 13.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1677,"height":1050}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

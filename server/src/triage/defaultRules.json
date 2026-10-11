@@ -1,0 +1,61 @@
+[
+  {
+    "key": "default_verification_code",
+    "priority": 10,
+    "match": {"subject_regex": "\\b(verification|authentication|sign-in|login|2fa|mfa) code\\b|\\bcode is \\d{4,8}\\b"},
+    "lane": "fyi",
+    "kind": "security",
+    "type": "verification_code",
+    "reason": "One-time authentication code."
+  },
+  {
+    "key": "default_delivery_digest",
+    "priority": 40,
+    "match": {
+      "from_name_includes": ["usps", "ups", "fedex", "amazon"],
+      "from_domains": ["usps.com", "ups.com", "fedex.com", "amazon.com"],
+      "subject_regex": "(daily digest|informed delivery|package (?:shipped|delivered)|(?:item|order).*shipped|(?:item|order).*delivered|^(shipped|delivered):)",
+      "none_includes": ["failed", "unable to deliver", "action required", "payment due", "signature", "held", "customs"]
+    },
+    "lane": "fyi",
+    "kind": "deliveries",
+    "type": "shipping",
+    "reason": "Routine delivery or shipment notification."
+  },
+  {
+    "key": "default_feedback_survey",
+    "priority": 69.7,
+    "match": {
+      "subject_regex": "(share your feedback|feedback survey|tell us what you think|how did we do|rate your (?:experience|order|purchase))",
+      "none_includes": ["case", "dispute", "payment", "refund", "return", "account"]
+    },
+    "lane": "noise",
+    "kind": null,
+    "type": null,
+    "reason": "Optional feedback survey."
+  },
+  {
+    "key": "default_social_notification",
+    "priority": 69.8,
+    "match": {
+      "subject_regex": "(is now following you|now follows you|liked your (?:post|photo|activity)|commented on your (?:post|photo|activity))",
+      "none_includes": ["security", "password", "payment", "billing", "suspicious"]
+    },
+    "lane": "noise",
+    "kind": null,
+    "type": null,
+    "reason": "Low-risk social notification."
+  },
+  {
+    "key": "default_marketing",
+    "priority": 70,
+    "match": {
+      "subject_regex": "(promo code|coupon|deal of the day|free shipping|clearance|bogo|buy one, get one|flash sale|earn points|bonus points|rewards offer|limited time offer|% off|\\bsale\\b)",
+      "none_includes": ["payment due", "past due", "overdue", "security alert", "service interruption"]
+    },
+    "lane": "noise",
+    "kind": null,
+    "type": null,
+    "reason": "Promotional or bulk email."
+  }
+]

@@ -1,0 +1,119 @@
+/* The phone (DESIGN.md › Phone; board 21, 390 × 844): below 640 px the same pages in one column. The
+   values are board 21's (its .ptop, .psearch, .ptabs, .pacts, .pday and .pitem). Every rule sits under
+   the breakpoint, so the desktop never sees it; the phone's own pieces (Phone.tsx, Agenda.tsx and the
+   reader's bars) only render there. */
+@media (max-width: 639px) {
+  /* ---------- The shell: one column, the tab bar at the bottom ---------- */
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .main { grid-template-rows: auto minmax(0, 1fr); }
+  .ph-tabs { height: 72px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: 1fr 1fr; padding-bottom: 18px; }
+  .ph-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
+  .ph-tab.on { color: var(--ink); }
+  /* The toast stays at the bottom here (#92): the phone's Done is in the reader's bottom bar. */
+  .toast { top: auto; bottom: 24px; }
+
+  /* The top: the mark, the page's name and what's on the right, 48 px; on the Inbox the search under it. */
+  .hd { height: auto; min-height: 48px; flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 0 12px 0 20px; border-bottom: 0; }
+  .hd > .hd-title { line-height: 48px; font-weight: 600; letter-spacing: -.01em; }
+  .hd > .apill { margin-left: -2px; }
+  .hd > .ph-count, .hd > .ph-range { color: var(--ink3); font-size: 12.5px; }
+  .hd > .ph-range { padding-right: 8px; }
+  .ph-icon { width: 40px; height: 40px; }
+  .ph-account { position: relative; height: 32px; padding: 0 8px 0 12px; }
+  .ph-account .icon { color: var(--ink3); }
+  .ph-account select { position: absolute; inset: 0; opacity: 0; font-size: 16px; }
+  /* Plain search: the words as typed, no key hints, no Alfred. */
+  .hd > .search, .hd > .search.active { order: 1; flex: 0 0 100%; width: auto; height: 40px; margin: 0 4px 8px -4px; padding: 0 12px; border-radius: 12px; }
+  .hd > .search .kbd { display: none; }
+  .hd > .search input { font-size: 16px; }
+  .hd > .search input::placeholder { font-size: 13px; }
+  .search-list .ask { display: none; }
+
+  /* ---------- The Inbox ---------- */
+  .gh { height: 28px; padding: 0 16px 0 20px; }
+  .gh .preview { display: none; }
+  /* Two lines a row, as Attention's (Decided while building #66): the sender, account and age, then
+     the subject under the sender, so neither is cut to a few characters. */
+  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 56px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 2px; }
+  .row .ud { grid-area: ud; }
+  .row .from, .list.all .row .from { grid-area: from; width: auto; }
+  .row .subj { grid-area: subj; }
+  .row .ac { grid-area: ac; width: auto; }
+  /* Dates never wrap (override 11): the age takes the room it needs. */
+  .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; }
+  /* … and an Attention row's age hugs its account, as board 21 draws it (#89). */
+  .arow .r1 .age { width: auto; min-width: 0; white-space: nowrap; }
+  .row .subj.code-line { gap: 6px; }
+  .code-line .copy { height: 26px; gap: 4px; }
+  .code-line .sum { display: none; }
+  .arow { padding: 8px 16px 9px 8px; }
+  /* Taps, not a pointer or keys: no hover fill or keyboard cursor stays behind on a row. */
+  .row:hover, .arow:hover, .row.cur:not(.open), .arow.cur:not(.open) { background: none; }
+  .gh.collapsed:hover, .gh.collapsed.cur, .gh.toggle:hover { background: var(--panel); }
+  .nfold:hover, .nfold.cur { background: none; }
+  .arow .l1 .via { display: none; }
+  .list.all .row .kd { display: none; }
+  .listfoot { display: none; }
+  /* No pointer to hover with: the shelf keeps its date, and Pin is the reader's. */
+  .row.shelf:hover .hact { display: none; }
+  .row.shelf:hover .age { display: block; }
+
+  /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
+  .pane { position: fixed; inset: 0; width: auto; max-width: none; border-left: 0; background: var(--page); z-index: 6; }
+  .pane > .rd-tools { display: none; }
+  .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
+  .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
+  .rd-head { padding: 10px 20px 0; gap: 16px; }
+  .rd-subj { font-size: 21px; }
+  .rd-acts { display: none; }
+  .rd-meta { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; }
+  .rd-meta .avatar { grid-row: 1 / 3; }
+  .rd-meta .who { grid-row: 1 / 3; }
+  .rd-meta .who > .ell { display: flex; flex-direction: column; gap: 1px; }
+  .rd-meta .who > .ell > :not(.name) { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rd-meta .rd-sep, .rd-meta .to { display: none; }
+  .rd-meta .account { grid-column: 3; grid-row: 1; justify-self: end; }
+  .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
+  .rd-body { padding: 16px 20px 20px; }
+  .mailtext { font-size: 15px; }
+  .ph-acts { height: 80px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px 22px; }
+  .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
+  .ph-acts .icon { color: var(--ink); }
+  .attach { width: 100%; }
+
+  /* ---------- The agenda ---------- */
+  .ph-agenda { flex: 1 1 auto; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  .ph-agenda .pday { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  .ph-agenda .pday.first { border-top: 0; }
+  .ph-agenda .pwx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+  .ph-agenda .pwx .temps { font-size: 11.5px; letter-spacing: 0; color: var(--ink3); }
+  .ph-agenda .pwx .icon { flex: none; }
+  .ph-agenda .pwx.sun { color: var(--sun); }
+  .ph-agenda .pwx.cloud { color: var(--ink2); }
+  .ph-agenda .pwx.rain { color: var(--cool); }
+  .ph-agenda .none { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+  /* An empty day with a forecast: "No events" beside its date, the forecast at the end. */
+  .ph-agenda .none:has(+ .pwx) { margin-left: 0; }
+  .ph-agenda .pitem { display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 20px; flex: none; color: var(--ink); }
+  .ph-agenda .pitem.sel { background: var(--sub2); }
+  .ph-agenda .pitem .when { width: 96px; flex: none; white-space: nowrap; color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .ph-agenda .pitem .mk { width: 13px; flex: none; display: grid; place-items: center; }
+  .ph-agenda .pitem .mk .ring { margin: 0; }
+  .ph-agenda .pitem .cbar { width: 3px; height: 20px; border-radius: 3px; background: var(--c); }
+  .ph-agenda .pitem .pl { color: var(--ink3); }
+  .ph-agenda .pitem.past, .ph-agenda .pitem.past .when { color: var(--ink3); }
+  .ph-agenda .pitem.past .cbar { opacity: .45; }
+  .ph-agenda .pitem.done .ell { color: var(--ink3); text-decoration: line-through; }
+  /* An item's detail, read-only, over the agenda above the tab bar. */
+  .ph-scrim { position: fixed; inset: 0; z-index: 5; background: var(--scrim); }
+  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: 84px; width: auto; z-index: 6; will-change: auto; }
+  .ph-detail .card-h { min-height: 48px; padding-top: 6px; }
+  .ph-detail .card-acts { display: none; }
+
+  /* ---------- Settings: on the desktop ---------- */
+  .ph-settings { flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 20px; color: var(--ink2); }
+  .ph-settings p { margin: 0; }
+
+  /* ---------- Signing in ---------- */
+  .sign-in { width: calc(100% - 32px); }
+}

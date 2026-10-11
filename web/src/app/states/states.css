@@ -1,0 +1,15 @@
+/* Health and states (design-export/styles/setpoint.css › .bar, .offline-pill; board 19a). */
+.list > .hbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; font-size: 13px; }
+.list > .hbar.caution { min-height: 40px; color: var(--caution); background: color-mix(in oklch, var(--caution) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--caution) 22%, transparent); }
+.list > .hbar.caution .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -10px; }
+.list > .hbar.caution .act:hover { background: var(--sub); }
+.list > .hbar.muted { min-height: 32px; color: var(--ink3); font-size: 12.5px; }
+.list > .hbar.failing { min-height: 32px; color: var(--caution); font-size: 12.5px; }
+/* The Unsorted group's note: "Triage is down, as of 9:09 AM". */
+.gh .gh-note { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--caution); display: inline-flex; align-items: center; gap: 6px; }
+
+.main > .offline-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--alert); color: var(--onAlert); box-shadow: var(--shadow-pill); font-weight: 500; white-space: nowrap; z-index: 5; }
+.main > .offline-pill .retry { height: 26px; padding: 0 10px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; }
+.main > .offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
+/* Everything under the pill: dimmed, and nothing to press. */
+.main.offline > .content { opacity: .4; filter: grayscale(.6); pointer-events: none; }

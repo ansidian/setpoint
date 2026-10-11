@@ -1,0 +1,114 @@
+/* The week view (DESIGN.md › Week view; board 16's .wk-* and .wb, which these follow): day heads and
+   the all-day row held at the top of one scroller, 24 hours under them, blocks in lanes. Items in the
+   all-day row are calendar.css's chips; the hours' blocks are `.wb`. */
+
+.cal-week { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.wk-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; overscroll-behavior-x: none; }
+.wk-scroll::-webkit-scrollbar { display: none; }
+.wk-grid { position: relative; }
+.wk-top { position: sticky; top: 0; z-index: 4; background: var(--page); }
+.wk-row { display: flex; }
+.wk-gut-cell { width: var(--weekGutter); flex: none; }
+.wk-days { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); position: relative; }
+
+/* Tints that run the whole column: the weekend, and the selected day (today by default). */
+.wk-weekend { background: color-mix(in oklch, var(--panel) 40%, transparent); }
+.wk-sel { background: color-mix(in oklch, var(--sub) 75%, transparent); }
+
+/* Day heads: weekday, date (today's disc), weather. */
+.wk-head { height: var(--weekHead); border-bottom: 1px solid var(--hair); }
+.wk-dhead { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border-left: 1px solid var(--hair); min-width: 0; overflow: hidden; }
+.wk-dhead .dw { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.wk-dhead.wk-sel .dw { color: var(--ink2); }
+.wk-dhead .wx { margin-left: auto; flex: none; }
+/* Narrow days keep the date and drop the weather. */
+.wk-dhead { container-type: inline-size; }
+@container (max-width: 96px) { .wk-dhead .wx { display: none; } }
+
+/* The all-day row: bars spanning their days, then tasks; two to three 20 px lines. */
+.wk-all { border-bottom: 1px solid var(--hair); }
+.wk-all .wk-gut-cell { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; color: var(--ink3); }
+.wk-all-bg { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.wk-acell { border-left: 1px solid var(--hair); }
+.wk-all-items { position: relative; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: var(--weekLineGap);
+  padding: var(--weekAllDayPad) 0; pointer-events: none; }
+.wk-piece, .wk-line { position: relative; min-width: 0; padding: 0 4px 0 5px; pointer-events: auto; display: flex; }
+.wk-piece > .ev, .wk-line > .ev, .wk-line > .tk { flex: 1 1 auto; }
+.wk-line > .more { pointer-events: auto; }
+.wk-piece.cont-l { padding-left: 0; }
+.wk-piece.cont-r { padding-right: 0; }
+.wk-piece.cont-l > .ev { border-top-left-radius: 0; border-bottom-left-radius: 0; box-shadow: none; }
+.wk-piece.cont-r > .ev { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.wk-piece.lift > .ev, .wk-line .tk.lift { box-shadow: var(--shadow-pop); }
+.wk-line .tk .t { color: var(--ink2); font-variant-numeric: tabular-nums; margin-right: 5px; }
+
+/* The hours: 44 px each, `hair` lines, labels in the gutter. */
+.wk-body { position: relative; display: flex; height: calc(24 * var(--weekHour)); }
+.wk-gutter { width: var(--weekGutter); flex: none; position: relative; }
+.wk-gut { position: absolute; left: 0; width: 48px; text-align: right; font-size: 11px; line-height: 14px; color: var(--ink3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-gut.now { color: var(--alert); font-weight: 500; }
+.wk-cols { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: repeating-linear-gradient(to bottom, var(--hair) 0 1px, transparent 1px var(--weekHour)); }
+.wk-col { position: relative; border-left: 1px solid var(--hair); min-width: 0; }
+
+/* Today's now-line: 1.5 px `alert`, an 8 px dot at its start. */
+.wk-now { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--alert); z-index: 3; pointer-events: none; }
+.wk-now::before { content: ''; position: absolute; left: -4px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
+
+/* Blocks: the chip's tint, bar and colours; the title at 500, its times under it at 400 and .8. */
+.wb { position: absolute; border-radius: 6px; color: var(--c, var(--cool)); background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent);
+  box-shadow: inset 3px 0 0 var(--c, var(--cool)); padding: 3px 7px 3px 9px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; z-index: 1;
+  animation: wk-fade var(--weekFade) var(--ease); }
+.wb .wb-title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wb .t { display: block; font-weight: 400; opacity: .8; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wb.short { padding-top: 2px; padding-bottom: 0; white-space: nowrap; text-overflow: ellipsis; }
+.wb.short .wb-title, .wb.short .t { display: inline; }
+/* Sharing the column, a tall enough block's title wraps to two lines, as board 16's lanes do; every
+   line is whole or not drawn (logic/week.ts › blockLines). */
+.wb.narrow { padding: 3px 5px 3px 8px; }
+.wb.two:not(.short) .wb-title { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.wb > .icon { float: left; margin: 1px 4px 0 0; }
+.wb.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
+.wb.past { opacity: .55; }
+.wb.pending { opacity: .5; }
+.wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
+.wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }
+.wb.ghost.faded { opacity: .35; }
+.wb.lift { z-index: 5; box-shadow: inset 3px 0 0 var(--c, var(--cool)), var(--shadow-pop); pointer-events: none; animation: none; }
+.wb.cont-t { border-top-left-radius: 0; border-top-right-radius: 0; }
+.wb.cont-b { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.wb .spin { position: absolute; right: 5px; top: 3px; margin: 0; }
+.wb .spin { animation: spin-later 0s 1s both; }
+.wb .spin .icon { animation: spin 900ms linear infinite; }
+
+/* A block's resizing edges (its outer 5 px), and a bar's ends. */
+.wk-edge { position: absolute; z-index: 2; }
+.wb .wk-edge { left: 0; right: 0; height: 5px; cursor: ns-resize; }
+.wb .wk-edge.t { top: 0; }
+.wb .wk-edge.b { bottom: 0; }
+.wk-piece .wk-edge { top: 0; bottom: 0; width: 5px; cursor: ew-resize; }
+.wk-piece .wk-edge.l { left: 5px; }
+.wk-piece .wk-edge.r { right: 4px; }
+
+/* A run of four or more overlapping events: "+N" in its third lane. */
+.wk-lanemore { position: absolute; z-index: 1; display: flex; }
+.wk-lanemore .more { height: 20px; }
+
+/* While dragging, the pointer says what the drag does everywhere. */
+.cal-week.dragging, .cal-week.dragging * { cursor: grabbing; }
+.cal-week.dragging.resize, .cal-week.dragging.resize * { cursor: ns-resize; }
+.cal-week.dragging.create, .cal-week.dragging.create * { cursor: default; }
+.cal-week.dragging .wb:not(.lift, .ghost) { pointer-events: none; }
+
+/* Paging slides the days in from the side they come from; blocks fade in as they arrive. */
+.wk-days[data-dir="next"], .wk-cols[data-dir="next"] { animation: wk-in-next var(--weekPage) var(--ease); }
+.wk-days[data-dir="prev"], .wk-cols[data-dir="prev"] { animation: wk-in-prev var(--weekPage) var(--ease); }
+@keyframes wk-in-next { from { transform: translateX(var(--weekSlide)); opacity: 0; } }
+@keyframes wk-in-prev { from { transform: translateX(calc(-1 * var(--weekSlide))); opacity: 0; } }
+@keyframes wk-fade { from { opacity: 0; } }
+
+/* As a chip's: the pointer's `sub` lies over the block's own fill (DESIGN.md #12). */
+.wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sub); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .wb:not(.ghost, .lift):hover::after { opacity: 1; }
+}

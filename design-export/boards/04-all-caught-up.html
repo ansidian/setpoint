@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1677">
+<title>04 Inbox · All caught up · Setpoint v2</title>
+<!-- Board 04: 04 All caught up · 1677 × 1050 · source: source/project/Inbox-caught-up.dc.html -->
+<link rel="stylesheet" href="../styles/setpoint.css">
+<link rel="stylesheet" href="../styles/fonts.css">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp a { text-decoration: none; }
+.sp .empty { flex: 1 1 auto; display: grid; place-items: center; padding-bottom: 96px; }
+.sp .empty-line { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="sp app" style="width: 1677px; height: 1050px">
+
+<aside class="sb">
+  <div class="sb-top">
+    <span class="mark"><svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="31 10" stroke-linecap="round" transform="rotate(-38 11 11)"></circle><circle cx="15.6" cy="6.4" r="2" fill="currentColor"></circle></svg></span>
+    <span class="sb-name">Setpoint</span>
+  </div>
+  <a class="nav on" href="#"><span class="ms">inbox</span><span class="grow">Inbox</span></a>
+  <a class="acct" href="#" style="--c: var(--a-business)"><span class="dot sm"></span>Business</a>
+  <a class="acct" href="#" style="--c: var(--a-personal)"><span class="dot sm"></span>Personal</a>
+  <a class="acct" href="#" style="--c: var(--a-work)"><span class="dot sm"></span>Work</a>
+  <a class="acct" href="#" style="--c: var(--a-jobs)"><span class="dot sm"></span>Jobs</a>
+  <a class="acct" href="#" style="--c: var(--a-icloud)"><span class="dot sm"></span>iCloud</a>
+  <a class="nav" href="#" style="margin-top: 2px"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>
+
+  <div class="sb-sec">
+    <div class="sb-label">Today</div>
+    <a class="today-row" href="#"><span class="t num">2:30 PM</span><span class="ell" style="color: var(--ink)">Dentist</span><span class="in num">in 5h</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>2 due today</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>1 due tomorrow</span></a>
+  </div>
+
+  <div class="sb-foot">
+    <a class="nav" href="#"><span class="ms">settings</span><span class="grow">Settings</span><span class="kbd">⌘,</span></a>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="hd">
+    <span class="hd-title">Inbox</span>
+    <span class="seg"><span class="on">Unread</span><span>All</span></span>
+    <span class="grow"></span>
+    <label class="search"><span class="ms s16">search</span><input class="grow" placeholder="Search mail" aria-label="Search mail" style="color: var(--ink)"><span class="kbd">/</span></label>
+  </header>
+
+  <div class="content">
+    <section class="list" aria-label="Inbox">
+      <div class="gh first"><span class="ms s16" style="color: var(--ink3)">keep</span>Pinned <span class="n">1</span></div>
+      <div class="row">
+        <span class="ud"></span>
+        <span class="from">Parkside Apartments</span>
+        <span class="subj"><b>Lease renewal terms</b> <span class="sum">· Renewal offer for the lease ending Nov 30 · sign by Oct 31</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">Sep 30</span>
+      </div>
+
+      <div class="empty">
+        <div class="empty-line">
+          <span class="ms s20" style="color: var(--ink3)">done_all</span>
+          <span>All caught up</span>
+          <a class="btn ghost sm" href="#">Open All</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</div>
+</body>
+</html>

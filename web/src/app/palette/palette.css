@@ -1,0 +1,19 @@
+/* ⌘K (board 20): the export's .cmdk, .cmdk-in, .cmdk-list, .cmdk-label and .menu-i, scoped to the palette. */
+.palette-scrim { position: fixed; inset: 0; background: var(--scrim); opacity: .55; z-index: 40; }
+.palette { position: fixed; top: 160px; left: 50%; transform: translateX(-50%); width: var(--palette); max-height: calc(100% - 200px); display: flex; flex-direction: column; overflow: hidden; z-index: 41; background: var(--modal); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
+.palette .ctx { display: flex; align-items: center; padding: 12px 16px 0; min-width: 0; }
+.palette .ctx .tag { max-width: 100%; }
+.palette .cmdk-in { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 16px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink3); }
+.palette .cmdk-in input { font-size: 15px; color: var(--ink); }
+.palette .cmdk-in input::placeholder { color: var(--ink3); opacity: 1; }
+.palette .cmdk-list { padding: 4px 8px 8px; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+.palette .cmdk-label { height: 30px; display: flex; align-items: flex-end; padding: 0 12px 6px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.palette .item { width: 100%; height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: var(--r-row); color: var(--ink2); text-align: left; }
+.palette .item .icon { color: var(--ink3); }
+.palette .item.cur { background: var(--sub2); color: var(--ink); }
+.palette .item.cur .icon { color: var(--ink); }
+.palette .item .kbd, .palette .item .tick { margin-left: auto; }
+.palette .item .tick .icon { color: inherit; }
+.palette .none { height: 34px; display: flex; align-items: center; padding: 0 12px; color: var(--ink3); }
+/* The pointer takes the cursor (a `sub2` fill), over 120 ms (DESIGN.md › Decided while building #12). */
+.palette .item { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }

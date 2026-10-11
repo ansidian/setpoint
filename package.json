@@ -1,0 +1,45 @@
+{
+  "name": "setpoint",
+  "version": "2.0.0-dev",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "start": "npm run start -w server",
+    "dev": "npm run dev -w server",
+    "cli": "npm run cli -w server --",
+    "build": "npm run build -w web",
+    "seed": "npm run seed -w server --",
+    "try": "npm run try -w server --",
+    "db:generate": "npm run db:generate -w server --",
+    "glyphs": "npm run glyphs -w web",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "eslint . && npm run typecheck && vitest run",
+    "test:browser": "node web/tests/browser/run.ts",
+    "test:browser:stress": "SETPOINT_BROWSER_STRESS=1 node web/tests/browser/run.ts",
+    "goldens": "SETPOINT_UPDATE_GOLDENS=1 node web/tests/browser/run.ts",
+    "audit:boards": "node web/tests/browser/audit.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.3"
+  },
+  "overrides": {
+    "vite": "8.3.0",
+    "tldts-core": "7.4.15"
+  }
+}

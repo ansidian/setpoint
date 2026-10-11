@@ -1,0 +1,328 @@
+/* Setpoint's styles on the tokens in tokens.ts (published as CSS custom properties). Component
+   values are design-export/styles/setpoint.css's, whose class names they keep (without `.sp`), so a
+   board's markup and the app's can be read side by side. DESIGN.md wins where they differ. */
+
+/* Geist and Geist Mono from the export's own build (geist 1.7.2, design-export/styles/fonts.css),
+   the font the board baselines are drawn in; bundled, never loaded from the network. */
+@font-face { font-family: 'Geist Variable'; src: url('../../design-export/styles/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Geist Mono Variable'; src: url('../../design-export/styles/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+
+*, *::before, *::after { box-sizing: border-box; }
+/* No focus rings or browser outlines anywhere (DESIGN.md › Principles). */
+*:focus, *:focus-visible { outline: none; }
+html, body, #root { height: 100%; margin: 0; }
+:root { --zoom: 1; zoom: var(--zoom); }
+@media (min-width: 2200px) { :root { --zoom: 1.25; } }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.35;
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+a { text-decoration: none; color: inherit; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
+input { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+/* Controls can't be selected; titles, addresses, codes and bodies can (DESIGN.md › Interaction rules). */
+.app, button { user-select: none; -webkit-user-select: none; }
+.selectable, .rd-subj, .mailtext, .code { user-select: text; -webkit-user-select: text; }
+
+/* A theme switch fades every colour (DESIGN.md › Motion); theme.ts adds the class for the fade only. */
+.theme-fade, .theme-fade *, .theme-fade *::before, .theme-fade *::after {
+  transition: background-color var(--theme-fade) var(--ease), color var(--theme-fade) var(--ease), border-color var(--theme-fade) var(--ease),
+    box-shadow var(--theme-fade) var(--ease), fill var(--theme-fade) var(--ease), stroke var(--theme-fade) var(--ease) !important;
+}
+
+/* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens: darma's). */
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); }
+.ink2 { color: var(--ink2); }
+.ink3 { color: var(--ink3); }
+.grow { flex: 1 1 auto; min-width: 0; }
+.ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.icon, .mark { flex: none; display: block; }
+
+/* ---------- The shell ---------- */
+.app { position: relative; height: 100%; display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); overflow: hidden; }
+.sb { background: var(--panel); border-right: 1px solid var(--edge); display: flex; flex-direction: column; padding: 12px 10px 12px; gap: 2px; min-height: 0; overflow: hidden; }
+.sb-top { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; margin-bottom: 8px; }
+.sb-name { font-size: 14px; font-weight: 600; letter-spacing: -.01em; flex: 1; }
+.sb-top .mark { width: 18px; height: 18px; }
+.nav { height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); font-weight: 500; flex: none; }
+.nav .icon { color: var(--ink3); }
+.nav:hover { background: var(--sub); }
+.nav.on { background: var(--sub2); color: var(--ink); }
+.nav.on .icon { color: var(--ink); }
+.nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
+.apill { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
+.acct { height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; border-radius: 10px; color: var(--ink2); flex: none; }
+.acct:hover { background: var(--sub); }
+.acct.on { background: var(--sub2); color: var(--ink); }
+.acct .cnt { color: var(--ink3); font-size: 12px; margin-left: auto; }
+.acct .reconnect { color: var(--caution); margin-left: auto; }
+.acct .reconnect + .cnt { margin-left: 0; }
+.dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--c, var(--ink3)); }
+.dot.sm { width: 7px; height: 7px; }
+.sb-sec { margin-top: 18px; display: flex; flex-direction: column; gap: 2px; }
+.sb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 10px; height: 24px; display: flex; align-items: center; gap: 6px; }
+.sb-foot { margin-top: auto; }
+.today-row { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; }
+.today-row:hover { background: var(--sub); }
+.today-row .t { color: var(--ink); width: 58px; flex: none; }
+.today-row .title { color: var(--ink); }
+.today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; }
+/* #78: a task line by name, its ring completing it; "3 more due tomorrow" opening the rest; a line's
+   card open, the line `sub2` as a selected row is. */
+.today-row.on { background: var(--sub2); }
+.today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
+.today-row .check .ring { margin: 0; }
+.today-row .check:hover .ring { border-color: var(--ink); }
+.today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
+.today-more .ring-space { width: 17px; flex: none; }
+/* The floating detail's card beside the sidebar (detail.css draws it). */
+.fd.today-card { position: absolute; z-index: 20; will-change: auto; animation: today-card-in var(--detail-open) var(--ease); transform-origin: left top; }
+.fd.today-card .card-h { padding-top: 12px; }
+.fd.today-card.settled { transition: top var(--dur-medium) var(--ease); }
+@keyframes today-card-in { from { opacity: 0; transform: scale(.96); } }
+@media (prefers-reduced-motion: reduce) { .fd.today-card { animation: none; } }
+/* Todoist's open ring: 13 px, a 1.5 px `ink3` stroke (DESIGN.md › Glyphs), or a task's project colour (`--ring`, SV-25). */
+.ring { width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring, var(--ink3)); flex: none; display: inline-block; margin: 0 3px 0 1px; }
+
+.main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
+.hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.hd-title { font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
+.seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; }
+.seg > * { height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; transition: background-color var(--dur-fast) var(--ease); }
+.seg > .on { background: var(--sub3); color: var(--ink); }
+.search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
+.search:focus-within { border-color: var(--edgeOn); background: var(--cardOn); color: var(--ink); }
+.search input { color: var(--ink); }
+.search input::placeholder { color: var(--ink3); opacity: 1; }
+.kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px; background: var(--sub2); color: var(--ink3); font-size: 11px; font-weight: 500; line-height: 1; flex: none; }
+.btn { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-radius: 999px; background: var(--ink); color: var(--onInk); font-weight: 500; font-size: 13px; white-space: nowrap; flex: none; }
+.btn.ghost { background: var(--sub2); color: var(--ink); }
+.btn.ghost:enabled:hover { background: var(--sub3); }
+.btn.out { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.btn.quiet { background: transparent; color: var(--ink2); padding: 0 10px; }
+.btn.sm { height: 26px; padding: 0 10px; font-size: 12.5px; }
+.btn:disabled { opacity: .5; }
+.ibtn { width: 30px; height: 30px; border-radius: 999px; display: inline-grid; place-items: center; color: var(--ink2); flex: none; }
+.ibtn:hover { background: var(--sub2); color: var(--ink); }
+.ibtn:disabled { opacity: .4; background: none; color: var(--ink2); }
+.content { display: flex; min-height: 0; min-width: 0; position: relative; }
+.list { flex: 1 1 auto; min-width: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
+.pane { width: var(--readingPane); flex: none; border-left: 1px solid var(--hair); min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ---------- The list ---------- */
+.gh { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
+.gh .chev { margin-left: auto; color: var(--ink3); }
+.gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.gh.att .n { color: var(--caution); }
+.gh.first { border-top: 0; }
+.gh.collapsed:hover, .gh.collapsed.cur { background: var(--cardOn); }
+.gh .keep { color: var(--ink3); }
+.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
+.row:hover { background: var(--sub); }
+.row.cur, .row.open { background: var(--sub2); }
+.ud { width: 12px; flex: none; display: grid; place-items: center; }
+.ud::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; }
+.row.unread .ud::before, .arow.unread .ud::before { background: var(--ink); }
+/* Opening an unread email fades its dot out (DESIGN.md › Decided while building #13). */
+.ud::before { transition: background-color var(--dur-fast) var(--ease); }
+/* A row (or header, or the prompt) leaving folds away under app/fold.ts's motion, out of the pointer's way. */
+.list .leaving { overflow: hidden; pointer-events: none; }
+.row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .subj { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .subj .sum { color: var(--ink3); }
+.row.unread .from, .row.unread .subj b { color: var(--ink); font-weight: 500; }
+.row .subj b { font-weight: 400; color: var(--ink2); }
+.row .subj.code-line { display: flex; align-items: center; gap: 10px; }
+.code-line .copy { height: 22px; padding: 0 8px; font-size: 12px; }
+.code-line .sum { font-size: 12px; }
+.row .age { width: 64px; flex: none; text-align: right; color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The account: a colour dot and its label, on every row, never dropped (decision 41). */
+.row .ac { display: inline-flex; align-items: center; gap: 6px; flex: none; width: var(--ac-w, 76px); color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.row .ac .label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.code { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--ink); }
+.arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px 16px 10px 12px; color: var(--ink2); position: relative; flex: none; border-bottom: 1px solid var(--hair); }
+.arow:last-child { border-bottom: 0; }
+.arow:hover { background: var(--sub); }
+.arow.cur, .arow.open { background: var(--sub2); }
+.arow .ud { grid-row: 1; height: 18px; }
+.arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
+.arow .l1 .from { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arow .l1 .via { color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.arow.unread .from { color: var(--ink); font-weight: 500; }
+.arow .r1 { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12px; height: 18px; justify-content: flex-end; white-space: nowrap; }
+.arow .r1 .age { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.arow .l2 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); }
+.arow.unread .l2 { color: var(--ink); }
+.arow .l3 { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
+.arow.protected .l2 { color: var(--alert); font-weight: 500; }
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; }
+.tag.alert { color: var(--alert); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 40%, transparent); background: color-mix(in oklch, var(--alert) 10%, var(--chip)); }
+.tag.caution { color: var(--caution); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 35%, transparent); background: color-mix(in oklch, var(--caution) 12%, var(--chip)); }
+/* A change waiting for its provider (DESIGN.md › Interaction rules). */
+.row.pending, .arow.pending { opacity: .5; }
+.listfoot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 16px 14px 24px; color: var(--ink3); font-size: 12.5px; flex: none; }
+.listfoot .lnk { color: var(--ink2); display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 10px; border-radius: 999px; }
+.listfoot .lnk:hover { background: var(--sub); }
+/* All caught up (board 04). */
+.empty { flex: 1 1 auto; display: grid; place-items: center; padding-bottom: 96px; }
+.empty-line { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 14px; }
+.empty-line .icon { color: var(--ink3); }
+
+/* ---------- The reader ---------- */
+.rd-tools { height: 48px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); }
+.rd-tools .tool { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 999px; color: var(--ink2); font-size: 12.5px; flex: none; }
+.rd-tools .tool:hover { background: var(--sub2); color: var(--ink); }
+.rd-tools .tool .kbd { margin-left: 2px; }
+/* Reply's place, after Open in Gmail, empty until reply exists. */
+.rd-tools .reply-slot { display: contents; }
+.rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.rd-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 12px; flex: none; }
+.rd-subj { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -.01em; margin: 0; }
+.rd-meta { display: flex; align-items: center; gap: 10px; color: var(--ink2); }
+.rd-meta .who { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.rd-meta .name { color: var(--ink); font-weight: 500; }
+.rd-meta .to { color: var(--ink3); font-size: 12px; }
+.rd-meta .account { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; flex: none; }
+.rd-meta .time { color: var(--ink3); font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; }
+.avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--sub2); color: var(--ink); display: grid; place-items: center; font-weight: 500; font-size: 13px; flex: none; }
+.rd-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.rd-acts .btn { height: 28px; font-size: 12.5px; padding: 0 12px; }
+.rd-body { padding: 4px 28px 28px; flex: 1 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.mailtext { color: var(--ink); font-size: 14px; line-height: 1.55; max-width: 600px; overflow-wrap: anywhere; }
+.mailtext p { margin: 0 0 12px; }
+
+/* ---------- Mail details (F2) ---------- */
+/* The Pinned shelf: Unpin takes the age's place under the pointer (board 10). */
+.row.shelf .hact { display: none; width: 64px; flex: none; justify-content: flex-end; }
+.row.shelf:hover .hact { display: flex; }
+.row.shelf:hover .age { display: none; }
+.unpin { height: 22px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12px; flex: none; }
+.unpin:hover { background: var(--sub3); }
+/* The pattern prompt at the end of Attention (board 09). */
+.prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
+.prompt .prompt-icon { color: var(--ink3); }
+.code-line .copy .icon { color: var(--ink2); }
+/* All (board 05, #48): the Pinned shelf (D105), day headings, lane labels under them, the kind where an
+   FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
+.gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
+.lh.att .n { color: var(--caution); }
+.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); cursor: pointer; }
+.nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.nfold .chev { margin-left: auto; }
+.nfold.cur { background: var(--cardOn); }
+.list.all .row .kd { width: 84px; margin-left: 12px; margin-right: -10px; flex: none; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list.all .row .from { width: 200px; }
+.list.all .row .age { width: 72px; }
+.list.all .row.shelf .hact { width: 72px; }
+.list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
+.list.all .row .subj .code { font-size: 13px; }
+/* Other chips drop while the reading pane is open; the account never does. */
+.content:has(> .pane) .list.all .row .kd { display: none; }
+/* The app's one toast: the export's `.toast`, a 40 px pill at the top centre, in the header's band (#92), above Settings (30–31). */
+.toast { position: absolute; left: 50%; top: calc((var(--header) - 40px) / 2); transform: translateX(-50%); height: 40px; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 16px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); white-space: nowrap; z-index: 35; }
+/* A line with no button keeps the same room on both sides. */
+.toast:not(:has(button)) { padding-right: 16px; }
+
+/* The reader's tools: Pin on a pinned email is Unpin, held (board 10). */
+.rd-tools .tool.active { background: var(--sub2); color: var(--ink); }
+.pane { position: relative; max-width: calc(100% - 420px); }
+/* The pane's left edge resizes it (2026-10-09): a line in `edgeHover` under the pointer or focus. */
+.pane-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
+.pane-edge::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
+.pane-edge:hover::before, .pane-edge:active::before, .pane-edge:focus-visible::before { background: var(--edgeHover); }
+/* Protected mail (board 03). */
+.protected-line { display: flex; align-items: center; gap: 6px; color: var(--alert); font-size: 12.5px; font-weight: 500; }
+.rd-subj.protected { margin-top: -4px; }
+/* The security facts card (board 03). */
+.facts-card { background: var(--card); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.facts-card.alert { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--alert) 30%, var(--edgeOn)); }
+.facts { display: grid; grid-template-columns: 112px minmax(0, 1fr); row-gap: 9px; column-gap: 12px; margin: 0; padding: 14px 16px; }
+.facts dt { color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.facts dd { margin: 0; color: var(--ink); user-select: text; -webkit-user-select: text; }
+.facts .unfamiliar { color: var(--alert); }
+/* The images-hidden bar (board 02). */
+.imgbar { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px 0 12px; border-radius: var(--r-bar); background: var(--sub); color: var(--ink2); font-size: 12.5px; flex: none; }
+.imgbar .sep { color: var(--ink3); }
+.imgbar .lnk { color: var(--ink); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; }
+.imgbar .lnk:hover { background: var(--sub2); }
+/* An HTML email: a sandboxed frame as wide as the reading pane, radius 14 on white, as tall as its page says it is. */
+.mailframe { display: block; width: 100%; border: 0; border-radius: var(--r-card); background: #ffffff; flex: none; color-scheme: light; }
+/* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10; Decided while building #61). */
+.attachments { display: flex; flex-wrap: wrap; gap: 8px; }
+.attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; }
+.attach:hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.attach .type { color: var(--ink2); display: grid; }
+.attach .names { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.attach .name { color: var(--ink); }
+.attach .size { color: var(--ink3); font-size: 12px; }
+.attach .look { color: var(--ink3); display: grid; }
+/* A previewable card opens its preview from all but its Download link (SV-25). */
+.attach .open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; height: 100%; text-align: left; }
+.attach .dl, .preview-head .dl { color: var(--ink2); font-size: 12.5px; height: 24px; padding: 0 8px; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; flex: none; }
+.pop { background: var(--modal); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
+.attach-preview { position: absolute; inset: 12px; z-index: 3; display: flex; flex-direction: column; overflow: hidden; }
+.preview-head { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 18px; border-bottom: 1px solid var(--hair); }
+.preview-body { flex: 1 1 auto; min-height: 0; overflow: auto; display: flex; }
+.preview-line { margin: auto; color: var(--ink3); font-size: 12.5px; }
+.preview-pdf { flex: 1 1 auto; border: 0; background: #ffffff; }
+.preview-image { margin: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.preview-csv { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; align-self: flex-start; user-select: text; -webkit-user-select: text; }
+.preview-csv td { padding: 6px 12px; border-bottom: 1px solid var(--hair); white-space: nowrap; color: var(--ink2); }
+.preview-csv tr:first-child td { color: var(--ink); font-weight: 500; }
+.ibtn.sm { width: 26px; height: 26px; }
+
+/* ---------- Sign-in (darma's card) ---------- */
+.sign-in-page { position: relative; height: 100%; overflow: hidden; background: var(--page); }
+/* Anchored from its top a little above the middle, so a line appearing grows it down, not up (Decided while building #71). */
+.sign-in {
+  position: absolute; left: 50%; top: max(24px, calc(50% - 120px)); transform: translateX(-50%);
+  width: 380px; display: flex; flex-direction: column; gap: 20px; padding: 24px 24px 20px;
+  background: var(--modal); border: 1px solid var(--edgeOn); border-radius: var(--r-modal); box-shadow: var(--shadow-modal);
+}
+.sign-in .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; padding-left: 2px; }
+.sign-in-fields { display: flex; flex-direction: column; gap: 8px; }
+.input { width: 100%; height: 36px; flex: none; padding: 0 12px; border-radius: var(--r-row); background: var(--chip); border: 1px solid var(--edge); font-size: 13.5px; color: var(--ink); transition: border-color var(--dur-fast) var(--ease); }
+.input:focus { border-color: var(--edgeOn); }
+.input::placeholder { color: var(--ink3); }
+.input.failed, .input.failed:focus { border-color: color-mix(in oklch, var(--alert) 60%, transparent); }
+.input.token { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; -webkit-text-security: disc; }
+.input.token::placeholder { font-family: var(--sans); font-size: 13.5px; letter-spacing: 0; }
+.sign-in-line { margin: 0; padding-left: 2px; font-size: 12.5px; color: var(--ink3); }
+.sign-in-line .mono { font-family: var(--mono); letter-spacing: -.01em; }
+.sign-in-line.failed { color: var(--alert); }
+.sign-in-foot { display: flex; justify-content: flex-end; gap: 8px; }
+.sign-in-foot .btn.quiet { margin: 0 auto 0 -10px; }
+.input.code { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; }
+.input.code::placeholder { font-family: var(--sans); font-size: 13.5px; letter-spacing: 0; }
+.sign-in .btn .kbd { background: color-mix(in oklch, var(--onInk) 14%, transparent); color: var(--onInk); }
+.recovery { margin: 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--sub); font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; }
+
+/* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
+/* The export's hover where it draws one; otherwise a `sub` fill on flat controls, rows and menu items,
+   an `edgeHover` border on outlined buttons and fields, and the primary button a touch dimmer. Fills
+   and borders change over 120 ms. Disabled controls don't answer, and a touch screen has no hover. */
+.btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .listfoot .lnk, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input {
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+@media (hover: hover) {
+  .btn:not(.ghost, .out, .quiet):enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--page)); }
+  .btn.out:enabled:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
+  .btn.quiet:enabled:hover { background: var(--sub); color: var(--ink); }
+  .seg > :not(.on, :disabled, [aria-disabled="true"]):hover { background: var(--sub); color: var(--ink); }
+  /* An expanded group's header collapses it on a click, so it answers as a collapsed one does. */
+  .gh.toggle:hover, .nfold:hover { background: var(--cardOn); }
+  .search:not(:focus-within):hover, .input:not(:focus, .failed):hover { border-color: var(--edgeHover); }
+  a.dl:hover, a.attach:hover .dl { background: var(--sub); color: var(--ink); }
+}

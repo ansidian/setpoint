@@ -1,0 +1,11 @@
+{
+  "about": "News's local sources (BRIEF.md › News › Sources, D91): the area's stations, a crime wire, area sites and Google News search for the area. The real list names the user's city, so it is never committed: copy this file to server/news/local-sources.json (ignored by git), or straight to news-local-sources.json in the data directory, and fill in the real feeds. Setpoint copies the checkout's file into the data directory once, and reads the data directory's at every start. Each source needs a key and a name; section defaults to local, kind and adapter to feed, reads to \"Feed\". summary_only marks a page that can't be read in-app; metered a paper that counts toward stories but is never shown. icon names the tile Settings › News draws: live_tv for a TV station, local_police for a crime wire, newspaper (the default for a feed).",
+  "sources": [
+    {"key": "channel-4-local", "name": "Channel 4 · Local news", "url": "https://www.example.com/news/local/feed/", "reads": "Feed, summary only", "summary_only": true, "icon": "live_tv"},
+    {"key": "channel-7-local", "name": "Channel 7 · Local", "url": "https://news.example.org/local/rss.xml", "reads": "Feed and two area tags", "icon": "live_tv"},
+    {"key": "county-crime-wire", "name": "County crime wire", "url": "https://sheriff.example.org/newsroom/feed", "reads": "Feed", "icon": "local_police"},
+    {"key": "area-news", "name": "Area news site", "url": "https://www.example.org/area/feed/", "reads": "Feed, Local only"},
+    {"key": "metro-daily", "name": "Metro Daily", "url": "https://www.example.com/local/rss", "reads": "Feed; counts toward stories, never shown", "metered": true},
+    {"key": "google-news-area", "name": "Google News · area search", "kind": "discovery", "adapter": "google_news", "config": {"query": "\"Example City\" OR \"Example County\""}, "reads": "Finds stories, never read"}
+  ]
+}

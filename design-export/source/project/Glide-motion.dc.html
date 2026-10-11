@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Floating detail · Glide</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./setpoint.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..600&amp;family=Geist+Mono:wght@400..600&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..24,300,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp .gl{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.sp .kf{padding:12px 12px 14px;display:flex;flex-direction:column}
+.sp .kf svg{display:block;border-radius:10px}
+.sp .kf-h{display:flex;align-items:baseline;gap:8px;margin-top:10px}
+.sp .kf-h b{font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+.sp .kf p{margin:3px 0 0;font-size:12.5px;line-height:1.4;color:var(--ink2)}
+.sp .trk-l{height:30px;display:flex;align-items:center;color:var(--ink2)}
+.sp .bar-g{position:absolute;height:20px;border-radius:6px;display:flex;align-items:center;padding:0 10px;font-size:12px;white-space:nowrap;color:var(--ink)}
+.sp .guide{position:absolute;top:18px;bottom:22px;border-left:1px dashed var(--edgeOn)}
+.sp .guide-l{position:absolute;top:0;transform:translateX(-50%);font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.sp .rule{padding:16px 16px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.sp .rule-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.sp .rule-h .ms{color:var(--ink3)}
+.sp .rule p{margin:0;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.sp .svgt{font-family:inherit}
+/* keyframe drawings: chips follow the month's recipe (tinted, 3 px bar; selected solid) */
+.sp .kc{fill:color-mix(in oklch, var(--c) var(--evtint), transparent)}
+.sp .kb{fill:var(--c)}
+.sp .kt{fill:var(--c);opacity:.8}
+.sp .kst{fill:var(--onInk);opacity:.8}
+.sp .tr{fill:none;stroke:var(--ink3);stroke-width:2.5}
+.sp .tb{fill:var(--ink3);opacity:.6}
+.sp .ka{fill:none;stroke:var(--ink3);stroke-width:3;stroke-dasharray:10 10;opacity:.6}
+.sp .kbt{fill:none;stroke:var(--ink2);stroke-width:3;stroke-dasharray:10 10;opacity:.8}
+.sp .sw{position:absolute;width:18px;height:11px;border-radius:3px}
+</style>
+</helmet>
+<div class="sp" style="width:1677px;height:1050px;padding:64px;display:flex;flex-direction:column;gap:20px">
+
+  <header style="display:flex;align-items:flex-end;gap:24px;flex:none">
+    <div class="grow">
+      <div class="gl">Board 12c · Motion spec</div>
+      <h1 style="margin:6px 0 0;font-size:24px;line-height:1.25;font-weight:500;letter-spacing:-.01em">Floating detail · glide</h1>
+      <p class="ink2" style="margin:6px 0 0;font-size:14px">One card travels between items. Its own motion; everything else stays on the 180 ms token.</p>
+    </div>
+    <div style="display:flex;gap:6px;padding-bottom:2px">
+      <span class="tag num">Position 280 – 380 ms</span>
+      <span class="tag num">Height 220 ms</span>
+      <span class="tag num">Content 90 + 130 ms</span>
+      <span class="tag num">Selection fill at 60 ms</span>
+    </div>
+  </header>
+
+  <section style="flex:none">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="gl grow">Keyframes · Dentist → Dinner with Sam · 724 px · 352 ms</span>
+      <span class="ink3" style="font-size:12px;display:inline-flex;align-items:center;gap:6px"><svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true"><rect x="1" y="1" width="20" height="10" rx="3" style="fill:none;stroke:var(--ink2);stroke-width:1.2;stroke-dasharray:3 3"></rect></svg>A start · B target</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-top:12px">
+
+      <!-- 0 ms -->
+      <div class="card kf">
+        <svg width="273" height="143" viewBox="0 110 1040 545" aria-hidden="true">
+          <rect x="0" y="110" width="1040" height="545" style="fill:var(--page)"></rect>
+          <rect x="1029" y="110" width="11" height="545" style="fill:var(--panel)"></rect>
+          <path d="M147 110V655M294 110V655M441 110V655M588 110V655M735 110V655M882 110V655M0 206H1029M0 382H1029M0 558H1029" style="fill:none;stroke:var(--edgeOn);stroke-width:3"></path>
+          <path d="M1029 110V655" style="fill:none;stroke:var(--ink3);stroke-width:3"></path>
+          <g class="svgt" style="fill:var(--ink3);font-size:26px"><text x="12" y="231">5</text><text x="159" y="231">6</text><text x="306" y="231">7</text><text x="453" y="231">8</text><text x="600" y="231">9</text><text x="747" y="231">10</text><text x="894" y="231">11</text><text x="12" y="407">12</text><text x="159" y="407">13</text><text x="306" y="407">14</text><text x="453" y="407">15</text><text x="600" y="407">16</text><text x="747" y="407">17</text><text x="894" y="407">18</text><text x="12" y="583">19</text><text x="159" y="583">20</text><text x="306" y="583">21</text><text x="453" y="583">22</text><text x="600" y="583">23</text><text x="747" y="583">24</text><text x="894" y="583">25</text></g>
+          <g style="opacity:.55">
+            <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="237" width="6" height="20"></rect><rect class="kt" x="20" y="244" width="40" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="237" width="6" height="20"></rect><rect class="kt" x="167" y="244" width="90" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="237" width="6" height="20"></rect><rect class="kt" x="314" y="244" width="40" height="6" rx="3"></rect></g>
+          </g>
+          <circle cx="16" cy="270" r="6" style="fill:var(--comf)"></circle><rect class="tb" x="28" y="267" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="293" r="6"></circle><rect class="tb" x="322" y="290" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="316" r="6"></circle><rect class="tb" x="322" y="313" width="50" height="6" rx="3"></rect>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="237" width="6" height="20"></rect><rect class="kt" x="461" y="244" width="90" height="6" rx="3"></rect></g>
+          <circle class="tr" cx="457" cy="270" r="6"></circle><rect class="tb" x="469" y="267" width="100" height="6" rx="3"></rect>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="237" width="6" height="20"></rect><rect class="kt" x="608" y="244" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="594" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="260" width="6" height="20"></rect><rect class="kt" x="608" y="267" width="85" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="413" width="6" height="20"></rect><rect class="kt" x="20" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="413" width="6" height="20"></rect><rect class="kt" x="167" y="420" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="413" width="6" height="20"></rect><rect class="kt" x="314" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-jobs)"><rect class="kc" x="447" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="413" width="6" height="20"></rect><rect class="kt" x="461" y="420" width="80" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="436" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="436" width="6" height="20"></rect><rect class="kt" x="461" y="443" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="413" width="6" height="20"></rect><rect class="kt" x="608" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="589" width="6" height="20"></rect><rect class="kt" x="20" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="589" width="6" height="20"></rect><rect class="kt" x="167" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="589" width="6" height="20"></rect><rect class="kt" x="314" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="589" width="6" height="20"></rect><rect class="kt" x="461" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="589" width="6" height="20"></rect><rect class="kt" x="608" y="596" width="40" height="6" rx="3"></rect></g>
+          <!-- Dentist: still solid at the click; Dinner with Sam: tinted -->
+          <g style="--c:var(--c-personal)"><rect class="kb" x="300" y="260" width="134" height="20" rx="5"></rect><rect class="kst" x="314" y="267" width="70" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="283" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="283" width="6" height="20"></rect><rect class="kt" x="608" y="290" width="100" height="6" rx="3"></rect></g>
+          <g transform="translate(12 144)">
+            <rect width="280" height="252" rx="18" style="fill:var(--cardOn);stroke:var(--edgeOn);stroke-width:3"></rect>
+            <rect x="126" y="7" width="28" height="5" rx="2.5" style="fill:var(--sub3)"></rect>
+            <g>
+              <circle cx="22" cy="31" r="6" style="fill:var(--c-personal)"></circle>
+              <text class="svgt" x="38" y="41" style="fill:var(--ink);font-size:28px;font-weight:500">Dentist</text>
+              <g style="fill:var(--sub3)"><rect x="38" y="56" width="170" height="10" rx="5"></rect><rect x="38" y="82" width="110" height="10" rx="5"></rect><rect x="38" y="122" width="180" height="10" rx="5"></rect><rect x="38" y="150" width="110" height="10" rx="5"></rect><rect x="38" y="178" width="80" height="10" rx="5"></rect></g>
+              <g style="fill:var(--sub2)"><rect x="38" y="100" width="80" height="8" rx="4"></rect><rect x="12" y="80" width="14" height="14" rx="4"></rect><rect x="12" y="120" width="14" height="14" rx="4"></rect><rect x="12" y="148" width="14" height="14" rx="4"></rect><rect x="12" y="176" width="14" height="14" rx="4"></rect></g>
+            </g>
+            <rect x="0" y="207" width="280" height="1.5" style="fill:var(--hair)"></rect>
+            <rect x="12" y="216" width="66" height="26" rx="13" style="fill:var(--sub2)"></rect>
+            <g style="fill:var(--sub3)"><circle cx="186" cy="229" r="6"></circle><circle cx="210" cy="229" r="6"></circle><circle cx="234" cy="229" r="6"></circle><circle cx="258" cy="229" r="6"></circle></g>
+          </g>
+          <rect class="kbt" x="736" y="153" width="280" height="280" rx="18"></rect>
+          <g class="svgt" style="fill:var(--ink2);font-size:30px;font-weight:500"><text x="16" y="136">A</text><text x="742" y="145">B</text></g>
+        </svg>
+        <div class="kf-h"><b>0 ms</b><span class="ink3">Click</span></div>
+        <p>Dentist goes back to tinted. The card starts at A, left of Dentist, with its content.</p>
+      </div>
+
+      <!-- 60 ms -->
+      <div class="card kf">
+        <svg width="273" height="143" viewBox="0 110 1040 545" aria-hidden="true">
+          <rect x="0" y="110" width="1040" height="545" style="fill:var(--page)"></rect>
+          <rect x="1029" y="110" width="11" height="545" style="fill:var(--panel)"></rect>
+          <path d="M147 110V655M294 110V655M441 110V655M588 110V655M735 110V655M882 110V655M0 206H1029M0 382H1029M0 558H1029" style="fill:none;stroke:var(--edgeOn);stroke-width:3"></path>
+          <path d="M1029 110V655" style="fill:none;stroke:var(--ink3);stroke-width:3"></path>
+          <g class="svgt" style="fill:var(--ink3);font-size:26px"><text x="12" y="231">5</text><text x="159" y="231">6</text><text x="306" y="231">7</text><text x="453" y="231">8</text><text x="600" y="231">9</text><text x="747" y="231">10</text><text x="894" y="231">11</text><text x="12" y="407">12</text><text x="159" y="407">13</text><text x="306" y="407">14</text><text x="453" y="407">15</text><text x="600" y="407">16</text><text x="747" y="407">17</text><text x="894" y="407">18</text><text x="12" y="583">19</text><text x="159" y="583">20</text><text x="306" y="583">21</text><text x="453" y="583">22</text><text x="600" y="583">23</text><text x="747" y="583">24</text><text x="894" y="583">25</text></g>
+          <g style="opacity:.55">
+            <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="237" width="6" height="20"></rect><rect class="kt" x="20" y="244" width="40" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="237" width="6" height="20"></rect><rect class="kt" x="167" y="244" width="90" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="237" width="6" height="20"></rect><rect class="kt" x="314" y="244" width="40" height="6" rx="3"></rect></g>
+          </g>
+          <circle cx="16" cy="270" r="6" style="fill:var(--comf)"></circle><rect class="tb" x="28" y="267" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="293" r="6"></circle><rect class="tb" x="322" y="290" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="316" r="6"></circle><rect class="tb" x="322" y="313" width="50" height="6" rx="3"></rect>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="237" width="6" height="20"></rect><rect class="kt" x="461" y="244" width="90" height="6" rx="3"></rect></g>
+          <circle class="tr" cx="457" cy="270" r="6"></circle><rect class="tb" x="469" y="267" width="100" height="6" rx="3"></rect>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="237" width="6" height="20"></rect><rect class="kt" x="608" y="244" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="594" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="260" width="6" height="20"></rect><rect class="kt" x="608" y="267" width="85" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="413" width="6" height="20"></rect><rect class="kt" x="20" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="413" width="6" height="20"></rect><rect class="kt" x="167" y="420" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="413" width="6" height="20"></rect><rect class="kt" x="314" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-jobs)"><rect class="kc" x="447" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="413" width="6" height="20"></rect><rect class="kt" x="461" y="420" width="80" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="436" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="436" width="6" height="20"></rect><rect class="kt" x="461" y="443" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="413" width="6" height="20"></rect><rect class="kt" x="608" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="589" width="6" height="20"></rect><rect class="kt" x="20" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="589" width="6" height="20"></rect><rect class="kt" x="167" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="589" width="6" height="20"></rect><rect class="kt" x="314" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="589" width="6" height="20"></rect><rect class="kt" x="461" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="589" width="6" height="20"></rect><rect class="kt" x="608" y="596" width="40" height="6" rx="3"></rect></g>
+          <!-- Dentist: tinted; Dinner with Sam: solid -->
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="260" width="6" height="20"></rect><rect class="kt" x="314" y="267" width="70" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kb" x="594" y="283" width="134" height="20" rx="5"></rect><rect class="kst" x="608" y="290" width="100" height="6" rx="3"></rect></g>
+          <rect class="ka" x="12" y="144" width="280" height="252" rx="18"></rect>
+          <g transform="translate(544.6 150.6)">
+            <rect width="280" height="270" rx="18" style="fill:var(--cardOn);stroke:var(--edgeOn);stroke-width:3"></rect>
+            <rect x="126" y="7" width="28" height="5" rx="2.5" style="fill:var(--sub3)"></rect>
+            <g style="opacity:.33">
+              <circle cx="22" cy="31" r="6" style="fill:var(--c-personal)"></circle>
+              <text class="svgt" x="38" y="41" style="fill:var(--ink);font-size:28px;font-weight:500">Dentist</text>
+              <g style="fill:var(--sub3)"><rect x="38" y="56" width="170" height="10" rx="5"></rect><rect x="38" y="82" width="110" height="10" rx="5"></rect><rect x="38" y="122" width="180" height="10" rx="5"></rect><rect x="38" y="150" width="110" height="10" rx="5"></rect><rect x="38" y="178" width="80" height="10" rx="5"></rect></g>
+              <g style="fill:var(--sub2)"><rect x="38" y="100" width="80" height="8" rx="4"></rect><rect x="12" y="80" width="14" height="14" rx="4"></rect><rect x="12" y="120" width="14" height="14" rx="4"></rect><rect x="12" y="148" width="14" height="14" rx="4"></rect><rect x="12" y="176" width="14" height="14" rx="4"></rect></g>
+            </g>
+            <rect x="0" y="225" width="280" height="1.5" style="fill:var(--hair)"></rect>
+            <rect x="12" y="234" width="66" height="26" rx="13" style="fill:var(--sub2)"></rect>
+            <g style="fill:var(--sub3)"><circle cx="186" cy="247" r="6"></circle><circle cx="210" cy="247" r="6"></circle><circle cx="234" cy="247" r="6"></circle><circle cx="258" cy="247" r="6"></circle></g>
+          </g>
+          <rect class="kbt" x="736" y="153" width="280" height="280" rx="18"></rect>
+          <g class="svgt" style="fill:var(--ink2);font-size:30px;font-weight:500"><text x="16" y="136">A</text><text x="742" y="145">B</text></g>
+        </svg>
+        <div class="kf-h"><b>60 ms</b><span class="ink3">Selection</span></div>
+        <p>Dinner with Sam turns solid. 74% of the travel done; old content at 33%.</p>
+      </div>
+
+      <!-- 185 ms -->
+      <div class="card kf">
+        <svg width="273" height="143" viewBox="0 110 1040 545" aria-hidden="true">
+          <rect x="0" y="110" width="1040" height="545" style="fill:var(--page)"></rect>
+          <rect x="1029" y="110" width="11" height="545" style="fill:var(--panel)"></rect>
+          <path d="M147 110V655M294 110V655M441 110V655M588 110V655M735 110V655M882 110V655M0 206H1029M0 382H1029M0 558H1029" style="fill:none;stroke:var(--edgeOn);stroke-width:3"></path>
+          <g class="svgt" style="fill:var(--ink3);font-size:26px"><text x="12" y="231">5</text><text x="159" y="231">6</text><text x="306" y="231">7</text><text x="453" y="231">8</text><text x="600" y="231">9</text><text x="747" y="231">10</text><text x="894" y="231">11</text><text x="12" y="407">12</text><text x="159" y="407">13</text><text x="306" y="407">14</text><text x="453" y="407">15</text><text x="600" y="407">16</text><text x="747" y="407">17</text><text x="894" y="407">18</text><text x="12" y="583">19</text><text x="159" y="583">20</text><text x="306" y="583">21</text><text x="453" y="583">22</text><text x="600" y="583">23</text><text x="747" y="583">24</text><text x="894" y="583">25</text></g>
+          <g style="opacity:.55">
+            <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="237" width="6" height="20"></rect><rect class="kt" x="20" y="244" width="40" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="237" width="6" height="20"></rect><rect class="kt" x="167" y="244" width="90" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="237" width="6" height="20"></rect><rect class="kt" x="314" y="244" width="40" height="6" rx="3"></rect></g>
+          </g>
+          <circle cx="16" cy="270" r="6" style="fill:var(--comf)"></circle><rect class="tb" x="28" y="267" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="293" r="6"></circle><rect class="tb" x="322" y="290" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="316" r="6"></circle><rect class="tb" x="322" y="313" width="50" height="6" rx="3"></rect>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="237" width="6" height="20"></rect><rect class="kt" x="461" y="244" width="90" height="6" rx="3"></rect></g>
+          <circle class="tr" cx="457" cy="270" r="6"></circle><rect class="tb" x="469" y="267" width="100" height="6" rx="3"></rect>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="237" width="6" height="20"></rect><rect class="kt" x="608" y="244" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="594" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="260" width="6" height="20"></rect><rect class="kt" x="608" y="267" width="85" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="413" width="6" height="20"></rect><rect class="kt" x="20" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="413" width="6" height="20"></rect><rect class="kt" x="167" y="420" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="413" width="6" height="20"></rect><rect class="kt" x="314" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-jobs)"><rect class="kc" x="447" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="413" width="6" height="20"></rect><rect class="kt" x="461" y="420" width="80" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="436" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="436" width="6" height="20"></rect><rect class="kt" x="461" y="443" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="413" width="6" height="20"></rect><rect class="kt" x="608" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="589" width="6" height="20"></rect><rect class="kt" x="20" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="589" width="6" height="20"></rect><rect class="kt" x="167" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="589" width="6" height="20"></rect><rect class="kt" x="314" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="589" width="6" height="20"></rect><rect class="kt" x="461" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="589" width="6" height="20"></rect><rect class="kt" x="608" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="260" width="6" height="20"></rect><rect class="kt" x="314" y="267" width="70" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kb" x="594" y="283" width="134" height="20" rx="5"></rect><rect class="kst" x="608" y="290" width="100" height="6" rx="3"></rect></g>
+          <rect class="ka" x="12" y="144" width="280" height="252" rx="18"></rect>
+          <g transform="translate(757.7 153.3)">
+            <rect width="280" height="280" rx="18" style="fill:var(--cardOn);stroke:var(--edgeOn);stroke-width:3"></rect>
+            <rect x="126" y="7" width="28" height="5" rx="2.5" style="fill:var(--sub3)"></rect>
+            <g transform="translate(1.6 0)" style="opacity:.73">
+              <circle cx="22" cy="31" r="6" style="fill:var(--c-personal)"></circle>
+              <text class="svgt" x="38" y="41" style="fill:var(--ink);font-size:28px;font-weight:500">Dinner with Sam</text>
+              <g style="fill:var(--sub3)"><rect x="38" y="56" width="180" height="10" rx="5"></rect><rect x="38" y="82" width="90" height="10" rx="5"></rect><rect x="38" y="122" width="70" height="10" rx="5"></rect><rect x="38" y="150" width="180" height="10" rx="5"></rect><rect x="38" y="178" width="100" height="10" rx="5"></rect><rect x="38" y="206" width="80" height="10" rx="5"></rect></g>
+              <g style="fill:var(--sub2)"><rect x="38" y="100" width="120" height="8" rx="4"></rect><rect x="12" y="80" width="14" height="14" rx="4"></rect><rect x="12" y="120" width="14" height="14" rx="4"></rect><rect x="12" y="148" width="14" height="14" rx="4"></rect><rect x="12" y="176" width="14" height="14" rx="4"></rect><rect x="12" y="204" width="14" height="14" rx="4"></rect></g>
+            </g>
+            <rect x="0" y="235" width="280" height="1.5" style="fill:var(--hair)"></rect>
+            <rect x="12" y="244" width="66" height="26" rx="13" style="fill:var(--sub2)"></rect>
+            <g style="fill:var(--sub3)"><circle cx="186" cy="257" r="6"></circle><circle cx="210" cy="257" r="6"></circle><circle cx="234" cy="257" r="6"></circle><circle cx="258" cy="257" r="6"></circle></g>
+          </g>
+          <path d="M1029 110V655" style="fill:none;stroke:var(--ink3);stroke-width:3"></path>
+          <rect class="kbt" x="736" y="153" width="280" height="280" rx="18"></rect>
+          <g class="svgt" style="fill:var(--ink2);font-size:30px;font-weight:500"><text x="16" y="136">A</text><text x="742" y="145">B</text></g>
+        </svg>
+        <div class="kf-h"><b>185 ms</b><span class="ink3">Overshoot</span></div>
+        <p>22 px past B, the peak (+3%). New content at 73%, finishing its 6 px slide.</p>
+      </div>
+
+      <!-- 220 ms -->
+      <div class="card kf">
+        <svg width="273" height="143" viewBox="0 110 1040 545" aria-hidden="true">
+          <rect x="0" y="110" width="1040" height="545" style="fill:var(--page)"></rect>
+          <rect x="1029" y="110" width="11" height="545" style="fill:var(--panel)"></rect>
+          <path d="M147 110V655M294 110V655M441 110V655M588 110V655M735 110V655M882 110V655M0 206H1029M0 382H1029M0 558H1029" style="fill:none;stroke:var(--edgeOn);stroke-width:3"></path>
+          <g class="svgt" style="fill:var(--ink3);font-size:26px"><text x="12" y="231">5</text><text x="159" y="231">6</text><text x="306" y="231">7</text><text x="453" y="231">8</text><text x="600" y="231">9</text><text x="747" y="231">10</text><text x="894" y="231">11</text><text x="12" y="407">12</text><text x="159" y="407">13</text><text x="306" y="407">14</text><text x="453" y="407">15</text><text x="600" y="407">16</text><text x="747" y="407">17</text><text x="894" y="407">18</text><text x="12" y="583">19</text><text x="159" y="583">20</text><text x="306" y="583">21</text><text x="453" y="583">22</text><text x="600" y="583">23</text><text x="747" y="583">24</text><text x="894" y="583">25</text></g>
+          <g style="opacity:.55">
+            <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="237" width="6" height="20"></rect><rect class="kt" x="20" y="244" width="40" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="237" width="6" height="20"></rect><rect class="kt" x="167" y="244" width="90" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="237" width="6" height="20"></rect><rect class="kt" x="314" y="244" width="40" height="6" rx="3"></rect></g>
+          </g>
+          <circle cx="16" cy="270" r="6" style="fill:var(--comf)"></circle><rect class="tb" x="28" y="267" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="293" r="6"></circle><rect class="tb" x="322" y="290" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="316" r="6"></circle><rect class="tb" x="322" y="313" width="50" height="6" rx="3"></rect>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="237" width="6" height="20"></rect><rect class="kt" x="461" y="244" width="90" height="6" rx="3"></rect></g>
+          <circle class="tr" cx="457" cy="270" r="6"></circle><rect class="tb" x="469" y="267" width="100" height="6" rx="3"></rect>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="237" width="6" height="20"></rect><rect class="kt" x="608" y="244" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="594" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="260" width="6" height="20"></rect><rect class="kt" x="608" y="267" width="85" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="413" width="6" height="20"></rect><rect class="kt" x="20" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="413" width="6" height="20"></rect><rect class="kt" x="167" y="420" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="413" width="6" height="20"></rect><rect class="kt" x="314" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-jobs)"><rect class="kc" x="447" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="413" width="6" height="20"></rect><rect class="kt" x="461" y="420" width="80" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="436" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="436" width="6" height="20"></rect><rect class="kt" x="461" y="443" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="413" width="6" height="20"></rect><rect class="kt" x="608" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="589" width="6" height="20"></rect><rect class="kt" x="20" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="589" width="6" height="20"></rect><rect class="kt" x="167" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="589" width="6" height="20"></rect><rect class="kt" x="314" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="589" width="6" height="20"></rect><rect class="kt" x="461" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="589" width="6" height="20"></rect><rect class="kt" x="608" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="260" width="6" height="20"></rect><rect class="kt" x="314" y="267" width="70" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kb" x="594" y="283" width="134" height="20" rx="5"></rect><rect class="kst" x="608" y="290" width="100" height="6" rx="3"></rect></g>
+          <rect class="ka" x="12" y="144" width="280" height="252" rx="18"></rect>
+          <g transform="translate(754.1 153.2)">
+            <rect width="280" height="280" rx="18" style="fill:var(--cardOn);stroke:var(--edgeOn);stroke-width:3"></rect>
+            <rect x="126" y="7" width="28" height="5" rx="2.5" style="fill:var(--sub3)"></rect>
+            <g>
+              <circle cx="22" cy="31" r="6" style="fill:var(--c-personal)"></circle>
+              <text class="svgt" x="38" y="41" style="fill:var(--ink);font-size:28px;font-weight:500">Dinner with Sam</text>
+              <g style="fill:var(--sub3)"><rect x="38" y="56" width="180" height="10" rx="5"></rect><rect x="38" y="82" width="90" height="10" rx="5"></rect><rect x="38" y="122" width="70" height="10" rx="5"></rect><rect x="38" y="150" width="180" height="10" rx="5"></rect><rect x="38" y="178" width="100" height="10" rx="5"></rect><rect x="38" y="206" width="80" height="10" rx="5"></rect></g>
+              <g style="fill:var(--sub2)"><rect x="38" y="100" width="120" height="8" rx="4"></rect><rect x="12" y="80" width="14" height="14" rx="4"></rect><rect x="12" y="120" width="14" height="14" rx="4"></rect><rect x="12" y="148" width="14" height="14" rx="4"></rect><rect x="12" y="176" width="14" height="14" rx="4"></rect><rect x="12" y="204" width="14" height="14" rx="4"></rect></g>
+            </g>
+            <rect x="0" y="235" width="280" height="1.5" style="fill:var(--hair)"></rect>
+            <rect x="12" y="244" width="66" height="26" rx="13" style="fill:var(--sub2)"></rect>
+            <g style="fill:var(--sub3)"><circle cx="186" cy="257" r="6"></circle><circle cx="210" cy="257" r="6"></circle><circle cx="234" cy="257" r="6"></circle><circle cx="258" cy="257" r="6"></circle></g>
+          </g>
+          <path d="M1029 110V655" style="fill:none;stroke:var(--ink3);stroke-width:3"></path>
+          <rect class="kbt" x="736" y="153" width="280" height="280" rx="18"></rect>
+          <g class="svgt" style="fill:var(--ink2);font-size:30px;font-weight:500"><text x="16" y="136">A</text><text x="742" y="145">B</text></g>
+        </svg>
+        <div class="kf-h"><b>220 ms</b><span class="ink3">Content in</span></div>
+        <p>Height at 280 px and new content full. The card is 18 px past B, easing back.</p>
+      </div>
+
+      <!-- 352 ms -->
+      <div class="card kf">
+        <svg width="273" height="143" viewBox="0 110 1040 545" aria-hidden="true">
+          <rect x="0" y="110" width="1040" height="545" style="fill:var(--page)"></rect>
+          <rect x="1029" y="110" width="11" height="545" style="fill:var(--panel)"></rect>
+          <path d="M147 110V655M294 110V655M441 110V655M588 110V655M735 110V655M882 110V655M0 206H1029M0 382H1029M0 558H1029" style="fill:none;stroke:var(--edgeOn);stroke-width:3"></path>
+          <path d="M1029 110V655" style="fill:none;stroke:var(--ink3);stroke-width:3"></path>
+          <g class="svgt" style="fill:var(--ink3);font-size:26px"><text x="12" y="231">5</text><text x="159" y="231">6</text><text x="306" y="231">7</text><text x="453" y="231">8</text><text x="600" y="231">9</text><text x="747" y="231">10</text><text x="894" y="231">11</text><text x="12" y="407">12</text><text x="159" y="407">13</text><text x="306" y="407">14</text><text x="453" y="407">15</text><text x="600" y="407">16</text><text x="747" y="407">17</text><text x="894" y="407">18</text><text x="12" y="583">19</text><text x="159" y="583">20</text><text x="306" y="583">21</text><text x="453" y="583">22</text><text x="600" y="583">23</text><text x="747" y="583">24</text><text x="894" y="583">25</text></g>
+          <g style="opacity:.55">
+            <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="237" width="6" height="20"></rect><rect class="kt" x="20" y="244" width="40" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="237" width="6" height="20"></rect><rect class="kt" x="167" y="244" width="90" height="6" rx="3"></rect></g>
+            <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="237" width="6" height="20"></rect><rect class="kt" x="314" y="244" width="40" height="6" rx="3"></rect></g>
+          </g>
+          <circle cx="16" cy="270" r="6" style="fill:var(--comf)"></circle><rect class="tb" x="28" y="267" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="293" r="6"></circle><rect class="tb" x="322" y="290" width="90" height="6" rx="3"></rect>
+          <circle class="tr" cx="310" cy="316" r="6"></circle><rect class="tb" x="322" y="313" width="50" height="6" rx="3"></rect>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="237" width="6" height="20"></rect><rect class="kt" x="461" y="244" width="90" height="6" rx="3"></rect></g>
+          <circle class="tr" cx="457" cy="270" r="6"></circle><rect class="tb" x="469" y="267" width="100" height="6" rx="3"></rect>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="237" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="237" width="6" height="20"></rect><rect class="kt" x="608" y="244" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="594" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="260" width="6" height="20"></rect><rect class="kt" x="608" y="267" width="85" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="413" width="6" height="20"></rect><rect class="kt" x="20" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="413" width="6" height="20"></rect><rect class="kt" x="167" y="420" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="413" width="6" height="20"></rect><rect class="kt" x="314" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-jobs)"><rect class="kc" x="447" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="413" width="6" height="20"></rect><rect class="kt" x="461" y="420" width="80" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="436" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="436" width="6" height="20"></rect><rect class="kt" x="461" y="443" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="413" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="413" width="6" height="20"></rect><rect class="kt" x="608" y="420" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="6" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="6" y="589" width="6" height="20"></rect><rect class="kt" x="20" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="153" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="153" y="589" width="6" height="20"></rect><rect class="kt" x="167" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="589" width="6" height="20"></rect><rect class="kt" x="314" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-classes)"><rect class="kc" x="447" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="447" y="589" width="6" height="20"></rect><rect class="kt" x="461" y="596" width="90" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="594" y="589" width="134" height="20" rx="5"></rect><rect class="kb" x="594" y="589" width="6" height="20"></rect><rect class="kt" x="608" y="596" width="40" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kc" x="300" y="260" width="134" height="20" rx="5"></rect><rect class="kb" x="300" y="260" width="6" height="20"></rect><rect class="kt" x="314" y="267" width="70" height="6" rx="3"></rect></g>
+          <g style="--c:var(--c-personal)"><rect class="kb" x="594" y="283" width="134" height="20" rx="5"></rect><rect class="kst" x="608" y="290" width="100" height="6" rx="3"></rect></g>
+          <rect class="ka" x="12" y="144" width="280" height="252" rx="18"></rect>
+          <g transform="translate(736 153)">
+            <rect width="280" height="280" rx="18" style="fill:var(--cardOn);stroke:var(--edgeOn);stroke-width:3"></rect>
+            <rect x="126" y="7" width="28" height="5" rx="2.5" style="fill:var(--sub3)"></rect>
+            <g>
+              <circle cx="22" cy="31" r="6" style="fill:var(--c-personal)"></circle>
+              <text class="svgt" x="38" y="41" style="fill:var(--ink);font-size:28px;font-weight:500">Dinner with Sam</text>
+              <g style="fill:var(--sub3)"><rect x="38" y="56" width="180" height="10" rx="5"></rect><rect x="38" y="82" width="90" height="10" rx="5"></rect><rect x="38" y="122" width="70" height="10" rx="5"></rect><rect x="38" y="150" width="180" height="10" rx="5"></rect><rect x="38" y="178" width="100" height="10" rx="5"></rect><rect x="38" y="206" width="80" height="10" rx="5"></rect></g>
+              <g style="fill:var(--sub2)"><rect x="38" y="100" width="120" height="8" rx="4"></rect><rect x="12" y="80" width="14" height="14" rx="4"></rect><rect x="12" y="120" width="14" height="14" rx="4"></rect><rect x="12" y="148" width="14" height="14" rx="4"></rect><rect x="12" y="176" width="14" height="14" rx="4"></rect><rect x="12" y="204" width="14" height="14" rx="4"></rect></g>
+            </g>
+            <rect x="0" y="235" width="280" height="1.5" style="fill:var(--hair)"></rect>
+            <rect x="12" y="244" width="66" height="26" rx="13" style="fill:var(--sub2)"></rect>
+            <g style="fill:var(--sub3)"><circle cx="186" cy="257" r="6"></circle><circle cx="210" cy="257" r="6"></circle><circle cx="234" cy="257" r="6"></circle><circle cx="258" cy="257" r="6"></circle></g>
+          </g>
+          <g class="svgt" style="fill:var(--ink2);font-size:30px;font-weight:500"><text x="16" y="136">A</text></g>
+        </svg>
+        <div class="kf-h"><b>352 ms</b><span class="ink3">Rest</span></div>
+        <p>At B, right of Fri 9 over the empty weekend: it covers no items (left 8, below 5).</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display:flex;gap:24px;flex:none">
+    <div class="card" style="flex:1 1 auto;min-width:0;padding:20px 24px">
+      <div class="gl">Timeline · parallel tracks</div>
+      <div style="display:flex;margin-top:14px">
+        <div style="width:180px;flex:none;padding-top:24px">
+          <div class="trk-l" style="color:var(--ink)">Position</div>
+          <div class="trk-l">Height</div>
+          <div class="trk-l">Old content</div>
+          <div class="trk-l">New content</div>
+          <div class="trk-l">Selection</div>
+        </div>
+        <div style="position:relative;width:800px;height:200px;flex:none">
+          <div class="guide" style="left:0"></div><span class="guide-l" style="left:0">0</span>
+          <div class="guide" style="left:120px"></div><span class="guide-l" style="left:120px">60</span>
+          <div class="guide" style="left:370px"></div><span class="guide-l" style="left:370px">185</span>
+          <div class="guide" style="left:440px"></div><span class="guide-l" style="left:440px">220</span>
+          <div class="guide" style="left:704px"></div><span class="guide-l" style="left:704px">352</span>
+
+          <div class="bar-g hatch" style="left:560px;top:29px;width:200px;box-shadow:inset 0 0 0 1px var(--edge)"></div>
+          <span class="ink3 num" style="position:absolute;left:768px;top:29px;height:20px;display:flex;align-items:center;font-size:12px">≤ 380</span>
+          <div class="bar-g num" style="left:0;top:29px;width:704px;background:var(--ink);color:var(--onInk);font-weight:500">352 ms · cubic-bezier(.22, 1.3, .36, 1) · position only (translate x, y)</div>
+
+          <div class="bar-g num" style="left:0;top:59px;width:440px;background:var(--sub3)">220 ms · cubic-bezier(.2, 0, 0, 1)</div>
+
+          <div class="bar-g num" style="left:0;top:89px;width:180px;background:linear-gradient(90deg, var(--sub3), var(--sub))">Fade out · 90 ms</div>
+
+          <div class="bar-g num" style="left:180px;top:119px;width:260px;background:linear-gradient(90deg, var(--sub), var(--sub3))">Fade in · 6 px slide · 130 ms</div>
+
+          <span class="sw" style="left:-9px;top:154px;--c:var(--c-personal);background:color-mix(in oklch, var(--c) var(--evtint), transparent);box-shadow:inset 3px 0 0 var(--c)"></span>
+          <span class="sw" style="left:111px;top:154px;--c:var(--c-personal);background:var(--c)"></span>
+          <span class="ink2 num" style="position:absolute;left:138px;top:149px;height:20px;display:flex;align-items:center;font-size:12px">Tinted → solid fill swap at 60 ms · the old item back to tinted at 0</span>
+
+          <div style="position:absolute;left:0;right:0;top:178px;border-top:1px solid var(--hair)"></div>
+          <span class="ink3 num" style="position:absolute;left:0;top:184px;font-size:11.5px">0</span>
+          <span class="ink3 num" style="position:absolute;left:200px;top:184px;font-size:11.5px;transform:translateX(-50%)">100</span>
+          <span class="ink3 num" style="position:absolute;left:400px;top:184px;font-size:11.5px;transform:translateX(-50%)">200</span>
+          <span class="ink3 num" style="position:absolute;left:600px;top:184px;font-size:11.5px;transform:translateX(-50%)">300</span>
+          <span class="ink3 num" style="position:absolute;left:800px;top:184px;font-size:11.5px;transform:translateX(-100%)">400 ms</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)">
+        <span style="font-weight:500">Duration</span>
+        <span class="ink2 num grow">280 ms + 40 ms per 400 px of travel, capped at 380 ms</span>
+        <span class="tag num">454 px → 325 ms</span>
+        <span class="tag num">600 px → 340 ms</span>
+        <span class="tag num">724 px → 352 ms</span>
+        <span class="tag num">1,000 px → 380 ms</span>
+      </div>
+    </div>
+
+    <div class="card" style="width:460px;flex:none;padding:20px 24px">
+      <div class="gl">Curves</div>
+      <svg width="412" height="196" viewBox="0 0 420 200" aria-hidden="true" style="display:block;margin-top:12px">
+        <path d="M44 170H404M44 170V24" style="fill:none;stroke:var(--ink3);stroke-width:1"></path>
+        <path d="M44 40H404" style="fill:none;stroke:var(--ink3);stroke-width:1;stroke-dasharray:3 4;opacity:.7"></path>
+        <path d="M44 170 C116 170 44 40 404 40" style="fill:none;stroke:var(--ink3);stroke-width:1.5;stroke-dasharray:5 4"></path>
+        <path d="M44 170 C123.2 1 173.6 40 404 40" style="fill:none;stroke:var(--ink);stroke-width:2"></path>
+        <g style="fill:var(--ink)"><circle cx="105.3" cy="74.4" r="3.5"></circle><circle cx="233" cy="36.1" r="3.5"></circle><circle cx="268.7" cy="36.7" r="3.5"></circle></g>
+        <g class="svgt" style="fill:var(--ink3);font-size:11px">
+          <text x="113" y="79">60</text>
+          <text x="233" y="26" text-anchor="middle">185 · +3%</text>
+          <text x="278" y="30">220</text>
+          <text x="36" y="174" text-anchor="end">0</text>
+          <text x="36" y="44" text-anchor="end">1</text>
+          <text x="44" y="188" text-anchor="middle">0</text>
+          <text x="224" y="188" text-anchor="middle">176</text>
+          <text x="404" y="188" text-anchor="end">352 ms</text>
+        </g>
+      </svg>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:12.5px">
+        <div style="display:flex;align-items:center;gap:10px"><svg width="22" height="4" aria-hidden="true"><path d="M0 2H22" style="stroke:var(--ink);stroke-width:2"></path></svg><span class="num">Position only · cubic-bezier(.22, 1.3, .36, 1)</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><svg width="22" height="4" aria-hidden="true"><path d="M0 2H22" style="stroke:var(--ink3);stroke-width:1.5;stroke-dasharray:5 4"></path></svg><span class="ink2 num">Height and content · cubic-bezier(.2, 0, 0, 1)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;flex:1 1 auto;min-height:0">
+    <div class="card rule">
+      <div class="rule-h"><span class="ms">trending_flat</span>Path</div>
+      <div style="display:flex;gap:6px"><span class="tag">FLIP translate</span><span class="tag">Fewest items covered</span></div>
+      <p>A straight line from A to B. B is the side covering the fewest other items (right, left, above, below; right first), inside the month, 8 px off the chip. The bounce may pass the edge briefly (9 px here).</p>
+    </div>
+    <div class="card rule">
+      <div class="rule-h"><span class="ms">alt_route</span>Interruption</div>
+      <div style="display:flex;gap:6px"><span class="tag">Retarget</span><span class="tag">Velocity kept</span></div>
+      <p>A click on a third item mid-glide retargets from the card's current position and velocity. No restart, no close; content swaps from what's showing.</p>
+    </div>
+    <div class="card rule">
+      <div class="rule-h"><span class="ms">open_in_full</span>Open and close</div>
+      <div style="display:flex;gap:6px"><span class="tag num">Open 180 ms</span><span class="tag num">Close 120 ms</span></div>
+      <p>Open, with no card yet: scale .96 → 1 and fade in from the anchor. Close on Esc or a click on empty grid: fade and scale to .98 toward the anchor.</p>
+    </div>
+    <div class="card rule">
+      <div class="rule-h"><span class="ms">drag_pan</span>Drag</div>
+      <div style="display:flex;gap:6px"><span class="tag">Lift</span><span class="tag">1:1</span><span class="tag">Detached</span></div>
+      <p>From the grip the card lifts (shadow deepens), follows the pointer 1:1 and stays where it's dropped. The next item click glides it from there to its new anchor (12d).</p>
+    </div>
+    <div class="card rule">
+      <div class="rule-h"><span class="ms">edit</span>Edit</div>
+      <div style="display:flex;gap:6px"><span class="tag num">220 ms</span><span class="tag num">Editor 12 px</span></div>
+      <p>E or Edit hands the item to the right pane: the card shrinks and fades toward the pane while the editor slides in 12 px.</p>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1677,"height":1050}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

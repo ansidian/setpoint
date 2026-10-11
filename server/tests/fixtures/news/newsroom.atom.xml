@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An invented company newsroom's Atom feed, shaped like the labs' and blogs' (Hugging Face's,
+     DeepMind's): HTML summaries, an author's name, relative links resolved against the feed, and an
+     image as an enclosure link. {{BASE}} is the newsroom. -->
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <title type="text">Northwind Labs Blog</title>
+  <id>{{BASE}}/blog</id>
+  <link rel="self" href="{{BASE}}/blog/feed.xml" />
+  <updated>2026-10-07T15:00:00Z</updated>
+  <entry>
+    <title type="html">Northwind releases &lt;em&gt;Breeze 3&lt;/em&gt;, an open model for speech</title>
+    <link rel="alternate" type="text/html" href="/blog/breeze-3" />
+    <link rel="enclosure" type="image/png" href="{{BASE}}/blog/assets/breeze-3/cover.png" />
+    <id>tag:northwind.example,2026:breeze-3</id>
+    <published>2026-10-07T13:00:00Z</published>
+    <updated>2026-10-07T14:00:00Z</updated>
+    <author><name>Priya Raman</name></author>
+    <summary type="html">&lt;p&gt;Breeze 3 transcribes and translates 40 languages &amp;amp; runs on a laptop.&lt;/p&gt;</summary>
+  </entry>
+  <entry>
+    <title>Inside our new evaluation suite</title>
+    <link href="{{BASE}}/blog/evaluation-suite?ref=feed" />
+    <id>tag:northwind.example,2026:evaluation-suite</id>
+    <updated>2026-10-06T20:00:00Z</updated>
+    <content type="html">&lt;figure&gt;&lt;img alt="Chart" src="{{BASE}}/blog/assets/evals/chart.webp" /&gt;&lt;/figure&gt;&lt;p&gt;How we measure what our models can do.&lt;/p&gt;</content>
+    <media:thumbnail url="{{BASE}}/blog/assets/evals/thumb.jpg" width="320" height="180" />
+  </entry>
+</feed>

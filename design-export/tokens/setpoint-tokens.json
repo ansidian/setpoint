@@ -1,0 +1,152 @@
+{
+  "$source": "styles/setpoint.css (.sp = Night, .sp.light = Light)",
+  "themes": {
+    "night": {
+      "surface": {
+        "page": "#050506",
+        "panel": "#08090a",
+        "card": "#0c0d0f",
+        "cardOn": "#131417",
+        "chip": "#0f1013",
+        "modal": "#0c0d0f",
+        "scrim": "rgba(0,0,0,.72)"
+      },
+      "ink": {
+        "ink": "#ecebe7",
+        "ink2": "#a3a4a8",
+        "ink3": "#707277",
+        "onInk": "#050506",
+        "onAccent": "#050506",
+        "onAlert": "#1a0806"
+      },
+      "line": {
+        "edge": "rgba(255,255,255,.055)",
+        "edgeOn": "rgba(255,255,255,.12)",
+        "edgeHover": "rgba(255,255,255,.14)",
+        "hair": "rgba(255,255,255,.07)",
+        "stripe": "rgba(255,255,255,.045)"
+      },
+      "fill": {
+        "sub": "rgba(255,255,255,.055)",
+        "sub2": "rgba(255,255,255,.09)",
+        "sub3": "rgba(255,255,255,.13)"
+      },
+      "accent": {
+        "caution": "oklch(0.75 0.16 40)",
+        "alert": "oklch(0.72 0.17 25)",
+        "warm": "oklch(0.8 0.11 55)",
+        "cool": "oklch(0.8 0.11 235)",
+        "comf": "oklch(0.8 0.11 165)",
+        "good": "oklch(0.8 0.13 150)",
+        "sun": "oklch(0.86 0.16 92)",
+        "violet": "oklch(0.8 0.11 300)",
+        "cyan": "oklch(0.8 0.11 195)"
+      },
+      "shadow": {
+        "shadow-pop": "0 18px 50px rgba(0,0,0,.4)",
+        "shadow-modal": "0 30px 80px rgba(0,0,0,.35)",
+        "shadow-pill": "0 10px 30px rgba(0,0,0,.3)"
+      },
+      "calendar": {
+        "evtint": "16%",
+        "c-personal": "var(--cool)",
+        "c-classes": "var(--cyan)",
+        "c-jobs": "var(--violet)"
+      },
+      "account": {
+        "a-business": "var(--warm)",
+        "a-personal": "var(--cool)",
+        "a-work": "var(--comf)",
+        "a-jobs": "var(--violet)",
+        "a-icloud": "var(--ink2)"
+      },
+      "motion": {
+        "ease": "cubic-bezier(.2,0,0,1)"
+      }
+    },
+    "light": {
+      "surface": {
+        "page": "#f8f8f6",
+        "panel": "#f1f1ee",
+        "card": "#ffffff",
+        "cardOn": "#f4f4f2",
+        "chip": "#ffffff",
+        "modal": "#ffffff",
+        "scrim": "rgba(20,26,32,.35)"
+      },
+      "ink": {
+        "ink": "#1d1e21",
+        "ink2": "#56585d",
+        "ink3": "#6d6f74",
+        "onInk": "#ffffff",
+        "onAccent": "#ffffff",
+        "onAlert": "#ffffff"
+      },
+      "line": {
+        "edge": "rgba(29,30,33,.1)",
+        "edgeOn": "rgba(29,30,33,.17)",
+        "edgeHover": "rgba(29,30,33,.22)",
+        "hair": "rgba(29,30,33,.08)",
+        "stripe": "rgba(29,30,33,.05)"
+      },
+      "fill": {
+        "sub": "rgba(29,30,33,.04)",
+        "sub2": "rgba(29,30,33,.07)",
+        "sub3": "rgba(29,30,33,.11)"
+      },
+      "accent": {
+        "caution": "oklch(0.535 0.16 40)",
+        "alert": "oklch(0.535 0.185 25)",
+        "warm": "oklch(0.54 0.12 55)",
+        "cool": "oklch(0.54 0.12 235)",
+        "comf": "oklch(0.54 0.1 165)",
+        "good": "oklch(0.53 0.13 150)",
+        "sun": "oklch(0.63 0.125 92)",
+        "violet": "oklch(0.54 0.14 300)",
+        "cyan": "oklch(0.54 0.09 195)"
+      },
+      "shadow": {
+        "shadow-pop": "0 18px 50px rgba(15,20,28,.14)",
+        "shadow-modal": "0 30px 80px rgba(15,20,28,.18)",
+        "shadow-pill": "0 10px 30px rgba(15,20,28,.14)"
+      },
+      "calendar": {
+        "evtint": "12%",
+        "c-personal": "var(--cool)",
+        "c-classes": "var(--cyan)",
+        "c-jobs": "var(--violet)"
+      },
+      "account": {
+        "a-business": "var(--warm)",
+        "a-personal": "var(--cool)",
+        "a-work": "var(--comf)",
+        "a-jobs": "var(--violet)",
+        "a-icloud": "var(--ink2)"
+      },
+      "motion": {
+        "ease": "cubic-bezier(.2,0,0,1)"
+      }
+    }
+  },
+  "type": {
+    "family": {
+      "sans": "\"Geist\", system-ui, sans-serif",
+      "mono": "\"Geist Mono\", ui-monospace, monospace"
+    },
+    "features": "font-feature-settings: \"ss01\"; tabular-nums on times and counts (.num)",
+    "base": "13px / 1.35",
+    "icons": "Material Symbols Rounded · FILL 0 · wght 300 · GRAD 0 · opsz 24 (FILL 1 for .ms.f)"
+  },
+  "layout": {
+    "target": "1677 × 1050 (holds at 1728 × 1117)",
+    "sidebar": "248px",
+    "header": "56px",
+    "readingPane": "680px",
+    "calendarRightPane": "400px",
+    "monthColumn": "147px",
+    "monthRow": "176px",
+    "floatingDetail": "280px wide, 8px off its item",
+    "settingsModal": "1040 × 720, nav 220px",
+    "radii": "999 / 26 / 18 / 14 / 12 / 10"
+  }
+}

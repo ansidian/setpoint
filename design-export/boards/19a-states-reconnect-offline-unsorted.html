@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1677">
+<title>19a Inbox states · Setpoint v2</title>
+<!-- Board 19a: 19a States · reconnect, offline, Unsorted · 1677 × 1050 · source: source/project/States-inbox.dc.html -->
+<link rel="stylesheet" href="../styles/setpoint.css">
+<link rel="stylesheet" href="../styles/fonts.css">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp .content.offline { opacity: .4; filter: grayscale(.6); pointer-events: none; }
+.sp .gh .note { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); display: inline-flex; align-items: center; gap: 6px; }
+.sp .gh .note.caution { color: var(--caution); }
+.sp .bar .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+<div class="sp app" style="width: 1677px; height: 1050px">
+
+<aside class="sb">
+  <div class="sb-top">
+    <span class="mark"><svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-dasharray="31 10" stroke-linecap="round" transform="rotate(-38 11 11)"></circle><circle cx="15.6" cy="6.4" r="2" fill="currentColor"></circle></svg></span>
+    <span class="sb-name">Setpoint</span>
+  </div>
+  <a class="nav on" href="#"><span class="ms">inbox</span><span class="grow">Inbox</span><span class="apill num">3</span><span class="cnt num">21</span></a>
+  <a class="acct" href="#" style="--c: var(--a-business)" aria-label="Business needs sign-in"><span class="dot sm"></span>Business<span class="ms s16" style="margin-left: auto; color: var(--caution); font-size: 15px">warning</span><span class="cnt num" style="margin-left: 0">7</span></a>
+  <a class="acct" href="#" style="--c: var(--a-personal)"><span class="dot sm"></span>Personal<span class="cnt num">9</span></a>
+  <a class="acct" href="#" style="--c: var(--a-work)"><span class="dot sm"></span>Work<span class="cnt num">1</span></a>
+  <a class="acct" href="#" style="--c: var(--a-jobs)"><span class="dot sm"></span>Jobs<span class="cnt num">3</span></a>
+  <a class="acct" href="#" style="--c: var(--a-icloud)"><span class="dot sm"></span>iCloud<span class="cnt num">1</span></a>
+  <a class="nav" href="#" style="margin-top: 2px"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>
+
+  <div class="sb-sec">
+    <div class="sb-label">Today</div>
+    <a class="today-row" href="#"><span class="t num">2:30 PM</span><span class="ell" style="color: var(--ink)">Dentist</span><span class="in num">in 5h</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>2 due today</span></a>
+    <a class="today-row" href="#"><span class="ring" style="margin: 0 3px 0 1px"></span><span>1 due tomorrow</span></a>
+  </div>
+
+  <div class="sb-foot">
+    <a class="nav" href="#"><span class="ms">settings</span><span class="grow">Settings</span><span class="kbd">⌘,</span></a>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="hd">
+    <span class="hd-title">Inbox</span>
+    <span class="seg"><span class="on">Unread</span><span>All</span></span>
+    <span class="grow"></span>
+    <label class="search"><span class="ms s16">search</span><input class="grow" placeholder="Search mail" aria-label="Search mail" style="color: var(--ink)"><span class="kbd">/</span></label>
+  </header>
+
+  <div class="offline-pill" role="status">
+    <span class="ms s16">cloud_off</span>
+    <span>Offline · as of 9:11 AM · retrying</span>
+    <button class="retry">Retry now</button>
+  </div>
+
+  <div class="content offline" aria-disabled="true">
+    <section class="list" aria-label="Inbox">
+      <div class="bar caution">
+        <span class="ms f s16">warning</span>
+        <span>Business needs sign-in</span>
+        <span>·</span>
+        <button class="act" style="margin-left: -10px">Reconnect</button>
+      </div>
+      <div class="bar muted">
+        <span class="ms s16">schedule</span>
+        <span>iCloud · as of 8:40 AM</span>
+      </div>
+
+      <div class="gh"><span class="ms s16" style="color: var(--ink3)">keep</span>Pinned <span class="n">1</span></div>
+      <div class="row">
+        <span class="ud"></span>
+        <span class="from">Parkside Apartments</span>
+        <span class="subj"><b>Lease renewal terms</b> <span class="sum">· Renewal offer for the lease ending Nov 30 · sign by Oct 31</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">Sep 30</span>
+      </div>
+
+      <div class="gh att">Attention <span class="n">3</span></div>
+      <div class="arow unread protected">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Google</span><span class="tag alert"><span class="ms">shield</span>Protected</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-personal)"></span><span>Personal</span><span class="num" style="width: 44px; text-align: right">20m</span></div>
+        <div class="l2">Your recovery email was changed</div>
+        <div class="l3">If you didn't make this change, secure your account now</div>
+      </div>
+      <div class="arow unread">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Northwind Talent</span><span class="ink3" style="font-size: 12px">via Greenhouse</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-jobs)"></span><span>Jobs</span><span class="num" style="width: 44px; text-align: right">2h</span></div>
+        <div class="l2">Interview availability for Software Engineer I</div>
+        <div class="l3">Pick a 30-minute slot this week</div>
+      </div>
+      <div class="arow">
+        <span class="ud"></span>
+        <div class="l1"><span class="from">Contoso University</span></div>
+        <div class="r1"><span class="dot sm" style="--c: var(--a-personal)"></span><span>Personal</span><span class="num" style="width: 44px; text-align: right">Mon</span></div>
+        <div class="l2">Final exam schedule · CS 101</div>
+        <div class="l3">Fall 2026 finals, rooms and times</div>
+      </div>
+
+      <div class="gh">Unsorted <span class="n">2</span><span class="note caution"><span class="ms s16">error</span>Triage is down · as of 9:09 AM</span></div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Fabrikam</span>
+        <span class="subj"><b>Online assessment · Data Analyst</b> <span class="sum">· via Workday</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-jobs)"></span>Jobs</span>
+        <span class="age">1m</span>
+      </div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Tailspin Toys</span>
+        <span class="subj"><b>Order confirmation</b></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">2m</span>
+      </div>
+
+      <div class="gh">Security <span class="n">3</span></div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Google</span>
+        <span class="subj"><b>New sign-in</b> <span class="sum">· MacBook Pro · Los Angeles</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-business)"></span>Business</span>
+        <span class="age">1h</span>
+      </div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Google</span>
+        <span class="subj"><b>Access granted</b> <span class="sum">· Claude</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-work)"></span>Work</span>
+        <span class="age">3h</span>
+      </div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Contoso Insurance</span>
+        <span class="subj" style="display: flex; align-items: center; gap: 10px"><span class="code">482 913</span><button class="btn ghost sm" style="height: 22px; padding: 0 8px; font-size: 12px"><span class="ms s16" style="font-size: 14px">content_copy</span>Copy</button><span class="sum" style="font-size: 12px">Expires in 11 min</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-personal)"></span>Personal</span>
+        <span class="age">4m</span>
+      </div>
+
+      <div class="gh collapsed">Deliveries <span class="n">4</span><span style="text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px">Wingtip Toys · Consolidated Messenger · Southridge Video</span><span class="ms chev">chevron_right</span></div>
+      <div class="gh collapsed">Money <span class="n">3</span><span style="text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px">Woodgrove Bank · Woodgrove Pay · Proseware</span><span class="ms chev">chevron_right</span></div>
+      <div class="gh">Career <span class="n">1</span></div>
+      <div class="row unread">
+        <span class="ud"></span>
+        <span class="from">Fabrikam</span>
+        <span class="subj"><b>Application received · Data Analyst</b> <span class="sum">· via Workday</span></span>
+        <span class="ac"><span class="dot sm" style="--c: var(--a-jobs)"></span>Jobs</span>
+        <span class="age">7h</span>
+      </div>
+      <div class="gh collapsed">Noise <span class="n">6</span><span class="ms chev">chevron_right</span></div>
+
+      <div class="listfoot"><button class="lnk" disabled>Mark all as read <span class="kbd">⇧I</span></button></div>
+    </section>
+  </div>
+</main>
+</div>
+</body>
+</html>
