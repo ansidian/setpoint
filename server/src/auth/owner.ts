@@ -117,12 +117,13 @@ export async function claimOwner(store: Store, setupToken: string, password: str
 /**
  * Reserves one password attempt before bcrypt runs, successes included, so concurrent guesses from
  * anywhere share one budget and none can erase another's. A refused attempt doesn't extend the
- * window. Throws 429 with how long to wait.
+ * window. Throws 429 with how long to wait. The window runs on real time: a development clock starts
+ * again from the seed's moment at every restart, and a window measured on it would never end.
  */
 export function reservePasswordAttempt(store: Store) {
   transaction(store, () => {
     const owner = requireOwner(store);
-    const now = store.now();
+    const now = store.realNow?.() ?? store.now();
     const windowOver = !owner.passwordWindowEndsAt || Date.parse(owner.passwordWindowEndsAt) <= now.getTime();
     if (windowOver) {
       store.db.update(t.owner).set({passwordAttempts: 1, passwordWindowEndsAt: new Date(now.getTime() + PASSWORD_WINDOW_MS).toISOString()}).run();

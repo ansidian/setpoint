@@ -1,6 +1,7 @@
 // Sign-in (harvested from v1's server/auth; SV-2): the first claim by setup token, the password and
 // its shared budget, sessions stored as hashes, recovery codes, security transitions, strict mode
 // and passkeys' challenges.
+import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {
@@ -10,6 +11,7 @@ import {
 import {passkeySignInOptions, relyingParty, startPendingSignIn} from '../src/auth/passkeys.ts';
 import {createSession, findSession, hashSecret, SESSION_DAYS} from '../src/auth/sessions.ts';
 import * as t from '../src/db/schema.ts';
+import {storeClock} from '../src/store.ts';
 import {claim, client, ORIGIN, PASSWORD, signedIn, world} from './helpers.ts';
 
 const DAY = 24 * 60 * 60_000;
@@ -59,6 +61,37 @@ describe('the password budget', () => {
     expect(() => reservePasswordAttempt(w.store)).toThrow(expect.objectContaining({details: {retry_after_seconds: 1}}));
     w.advance(1000);
     expect(() => reservePasswordAttempt(w.store)).not.toThrow();
+  });
+
+  // A development run's clock starts again from the seed's moment at every restart (SETPOINT_CLOCK=seed),
+  // or holds there (frozen), so a window measured on it would never end; the budget runs on real time.
+  test('on a development clock it refills on real time, though the clock starts again at each restart', async () => {
+    const w = world();
+    await claim(w);
+    let real = Date.parse('2026-10-11T20:00:00.000Z');
+    const store = {...w.store, ...storeClock('frozen'), realNow: () => new Date(real)};
+    for (let attempt = 0; attempt < PASSWORD_MAX_ATTEMPTS; attempt += 1) reservePasswordAttempt(store);
+    expect(() => reservePasswordAttempt(store)).toThrow(expect.objectContaining({status: 429, details: {retry_after_seconds: 900}}));
+    // Restarted: the clock reads the seed's moment again, and real time has gone on.
+    real += PASSWORD_WINDOW_MS;
+    expect(store.now().toISOString()).toBe(SEED_NOW);
+    expect(() => reservePasswordAttempt(store)).not.toThrow();
+  });
+
+  test.each([
+    ['real: real time alone, as in production', 'real', false],
+    ['seed: from the seed\'s moment, with real time beside it', 'seed', true],
+    ['frozen: held at the seed\'s moment, with real time beside it', 'frozen', true],
+  ] as const)('the clocks for SETPOINT_CLOCK=%s', (_, clock, development) => {
+    const started = Date.now() - 60_000;
+    const {now, realNow} = storeClock(clock, started);
+    expect(realNow !== undefined).toBe(development);
+    // From the seed's moment, a minute after starting a minute ago.
+    const fromSeed = now().getTime() - Date.parse(SEED_NOW);
+    if (clock === 'real') expect(Math.abs(now().getTime() - Date.now())).toBeLessThan(1000);
+    if (clock === 'frozen') expect(fromSeed).toBe(0);
+    if (clock === 'seed') expect(fromSeed >= 60_000 && fromSeed < 61_000).toBe(true);
+    if (realNow) expect(Math.abs(realNow().getTime() - Date.now())).toBeLessThan(1000);
   });
 
   test('without an owner, every attempt is refused', () => {

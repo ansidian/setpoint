@@ -5,7 +5,6 @@
 //   npm start        SETPOINT_DATA_DIR, SETPOINT_KEY_FILE, SETPOINT_PUBLIC_URL… (OPERATIONS.md)
 import fs from 'node:fs';
 import {serve} from '@hono/node-server';
-import {SEED_NOW} from '@setpoint/shared';
 import {createApp} from './api/app.ts';
 import {ensureCalendarSources} from './calendar/sources.ts';
 import {loadConfig} from './config.ts';
@@ -27,6 +26,7 @@ import {todoistAdapter} from './providers/todoist/index.ts';
 import {weatherAdapter} from './providers/weather/index.ts';
 import {ReminderScheduler} from './reminders/scheduler.ts';
 import {loadKeyring} from './secrets/crypto.ts';
+import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
@@ -36,10 +36,8 @@ import {TriageWorker} from './triage/worker.ts';
 const config = loadConfig();
 const {sqlite, db} = openDatabase(config.databasePath);
 const {keyring, from: keyFrom} = loadKeyring(process.env, config.dataDir);
-const started = Date.now();
-const now = config.clock === 'frozen' ? () => new Date(SEED_NOW) : config.clock === 'seed' ? () => new Date(Date.parse(SEED_NOW) + Date.now() - started) : () => new Date();
 const live = new LiveFeed();
-const store: Store = {sqlite, db, timeZone: config.timeZone, now, live, keyring};
+const store: Store = {sqlite, db, timeZone: config.timeZone, ...storeClock(config.clock), live, keyring};
 const notifier = new Notifier(store, {publicUrl: config.publicUrl});
 // Real sources go to their providers' adapters; the dev provider serves only the seed's dev
 // sources, and never in production, so the seed never reaches a provider. Gmail and Calendar share
