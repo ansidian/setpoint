@@ -81,7 +81,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `good` | `oklch(0.8 0.13 150)` | `oklch(0.53 0.13 150)` | the done glyph |
 | `sun` | `oklch(0.86 0.16 92)` | `oklch(0.63 0.125 92)` | sun, search highlight (26% mix) |
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
-| `cyan` | `oklch(0.8 0.11 195)` | `oklch(0.54 0.09 195)` | Classes |
+| `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
@@ -874,7 +874,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 29. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
     `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
-    (`#f4f4f2`), and Light `--evtint` 14% (12%). The boards keep the export's values.
+    (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
+    (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The boards keep
+    the export's values.
 
 ## Not designed yet
 
@@ -1709,3 +1711,8 @@ it changes what's on screen.
     colour means "still ahead" and a past Gym reads 3.8–4.3:1 rather than 2:1. A day that's over keeps
     its number in `ink3` ("Oct 1" keeps its weight and ink) (Andy, 2026-10-11, polish audit
     grids-01).
+125. **Classes' cyan moves away from Personal's cool:** `cyan` is Night `oklch(0.86 0.11 182)` and
+    Light `oklch(0.58 0.1 182)`, lighter and greener, so the two calendars that fill the month are
+    told apart: 1.26:1 against `cool` in Night and 1.21:1 in Light, up from 1.03 and 1.02, and 53° of
+    hue. Setpoint writes `#74e9d6` to Google for it and still reads `#57d4d4` back as cyan, and
+    Google's Peacock still lands on it by hue (Andy, 2026-10-11, polish audit color-05).

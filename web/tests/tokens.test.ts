@@ -39,6 +39,8 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
   {theme: 'night', variable: '--panel', exported: '#08090a', ours: '#0b0c0e', why: 'Override 29: Night panel reads as a layer'},
   {theme: 'light', variable: '--cardOn', exported: '#f4f4f2', ours: '#ffffff', why: 'Override 29: Light cardOn floats, white'},
   {theme: 'light', variable: '--evtint', exported: '12%', ours: '14%', why: 'Override 29: Light chips\' tint shows on the grid'},
+  {theme: 'night', variable: '--cyan', exported: 'oklch(0.8 0.11 195)', ours: 'oklch(0.86 0.11 182)', why: 'Override 29: Classes\' cyan moves away from Personal\'s cool'},
+  {theme: 'light', variable: '--cyan', exported: 'oklch(0.54 0.09 195)', ours: 'oklch(0.58 0.1 182)', why: 'Override 29: Classes\' cyan moves away from Personal\'s cool'},
 ];
 /** Override 4: the done glyph is `good`; the export's `.ring.done` fills with `--comf`. */
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};

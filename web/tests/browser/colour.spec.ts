@@ -156,6 +156,9 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await style(chip('Gym'), 'color'), ink3, 'a past item is ink3');
       assert.equal(await style(chip('Gym'), 'opacity'), '1', 'at full strength');
       assert.equal(await style(chip('Dentist'), 'color'), ahead);
+      // Classes' cyan sits at 182°, lighter than Personal's cool (#125).
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .ev', {hasText: 'CS 101 lecture'}), 'color'),
+        await colourOf(page, theme === 'light' ? 'oklch(0.43 0.1 182)' : 'oklch(0.86 0.11 182)'));
       assert.equal(await style(page.locator('.cell[data-date="2026-10-06"] .dn'), 'color'), ink3, 'a day that\'s over');
       assert.equal(await style(page.locator('.cell[data-date="2026-10-01"] .dn'), 'color'), await colourOf(page, 'var(--ink)'), 'Oct 1 keeps its ink');
       assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .dn'), 'color'), await colourOf(page, 'var(--ink2)'), 'a day ahead keeps ink2');

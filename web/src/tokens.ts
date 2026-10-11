@@ -7,7 +7,7 @@ import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
 
-/** Night. Keys are DESIGN.md's token names; `panel` and `ink3` are the polish audit's (override 29). */
+/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` are the polish audit's (override 29). */
 export const colour = {
   page: '#050506',
   panel: '#0b0c0e',
@@ -40,7 +40,7 @@ export const colour = {
   good: 'oklch(0.8 0.13 150)',
   sun: 'oklch(0.86 0.16 92)',
   violet: 'oklch(0.8 0.11 300)',
-  cyan: 'oklch(0.8 0.11 195)',
+  cyan: 'oklch(0.86 0.11 182)',
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
@@ -50,7 +50,7 @@ export type ColourToken = keyof typeof colour;
 
 /**
  * Light: darma's Light tokens (decision 45), with `page` #f6f6f4 (DESIGN.md override 5) and the polish
- * audit's own (override 29): a deeper `ink2`, a white `cardOn` and a stronger calendar tint.
+ * audit's own (override 29): a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger calendar tint.
  */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',
@@ -83,7 +83,7 @@ export const lightColour: Record<ColourToken, string> = {
   good: 'oklch(0.53 0.13 150)',
   sun: 'oklch(0.63 0.125 92)',
   violet: 'oklch(0.54 0.14 300)',
-  cyan: 'oklch(0.54 0.09 195)',
+  cyan: 'oklch(0.58 0.1 182)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
 };

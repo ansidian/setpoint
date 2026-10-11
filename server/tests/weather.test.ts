@@ -100,7 +100,7 @@ describe('weather', () => {
 describe('a Google calendar\'s colour as a swatch', () => {
   test.each([
     ['#4986e7', 'cool'], ['#16a765', 'good'], ['#7bd148', 'good'], ['#f83a22', 'alert'], ['#ff7537', 'caution'], ['#ffad46', 'warm'],
-    ['#fad165', 'sun'], ['#9a9cff', 'violet'], ['#9fe1e7', 'cyan'], ['#42d692', 'comf'], ['#cabdbf', 'ink2'], ['#e1e1e1', 'ink2'], ['not a colour', 'ink2'],
+    ['#fad165', 'sun'], ['#9a9cff', 'violet'], ['#9fe1e7', 'cyan'], ['#46d6db', 'cyan'], ['#42d692', 'comf'], ['#7ae7bf', 'comf'], ['#cabdbf', 'ink2'], ['#e1e1e1', 'ink2'], ['not a colour', 'ink2'],
   ])('%s → %s', (hex, swatch) => {
     expect(swatchFor(hex)).toBe(swatch);
   });
@@ -111,7 +111,7 @@ describe('a Google calendar\'s colour as a swatch', () => {
   });
   // What an earlier build wrote, before the polish audit moved the swatch (Night ink3, SV-58): calendars
   // already carrying it still read back as it.
-  test.each([['#707277', 'ink3']])('%s, written before, still reads back as %s', (hex, swatch) => {
+  test.each([['#707277', 'ink3'], ['#57d4d4', 'cyan']])('%s, written before, still reads back as %s', (hex, swatch) => {
     expect(swatchFor(hex)).toBe(swatch);
   });
   test.each([['#71c9fa', '#000000'], ['#f7cd3a', '#000000'], ['#a3a4a8', '#000000'], ['#7d7f84', '#ffffff']])('text on %s is %s', (hex, foreground) => {
