@@ -155,6 +155,8 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
+    // Reduce motion changes nothing (DESIGN.md › Principles): the card still opens with its motion.
+    await page.emulateMedia({reducedMotion: 'reduce'});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
@@ -166,6 +168,7 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await lines.filter({hasText: 'Renew car registration'}).click();
     const card = page.locator('.today-card');
     await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
+    assert.equal(await card.evaluate(element => getComputedStyle(element).animationName), 'today-card-in');
     assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
     assert.equal(Math.round((await box(page, '.today-card')).x), Math.round((await box(page, '.sb')).width) + 8);
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),

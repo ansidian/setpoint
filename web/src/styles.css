@@ -97,7 +97,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .fd.today-card .card-h { padding-top: 12px; }
 .fd.today-card.settled { transition: top var(--dur-medium) var(--ease); }
 @keyframes today-card-in { from { opacity: 0; transform: scale(.96); } }
-@media (prefers-reduced-motion: reduce) { .fd.today-card { animation: none; } }
 /* Todoist's open ring: 13 px, a 1.5 px `ink3` stroke (DESIGN.md › Glyphs), or a task's project colour (`--ring`, SV-25). */
 .ring { width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring, var(--ink3)); flex: none; display: inline-block; margin: 0 3px 0 1px; }
 
