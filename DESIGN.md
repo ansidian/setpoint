@@ -575,8 +575,9 @@ Board 28 replaces All's list.
 - Under each day, up to 5 stories per section, biggest first, the first as a lead. Each row names
   its section in the meta. A lead's image is its story's large copy, kept while the story is in
   Missed, never its thumbnail stretched (#115).
-- A story leaves Missed once it's seen. When Missed empties, the strip goes and the view returns
-  to All.
+- A story leaves Missed once it's seen, but the list holds for the visit, as All's order does: rows
+  seen while it's open keep their places. Back in All, the strip is gone once Missed is empty, and
+  Missed opened with nothing in it is All (#117).
 
 ### States
 
@@ -1358,3 +1359,8 @@ it changes what's on screen.
     show in other blocks, as their main section's (#96), is empty without the section being so; it
     keeps its "2 more in Tech" link and no longer says "Nothing new in Tech since Mon" above it. The
     line stays for a section whose own list is empty (Andy, 2026-10-11, polish audit extra-08).
+117. **Catch up holds its list for the visit:** seeing Missed's stories while it's open no longer
+    sends the page back to All the moment the last one is seen (about a second after the rows are on
+    screen, with a short list). The rows keep their places and their dots follow #95; the strip is
+    gone when the user goes back to All, and Missed opened empty is All, as before (Andy, 2026-10-11,
+    polish audit news-01).

@@ -156,8 +156,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
     list.current?.scrollTo({top: 0});
   };
 
-  // Missed, opened with nothing left in it, is All (D92).
-  const emptyMissed = view === 'missed' && held !== null && latest?.missed?.count === 0;
+  // Missed, opened with nothing left in it, is All (D92). Emptied during the visit, as its rows are
+  // seen, its held order keeps the list until the visit leaves it, as All's does (the polish audit's news-01).
+  const emptyMissed = view === 'missed' && held !== null && held.layout.every(shelf => shelf.ids.length === 0) && latest?.missed?.count === 0;
   useEffect(() => {
     if (emptyMissed) navigate({page: 'news', view: 'all', story: null, article: null}, {replace: true});
   }, [emptyMissed]);

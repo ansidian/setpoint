@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after, test} from 'node:test';
-import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
+import type {MissedOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -341,6 +341,38 @@ test('Missed (28): Catch up lists the stories that left unseen, by day, each row
     await page.getByRole('button', {name: 'Back to All'}).click();
     await page.waitForURL(/\/news$/);
     await until('the strip counts what\'s left', () => page.locator('.nw-missed b').textContent(), text => text !== '14 stories');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Missed holds for the visit: emptied while it\'s read, it stays; opened empty, it\'s All (the polish audit\'s news-01)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await page.locator('.nw-missed .btn', {hasText: 'Catch up'}).click();
+    await page.waitForURL(/\/news\/missed$/);
+    await page.locator('.nw-back .t', {hasText: 'Missed since Mon 10:40 PM'}).waitFor();
+    assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
+    // Every story in it seen during the visit, as rows fully on screen are: Missed is empty now.
+    const ids = (await setpoint.api<MissedOut>('GET', '/news/missed')).days.flatMap(day => day.stories.map(story => story.id));
+    const emptied = page.waitForResponse(async response => response.url().endsWith('/api/news/missed') && (await response.json() as MissedOut).count === 0);
+    await setpoint.api('POST', '/news/seen', {story_ids: ids});
+    await emptied;
+    // Nothing happens to wait for: the list holds for the visit rather than jumping to All.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.match(page.url(), /\/news\/missed$/);
+    assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
+    assert.equal(await page.locator('.nw-back .n').textContent(), '14 stories');
+    // Back in All, the strip is gone; Missed opened again, with nothing in it, is All.
+    await page.getByRole('button', {name: 'Back to All'}).click();
+    await page.waitForURL(/\/news$/);
+    await page.locator('.nw-missed').waitFor({state: 'detached'});
+    await page.goto(`${setpoint.base}/news/missed`);
+    await page.waitForURL(/\/news$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
