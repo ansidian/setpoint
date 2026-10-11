@@ -46,7 +46,7 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
 /** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #120–#149, and the scrollbar's). */
-const NOT_IN_EXPORT = ['--sub4', '--accent', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL'];
+const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 

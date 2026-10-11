@@ -43,6 +43,9 @@ export const colour = {
   cyan: 'oklch(0.86 0.11 182)',
   // "You are here" (#126): cool's values, named for its job so recolouring Personal never moves it.
   accent: 'oklch(0.8 0.11 235)',
+  // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub` (#129).
+  navOn: 'rgba(255,255,255,.10)',
+  navOnEdge: 'rgba(255,255,255,.07)',
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
@@ -87,6 +90,8 @@ export const lightColour: Record<ColourToken, string> = {
   violet: 'oklch(0.54 0.14 300)',
   cyan: 'oklch(0.58 0.1 182)',
   accent: 'oklch(0.54 0.12 235)',
+  navOn: '#ffffff',
+  navOnEdge: 'rgba(29,30,33,.10)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
 };

@@ -241,3 +241,36 @@ test('today is the now-line\'s alert disc in the month, the week\'s heads and th
     await setpoint.stop();
   }
 });
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: the current page is a raised navOn chip that hover's flat sub never matches; an account's filter makes Inbox its parent (#129)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await inbox(page, setpoint.base, theme);
+      const inboxNav = page.locator('.sb .nav', {hasText: 'Inbox'});
+      const calendarNav = page.locator('.sb .nav', {hasText: 'Calendar'});
+      const raised = [await colourOf(page, 'var(--navOn)'), `${await colourOf(page, 'var(--navOnEdge)')} 0px 0px 0px 1px inset`];
+      assert.equal(raised[0], theme === 'light' ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.1)');
+      assert.deepEqual([await style(inboxNav, 'backgroundColor'), await style(inboxNav, 'boxShadow')], raised, 'Inbox, current');
+      // Hovering Calendar draws a flat tint, plainly not the current page's chip.
+      await calendarNav.hover();
+      const sub = await colourOf(page, 'var(--sub)');
+      await until('Calendar\'s hover', () => style(calendarNav, 'backgroundColor'), fill => fill === sub);
+      assert.equal(await style(calendarNav, 'boxShadow'), 'none');
+      // Business filters the Inbox: its row is the chip, and Inbox its parent in ink, without a fill.
+      await page.locator('.sb .acct', {hasText: 'Business'}).click();
+      const business = page.locator('.sb .acct.on', {hasText: 'Business'});
+      await business.waitFor();
+      await page.mouse.move(700, 28);
+      await until('Business raised', () => style(business, 'backgroundColor'), fill => fill === raised[0]);
+      assert.equal(await inboxNav.getAttribute('class'), 'nav parent');
+      await until('Inbox without a fill', () => style(inboxNav, 'backgroundColor'), fill => fill === 'rgba(0, 0, 0, 0)');
+      const ink = await colourOf(page, 'var(--ink)');
+      assert.deepEqual([await style(inboxNav, 'color'), await style(inboxNav.locator('.icon'), 'color')], [ink, ink]);
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}

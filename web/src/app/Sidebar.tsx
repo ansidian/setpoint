@@ -48,7 +48,9 @@ export function Sidebar({route}: {route: Route}) {
         <Mark />
         {!rail && <span className="sb-name">Setpoint</span>}
       </div>
-      <Link className={route.page === 'inbox' && !filtered ? 'nav on' : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}>
+      {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#129); the rail has no
+          accounts, so there Inbox stays the current page. */}
+      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}>
         <Icon name="inbox" />
         <span className="grow">Inbox</span>
         {counts && counts.attention > 0 && <span className="apill num" title="Attention, not Done">{counts.attention}</span>}

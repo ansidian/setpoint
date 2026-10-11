@@ -84,6 +84,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
+| `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
 - **Roles** (#126): each colour has one job, so a screen has two or three anchors. **`accent`**
@@ -189,11 +190,13 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
 - **Sidebar** 248 px, `panel`, `edge` right border, padding 12 / 10:
   - the mark and **Setpoint** (36 px row, 8 px below). No search button: search lives in each
     page's header.
-  - **Inbox** (32 px nav item, radius 10, `sub` hover, `sub2` current): the **attention pill** (18 px,
+  - **Inbox** (32 px nav item, radius 10, `sub` hover; current, a raised `navOn` chip with an inset
+    `navOnEdge` hairline and its icon in `accent`, #129): the **attention pill** (18 px,
     `caution` fill, `onInk` 11.5 / 600 text; not-Done attention, read or not) then the unread count
     (`ink3` 12).
   - **Accounts** under Inbox (28 px, indented 34 px): colour dot (8 px), label, unread count. A click
-    filters the Inbox to that account; a needs-reconnect account adds a `sync_problem` glyph in
+    filters the Inbox to that account (its row the `navOn` chip, Inbox its parent in `ink` without a
+    fill); a needs-reconnect account adds a `sync_problem` glyph in
     `caution` before its count, keeping the count.
   - **Calendar**.
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
@@ -1745,3 +1748,9 @@ it changes what's on screen.
     mini-month (the date pickers' too), with `onAlert` 600 (7.3:1 in Night, 5.7:1 in Light), so today
     and now are one red thread across the grid and the right pane's now-line (Andy, 2026-10-11,
     polish audit grids-03).
+129. **The current page is a raised chip:** the sidebar's current page and filtering account, and
+    Settings' current page, take `navOn` (Night `rgba(255,255,255,.10)`, Light white) with a 1 px inset
+    `navOnEdge` hairline, a raised tab rather than a shadow, while hover stays a flat `sub`; the two
+    measured 1.06–1.09:1 apart as `sub2` and `sub`, so pointing at Calendar from the Inbox drew two
+    near-identical pills. List rows keep `sub2`. While an account filters the Inbox, Inbox reads as
+    its parent, label and icon in `ink`, no fill (Andy, 2026-10-11, polish audit shell-02).
