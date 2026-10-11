@@ -550,10 +550,11 @@ export const REGIONS = {
 } as const;
 export type Region = keyof typeof REGIONS;
 
-// The screenshots that check Setpoint's mark (the sidebar in each theme, the phone's header); the
-// rest that show it leave it out. It's hidden rather than masked: a mask paints over the mark's box
-// even where something covers it (the phone's reader over the Inbox's header).
-const MARK_CHECKED = new Set(['01-inbox-a-typical-morning.sidebar', '22a-light-inbox', '21a-phone-inbox']);
+// The screenshots that check Setpoint's mark (the sidebar in each theme, the phone's header, the
+// screen that says Setpoint can't be reached); the rest that show it leave it out. It's hidden
+// rather than masked: a mask paints over the mark's box even where something covers it (the phone's
+// reader over the Inbox's header).
+const MARK_CHECKED = new Set(['01-inbox-a-typical-morning.sidebar', '22a-light-inbox', '21a-phone-inbox', 'unreachable-at-launch']);
 const WITHOUT_MARK = 'svg.mark { visibility: hidden; }';
 
 /**

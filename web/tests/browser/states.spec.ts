@@ -3,7 +3,8 @@
 // flows: offline dims the page and refuses changes, Retry now tries again and the stream's return
 // clears it, the reconnect bar opens Settings › Accounts, a failing account's line says why, and
 // the first backfill's indexing line holds in search; SV-20 adds the calendar's own stale and
-// failing lines.
+// failing lines. The polish audit's states-02: Setpoint unreachable at launch shows the mark and the
+// pill, not the sign-in card, and asks again until it answers.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {MailCountsOut} from '@setpoint/shared';
@@ -80,6 +81,67 @@ test('offline: the page dims, changes are refused, not queued, Retry now tries a
     // Back online, H works again.
     await page.keyboard.press('h');
     await until('Done', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), value => value.attention === 2);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Setpoint unreachable at launch: the mark and the offline pill, not the sign-in card; it asks again until Setpoint answers (states-02)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    // Setpoint restarting behind its proxy: GET /api/me answers the proxy's 502, then no connection at all.
+    let me: 'gateway' | 'refused' | 'up' = 'gateway';
+    await page.route('**/api/me', route => (me === 'gateway' ? route.fulfill({status: 502, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>'})
+      : me === 'refused' ? route.abort('connectionrefused') : route.continue()));
+    await page.goto(`${setpoint.base}/inbox`);
+    const pill = page.locator('.boot .offline-pill');
+    await pill.waitFor();
+    assert.equal(await pill.textContent(), 'Can’t reach Setpoint, retryingRetry now');
+    assert.equal(await page.locator('.sign-in').count(), 0, 'no sign-in card: nothing says the user was signed out');
+    // The mark at 36 px where the sign-in card's top sits, dimmed; the pill 22 px under it.
+    const mark = page.locator('.boot svg.mark');
+    const box = (await mark.boundingBox())!;
+    const pillBox = (await pill.boundingBox())!;
+    assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
+    assert.equal(pillBox.y - (box.y + box.height), 22);
+    // Centred on the same line, to the half pixel an odd width rounds to.
+    assert.ok(Math.abs(box.x + box.width / 2 - (pillBox.x + pillBox.width / 2)) <= 0.5, 'the pill is centred under the mark');
+    assert.deepEqual(await mark.evaluate(svg => [getComputedStyle(svg).opacity, getComputedStyle(svg).filter]), ['0.5', 'grayscale(0.4)']);
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'unreachable-at-launch');
+
+    // No connection at all is the same; it asks again on its own, with no click.
+    me = 'refused';
+    await page.waitForRequest(request => request.url().endsWith('/api/me'));
+    // Retry now asks at once; still nothing answers, so the pill stays.
+    const asked = page.waitForRequest(request => request.url().endsWith('/api/me'));
+    await pill.locator('.retry').click();
+    await asked;
+    await setpoint.idle();
+    assert.equal(await pill.count(), 1);
+    assert.equal(await page.locator('.sign-in').count(), 0);
+
+    // Setpoint is back: the next ask opens the app at the address it was opened at, signed in.
+    me = 'up';
+    await page.locator('.arow').first().waitFor();
+    assert.match(page.url(), /\/inbox$/);
+    assert.equal(await page.locator('.boot').count(), 0);
+
+    // Signed in, a restart that refuses the live stream and /api/me keeps the app, under the offline
+    // pill, rather than swapping it for the sign-in card.
+    me = 'gateway';
+    await page.route(/\/api\/events/, route => route.fulfill({status: 502, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>'}));
+    const checked = page.waitForResponse(response => response.url().endsWith('/api/me'));
+    await page.context().setOffline(true);
+    await page.locator('.main > .offline-pill').waitFor();
+    await page.context().setOffline(false);
+    await checked;
+    await setpoint.idle();
+    assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
+    assert.equal(await page.locator('.main > .offline-pill').count(), 1);
+    assert.equal(await page.locator('.arow').count() > 0, true);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

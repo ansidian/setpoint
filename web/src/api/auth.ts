@@ -1,15 +1,16 @@
 // Signing in (darma's pattern; DESIGN.md › Not designed yet: sign-in follows darma's card). Setpoint
 // asks GET /api/me once at start: with a session it shows the app, else the sign-in card, which
 // claims Setpoint with the CLI's setup token the first time and signs in with the password or a
-// passkey after.
+// passkey after. When Setpoint can't be reached at all (a deploy, a restart: no connection, or the
+// proxy's 5xx), it says so and asks again until it answers (Root; DESIGN.md › Health and states).
 // Any 401 later swaps the app for the card and keeps the address. /api/me also gives the owner's
 // time zone and the server's clock, which the dev server runs from the seed's moment, so the app's
 // "now" is the server's.
 import type {AuthStatusOut, MeOut, RecoveryCodesOut, SignInOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
-import {clearCache, getJson, onUnauthorized, refreshAll, sendJson} from './client.ts';
+import {ApiFailure, clearCache, getJson, onUnauthorized, refreshAll, sendJson} from './client.ts';
 
-export type AuthState = 'checking' | 'in' | 'out';
+export type AuthState = 'checking' | 'in' | 'out' | 'unreachable';
 
 let state: AuthState = 'checking';
 let me: MeOut | null = null;
@@ -44,14 +45,29 @@ export const timeZone = () => me?.time_zone ?? 'America/Los_Angeles';
 /** Now, by the server's clock. */
 export const serverNow = () => Date.now() + offset;
 
-/** Asks whether this browser is signed in; an unreachable server shows the card's retry. */
-export async function checkSession() {
-  try {
-    learn(await getJson<MeOut>('/me', {quiet401: true}));
-    set('in');
-  } catch {
-    set('out');
-  }
+/** Setpoint itself didn't answer: no connection, or the proxy in front of it answering 5xx while it restarts. */
+const unreachable = (error: unknown) => error instanceof ApiFailure && (error.code === 'unreachable' || error.status >= 500);
+
+let checking: Promise<void> | null = null;
+
+/**
+ * Asks whether this browser is signed in: a 401 (or any refusal) shows the sign-in card. Setpoint
+ * not answering is no sign-out: at launch it shows the boot screen's pill until an answer comes,
+ * and while signed in the app stays, under the live stream's offline pill. One ask at a time.
+ */
+export function checkSession(): Promise<void> {
+  checking ??= (async () => {
+    try {
+      learn(await getJson<MeOut>('/me', {quiet401: true}));
+      set('in');
+    } catch (error) {
+      if (!unreachable(error)) set('out');
+      else if (state !== 'in') set('unreachable');
+    } finally {
+      checking = null;
+    }
+  })();
+  return checking;
 }
 
 export const authStatus = () => getJson<AuthStatusOut>('/auth/status');

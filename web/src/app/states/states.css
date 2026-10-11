@@ -8,8 +8,15 @@
 /* The Unsorted group's note: "Triage is down, as of 9:09 AM". */
 .gh .gh-note { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--caution); display: inline-flex; align-items: center; gap: 6px; }
 
-.main > .offline-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--alert); color: var(--onAlert); box-shadow: var(--shadow-pill); font-weight: 500; white-space: nowrap; z-index: 5; }
-.main > .offline-pill .retry { height: 26px; padding: 0 10px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; }
-.main > .offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
+.offline-pill { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--alert); color: var(--onAlert); box-shadow: var(--shadow-pill); font-weight: 500; white-space: nowrap; }
+.main > .offline-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; }
+.offline-pill .retry { height: 26px; padding: 0 10px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; }
+.offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
 /* Everything under the pill: dimmed, and nothing to press. */
 .main.offline > .content { opacity: .4; filter: grayscale(.6); pointer-events: none; }
+
+/* Setpoint unreachable at launch (DESIGN.md › Health and states): the mark at 36 px where the sign-in
+   card's top sits (#71), dimmed, and the pill 22 px under it. */
+.boot { position: relative; height: 100%; overflow: hidden; background: var(--page); }
+.boot-at { position: absolute; left: 50%; top: max(24px, calc(50% - 120px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.boot.unreachable .mark { opacity: .5; filter: grayscale(.4); }

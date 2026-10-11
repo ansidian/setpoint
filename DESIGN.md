@@ -663,6 +663,7 @@ A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the ad
 | **Failing** | the same line in `caution`, with the reason |
 | **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): "Business needs sign-in · Reconnect"; the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now; everything under it dimmed, changes disabled |
+| **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner. |
 | **First backfill** | search's status: "Indexing · 62% · showing what's indexed so far" |
@@ -1364,3 +1365,11 @@ it changes what's on screen.
     screen, with a short list). The rows keep their places and their dots follow #95; the strip is
     gone when the user goes back to All, and Missed opened empty is All, as before (Andy, 2026-10-11,
     polish audit news-01).
+118. **Setpoint unreachable at launch isn't a sign-out:** when it can't be reached as it opens (a
+    deploy or a restart: no connection, or the proxy's 5xx), it shows the mark, dimmed, and the
+    offline pill under it, "Can't reach Setpoint, retrying" with Retry now, rather than the sign-in
+    card with "Can't reach Setpoint" under an `alert` Password field. It asks again every 5 seconds
+    and when the network comes back, and opens the app (or the card, on a 401) at the address it
+    was opened at. Signed in, the same restart keeps the app under the offline pill instead of
+    swapping it for the card. The card's own "Can't reach Setpoint" stays for a sign-in attempt
+    that fails (Andy, 2026-10-11, polish audit states-02).

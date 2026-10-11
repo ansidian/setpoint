@@ -1,15 +1,16 @@
 // Health and states on the page (DESIGN.md › Health and states; board 19a): the needs-reconnect bar
 // and the stale and failing lines at the top of the Inbox, and the offline pill over the page, with
-// everything under it dimmed and changes disabled (App.tsx dims; client.ts refuses changes).
+// everything under it dimmed and changes disabled (App.tsx dims; client.ts refuses changes). The
+// same pill says when Setpoint can't be reached at launch, under the mark (Root.tsx).
 import type {TriageStatusOut} from '@setpoint/shared';
 import {useEffect} from 'react';
-import {timeZone} from '../../api/auth.ts';
+import {checkSession, timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {retryNow, useOfflineSince} from '../../api/live.ts';
 import {TRIAGE_PATH} from '../../api/mail.ts';
 import {clockTime} from '../../logic/format.ts';
 import {inboxHealthLines, reconnectLine, triageNote} from '../../logic/health.ts';
-import {Icon} from '../../ui/Icon.tsx';
+import {Icon, Mark} from '../../ui/Icon.tsx';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {openSettings} from '../settings/store.ts';
@@ -52,6 +53,17 @@ export function TriageNote() {
   return note && <span className="gh-note num"><Icon name="error" size={16} />{note}</span>;
 }
 
+/** The offline pill: `cloud_off`, what's wrong and that it's retrying, and Retry now. */
+function Pill({text, onRetry}: {text: string; onRetry: () => void}) {
+  return (
+    <div className="offline-pill" role="status">
+      <Icon name="cloud_off" size={16} />
+      <span className="num">{text}</span>
+      <button className="retry" type="button" onClick={onRetry}>Retry now</button>
+    </div>
+  );
+}
+
 /** "Offline, as of 9:41 PM, retrying" and Retry now, while Setpoint's live stream is down. */
 export function OfflinePill() {
   const since = useOfflineSince();
@@ -68,11 +80,21 @@ export function OfflinePill() {
     return () => window.removeEventListener('keydown', block, true);
   }, [offline]);
   if (since === null) return null;
+  return <Pill text={`Offline, as of ${clockTime(since, timeZone())}, retrying`} onRetry={retryNow} />;
+}
+
+/**
+ * Setpoint unreachable at launch (a deploy, a restart): the mark, dimmed, where the sign-in card's
+ * top sits, and the offline pill under it, not the sign-in card. Root asks again every few seconds;
+ * Retry now asks at once.
+ */
+export function Unreachable() {
   return (
-    <div className="offline-pill" role="status">
-      <Icon name="cloud_off" size={16} />
-      <span className="num">Offline, as of {clockTime(since, timeZone())}, retrying</span>
-      <button className="retry" type="button" onClick={retryNow}>Retry now</button>
+    <div className="boot unreachable">
+      <div className="boot-at">
+        <Mark size={36} />
+        <Pill text="Can’t reach Setpoint, retrying" onRetry={() => void checkSession()} />
+      </div>
     </div>
   );
 }

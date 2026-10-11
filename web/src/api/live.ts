@@ -12,7 +12,8 @@ import {pathsForEvent} from '../logic/live.ts';
 import {serverNow} from './auth.ts';
 import {mountedPaths, refresh, refreshAll, refuseWrites} from './client.ts';
 
-const RECONNECT_MS = 5000;
+/** How long a refused stream, or a launch that found Setpoint unreachable (Root), waits to try again. */
+export const RECONNECT_MS = 5000;
 
 let source: EventSource | null = null;
 let lastId: string | null = null;
