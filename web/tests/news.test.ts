@@ -292,19 +292,24 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
   });
 
   // The rule (DESIGN.md › The list, States): a story stays 48 hours after its last new fact, so a
-  // section with none has had nothing new for 48 hours; the first run is still sorting it.
+  // section with none has had nothing new for 48 hours; the first run is still sorting it. In All, a
+  // block can be empty while its section isn't: its stories show in other blocks, as their main
+  // section's (#96), and "2 more in Tech" opens them, so nothing new isn't true (the polish audit's
+  // extra-08).
   test.each([
-    ['stories, seen or not: they show', 'tech', 3, false, null],
-    ['none (the board): nothing new for 48 hours, since Mon', 'tech', 0, false, 'Nothing new in Tech since Mon'],
-    ['none during the first run (29b)', 'ai', 0, true, 'Nothing sorted in AI yet'],
-    ['stories during the first run: they show', 'local', 5, true, null],
-  ] as const)('a section with nothing to show: %s', (_name, section, stories, firstRun, expected) => {
-    expect(emptySectionLine(section, stories, firstRun, now, zone)).toBe(expected);
+    ['stories, seen or not: they show', 'tech', 3, 0, false, null],
+    ['none (the board): nothing new for 48 hours, since Mon', 'tech', 0, 0, false, 'Nothing new in Tech since Mon'],
+    ['none in All\'s block, its 2 shown in other blocks: no line over "2 more in Tech"', 'tech', 0, 2, false, null],
+    ['none during the first run (29b)', 'ai', 0, 0, true, 'Nothing sorted in AI yet'],
+    ['none in All\'s block during the first run, 1 in another block', 'ai', 0, 1, true, null],
+    ['stories during the first run: they show', 'local', 5, 0, true, null],
+  ] as const)('a section with nothing to show: %s', (_name, section, stories, more, firstRun, expected) => {
+    expect(emptySectionLine(section, stories, more, firstRun, now, zone)).toBe(expected);
   });
 
   test('48 hours back is always two days back, worded as an age', () => {
     const justAfterMidnight = Date.parse('2026-10-07T07:05:00.000Z');
-    expect(emptySectionLine('general', 0, false, justAfterMidnight, zone)).toBe('Nothing new in General since Mon');
+    expect(emptySectionLine('general', 0, 0, false, justAfterMidnight, zone)).toBe('Nothing new in General since Mon');
   });
 });
 

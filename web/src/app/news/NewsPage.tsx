@@ -365,7 +365,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
               // A section's own line and its empty line (N5); Missed's days have neither.
               const own = view === 'missed' ? null : NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
-              const empty = own && latest ? emptySectionLine(own, shelfRows.length, firstRun, now, zone) : null;
+              const empty = own && latest ? emptySectionLine(own, shelfRows.length, shelf.more, firstRun, now, zone) : null;
               return (
                 <Fragment key={shelf.key}>
                   {section && <div className={header}>{SECTION_LABELS[section]}</div>}

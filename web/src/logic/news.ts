@@ -341,10 +341,12 @@ export const STORY_HOURS = 48;
  * page for 48 hours after its last new fact, so an empty section has had nothing new for 48 hours:
  * "Nothing new in Tech since Mon", from then; anything that came and left unseen before is Missed's.
  * During the first run it's still being sorted: "Nothing sorted in AI yet". A section with stories
- * shows them, seen or not: the dots aren't a to-do list (D87).
+ * shows them, seen or not: the dots aren't a to-do list (D87). An empty block in All whose section
+ * has `more` (its stories shown in other blocks, #96) isn't an empty section: its "2 more in Tech"
+ * stands alone.
  */
-export function emptySectionLine(section: NewsSection, stories: number, firstRun: boolean, now: number, timeZone: string): string | null {
-  if (stories > 0) return null;
+export function emptySectionLine(section: NewsSection, stories: number, more: number, firstRun: boolean, now: number, timeZone: string): string | null {
+  if (stories > 0 || more > 0) return null;
   if (firstRun) return `Nothing sorted in ${SECTION_LABELS[section]} yet`;
   return `Nothing new in ${SECTION_LABELS[section]} since ${dayWord(new Date(now - STORY_HOURS * 3_600_000).toISOString(), now, timeZone)}`;
 }

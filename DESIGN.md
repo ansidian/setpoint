@@ -527,7 +527,9 @@ navigation.
     `cardOn`, an `edgeOn` ring, the pill shadow.
   - It shows `arrow_upward`, "3 new · 1 updated" (the updated count in `cool`) and the `N` hint.
   - A click or `N` re-sorts the list and scrolls it to the top.
-- **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon".
+- **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon", only
+  when its own list is empty too. A block whose stories all show in other blocks (#96) has just its
+  "2 more in Tech" link (#116).
 
 ### The story pane
 
@@ -1352,3 +1354,7 @@ it changes what's on screen.
     as on the page rather than from a 144 × 96 thumbnail stretched to 232 × 130. The large copy goes
     an hour after the story is seen (so the visit that saw it keeps its images), and every other copy
     goes with the page as before (Andy, 2026-10-11, polish audit news-09).
+116. **"Nothing new" only when a section has nothing:** All's block for a section whose stories all
+    show in other blocks, as their main section's (#96), is empty without the section being so; it
+    keeps its "2 more in Tech" link and no longer says "Nothing new in Tech since Mon" above it. The
+    line stays for a section whose own list is empty (Andy, 2026-10-11, polish audit extra-08).
