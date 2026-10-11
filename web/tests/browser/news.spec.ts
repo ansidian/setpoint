@@ -142,7 +142,8 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     const redFlag = row(page, 'Red Flag Warning');
     assert.match(await redFlag.evaluate(element => getComputedStyle(element).gridTemplateColumns), /^12px \S+ \S+ 72px$/);
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).borderRadius]), [72, 48, '8px']);
-    assert.equal(await redFlag.locator('img').count(), 0, 'a story without an image leaves its column empty');
+    assert.equal(await redFlag.locator('img').count(), 0, 'NWS\'s story has no image');
+    assert.equal(await row(page, 'Council approves').locator('img, .nw-hz').count(), 0, 'an outlet\'s story without an image leaves its column empty');
     const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
     // The General block's rows are below the fold, so they're still new or updated here.
     assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
@@ -221,6 +222,35 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '31-light-news');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('#162: a hazard source\'s story without a photo shows its hazard\'s glyph in a caution tile; as a lead, before its headline', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    const redFlag = row(page, 'Red Flag Warning');
+    await redFlag.waitFor();
+    const caution = await colourOf(page, 'var(--caution)');
+    const tile = redFlag.locator('.nw-hz');
+    assert.deepEqual(await tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor]),
+      [72, 48, '8px', await backgroundOf(page, 'color-mix(in oklch, var(--caution) 10%, transparent)')]);
+    assert.deepEqual(await glyphs(tile.locator('.icon')), [['thunderstorm', '22', caution]]);
+    // The tile sits in the thumbnail's column, level with a photo's.
+    const photo = row(page, 'Federal agents detain 9').locator('img');
+    assert.equal(await tile.evaluate(box => box.getBoundingClientRect().right), await photo.evaluate(image => image.getBoundingClientRect().right));
+    assert.equal(await row(page, 'Council approves').locator('.nw-hz').count(), 0, 'an outlet\'s story leaves its column empty');
+    // Ranked first in Local, it leads the block without a photo: an 18 px glyph before its headline, no tile.
+    await newsChange(setpoint, `UPDATE news_stories SET score = 99 WHERE headline = 'Red Flag Warning for the valleys until Thu 6 PM'`);
+    await page.reload();
+    const lead = page.locator('.nw-lead', {hasText: 'Red Flag Warning'});
+    await lead.waitFor();
+    assert.equal(await lead.locator('.nw-hz, img').count(), 0);
+    assert.deepEqual(await glyphs(lead.locator('.hl .hz .icon')), [['thunderstorm', '18', caution]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -365,7 +365,15 @@ export const sourcesHeader = (out: Pick<NewsSourcesOut, 'articles_today' | 'stor
 const ADAPTER_TILES = {
   feed: 'newspaper', page_read: 'newspaper', hn_algolia: 'newspaper', nws: 'thunderstorm', usgs: 'earthquake', cal_fire: 'local_fire_department',
   airnow: 'air', google_news: 'travel_explore',
-} as const satisfies Record<NewsAdapterKey, string>;
+} as const satisfies Record<NewsAdapterKey, IconName>;
+
+/**
+ * A story led by a hazard source and without a photo: its hazard's glyph where the photo would go
+ * (#162), the same as the source's tile in Settings › News. An outlet's story has none, its photo's
+ * column left empty.
+ */
+export const hazardGlyph = (row: Pick<StoryRowOut, 'image'> & {lead: Pick<StoryRowOut['lead'], 'hazard'>}): IconName | null =>
+  (!row.image && row.lead.hazard ? ADAPTER_TILES[row.lead.hazard] : null);
 
 /** A source's tile (30a): the icon its list names (a TV station's `live_tv`, a crime wire's `local_police`), else its adapter's. */
 export const sourceTile = (source: Pick<NewsSourceOut, 'icon' | 'adapter'>) => source.icon ?? ADAPTER_TILES[source.adapter];

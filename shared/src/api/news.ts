@@ -24,7 +24,7 @@
 // biggest first (N3 ranks); a story under the bar never shows. Dots follow D87: there are no counts
 // and no "mark all seen".
 import {z} from 'zod';
-import {AI_PROVIDERS, HEALTH_STATES, NEWS_ADAPTERS, NEWS_SECTIONS, NEWS_SOURCE_ICONS, NEWS_SOURCE_KINDS, STORY_STATES} from '../enums.ts';
+import {AI_PROVIDERS, HEALTH_STATES, NEWS_ADAPTERS, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SOURCE_ICONS, NEWS_SOURCE_KINDS, STORY_STATES} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
 import type {ProposalOut} from './search.ts';
 
@@ -65,6 +65,8 @@ export const storyLeadSchema = z.strictObject({
   more: z.int().nonnegative(),
   published_at: instant,
   url: z.url(),
+  // The leading article's hazard source ("nws"), whose glyph stands in for a missing photo; null for an outlet.
+  hazard: z.enum(NEWS_HAZARDS).nullable(),
 });
 export type StoryLeadOut = z.infer<typeof storyLeadSchema>;
 

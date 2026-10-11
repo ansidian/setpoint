@@ -173,6 +173,13 @@ export const NEWS_ADAPTERS = ['feed', 'nws', 'usgs', 'cal_fire', 'airnow', 'hn_a
 export type NewsAdapterKey = (typeof NEWS_ADAPTERS)[number];
 
 /**
+ * The adapters that read official hazard data (NWS alerts, USGS quakes, Cal Fire, AirNow): always
+ * Local. A story led by one names it, so the list can draw the hazard's glyph where a photo would go.
+ */
+export const NEWS_HAZARDS = ['nws', 'usgs', 'cal_fire', 'airnow'] as const satisfies readonly NewsAdapterKey[];
+export type NewsHazard = (typeof NEWS_HAZARDS)[number];
+
+/**
  * An icon a source on the local list may name for its tile in Settings › News (board 30a): a TV
  * station's `live_tv`, a crime wire's `local_police`, or a paper. A source without one takes its
  * adapter's.

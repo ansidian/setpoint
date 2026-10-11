@@ -64,6 +64,10 @@
 .nw-row.new .hl, .nw-row.upd .hl { color: var(--ink); font-weight: 500; }
 .nw-row .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
 .nw-row .nw-img { width: 72px; height: 48px; border-radius: 8px; }
+/* A hazard source's story without a photo: its hazard's glyph in a caution tile where the photo would go (#162). */
+.nw-hz { width: 72px; height: 48px; border-radius: 8px; display: grid; place-items: center; color: var(--caution); background: color-mix(in oklch, var(--caution) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 22%, transparent); }
+/* A lead without one: the glyph inline before the headline, not a large empty tile. */
+.nw-lead .hl .hz { display: inline-grid; vertical-align: -3px; margin-right: 8px; color: var(--caution); }
 .nw-row .side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 
 .nw-meta { display: flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }

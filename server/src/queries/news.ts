@@ -14,7 +14,7 @@ import {and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lte, max} from '
 import * as t from '../db/schema.ts';
 import type {Health} from '../domain/health.ts';
 import {ARCHIVE_MS, blockSize, leadOf, listedArticles, mainSection, newSince, sectionHealth, sectionOrder, storyState} from '../domain/news.ts';
-import {limitMissed, matchesAll, searchWords, sourceRule} from '../domain/newsSorting.ts';
+import {hazardOf, limitMissed, matchesAll, searchWords} from '../domain/newsSorting.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {activeNewsSources} from '../news/sources.ts';
@@ -59,8 +59,12 @@ function loadRows(store: Store, storyIds: readonly number[]): Loaded {
     }
   }
   const sourceIds = [...new Set([...articles.values()].flat().map(article => article.sourceId))];
-  const hazards = new Set(sourceIds.length
-    ? store.db.select().from(t.newsSources).where(inArray(t.newsSources.id, sourceIds)).all().filter(source => sourceRule(source).hazard).map(source => source.id)
+  // Each hazard source's hazard, by its id.
+  const hazards = new Map(sourceIds.length
+    ? store.db.select().from(t.newsSources).where(inArray(t.newsSources.id, sourceIds)).all().flatMap(source => {
+      const hazard = hazardOf(source.adapter);
+      return hazard ? [[source.id, hazard] as const] : [];
+    })
     : []);
   for (const story of stories) {
     const own = articles.get(story.id) ?? [];
@@ -77,7 +81,7 @@ function loadRows(store: Store, storyIds: readonly number[]): Loaded {
       state: storyState(story.seenAt, story.lastNewFactAt),
       lead: {
         article_id: lead.article.id, outlet: lead.article.outlet, outlet_short: shortName(lead.article), more: lead.more,
-        published_at: lead.article.publishedAt, url: lead.article.url,
+        published_at: lead.article.publishedAt, url: lead.article.url, hazard: hazards.get(lead.article.sourceId) ?? null,
       },
       image: copies?.thumb && imageArticle ? {thumb: imageOut(copies.thumb), large: copies.large ? imageOut(copies.large) : null, outlet: imageArticle.outlet} : null,
       first_reported_at: story.firstReportedAt, last_new_fact_at: story.lastNewFactAt, seen_at: story.seenAt, expired_at: story.expiredAt,

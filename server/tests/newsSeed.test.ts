@@ -70,6 +70,18 @@ describe('All', () => {
     expect(ageOf('Council approves').slice(0, 10)).toBe('2026-10-05');
   });
 
+  test('a story led by a hazard source names its hazard, for its glyph; every other lead none (news-08)', () => {
+    const store = seeded();
+    const leads = new Map(newsSection(store, 'local').stories.map(story => [story.headline, story.lead.hazard]));
+    expect(leads.get('Red Flag Warning for the valleys until Thu 6 PM')).toBe('nws');
+    expect(leads.get('M3.4 earthquake near the foothills, felt lightly across the valleys')).toBe('usgs');
+    // An outlet's story names none, with a photo or without one.
+    expect(leads.get('Brush fire near the 210 grows to 400 acres')).toBeNull();
+    expect(leads.get('Council approves a 120-unit housing project on a former parking lot')).toBeNull();
+    const page = newsPage(store);
+    expect(page.blocks.flatMap(block => block.stories).filter(story => story.lead.hazard).map(story => story.headline)).toEqual(['Red Flag Warning for the valleys until Thu 6 PM']);
+  });
+
   test('each block\'s lead has a large image and every image a thumbnail', () => {
     const page = newsPage(seeded());
     for (const block of page.blocks) expect(block.stories[0]!.image?.large).toMatchObject({width: 640, height: 360});

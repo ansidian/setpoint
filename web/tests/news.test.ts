@@ -8,7 +8,7 @@ import {describe, expect, test} from 'vitest';
 import {
   articleNote, dueSeen, factsSince, initials, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
   rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
-  capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
+  capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
 import type {Layout} from '../src/logic/news.ts';
 import {news} from '../src/tokens.ts';
@@ -21,7 +21,7 @@ let nextId = 100;
 function story(fields: Partial<StoryRowOut> = {}): StoryRowOut {
   return {
     id: nextId++, headline: 'A story', one_line: null, sections: ['local'], state: 'new',
-    lead: {article_id: 1, outlet: 'KTLA', outlet_short: 'KTLA', more: 0, published_at: '2026-10-07T15:02:00.000Z', url: 'https://ktla.example/a'},
+    lead: {article_id: 1, outlet: 'KTLA', outlet_short: 'KTLA', more: 0, published_at: '2026-10-07T15:02:00.000Z', url: 'https://ktla.example/a', hazard: null},
     image: null, first_reported_at: '2026-10-07T12:00:00.000Z', last_new_fact_at: '2026-10-07T15:40:00.000Z', seen_at: null, expired_at: null, ...fields,
   };
 }
@@ -29,6 +29,20 @@ const lead = (outlet_short: string, more: number, published_at = '2026-10-07T15:
 
 test('each section\'s glyph (#161): Local location_on, Tech computer, AI auto_awesome, General public', () => {
   expect(SECTION_GLYPHS).toEqual({local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'});
+});
+
+describe('a hazard\'s glyph where the photo would go (#162)', () => {
+  const image = {thumb: {id: 1, url: '/api/news/images/1', width: 144, height: 96}, large: null, outlet: 'KTLA'};
+  test.each([
+    ['NWS without a photo', 'nws', null, 'thunderstorm'],
+    ['USGS', 'usgs', null, 'earthquake'],
+    ['Cal Fire', 'cal_fire', null, 'local_fire_department'],
+    ['AirNow', 'airnow', null, 'air'],
+    ['a hazard with a photo shows the photo', 'nws', image, null],
+    ['an outlet without a photo leaves the column empty', null, null, null],
+  ] as const)('%s', (_name, hazard, picture, glyph) => {
+    expect(hazardGlyph({image: picture, lead: {hazard}})).toBe(glyph);
+  });
 });
 
 describe('meta copy', () => {

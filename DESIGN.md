@@ -504,7 +504,10 @@ navigation.
   - The meta, right-aligned on two lines: the leading outlet and "+N" in `ink2` 12, then the age in
     `ink3` 12, or "Updated 7:55 AM" in `cool`.
   - The thumbnail: 72 × 48, radius 8. A story without an image leaves the column empty, never a
-    placeholder.
+    placeholder, except one led by a hazard source (NWS, USGS, Cal Fire, AirNow): its hazard's 22 px
+    glyph in `caution` on a 72 × 48 tile, radius 8, `caution` at 10% with a 22% inset ring (#162).
+  - A lead without an image led by a hazard source puts its hazard's 18 px glyph in `caution` before
+    the headline, rather than a large empty tile (#162).
 - **The dot** (6 px in the 12 px gutter): `ink` for **new**, as unread mail; `cool` for
   **updated**; none once seen, from the next visit (#95). Hover is `sub`; the keyboard cursor and
   the open story are `sub2`.
@@ -1393,3 +1396,11 @@ it changes what's on screen.
     `ink3`. The story pane's section tags take the same glyph, Missed's day headers `history` and
     Show headlines' Unsorted header `pending`, as mail's Unsorted. No colour per section: the
     account colours already mean accounts (Andy, 2026-10-11, polish audit news-07).
+162. **An official warning without a photo shows its hazard, not a hole:** a story whose leading article
+    comes from a hazard source (NWS `thunderstorm`, USGS `earthquake`, Cal Fire
+    `local_fire_department`, AirNow `air`, the glyphs Settings › News gives those sources) and that
+    has no image draws its glyph at 22 px in `caution` on a 72 × 48 tile (radius 8, `caution` at 10%,
+    a 22% inset ring) in the thumbnail's column; as a block's lead it puts an 18 px `caution` glyph
+    before the headline instead. An outlet's story without an image still leaves the column empty,
+    never a placeholder. The story's lead names its hazard source (`hazard` in the API) (Andy,
+    2026-10-11, polish audit news-08).

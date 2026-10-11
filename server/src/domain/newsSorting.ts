@@ -4,8 +4,8 @@
 // answer is applied (new facts versus repeats), the ranking formula and the bar, the monthly cap,
 // Missed's limits, keynote confirmation, and search's matching. Pure, so each is tested as a table;
 // src/news/sorter.ts asks the models and keeps what these decide.
-import type {NewsSection} from '@setpoint/shared';
-import {NEWS_SECTIONS} from '@setpoint/shared';
+import type {NewsHazard, NewsSection} from '@setpoint/shared';
+import {NEWS_HAZARDS, NEWS_SECTIONS} from '@setpoint/shared';
 import {SUBJECT_SECTION} from './news.ts';
 import {distanceKm, outletOf} from './newsIngest.ts';
 import {fold, wordsOf} from './searchChips.ts';
@@ -15,8 +15,8 @@ const HOUR = 60 * 60_000;
 
 // ---- Each article: the rules first ----
 
-/** Adapters that read official hazard data: always Local, always a hazard (weather counts only as one). */
-const HAZARD_ADAPTERS = new Set(['nws', 'usgs', 'cal_fire', 'airnow']);
+/** The hazard an adapter reads official data on (always Local, always a hazard; weather counts only as one), else null. */
+export const hazardOf = (adapter: string): NewsHazard | null => (NEWS_HAZARDS as readonly string[]).includes(adapter) ? adapter as NewsHazard : null;
 
 /** First-party newsrooms, by the company they speak for: one confirms its own keynote on its own. */
 export const FIRST_PARTY = ['apple', 'google', 'samsung', 'microsoft', 'openai', 'anthropic', 'deepmind', 'hugging face', 'mistral', 'meta'] as const;
@@ -39,7 +39,7 @@ export interface SourceRule {
  * outlet is Anthropic, for Anthropic.
  */
 export function sourceRule(source: {section: NewsSection; adapter: string; kind: string; name: string; config?: Record<string, unknown>}): SourceRule {
-  const hazard = HAZARD_ADAPTERS.has(source.adapter);
+  const hazard = hazardOf(source.adapter) !== null;
   const subjectCheck = source.adapter === 'hn_algolia';
   const words = ` ${fold(outletOf(source.name, source.config ?? {}).outlet).replace(/[^a-z0-9]+/g, ' ')} `;
   const firstParty = (source.kind === 'feed' || source.kind === 'page_read') && !subjectCheck && (source.section === 'tech' || source.section === 'ai')

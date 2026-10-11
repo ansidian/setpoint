@@ -30,7 +30,7 @@ import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, keyStory, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
+  dueSeen, emptySectionLine, firstRunLine, hazardGlyph, keyStory, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
   pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
   unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -416,6 +416,8 @@ const STATE_CLASS = {new: 'new', updated: 'upd', seen: 'seen'} as const;
 function StoryRow({row, lead, rowKey, section, cursor, openKey, now, zone, onPoint, onOpen}: RowProps) {
   const meta = rowMeta(row, now, zone, section);
   const image = lead ? row.image?.large ?? row.image?.thumb : row.image?.thumb;
+  // A hazard source's story without a photo shows its hazard's glyph instead (#162).
+  const hazard = hazardGlyph(row);
   const classes = [lead ? 'nw-lead' : 'nw-row', STATE_CLASS[row.state], lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open'].filter(Boolean).join(' ');
   const attributes = {className: classes, 'data-key': rowKey, 'data-story': row.id, onMouseMove: () => onPoint(rowKey), onClick: () => onOpen(rowKey)};
   if (lead) {
@@ -424,7 +426,7 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, now, zone, onPoi
         <span className="nd" />
         {image && <img className="nw-img" src={image.url} alt="" />}
         <div className="txt">
-          <div className="hl">{row.headline}</div>
+          <div className="hl">{hazard && <span className="hz"><Icon name={hazard} size={18} /></span>}{row.headline}</div>
           {row.one_line && <div className="sm">{row.one_line}</div>}
           <div className="nw-meta">
             {meta.section && <><span>{meta.section}</span><span>·</span></>}
@@ -446,7 +448,7 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, now, zone, onPoi
         <span className="nw-meta">{meta.section && <><span>{meta.section}</span><span>·</span></>}<span className="outlet">{meta.outlet}</span></span>
         <span className="nw-meta">{meta.updated ? <span className="upd">{meta.updated}</span> : meta.age}</span>
       </div>
-      {image ? <img className="nw-img" src={image.url} alt="" /> : <span />}
+      {image ? <img className="nw-img" src={image.url} alt="" /> : hazard ? <span className="nw-hz"><Icon name={hazard} size={22} /></span> : <span />}
     </div>
   );
 }
