@@ -2,7 +2,8 @@
 // approved screenshots (the Inbox after reading Northwind, the reader on it, the agenda), the Inbox, reader and
 // agenda by taps, read state, Done, Trash with Undo, Mark unread and read, Mark all as read, plain
 // search, and every kind of deep link an ntfy notification carries (`deepLinkPath`): an email, an
-// event, one occurrence of a recurring event, a task's day, and a Settings page.
+// event, one occurrence of a recurring event, a task's day, and a Settings page. Sign-in's fields
+// are 16 px, so iOS doesn't zoom into them.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
@@ -50,6 +51,28 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
     await page.locator('.ph-agenda .pitem').first().waitFor();
     assert.equal(new URL(page.url()).pathname, '/calendar');
     await matchGolden(page, '21c-phone-agenda');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoom the page; placeholders stay 13.5 px', async () => {
+  const setpoint = await startSetpoint({claim: false});
+  try {
+    const page = await setpoint.page('iphone');
+    const sizes = () => page.locator('.sign-in .input').evaluateAll(inputs => inputs.map(input => [input.getAttribute('aria-label'), getComputedStyle(input).fontSize, getComputedStyle(input, '::placeholder').fontSize]));
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.getByLabel('Setup token').waitFor();
+    assert.deepEqual(await sizes(), [['Setup token', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
+    // Claimed (elsewhere), the card asks for the password; then a recovery code and a new password.
+    await setpoint.api('POST', '/auth/claim', {setup_token: setpoint.setupToken, password: 'a long enough password'});
+    await page.reload();
+    await page.getByLabel('Password').waitFor();
+    assert.deepEqual(await sizes(), [['Password', '16px', '13.5px']]);
+    await page.getByRole('button', {name: 'Use a recovery code'}).click();
+    await page.getByLabel('Recovery code').waitFor();
+    assert.deepEqual(await sizes(), [['Recovery code', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
