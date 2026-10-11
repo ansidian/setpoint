@@ -379,7 +379,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sign-in-foot .btn.quiet { margin: 0 auto 0 -10px; }
 .input.code { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; }
 .input.code::placeholder { font-family: var(--sans); font-size: 13.5px; letter-spacing: 0; }
-.sign-in .btn .kbd { background: color-mix(in oklch, var(--onInk) 14%, transparent); color: var(--onInk); }
+.sign-in .btn .kbd { background: color-mix(in srgb, var(--onInk) 14%, transparent); color: var(--onInk); }
 .recovery { margin: 0; padding: 12px 14px; border-radius: var(--r-card); background: var(--sub); font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; }
 
 /* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
@@ -390,7 +390,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 @media (hover: hover) {
-  .btn:not(.ghost, .out, .quiet):enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--page)); }
+  .btn:not(.ghost, .out, .quiet):enabled:hover { background: color-mix(in srgb, var(--ink) 86%, var(--page)); }
   .btn.out:enabled:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
   .btn.quiet:enabled:hover { background: var(--sub); color: var(--ink); }
   .seg > :not(.on, :disabled, [aria-disabled="true"]):hover { background: var(--sub); color: var(--ink); }

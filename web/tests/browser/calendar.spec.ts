@@ -118,9 +118,12 @@ for (const size of ['target', 'large'] as SizeName[]) {
       assert.equal((await box('.cell[data-date="2026-10-07"] .ev')).height, 20);
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
       assert.deepEqual(scroll, [0, 0]);
-      // Past items are dimmed; the selected day is `sub`; today is the disc.
-      assert.equal(await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'}).evaluate(element => getComputedStyle(element).opacity), '0.55');
-      assert.equal(await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).evaluate(element => getComputedStyle(element).opacity), '1');
+      // Past items turn grey at full strength (#124), future ones keep their colour; the selected day is `sub`; today is the disc.
+      const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
+      assert.deepEqual(await look('Gym'), ['1', 'rgb(125, 127, 132)'], 'past: ink3');
+      const [opacity, colour] = await look('Dentist');
+      assert.equal(opacity, '1');
+      assert.notEqual(colour, 'rgb(125, 127, 132)', 'ahead: its calendar\'s colour');
       assert.equal(await page.locator('.cell.sel').getAttribute('data-date'), '2026-10-07');
       assert.equal(await text(page, '.dn.today'), '7');
       assert.deepEqual(setpoint.pageErrors, []);

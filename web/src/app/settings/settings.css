@@ -173,7 +173,7 @@
   .settings .handle:hover { color: var(--ink); }
   .settings .fld:not(:focus):hover, .settings .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
   .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
-  .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--modal)); }
+  .settings .switch.on:enabled:hover { background: color-mix(in srgb, var(--ink) 86%, var(--modal)); }
 }
 
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and

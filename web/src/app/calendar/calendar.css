@@ -6,7 +6,7 @@
 .cal-title { min-width: 128px; }
 .cal-step { display: inline-flex; align-items: center; gap: 2px; flex: none; }
 .ibtn.sm { width: 26px; height: 26px; }
-.hd .btn .kbd { background: color-mix(in oklch, var(--onInk) 12%, transparent); color: var(--onInk); }
+.hd .btn .kbd { background: color-mix(in srgb, var(--onInk) 12%, transparent); color: var(--onInk); }
 
 /* ---------- The month ---------- */
 .cal-month { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
@@ -19,11 +19,16 @@
 .cal-grid { position: absolute; left: 0; right: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-auto-rows: var(--monthRow); }
 .cell { border-right: 1px solid var(--hair); border-bottom: 1px solid var(--hair); padding: 6px 6px 4px; display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .cell:nth-child(7n) { border-right: 0; }
-/* In this order: a day outside the month takes its tint over a weekend's, and the selected day over both. */
-.cell.weekend { background: color-mix(in oklch, var(--panel) 40%, transparent); }
-.cell.out { background: color-mix(in oklch, var(--panel) 60%, transparent); }
+/* In this order: a day outside the month takes its tint over a weekend's, and the selected day over
+   both. Weekends sit back and the days outside the shown month further (#123); `out` flips as the
+   scroll moves the shown month, so it eases. */
+.cell { transition: background-color var(--dur-medium) var(--ease); }
+.cell.weekend { background: var(--dayOff); }
+.cell.out { background: var(--dayOut); }
 .cell.out .dn { color: var(--ink3); }
 .cell.sel { background: var(--sub); }
+/* A day that's over keeps its number in ink3 (#124). */
+.cell.past .dn:not(.today, .month) { color: var(--ink3); }
 /* Each month's boundary, as v1 traces it: today's month in `cool`, the others fainter. */
 .cell.edge-top::after, .cell.edge-left::after { content: ''; position: absolute; inset: 0; pointer-events: none; --edge: color-mix(in oklch, var(--cool) 32%, transparent); }
 .cell.edge-now::after { --edge: var(--cool); }
@@ -44,14 +49,16 @@
 .wx.cloud { color: var(--ink2); }
 .wx.rain { color: var(--cool); }
 
-/* Events: tinted chips (decision 38): the calendar's colour as text, a 3 px inset bar, the colour
-   at --evtint as fill; the selected item turns solid, with no outline ring; past items at .55. */
-.ev { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 6px 0 9px; border-radius: 6px; color: var(--c, var(--cool));
+/* Events: tinted chips (decision 38): the calendar's colour as text, its lightness capped at --tintL
+   (#122), a 3 px inset bar, the colour at --evtint as fill; the selected item turns solid, with no
+   outline ring; a past item turns grey, its bar and fill faint (#124). */
+.ev { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 6px 0 9px; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h);
   background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c, var(--cool));
   font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
 .ev .t { font-weight: 400; opacity: .8; font-variant-numeric: tabular-nums; margin-right: 5px; }
 .ev.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
-.ev.past { opacity: .55; }
+.ev.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
+.ev.past .t { opacity: 1; }
 .ev.pending, .tk.pending { opacity: .5; }
 .ev.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 /* Tasks: the ring (12 px; its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
@@ -159,7 +166,7 @@
 /* ---------- F6: direct manipulation and changes in place ---------- */
 /* A draft, a drag's origin, or a drop waiting on its scope: a dashed ghost in the item's colour
    (boards 13, 15, 15b); faded while the drop waits. */
-.ev.ghost { background: color-mix(in oklch, var(--c) 14%, transparent); box-shadow: none; outline: 1.5px dashed var(--c); outline-offset: -1.5px; color: var(--c); }
+.ev.ghost { background: color-mix(in oklch, var(--c) 14%, transparent); box-shadow: none; outline: 1.5px dashed var(--c); outline-offset: -1.5px; color: oklch(from var(--c) min(l, var(--tintL)) c h); }
 .ev.ghost.faded { opacity: .35; }
 .tk.ghost { outline: 1.5px dashed var(--ink3); outline-offset: -1.5px; }
 .tk.ghost.faded { opacity: .35; }
@@ -197,7 +204,7 @@
 .scope-choices { display: flex; flex-direction: column; gap: 2px; }
 .scope-acts { display: flex; align-items: center; gap: 6px; padding: 10px 6px 6px; }
 .scope-card { position: absolute; width: 300px; padding: 6px; z-index: 5; }
-.scope-acts .btn:not(.quiet) .kbd { background: color-mix(in oklch, var(--onInk) 12%, transparent); color: var(--onInk); }
+.scope-acts .btn:not(.quiet) .kbd { background: color-mix(in srgb, var(--onInk) 12%, transparent); color: var(--onInk); }
 .scope-acts .btn.quiet .kbd { margin-left: 4px; }
 
 /* A change that failed, in place (board 19b). */

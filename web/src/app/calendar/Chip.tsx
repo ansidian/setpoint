@@ -1,5 +1,5 @@
 // An item on the grid and in the "+N" popover (DESIGN.md › Month grid): an event as a tinted chip
-// in its colour (its own, else its calendar's: "7 AM Gym"), solid when selected, at .55 when past; a
+// in its colour (its own, else its calendar's: "7 AM Gym"), solid when selected, grey when past (#124); a
 // task with its ring or done glyph. A change waiting for its provider shows at .5 with a spinner, and
 // a failed one outlined in `alert` with an error glyph (board 19b). A task's ring takes its Todoist
 // project's colour (SV-25, D54). While dragged, or while a drop

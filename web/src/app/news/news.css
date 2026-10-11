@@ -117,7 +117,7 @@
 .st-img { position: relative; margin: 0 28px; max-width: 600px; height: 220px; border-radius: 14px; overflow: hidden; flex: none; }
 .st-img.article { height: 240px; }
 .st-img .nw-img { width: 100%; height: 100%; }
-.st-img .cap { position: absolute; left: 10px; bottom: 9px; font-size: 11px; color: var(--ink2); background: color-mix(in oklch, var(--page) 72%, transparent); padding: 2px 8px; border-radius: 999px; }
+.st-img .cap { position: absolute; left: 10px; bottom: 9px; font-size: 11px; color: var(--ink2); background: color-mix(in srgb, var(--page) 72%, transparent); padding: 2px 8px; border-radius: 999px; }
 .st-body { padding: 18px 28px 24px; display: flex; flex-direction: column; gap: 18px; }
 /* The pane's body is one column at the reading measure, however wide the pane is dragged (#98). */
 .st-head > *, .st-body > *, .ar-head > *, .ar-body > * { max-width: 600px; box-sizing: border-box; }

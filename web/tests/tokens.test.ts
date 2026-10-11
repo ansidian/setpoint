@@ -6,7 +6,7 @@ import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
-  placement, radius, themeVariables, type, type Theme, viewport,
+  placement, radius, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -38,12 +38,13 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
   {theme: 'light', variable: '--ink2', exported: '#56585d', ours: '#4b4d52', why: 'Override 29: Light ink2 steps clear of ink3'},
   {theme: 'night', variable: '--panel', exported: '#08090a', ours: '#0b0c0e', why: 'Override 29: Night panel reads as a layer'},
   {theme: 'light', variable: '--cardOn', exported: '#f4f4f2', ours: '#ffffff', why: 'Override 29: Light cardOn floats, white'},
+  {theme: 'light', variable: '--evtint', exported: '12%', ours: '14%', why: 'Override 29: Light chips\' tint shows on the grid'},
 ];
 /** Override 4: the done glyph is `good`; the export's `.ring.done` fills with `--comf`. */
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
-/** Theme variables tokens.ts adds that the export doesn't define. */
-const NOT_IN_EXPORT = ['--sub4', '--evhover', '--scrollbar-thumb'];
+/** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #120–#149, and the scrollbar's). */
+const NOT_IN_EXPORT = ['--sub4', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 
@@ -174,6 +175,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`the needs-reconnect bar (\`caution\` ${mix.reconnectBar.fill}% on \`page\`, ${mix.reconnectBar.edge}% bottom edge)`);
     expect(flat).toContain(`calendar tint \`--evtint\` (Night ${evtint.night}%, Light ${evtint.light}%)`);
     expect(flat).toContain(`deepening under the pointer by \`--evhover\` (Night ${evhover.night}%, Light ${evhover.light}%)`);
+    expect(flat).toContain(`coloured text on its own tint caps its lightness at \`--tintL\` (Night ${tintL.night}, Light ${String(tintL.light).replace(/^0/, '')})`);
     expect(flat).toContain(`search highlight (${mix.searchHighlight.fill}% mix)`);
   });
 

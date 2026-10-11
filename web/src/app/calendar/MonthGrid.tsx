@@ -292,7 +292,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items, forec
   const {shown: fits, more} = fitDay(items.length);
   const out = monthOf(date) !== shown;
   const edges = monthEdges(date, today);
-  const className = ['cell', out && 'out', isWeekend(date) && 'weekend', date === selectedDay && 'sel', dropping && 'drop', edges.top && 'edge-top', edges.left && 'edge-left', edges.now && 'edge-now'].filter(Boolean).join(' ');
+  const className = ['cell', out && 'out', isWeekend(date) && 'weekend', date < today && 'past', date === selectedDay && 'sel', dropping && 'drop', edges.top && 'edge-top', edges.left && 'edge-left', edges.now && 'edge-now'].filter(Boolean).join(' ');
   const wx = forecast ? weatherOf(forecast) : null;
   return (
     <div className={className} data-date={date} onClick={() => onSelectDay(date)}>

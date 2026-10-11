@@ -41,13 +41,16 @@ export const colour = {
   sun: 'oklch(0.86 0.16 92)',
   violet: 'oklch(0.8 0.11 300)',
   cyan: 'oklch(0.8 0.11 195)',
+  // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
+  dayOff: 'rgba(255,255,255,.02)',
+  dayOut: 'rgba(255,255,255,.035)',
 } as const;
 
 export type ColourToken = keyof typeof colour;
 
 /**
  * Light: darma's Light tokens (decision 45), with `page` #f6f6f4 (DESIGN.md override 5) and the polish
- * audit's own (override 29): a deeper `ink2` and a white `cardOn`.
+ * audit's own (override 29): a deeper `ink2`, a white `cardOn` and a stronger calendar tint.
  */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',
@@ -81,6 +84,8 @@ export const lightColour: Record<ColourToken, string> = {
   sun: 'oklch(0.63 0.125 92)',
   violet: 'oklch(0.54 0.14 300)',
   cyan: 'oklch(0.54 0.09 195)',
+  dayOff: 'rgba(29,30,33,.028)',
+  dayOut: 'rgba(29,30,33,.048)',
 };
 
 /** Overlay shadows; shadows only on overlays. */
@@ -110,9 +115,15 @@ export const mix = {
   reconnectBar: {colour: 'caution', fill: 9, on: 'page', edge: 22},
   searchHighlight: {colour: 'sun', fill: 26, on: 'transparent'},
 } as const;
-export const evtint = {night: 16, light: 12} as const;
+export const evtint = {night: 16, light: 14} as const;
 /** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`, polish audit grids-05). */
 export const evhover = {night: 18, light: 14} as const;
+/**
+ * Coloured text on its own tint (calendar chips, week blocks, the editor's timeline) caps its
+ * lightness at `--tintL` (#122): Light's hues are tuned for text on the page and wash out on a tint;
+ * Night's aren't capped.
+ */
+export const tintL = {night: 1, light: 0.43} as const;
 
 /** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
 export const glyphColour = {
@@ -320,7 +331,7 @@ export function cssVariables(): Record<string, string> {
   return vars;
 }
 
-/** A theme's colours, shadows, chip tint and scrollbar thumb. */
+/** A theme's colours, shadows, chip tint, scrollbar thumb and the cap on coloured text on a tint. */
 export function themeVariables(theme: Theme): Record<string, string> {
   const light = theme === 'light';
   const vars: Record<string, string> = {};
@@ -329,6 +340,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--evtint'] = `${light ? evtint.light : evtint.night}%`;
   vars['--evhover'] = `${light ? evhover.light : evhover.night}%`;
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
+  vars['--tintL'] = String(light ? tintL.light : tintL.night);
   return vars;
 }
 

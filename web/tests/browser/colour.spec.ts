@@ -115,3 +115,61 @@ test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light 
     await setpoint.stop();
   }
 });
+
+/** October 2026 on Calendar in a theme, the grid and its forecast in. */
+async function calendar(page: Page, base: string, theme: 'night' | 'light') {
+  await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
+  await page.goto(`${base}/calendar`);
+  await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
+  await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme);
+  await page.mouse.move(1000, 28);
+}
+
+/** A blank point low in a day's cell, under its items. */
+async function inCell(page: Page, date: string): Promise<[number, number, number]> {
+  const box = (await page.locator(`.cell[data-date="${date}"]`).boundingBox())!;
+  return pixel(page, box.x + box.width / 2, box.y + box.height - 12);
+}
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: weekends sit back and the days outside the month further, an outside weekend as an outside day; past items and days turn grey; Light's chip text is capped at .43 (#122–#124)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await calendar(page, setpoint.base, theme);
+      // Tue Oct 6 (a weekday in the month), Sat Oct 3, Mon Sep 28 and Sun Sep 27 (outside it).
+      const weekday = await inCell(page, '2026-10-06');
+      const weekend = await inCell(page, '2026-10-03');
+      const outside = await inCell(page, '2026-09-28');
+      const outsideWeekend = await inCell(page, '2026-09-27');
+      assert.ok(contrast(weekend, weekday) >= 1.02, `a weekend shows: ${contrast(weekend, weekday).toFixed(3)}:1`);
+      assert.ok(contrast(outside, weekday) > contrast(weekend, weekday) + 0.01, `outside the month recedes further: ${contrast(outside, weekday).toFixed(3)}:1`);
+      assert.deepEqual(outsideWeekend, outside, 'an outside weekend takes the outside shading');
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-03"]'), 'backgroundColor'), await colourOf(page, 'var(--dayOff)'));
+      assert.equal(await style(page.locator('.cell[data-date="2026-09-27"]'), 'backgroundColor'), await colourOf(page, 'var(--dayOut)'));
+
+      // 7 AM Gym is over; Dentist at 2:30 PM is ahead, in Personal's cool, capped at .43 in Light.
+      const chip = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title});
+      const ink3 = await colourOf(page, 'var(--ink3)');
+      const ahead = await colourOf(page, theme === 'light' ? 'oklch(0.43 0.12 235)' : 'var(--cool)');
+      assert.equal(await style(chip('Gym'), 'color'), ink3, 'a past item is ink3');
+      assert.equal(await style(chip('Gym'), 'opacity'), '1', 'at full strength');
+      assert.equal(await style(chip('Dentist'), 'color'), ahead);
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-06"] .dn'), 'color'), ink3, 'a day that\'s over');
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-01"] .dn'), 'color'), await colourOf(page, 'var(--ink)'), 'Oct 1 keeps its ink');
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .dn'), 'color'), await colourOf(page, 'var(--ink2)'), 'a day ahead keeps ink2');
+
+      // The week: its weekend columns, its blocks the same.
+      await page.keyboard.press('w');
+      const block = (title: string) => page.locator('.wk-col[data-date="2026-10-07"] .wb', {hasText: title});
+      await block('Dentist').waitFor();
+      assert.equal(await style(page.locator('.wk-weekend').first(), 'backgroundColor'), await colourOf(page, 'var(--dayOff)'));
+      assert.equal(await style(block('Gym'), 'color'), ink3);
+      assert.equal(await style(block('Dentist'), 'color'), ahead);
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}

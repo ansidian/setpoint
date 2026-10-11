@@ -83,15 +83,18 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.8 0.11 195)` | `oklch(0.54 0.09 195)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
+| `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from darma's 11
   swatches in Settings.
-- **Mixes** are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
+- **Mixes** of a hue are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
-  (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 12%),
+  (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
-  colour, and by 28% while pressed (#145).
+  colour, and by 28% while pressed (#145). A neutral (an ink or a surface) mixes in `srgb` or is an
+  alpha token, never in oklch, which tints it (#123). On the calendar, coloured text on its own tint
+  caps its lightness at `--tintL` (Night 1, Light .43), keeping its hue and chroma (#122).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -356,14 +359,16 @@ offered for protected mail.
 ### Month grid
 
 - **Weekday row** 30 px, 11.5 uppercase. **Columns** 147 px at the design target, **rows** 176. Cells
-  have `hair` right and bottom lines; days outside the month take `panel` at 60%, weekends at 40%,
-  the selected day `sub`.
-- **Day head** 22 px: the number (12.5, `ink2`; today a 22 px `ink` disc with `onInk` 600; "Oct 1"
-  and "Nov 1" at 500), and the weather icon at the end (16 px: sun `sun`, cloud `ink2`, rain `cool`).
-- **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text (12 /
-  500, the time at 400 and .8), a 3 px inset left bar, and the colour at `--evtint` as fill. The
-  **selected item turns solid** (colour fill, `onInk` text, no bar) and is the only selection mark: no
-  outline ring. **Past** items are at .55 opacity. Titles end in "…".
+  have `hair` right and bottom lines; weekends take `dayOff`, days outside the month `dayOut` (an
+  outside weekend too), the selected day `sub` (#123).
+- **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#124); today a 22 px
+  `ink` disc with `onInk` 600; "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
+  sun `sun`, cloud `ink2`, rain `cool`).
+- **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text, its
+  lightness capped at `--tintL` (#122) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
+  the colour at `--evtint` as fill. The **selected item turns solid** (colour fill, `onInk` text, no
+  bar) and is the only selection mark: no outline ring. **Past** items turn grey: `ink3` text and time,
+  the colour's bar at 45% and its fill at half `--evtint` (#124). Titles end in "…".
 - **Tasks:** the ring or done glyph and the title in `ink` 12; hover and selected `sub2`.
 - **Overflow:** what doesn't fit folds into "+3" (`ink3` 12) on a chip's footprint (20 px, radius 6,
   the count lined up with the chips' titles, `sub` and `ink2` under the pointer), then up to three
@@ -469,7 +474,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   more shows two and "+N", which opens the day's popover (board 11b). An event of 24 h or more is a
   bar here too.
 - **Hours:** all 24, 44 px each, `hair` lines, the gutter's labels in `ink3` 11. Weekends take
-  `panel` at 40%, the **selected day's column `sub`** (today by default, so board 16 reads the same),
+  `dayOff`, the **selected day's column `sub`** (today by default, so board 16 reads the same),
   and today's column the **now-line** (1.5 px `alert`, an 8 px dot at its start, the time in the
   gutter in `alert` 500).
 - **Opening scroll:** this week puts the now-line about a third down; another week an hour before
@@ -478,7 +483,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   under it at 400 and .8; at least 20 px; under 50 minutes (no room for a second line) the time follows the title on one
   line ("Standup, 9:00 AM"), and the place shows under the time where a whole line is left for it; in a
   lane a block gives its start alone, as a month chip does ("7 PM"), and one with room for four
-  lines wraps its title to two; no line is drawn cut off; titles end in "…" (override 10). Selected solid, past .55, pending .5 with
+  lines wraps its title to two; no line is drawn cut off; titles end in "…" (override 10). Selected solid, past grey as a chip (#124), pending .5 with
   the spinner, failed outlined in `alert`. An event crossing midnight draws in both days.
 - **Overlaps:** each run of overlapping events shares its column in up to three equal lanes; a
   fourth or more folds into "+N" at the run's top, opening the day's popover.
@@ -869,7 +874,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 29. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
     `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
-    (`#f4f4f2`). The boards keep the export's values.
+    (`#f4f4f2`), and Light `--evtint` 14% (12%). The boards keep the export's values.
 
 ## Not designed yet
 
@@ -1685,3 +1690,22 @@ it changes what's on screen.
     and All's folded Noise line takes a row's `sub` and `sub2`; `cardOn` sank below the band in Light,
     so J landing on a folded group showed nothing. News's image placeholder is `sub2` (Andy,
     2026-10-11, polish audit color-03, inbox-02, shell-05, search-07).
+122. **Coloured text on its own tint is capped at lightness .43 in Light:** chips, week blocks and
+    the editor's timeline draw their calendar's colour as `oklch(from <colour> min(l, var(--tintL)) c h)`,
+    `--tintL` Night 1 and Light .43, keeping hue and chroma, and Light's `--evtint` is 14%. Light's
+    hues are tuned for text on the page and read 3.8–4.3:1 on their own tint; capped, titles read
+    5.8–6.8:1 and Light's month as crisply as Night's, which is unchanged. The selected chip keeps
+    `onInk`, a failed one `alert`, and bars and fills the colour itself (Andy, 2026-10-11, polish
+    audit color-02, grids-01).
+123. **Weekends and the days outside the month show, and neutral mixes stay grey:** weekends take
+    `dayOff` (Night `rgba(255,255,255,.02)`, Light `rgba(29,30,33,.028)`) and days outside the shown
+    month `dayOut` (`.035`, `.048`), an outside weekend as an outside day, the selected day `sub` over
+    both; the week's weekend columns take `dayOff`. `panel` at 40% and 60% measured 1.01:1 on the
+    page, and its oklch mix with transparent turned faintly pink. A cell eases its shading over
+    180 ms as the scroll moves the shown month. Every neutral mix (an ink or a surface) is now `srgb`
+    or an alpha token; oklch is for hues (Andy, 2026-10-11, polish audit color-06, grids-02).
+124. **Past items turn grey instead of fading:** a past chip or week block draws its title and time
+    in `ink3` at full strength, its bar at 45% of its colour and its fill at half `--evtint`, so
+    colour means "still ahead" and a past Gym reads 3.8–4.3:1 rather than 2:1. A day that's over keeps
+    its number in `ink3` ("Oct 1" keeps its weight and ink) (Andy, 2026-10-11, polish audit
+    grids-01).

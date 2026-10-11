@@ -12,8 +12,8 @@
 .wk-days { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); position: relative; }
 
 /* Tints that run the whole column: the weekend, and the selected day (today by default). */
-.wk-weekend { background: color-mix(in oklch, var(--panel) 40%, transparent); }
-.wk-sel { background: color-mix(in oklch, var(--sub) 75%, transparent); }
+.wk-weekend { background: var(--dayOff); }
+.wk-sel { background: color-mix(in srgb, var(--sub) 75%, transparent); }
 
 /* Day heads: weekday, date (today's disc), weather. */
 .wk-head { height: var(--weekHead); border-bottom: 1px solid var(--hair); }
@@ -55,8 +55,9 @@
 .wk-now { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--alert); z-index: 3; pointer-events: none; }
 .wk-now::before { content: ''; position: absolute; left: -4px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
 
-/* Blocks: the chip's tint, bar and colours; the title at 500, its times under it at 400 and .8. */
-.wb { position: absolute; border-radius: 6px; color: var(--c, var(--cool)); background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent);
+/* Blocks: the chip's tint, bar and colours (its text capped at --tintL, #122); the title at 500, its
+   times under it at 400 and .8; past, grey with a faint bar and fill (#124). */
+.wb { position: absolute; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h); background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent);
   box-shadow: inset 3px 0 0 var(--c, var(--cool)); padding: 3px 7px 3px 9px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; z-index: 1;
   animation: wk-fade var(--weekFade) var(--ease); }
 .wb .wb-title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -69,7 +70,8 @@
 .wb.two:not(.short) .wb-title { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .wb > .icon { float: left; margin: 1px 4px 0 0; }
 .wb.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
-.wb.past { opacity: .55; }
+.wb.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
+.wb.past .t { opacity: 1; }
 .wb.pending { opacity: .5; }
 .wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 .wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }
