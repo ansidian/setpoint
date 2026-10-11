@@ -7,8 +7,8 @@ import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {costMicros} from '../src/domain/aiCost.ts';
 import {
-  applyGrouping, candidates, confirmKeynote, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
-  rankOrder, revisionFacts, ruleMatch, searchWords, significantWords, sourceRule, STORY_BAR, storyScore, summaryModel, wireKey,
+  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
+  rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, storyScore, summaryModel, wireKey,
 } from '../src/domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteClaim, NoiseReason, RankSignals, SourceRule} from '../src/domain/newsSorting.ts';
 import {ARTICLE_SYSTEM, groupingOf, keynoteOf, notesOf, rankingOf, writtenOf} from '../src/news/prompt.ts';
@@ -140,6 +140,66 @@ describe('grouping: cheap candidates first', () => {
     ['the closest first', 'Ohio warehouse shooting: suspect in custody, four killed', [2]],
   ])('%s', (_, headline, ids) => {
     expect(candidates({words: significantWords(headline), incident: null, wireKey: null}, stories).map(candidate => candidate.id)).toEqual(ids);
+  });
+
+  // The polish audit's extra-09, invented: one flood, two stations, facts worded apart.
+  const FLOOD_STORY = 'Flash flood closes 8 roads around Fabrikam Falls overnight';
+  const FLOOD_ARTICLE = 'Rising creek shuts eight Fabrikam Falls streets, crews say';
+  const flood = (headline: string, at: string) => ({
+    id: 9, words: significantWords(headline, 'Heavy rain sent the creek over its banks late Tuesday, flooding low-lying blocks near downtown',
+      'Public works put up barricades at each closed crossing and urged drivers to find detours'),
+    incidents: new Set<string>(), wireKeys: new Set<string>(), events: [eventMark(headline, at)],
+  });
+  const wanted = (headline: string, at: string) => ({
+    words: significantWords(headline, 'Water from the swollen stream covered several neighborhood intersections after midnight',
+      'The city asked motorists to stay off the affected streets until it recedes'),
+    incident: null, wireKey: null, event: eventMark(headline, at),
+  });
+
+  test.each<[string, string, string, number[]]>([
+    ['the same count and place within a day: a candidate, though their words differ', FLOOD_STORY, ago(4), [9]],
+    ['the same place, another count: not', 'Flash flood closes 3 roads around Fabrikam Falls overnight', ago(4), []],
+    ['the same count, another place: not', 'Flash flood closes 8 roads around Northwind Harbor overnight', ago(4), []],
+    ['the same count and place more than a day apart: not', FLOOD_STORY, ago(30), []],
+  ])('the same event: %s', (_, storyHeadline, storyAt, ids) => {
+    expect(candidates(wanted(FLOOD_ARTICLE, ago(0)), [flood(storyHeadline, storyAt)]).map(candidate => candidate.id)).toEqual(ids);
+  });
+
+  test('without the headlines\' marks, the two share too few words to meet', () => {
+    const {event: _, ...article} = wanted(FLOOD_ARTICLE, ago(0));
+    expect(candidates(article, [flood(FLOOD_STORY, ago(4))])).toEqual([]);
+  });
+
+  test('a story marking the same event comes before closer wording, so the cap never drops it', () => {
+    const close = (id: number) => ({id, words: wanted(FLOOD_ARTICLE, ago(0)).words, incidents: new Set<string>(), wireKeys: new Set<string>()});
+    expect(candidates(wanted(FLOOD_ARTICLE, ago(0)), [close(1), close(2), close(3), flood(FLOOD_STORY, ago(4))]).map(candidate => candidate.id)).toEqual([9, 3, 2]);
+  });
+
+  test.each<[string, number[], string[]]>([
+    [FLOOD_ARTICLE, [8], ['fabrikam', 'falls']],
+    // A count spelled out first is still a count, though the first word is never a name.
+    ['Two shelters and 8 crews stand ready as Fabrikam County braces for rain', [2, 8], ['fabrikam', 'county']],
+    ['Creek floods 9 basements in Fabrikam Falls, city says', [9], ['fabrikam', 'falls']],
+    // Nor is money a count.
+    ['Mayor offers $50,000 reward in North Contoso hit-and-run', [], ['north', 'contoso']],
+    ['Brush fire near the 210 burns 150 acres', [150, 210], []],
+    ['Introducing Claude Haiku 5.5 in Fabrikam\'s schools', [], ['claude', 'haiku', 'fabrikam']],
+    ['1 dead in a crash on the 2026 Marathon route', [], ['marathon']],
+    ['Fire 10% contained as crews win a $50 grant from "Contoso"', [], ['contoso']],
+    ['Transcript: an interview on "Mornings in Fabrikam," Oct. 11, 2026, and Sunday\'s 3 guests', [3], ['mornings', 'fabrikam']],
+  ])('a headline\'s mark: %s', (headline, counts, names) => {
+    const mark = eventMark(headline, NOW);
+    expect([[...mark.counts].sort((a, b) => a - b), [...mark.names]]).toEqual([counts, names]);
+  });
+
+  test.each<[string, string, string, boolean]>([
+    ['the same count and place', 'Creek shuts eight roads in Fabrikam', 'Flood closes 8 roads in Fabrikam', true],
+    ['a day apart exactly still counts', 'Creek shuts eight roads in Fabrikam', 'Flood closes 8 roads in Fabrikam', true],
+    ['no count in common', 'Creek shuts eight roads in Fabrikam', 'Flood closes 3 roads in Fabrikam', false],
+    ['no place in common', 'Creek shuts eight roads in Fabrikam', 'Flood closes 8 roads in Northwind', false],
+  ])('sameEvent: %s', (name, a, b, same) => {
+    const apart = name.startsWith('a day apart') ? SAME_EVENT_MS : 60 * 60_000;
+    expect(sameEvent(eventMark(a, NOW), eventMark(b, new Date(Date.parse(NOW) - apart).toISOString()))).toBe(same);
   });
 
   test.each<[string, string, boolean, string | null]>([

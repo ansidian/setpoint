@@ -196,17 +196,72 @@ export function incidentKey(canonicalUrl: string, hazard: boolean): string | nul
   return at > 0 ? canonicalUrl.slice(0, at) : null;
 }
 
+/** A day: two headlines further apart than this are about different events, whatever they share. */
+export const SAME_EVENT_MS = 24 * 60 * 60_000;
+
+const NUMBER_WORDS = ['two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+
+// Months and days are capitalised too, but name a time, not a place; a figure after a month is its day.
+const MONTHS = new Set([
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+  'jan', 'feb', 'mar', 'apr', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
+]);
+const CALENDAR_WORDS = new Set([...MONTHS, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+
+/** What marks an event in a headline: the counts it gives and the names it capitalises, with when it was published. */
+export interface EventMark {
+  counts: ReadonlySet<number>;
+  names: ReadonlySet<string>;
+  at: number;
+}
+
+/**
+ * A headline's event mark: its counts from 2 to 999, in figures or words ("8", "eight"), and its
+ * capitalised words past the first, folded ("Fabrikam", "Falls", "LA"), its places and names.
+ * A figure inside a larger one ("50,000", "5.5", "150-acre"), money, a share or a date ("Oct. 11")
+ * isn't a count, and days and months aren't names.
+ */
+export function eventMark(headline: string, publishedAt: string): EventMark {
+  const counts = new Set<number>();
+  const names = new Set<string>();
+  const bare = (token: string) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').replace(/['’]s$/i, '');
+  headline.split(/\s+/).filter(Boolean).forEach((token, index, tokens) => {
+    // A figure only when nothing but punctuation is around it: "$50" is money and "10%" a share.
+    const figure = token.replace(/^[("'‘“]+|[)"'’”,.:;!?]+$/g, '');
+    const word = bare(token);
+    const spelled = NUMBER_WORDS.indexOf(word.toLowerCase());
+    const dated = index > 0 && MONTHS.has(fold(bare(tokens[index - 1]!)));
+    const count = /^\d{1,3}$/.test(figure) ? (dated ? null : Number(figure)) : spelled >= 0 ? spelled + 2 : null;
+    if (count !== null) {
+      if (count >= 2) counts.add(count);
+    } else if (index > 0 && /^\p{Lu}\p{L}/u.test(word) && !STOP.has(fold(word)) && !CALENDAR_WORDS.has(fold(word))) names.add(fold(word));
+  });
+  return {counts, names, at: Date.parse(publishedAt)};
+}
+
+/**
+ * Two headlines likely about the same event: published within a day of each other, giving the same
+ * count and naming a place in common ("Rising creek shuts eight Fabrikam Falls streets" and "Flash
+ * flood closes 8 roads around Fabrikam Falls"). Only a candidate: the model still confirms.
+ */
+export function sameEvent(a: EventMark, b: EventMark): boolean {
+  return Math.abs(a.at - b.at) <= SAME_EVENT_MS && [...a.counts].some(count => b.counts.has(count)) && [...a.names].some(name => b.names.has(name));
+}
+
 export interface MatchableStory {
   id: number;
   words: Set<string>;
   incidents: ReadonlySet<string>;
   wireKeys: ReadonlySet<string>;
+  // Its headline's and each of its articles' headlines' marks.
+  events?: readonly EventMark[];
 }
 
 export interface MatchableArticle {
   words: Set<string>;
   incident: string | null;
   wireKey: string | null;
+  event?: EventMark;
 }
 
 /**
@@ -231,16 +286,19 @@ export const CANDIDATES_MAX = 3;
 
 /**
  * The likely stories for an article, closest first: those sharing enough of its words (the overlap
- * of the article's headline and facts with the story's headline, facts and sources' headlines). Only
- * these go to the model, which confirms whether one is the same event.
+ * of the article's headline and facts with the story's headline, facts and sources' headlines), and
+ * those whose headlines mark the same event as its own (sameEvent), which come first, as two
+ * outlets' facts can be worded too far apart to share enough words. Only these go to the model,
+ * which confirms whether one is the same event.
  */
 export function candidates(article: MatchableArticle, stories: readonly MatchableStory[], max = CANDIDATES_MAX): {id: number; overlap: number}[] {
   return stories.flatMap(story => {
     const shared = [...article.words].filter(word => story.words.has(word)).length;
     const smaller = Math.min(article.words.size, story.words.size);
     const overlap = smaller ? shared / smaller : 0;
-    return shared >= 2 && overlap >= CANDIDATE_OVERLAP ? [{id: story.id, overlap}] : [];
-  }).sort((a, b) => b.overlap - a.overlap || b.id - a.id).slice(0, max);
+    const event = article.event !== undefined && (story.events ?? []).some(mark => sameEvent(article.event!, mark));
+    return event || (shared >= 2 && overlap >= CANDIDATE_OVERLAP) ? [{id: story.id, overlap, event}] : [];
+  }).sort((a, b) => Number(b.event) - Number(a.event) || b.overlap - a.overlap || b.id - a.id).slice(0, max).map(({id, overlap}) => ({id, overlap}));
 }
 
 /** Two fact lines say the same thing: the same words, or nearly all of the shorter one's. */

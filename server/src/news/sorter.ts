@@ -6,8 +6,9 @@
 //    noise (src/domain/newsSorting.ts). Noise is done with; the rest is grouped.
 // 2. Grouping, one article at a time in the order published: the same hazard incident (each revision
 //    a new fact) or the same wire text (a repeat) joins its story by rule; otherwise cheap candidate
-//    matching finds the likely stories and Haiku confirms whether it's the same event and what facts
-//    it brings. No match starts a story.
+//    matching finds the likely stories (enough words in common, or a headline a day apart with the
+//    same count and place) and Haiku confirms whether it's the same event and what facts it brings.
+//    No match starts a story.
 // 3. Stories with new facts (or new ones) are written (Claude Sonnet 5.5, Haiku past the cap): the
 //    neutral headline, the one line, the summary, the lead article and the best image. A fifth outlet
 //    repeating the first four rewrites nothing. A story covered only by a metered paper is never
@@ -25,7 +26,7 @@ import {and, asc, eq, gt, inArray, isNotNull, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {STORY_TTL_MS} from '../domain/news.ts';
 import {
-  applyGrouping, candidates, confirmKeynote, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
+  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
   significantWords, sourceRule, storyScore, wireKey,
 } from '../domain/newsSorting.ts';
 import type {ArticleNotes, KeynoteClaim, MatchableStory} from '../domain/newsSorting.ts';
@@ -139,6 +140,7 @@ function matchable(live: LiveStory, sources: Map<number, SourceRow>): MatchableS
     words: significantWords(live.story.headline, ...live.facts.map(fact => fact.text), ...live.articles.map(article => article.headline)),
     incidents: new Set(live.articles.flatMap(article => incidentKey(article.canonicalUrl, sourceRule(sources.get(article.sourceId)!).hazard) ?? [])),
     wireKeys: new Set(live.articles.flatMap(article => article.wireKey ?? [])),
+    events: [eventMark(live.story.headline, live.story.lastNewFactAt), ...live.articles.map(article => eventMark(article.headline, article.publishedAt))],
   };
 }
 
@@ -197,7 +199,10 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
   const hazard = sourceRule(sources.get(article.sourceId)!).hazard;
   const live = liveStories(store, sources);
   const stories = live.map(story => matchable(story, sources));
-  const wanted = {words: significantWords(article.headline, ...notes.facts), incident: incidentKey(article.canonicalUrl, hazard), wireKey: article.wireKey};
+  const wanted = {
+    words: significantWords(article.headline, ...notes.facts), incident: incidentKey(article.canonicalUrl, hazard), wireKey: article.wireKey,
+    event: eventMark(article.headline, article.publishedAt),
+  };
 
   const ruled = ruleMatch(wanted, stories);
   if (ruled) {

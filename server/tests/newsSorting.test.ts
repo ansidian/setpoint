@@ -138,7 +138,22 @@ const THIRD: Recorded[] = [
   {source: 'nbcla', headline: 'Freeway ramp closures begin tonight', published: 0.85, subject: 'local', sections: ['local'], facts: ['Overnight ramp closures begin tonight'], importance: 50},
 ];
 
-const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD].map(article => [article.headline, article]));
+// The same flood from two stations a few hours apart (the polish audit's extra-09, invented): their
+// headlines give the same count and place, but their facts are worded apart, so they share too few
+// words to meet as candidates.
+const FLOOD: Recorded[] = [
+  {source: 'nbcla', headline: 'Flash flood closes 8 roads around Fabrikam Falls overnight', published: -9, subject: 'local', sections: ['local'], importance: 70,
+    facts: ['Heavy rain sent the creek over its banks late Tuesday, flooding low-lying blocks near downtown',
+      'Public works put up barricades at each closed crossing and urged drivers to find detours',
+      'No injuries were reported, and the water was expected to crest before dawn']},
+  {source: 'abc7', headline: 'Rising creek shuts eight Fabrikam Falls streets, crews say', published: -5, subject: 'local', sections: ['local'], importance: 70,
+    facts: ['Water from the swollen stream covered several neighborhood intersections after midnight',
+      'The city asked motorists to stay off the affected streets until it recedes',
+      'A shelter at the community center took in a handful of residents from riverside homes'],
+    join: 'fabrikam falls', newFacts: ['A shelter at the community center took in residents from riverside homes']},
+];
+
+const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD].map(article => [article.headline, article]));
 
 // Sonnet's stories, by what their notes say (first match wins).
 const STORIES: [RegExp, (input: string) => {headline: string; one_line: string; summary: string}][] = [
@@ -154,6 +169,7 @@ const STORIES: [RegExp, (input: string) => {headline: string; one_line: string; 
   [/haiku/i, () => ({headline: 'Anthropic releases Claude Haiku 5.5', one_line: 'Faster and cheaper, in the API and Claude apps today', summary: 'Anthropic released Claude Haiku 5.5.'})],
   [/library/i, () => ({headline: 'A library branch extends its weekend hours', one_line: 'Open Sundays from this week', summary: 'A branch library added Sunday hours.'})],
   [/ramp/i, () => ({headline: 'Overnight freeway ramp closures begin tonight', one_line: 'Through Friday', summary: 'Ramp closures begin tonight.'})],
+  [/fabrikam falls/i, () => ({headline: 'Flash flood closes 8 roads around Fabrikam Falls', one_line: 'Crews expect the creek to crest before dawn', summary: 'A flash flood closed eight roads around Fabrikam Falls overnight.'})],
 ];
 
 // Sonnet's hourly judgement, by what each story's line says.
@@ -397,6 +413,18 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(out.days.flatMap(day => day.stories.map(story => story.id))).toEqual([ramp]);
     // Expired stories are still found.
     expect(newsSearch(w.store, {q: 'warehouse', limit: 50}).stories.map(story => story.expired_at !== null)).toEqual([true]);
+  });
+});
+
+describe('the same event, worded apart (the polish audit\'s extra-09)', () => {
+  test('two headlines a day apart with the same count and place meet as candidates, and the model joins them', async () => {
+    const s = await sortWorld();
+    s.deliver(FLOOD);
+    await s.drain();
+    const story = s.storyOf(FLOOD[0]!.headline)!;
+    expect(s.calls('submit_news_grouping').map(request => headlineIn(request.input))).toEqual([FLOOD[1]!.headline]);
+    expect(s.storyOf(FLOOD[1]!.headline)).toBe(story);
+    expect(s.story(story).outlets).toBe(2);
   });
 });
 
