@@ -201,7 +201,10 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 ### The list
 
-- **Group header** 30 px, `panel`, `hair` above and below (none above the first), 11.5 uppercase
+- **Group header** 30 px, `panel`, `hair` above and below (none above the first), its group's 14 px
+  glyph in `ink3` 8 px before the label (Pinned `keep`, Attention `flag` in `caution`, Unsorted
+  `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career `work`, People
+  `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #160), 11.5 uppercase
   .08em `ink3`, count in `ink2` (Attention's in `caution`). A collapsed group adds the first three
   organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge Video") and a chevron, and hovers `cardOn`. Every group
   starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
@@ -231,7 +234,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 The header's **All**. Every email, Noise included, newest first, under day headings ("TODAY Wed,
 Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39). Each day
-groups its rows by lane, and the kind shows once, in a left column, where an FYI run starts; each
+groups its rows by lane, and the kind shows once, in a left column, where an FYI run starts, after
+its group's glyph at 13 px (#160); each
 day's Noise folds to one line ([Decided while building](#decided-while-building) #48). Pinned
 email sits on Unread's Pinned shelf above the first day, with ages and Unpin under the pointer, and
 leaves its day until it's unpinned (#101).
@@ -1373,3 +1377,10 @@ it changes what's on screen.
     was opened at. Signed in, the same restart keeps the app under the offline pill instead of
     swapping it for the card. The card's own "Can't reach Setpoint" stays for a sign-in attempt
     that fails (Andy, 2026-10-11, polish audit states-02).
+160. **Each lane carries its glyph:** every Unread group header leads with a 14 px glyph in `ink3`, 8
+    px before its label: Pinned `keep` (was 16), Attention `flag` (in `caution`, as its count),
+    Unsorted `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career
+    `work`, People `person`, Updates `notifications`, Other `mail`, Noise `campaign`. All's kind
+    column draws the same glyph at 13 px before the kind word, the column 100 px wide to hold it.
+    Shape alone, no colour per kind: the account colours already mean accounts (Andy, 2026-10-11,
+    polish audit inbox-04).

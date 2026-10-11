@@ -4,20 +4,20 @@
 // Pinned shelf above the days, with ages and Unpin under the pointer, and leaves its day meanwhile (D105).
 // Pages load as the list nears its end. What shows comes from logic/all.ts; actions are the page's.
 // A trashed row folds out and Undo folds it back in, as in Unread (app/fold.ts).
-import type {AccountOut, MessageRowOut} from '@setpoint/shared';
+import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useMemo} from 'react';
 import type {MouseEvent, UIEvent} from 'react';
 import {allRowLine, dayHeading, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, FoldRules} from '../logic/fold.ts';
 import {age, clockTime, fullTimestamp, localDate} from '../logic/format.ts';
-import {groupKey, rowKey, showsPending} from '../logic/inbox.ts';
+import {GROUP_GLYPHS, GROUP_LABELS, groupKey, rowKey, showsPending} from '../logic/inbox.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
 import {foldIn, foldOut, useFold} from './fold.ts';
 
 type Part = {kind: 'shelf'; count: number} | {kind: 'day'; date: string} | {kind: 'lane'; lane: AllLane; label: string; count: number}
-  | {kind: 'noise'; date: string; count: number; preview: string; open: boolean} | {kind: 'row'; row: MessageRowOut; label: string | null; shelf: boolean};
+  | {kind: 'noise'; date: string; count: number; preview: string; open: boolean} | {kind: 'row'; row: MessageRowOut; group: InboxGroup | null; shelf: boolean};
 const RULES: FoldRules<Part> = {folds: () => true, arrives: () => true};
 
 export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin}: {
@@ -40,11 +40,11 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
     const list = event.currentTarget;
     if (list.scrollHeight - list.scrollTop - list.clientHeight < 600) onNearEnd();
   };
-  const rowEntry = (row: MessageRowOut, label: string | null): Entry<Part> => ({key: `all:${row.id}`, id: row.id, item: {kind: 'row', row, label, shelf: false}});
+  const rowEntry = (row: MessageRowOut, group: InboxGroup | null): Entry<Part> => ({key: `all:${row.id}`, id: row.id, item: {kind: 'row', row, group, shelf: false}});
   const entries = useMemo(() => [
     ...(shelf.length ? [
       {key: groupKey('pinned'), id: null, item: {kind: 'shelf', count: shelf.length}} satisfies Entry<Part>,
-      ...shelf.map((row): Entry<Part> => ({key: rowKey('pinned', row.id), id: row.id, item: {kind: 'row', row, label: null, shelf: true}})),
+      ...shelf.map((row): Entry<Part> => ({key: rowKey('pinned', row.id), id: row.id, item: {kind: 'row', row, group: null, shelf: true}})),
     ] : []),
     ...days.flatMap((day): Entry<Part>[] => [
     {key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}},
@@ -67,7 +67,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
         if (item.kind === 'shelf') {
           return (
             <div key={key} ref={ref} className={['gh', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
-              <span className="keep"><Icon name="keep" size={16} /></span>Pinned <span className="n">{item.count}</span>
+              <span className="gi"><Icon name={GROUP_GLYPHS.pinned} size={14} /></span>{GROUP_LABELS.pinned} <span className="n">{item.count}</span>
             </div>
           );
         }
@@ -101,7 +101,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
         return (
           <div key={key} ref={ref} className={classes} title={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onClick={leaving ? undefined : () => onOpen(row.id, key)}>
-            <span className="kd">{item.label}</span>
+            <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <span className="ud" />
             <span className="from">{line.from}</span>
             <span className="subj">

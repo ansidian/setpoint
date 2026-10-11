@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, arrivalView, caughtUp, codeExpired, countsAfterOpen, cursorStops, groupViews, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, arrivalView, caughtUp, GROUP_GLYPHS, codeExpired, countsAfterOpen, cursorStops, groupViews, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {Collapse, PatternPrompt} from '../src/logic/inbox.ts';
@@ -45,6 +45,13 @@ const groups: InboxGroupOut[] = [
 const inbox: InboxOut = {account_id: null, groups, counts, next_change_at: null};
 // Deliveries and Noise as the user collapsed them, as the boards show them.
 const asBoards: Collapse = {deliveries: true, noise: true};
+
+// Each lane's glyph, one per group and no two alike (#160): its header and All's kind column draw it.
+test.each([
+  ['pinned', 'keep'], ['attention', 'flag'], ['unsorted', 'pending'], ['security', 'lock'], ['deliveries', 'local_shipping'], ['money', 'payments'],
+  ['career', 'work'], ['people', 'person'], ['updates', 'notifications'], ['other', 'mail'], ['noise', 'campaign'],
+] as const)('%s\'s glyph is %s', (name, glyph) => expect(GROUP_GLYPHS[name]).toBe(glyph));
+test('no two groups share a glyph', () => expect(new Set(Object.values(GROUP_GLYPHS)).size).toBe(Object.keys(GROUP_GLYPHS).length));
 
 describe('groupViews', () => {
   test('every group starts expanded: rows and chevrons', () => {

@@ -4,12 +4,23 @@
 // keyboard cursor can stop, and the counts' at-once changes (DESIGN.md › Interaction rules).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
+import type {IconName} from '../ui/glyphs.ts';
 import {countdownChange} from './format.ts';
 import type {MailView} from './route.ts';
 
 export const GROUP_LABELS: Record<InboxGroup, string> = {
   pinned: 'Pinned', attention: 'Attention', unsorted: 'Unsorted', security: 'Security', deliveries: 'Deliveries', money: 'Money',
   career: 'Career', people: 'People', updates: 'Updates', other: 'Other', noise: 'Noise',
+};
+
+/**
+ * Each group's glyph, before its header's label and before All's kind word, so a lane reads at a
+ * glance without its word. Shape alone, in the header's `ink3`; only Attention's flag is `caution`, as its
+ * count is (Decided while building #160).
+ */
+export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
+  pinned: 'keep', attention: 'flag', unsorted: 'pending', security: 'lock', deliveries: 'local_shipping', money: 'payments',
+  career: 'work', people: 'person', updates: 'notifications', other: 'mail', noise: 'campaign',
 };
 
 /** Pinned, Attention and Unsorted always show their rows; every other group has a chevron. */

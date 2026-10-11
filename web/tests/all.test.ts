@@ -4,7 +4,7 @@
 import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {allRowLine, dayHeading, dayStops, dayView, groupByDay, kindLabel} from '../src/logic/all.ts';
+import {allRowLine, dayHeading, dayStops, dayView, groupByDay, kindGroup, kindLabel} from '../src/logic/all.ts';
 import {clockTime} from '../src/logic/format.ts';
 
 let nextId = 100;
@@ -106,7 +106,7 @@ describe('dayView', () => {
     expect(dayView(day, false).lanes.map(lane => [lane.label, lane.rows.map(({row: one, kind}) => [one.id, kind])])).toEqual([
       ['Attention', [[interview.id, null]]],
       ['Unsorted', [[unsorted.id, null]]],
-      ['FYI', [[signIn.id, 'Security'], [hub.id, 'Deliveries'], [ups.id, null], [statement.id, 'Money'], [other.id, 'Other']]],
+      ['FYI', [[signIn.id, 'security'], [hub.id, 'deliveries'], [ups.id, null], [statement.id, 'money'], [other.id, 'other']]],
     ]);
   });
 
@@ -118,7 +118,7 @@ describe('dayView', () => {
   });
 
   test('a day without Noise or a lane leaves them out', () => {
-    expect(dayView({date: '2026-10-07', rows: [hub]}, false)).toEqual({date: '2026-10-07', lanes: [{lane: 'fyi', label: 'FYI', rows: [{row: hub, kind: 'Deliveries'}]}], noise: null});
+    expect(dayView({date: '2026-10-07', rows: [hub]}, false)).toEqual({date: '2026-10-07', lanes: [{lane: 'fyi', label: 'FYI', rows: [{row: hub, kind: 'deliveries'}]}], noise: null});
   });
 
   test('J and K stop on each row as shown, and on a folded Noise line instead of its rows', () => {
@@ -138,16 +138,16 @@ describe('dayView', () => {
   });
 });
 
-describe('kindLabel', () => {
+describe('kindGroup and kindLabel', () => {
   test.each([
-    ['an FYI kind', {lane: 'fyi', kind: 'deliveries'}, 'Deliveries'],
-    ['Attention keeps its kind', {lane: 'attention', kind: 'career'}, 'Career'],
-    ['security', {lane: 'fyi', kind: 'security'}, 'Security'],
-    ['no kind is Other', {lane: 'fyi', kind: null}, 'Other'],
-    ['Noise', {lane: 'noise', kind: null}, 'Noise'],
-    ['Unsorted', {lane: null, kind: null}, 'Unsorted'],
-  ] as const)('%s', (_name, fields, label) => {
-    expect(kindLabel(fields)).toBe(label);
+    ['an FYI kind', {lane: 'fyi', kind: 'deliveries'}, 'deliveries', 'Deliveries'],
+    ['Attention keeps its kind', {lane: 'attention', kind: 'career'}, 'career', 'Career'],
+    ['security', {lane: 'fyi', kind: 'security'}, 'security', 'Security'],
+    ['no kind is Other', {lane: 'fyi', kind: null}, 'other', 'Other'],
+    ['Noise', {lane: 'noise', kind: null}, 'noise', 'Noise'],
+    ['Unsorted', {lane: null, kind: null}, 'unsorted', 'Unsorted'],
+  ] as const)('%s', (_name, fields, group, label) => {
+    expect([kindGroup(fields), kindLabel(fields)]).toEqual([group, label]);
   });
 });
 

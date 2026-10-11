@@ -133,7 +133,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh.att .n { color: var(--caution); }
 .gh.first { border-top: 0; }
 .gh.collapsed:hover, .gh.collapsed.cur { background: var(--cardOn); }
-.gh .keep { color: var(--ink3); }
+/* Each group's glyph before its label (#160): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
+.gh .gi { display: grid; color: var(--ink3); }
+.gh.att .gi { color: var(--caution); }
 .row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
 .row:hover { background: var(--sub); }
 .row.cur, .row.open { background: var(--sub2); }
@@ -235,7 +237,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .nfold .chev { margin-left: auto; }
 .nfold.cur { background: var(--cardOn); }
-.list.all .row .kd { width: 84px; margin-left: 12px; margin-right: -10px; flex: none; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list.all .row .kd { width: 100px; margin-left: 12px; margin-right: -10px; flex: none; display: flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
 .list.all .row .from { width: 200px; }
 .list.all .row .age { width: 72px; }
 .list.all .row.shelf .hact { width: 72px; }

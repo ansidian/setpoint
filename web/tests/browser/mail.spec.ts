@@ -9,11 +9,27 @@ import path from 'node:path';
 import {after, test} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, collapseGroups, point, readSecurity, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
+
+/** A token's colour as the page computes it, to compare with an element's. */
+const tokenColour = (page: Page, token: string) => page.evaluate(name => {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--${name})`;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+}, token);
+
+const GLYPH_NAMES = new Map<string, string>(Object.entries(ICONS).map(([name, path]) => [path, name]));
+/** Each glyph's name (from its bundled path), size and colour. */
+const glyphs = async (icons: Locator) => (await icons.evaluateAll(all => all.map(icon => [icon.querySelector('path')!.getAttribute('d')!, icon.getAttribute('width'), getComputedStyle(icon).color])))
+  .map(([path, size, colour]) => [GLYPH_NAMES.get(path!) ?? 'unknown', size, colour]);
 
 const counts = (setpoint: Setpoint) => setpoint.api<MailCountsOut>('GET', '/mail/counts');
 const pill = (page: Page) => page.locator('.nav:has-text("Inbox") .apill').textContent();
@@ -822,6 +838,38 @@ test('All: every email by day with clock times, grouped by lane, Noise folded pe
     await until('it folds away', () => lease.count(), count => count === 0);
     await page.keyboard.press('Meta+z');
     await until('⌘Z brings it back', () => lease.count(), count => count === 1, 5000);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('#160: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const [ink3, caution] = [await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
+    const headers = page.locator('.list .gh');
+    const labels = await headers.evaluateAll(all => all.map(header => header.querySelector('.gi')!.nextSibling!.textContent));
+    assert.deepEqual(labels, ['Pinned', 'Attention', 'Security', 'Deliveries', 'Money', 'Career', 'Noise']);
+    assert.deepEqual(await glyphs(headers.locator('.gi .icon')), [
+      ['keep', '14', ink3], ['flag', '14', caution], ['lock', '14', ink3], ['local_shipping', '14', ink3], ['payments', '14', ink3], ['work', '14', ink3], ['campaign', '14', ink3],
+    ]);
+    // The label starts 8 px after the glyph, as the header's other parts are spaced.
+    const gaps = await headers.evaluateAll(all => all.map(header => {
+      const glyph = header.querySelector('.gi')!;
+      const range = document.createRange();
+      range.selectNode(glyph.nextSibling!);
+      return Math.round(range.getBoundingClientRect().left - glyph.getBoundingClientRect().right);
+    }));
+    assert.deepEqual(new Set(gaps), new Set([8]));
+    // All: the Pinned shelf's header the same, and each kind word after its group's glyph at 13 px.
+    await page.goto(`${setpoint.base}/inbox/all`);
+    await page.locator('.list.all .row').first().waitFor();
+    assert.deepEqual(await glyphs(page.locator('.list.all .gh .gi .icon')), [['keep', '14', ink3]]);
+    const kinds = page.locator('.list.all .row .kd:has(.icon)');
+    assert.deepEqual((await kinds.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
+    assert.deepEqual((await glyphs(kinds.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

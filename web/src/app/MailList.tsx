@@ -7,7 +7,7 @@ import type {AccountOut, MessageRowOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, Ref} from 'react';
 import {age, codeGroups, expiresIn, fullTimestamp} from '../logic/format.ts';
-import {groupKey, promptText, rowKey, rowLine, sender, showsPending} from '../logic/inbox.ts';
+import {GROUP_GLYPHS, groupKey, promptText, rowKey, rowLine, sender, showsPending} from '../logic/inbox.ts';
 import type {GroupView, PatternPrompt} from '../logic/inbox.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {Icon} from '../ui/Icon.tsx';
@@ -136,7 +136,7 @@ function GroupHeader({view, first, cur, leaving, fold, onPoint, onToggle}: {
   };
   return (
     <div className={classes} ref={fold} {...attributes}>
-      {view.group === 'pinned' && <span className="keep"><Icon name="keep" size={16} /></span>}
+      <span className="gi"><Icon name={GROUP_GLYPHS[view.group]} size={14} /></span>
       {view.label} <span className="n">{view.count}</span>
       {view.preview && <span className="preview">{view.preview}</span>}
       {view.group === 'unsorted' && <TriageNote />}

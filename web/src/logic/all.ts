@@ -4,10 +4,10 @@
 // Each day groups its rows by lane, with the kind once where an FYI run starts, and folds its Noise
 // to one line (#48, D58). A pinned email sits on the Pinned shelf above the days, and only there (D105).
 import {INBOX_GROUPS} from '@setpoint/shared';
-import type {MessageRowOut} from '@setpoint/shared';
+import type {InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {daysBetween, localDate} from './format.ts';
 import {codeGroups} from './format.ts';
-import {rowKey, sender} from './inbox.ts';
+import {GROUP_LABELS, rowKey, sender} from './inbox.ts';
 import type {Stop} from './inbox.ts';
 
 export interface Day {
@@ -41,8 +41,8 @@ export type AllLane = 'attention' | 'unsorted' | 'fyi';
 export interface LaneView {
   lane: AllLane;
   label: string;
-  // Each row with its kind where an FYI run of that kind starts, else null.
-  rows: {row: MessageRowOut; kind: string | null}[];
+  // Each row with its kind where an FYI run of that kind starts (its group, for the word and the glyph), else null.
+  rows: {row: MessageRowOut; kind: InboxGroup | null}[];
 }
 
 export interface DayView {
@@ -66,7 +66,7 @@ export function dayView(day: Day, noiseOpen: boolean): DayView {
     if (!rows.length) return [];
     if (lane !== 'fyi') return [{lane, label, rows: rows.map(row => ({row, kind: null}))}];
     const sorted = rows.toSorted((a, b) => kindOrder(a) - kindOrder(b));
-    return [{lane, label, rows: sorted.map((row, index) => ({row, kind: index > 0 && kindLabel(sorted[index - 1]!) === kindLabel(row) ? null : kindLabel(row)}))}];
+    return [{lane, label, rows: sorted.map((row, index) => ({row, kind: index > 0 && kindGroup(sorted[index - 1]!) === kindGroup(row) ? null : kindGroup(row)}))}];
   });
   const noise = day.rows.filter(row => row.lane === 'noise');
   return {
@@ -103,16 +103,15 @@ export function dayHeading(date: string, today: string): {label: string; date: s
   return {label: weekday, date: onDay(date, sameYear ? {month: 'short', day: 'numeric'} : {month: 'short', day: 'numeric', year: 'numeric'})};
 }
 
-export const KIND_LABELS = {
-  deliveries: 'Deliveries', money: 'Money', career: 'Career', security: 'Security', updates: 'Updates', people: 'People', other: 'Other',
-} as const;
-
-/** The kind All shows before the account: the FYI kind, else Noise, or Unsorted while triage hasn't sorted it. */
-export function kindLabel(row: Pick<MessageRowOut, 'lane' | 'kind'>): string {
-  if (row.lane === null) return 'Unsorted';
-  if (row.lane === 'noise') return 'Noise';
-  return KIND_LABELS[row.kind ?? 'other'];
+/** The kind All shows before the account, as Unread's group: the FYI kind, else Noise, or Unsorted while triage hasn't sorted it. */
+export function kindGroup(row: Pick<MessageRowOut, 'lane' | 'kind'>): InboxGroup {
+  if (row.lane === null) return 'unsorted';
+  if (row.lane === 'noise') return 'noise';
+  return row.kind ?? 'other';
 }
+
+/** The kind's word: "Deliveries", "Noise", "Unsorted". */
+export const kindLabel = (row: Pick<MessageRowOut, 'lane' | 'kind'>): string => GROUP_LABELS[kindGroup(row)];
 
 /**
  * A row's text in All, as the Inbox's (Decided while building #35, #74): the summary, when triage
