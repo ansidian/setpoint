@@ -114,6 +114,10 @@
 /* A row's menu and a select's: the app's one menu (styles.css), under its button's right edge. */
 .settings .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; min-width: 180px; }
 .settings .menu.left { right: auto; left: 0; }
+/* The section holding an open menu stacks over the ones after it, so their sticky labels stay under
+   the menu even while a page switch's fade makes each section its own layer (a page whose answers
+   were loaded as Settings opened shows at once, and can be clicked within the fade). */
+.settings .set-main > :has(.menu) { position: relative; z-index: 2; }
 /* No room below in the page: it opens upward (ui/popover.ts). It grows from its button's corner, as
    every popover does (styles.css › Overlays arrive). */
 .settings .menu[data-up] { top: auto; bottom: calc(100% + 6px); }
