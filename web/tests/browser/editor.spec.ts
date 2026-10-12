@@ -76,6 +76,9 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('End');
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
+    // The head's × is a 30 px header button with an 18 px glyph, as Settings' (#164); Add another's add is 17 beside its label.
+    assert.deepEqual(await page.getByRole('button', {name: 'Close editor'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [30, '18']);
+    assert.equal(await page.getByRole('button', {name: 'Add another'}).locator('.icon').getAttribute('width'), '17');
     await page.mouse.move(700, 28);
     // Lets a hover fill the move left fade out (120 ms) before the screenshot.
     await page.waitForTimeout(250);

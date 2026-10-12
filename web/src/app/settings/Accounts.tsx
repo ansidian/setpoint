@@ -152,7 +152,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
       )}
       <span className="prov">{source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'}</span>
       <span className={state.tone === 'caution' || check.failed ? 'state caution' : 'state'} title={check.text ?? account.health.reason ?? undefined}>
-        {state.reconnect && <Icon name="warning" size={16} />}
+        {state.reconnect && <Icon name="sync_problem" size={16} />}
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
       </span>
@@ -225,7 +225,7 @@ function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; s
       <div className="lines grow"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
       <span className="prov">{syncLine(source, timeZone())}</span>
       <span className={state.tone === 'caution' || check.failed ? 'state caution' : 'state'} title={check.text ?? source.health.reason ?? undefined}>
-        {state.reconnect && <Icon name="warning" size={16} />}
+        {state.reconnect && <Icon name="sync_problem" size={16} />}
         <span className="num ell">{check.text ?? state.text}</span>
       </span>
       <Menu label={`${name} options`} button={<button className="ibtn sm" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>

@@ -30,7 +30,7 @@ export function useHealthBars() {
     <>
       {reconnect && (
         <div className="hbar caution" role="alert">
-          <Icon name="warning-fill" size={16} />
+          <Icon name="sync_problem" size={16} />
           <span>{reconnect}</span>
           <span>·</span>
           <button className="act" type="button" onClick={() => openSettings('accounts')}>Reconnect</button>
@@ -59,7 +59,7 @@ function Pill({text, onRetry}: {text: string; onRetry: () => void}) {
     <div className="offline-pill" role="status">
       <Icon name="cloud_off" size={16} />
       <span className="num">{text}</span>
-      <button className="retry" type="button" onClick={onRetry}>Retry now</button>
+      <button className="retry" type="button" onClick={onRetry}><Icon name="refresh" size={16} />Retry now</button>
     </div>
   );
 }

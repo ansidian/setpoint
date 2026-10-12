@@ -41,7 +41,7 @@ export function FailedCard({item, calendar, timeZone, onRetry, onMoveBack, onClo
       <div className="card-h">
         <span className="failed-mark"><Icon name="error" size={20} /></span>
         <span className="grow failed-title">{failedTitle(item)}</span>
-        <button className="ibtn sm" aria-label="Close" title="Close · Esc" onClick={onClose}><Icon name="close" /></button>
+        <button className="ibtn sm" aria-label="Close" title="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="card-b">
         <div className="fact"><Icon name="schedule" size={17} /><span className="num"><span className="v block">{detailWhen(item, timeZone)}</span>{from && <span className="ink3 from">{from}</span>}</span></div>

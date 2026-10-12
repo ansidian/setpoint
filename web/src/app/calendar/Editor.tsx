@@ -667,7 +667,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         <span className="grow ed-title">{editing ? `Edit ${noun}` : `New ${noun}`}</span>
         {editing ? (
           <span className="menu-host">
-            <button type="button" className="ibtn sm" aria-label="More" aria-expanded={menu === 'more'} onClick={() => setMenu(menu === 'more' ? null : 'more')}><Icon name="more_horiz" /></button>
+            <button type="button" className="ibtn" aria-label="More" aria-expanded={menu === 'more'} onClick={() => setMenu(menu === 'more' ? null : 'more')}><Icon name="more_horiz" /></button>
             {menu === 'more' && (
               <div ref={menuRef} className="pop menu right" role="menu">
                 <button type="button" role="menuitem" className="menu-i" onClick={() => onDelete(editing)}><Icon name="delete" size={16} />Delete<span className="kbd">Del</span></button>
@@ -680,7 +680,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <span className={kind === 'task' ? 'on' : ''} role="tab" aria-selected={kind === 'task'} onClick={() => switchKind('task')}>Task</span>
           </span>
         )}
-        <button type="button" className="ibtn sm" aria-label="Close editor" title="Close · Esc" onClick={onClose}><Icon name="close" /></button>
+        <button type="button" className="ibtn" aria-label="Close editor" title="Close · Esc" onClick={onClose}><Icon name="close" /></button>
       </div>
 
       <div className="ed-scroll">

@@ -180,7 +180,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* A change waiting for its provider (DESIGN.md › Interaction rules). */
 .row.pending, .arow.pending { opacity: .5; }
 .listfoot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 16px 14px 24px; color: var(--ink3); font-size: 12.5px; flex: none; }
-.listfoot .lnk { color: var(--ink2); display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 10px; border-radius: 999px; }
+.listfoot .lnk { color: var(--ink2); display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; }
+/* Mark all as read's glyph, as ⌘K's same command (#164), 6 px before its label. */
+.listfoot .lnk > .icon { margin-right: -2px; }
 .listfoot .lnk:hover { background: var(--sub); }
 /* All caught up (board 04). */
 .empty { flex: 1 1 auto; display: grid; place-items: center; padding-bottom: 96px; }

@@ -403,6 +403,8 @@ test('Mark all as read from the footer: everything outside Attention and Securit
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
+    // Its glyph is ⌘K's for the same command, 16 px before the label (#164).
+    assert.deepEqual((await glyphs(page.locator('.listfoot .lnk .icon')))[0]!.slice(0, 2), ['mark_email_read', '16']);
     await page.locator('.listfoot .lnk', {hasText: 'Mark all as read'}).click();
     await until('only Attention\'s two unread and Security\'s three remain', () => unreadCount(page), text => text === '5', 5000);
     // The screen shows it at once; the server follows.

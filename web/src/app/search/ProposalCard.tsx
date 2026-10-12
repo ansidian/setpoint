@@ -225,7 +225,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
           <button type="submit" className="btn" disabled={!calendarId || !title.trim()}>
             {pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}Create
           </button>
-          <button type="button" className="btn out" onClick={moreOptions}><Icon name="open_in_new" />More options</button>
+          <button type="button" className="btn out" onClick={moreOptions}><Icon name="open_in_new" size={17} />More options</button>
           <button type="button" className="btn quiet" onClick={close}>Cancel<span className="kbd">Esc</span></button>
           <span className="grow" />
           {proposal.from_email.length > 0 && <span className="legend"><Icon name="mail" size={14} />From the email</span>}

@@ -54,7 +54,7 @@ export function DayPopover({date, items, section, selected, calendars, now, time
       <div className="daypop-head">
         <span className="grow">{dayTitle(date)}</span>
         <span className="kbd">Esc</span>
-        <button className="ibtn sm" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+        <button className="ibtn sm" aria-label="Close" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="daypop-list">
         {items.map(item => (

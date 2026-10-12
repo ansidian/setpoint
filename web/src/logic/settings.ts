@@ -1,5 +1,20 @@
 // Settings' words and small rules (DESIGN.md › Settings; boards 17, 18a, 18b), tested as tables.
 import type {HealthOut, HealthState, Kind, Lane, MessageType, PrecisionOut, RuleMatch, RuleOut, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
+import type {IconName} from '../ui/glyphs.ts';
+import type {SettingsPage} from './route.ts';
+
+/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#164). */
+export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
+  accounts: {label: 'Accounts', icon: 'alternate_email'},
+  calendar: {label: 'Calendar', icon: 'calendar_month'},
+  todoist: {label: 'Todoist', icon: 'task_alt'},
+  notifications: {label: 'Notifications', icon: 'notifications'},
+  mail: {label: 'Mail', icon: 'mail'},
+  news: {label: 'News', icon: 'newspaper'},
+  ai: {label: 'AI', icon: 'auto_awesome'},
+  appearance: {label: 'Appearance', icon: 'contrast'},
+  security: {label: 'Security', icon: 'lock'},
+};
 
 const WORST: HealthState[] = ['needs_reconnect', 'failing', 'stale', 'healthy'];
 

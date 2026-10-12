@@ -470,6 +470,8 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Project"]').inputValue(), 'School');
+    // A labelled button's glyph is 17, open_in_new as Add's (#164).
+    assert.equal(await card.getByRole('button', {name: 'More options'}).locator('.icon').getAttribute('width'), '17');
     // S4: the card's fields as left go with it; those changed lose the email's mark.
     await card.locator('input[aria-label="Title"]').fill('Study for the final');
     await card.locator('input[aria-label="Date"]').fill('dec 8');

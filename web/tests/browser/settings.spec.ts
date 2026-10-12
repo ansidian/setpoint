@@ -15,6 +15,7 @@ import path from 'node:path';
 import {after, test} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, matchGolden, ROOT, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
@@ -47,6 +48,10 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     assert.match((await page.locator('.settings .spark span').last().getAttribute('title'))!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
+    // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#164).
+    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon path').getAttribute('d'), ICONS.sync_problem);
+    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'), 'in caution on the current page too');
+    assert.equal(await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).locator('.state > .icon path').getAttribute('d'), ICONS.sync_problem);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '17-settings-accounts', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -110,7 +115,8 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Calendar', 'Todoist', 'Notifications', 'Mail', 'News', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
-    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'));
+    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon path').getAttribute('d'), ICONS.warning, 'a failing feed keeps warning (override 24)');
+    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'));
     // The head's counts, then one group per section with its count, and no Keys group (#97).
     const sources = await setpoint.api<NewsSourcesOut>('GET', '/news/sources');
     assert.equal(await page.locator('.settings .set-head .head-note').textContent(), `${sources.articles_today} articles today · ${sources.stories_on_page} stories`);
@@ -312,6 +318,19 @@ test('Mail: a rule added, a learned rule undone, a domain untrusted, the code ex
     await page.getByRole('button', {name: 'Add', exact: true}).click();
     await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.kind === 'security'));
     await page.locator('.settings .rule', {hasText: 'alerts.contoso.example'}).waitFor();
+    // A rule's menu turns it off with toggle_off and back on with toggle_on (#164).
+    const added = page.locator('.settings .set-row', {hasText: 'alerts.contoso.example'});
+    await added.getByRole('button', {name: 'Rule options'}).click();
+    const turnOff = page.getByRole('menuitem', {name: 'Turn off'});
+    assert.equal(await turnOff.locator('.icon path').getAttribute('d'), ICONS.toggle_off);
+    await turnOff.click();
+    await settled('the rule off', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && !rule.enabled));
+    await added.locator('.when', {hasText: 'Off'}).waitFor();
+    await added.getByRole('button', {name: 'Rule options'}).click();
+    const turnOn = page.getByRole('menuitem', {name: 'Turn on'});
+    assert.equal(await turnOn.locator('.icon path').getAttribute('d'), ICONS.toggle_on);
+    await turnOn.click();
+    await settled('the rule on', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.enabled));
 
     await page.locator('.settings .set-row', {hasText: 'Northwind newsletters'}).getByRole('button', {name: 'Undo'}).click();
     await settled('Undo', rules, list => !list.some(rule => rule.match.organisation === 'Northwind'));

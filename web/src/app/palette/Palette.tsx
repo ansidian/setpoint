@@ -7,6 +7,7 @@ import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react';
 import {markAllRead} from '../../api/mail.ts';
 import {paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
+import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -23,17 +24,17 @@ import './palette.css';
 
 const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'} as const;
 
-// Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20).
-const SETTINGS_SECTIONS: {page: SettingsPage; label: string; keywords: string}[] = [
-  {page: 'accounts', label: 'Accounts', keywords: 'gmail google icloud reconnect connect'},
-  {page: 'calendar', label: 'Calendar', keywords: 'calendars home weather forecast maps places'},
-  {page: 'todoist', label: 'Todoist', keywords: 'projects tasks'},
-  {page: 'notifications', label: 'Notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
-  {page: 'mail', label: 'Mail', keywords: 'rules domains trusted codes expiry triage'},
-  {page: 'news', label: 'News', keywords: 'sources feeds airnow'},
-  {page: 'ai', label: 'AI', keywords: 'keys models anthropic openai claude gpt alfred usage cap'},
-  {page: 'appearance', label: 'Appearance', keywords: 'theme'},
-  {page: 'security', label: 'Security', keywords: 'password passkeys recovery codes'},
+// Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#164).
+const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
+  {page: 'accounts', keywords: 'gmail google icloud reconnect connect'},
+  {page: 'calendar', keywords: 'calendars home weather forecast maps places'},
+  {page: 'todoist', keywords: 'projects tasks'},
+  {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
+  {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
+  {page: 'news', keywords: 'sources feeds airnow'},
+  {page: 'ai', keywords: 'keys models anthropic openai claude gpt alfred usage cap'},
+  {page: 'appearance', keywords: 'theme'},
+  {page: 'security', keywords: 'password passkeys recovery codes'},
 ];
 
 /** The palette's own commands: Go to, Appearance, and the ones with a key that typing finds. */
@@ -52,8 +53,8 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I',
       run: () => void markAllRead(route.page === 'inbox' ? route.account : null).catch((error: Error) => showToast(error.message))},
-    ...SETTINGS_SECTIONS.map(({page, label, keywords}): Command => ({
-      id: `settings-${page}`, section: 'more', label: `Settings › ${label}`, icon: 'settings', keywords, run: () => openSettings(page),
+    ...SETTINGS_SECTIONS.map(({page, keywords}): Command => ({
+      id: `settings-${page}`, section: 'more', label: `Settings › ${SETTINGS_NAV[page].label}`, icon: SETTINGS_NAV[page].icon, keywords, run: () => openSettings(page),
     })),
     {id: 'sign-out', section: 'more', label: 'Sign out', icon: 'door_open', run: askSignOut},
   ];

@@ -107,7 +107,7 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; 
             <button className="mi" type="button" role="menuitem" onClick={() => {
               close();
               void setRuleEnabled(rule.id, !rule.enabled).catch(toastFailure(rule.enabled ? 'Couldn\'t turn the rule off' : 'Couldn\'t turn the rule on'));
-            }}><Icon name={rule.enabled ? 'visibility' : 'check'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
+            }}><Icon name={rule.enabled ? 'toggle_off' : 'toggle_on'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
             <button className="mi" type="button" role="menuitem" onClick={() => {
               close();
               void deleteRule(rule.id).catch(toastFailure('Couldn\'t delete the rule'));
@@ -130,7 +130,7 @@ function LearnedRule({rule}: {rule: RuleOut}) {
       <RuleText rule={rule} />
       <span className="when">Learned {learnedOn}</span>
       {today ? <button className="btn ghost sm" type="button" onClick={remove}>Undo</button>
-        : <button className="ibtn sm" type="button" aria-label="Remove learned rule" onClick={remove}><Icon name="close" /></button>}
+        : <button className="ibtn sm" type="button" aria-label="Remove learned rule" onClick={remove}><Icon name="close" size={16} /></button>}
     </div>
   );
 }

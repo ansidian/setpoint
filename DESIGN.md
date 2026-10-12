@@ -137,8 +137,13 @@ paint doesn't fade.
 ## Glyphs, icons and the mark
 
 - **Icons:** Material Symbols Rounded, weight 300, FILL 0 (the `-fill` files are FILL 1 uses), as SVG
-  masks from `glyphs/icons.json`. Sizes: 18 in the sidebar and rows, 16 in buttons and tools, 14 in
-  chips and tags, 17 in facts.
+  masks from `glyphs/icons.json`. One size per role (#164): 18 in the sidebar, rows, the reader's and
+  the story pane's tools and 30 px icon buttons; 17 beside a label in a button (Add, More options,
+  the reader's actions) and in facts; 16 in small buttons, menus and inline links; 14 in chips and
+  tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
+  header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (sidebar, Settings › Accounts and its rows, the
+  Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
+  `mark_email_read`, a Settings page its nav's glyph wherever it's named.
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
   stroke (12 px, `ink2` on the grid); done is darma's filled disc with the check knocked out, in
   **`good`**, title struck through in `ink3`.
@@ -227,7 +232,7 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   ([Decided while building](#decided-while-building) #109).
 - **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
   email's line is its subject and summary.
-- **Footer:** "Mark all as read ⇧I" at the end of the list.
+- **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#164).
 - **Empty:** "All caught up" with "Open All" (board 04); the reading pane collapses.
 
 ### All
@@ -671,8 +676,8 @@ A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the ad
 | **Healthy** | nothing |
 | **Stale** | a muted 32 px line, `ink3` 12.5: "Personal, as of 9:14 PM" |
 | **Failing** | the same line in `caution`, with the reason |
-| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): "Business needs sign-in · Reconnect"; the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
-| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now; everything under it dimmed, changes disabled |
+| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect"; the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
+| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164); everything under it dimmed, changes disabled |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner. |
@@ -1414,3 +1419,18 @@ it changes what's on screen.
     a 16 px `download` (gap 6, padding 0 10 0 8). Under the pointer the ring stays `edgeHover`, the
     tile deepens to 22%, the eye turns `ink`, and in Night the card fills `cardOn` (Light stays
     white) (Andy, 2026-10-11, polish audit reader-07).
+164. **A glyph means one thing, at one size per role:** account trouble is `sync_problem` everywhere
+    (the sidebar, Settings › Accounts' nav and rows, the Inbox's reconnect bar, which had shown
+    `warning` and `warning-fill`), while a failing News feed keeps `warning` (override 24); either
+    mark in Settings' nav is `caution`, the current page's too (it had taken the nav's `ink3` and
+    `ink`). A card's
+    or popover's × is 16 px in a 26 px button (the day's popover, the failed card and a learned
+    rule's were 18); 18 only in a 30 px header button, Settings' and the editor's, whose × and More
+    become 30 px. Add is 17 beside a label, 18 in a 30 px icon button, 16 in a 26 px one;
+    `open_in_new` is 18 in tools, 16 in small buttons and inline links, and 17 on the proposal
+    card's More options, a labelled button as Add's. ⌘K's "Settings › Mail" carries Mail's nav
+    glyph, not a generic gear; a rule's Turn off and Turn on show `toggle_off` and `toggle_on`
+    (were an eye and a check); Retry now carries `refresh`, as every Try again does; the list's
+    Mark all as read carries `mark_email_read`, as ⌘K's does. Stale and failing lines keep their
+    glyphs here; their tone rule is settled with the health states (Andy, 2026-10-11, polish audit
+    motion-10).

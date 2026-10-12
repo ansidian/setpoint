@@ -8,10 +8,14 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {MailCountsOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
+
+/** A glyph's bundled path and size, to compare with ICONS. */
+const glyph = async (icon: Locator) => [await icon.locator('path').getAttribute('d'), await icon.getAttribute('width')];
 
 /** Cuts Setpoint's live stream (the browser goes offline), or brings the network back. */
 const network = (page: Page, online: boolean) => page.context().setOffline(!online);
@@ -27,8 +31,13 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.today-row').first().waitFor();
     await collapseGroups(page);
     assert.equal(await page.locator('.acct', {hasText: 'Business'}).locator('.reconnect').count(), 1, 'the sidebar marks Business');
+    // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#164).
+    assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
+    assert.deepEqual(await glyph(page.locator('.acct', {hasText: 'Business'}).locator('.reconnect .icon')), [ICONS.sync_problem, '16']);
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
+    // Retry now carries refresh, as every Try again does (#164).
+    assert.deepEqual(await glyph(page.locator('.offline-pill .retry .icon')), [ICONS.refresh, '16']);
     await page.mouse.move(700, 28);
     await matchGolden(page, '19a-states-reconnect-offline-unsorted', 'main');
     await matchGolden(page, '19a-states-reconnect-offline-unsorted.sidebar', 'sidebar');

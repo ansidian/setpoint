@@ -155,7 +155,7 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
   }
 });
 
-test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI', async () => {
+test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, each with its nav\'s glyph', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -165,8 +165,11 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
       await page.keyboard.press('Meta+k');
       await page.keyboard.type(typed);
       assert.deepEqual(await items(page), [`Settings › ${section}`], typed);
+      const glyph = await page.locator('.palette .item .icon path').getAttribute('d');
       await page.keyboard.press('Enter');
       await page.locator('.settings .set-title', {hasText: section}).waitFor();
+      // The command carries its page's own glyph from Settings' nav, not a generic gear (#164).
+      assert.equal(await page.locator('.settings .set-nav .nav.on .icon path').first().getAttribute('d'), glyph, `Settings › ${section}'s glyph`);
       await page.keyboard.press('Escape');
       await page.locator('.settings').waitFor({state: 'detached'});
     }

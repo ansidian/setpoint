@@ -11,9 +11,9 @@ import {useResource} from '../../api/client.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {feedFailing} from '../../logic/news.ts';
+import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {SETTINGS_PAGES} from '../../logic/route.ts';
 import type {SettingsPage} from '../../logic/route.ts';
-import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {AccountsPage} from './Accounts.tsx';
 import {AiPage} from './Ai.tsx';
@@ -26,18 +26,6 @@ import {SecurityPage} from './Security.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
 import {TodoistPage} from './Todoist.tsx';
 import './settings.css';
-
-const NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
-  accounts: {label: 'Accounts', icon: 'alternate_email'},
-  calendar: {label: 'Calendar', icon: 'calendar_month'},
-  todoist: {label: 'Todoist', icon: 'task_alt'},
-  notifications: {label: 'Notifications', icon: 'notifications'},
-  mail: {label: 'Mail', icon: 'mail'},
-  news: {label: 'News', icon: 'newspaper'},
-  ai: {label: 'AI', icon: 'auto_awesome'},
-  appearance: {label: 'Appearance', icon: 'contrast'},
-  security: {label: 'Security', icon: 'lock'},
-};
 
 const PAGES: Record<SettingsPage, () => JSX.Element> = {
   accounts: AccountsPage, calendar: CalendarPage, todoist: TodoistPage, notifications: NotificationsPage,
@@ -91,9 +79,9 @@ function Open({page}: {page: SettingsPage}) {
           <div className="set-navtitle">Settings</div>
           {SETTINGS_PAGES.map(name => (
             <button key={name} type="button" className={name === page ? 'nav on' : 'nav'} aria-current={name === page ? 'page' : undefined} onClick={() => openSettings(name)}>
-              <Icon name={NAV[name].icon} />
-              <span className="grow">{NAV[name].label}</span>
-              {name === 'accounts' && reconnect && <span className="warn" title="An account needs sign-in"><Icon name="warning" size={16} /></span>}
+              <Icon name={SETTINGS_NAV[name].icon} />
+              <span className="grow">{SETTINGS_NAV[name].label}</span>
+              {name === 'accounts' && reconnect && <span className="warn" title="An account needs sign-in"><Icon name="sync_problem" size={16} /></span>}
               {name === 'news' && failing && <span className="warn" title="A feed is failing"><Icon name="warning" size={16} /></span>}
             </button>
           ))}

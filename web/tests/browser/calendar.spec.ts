@@ -58,6 +58,8 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
     assert.deepEqual(await popover.locator(':is(.ev, .tk)').allTextContents(),
       ['9 AMFarmers market', '11 AMHaircut', '12:30 PMLunch with Jo', '2 PMVolunteer shift', '5 PMCall Mom', '8 PMMovie night', 'Grocery run', 'Laundry']);
     assert.equal(await text(page, '.rp-date'), 'Sat, Oct 17');
+    // A popover's × is 16 px in a 26 px button, as every card's (#164).
+    assert.deepEqual(await popover.getByRole('button', {name: 'Close'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     await page.locator('.ag-item', {hasText: 'Movie night'}).waitFor();
     await settle(page);
     await matchGolden(page, '11b-a-busy-day-plus-3-and-its-popover', 'grid');
