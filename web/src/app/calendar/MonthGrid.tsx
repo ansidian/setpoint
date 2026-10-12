@@ -95,7 +95,9 @@ export function MonthGrid(props: MonthGridProps) {
   // A drop to settle: the item, the day, and where its lifted chip was in the section.
   const settling = useRef<{key: string; to: string; at: Point; until: number} | null>(null);
   const ring = useRingColour();
-  const press = useRef<{item: ItemOut; from: string; chip: HTMLElement; x: number; y: number} | null>(null);
+  // A pressed chip, with its width and the pointer's place in it as it was pressed: the press's .97
+  // (80 ms) shrinks it from then on, and the lift takes its own size, however long it's held.
+  const press = useRef<{item: ItemOut; from: string; x: number; y: number; width: number; grab: Point} | null>(null);
   const latestDrop = useRef(onDrop);
   useEffect(() => {
     latestDrop.current = onDrop;
@@ -225,9 +227,8 @@ export function MonthGrid(props: MonthGridProps) {
       if (!pressed || !host) return;
       if (!current) {
         if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) < dragTokens.thresholdPx) return;
-        const box = rectIn(pressed.chip, host);
         const start = pointIn(pressed.x, pressed.y, host);
-        current = {item: pressed.item, from: pressed.from, width: box.width, grab: {left: start.left - box.left, top: start.top - box.top}, at: {left: box.left, top: box.top}, to: pressed.from};
+        current = {item: pressed.item, from: pressed.from, width: pressed.width, grab: pressed.grab, at: {left: start.left - pressed.grab.left, top: start.top - pressed.grab.top}, to: pressed.from};
         onPopover(null);
         frame = requestAnimationFrame(edge);
       }
@@ -276,7 +277,11 @@ export function MonthGrid(props: MonthGridProps) {
 
   const onPress = (item: ItemOut, date: string, event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !canMove(item) || item.id < 0) return;
-    press.current = {item, from: date, chip: event.currentTarget, x: event.clientX, y: event.clientY};
+    const host = section.current;
+    if (!host) return;
+    const box = rectIn(event.currentTarget, host);
+    const start = pointIn(event.clientX, event.clientY, host);
+    press.current = {item, from: date, x: event.clientX, y: event.clientY, width: box.width, grab: {left: start.left - box.left, top: start.top - box.top}};
   };
 
   const onScroll = () => {

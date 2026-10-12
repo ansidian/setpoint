@@ -902,11 +902,17 @@ test('a drag lands where it shows it will: the lift eases in, the day under it t
     const target = (await thursday.boundingBox())!;
     await page.mouse.move(box.x + 20, box.y + box.height / 2);
     await page.mouse.down();
+    // Held until the press has shrunk it to .97 before it moves, as a slower hand does.
+    await until('the press shrinks it', () => style(dentist, 'transform'), transform => transform === 'matrix(0.97, 0, 0, 0.97, 0, 0)');
     await page.mouse.move(box.x + 40, box.y + box.height / 2 + 10, {steps: 3});
     await page.mouse.move(target.x + target.width / 2, target.y + target.height - 30, {steps: 5});
     const lift = page.locator('.ev.lift');
     await lift.waitFor();
     assert.deepEqual([await style(lift, 'animation-name'), await style(lift, 'animation-duration')], ['lift-in', '0.12s']);
+    // It lifts at its own width, not the press's .97 of it, however long it was held (subpixel layout,
+    // so to within 0.5 px).
+    const lifted = await lift.evaluate(element => parseFloat(element.style.width));
+    assert.ok(Math.abs(lifted - box.width) < 0.5, `the lifted chip is ${lifted} px wide, Dentist ${box.width}`);
     await until('Thursday is the target', () => thursday.getAttribute('class'), classes => !!classes?.split(' ').includes('drop'));
     const colourOf = (css: string) => thursday.evaluate((element, value) => {
       const probe = document.createElement('span');
