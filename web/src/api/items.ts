@@ -15,13 +15,24 @@ export const weatherPath = (from: string, to: string) => `/weather?from=${from}&
 export const monthItemsPath = (month: string) => itemsPath(firstOfMonth(month), firstOfMonth(addMonths(month, 1)));
 export const monthWeatherPath = (month: string) => weatherPath(firstOfMonth(month), firstOfMonth(addMonths(month, 1)));
 
+// Each calendar's latest toggle on its way. A toggle sent while the one before is still on its way (off,
+// then straight back on; Show all, then its Undo) could reach the server first and be undone by it, so
+// it's sent once that one is answered; and only the latest's answer shows, so an earlier one's doesn't
+// put back what it changed.
+const toggles = new Map<number, Promise<unknown>>();
+
 /** Shows a calendar or hides it on the grid and in the agenda. */
 export async function setCalendarVisible(id: number, visible: boolean): Promise<void> {
   updateCached<CalendarOut[]>(CALENDARS_PATH, list => list.map(calendar => (calendar.id === id ? {...calendar, visible} : calendar)));
+  const sending = (toggles.get(id) ?? Promise.resolve()).catch(() => undefined).then(() => sendJson<CalendarOut>('PATCH', `/calendars/${id}`, {visible}));
+  toggles.set(id, sending);
   try {
-    const calendar = await sendJson<CalendarOut>('PATCH', `/calendars/${id}`, {visible});
+    const calendar = await sending;
+    if (toggles.get(id) !== sending) return;
+    toggles.delete(id);
     updateCached<CalendarOut[]>(CALENDARS_PATH, list => list.map(one => (one.id === id ? calendar : one)));
   } catch (error) {
+    if (toggles.get(id) === sending) toggles.delete(id);
     refreshIfShown(CALENDARS_PATH);
     throw error;
   }

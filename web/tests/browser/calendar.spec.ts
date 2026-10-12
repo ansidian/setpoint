@@ -247,6 +247,42 @@ test('a calendar toggled off leaves the grid and the agenda, and comes back on',
   }
 });
 
+test('a calendar toggled off and straight back on stays on, on screen and at the server, however late the off arrives', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    await page.locator('.ag-item', {hasText: 'Study group'}).first().waitFor();
+    // Personal's off is held on its way to the server, as a request on a slow connection can be.
+    let release = () => {};
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let holding = false;
+    await page.route('**/api/calendars/1', async route => {
+      if ((route.request().postDataJSON() as {visible?: boolean}).visible === false) {
+        holding = true;
+        await held;
+      }
+      await route.continue();
+    });
+    const personal = page.locator('.calrow', {hasText: 'Personal'});
+    await personal.click();
+    await until('the off on its way', async () => holding, on => on);
+    await personal.click();
+    await until('back on screen', () => chips(page, '2026-10-09'), list => list.join() === '7 AMGym,6:30 PMStudy group,7 PMDinner with Sam');
+    release();
+    await setpoint.idle();
+    await until('on at the server', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Personal')?.visible === true);
+    await setpoint.idle();
+    assert.equal(await personal.getAttribute('aria-pressed'), 'true', 'and on screen');
+    assert.deepEqual(await chips(page, '2026-10-09'), ['7 AMGym', '6:30 PMStudy group', '7 PMDinner with Sam']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 /** A token's colour as the page computes it, to compare with an element's. */
 const tokenColour = (page: Page, token: string) => page.evaluate(name => {
   const probe = document.createElement('span');
