@@ -55,11 +55,13 @@
 .settings .line.caution { color: var(--caution); }
 .settings .note { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 4px; color: var(--ink3); font-size: 12.5px; flex: none; }
 
-/* A switch: 34 × 20. */
+/* A switch: 34 × 20. On is a `switchOn` track (`good`) with a `switchKnobOn` knob, off recedes to an
+   `ink3` knob on `sub3`, and a press stretches the knob 4 px toward its travel (#139). */
 .settings .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
-.settings .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink2); transition: left var(--dur-fast) var(--ease), width var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
-.settings .switch.on { background: var(--ink); }
-.settings .switch.on::after { left: 16px; background: var(--onInk); }
+.settings .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink3);
+  transition: left var(--dur-fast) var(--ease), width var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+.settings .switch.on { background: var(--switchOn); }
+.settings .switch.on::after { left: 16px; background: var(--switchKnobOn); }
 /* Pressed, its knob stretches toward where it's going (DESIGN.md › Decided while building #144). */
 .settings .switch:enabled:active::after { width: 20px; }
 .settings .switch.on:enabled:active::after { left: 12px; }
@@ -173,7 +175,7 @@
   .settings .handle:hover { color: var(--ink); }
   .settings .fld:not(:focus):hover, .settings .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
   .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
-  .settings .switch.on:enabled:hover { background: color-mix(in srgb, var(--ink) 86%, var(--modal)); }
+  .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--switchOn) 86%, var(--modal)); }
 }
 
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and

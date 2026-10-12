@@ -85,6 +85,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
 | `sunGlyph` | `var(--sun)` | `oklch(0.58 0.14 78)` | the forecast's sun on the grids and the right pane |
+| `switchOn` / `switchKnobOn` | `color-mix(in oklch, var(--good) 58%, var(--modal))` / `var(--ink)` | `var(--good)` / `var(--onInk)` | a switch that's on: its track / its knob |
 | `hl` | `color-mix(in oklch, var(--sun) 26%, transparent)` | `oklch(0.92 0.12 96)` | search's match highlight |
 | `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(29,30,33,.3)` | a focused field's border |
 | `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
@@ -730,7 +731,8 @@ key (New event, New task, Mark all as read).
 
 A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the address bar, with a
 **220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16; switches are 34 ×
-20. A reconnect link opens it at Accounts.
+20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3`, the knob
+stretching toward its travel as it's pressed (#139). A reconnect link opens it at Accounts.
 
 - **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
@@ -1832,3 +1834,10 @@ it changes what's on screen.
     that completes keeps its colour under the pointer, its fill rising to 24% with an 11 px `check`
     in it, centred on the whole ring (the 1.5 px stroke included) rather than on its inside, so it sits
     true; the done glyph stays `good` (Andy, 2026-10-11, polish audit calpanes-07).
+139. **A switch that's on is `good`, and off recedes:** on is a `switchOn` track (Night `good` 58%
+    into `modal`, Light `good`) with a `switchKnobOn` knob (Night `ink`, Light white), so a column of
+    switches no longer reads as a column of primary buttons and on ties to the healthy dots; under the
+    pointer the track takes 86% of itself into `modal`. Off is an `ink3` knob on `sub3` in both
+    themes (Light's `ink2` knob was nearly as heavy as on). A press stretches the knob to 20 px toward
+    its travel over 120 ms; a disabled switch stays at .5 (Andy, 2026-10-11, polish audit
+    settings-06).

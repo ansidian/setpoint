@@ -508,3 +508,39 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 }
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: a switch that's on is a good track with its knob, off an ink3 knob on sub3; a press stretches the knob toward its travel (#139)`, async () => {
+    // Board 18b's ntfy: reminders on, mail off.
+    const setpoint = await startSetpoint({fixtures: ['ntfy'], clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
+      await page.goto(`${setpoint.base}/settings/notifications`);
+      const on = page.getByRole('switch', {name: 'setpoint-reminders'});
+      const off = page.getByRole('switch', {name: 'setpoint-mail'});
+      await until('the switches work', () => on.isDisabled(), disabled => !disabled);
+      await page.mouse.move(1, 1);
+      const knob = (target: Locator) => target.evaluate(element => [getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::after').width]);
+      const track = await backgroundOf(page, 'var(--switchOn)');
+      await until('on: the good track', () => style(on, 'backgroundColor'), fill => fill === track);
+      assert.deepEqual(await knob(on), [await colourOf(page, theme === 'light' ? '#ffffff' : 'var(--ink)'), '16px']);
+      assert.equal(await style(off, 'backgroundColor'), await backgroundOf(page, 'var(--sub3)'));
+      assert.deepEqual(await knob(off), [await colourOf(page, 'var(--ink3)'), '16px'], 'off recedes');
+      // The track as drawn is green: its green leads its red and blue.
+      const box = (await on.boundingBox())!;
+      const [r, g, b] = await pixel(page, box.x + 6, box.y + box.height / 2);
+      assert.ok(g > r + 25 && g > b + 15, `the track reads green: rgb(${r}, ${g}, ${b})`);
+      // Pressed: the knob stretches to 20 px, toward its travel (left, when on), over 120 ms; let go elsewhere.
+      await on.hover();
+      await page.mouse.down();
+      await until('the knob stretches', () => knob(on), ([, width]) => width === '20px');
+      assert.equal(await on.evaluate(element => getComputedStyle(element, '::after').left), '12px');
+      await page.mouse.move(1, 1);
+      await page.mouse.up();
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}
