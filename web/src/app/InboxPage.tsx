@@ -43,6 +43,7 @@ import type {Beat} from './fold.ts';
 import {MailList} from './MailList.tsx';
 import {usePhone} from './Phone.tsx';
 import {Reader} from './Reader.tsx';
+import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
 import {navigate} from './router.ts';
@@ -183,6 +184,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
 
   const open = route.open;
+  // The way the user last stepped to an email (reader-03).
+  const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
   const subject = open && openMessageData?.id === open ? openMessageData.subject : null;
   useEffect(() => {
     document.title = tabTitle({page: 'inbox', attention: counts?.attention ?? 0, subject});
@@ -214,8 +217,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   const go = (changes: Partial<InboxRoute>) => navigate({...route, ...changes});
 
-  /** Opens an email. */
-  function openEmail(id: number, key?: string) {
+  /**
+   * Opens an email. `travel` is the way the user stepped to it (J, K, the arrows, Done or Trash moving
+   * on), so the reader's swap comes from that side (reader-03); a click has none.
+   */
+  function openEmail(id: number, key?: string, travel: Travel | null = null) {
+    setTravelled(travel ? {id, travel} : null);
     const stop = (key ? stops.find(item => item.key === key) : null) ?? stopOf(stops, id);
     if (stop?.kind === 'row') setCursor(stop.key);
     lastOpened = id;
@@ -278,7 +285,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       // The phone goes back to the list, where the toast is: the next email isn't in view there, so
       // opening it would be a jump into an email the user didn't pick (UX #12).
       const next = phone ? null : nextAfterLeaving(stops, cursor, id);
-      if (next !== null) openEmail(next);
+      // The next one down the list: the reader swaps as J does.
+      if (next !== null) openEmail(next, undefined, 'next');
       else close();
     }
     takeOut([id]);
@@ -342,7 +350,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     },
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;
-      if (next !== null) openEmail(next);
+      if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
     // ⇧U or ⌘K: the email unread again; an open one's reader closes, so it stays unread (UX #11).
     markUnread: () => {
@@ -505,7 +513,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           </section>
         )}
         {open !== null && (
-          <Reader id={open} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
+          <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
             marks={searching ? readerMarks(open, search.results, alfred.turns) : []}
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}

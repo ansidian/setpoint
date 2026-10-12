@@ -446,3 +446,95 @@ test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the s
     await setpoint.stop();
   }
 });
+
+test('reader-03, -04, -09: each email swaps in from the way the user stepped; a code is lifted into a card with Copy; the edge straddles the border with a grip', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    const swap = page.locator('.pane .rd-swap');
+    const swapped = () => swap.evaluate(element => [element.getAttribute('data-swap'), getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]);
+
+    // The first email arrives with the pane (its slide), not as a swap.
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.deepEqual(await swapped(), [null, 'none', '0s']);
+    const tools = page.locator('.pane > .rd-tools');
+    await tools.evaluate(element => element.setAttribute('data-first', ''));
+    // J: up 8 px from below, over 180 ms; K: down from above; a click fades over 120 ms. The tools stay.
+    await page.keyboard.press('j');
+    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    assert.deepEqual(await swapped(), ['next', 'rd-in-next', '0.18s']);
+    await page.keyboard.press('k');
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.deepEqual(await swapped(), ['prev', 'rd-in-prev', '0.18s']);
+    await page.locator('.row', {hasText: 'Contoso Insurance'}).click();
+    await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
+    assert.deepEqual(await swapped(), ['fade', 'fade-in', '0.12s']);
+    assert.equal(await page.locator('.pane > .rd-tools[data-first]').count(), 1, 'the tools never swap');
+    assert.deepEqual(await page.evaluate(() => {
+      const probe = document.querySelector('.pane .rd-scroll')!.appendChild(document.createElement('div'));
+      probe.className = 'rd-swap';
+      probe.dataset.swap = 'next';
+      const frames = probe.getAnimations()[0] ? (probe.getAnimations()[0]!.effect as KeyframeEffect).getKeyframes().map(frame => [frame.opacity, frame.transform]) : [];
+      probe.remove();
+      return frames;
+    }), [['0', 'translateY(8px)'], ['1', 'none']]);
+
+    // The code email: a 56 px card after the sender, the code in Geist Mono 22 / 500 / .12em in two
+    // groups, Copy, and its countdown at the right in ink3 12.5.
+    const card = page.locator('.rd-head .code-card');
+    await card.waitFor();
+    assert.equal(await card.evaluate(element => element.previousElementSibling?.className), 'rd-meta');
+    assert.deepEqual(await card.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.height, style.paddingLeft, style.paddingRight, style.columnGap, style.borderTopLeftRadius];
+    }), ['56px', '18px', '12px', '14px', '14px']);
+    const code = card.locator('.code');
+    assert.deepEqual(await code.evaluate(element => [element.textContent, getComputedStyle(element).fontSize, getComputedStyle(element).fontWeight, getComputedStyle(element).letterSpacing, getComputedStyle(element).fontFamily]),
+      ['482 913', '22px', '500', '2.64px', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mono').trim())).replaceAll('\'', '"')]);
+    const expiry = card.locator('.expiry');
+    assert.match((await expiry.textContent())!, /^Expires in \d+ min$/);
+    assert.deepEqual(await expiry.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize]), [await colourOf(page, '--ink3'), '12.5px']);
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
+    await card.getByRole('button', {name: 'Copy'}).click();
+    await card.getByRole('button', {name: 'Copied'}).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
+
+    // The edge: 10 px straddling the pane's border. Under the pointer, after 80 ms, its line and a
+    // 14 × 28 grip at the pointer's height; a double-click puts the pane back to 680.
+    const pane = (await page.locator('.pane').boundingBox())!;
+    const edge = page.locator('.pane-edge');
+    const lineColour = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('i'));
+      probe.style.background = 'color-mix(in srgb, var(--ink) 26%, transparent)';
+      const colour = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return colour;
+    });
+    const box = (await edge.boundingBox())!;
+    assert.deepEqual([box.x, box.width], [pane.x - 5, 10]);
+    await page.mouse.move(pane.x, pane.y + 300);
+    const grip = edge.locator('.grip');
+    await until('the grip shows', () => grip.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '1');
+    const [hover, line] = await edge.evaluate(element => [getComputedStyle(element.querySelector('.grip')!).transitionDelay, getComputedStyle(element, '::before').transitionDelay]);
+    assert.deepEqual([hover, line], ['0.08s', '0.08s']);
+    const held = (await grip.boundingBox())!;
+    assert.deepEqual([held.width, held.height, Math.round(held.y + held.height / 2)], [14, 28, Math.round(pane.y + 300)]);
+    assert.ok(Math.abs(held.x + held.width / 2 - (pane.x + 2)) <= 1, 'centred on the line by the border');
+    // Its line, once its fade has ended.
+    await until('the line in ink at 26%', () => edge.evaluate(element => getComputedStyle(element, '::before').backgroundColor),
+      colour => colour === lineColour);
+    await page.mouse.down();
+    await page.mouse.move(pane.x - 100, pane.y + 300, {steps: 4});
+    assert.equal(await edge.evaluate(element => element.classList.contains('dragging')), true);
+    await page.mouse.up();
+    await until('wider', async () => Math.round((await page.locator('.pane').boundingBox())!.width), width => width === 780);
+    await edge.dblclick();
+    await until('back to 680', async () => Math.round((await page.locator('.pane').boundingBox())!.width), width => width === 680);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

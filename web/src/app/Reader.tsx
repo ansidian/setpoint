@@ -23,6 +23,7 @@ import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
+import {CodeCard} from './Code.tsx';
 import {foldAway} from './fold.ts';
 import {MailFrame} from './MailFrame.tsx';
 import {useCommands} from './palette/commands.ts';
@@ -33,6 +34,9 @@ import {ProposalCard} from './search/ProposalCard.tsx';
 import {Marked} from './search/Search.tsx';
 import {useAlfred} from './search/state.ts';
 import {showToast, toastFailure} from './toast.ts';
+
+/** The way the user stepped to the email shown: down the list (J, ↓, Done or Trash moving on) or up (K, ↑). */
+export type Travel = 'next' | 'prev';
 
 export interface ReaderActions {
   done: () => void;
@@ -45,8 +49,10 @@ export interface ReaderActions {
   markUnread: () => void;
 }
 
-export function Reader({id, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
+export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
   id: number;
+  // How the user stepped to it, for its swap (reader-03); null for a click.
+  travel?: Travel | null;
   // Its row in the list, so the tools are right before the email itself has loaded.
   row: MessageRowOut | undefined;
   accounts: Map<number, AccountOut>;
@@ -61,6 +67,10 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
   back?: 'Inbox' | 'Search';
 }) {
   const width = useReadingPaneWidth();
+  // The email the pane opened on arrives with the pane (its slide in), not as a swap; every one after it swaps.
+  const [arrived] = useState(id);
+  const [moved, setMoved] = useState(false);
+  if (!moved && id !== arrived) setMoved(true);
   const {data} = useResource<MessageOut>(messagePath(id));
   const message = data?.id === id ? data : undefined;
   const cards = useCards(id);
@@ -149,7 +159,12 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
         )}
       </div>
       <div className="rd-scroll" ref={scroller}>
-        {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />}
+        {/* Each email swaps in from the side the user stepped from (reader-03): up 8 px from below
+            going down the list, down from above going up, a fade for a click; the email the pane
+            opened on arrives with the pane. The tools stay still. */}
+        <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>
+          {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />}
+        </div>
       </div>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
           email and its account are known, so none moves in or along when the email arrives; until
@@ -187,7 +202,7 @@ function useCards(id: number) {
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
   const alfred = useAlfred(id);
   // Its button again closes the card: it folds away as its own × does (app/fold.ts).
-  const foldCard = () => foldAway(document.querySelector('.pane .rd-scroll > .card'));
+  const foldCard = () => foldAway(document.querySelector('.pane .rd-swap > .card'));
   return {
     panel, alfred,
     propose(kind: ItemKind) {
@@ -290,6 +305,8 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread
           <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
           <span className="time" title={fullTimestamp(message.received_at, timeZone)}>{readerTime(message.received_at, now, timeZone)}</span>
         </div>
+        {/* A verification code lifted out of the body, with Copy and its countdown (reader-04). */}
+        {message.code && <CodeCard code={message.code} />}
         {message.security && (
           <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
             <dl className="facts">
@@ -338,31 +355,42 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread
   );
 }
 
-/** The pane's left edge, dragged (or ← → when focused) to make it wider or narrower (News's story pane shares it). */
+/**
+ * The pane's left edge, dragged (or ← → when focused) to make it wider or narrower, and double-clicked
+ * to put it back to 680 (News's story pane shares it). A grip follows the pointer's height along it
+ * (reader-09).
+ */
 export function PaneEdge({width}: {width: number}) {
   const drag = useRef<{x: number; width: number} | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const end = () => {
+    drag.current = null;
+    setDragging(false);
+  };
   return (
-    <div className="pane-edge" role="separator" aria-orientation="vertical" aria-label="Resize the reading pane" tabIndex={0}
+    <div className={dragging ? 'pane-edge dragging' : 'pane-edge'} role="separator" aria-orientation="vertical" aria-label="Resize the reading pane" tabIndex={0}
       aria-valuenow={width} aria-valuemin={READING_PANE.min} aria-valuemax={READING_PANE.max}
       onPointerDown={event => {
         if (event.button !== 0) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
         drag.current = {x: event.clientX, width};
+        setDragging(true);
       }}
       onPointerMove={event => {
+        const edge = event.currentTarget;
+        edge.style.setProperty('--grip-y', `${Math.round(event.clientY - edge.getBoundingClientRect().top)}px`);
         if (drag.current) setReadingPaneWidth(drag.current.width + drag.current.x - event.clientX);
       }}
-      onPointerUp={() => {
-        drag.current = null;
-      }}
-      onPointerCancel={() => {
-        drag.current = null;
-      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={() => setReadingPaneWidth(READING_PANE.start)}
       onKeyDown={event => {
         if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
         event.preventDefault();
         setReadingPaneWidth(width + (event.key === 'ArrowLeft' ? READING_PANE.step : -READING_PANE.step));
-      }} />
+      }}>
+      <span className="grip"><Icon name="drag_indicator" size={14} /></span>
+    </div>
   );
 }

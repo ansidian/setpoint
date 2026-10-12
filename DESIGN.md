@@ -136,6 +136,7 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 | Group headers, section labels, weekday names | 11.5 / uppercase / .08em |
 | Keyboard hints | 11 / 500 |
 | Verification codes | Geist Mono 13 / 500 / .06em |
+| The reader's code card | Geist Mono 22 / 500 / .12em |
 
 On the phone the list reads a step up, as the reader's body (15) does: rows 15; ages, counts and
 account labels 13; summaries in Attention 13.5; group headers 12; search's rows the same
@@ -228,7 +229,8 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
   with its `C` hint).
 - **Content** under the header; the list or grid scrolls, the shell never does.
 - **Panes** sit under the header with a `hair` left border: the **reading pane** 680 px, Calendar's
-  **right pane** 400 px. The reading pane collapses when nothing is open (decision 43).
+  **right pane** 400 px. The reading pane collapses when nothing is open (decision 43); its left edge
+  resizes it, and shows so under the pointer (#208).
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
@@ -335,7 +337,9 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **Head** (padding 20 28 16): the subject (20 / 500), then a 32 px avatar, the sender's name, " ·
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
-  ([Decided while building](#decided-while-building) #88).
+  ([Decided while building](#decided-while-building) #88). A verification code follows in its
+  **code card**, with Copy and its countdown (#207). Each email swaps in from the side the user
+  stepped from (#206).
 - **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #133):
   **Add to calendar**, **Add as task**, **Ask about this email**.
   Security mail has no Add to calendar; it shows the **facts card** instead (board 03: what happened,
@@ -2170,3 +2174,20 @@ it changes what's on screen.
     the sidebar filters the Inbox (Unread, All and its search), rows and Attention rows leave out the
     account they'd all repeat; the age keeps its column and the subject runs wider. Unfiltered every
     row keeps it, and the phone's rows keep theirs (Andy, 2026-10-11, polish audit inbox-12).
+206. **An email swaps in from where the user stepped** (amending #141, where J and K swapped what the
+    pane shows without motion): the email the pane opens on arrives with the pane's slide; after it,
+    going down the list (J, ↓, Done or Trash moving on) the next email rises 8 px from below over
+    180 ms, going up (K, ↑) it comes down 8 px from above, and one opened by a click fades in over
+    120 ms, as the week pages. The tools never move (Andy, 2026-10-11, polish audit reader-03).
+207. **A verification code is lifted into the reader:** after the sender, a 56 px card in the facts
+    card's look (`card`, radius 14, an `edgeOn` ring; padding 0 12 0 18, 14 px between its parts) holds
+    the code in Geist Mono 22 / 500 / .12em in two groups, Copy (Copied in `good`, #204), and at its
+    right the countdown on the clock rather than the email's own words, "Expires in 11 min" in `ink3`
+    12.5, by the second and in `caution` through its last minute; expired, it reads "Expired" and the
+    code turns `ink3` (Andy, 2026-10-11, polish audit reader-04).
+208. **The reading pane's edge shows it resizes:** its hit area is 10 px straddling the border. Under
+    the pointer, after 80 ms so a pass doesn't flash, a 2 px line in `ink` at 26% lies along the border
+    and a grip (14 × 28, radius 999, `cardOn` with an `edgeOn` ring, a 14 px `drag_indicator` in
+    `ink2`) fades in over 120 ms at the pointer's height; dragging, the line is `ink3` and the grip
+    stays; a double-click puts the pane back to 680. News's story pane shares it (Andy, 2026-10-11,
+    polish audit reader-09).

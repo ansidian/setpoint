@@ -5,7 +5,7 @@
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';
 import {serverNow} from '../api/auth.ts';
-import {countdownChange, expiresIn, expiresSoon} from '../logic/format.ts';
+import {codeGroups, countdownChange, expiresIn, expiresSoon} from '../logic/format.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {showToast} from './toast.ts';
 
@@ -52,3 +52,19 @@ export function useCountdown(at: string): {text: string; soon: boolean; expired:
   return {text: expiresIn(at, now), soon: expiresSoon(at, now), expired: Date.parse(at) <= now};
 }
 
+/**
+ * The reader's code card (reader-04), after the sender: the code in Geist Mono at 22 px in two groups,
+ * Copy, and at the right its countdown on the clock, not the email's own words; once expired it says
+ * so and the code steps back to `ink3`.
+ */
+export function CodeCard({code}: {code: {value: string; expires_at: string}}) {
+  const countdown = useCountdown(code.expires_at);
+  return (
+    <div className={countdown.expired ? 'code-card expired' : 'code-card'}>
+      <span className="code">{codeGroups(code.value)}</span>
+      <CodeCopy value={code.value} />
+      <span className="grow" />
+      <span className={countdown.soon ? 'expiry num soon' : 'expiry num'}>{countdown.text}</span>
+    </div>
+  );
+}

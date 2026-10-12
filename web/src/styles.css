@@ -335,6 +335,23 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Reply's place, after Open in Gmail, empty until reply exists. */
 .rd-tools .reply-slot { display: contents; }
 .rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+/* Each email swaps in from the side the user stepped from (reader-03), as the week pages: up 8 px from
+   below going down the list (J, ↓, Done or Trash moving on), down 8 px from above going up (K, ↑), over
+   180 ms; a click fades it in over 120 ms. The email the pane opened on arrives with the pane. */
+.rd-swap { flex: 1 0 auto; display: flex; flex-direction: column; }
+.rd-swap[data-swap="next"] { animation: rd-in-next var(--dur-medium) var(--ease); }
+.rd-swap[data-swap="prev"] { animation: rd-in-prev var(--dur-medium) var(--ease); }
+.rd-swap[data-swap="fade"] { animation: fade-in var(--dur-fast) var(--ease); }
+@keyframes rd-in-next { from { opacity: 0; transform: translateY(8px); } }
+@keyframes rd-in-prev { from { opacity: 0; transform: translateY(-8px); } }
+/* A verification code lifted into the reader (reader-04): a 56 px card as the facts card's, the code in
+   Geist Mono 22 / 500 / .12em, Copy, and its countdown at the right in `ink3` 12.5; expired, the code
+   steps back to `ink3`. */
+.code-card { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 12px 0 18px; background: var(--card); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
+.code-card .code { font-size: 22px; font-weight: 500; letter-spacing: .12em; }
+.code-card.expired .code { color: var(--ink3); }
+.code-card .expiry { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
+.code-card .copy .icon { color: var(--ink2); }
 .rd-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 12px; flex: none; }
 .rd-subj { font-size: 20px; line-height: 1.25; font-weight: 500; letter-spacing: -.01em; margin: 0; }
 .rd-meta { display: flex; align-items: center; gap: 10px; color: var(--ink2); }
@@ -430,10 +447,22 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The reader's tools: Pin on a pinned email is Unpin, held (board 10). */
 .rd-tools .tool.active { background: var(--sub2); color: var(--ink); }
 .pane { position: relative; max-width: calc(100% - 420px); }
-/* The pane's left edge resizes it (2026-10-09): a line in `edgeHover` under the pointer or focus. */
-.pane-edge { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
-.pane-edge::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
-.pane-edge:hover::before, .pane-edge:active::before, .pane-edge:focus-visible::before { background: var(--edgeHover); }
+/* The pane's left edge resizes it (2026-10-09), and shows it can (reader-09): a 10 px strip straddling
+   the border (placed from inside it; the pane draws past its left side for it, as its scroller clips
+   its own content). Under the pointer, after 80 ms so a pass doesn't flash, a 2 px line in `ink` at 26%
+   beside the border and a grip at the pointer's height (14 × 28, `cardOn` with an `edgeOn` ring,
+   `drag_indicator` in `ink2`) fade in over 120 ms; dragging, the line is `ink3` and the grip stays. A
+   double-click puts the pane back to 680. Focused, the line is `edgeHover`. News's story pane shares it. */
+.pane:has(> .pane-edge) { overflow: visible; }
+.pane-edge { position: absolute; left: -6px; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 3; touch-action: none; outline: none; }
+.pane-edge::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
+.pane-edge:focus-visible::before { background: var(--edgeHover); }
+.pane-edge:hover::before { background: color-mix(in srgb, var(--ink) 26%, transparent); transition-delay: 80ms; }
+.pane-edge.dragging::before { background: var(--ink3); transition-delay: 0s; }
+.pane-edge .grip { position: absolute; left: 0; top: var(--grip-y, 50%); width: 14px; height: 28px; margin-top: -14px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn);
+  color: var(--ink2); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+.pane-edge:hover .grip { opacity: 1; transition-delay: 80ms; }
+.pane-edge.dragging .grip { opacity: 1; transition-delay: 0s; }
 /* Protected mail (board 03). */
 .protected-line { display: flex; align-items: center; gap: 6px; color: var(--alert); font-size: 12.5px; font-weight: 500; }
 .rd-subj.protected { margin-top: -4px; }

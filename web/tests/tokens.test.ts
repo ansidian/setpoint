@@ -199,6 +199,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(rows['Group headers, section labels, weekday names']).toBe(`${type.label.size} / uppercase / ${type.label.tracking}`);
     expect(rows['Keyboard hints']).toBe(`${type.hint.size} / ${type.hint.weight}`);
     expect(rows['Verification codes']).toBe(`Geist Mono ${type.code.size} / ${type.code.weight} / ${type.code.tracking}`);
+    expect(rows['The reader\'s code card']).toBe(`Geist Mono ${type.readerCode.size} / ${type.readerCode.weight} / ${type.readerCode.tracking}`);
   });
 
   test('radii match the Shape table, in order', () => {

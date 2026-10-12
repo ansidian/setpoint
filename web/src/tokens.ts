@@ -195,6 +195,8 @@ export const type = {
   label: {size: 11.5, tracking: '.08em'},
   hint: {size: 11, weight: 500},
   code: {size: 13, weight: 500, tracking: '.06em'},
+  // The reader's code card (polish audit reader-04).
+  readerCode: {size: 22, weight: 500, tracking: '.12em'},
 } as const;
 
 /** DESIGN.md › Shape, in the table's order. Settings' row groups are 16. */
