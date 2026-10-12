@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, monthPaging, motion, news, week,
+  accountColour, base, calendarColour, colour, cssVariables, evhover, evland, evtint, glide, glyphColour, layout, lightColour, mix, monthPaging, motion, news, week,
   attTint, mailDim, placement, radius, ringL, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
@@ -46,7 +46,7 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
 /** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #120–#149, and the scrollbar's). */
-const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--mailEdge', '--hl', '--edgeFocus', '--sunGlyph', '--switchOn', '--switchKnobOn', '--dayOff', '--dayOut', '--evhover', '--scrollbar-thumb', '--tintL', '--attTint', '--mailDim', '--ringMin', '--ringMax'];
+const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--mailEdge', '--hl', '--edgeFocus', '--sunGlyph', '--switchOn', '--switchKnobOn', '--dayOff', '--dayOut', '--evhover', '--evland', '--scrollbar-thumb', '--tintL', '--attTint', '--mailDim', '--ringMin', '--ringMax'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 
@@ -177,6 +177,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`the needs-reconnect bar (\`caution\` ${mix.reconnectBar.fill}% on \`page\`, ${mix.reconnectBar.edge}% bottom edge)`);
     expect(flat).toContain(`calendar tint \`--evtint\` (Night ${evtint.night}%, Light ${evtint.light}%)`);
     expect(flat).toContain(`deepening under the pointer by \`--evhover\` (Night ${evhover.night}%, Light ${evhover.light}%)`);
+    expect(flat).toContain(`as a change lands it starts at \`--evland\` (Night ${evland.night}%, Light ${evland.light}%)`);
     expect(flat).toContain(`coloured text on its own tint caps its lightness at \`--tintL\` (Night ${tintL.night}, Light ${String(tintL.light).replace(/^0/, '')})`);
     expect(flat).toContain(`Attention's band (\`caution\` ${attTint.night}% on \`panel\` in srgb, Light ${attTint.light}%)`);
     expect(flat).toContain(`the email frame's brightness \`--mailDim\` (Night ${String(mailDim.night).replace(/^0/, '')}, Light ${mailDim.light})`);

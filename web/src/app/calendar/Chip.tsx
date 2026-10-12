@@ -14,6 +14,7 @@ import {TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {chipTime, isPast} from '../../logic/calendar.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
+import {useLanding} from './landing.ts';
 import {useCalendarFade} from './view.ts';
 
 /** How the grid draws an item besides its own state. */
@@ -48,6 +49,8 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const ring = useRingColour();
   // A calendar just toggled fades its items out or in (polish audit calpanes-11).
   const fade = useCalendarFade()(item.calendar_id);
+  // An event's change arriving brightens its tint once (polish audit calflows-02).
+  const landing = useLanding<HTMLDivElement>(item);
   const onClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     onSelect(item, event.currentTarget, event.metaKey || event.ctrlKey || event.shiftKey);
@@ -69,7 +72,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   }
   const time = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
   return (
-    <div className={`ev${selected && !look ? ' sel' : ''}${isPast(item, now, timeZone) && !look && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label}
+    <div ref={landing} className={`ev${selected && !look ? ' sel' : ''}${isPast(item, now, timeZone) && !look && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label}
       style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties} onClick={onClick} onPointerDown={onPointerDown}>
       {failed && <Icon name="error" size={14} />}
       {time && <span className="t">{time}</span>}

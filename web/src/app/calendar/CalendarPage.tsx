@@ -52,6 +52,7 @@ import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
 import {FailedCard} from './FailedCard.tsx';
+import {expectLanding} from './landing.ts';
 import {MonthGrid} from './MonthGrid.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import {SearchPane} from './SearchPane.tsx';
@@ -622,6 +623,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     void createItems(inputs)
       .then(commands => {
         settle(commands.map(command => command.target_id));
+        // The server's own copies land as they're drawn settled (polish audit calflows-02).
+        expectLanding(commands.map(command => command.target_id));
         said(line(drafts), () => {
           sendDeletes(commands.map(command => ({id: command.target_id, scope: 'this', occurrence_start: null, sent: false})), commands.map(() => 'it'));
         });

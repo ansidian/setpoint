@@ -772,7 +772,8 @@ test('a day picked answers in three places: its number\'s `sub3` disc, the mini-
     await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
     const ghosts = page.locator('.rpane .ag-ghost');
     await until('Sat, Oct 24\'s ghost rows', () => ghosts.allTextContents(), rows => rows.join() === 'New eventC,New taskD');
-    assert.deepEqual([await style(ghosts.first(), 'height'), await style(ghosts.first(), 'border-top-left-radius'), await style(ghosts.first(), 'outline-style'), await style(ghosts.first(), 'outline-width')], ['36px', '10px', 'dashed', '1.5px']);
+    // (A 1.5 px outline draws snapped to 1 at one device pixel per px.)
+    assert.deepEqual([await style(ghosts.first(), 'height'), await style(ghosts.first(), 'border-top-left-radius'), await style(ghosts.first(), 'outline-style')], ['36px', '10px', 'dashed']);
     assert.equal(await style(ghosts.first(), 'outline-color'), await colour(page, '--edgeOn'));
     await ghosts.first().hover();
     const sub = await colour(page, '--sub');
@@ -780,6 +781,54 @@ test('a day picked answers in three places: its number\'s `sub3` disc, the mini-
     await ghosts.nth(1).click();
     await page.getByRole('form', {name: 'New task'}).waitFor();
     assert.equal(await page.getByLabel('Due date', {exact: true}).inputValue(), 'Sat, Oct 24');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a change on its way dashes its chip\'s bar, marching from a second on, and lands with its tint brightening once', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    let release = () => {};
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    // The change waits at the server's door.
+    await page.route(/\/api\/items\/\d+$/, async route => {
+      if (route.request().method() === 'PATCH') await held;
+      await route.continue();
+    });
+    const dentist = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'});
+    await dentist.click();
+    await page.locator('.fd').getByRole('button', {name: 'Colour'}).click();
+    await page.locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
+    await page.keyboard.press('Escape');
+    await until('on its way', () => dentist.getAttribute('class'), classes => classes === 'ev pending');
+    // Its bar dashed, 3 px on and 3 off, still for a second, then marching every 900 ms.
+    await until('at .5', () => style(dentist, 'opacity'), value => value === '0.5');
+    assert.deepEqual([await style(dentist, 'box-shadow'), await style(dentist, 'background-size')], ['none', '3px 100%']);
+    assert.match(await style(dentist, 'background-image'), /^repeating-linear-gradient\(/);
+    assert.deepEqual([await style(dentist, 'animation-name'), await style(dentist, 'animation-duration'), await style(dentist, 'animation-delay'), await style(dentist, 'animation-iteration-count')],
+      ['sending', '0.9s', '1s', 'infinite']);
+    assert.match(await style(dentist, 'transition'), /opacity 0\.12s/, 'its .5 eases back');
+    // Arrived: its tint brightens once and settles over 420 ms.
+    const classes = await watch(dentist, 'class');
+    release();
+    await until('it lands', classes, seen => seen.some(value => value?.split(' ').includes('landed')));
+    assert.equal(await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.className = 'ev landed';
+      document.querySelector('.cal-grid .cell')!.append(probe);
+      const {animationName, animationDuration} = getComputedStyle(probe);
+      probe.remove();
+      return `${animationName} ${animationDuration}`;
+    }), 'landed 0.42s');
+    await until('settled', () => dentist.getAttribute('class'), value => value === 'ev');
+    await page.unroute(/\/api\/items\/\d+$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

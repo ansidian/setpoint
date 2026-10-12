@@ -94,6 +94,14 @@
 .ev.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
 .ev.past .t { opacity: 1; }
 .ev.pending, .tk.pending { opacity: .5; }
+/* On its way (polish audit calflows-02): an event's bar is dashed rather than solid, still for the
+   first second (#54), then marching with the spinner; arrived, its tint brightens to `--evland` once
+   and settles over 420 ms, and its .5 eases back over 120 ms. A task keeps .5 and the spinner, and the ease. */
+.ev.pending { box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
+  animation: sending 900ms linear 1s infinite; }
+@keyframes sending { to { background-position: 0 6px; } }
+.ev.landed:not(.sel) { animation: landed 420ms var(--ease); }
+@keyframes landed { 0% { background-color: color-mix(in oklch, var(--c, var(--cool)) var(--evland), transparent); } }
 .ev.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 /* Tasks: the ring (12 px; its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
@@ -361,14 +369,14 @@
 .cal-search .no-results { padding-left: 20px; }
 
 /* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
-.more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more, .ag-task .check .ring { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more, .ag-task .check .ring { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 /* Items and cells are controls: the arrow, never the text cursor (DESIGN.md › Decided while building #144). */
 .ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
    answer lies over it: its own colour at `--evhover`, deepening it (a solid, selected chip keeps the
    `sub` it had). Pressed, it gives to .97 and deepens to 28% until a drag lifts it (DESIGN.md › Decided
    while building #145). */
-.ev { position: relative; transition: transform var(--dur-fast) var(--ease); }
+.ev { position: relative; transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 .ev::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 .ev.sel::after { background: var(--sub); }
 .ev:not(.ghost, .lift):active { transform: scale(.97); transition-duration: var(--dur-press); }

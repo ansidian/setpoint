@@ -143,6 +143,8 @@ export const mix = {
 export const evtint = {night: 16, light: 14} as const;
 /** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`, polish audit grids-05). */
 export const evhover = {night: 18, light: 14} as const;
+/** Where a chip's tint starts as its change lands, settling back to `--evtint` (`--evland`, polish audit calflows-02). */
+export const evland = {night: 34, light: 26} as const;
 /**
  * Coloured text on its own tint (calendar chips, week blocks, the editor's timeline) caps its
  * lightness at `--tintL` (#122): Light's hues are tuned for text on the page and wash out on a tint;
@@ -388,6 +390,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   for (const [name, value] of Object.entries(light ? lightShadow : shadow)) vars[`--shadow-${name}`] = value;
   vars['--evtint'] = `${light ? evtint.light : evtint.night}%`;
   vars['--evhover'] = `${light ? evhover.light : evhover.night}%`;
+  vars['--evland'] = `${light ? evland.light : evland.night}%`;
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;

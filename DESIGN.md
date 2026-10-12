@@ -106,7 +106,8 @@ Personal, which are account names). The UI says "Done", never "handled".
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
   (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
-  colour, and by 28% while pressed (#145); Attention's band (`caution` 8% on `panel` in srgb, Light
+  colour, and by 28% while pressed (#145); as a change lands it starts at `--evland` (Night 34%, Light
+  26%) and settles back (#235); Attention's band (`caution` 8% on `panel` in srgb, Light
   6%). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
   tints it (#123).
 - **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`
@@ -807,7 +808,7 @@ section's label stays under the title (#250).
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164); everything under it dimmed, changes disabled |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" |
-| **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner. |
+| **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
 | **First backfill** | search's status: "Indexing · 62% · showing what's indexed so far" |
 
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
@@ -2066,3 +2067,11 @@ it changes what's on screen.
     the pointer `sub`, `ink` and an `edgeHover` outline over 120 ms. The line under the date stays the
     one line ("Nothing planned", or the forecast). Replacing Copy's "No events · New event" there (Andy,
     2026-10-11, polish audit calpanes-09).
+235. **Changes look on their way, then visibly arrive:** an event waiting for its provider (a create,
+    Save, a drop, Clone, Paste, Colour, Try again) keeps .5 but its 3 px bar is dashed (3 px on, 3 off)
+    rather than solid: still for the first second, so a quick confirmation stays quiet (#54), then
+    marching downward with the spinner, every 900 ms. When it arrives (its change done, or a create's
+    copy first drawn settled) its tint starts at `--evland` (Night 34%, Light 26%) and settles back
+    to `--evtint` over 420 ms, and the .5 eases back over 120 ms rather than snapping. The month's
+    chips and the week's blocks alike; a task keeps .5 and the spinner, with the ease (Andy,
+    2026-10-11, polish audit calflows-02).

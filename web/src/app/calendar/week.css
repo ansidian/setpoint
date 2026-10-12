@@ -87,7 +87,12 @@
 .wb.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
 .wb.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
 .wb.past .t { opacity: 1; }
-.wb.pending { opacity: .5; }
+/* Waiting for its provider: .5, its bar dashed, marching from a second on with the spinner; arrived,
+   its tint brightens once (calendar.css's `landed`, polish audit calflows-02). */
+.wb.pending { opacity: .5; box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
+  animation: sending 900ms linear 1s infinite; }
+.wb.landed:not(.sel) { animation: landed 420ms var(--ease); }
+.wb { transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 .wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 .wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }
 .wb.ghost.faded { opacity: .35; }
@@ -135,7 +140,6 @@
 
 /* As a chip's (calendar.css, DESIGN.md #145): the pointer lays the block's own colour at `--evhover`
    over its fill (a selected block `sub`), and a press gives it to .97 and 28%. */
-.wb { transition: transform var(--dur-fast) var(--ease); }
 .wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 .wb.sel::after { background: var(--sub); }
 .wb:not(.ghost, .lift):active { transform: scale(.97); transition-duration: var(--dur-press); }

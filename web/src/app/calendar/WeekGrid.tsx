@@ -30,6 +30,7 @@ import {FloatingDetail} from './detail/FloatingDetail.tsx';
 import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
 import type {Slot} from './Editor.tsx';
 import {pointIn, rectIn, zoomOf} from './geometry.ts';
+import {useLanding} from './landing.ts';
 import {useCalendarFade} from './view.ts';
 import type {ScrollRequest} from './view.ts';
 import './week.css';
@@ -587,11 +588,12 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
   const narrow = block.lanes > 1;
   const lines = blockLines(box.height, narrow);
   const fade = useCalendarFade()(item.calendar_id);
+  const landing = useLanding<HTMLDivElement>(item);
   const classes = ['wb', fade, short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !look && 'sel', isPast(item, now, timeZone) && !look && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
     look && 'ghost', look === 'faded' && 'faded', lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
   const edges = resizable(item) && !look && !lifted;
   return (
-    <div className={classes} role="button" data-key={item.key} title={`${item.title} · ${time}`} aria-label={blockLabel(item, block.date, calendar?.name, timeZone)}
+    <div ref={landing} className={classes} role="button" data-key={item.key} title={`${item.title} · ${time}`} aria-label={blockLabel(item, block.date, calendar?.name, timeZone)}
       style={{...laneStyle(block.lane, block.lanes, box.top, box.height), '--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties}
       onClick={event => {
         event.stopPropagation();
