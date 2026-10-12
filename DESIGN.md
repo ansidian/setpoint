@@ -830,6 +830,9 @@ section's label stays under the title (#250).
 - **Calendar, Todoist, AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
   Settings](BRIEF.md#settings)).
 - Sign out isn't drawn; it follows darma (the foot of the nav, and ⌘K).
+- **Loading** (#171): opening Settings loads every page's answers, so a page switched to shows at
+  once; until a group's answers come, it draws skeleton rows (#170) in `sub3`, never what it says
+  for nothing ("Not connected", "Not set", "No rules yet", "None yet").
 
 ## Health and states
 
@@ -2328,3 +2331,12 @@ it changes what's on screen.
     house style. What replaces it fades in over 120 ms. A page shows no empty state ("All caught
     up", "No events", "Not connected") until it knows (Andy, 2026-10-11, polish audit states-03,
     inbox-13).
+171. **Settings says only what it knows:** each page's groups draw skeleton rows until their answers
+    come (#170): a title bar over its line (one bar and a shorter one for a one-line row: rules,
+    domains, calendars, projects), the control's place an 84 px bar at the end, the icon tile first
+    on Accounts and News, in `sub3` on the group's `sub`. So Todoist never reads "Not connected"
+    with Connect Todoist while it's connected, Calendar "Home · Not set", Mail "No rules yet",
+    "0 domains" and "None yet", Security "—" codes, Notifications "Not set up", or Attention
+    precision that nothing was Done. Opening Settings loads every page's answers a moment after
+    its own, so the next page shows at once (Andy, 2026-10-11, polish audit states-01,
+    settings-05).

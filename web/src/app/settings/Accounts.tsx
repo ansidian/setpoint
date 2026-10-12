@@ -22,7 +22,7 @@ import {useCheckNow} from '../states/checkNow.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import type {DragProps} from './order.ts';
-import {escapeCancels, HealthGlyph, Line, Menu, Page, Section, useAttempt} from './parts.tsx';
+import {escapeCancels, HealthGlyph, Line, Menu, Page, Section, SkeletonRows, useAttempt} from './parts.tsx';
 
 const ACCOUNT_ICONS: IconName[] = ['storefront', 'person', 'work', 'badge', 'cloud', 'mail', 'inbox', 'computer', 'group', 'lock'];
 const SOURCE_ICONS: Record<string, IconName> = {google_calendar: 'calendar_month', todoist: 'task_alt', weather: 'partly_cloudy_day'};
@@ -63,7 +63,8 @@ export function AccountsPage() {
     )}>
       {icloud && <IcloudForm address={icloud.address} onDone={() => setIcloud(null)} />}
       <Section label="Mail">
-        <div {...order.groupProps}>
+        {/* Each account's state is said only once it's known (states-01). */}
+        {!accounts || !sources ? <SkeletonRows count={5} tile /> : <div {...order.groupProps}>
           {list.map((account, index) => (
             <AccountRow key={account.id} account={account} source={mailSource(account)} now={now} drag={order.rowProps(account, index)}
               onMove={delta => {
@@ -72,27 +73,29 @@ export function AccountsPage() {
               }}
               onReconnect={() => reconnect(account)} />
           ))}
-        </div>
+        </div>}
         <Line text={connect.line?.text ?? null} tone={connect.line?.tone} />
       </Section>
-      {(google || todoist || weather) && (
+      {!sources ? (
+        <Section label="Sources" style={{marginTop: 18}}><SkeletonRows count={3} tile /></Section>
+      ) : (google || todoist || weather) && (
         <Section label="Sources" style={{marginTop: 18}}>
           <div className="set-group">
             {google && <SourceRow source={google} name="Google Calendar" sub={calendars?.filter(calendar => calendar.provider === 'google').map(calendar => calendar.name).join(' · ') ?? ''} now={now} />}
             {todoist && <SourceRow source={todoist} name="Todoist" sub={projects ? `${defaultProject?.name ?? 'No default project'} · ${projects.length} project${projects.length === 1 ? '' : 's'}` : ''} now={now} />}
-            {weather && <SourceRow source={weather} name="Weather" sub={settings?.calendar.home?.label ?? 'No home set'} now={now} />}
+            {weather && <SourceRow source={weather} name="Weather" sub={settings ? settings.calendar.home?.label ?? 'No home set' : ''} now={now} />}
           </div>
         </Section>
       )}
       <Section style={{marginTop: 18}}>
-        <div className="set-group precision">
+        {!precision || !shownPrecision ? <SkeletonRows count={1} /> : <div className="set-group precision">
           <span className="big num">{shownPrecision.value}</span>
           <div className="lines grow">
             <span className="t">Attention precision</span>
             <span className="s">{shownPrecision.line}</span>
           </div>
-          {precision?.precision != null && <Sparkline days={precision.days} />}
-        </div>
+          {precision.precision != null && <Sparkline days={precision.days} />}
+        </div>}
       </Section>
     </Page>
   );

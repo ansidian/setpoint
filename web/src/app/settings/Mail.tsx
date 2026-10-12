@@ -17,7 +17,7 @@ import {useNow} from '../clock.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import type {DragProps} from './order.ts';
-import {escapeCancels, Line, Menu, Page, Section, Select, useAttempt} from './parts.tsx';
+import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
 // The domains shown before Show all.
 const DOMAINS_SHOWN = 11;
@@ -40,7 +40,8 @@ export function MailPage() {
   return (
     <Page title="Mail">
       <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => setAdding(!adding)}><Icon name="add" size={17} />Add rule</button>}>
-        <div {...order.groupProps}>
+        {/* "No rules yet" only once the rules are known (states-01). */}
+        {!rules && !adding ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>
           {adding && <AddRule onDone={() => setAdding(false)} />}
           {written.map((rule, index) => (
             <WrittenRule key={rule.id} rule={rule} drag={order.rowProps(rule, index)} onMove={delta => {
@@ -49,7 +50,7 @@ export function MailPage() {
             }} />
           ))}
           {!written.length && !adding && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
-        </div>
+        </div>}
         <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · no rule can move it</div>
       </Section>
 
@@ -61,21 +62,21 @@ export function MailPage() {
         </Section>
       )}
 
-      <TrustedDomains domains={domains ?? []} />
+      <TrustedDomains domains={domains} />
 
       <Section>
-        <div className="set-group">
+        {!settings ? <SkeletonRows count={1} /> : <div className="set-group">
           <div className="set-row">
             <div className="lines grow"><span className="t">Code expiry</span><span className="s">Verification codes leave the Inbox after</span></div>
             <span className="seg" ref={segThumb} role="radiogroup" aria-label="Code expiry">
               {CODE_EXPIRY_PRESETS.map(minutes => (
-                <button key={minutes} type="button" role="radio" aria-checked={settings?.mail.code_expiry_minutes === minutes}
-                  className={settings?.mail.code_expiry_minutes === minutes ? 'on' : undefined}
+                <button key={minutes} type="button" role="radio" aria-checked={settings.mail.code_expiry_minutes === minutes}
+                  className={settings.mail.code_expiry_minutes === minutes ? 'on' : undefined}
                   onClick={() => void save.attempt(() => patchSettings({mail: {code_expiry_minutes: minutes}}))}>{expiryLabel(minutes)}</button>
               ))}
             </span>
           </div>
-        </div>
+        </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
     </Page>
@@ -164,21 +165,21 @@ function AddRule({onDone}: {onDone: () => void}) {
   );
 }
 
-function TrustedDomains({domains}: {domains: TrustedDomainOut[]}) {
+function TrustedDomains({domains}: {domains: TrustedDomainOut[] | undefined}) {
   const [filter, setFilter] = useState('');
   const [all, setAll] = useState(false);
   // Newest first: the domain just trusted is the one most likely to be taken back.
-  const sorted = [...domains].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const sorted = [...domains ?? []].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const matching = filter.trim() ? sorted.filter(row => row.domain.includes(filter.trim().toLowerCase())) : sorted;
   const shown = all || filter.trim() || matching.length <= DOMAINS_SHOWN + 1 ? matching : matching.slice(0, DOMAINS_SHOWN);
   return (
     <Section label="Trusted remote-content domains" right={(
       <>
-        <span className="num">{domains.length} domain{domains.length === 1 ? '' : 's'}</span>
+        {domains && <span className="num">{domains.length} domain{domains.length === 1 ? '' : 's'}</span>}
         <label className="mini-field"><Icon name="search" size={16} /><input value={filter} placeholder="Filter" aria-label="Filter domains" onChange={event => setFilter(event.target.value)} /></label>
       </>
     )}>
-      <div className="set-group">
+      {!domains ? <SkeletonRows count={2} one /> : <div className="set-group">
         {/* Nothing to list is one plain line across the group, not a cell of the domains' grid. */}
         {!matching.length ? <div className="set-row one"><span className="s">{filter ? 'No domain matches' : 'None yet · the reader’s “Always show from …” adds one'}</span></div> : (
           <div className="doms">
@@ -193,7 +194,7 @@ function TrustedDomains({domains}: {domains: TrustedDomainOut[]}) {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </Section>
   );
 }

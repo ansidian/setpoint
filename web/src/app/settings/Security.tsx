@@ -11,7 +11,7 @@ import {addPasskey, changePassword, confirmPassword, deletePasskey, regenerateRe
 import {readerTime} from '../../logic/format.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
-import {escapeCancels, Line, Page, Row, Section, Select, useAttempt} from './parts.tsx';
+import {escapeCancels, Line, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
 const MODES: {value: AuthMode; label: string}[] = [
   {value: 'password_or_passkey', label: 'A password or a passkey'},
@@ -33,7 +33,8 @@ export function SecurityPage() {
       {security && locked && <ConfirmPassword />}
 
       <Section label="Sign-in">
-        <div className="set-group">
+        {/* How sign-in works, the passkeys and the codes left, only once they're known (states-01). */}
+        {!security ? <SkeletonRows count={2} /> : <div className="set-group">
           {editing === 'password' ? (
             <form className="set-row ctl form" onKeyDown={escapeCancels(() => setEditing(null))} onSubmit={event => {
               event.preventDefault();
@@ -62,11 +63,11 @@ export function SecurityPage() {
                 onChange={mode => void change.attempt(() => setAuthMode(mode), () => 'Sign-in changed')} />
             )}
           </Row>
-        </div>
+        </div>}
       </Section>
 
       <Section label="Passkeys" right={<button className="btn quiet sm" type="button" disabled={locked} onClick={() => setEditing('passkey')}><Icon name="add" size={17} />Add passkey</button>}>
-        <div className="set-group">
+        {!security && editing !== 'passkey' ? <SkeletonRows count={1} /> : <div className="set-group">
           {editing === 'passkey' && (
             <form className="set-row ctl form" onKeyDown={escapeCancels(() => setEditing(null))} onSubmit={event => {
               event.preventDefault();
@@ -92,13 +93,13 @@ export function SecurityPage() {
               <span className="s set-empty">None yet · <button type="button" disabled={locked} onClick={() => setEditing('passkey')}>Add passkey</button></span>
             </div>
           )}
-        </div>
+        </div>}
       </Section>
 
       <Section label="Recovery codes">
-        <div className="set-group">
-          <Row title="Recovery codes" sub={security?.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
-            <span className="val num">{security ? `${security.recovery.remaining} left` : '—'}</span>
+        {!security ? <SkeletonRows count={1} /> : <div className="set-group">
+          <Row title="Recovery codes" sub={security.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
+            <span className="val num">{security.recovery.remaining} left</span>
             <button className="btn out sm" type="button" disabled={locked} onClick={() => void change.attempt(regenerateRecoveryCodes).then(made => made && setCodes(made))}>Make new codes</button>
           </Row>
           {codes && (
@@ -107,7 +108,7 @@ export function SecurityPage() {
               <pre className="codes" aria-label="Recovery codes">{codes.join('\n')}</pre>
             </div>
           )}
-        </div>
+        </div>}
         <Line text={change.line?.text ?? null} tone={change.line?.tone} />
       </Section>
 

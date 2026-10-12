@@ -2,11 +2,11 @@
    (none on a quick answer), fades in over 180 ms, then breathes, every bar in phase: its opacity to
    --skel-low and back over --skel-breathe. Bars are `sub2` on the page, `sub3` inside a `sub` group.
    What replaces it fades in over 120 ms (.sk-arrive). */
-.sk {
-  --sk-fill: var(--skel);
-  animation: sk-in var(--dur-medium) var(--ease) var(--skel-delay) both,
-    sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite;
-  pointer-events: none;
+/* The block fades in; its shapes breathe, all from the same moment, so in phase. The bands and
+   lines it draws between them (a header's `panel`, a group's `sub`) stay still. */
+.sk { --sk-fill: var(--skel); animation: sk-in var(--dur-medium) var(--ease) var(--skel-delay) both; pointer-events: none; }
+.sk :is(.sk-bar, .sk-dot, .sk-ring, .sk-box, .sk-img, .sk-thumb, .sk-fav, .sk-tile, .sk-attach, .rail) {
+  animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite;
 }
 .sk.on-sub { --sk-fill: var(--skel-on-sub); }
 @keyframes sk-in { from { opacity: 0; } }
@@ -50,6 +50,15 @@
 .sk-acct .sk-dot { background: var(--skel-on-sub); }
 .sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
 .sk-ring { width: 13px; height: 13px; flex: none; border-radius: 999px; border: 1.5px solid var(--skel-on-sub); margin: 0 3px 0 1px; }
+
+/* ---------- Settings: .set-group, .set-row (settings.css) ---------- */
+.settings .sk-set-group { border-radius: var(--settingsGroupRadius); background: var(--sub); }
+.settings .sk-set { min-height: var(--settingsRow); display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--hair); }
+.settings .sk-set:last-child { border-bottom: 0; }
+.settings .sk-set.one { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+.settings .sk-set .lines { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.settings .sk-set .sk-tile { width: 30px; height: 30px; flex: none; border-radius: var(--r-row); background: var(--skel); }
+.settings .sk-label { display: flex; }
 
 /* ---------- The reader's body (.rd-body, .mailtext) and an attachment (.attach) ---------- */
 .sk-body { display: flex; flex-direction: column; gap: 12px; max-width: 600px; padding-top: 6px; }

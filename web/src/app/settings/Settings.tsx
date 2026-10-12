@@ -2,14 +2,17 @@
 // the scrim behind, not in the address bar. The 220 px nav holds the pages, Accounts marked while a
 // source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
 // topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
-// focus goes back where it was.
+// focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
+// at once; until a group's answers come it draws skeleton rows, never a default as a fact (#171).
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {JSX, KeyboardEvent} from 'react';
 import {askSignOut} from '../signOut.ts';
-import {useResource} from '../../api/client.ts';
+import {prefetch, useResource} from '../../api/client.ts';
+import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {NEWS_SOURCES_PATH} from '../../api/news.ts';
+import {AI_PATH, NOTIFY_STATUS_PATH, PRECISION_PATH, RULES_PATH, SECRETS_PATH, SECURITY_PATH, SOURCES_PATH, TRUSTED_PATH} from '../../api/settings.ts';
 import {feedFailing} from '../../logic/news.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {SETTINGS_PAGES} from '../../logic/route.ts';
@@ -27,6 +30,14 @@ import {SecurityPage} from './Security.tsx';
 import {closeSettings, openSettings, useSettingsPage} from './store.ts';
 import {TodoistPage} from './Todoist.tsx';
 import './settings.css';
+
+// Every page's answers, loaded as Settings opens so a page switched to shows at once (settings-05).
+const PAGE_PATHS = [
+  ACCOUNTS_PATH, SOURCES_PATH, PRECISION_PATH, CALENDARS_PATH, TODOIST_PROJECTS_PATH, SETTINGS_PATH, RULES_PATH, TRUSTED_PATH, NOTIFY_STATUS_PATH,
+  SECRETS_PATH, AI_PATH, SECURITY_PATH, NEWS_SOURCES_PATH,
+];
+// After the page opened at has asked for its own, so they come first.
+const PREFETCH_AFTER_MS = 250;
 
 const PAGES: Record<SettingsPage, () => JSX.Element> = {
   accounts: AccountsPage, calendar: CalendarPage, todoist: TodoistPage, notifications: NotificationsPage,
@@ -52,6 +63,11 @@ function Open({page, closing}: {page: SettingsPage; closing: boolean}) {
 
   // Focus goes back where it was as it starts to close.
   useFocusReturn(closing);
+  useEffect(() => {
+    const timer = window.setTimeout(() => PAGE_PATHS.forEach(prefetch), PREFETCH_AFTER_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     modal.current?.querySelector<HTMLElement>('.set-nav .nav.on')?.focus();
   }, []);

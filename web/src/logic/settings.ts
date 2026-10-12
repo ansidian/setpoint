@@ -30,9 +30,10 @@ export function mergeSources(sources: SourceOut[]): SourceOut | null {
   return {...worst, health: {...worst.health, last_check_at: earliest(health => health.last_check_at)}};
 }
 
-/** "Attention precision · 82%" and its line, or what's missing. */
-export function precisionText(precision: Pick<PrecisionOut, 'precision' | 'done'> | undefined): {value: string; line: string} {
-  if (!precision || precision.precision === null) return {value: '—', line: 'Nothing in Attention was marked Done in the last 30 days'};
+/** "Attention precision · 82%" and its line, or what's missing; null until it's loaded, which says nothing yet (states-01). */
+export function precisionText(precision: Pick<PrecisionOut, 'precision' | 'done'> | undefined): {value: string; line: string} | null {
+  if (!precision) return null;
+  if (precision.precision === null) return {value: '—', line: 'Nothing in Attention was marked Done in the last 30 days'};
   // The line says what the figure is, not its inverse (UX #22).
   const opened = Math.round(precision.precision * 100);
   return {value: `${opened}%`, line: `${opened}% of attention mail was opened before Done · last 30 days`};

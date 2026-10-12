@@ -11,12 +11,14 @@ import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {everyLine, newsSourceState, SECTION_LABELS, sourcesHeader, sourceTile} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
-import {HealthGlyph, Page, Section} from './parts.tsx';
+import {HealthGlyph, Page, Section, SkeletonLabel, SkeletonRows} from './parts.tsx';
 
 export function NewsSettingsPage() {
   const {data} = useResource<NewsSourcesOut>(NEWS_SOURCES_PATH);
   return (
     <Page title="News" actions={data && <span className="head-note num">{sourcesHeader(data)}</span>}>
+      {/* Its sections' names come with the answer: until then, a group's skeleton under a label's. */}
+      {!data && <Section label={<SkeletonLabel />}><SkeletonRows count={6} tile /></Section>}
       {data?.sections.map(({section, sources}) => (
         <Section key={section} label={<>{SECTION_LABELS[section]} <span className="n num">{sources.length}</span></>}>
           <div className="set-group">

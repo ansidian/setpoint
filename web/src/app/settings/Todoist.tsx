@@ -11,7 +11,7 @@ import {connectTodoist, patchSettings, SOURCES_PATH} from '../../api/settings.ts
 import {sourceState, syncLine} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
-import {HealthGlyph, Line, Menu, Page, Row, Section, Select, useAttempt} from './parts.tsx';
+import {HealthGlyph, Line, Menu, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
 const INBOX = '';
 
@@ -29,7 +29,8 @@ export function TodoistPage() {
   return (
     <Page title="Todoist">
       <Section label="Connection">
-        <div className="set-group">
+        {/* Whether it's connected is said only once it's known (states-01). */}
+        {!sources ? <SkeletonRows count={1} /> : <div className="set-group">
           {/* Its state leads the title with its glyph, as Accounts' rows do (settings-01). */}
           <Row title={connected ? <span className="health-t"><HealthGlyph kind={state?.kind ?? null} />Connected</span> : 'Not connected'} sub={source && state ? `${syncLine(source, timeZone())} · ${state.text}` : 'Tasks with a date show on the calendar'}>
             <button className={state?.reconnect || !connected ? 'btn sm' : 'btn out sm'} type="button" disabled={connect.busy}
@@ -38,27 +39,29 @@ export function TodoistPage() {
                 return null;
               })}>{connected ? 'Reconnect' : 'Connect Todoist'}</button>
           </Row>
-        </div>
+        </div>}
         <Line text={connect.line?.text ?? null} tone={connect.line?.tone} />
       </Section>
 
       <Section label="Projects">
-        <div className="set-group">
-          {(projects ?? []).map(project => <ProjectRow key={project.id} project={project} />)}
-        </div>
+        {!projects ? <SkeletonRows count={3} one /> : (
+          <div className="set-group">
+            {projects.map(project => <ProjectRow key={project.id} project={project} />)}
+          </div>
+        )}
       </Section>
 
       <Section label="New tasks">
-        <div className="set-group">
+        {!settings || !projects ? <SkeletonRows count={1} /> : <div className="set-group">
           <Row title="Default project" sub="Where a task goes when it names none" kind="ctl">
-            <Select value={settings?.todoist.default_project ?? INBOX} label="Default project"
+            <Select value={settings.todoist.default_project ?? INBOX} label="Default project"
               options={[
-                {value: INBOX, label: projects?.find(project => project.inbox)?.name ?? 'Inbox'},
-                ...(projects ?? []).filter(project => !project.inbox).map(project => ({value: project.name, label: project.name})),
+                {value: INBOX, label: projects.find(project => project.inbox)?.name ?? 'Inbox'},
+                ...projects.filter(project => !project.inbox).map(project => ({value: project.name, label: project.name})),
               ]}
               onChange={name => void save.attempt(() => patchSettings({todoist: {default_project: name || null}}))} />
           </Row>
-        </div>
+        </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
     </Page>

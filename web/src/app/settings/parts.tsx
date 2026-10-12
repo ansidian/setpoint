@@ -6,6 +6,7 @@ import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
+import {Bar, Sk} from '../states/Loading.tsx';
 import {closeSettings} from './store.ts';
 
 export function Page({title, actions, children}: {title: string; actions?: ReactNode; children: ReactNode}) {
@@ -201,3 +202,32 @@ export function useAttempt() {
   }
   return {line, busy, attempt, clear: () => setLine(null)};
 }
+
+const TITLES = [150, 186, 132, 210, 168, 120];
+const TOPS = [110, 140, 96, 128, 150, 118];
+const LINES = [230, 190, 214, 170, 250, 204];
+
+/**
+ * A group's rows while its answers load (states-01, settings-05), in place of what the page would
+ * otherwise say for nothing ("Not connected", "No rules yet"): `count` rows of `sub3` bars, a title
+ * over its line (one line with `one`), and the control's place at the end; `tile` leads each with
+ * the 30 px icon tile (Accounts, News).
+ */
+export function SkeletonRows({count, tile = false, one = false}: {count: number; tile?: boolean; one?: boolean}) {
+  return (
+    <Sk kind="settings" className="sk-set-group on-sub">
+      {Array.from({length: count}, (_, index) => (
+        <div className={one ? 'sk-set one' : 'sk-set'} key={index}>
+          {tile && <span className="sk-tile" />}
+          {one ? <><Bar w={TITLES[index % TITLES.length]!} /><Bar w={70} style={{opacity: 0.6}} /></> : (
+            <span className="lines"><Bar w={TOPS[index % TOPS.length]!} /><Bar w={LINES[index % LINES.length]!} h={8} style={{opacity: 0.6}} /></span>
+          )}
+          <Bar w={84} h={8} style={{marginLeft: 'auto'}} />
+        </div>
+      ))}
+    </Sk>
+  );
+}
+
+/** A section whose label comes with its answer (News's sections) while it loads. */
+export const SkeletonLabel = () => <Sk kind="settings-label" className="sk-label"><Bar w={44} h={8} /></Sk>;

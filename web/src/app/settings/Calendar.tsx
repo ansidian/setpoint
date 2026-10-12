@@ -10,7 +10,7 @@ import {CALENDARS_PATH, placeSuggestions, setCalendarColour, setCalendarVisible,
 import {findPlace, patchSettings, SECRETS_PATH, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
-import {Line, Menu, Page, Row, Section, Switch, useAttempt} from './parts.tsx';
+import {Line, Menu, Page, Row, Section, SkeletonRows, Switch, useAttempt} from './parts.tsx';
 import {KeyRow, SecretRow} from './Ai.tsx';
 
 export function CalendarPage() {
@@ -26,34 +26,37 @@ export function CalendarPage() {
   return (
     <Page title="Calendar">
       <Section label="Calendars">
-        <div className="set-group">
-          {[...calendars ?? []].sort((a, b) => a.position - b.position).map(calendar => (
-            <CalendarRow key={calendar.id} calendar={calendar} onShow={on => void save.attempt(() => setCalendarVisible(calendar.id, on))} />
-          ))}
-        </div>
+        {!calendars ? <SkeletonRows count={4} one /> : (
+          <div className="set-group">
+            {[...calendars].sort((a, b) => a.position - b.position).map(calendar => (
+              <CalendarRow key={calendar.id} calendar={calendar} onShow={on => void save.attempt(() => setCalendarVisible(calendar.id, on))} />
+            ))}
+          </div>
+        )}
       </Section>
 
       <Section label="Home">
-        <div className="set-group">
+        {/* "Not set" only once it's known (states-01). */}
+        {!settings && !editingHome ? <SkeletonRows count={1} /> : <div className="set-group">
           {editingHome ? <HomeSearch onDone={() => setEditingHome(false)} /> : (
             <Row title={home ? home.label : 'Not set'} sub={home ? home.address : 'Time to Leave and the forecast start from Home'}>
               <button className="btn out sm" type="button" onClick={() => setEditingHome(true)}>{home ? 'Change' : 'Set Home'}</button>
             </Row>
           )}
-        </div>
+        </div>}
       </Section>
 
       <Section label="Weather and places">
-        <div className="set-group">
+        {!settings || !sources || !secrets ? <SkeletonRows count={3} /> : <div className="set-group">
           <Row title="Weather" sub="The forecast on each day, from Home">
-            <Switch on={settings?.calendar.weather ?? true} label="Weather" onChange={on => void save.attempt(() => patchSettings({calendar: {weather: on}}))} />
+            <Switch on={settings.calendar.weather} label="Weather" onChange={on => void save.attempt(() => patchSettings({calendar: {weather: on}}))} />
           </Row>
           {weather && (
             <KeyRow id="weather" title="Pirate Weather key" set={weather.has_credentials} disabled={weather.dev} save={key => setSourceKey(weather.id, key)}
               sub={weather.dev ? 'The forecast · invented in dev runs' : `The forecast · ${weather.has_credentials ? 'Set' : 'Not set'}`} />
           )}
           <SecretRow name="places_api_key" title="Google Maps key" sub="Places and Time to Leave's routes" secrets={secrets} />
-        </div>
+        </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
     </Page>

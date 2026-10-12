@@ -61,13 +61,16 @@ test('Unread loading: a skeleton in the rows\' shapes after 200 ms, breathing, n
     const release = await hold(page, /^\/api\/mail\/inbox$/);
     await visit(page, `${setpoint.base}/inbox`);
     const sk = await shown(page, 'inbox');
-    // Its motion: in after 200 ms over 180, then breathing over 1600 ms, every bar in phase (the block breathes, not each bar).
-    const motion = await sk.evaluate(element => {
+    // Its motion: in after 200 ms over 180, then each bar breathes over 1600 ms, from the same moment, so in phase.
+    const motion = (element: Element) => {
       const style = getComputedStyle(element);
       return [style.animationName, style.animationDuration, style.animationDelay, style.animationTimingFunction, style.animationIterationCount];
-    });
-    assert.deepEqual(motion, ['sk-in, sk-breathe', `0.18s, ${skeleton.breatheMs / 1000}s`, `${skeleton.delayMs / 1000}s, ${(skeleton.delayMs + 180) / 1000}s`,
-      `cubic-bezier(0.2, 0, 0, 1), ${skeleton.breatheEase.replace(/,/g, ', ').replace(/\.(\d)/g, '0.$1')}`, '1, infinite']);
+    };
+    assert.deepEqual(await sk.evaluate(motion), ['sk-in', '0.18s', `${skeleton.delayMs / 1000}s`, 'cubic-bezier(0.2, 0, 0, 1)', '1']);
+    assert.deepEqual(await sk.locator('.sk-bar').first().evaluate(motion),
+      ['sk-breathe', `${skeleton.breatheMs / 1000}s`, `${(skeleton.delayMs + 180) / 1000}s`, skeleton.breatheEase.replace(/,/g, ', ').replace(/\.(\d)/g, '0.$1'), 'infinite']);
+    // The headers' band stays still under them.
+    assert.equal(await sk.locator('.sk-gh').first().evaluate(header => getComputedStyle(header).animationName), 'none');
     assert.equal(await page.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor), await tokenColour(page, 'sub2'));
     // Nothing says the Inbox is empty, and no row is a skeleton's.
     assert.equal(await page.locator('.empty').count(), 0, 'no All caught up');
@@ -106,6 +109,65 @@ test('All loading: its skeleton under the Pinned shelf', async () => {
     await release();
     await page.locator('.list.all .row:not(.shelf)').first().waitFor();
     assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// Settings' own answers: every page's (settings-05 loads them all as Settings opens).
+const SETTINGS_PATHS = /^\/api\/(accounts|sources|mail\/precision|calendars|todoist\/projects|settings|mail\/rules|mail\/trusted-domains|notifications\/status|secrets|ai|security|news\/sources)$/;
+// What a page says only once it knows (states-01): each would be false of the seed while it loads.
+const FALSE_EMPTIES = ['Not connected', 'Connect Todoist', 'Not set', 'No rules yet', 'None yet', '0 domains', 'Nothing in Attention', '—', 'No sources', 'No home set'];
+
+test('Settings loading: each page draws its groups\' skeleton rows, never a default as a fact, until its answers come (states-01, settings-05)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const release = await hold(page, SETTINGS_PATHS);
+    await visit(page, `${setpoint.base}/settings/todoist`);
+    const main = page.locator('.settings .set-main');
+    for (const name of ['Todoist', 'Accounts', 'Calendar', 'Notifications', 'Mail', 'News', 'AI', 'Security']) {
+      await page.locator('.settings .set-nav').getByRole('button', {name, exact: true}).click();
+      await main.locator('.set-title', {hasText: name}).waitFor();
+      const sk = await shown(page, 'settings');
+      const text = await main.innerText();
+      for (const empty of FALSE_EMPTIES) assert.ok(!text.includes(empty), `${name} says "${empty}" while it loads`);
+      // Inside the page's `sub` group, the bars are `sub3`.
+      assert.equal(await sk.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor), await tokenColour(page, 'sub3'));
+      if (name === 'Todoist') {
+        await page.mouse.move(700, 28);
+        await matchGolden(page, 'loading-settings-todoist', 'settings');
+      }
+    }
+    await release();
+    await main.locator('.set-row', {hasText: 'Recovery'}).or(main.locator('.set-row', {hasText: 'left'})).first().waitFor();
+    await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
+    await main.locator('.set-row', {hasText: 'Connected'}).waitFor();
+    assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Settings opening loads every page\'s answers, so the next page shows at once (settings-05)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    const asked = ['/api/mail/rules', '/api/mail/trusted-domains', '/api/security', '/api/ai', '/api/news/sources']
+      .map(path => page.waitForResponse(response => new URL(response.url()).pathname === path));
+    await page.keyboard.press('Meta+,');
+    await page.locator('.settings .set-title', {hasText: 'Accounts'}).waitFor();
+    await Promise.all(asked);
+    // Mail's answers held from now on: what Settings loaded as it opened shows at once, with no skeleton.
+    await hold(page, /^\/api\/mail\/(rules|trusted-domains)$/);
+    await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
+    await page.locator('.settings .rule').first().waitFor();
+    await page.locator('.settings .dom').first().waitFor();
+    assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

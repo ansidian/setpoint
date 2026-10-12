@@ -14,7 +14,7 @@ import {readerTime} from '../../logic/format.ts';
 import {CAP_CHOICES, capMeter, cappedLine, dollars, newsUsageParts} from '../../logic/news.ts';
 import {monthTotal, usageLine} from '../../logic/settings.ts';
 import {useNow} from '../clock.ts';
-import {Line, Page, Row, Section, Select, useAttempt} from './parts.tsx';
+import {Line, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
 type ModelSetting = keyof Settings['ai'];
 
@@ -44,14 +44,17 @@ export function AiPage() {
   return (
     <Page title="AI">
       <Section label="Keys">
-        <div className="set-group">
-          <SecretRow name="anthropic_api_key" title="Anthropic" sub="Claude models" secrets={secrets} />
-          <SecretRow name="openai_api_key" title="OpenAI" sub="GPT models" secrets={secrets} />
-        </div>
+        {/* What's set, and which model is in use, only once it's known (states-01). */}
+        {!secrets ? <SkeletonRows count={2} /> : (
+          <div className="set-group">
+            <SecretRow name="anthropic_api_key" title="Anthropic" sub="Claude models" secrets={secrets} />
+            <SecretRow name="openai_api_key" title="OpenAI" sub="GPT models" secrets={secrets} />
+          </div>
+        )}
       </Section>
 
       <Section label="Mail">
-        <div className="set-group">
+        {!ai || !settings ? <SkeletonRows count={4} /> : <div className="set-group">
           {MODELS.map(({setting, title, sub, current}) => {
             const chosen = settings?.ai[setting] ?? null;
             const inUse = ai ? current(ai) : null;
@@ -70,12 +73,12 @@ export function AiPage() {
               </Row>
             );
           })}
-        </div>
+        </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
 
       <Section label="News">
-        <div className="set-group">
+        {!ai || !settings ? <SkeletonRows count={4} /> : <div className="set-group">
           <Row title="Articles and grouping" sub={`Section, noise filter, key facts, same event or not${needsKey}`} kind="ctl">
             {news && <span className="val">{label(news.articles_model)}</span>}
           </Row>
@@ -91,16 +94,16 @@ export function AiPage() {
             {meter && <span className={capped ? 'meter capped' : meter.near ? 'meter near' : 'meter'} role="meter" aria-label="This month" aria-valuemin={0} aria-valuemax={1} aria-valuenow={meter.fill}><span style={{width: `${meter.fill * 100}%`}} /></span>}
             {meter && <span className="amount num">{meter.text}</span>}
           </Row>
-        </div>
+        </div>}
         <Line text={cap.line?.text ?? null} tone={cap.line?.tone} />
       </Section>
 
       <Section label="Usage this month" right={usage && <span className="num ink2">{dollars(monthTotal(usage), true)}</span>}>
-        <div className="set-group">
+        {!usage ? <SkeletonRows count={3} /> : <div className="set-group">
           <Row title="Triage" sub={usage ? usageLine(usage.triage) : ''}>{usage && <span className="cost num">{dollars(usage.triage.cost_usd, true)}</span>}</Row>
           <Row title="Alfred" sub={usage ? usageLine(usage.alfred) : ''}>{usage && <span className="cost num">{dollars(usage.alfred.cost_usd, true)}</span>}</Row>
           <Row title="News" sub={usage ? newsUsageParts(usage.news) : ''}>{usage && <span className="cost num">{dollars(usage.news.cost_usd, true)}</span>}</Row>
-        </div>
+        </div>}
       </Section>
     </Page>
   );

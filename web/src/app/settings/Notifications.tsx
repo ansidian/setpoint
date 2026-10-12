@@ -13,7 +13,7 @@ import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
 import {SecretRow} from './Ai.tsx';
-import {Line, Page, Row, Section, Select, Stepper, Switch, useAttempt, useFlash} from './parts.tsx';
+import {Line, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt, useFlash} from './parts.tsx';
 import {openSettings} from './store.ts';
 
 const BUFFER_STEP = 5;
@@ -34,7 +34,17 @@ export function NotificationsPage() {
   const [sent, flashSent] = useFlash(SENT_MS);
   // The server saved: a `check` at the field's end, fading in, then out after 1.5 s.
   const [serverSaved, flashServerSaved] = useFlash(SAVED_MS + motion.medium);
-  if (!settings) return <Page title="Notifications">{null}</Page>;
+  // Until its answers come, its groups' skeleton: nothing said about ntfy that isn't known (states-01).
+  if (!settings || !secrets) {
+    return (
+      <Page title="Notifications">
+        <Section label="ntfy" style={{marginTop: 0}}><SkeletonRows count={4} /></Section>
+        <Section label="Reminder defaults"><SkeletonRows count={2} one /></Section>
+        <Section style={{marginTop: 22}}><SkeletonRows count={3} /></Section>
+        <Section><SkeletonRows count={1} /></Section>
+      </Page>
+    );
+  }
   const {notifications: ntfy, reminders, time_to_leave: leave} = settings;
   const change = (patch: Parameters<typeof patchSettings>[0]) => void save.attempt(() => patchSettings(patch));
 
@@ -43,7 +53,7 @@ export function NotificationsPage() {
   const noServer = !ntfy.ntfy_server;
   const noHome = !settings.calendar.home;
   // ntfy failing is a source struggling: `caution`, as every failing source is (states-04).
-  const state = !status?.configured ? {dot: 'okdot off', text: 'Not set up'}
+  const state = !status ? null : !status.configured ? {dot: 'okdot off', text: 'Not set up'}
     : status.last_error ? {dot: 'okdot warn', text: `Failing, ${status.last_error}`}
       : {dot: 'okdot', text: status.last_sent_at ? `Connected · last sent ${asOf(status.last_sent_at, now, timeZone())}` : 'Connected · nothing sent yet'};
   // Send test answers clearly (states-11, settings-07): anything but sent is a failure, in `alert`.
@@ -57,7 +67,7 @@ export function NotificationsPage() {
     <Page title="Notifications">
       <Section label="ntfy" right={(
         <>
-          <span className="ink2 num" style={{display: 'inline-flex', alignItems: 'center', gap: 7}}><span className={state.dot} />{state.text}</span>
+          {state && <span className="ink2 num" style={{display: 'inline-flex', alignItems: 'center', gap: 7}}><span className={state.dot} />{state.text}</span>}
           {!noServer && (
             <button className="btn out sm send-test" type="button" disabled={test.busy} onClick={sendTest}>
               {/* While it sends, the shared spinner takes the glyph's place, so the button keeps its width. */}

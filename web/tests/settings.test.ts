@@ -48,7 +48,8 @@ describe('Settings', () => {
   ])('Add rule\'s From %j matches %j', (text, match) => expect(senderMatch(text)).toEqual(match));
 
   test.each([
-    [undefined, {value: '—', line: 'Nothing in Attention was marked Done in the last 30 days'}],
+    // Not yet loaded: nothing to say, rather than that nothing was Done (states-01).
+    [undefined, null],
     [{precision: null, done: 0}, {value: '—', line: 'Nothing in Attention was marked Done in the last 30 days'}],
     [{precision: 0.82, done: 150}, {value: '82%', line: '82% of attention mail was opened before Done · last 30 days'}],
     [{precision: 1, done: 3}, {value: '100%', line: '100% of attention mail was opened before Done · last 30 days'}],

@@ -127,6 +127,16 @@ export function refresh(path: string): Promise<void> {
   return current.loading;
 }
 
+/**
+ * Loads `path` ahead of the view that shows it (Settings' pages, as Settings opens): only one that
+ * has no answer and isn't on its way, so it never asks twice.
+ */
+export function prefetch(path: string) {
+  const found = cache.get(path);
+  if (found && (found.loading || found.data !== undefined)) return;
+  void refresh(path);
+}
+
 /** The resources on screen. */
 export const mountedPaths = () => [...mounted.keys()];
 
