@@ -717,8 +717,8 @@ Board 28 replaces All's list.
 - **AI** (board 30b) adds a **News** group:
   - **Articles and grouping** (Claude Haiku 5.5) and **Stories and ranking** (Claude Sonnet 5.5)
   - **Monthly cap** ($40)
-  - **This month**: a 160 × 6 meter in `cool`, `caution` from 90% of the cap, then "$18.40 of $40" in
-    `ink` (#252)
+  - **This month**: a 160 × 6 meter, `ink3` on a `sub2` track, `caution` from 90% of the cap, then
+    "$18.40 of $40" in `ink` (#252)
   - **Usage this month** lists Triage, Alfred and News, with News broken into articles, grouping,
     stories and ranking, each cost in `ink` 500; its label carries the month's total (#252).
 
@@ -1651,11 +1651,14 @@ it changes what's on screen.
     "Tue, Oct 6 · 9 of 11 opened first", or "· nothing Done". Board 17 draws 30 bars and the figure
     inline (Andy, 2026-10-11, polish audit settings-08).
 252. **Settings › AI puts the money first:** each cost in Usage this month is `ink` 500 (was `ink2`
-    400), its label carries the month's total ("$21.35", `ink2`, Triage, Alfred and News together) so
-    This month's News-only "$18.40 of $40" no longer reads as the whole, the amount is `ink`, and the
-    meter is `cool` (was `ink2`), turning `caution` from 90% of the cap rather than only at it; its
-    fill eases to a new width over 260 ms. At the cap it's full in `caution`, as before (Andy,
-    2026-10-11, polish audit settings-10).
+    400), its label carries the month's total ("$21.35", `ink2`, Triage, Alfred and News together)
+    so This month's News-only "$18.40 of $40" no longer reads as the whole, the amount is `ink`, and
+    the meter turns `caution` from 90% of the cap rather than only at it; its fill eases to a new
+    width over 260 ms. The meter stays neutral, `ink3` on a `sub2` track (was `ink2` on `sub3`;
+    3.4:1 in Night, 4.1:1 in Light): the finding drew it `cool`, but #126 gives `cool` to identity
+    and `accent` to "you are here", and a usage meter is neither (Claude decided, Andy left small
+    gaps to Claude). At the cap it's full in `caution`, as before (Andy, 2026-10-11, polish audit
+    settings-10).
 253. **Every Settings group has its label, and an empty one says so as Mail does:** Notifications'
     last two groups take the labels "Time to Leave" and "Alerts" (Reconnect alerts), spaced as every
     other group, as #69 gave Calendar's last group a label. Security's empty Passkeys group is the

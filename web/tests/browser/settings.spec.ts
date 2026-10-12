@@ -184,8 +184,11 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     await still(page);
     const meter = news.locator('.meter');
     assert.deepEqual(await meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10]), [160, 6, 73.6]);
-    // The money first (the polish audit's settings-10): a cool meter, the amount in ink.
-    assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), await computed(page, 'background', 'var(--cool)'));
+    // The money first (the polish audit's settings-10): the amount in ink, and a neutral meter, ink3 on a sub2
+    // track: a usage meter is neither "you are here" (accent) nor an identity (cool).
+    const neutral = await computed(page, 'background', 'var(--ink3)');
+    assert.deepEqual(await meter.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element.firstElementChild!).backgroundColor]),
+      [await computed(page, 'background', 'var(--sub2)'), neutral]);
     assert.equal(await amount.evaluate(element => getComputedStyle(element).color), await computed(page, 'color', 'var(--ink)'));
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '30b-settings-ai', 'settings');
@@ -205,7 +208,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     await matchGolden(page, 'settings-ai-usage', 'settings');
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
-    // the meter turns caution, before the cap is reached; under that, cool again.
+    // the meter turns caution, before the cap is reached; under that, ink3 again.
     await choose(page, 'Monthly cap', '$20');
     await amount.filter({hasText: '$18.40 of $20'}).waitFor();
     assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
@@ -216,6 +219,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     await settled('the cap saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.news.monthly_cap_usd === 50);
     await amount.filter({hasText: '$18.40 of $50'}).waitFor();
     assert.equal(await meter.getAttribute('class'), 'meter');
+    await until('the meter neutral again', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === neutral);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
