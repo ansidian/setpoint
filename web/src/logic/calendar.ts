@@ -236,11 +236,12 @@ const CONDITIONS: Record<WeatherCondition, {label: string; icon: 'sunny' | 'part
   rain: {label: 'Rain', icon: 'rainy', tone: 'rain'},
 };
 
-/** A forecast's icon and colour (sun `sun`, cloud `ink2`, rain `cool`) and its line, "Sunny · 78° / 61°". */
+/** A forecast's icon and tone (sun `sunGlyph`, cloud `ink2`, rain `cool`), its high and low, and its line, "Sunny · 78° / 61°". */
 export function weatherOf(day: WeatherDayOut) {
   const condition = CONDITIONS[day.condition];
-  const temps = `${Math.round(day.high_f)}° / ${Math.round(day.low_f)}°`;
-  return {icon: condition.icon, tone: condition.tone, temps, line: `${condition.label} · ${temps}`};
+  const [high, low] = [`${Math.round(day.high_f)}°`, `${Math.round(day.low_f)}°`];
+  const temps = `${high} / ${low}`;
+  return {icon: condition.icon, tone: condition.tone, temps, high, low, line: `${condition.label} · ${temps}`};
 }
 
 /** The day's line under its date when there's no forecast: "6 events · 2 tasks". */

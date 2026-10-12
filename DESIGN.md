@@ -84,6 +84,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
+| `sunGlyph` | `var(--sun)` | `oklch(0.58 0.14 78)` | the forecast's sun on the grids and the right pane |
 | `hl` | `color-mix(in oklch, var(--sun) 26%, transparent)` | `oklch(0.92 0.12 96)` | search's match highlight |
 | `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(29,30,33,.3)` | a focused field's border |
 | `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
@@ -394,7 +395,7 @@ offered for protected mail.
   outside weekend too), the selected day `sub` (#123).
 - **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#124); today a 22 px
   `alert` disc with `onAlert` 600 (#128); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
-  sun `sun`, cloud `ink2`, rain `cool`).
+  sun `sunGlyph`, cloud `ink2`, rain `cool`), after the high in `ink2` and the low in `ink3` (#137).
 - **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text, its
   lightness capped at `--tintL` (#122) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
   the colour at `--evtint` as fill. The **selected item turns solid** (colour fill, `onInk` text, no
@@ -1815,3 +1816,8 @@ it changes what's on screen.
     in the reader and ⌘K, which leave `forum`. Ask Alfred reads in `ink`, its query in `ink3`. No
     wash on the card and no tinted hover: the AI has no hue of its own, so it never outshouts mail
     (Andy, 2026-10-11, polish audit search-05, color-01).
+137. **Light's forecast sun is deeper, and the high leads:** a token `sunGlyph` keeps Night's `sun`
+    and gives Light `oklch(0.58 0.14 78)` (4:1 on the page, was a pale olive 3.2:1), for the sun on
+    the month's and the week's day heads, the right pane and the phone's agenda; `sun` itself is
+    unchanged. Temperatures read the high in `ink2` and the low in `ink3`, "78° / 61°" (Andy,
+    2026-10-11, polish audit grids-13).

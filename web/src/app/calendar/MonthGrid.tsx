@@ -298,7 +298,7 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items, forec
     <div className={className} data-date={date} onClick={() => onSelectDay(date)}>
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
-        {wx && <span className={`wx ${wx.tone}`} title={wx.line}><span className="temps num">{wx.temps}</span><Icon name={wx.icon} size={16} /></span>}
+        {wx && <span className={`wx ${wx.tone}`} title={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={16} /></span>}
       </div>
       {items.slice(0, fits).map(item => (
         <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} look={looks.get(item.key)} now={now} timeZone={timeZone}

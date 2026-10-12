@@ -80,7 +80,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
                 <div className={['pday', index === 0 && 'first', section.today && 'today'].filter(Boolean).join(' ')}>
                   {section.today ? <span><span className="pd-today">Today</span> · {dayTitle(section.kind === 'day' ? section.date : section.from)}</span> : section.title}
                   {section.kind === 'empty' && <span className="none">No events</span>}
-                  {wx && <span className={`pwx ${wx.tone}`} title={wx.line}><span className="temps num">{wx.temps}</span><Icon name={wx.icon} size={17} /></span>}
+                  {wx && <span className={`pwx ${wx.tone}`} title={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={17} /></span>}
                 </div>
                 {section.kind === 'day' && section.lines.map(({item, when, past}, at) => {
                   const calendar = colours.get(item.calendar_id);

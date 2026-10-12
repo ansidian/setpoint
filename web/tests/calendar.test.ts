@@ -235,7 +235,11 @@ describe('the right pane', () => {
     [{date: '2026-10-08', condition: 'cloud', high_f: 72, low_f: 59}, 'cloud', 'cloud', 'Cloudy · 72° / 59°'],
     [{date: '2026-10-13', condition: 'rain', high_f: 64.4, low_f: 55}, 'rainy', 'rain', 'Rain · 64° / 55°'],
     [{date: '2026-10-14', condition: 'partly_cloudy', high_f: 70, low_f: 58}, 'partly_cloudy_day', 'cloud', 'Partly cloudy · 70° / 58°'],
-  ] as const)('%o', (day, icon, tone, line) => expect(weatherOf(day)).toEqual({icon, tone, temps: line.split(' · ')[1], line}));
+  ] as const)('%o', (day, icon, tone, line) => {
+    const temps = line.split(' · ')[1]!;
+    // The high and the low apart, so the grid can lead with the high (#137).
+    expect(weatherOf(day)).toEqual({icon, tone, temps, high: temps.split(' / ')[0], low: temps.split(' / ')[1], line});
+  });
 
   test('dates and keys', () => {
     expect([dayTitle('2026-10-07'), dayTitle('2026-10-17')]).toEqual(['Wed, Oct 7', 'Sat, Oct 17']);

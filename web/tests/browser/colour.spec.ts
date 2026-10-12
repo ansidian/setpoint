@@ -456,3 +456,23 @@ test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred,
     await setpoint.stop();
   }
 });
+
+test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high leads the low in ink2 (#137)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    for (const theme of ['night', 'light'] as const) {
+      await calendar(page, setpoint.base, theme);
+      const sunny = page.locator('.cell[data-date="2026-10-07"] .wx.sun');
+      assert.equal(await style(sunny, 'color'), await colourOf(page, theme === 'light' ? 'oklch(0.58 0.14 78)' : 'var(--sun)'), `${theme}: the sun`);
+      assert.equal(await style(page.locator('.rp-sub .sun'), 'color'), await colourOf(page, 'var(--sunGlyph)'), `${theme}: the right pane's`);
+      const high = sunny.locator('.temps .hi');
+      assert.equal(await high.textContent(), '78°');
+      assert.equal(await style(high, 'color'), await colourOf(page, 'var(--ink2)'));
+      assert.equal(await style(sunny.locator('.temps'), 'color'), await colourOf(page, 'var(--ink3)'), 'the low stays ink3');
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

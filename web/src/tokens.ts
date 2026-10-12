@@ -52,6 +52,8 @@ export const colour = {
   hl: 'color-mix(in oklch, var(--sun) 26%, transparent)',
   // A focused field's border, at least as strong as hover's `edgeHover` (#135).
   edgeFocus: 'rgba(255,255,255,.2)',
+  // The forecast's sun on the grids and in the right pane (#137): Night's `sun`, Light's a deeper amber.
+  sunGlyph: 'var(--sun)',
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
@@ -101,6 +103,7 @@ export const lightColour: Record<ColourToken, string> = {
   mailEdge: 'rgba(29,30,33,.1)',
   hl: 'oklch(0.92 0.12 96)',
   edgeFocus: 'rgba(29,30,33,.3)',
+  sunGlyph: 'oklch(0.58 0.14 78)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
 };

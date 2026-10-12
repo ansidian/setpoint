@@ -147,7 +147,8 @@
   .ph-agenda .pwx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
   .ph-agenda .pwx .temps { font-size: 11.5px; letter-spacing: 0; color: var(--ink3); }
   .ph-agenda .pwx .icon { flex: none; }
-  .ph-agenda .pwx.sun { color: var(--sun); }
+  .ph-agenda .pwx.sun { color: var(--sunGlyph); }
+  .ph-agenda .pwx .hi { color: var(--ink2); }
   .ph-agenda .pwx.cloud { color: var(--ink2); }
   .ph-agenda .pwx.rain { color: var(--cool); }
   .ph-agenda .none { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
