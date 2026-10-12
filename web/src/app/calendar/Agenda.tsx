@@ -3,13 +3,13 @@
 // opens that item's detail, read-only, over the agenda; /calendar/2026-10-07 brings that day into
 // view (or starts the agenda there when it's further out).
 import type {CalendarOut, ItemOut, ItemsOut, WeatherDayOut} from '@setpoint/shared';
-import {useEffect} from 'react';
+import {Fragment, useEffect} from 'react';
 import type {CSSProperties} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, itemPath, itemsPath, weatherPath} from '../../api/items.ts';
-import {itemDays, itemKey, itemsByDay, monthOf, weatherOf} from '../../logic/calendar.ts';
-import {addDays, localDate, monthName} from '../../logic/format.ts';
+import {dayTitle, itemDays, itemKey, itemsByDay, monthOf, weatherOf} from '../../logic/calendar.ts';
+import {addDays, clockTime, localDate, monthName} from '../../logic/format.ts';
 import {AGENDA_DAYS, agendaRange, agendaStart, phoneAgenda} from '../../logic/phone.ts';
 import type {Route} from '../../logic/route.ts';
 import {routePath} from '../../logic/route.ts';
@@ -76,27 +76,34 @@ export function Agenda({route}: {route: CalendarRoute}) {
             const wx = day && (section.kind === 'day' || section.from === section.to) ? weatherOf(day) : null;
             return (
               <div key={days} className="ph-day" data-days={days}>
-                <div className={index === 0 ? 'pday first' : 'pday'}>
-                  {section.title}
+                {/* Today reads "Today" in `ink` 500 before its date (#256). */}
+                <div className={['pday', index === 0 && 'first', section.today && 'today'].filter(Boolean).join(' ')}>
+                  {section.today ? <span><span className="pd-today">Today</span> · {dayTitle(section.kind === 'day' ? section.date : section.from)}</span> : section.title}
                   {section.kind === 'empty' && <span className="none">No events</span>}
                   {wx && <span className={`pwx ${wx.tone}`} title={wx.line}><span className="temps num">{wx.temps}</span><Icon name={wx.icon} size={17} /></span>}
                 </div>
-                {section.kind === 'day' && section.lines.map(({item, when, past}) => {
+                {section.kind === 'day' && section.lines.map(({item, when, past}, at) => {
                   const calendar = colours.get(item.calendar_id);
                   const to: CalendarRoute = {page: 'calendar', date: null, item: item.id, at: item.occurrence_start};
+                  // Events are their calendar's chip, as on the grids; tasks keep their ring (#256).
+                  const chip = item.kind === 'event';
                   return (
-                    <a key={item.key} className={['pitem', past && 'past', item.done && 'done', item.key === selectedKey && 'sel'].filter(Boolean).join(' ')} href={routePath(to)} data-key={item.key}
-                      style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties}
-                      onClick={event => {
-                        event.preventDefault();
-                        navigate(to);
-                      }}>
-                      <span className="when">{when}</span>
-                      <span className="mk">{item.kind === 'task' ? (item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />) : <span className="cbar" />}</span>
-                      <span className="ell">{item.title}{placeName(item) && <span className="pl"> · {placeName(item)}</span>}</span>
-                    </a>
+                    <Fragment key={item.key}>
+                      {section.nowAt === at && <NowLine now={now} timeZone={zone} />}
+                      <a className={['pitem', chip && 'chip', past && 'past', item.done && 'done', item.key === selectedKey && 'sel'].filter(Boolean).join(' ')} href={routePath(to)} data-key={item.key}
+                        style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties}
+                        onClick={event => {
+                          event.preventDefault();
+                          navigate(to);
+                        }}>
+                        <span className="when">{when}</span>
+                        {!chip && <span className="mk">{item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}</span>}
+                        <span className="ell">{item.title}{placeName(item) && <span className="pl"> · {placeName(item)}</span>}</span>
+                      </a>
+                    </Fragment>
                   );
                 })}
+                {section.kind === 'day' && section.nowAt === section.lines.length && <NowLine now={now} timeZone={zone} />}
               </div>
             );
           })}
@@ -116,6 +123,17 @@ export function Agenda({route}: {route: CalendarRoute}) {
         )}
       </div>
     </>
+  );
+}
+
+/** Today's now-line, as the right pane's: the time in `alert` in the time column, a dot, then the line (#256). */
+function NowLine({now, timeZone}: {now: number; timeZone: string}) {
+  return (
+    <div className="ph-now" aria-label={`Now, ${clockTime(now, timeZone)}`}>
+      <span className="t num">{clockTime(now, timeZone)}</span>
+      <span className="dot" />
+      <span className="line" />
+    </div>
   );
 }
 

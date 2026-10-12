@@ -38,8 +38,20 @@ export interface AgendaLine {
 }
 
 export type AgendaSection =
-  | {kind: 'day'; date: string; title: string; lines: AgendaLine[]}
-  | {kind: 'empty'; from: string; to: string; title: string};
+  // `nowAt`: today's now-line, before lines[nowAt] (agendaNowAt); null on other days.
+  | {kind: 'day'; date: string; title: string; today: boolean; lines: AgendaLine[]; nowAt: number | null}
+  | {kind: 'empty'; from: string; to: string; title: string; today: boolean};
+
+/**
+ * Where today's now-line goes among its lines (#256): before the first timed event not yet over,
+ * else after the last timed event, before the tasks. All-day events lead the day and tasks end it,
+ * so neither places it; a day without a timed event has none.
+ */
+export function agendaNowAt(lines: AgendaLine[]): number | null {
+  const timed = lines.flatMap((line, index) => (line.item.kind === 'event' && !line.item.all_day && line.item.starts_at ? [index] : []));
+  if (!timed.length) return null;
+  return timed.find(index => !lines[index]!.past) ?? timed.at(-1)! + 1;
+}
 
 /**
  * The agenda's days from `start`: each day's items in the grid's order (`byDay` is itemsByDay's), and
@@ -53,13 +65,14 @@ export function phoneAgenda(start: string, today: string, byDay: Map<string, Ite
     const items = byDay.get(date) ?? [];
     const title = date === today ? `Today · ${dayTitle(date)}` : dayTitle(date);
     if (items.length) {
-      sections.push({kind: 'day', date, title, lines: items.map(item => ({item, when: when(item, timeZone), past: isPast(item, now, timeZone)}))});
+      const lines = items.map(item => ({item, when: when(item, timeZone), past: isPast(item, now, timeZone)}));
+      sections.push({kind: 'day', date, title, today: date === today, lines, nowAt: date === today ? agendaNowAt(lines) : null});
       continue;
     }
     const last = sections.at(-1);
     // Today stays on its own line, named as today, and so does a day with a forecast.
     if (last?.kind === 'empty' && last.from !== today && !forecast.has(last.from) && !forecast.has(date)) sections[sections.length - 1] = {...last, to: date, title: `${dayTitle(last.from)} – ${dayTitle(date)}`};
-    else sections.push({kind: 'empty', from: date, to: date, title});
+    else sections.push({kind: 'empty', from: date, to: date, title, today: date === today});
   }
   return sections;
 }

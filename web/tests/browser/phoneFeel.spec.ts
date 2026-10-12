@@ -422,3 +422,79 @@ test('the phone\'s list reads a step up: rows 15, ages and accounts 13, summarie
     await setpoint.stop();
   }
 });
+
+test('the agenda marks today and now, draws events as their calendar\'s chips, and keeps each day\'s head in view', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ph-agenda .pitem').first().waitFor();
+    const [ink, ink3, alert] = [await tokenColour(page, 'ink'), await tokenColour(page, 'ink3'), await tokenColour(page, 'alert')];
+    // "Today" in `ink` 500, then its date as every day's, `ink3` 400.
+    assert.deepEqual(await styles(page, '.pday.today .pd-today', ['color', 'font-weight']), [ink, '500']);
+    assert.deepEqual(await styles(page, '.pday.today', ['color', 'font-weight']), [ink3, '400']);
+    assert.equal(await page.locator('.pday .pd-today').count(), 1);
+    // Now, at the seed's 9:12 AM, between the past Gym and the Dentist.
+    const today = page.locator('.ph-agenda [data-days="2026-10-07"]');
+    assert.deepEqual(await today.locator(':scope > :not(.pday)').evaluateAll(lines => lines.map(line => (line.classList.contains('ph-now') ? `now ${line.textContent}` : line.querySelector('.ell')!.firstChild!.textContent))),
+      ['Gym', 'now 9:12 AM', 'Dentist', 'CS 101 lab report', 'Pay rent']);
+    assert.equal(await page.locator('.ph-now').count(), 1);
+    // The right pane's now-line: 16 px; the time `alert` 12 / 500 in the 96 px time column; a 7 px
+    // `alert` dot on the marks' column, centred on the tasks' rings; a 1 px `alert` line at .7 from
+    // the titles' column.
+    const now = await page.locator('.ph-now').evaluate(row => {
+      const [time, dot, line] = [row.querySelector('.t')!, row.querySelector('.dot')!, row.querySelector('.line')!];
+      const box = (element: Element) => element.getBoundingClientRect();
+      const style = (element: Element) => getComputedStyle(element);
+      return {
+        height: box(row).height,
+        time: [box(time).width, style(time).color, style(time).fontSize, style(time).fontWeight, style(time).fontVariantNumeric],
+        dot: [box(dot).width, box(dot).height, style(dot).backgroundColor, box(dot).left + box(dot).width / 2],
+        line: [box(line).height, style(line).backgroundColor, style(line).opacity, box(line).left],
+      };
+    });
+    const task = page.locator('.pitem', {hasText: 'Pay rent'});
+    const [ring, title] = [(await task.locator('.mk').boundingBox())!, (await task.locator('.ell').boundingBox())!];
+    assert.deepEqual(now, {
+      height: 16, time: [96, alert, '12px', '500', 'tabular-nums'],
+      dot: [7, 7, alert, ring.x + ring.width / 2], line: [1, alert, '0.7', title.x],
+    });
+    // Events are their calendar's chips, as on the grids: its tint and 3 px bar, radius 6, 34 px in a
+    // 42 px line, the title level with a task's; past ones at .55; tasks keep their ring.
+    const chip = page.locator('.pitem.chip', {hasText: 'Dentist'}).locator('.ell');
+    assert.equal(await page.locator('.ph-agenda .cbar').count(), 0);
+    assert.deepEqual(await chip.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [element.getBoundingClientRect().height, style.borderRadius, style.paddingLeft, style.boxShadow.endsWith('3px 0px 0px 0px inset'), style.backgroundColor !== 'rgba(0, 0, 0, 0)', style.opacity];
+    }), [34, '6px', '25px', true, true, '1']);
+    assert.deepEqual(await styles(page, '.pitem.chip.past .ell', ['opacity']), ['0.55']);
+    const words = (cell: typeof chip) => cell.evaluate(element => {
+      const range = document.createRange();
+      range.selectNodeContents(element.firstChild!);
+      return range.getBoundingClientRect().left;
+    });
+    assert.equal(await words(chip), await words(task.locator('.ell')));
+    assert.ok(await task.locator('.ring').isVisible());
+    assert.deepEqual(await styles(page, '.ph-agenda .pday', ['position', 'top', 'z-index']), ['sticky', '0px', '1']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a busy day\'s head stays in view as its items scroll under it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['busy-saturday']});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-17'})}`);
+    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 17 – 24');
+    const agenda = page.locator('.ph-agenda');
+    await agenda.evaluate(element => element.scrollTo(0, 40));
+    await until('scrolled', () => agenda.evaluate(element => element.scrollTop), top => top === 40);
+    const [box, head] = [await agenda.boundingBox(), await page.locator('.ph-agenda [data-days="2026-10-17"] .pday').boundingBox()];
+    assert.equal(head!.y, box!.y, 'Saturday\'s head stays at the top');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

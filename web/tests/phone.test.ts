@@ -4,7 +4,7 @@ import type {InboxGroup, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {itemsByDay} from '../src/logic/calendar.ts';
-import {agendaRange, agendaStart, phoneAgenda, phoneGroups} from '../src/logic/phone.ts';
+import {agendaNowAt, agendaRange, agendaStart, phoneAgenda, phoneGroups} from '../src/logic/phone.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -107,6 +107,29 @@ describe('the agenda (board 21)', () => {
   });
 
   test('a later start has no Today', () => {
-    expect(phoneAgenda('2026-10-15', '2026-10-07', new Map(), now, zone)[0]!.title).toBe('Thu, Oct 15 – Thu, Oct 22');
+    const [first] = phoneAgenda('2026-10-15', '2026-10-07', new Map(), now, zone);
+    expect([first!.title, first!.today]).toEqual(['Thu, Oct 15 – Thu, Oct 22', false]);
   });
+
+  test('today is marked, with its now-line between the past Gym and the Dentist; other days have none', () => {
+    expect(sections.map(section => [section.today, section.kind === 'day' ? section.nowAt : 'empty'])).toEqual([
+      [true, 1], [false, null], [false, null], [false, 'empty'], [false, null], [false, null], [false, null],
+    ]);
+  });
+});
+
+// Today's now-line (#256), the seed's 9:12 AM: before the first timed event not over, else after the
+// last timed one; all-day events and tasks never place it, and a day with no timed event has none.
+test.each([
+  ['the seed: after the past Gym, before the Dentist', [event('Gym', '2026-10-07', '07:00', '08:00'), event('Dentist', '2026-10-07', '14:30', '15:30'), task('Pay rent', '2026-10-07')], 1],
+  ['an event under way: before it', [event('Standup', '2026-10-07', '09:00', '09:30'), task('Pay rent', '2026-10-07')], 0],
+  ['everything later: at the top', [event('Dentist', '2026-10-07', '14:30', '15:30')], 0],
+  ['every event over: after the last, before the tasks', [event('Gym', '2026-10-07', '07:00', '08:00'), task('Pay rent', '2026-10-07')], 1],
+  ['every event over, no tasks: at the end', [event('Gym', '2026-10-07', '07:00', '08:00')], 1],
+  ['an all-day event leads: after it', [item({all_day: true, start_date: '2026-10-07', end_date: '2026-10-08'}), event('Dentist', '2026-10-07', '14:30', '15:30')], 1],
+  ['only tasks: none', [task('Pay rent', '2026-10-07'), task('Call', '2026-10-07', {all_day: false, due_at: at('2026-10-07', '08:00')})], null],
+  ['only an all-day event: none', [item({all_day: true, start_date: '2026-10-07', end_date: '2026-10-08'})], null],
+])('today\'s now-line: %s', (_name, list, expected) => {
+  const [today] = phoneAgenda('2026-10-07', '2026-10-07', itemsByDay(list, undefined, zone), now, zone);
+  expect(today?.kind === 'day' ? [today.nowAt, agendaNowAt(today.lines)] : null).toEqual([expected, expected]);
 });

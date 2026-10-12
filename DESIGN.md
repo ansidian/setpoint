@@ -737,6 +737,8 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
 - **The edges:** the page reaches the screen's edges, kept clear of the status bar and the home
   indicator by their insets, and Safari's bars take the drawn theme's `page` (#261).
 - **The list** reads a step up ([Type](#type), #262).
+- **The agenda** reads "Today" in `ink` 500, puts the now-line among today's items, draws events as
+  their calendar's chips, and keeps each day's head in view (#256).
 
 ## mantel's mail chip
 
@@ -1512,6 +1514,14 @@ it changes what's on screen.
     bar fills once the email's row or the email is known, with Open in Gmail decided by its account
     (Gmail's mail always has the link), so nothing moves in or along when the email arrives; until
     then it's empty (Andy, 2026-10-11, polish audit phone-02).
+256. **The phone's agenda marks today and now, and draws events as chips:** today's head reads
+    "Today" in `ink` 500 before its date in `ink3`; a 16 px now-line (the right pane's: the time in
+    `alert` 12 / 500 in the time column, a 7 px `alert` dot, a 1 px `alert` line at .7) sits before
+    today's first timed event not yet over, or after its last, and only on a day with a timed event.
+    Events are their calendar's tinted chips with the 3 px bar, as on the grids (34 px, radius 6,
+    the title level with the tasks' titles, past ones at .55), where a 3 × 20 px bar was; tasks keep
+    their ring. Each day's head stays at the top while its items scroll under it (Andy, 2026-10-11,
+    polish audit phone-03).
 257. **The phone's reader slides over the list:** opening an email slides the reader in from the
     right over 260 ms (`--ease`, the modal timing, as it takes the whole screen) while the list moves
     a fifth left and dims to .55 under it; Back, Done and Trash run it the other way, the row folding

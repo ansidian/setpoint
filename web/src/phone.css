@@ -126,8 +126,11 @@
 
   /* ---------- The agenda ---------- */
   .ph-agenda { flex: 1 1 auto; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; }
-  .ph-agenda .pday { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  /* A day's head stays in view while its items scroll under it (#256). */
+  .ph-agenda .pday { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); white-space: nowrap; }
   .ph-agenda .pday.first { border-top: 0; }
+  /* "Today" in `ink` 500, then its date as every day's. */
+  .ph-agenda .pday .pd-today { color: var(--ink); font-weight: 500; }
   .ph-agenda .pwx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
   .ph-agenda .pwx .temps { font-size: 11.5px; letter-spacing: 0; color: var(--ink3); }
   .ph-agenda .pwx .icon { flex: none; }
@@ -142,10 +145,17 @@
   .ph-agenda .pitem .when { width: 96px; flex: none; white-space: nowrap; color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .ph-agenda .pitem .mk { width: 13px; flex: none; display: grid; place-items: center; }
   .ph-agenda .pitem .mk .ring { margin: 0; }
-  .ph-agenda .pitem .cbar { width: 3px; height: 20px; border-radius: 3px; background: var(--c); }
+  /* An event is its calendar's chip, as on the month and week grids (#256): the calendar's tint, its
+     3 px bar, its title level with the tasks' titles; past ones at .55. */
+  .ph-agenda .pitem.chip .ell { flex: 1 1 auto; margin: 4px 0; line-height: 34px; padding: 0 10px 0 25px; border-radius: 6px; background: color-mix(in oklch, var(--c) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c); }
+  .ph-agenda .pitem.chip.past .ell { opacity: .55; }
   .ph-agenda .pitem .pl { color: var(--ink3); }
   .ph-agenda .pitem.past, .ph-agenda .pitem.past .when { color: var(--ink3); }
-  .ph-agenda .pitem.past .cbar { opacity: .45; }
+  /* Now, among today's lines: the right pane's now-line (`alert` time, dot and line at .7), 16 px tall. */
+  .ph-agenda .ph-now { display: flex; align-items: center; gap: 12px; height: 16px; padding: 0 20px; flex: none; }
+  .ph-agenda .ph-now .t { width: 96px; flex: none; color: var(--alert); font-size: 12px; font-weight: 500; }
+  .ph-agenda .ph-now .dot { width: 7px; height: 7px; margin: 0 3px; border-radius: 999px; background: var(--alert); flex: none; }
+  .ph-agenda .ph-now .line { height: 1px; flex: 1; background: var(--alert); opacity: .7; }
   .ph-agenda .pitem.done .ell { color: var(--ink3); text-decoration: line-through; }
   /* An item's detail, read-only, over the agenda above the tab bar. */
   /* It rises 24 px into place as its scrim fades in, over 180 ms (#257). */
