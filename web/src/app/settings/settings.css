@@ -26,11 +26,22 @@
 .settings .set-nav .nav .warn .icon { color: inherit; }
 .settings .set-nav .foot { margin-top: auto; }
 
-.settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 20px 28px 24px 32px; position: relative; overflow-y: auto; }
-.settings .set-head { height: 40px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-right: 40px; flex: none; }
+/* Its 1 px transparent top and bottom keep what scrolls by inside the modal's ring rather than over it. */
+.settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 19px 28px 23px 32px; border-block: 1px solid transparent; position: relative; overflow-y: auto; scroll-timeline: --setmain y; }
+/* The page's title stays at the top while the page scrolls, over the page's own colour, with a
+   hairline under it once the page has scrolled (a scroll-driven animation over the first 24 px), and
+   the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal (#250). The
+   head stops 1 px short of the modal's right edge, its corner concentric with the modal's, so it never
+   covers the modal's ring. */
+.settings .set-head { position: sticky; top: -19px; z-index: 3; height: 59px; display: flex; align-items: center; gap: 8px; margin: -19px -27px 14px -32px; padding: 19px 67px 0 32px; flex: none; background: var(--modal);
+  border-top-right-radius: calc(var(--r-modal) - 1px); }
+/* The head fades up with its page (above) and draws its hairline as the page scrolls. */
+.settings .set-main > .set-head { animation: set-page-in var(--dur-fast) var(--ease), set-head-edge linear both; animation-timeline: auto, --setmain; animation-range: normal, 0 24px; }
+@keyframes set-head-edge { to { box-shadow: 0 1px 0 var(--hair); } }
 .settings .set-title { font-size: 18px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
-.settings .set-x { position: absolute; top: 24px; right: 20px; }
-.settings .set-label { height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
+.settings .set-x { position: fixed; top: 24px; right: 20px; z-index: 4; }
+/* A section's label stays under the title while its rows scroll by (News's 62 sources). */
+.settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--modal); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
 .settings .set-label .r { margin-left: auto; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
 .settings .set-sec { flex: none; }
 .settings .set-sec + .set-sec { margin-top: 14px; }

@@ -220,6 +220,64 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
   }
 });
 
+test('a long page keeps its title and × in place while it scrolls, a hairline under the title once it has, and a section\'s label under it (the polish audit\'s settings-04)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'ai');
+    await page.locator('.settings .amount').waitFor();
+    const main = page.locator('.settings .set-main');
+    const head = page.locator('.settings .set-head');
+    // Measured once the page has faded up into place (its 120 ms; the hairline's scroll-driven animation runs on).
+    await head.evaluate(element => Promise.all(element.getAnimations().filter(animation => animation.timeline instanceof DocumentTimeline).map(animation => animation.finished)));
+    const place = () => page.evaluate(() => {
+      const modal = document.querySelector('.settings')!.getBoundingClientRect();
+      const title = document.querySelector('.settings .set-title')!.getBoundingClientRect();
+      const close = document.querySelector('.settings .set-x')!.getBoundingClientRect();
+      const head = document.querySelector('.settings .set-head')!.getBoundingClientRect();
+      return {title: Math.round(title.top - modal.top), close: [Math.round(close.top - modal.top), Math.round(modal.right - close.right)],
+        head: [Math.round(head.top - modal.top), Math.round(modal.right - head.right)]};
+    });
+    const before = await place();
+    assert.deepEqual(before.close, [24, 20]);
+    assert.deepEqual(before.head, [1, 1], 'the head stops short of the modal\'s ring');
+    assert.equal(await head.evaluate(element => getComputedStyle(element).boxShadow), 'rgba(0, 0, 0, 0) 0px 0px 0px 0px', 'no hairline before it scrolls');
+    const hairline = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.boxShadow = '0 1px 0 var(--hair)';
+      document.body.append(probe);
+      const shadow = getComputedStyle(probe).boxShadow;
+      probe.remove();
+      return shadow;
+    });
+    await main.evaluate(element => element.scrollTo({top: 200}));
+    await until('scrolled', () => main.evaluate(element => element.scrollTop), top => top === 200);
+    assert.deepEqual(await place(), before, 'the title and × stay where they were');
+    await until('the hairline under the title', () => head.evaluate(element => getComputedStyle(element).boxShadow), shadow => shadow === hairline);
+    assert.equal(await head.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'background', 'var(--modal)'), 'over the modal\'s colour, so rows pass under it');
+    await page.getByRole('button', {name: 'Close settings'}).click();
+    await page.locator('.settings').waitFor({state: 'detached'});
+
+    // News's sources: scrolled 100 px into its longest section, that section's label stays under the title.
+    await openAt(page, setpoint.base, 'news');
+    await page.locator('.settings .news-src').first().waitFor();
+    const longest = await page.locator('.settings .set-main').evaluate(scroller => {
+      const sections = [...scroller.querySelectorAll<HTMLElement>('.set-sec')];
+      const section = sections.reduce((a, b) => (b.offsetHeight > a.offsetHeight ? b : a));
+      scroller.scrollTo({top: section.offsetTop + 100});
+      return section.querySelector('.set-label')!.firstChild!.textContent;
+    });
+    const stuck = await page.evaluate(() => {
+      const bottom = document.querySelector('.settings .set-head')!.getBoundingClientRect().bottom;
+      return [...document.querySelectorAll('.settings .set-label')].filter(label => Math.abs(label.getBoundingClientRect().top - bottom) < 1).map(label => label.firstChild!.textContent);
+    });
+    assert.deepEqual(stuck, [longest], 'its label sits under the title');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the modal: ⌘, and the sidebar open it over the page, not in the address bar; Esc closes; Reconnect opens Accounts', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect'], clock: 'frozen'});
   try {

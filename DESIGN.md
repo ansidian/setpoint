@@ -744,7 +744,9 @@ key (New event, New task, Mark all as read).
 A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the address bar, with a
 **220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16; switches are 34 ×
 20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3` (#139), the knob
-stretching toward its travel as it's pressed (#144). A reconnect link opens it at Accounts.
+stretching toward its travel as it's pressed (#144). A reconnect link opens it at Accounts. While a
+page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
+section's label stays under the title (#250).
 
 - **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
@@ -1626,6 +1628,14 @@ it changes what's on screen.
     arrivals (`news.landedMs`); an opened story's dot shrinks out in its colour over 180 ms; and a
     headline turning from new's `ink` to seen's `ink2` eases over 120 ms. The rows' own 120 ms hover
     and every press state are the motion pass's (Andy, 2026-10-11, polish audit news-06).
+250. **Settings keeps its title and × in view:** the page's head and × scrolled away with the page,
+    so after 260 px of AI the modal's top showed only a group label, and News's 2,700 px of sources
+    gave no sign of the page or the way out. The head is now sticky over the modal's colour
+    (reaching up through the page's padding to 1 px short of the modal's ring, so it sits where it
+    did; what scrolls by stays inside the ring too), a 1 px `hair` line appears under it once the
+    page has scrolled (a scroll-driven animation over the first 24 px, CSS alone), and the × is
+    fixed to the modal at its 24 / 20 px. A section's label stays under the head while its rows
+    pass, so News says "TECH 14" over Tech's sources (Andy, 2026-10-11, polish audit settings-04).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has
