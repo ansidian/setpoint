@@ -16,6 +16,7 @@ import {colourVar} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {navigate} from '../router.ts';
+import {CalendarsSkeleton} from '../states/Skeletons.tsx';
 import {MiniMonth} from './Pickers.tsx';
 import {fadeCalendar, revealDay, stepMini, useCalendarView} from './view.ts';
 
@@ -83,7 +84,8 @@ export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar
 
       <div className="sb-sec">
         <div className="sb-label">Calendars</div>
-        {(calendars ?? []).map(calendar => (
+        {!calendars && <CalendarsSkeleton />}
+        {calendars?.map(calendar => (
           <button key={calendar.id} className="calrow" aria-pressed={calendar.visible}
             style={{'--c': colourVar(calendar.colour ?? 'ink2')} as CSSProperties}
             onClick={() => void setVisible(calendar, !calendar.visible)}>

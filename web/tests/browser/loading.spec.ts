@@ -173,3 +173,34 @@ test('Settings opening loads every page\'s answers, so the next page shows at on
     await setpoint.stop();
   }
 });
+
+test('Calendar loading: the right pane and Calendars draw skeletons, never "Nothing planned" or "No events", and the grid no fake chips (states-01, calpanes-03)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    // The month's items and the calendars held; the weather comes, so the pane's line waits only for the items.
+    const release = await hold(page, /^\/api\/(items\?|calendars$)/);
+    await visit(page, `${setpoint.base}/calendar`);
+    await page.locator('.rpane .rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
+    await shown(page, 'agenda');
+    await shown(page, 'calendars');
+    const pane = await page.locator('.rpane').innerText();
+    for (const empty of ['Nothing planned', 'No events', 'hidden']) assert.ok(!pane.includes(empty), `the pane says "${empty}" while it loads`);
+    assert.equal(await page.locator('.rpane .ag-item').count(), 0);
+    assert.equal(await page.locator('.cal-month :is(.ev, .tk)').count(), 0, 'no chip stands in for an event');
+    assert.equal(await page.locator('[data-skeleton="agenda"] .sk-ag').count(), 3);
+    assert.equal(await page.locator('[data-skeleton="calendars"] .sk-calrow').count(), 4);
+    // The sidebar's rows as tall as a calendar's (30 px), their box 14 px, radius 4.
+    assert.deepEqual(await page.locator('.sk-calrow').first().evaluate(row => [row.getBoundingClientRect().height, row.querySelector('.sk-box')!.getBoundingClientRect().width, getComputedStyle(row.querySelector('.sk-box')!).borderRadius]), [30, 14, '4px']);
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-calendar-pane', 'rightPane');
+
+    await release();
+    await page.locator('.rpane .ag-item', {hasText: 'Dentist'}).waitFor();
+    await page.locator('.sb .calrow').first().waitFor();
+    assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

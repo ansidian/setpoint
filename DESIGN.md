@@ -464,6 +464,7 @@ on the left (off: an outline, and the name `ink3`), the name; **Todoist** reads 
 checkbox and name with no mark of its own. Toggled, a calendar's items fade out over 120 ms before they
 go, or fade back in over 180 ms (#228). With every calendar off, a 16 px `ink3` `visibility_off`
 follows the header's title (#113).
+Until the calendars have come, four skeleton rows: a 14 px box (radius 4) and a bar (#172).
 
 ### Right pane
 
@@ -477,7 +478,8 @@ then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px
 bars as the week's (#227), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#233).
 An empty day offers New event C and New task D as dashed ghost rows (#234); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
-editor and calendar search results; while those show, the grid dims what they don't match (#238).
+editor and calendar search results; while those show, the grid dims what they don't match (#238). Until the day's items and the calendars have come, its line is
+a 110 px bar and its agenda three skeleton rows (#172), never "Nothing planned" or the empty day.
 
 ### The floating detail
 
@@ -2340,3 +2342,11 @@ it changes what's on screen.
     precision that nothing was Done. Opening Settings loads every page's answers a moment after
     its own, so the next page shows at once (Andy, 2026-10-11, polish audit states-01,
     settings-05).
+172. **Calendar's pane says what's planned only once it knows:** until the selected day's month of
+    items and the calendars have come (a first open, or a day picked in a month not yet loaded),
+    the right pane's line under the date is a 110 px bar, unless the forecast has come, and its
+    agenda three skeleton rows (#170): a 52 px time bar, a 3 × 34 rail in `sub3`, a title over its
+    line; never "Nothing planned" or "No events · New event" on a day that holds Gym and the
+    Dentist. Calendars in the sidebar are four 30 px rows of a 14 px box (radius 4) and a bar. The
+    grid draws no stand-in chips, which would read as events; the phone's agenda draws two days of
+    skeleton rows (Andy, 2026-10-11, polish audit calpanes-03, states-01).

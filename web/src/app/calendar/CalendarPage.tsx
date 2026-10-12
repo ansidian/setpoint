@@ -259,7 +259,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // The editor's active draft's day is the selected day while it's open (board 13).
   const paneDay = (editor && addressOf(route) === editor.at && previews.day) || selectedDay;
   // The pane reads the selected day's month itself, so a day far from the grid's still shows.
-  const {data: dayMonth} = useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)));
+  const dayMonthLoad = {path: monthItemsPath(monthOf(selectedDay)), ...useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)))};
+  const dayMonth = dayMonthLoad.data;
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
   const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, calendars, zone, selectedDay]);
   // What the calendars toggled off hide on that day, so its pane doesn't call it free (SV-56).
@@ -862,7 +863,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
         ) : compact && !dayPane ? null : (
-          <DayPane date={selectedDay} today={today} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
+          <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
             selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
             onShowAll={() => showHidden(calendars ?? [])} />
         )}

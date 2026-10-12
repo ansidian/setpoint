@@ -20,6 +20,7 @@ import {colourVar} from '../accounts.ts';
 import {useRingColour} from './Chip.tsx';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
+import {PhoneAgendaSkeleton} from '../states/Skeletons.tsx';
 import {DetailContent} from './detail/DetailContent.tsx';
 import './detail/detail.css';
 
@@ -70,6 +71,8 @@ export function Agenda({route}: {route: CalendarRoute}) {
       </header>
       <div className="content">
         <section className="ph-agenda" aria-label="Agenda">
+          {/* Until the days' items come, their skeleton (#172). */}
+          {!items && <PhoneAgendaSkeleton />}
           {items && sections.map((section, index) => {
             const days = section.kind === 'day' ? section.date : daysOf(section.from, section.to).join(' ');
             const day = forecast.get(section.kind === 'day' ? section.date : section.from);

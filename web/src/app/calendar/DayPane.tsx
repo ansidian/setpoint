@@ -7,7 +7,9 @@
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
 // waiting for its provider (a spinner, board 19b). SV-20 adds the calendar's sources' stale and
 // failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
-// all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place.
+// all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place. Until the
+// day's items and the calendars have come, its line and agenda are a skeleton, never "Nothing
+// planned" (#172).
 import type {CalendarOut, ItemOut, SourceOut, WeatherDayOut} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
@@ -24,12 +26,18 @@ import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useCheckNow} from '../states/checkNow.ts';
 import {CheckNow, useLinePhase, useShownLines} from '../states/States.tsx';
+import {useArrival} from '../states/Loading.tsx';
+import {AgendaSkeleton, DayLineSkeleton} from '../states/Skeletons.tsx';
 import {useRingColour} from './Chip.tsx';
 import {useJustDone} from './done.ts';
 import {useCalendarFade} from './view.ts';
 
 interface DayPaneProps {
   date: string;
+  // The day's items or the calendars haven't come yet: its line and agenda are a skeleton, never
+  // "Nothing planned" (calpanes-03, #172); `failed` says why they didn't come instead.
+  loading: boolean;
+  failed?: ReactNode;
   today: string;
   items: ItemOut[];
   // The day's items the calendars toggled off hide.
@@ -50,7 +58,8 @@ interface DayPaneProps {
 
 const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>;
 
-export function DayPane({date, today, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onShowAll}: DayPaneProps) {
+export function DayPane({date, today, loading, failed, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onShowAll}: DayPaneProps) {
+  const arrived = useArrival(!loading, date);
   const ring = useRingColour();
   // A calendar just toggled fades its rows out or in, as its chips do (polish audit calpanes-11).
   const fade = useCalendarFade();
@@ -79,12 +88,14 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
           <div className="rp-date">{title}</div>
           {wx
             ? <div className="rp-sub ink2"><span className={wx.tone}><Icon name={wx.icon} size={16} /></span><span className="num">{wx.line}</span></div>
-            : <div className="rp-sub ink3 num">{dayCounts(items)}</div>}
+            : loading ? <DayLineSkeleton /> : <div className="rp-sub ink3 num">{dayCounts(items)}</div>}
         </div>
         <button className="ibtn" aria-label={`New event on ${title.slice(5)}`} onClick={() => onNew('event')}><Icon name="add" /></button>
       </div>
 
-      <div className="rp-scroll" key={date} data-dir={shownDay.dir}>
+      <div className={arrived ? 'rp-scroll sk-arrive' : 'rp-scroll'} key={date} data-dir={shownDay.dir}>
+        {loading && (failed ?? <AgendaSkeleton />)}
+        {!loading && <>
         {day.events.length > 0 && <div className="ag-day">Events</div>}
         {day.events.map((event, index) => (
           <AgendaRow key={event.item.key} {...{event, index, nowAt: day.nowAt, nowLine, selected, now, timeZone, onSelectItem}} fade={fade(event.item.calendar_id)} colour={event.item.colour ?? colours.get(event.item.calendar_id) ?? null}
@@ -121,6 +132,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
               <button type="button" className="ag-ghost" onClick={() => onNew('task')}><span className="ring" /><span className="grow">New task</span><span className="kbd">D</span></button>
             </div>
           ))}
+        </>}
       </div>
 
       <div className="rp-foot">

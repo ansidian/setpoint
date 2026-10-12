@@ -251,7 +251,7 @@ export function PhoneAgendaSkeleton() {
         <div className="sk-group" key={day}>
           <div className={day ? 'sk-pday' : 'sk-pday first'}><Bar w={day ? 84 : 112} h={8} /></div>
           {Array.from({length: count}, (_, index) => (
-            <div className="sk-pitem" key={index}><Bar w={at([64, 56, 70], index)} /><span className="rail" /><Bar w={at(['52%', '40%', '46%'], index + day)} /></div>
+            <div className="sk-pitem" key={index}><span className="when"><Bar w={at([64, 56, 70], index)} /></span><span className="rail" /><Bar w={at(['52%', '40%', '46%'], index + day)} /></div>
           ))}
         </div>
       ))}

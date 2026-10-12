@@ -75,6 +75,8 @@
 .sk-ag > .lines > .t { font-size: 13px; }
 .sk-ag > .lines > .s { font-size: 12.5px; }
 .sk-agenda { padding-top: 10px; }
+/* A day that came after its skeleton fades in rather than sliding in from its side. */
+.rpane > .rp-scroll.sk-arrive { animation: sk-arrive var(--dur-fast) var(--ease); }
 .sk-calendars { display: flex; flex-direction: column; }
 .sk-calrow { height: var(--calendarRow); flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
 .sk-calrow .sk-box { width: 14px; height: 14px; flex: none; border-radius: 4px; background: var(--sk-fill); }

@@ -182,6 +182,12 @@
   .ph-agenda .ph-now .dot { width: 7px; height: 7px; margin: 0 3px; border-radius: 999px; background: var(--alert); flex: none; }
   .ph-agenda .ph-now .line { height: 1px; flex: 1; background: var(--alert); opacity: .7; }
   .ph-agenda .pitem.done .ell { color: var(--ink3); text-decoration: line-through; }
+  /* Its skeleton (#172): .pday's band and .pitem's rows. */
+  .sk-pday { height: 30px; flex: none; display: flex; align-items: center; padding: 0 20px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+  .sk-pday.first { border-top: 0; }
+  .sk-pitem { height: 42px; flex: none; display: flex; align-items: center; gap: 12px; padding: 0 20px; }
+  .sk-pitem > .when { width: 96px; flex: none; }
+  .sk-pitem > .rail { width: 3px; height: 20px; margin: 0 5px; border-radius: 3px; background: var(--skel-on-sub); flex: none; }
   /* An item's detail, read-only, over the agenda above the tab bar. */
   /* It rises 24 px into place as its scrim fades in, over 180 ms (#257). */
   .ph-scrim { position: fixed; inset: 0; z-index: 5; background: var(--scrim); animation: ph-fade var(--dur-medium) var(--ease); }
