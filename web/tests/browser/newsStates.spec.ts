@@ -177,7 +177,7 @@ test('board 29b: the first run, sorting the last 48 hours; no Missed strip; noth
   }
 });
 
-test('offline on News: the pill, the page dimmed, its keys refused; back, the pill goes', async () => {
+test('offline on News: the pill, the page dimmed but readable, J still moving the cursor (states-05); back, the pill goes', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -187,17 +187,17 @@ test('offline on News: the pill, the page dimmed, its keys refused; back, the pi
     const pill = page.locator('.offline-pill');
     await pill.waitFor();
     assert.equal(await pill.textContent(), 'Offline, as of 9:12 AM, retryingRetry now');
-    assert.deepEqual(await page.locator('.main.offline > .content').evaluate(content => [getComputedStyle(content).opacity, getComputedStyle(content).pointerEvents]), ['0.4', 'none']);
+    const content = page.locator('.main.offline > .content');
+    await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
+    assert.equal(await content.evaluate(element => getComputedStyle(element).pointerEvents), 'auto');
     await page.mouse.move(700, 28);
+    // Reading goes on offline: J moves the cursor.
     await page.keyboard.press('j');
-    // Nothing happens to wait for: offline, J moves no cursor.
-    await page.waitForTimeout(300);
-    await setpoint.idle();
-    assert.equal(await page.locator('.nw-list .cur').count(), 0);
+    await page.locator('.nw-list .cur').waitFor();
     await page.context().setOffline(false);
     await pill.waitFor({state: 'detached'});
     await page.keyboard.press('j');
-    await page.locator('.nw-list .cur').waitFor();
+    await until('the cursor moved on', () => page.locator('.nw-list .cur').count(), count => count === 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -26,8 +26,13 @@ button.check-now:hover { background: var(--sub); color: var(--ink); }
 @keyframes pill-in { from { opacity: 0; transform: translate(-50%, -8px); } }
 .offline-pill .retry { height: 26px; padding: 0 10px 0 8px; border-radius: 999px; background: color-mix(in oklch, var(--onAlert) 14%, transparent); display: inline-flex; align-items: center; gap: 6px; }
 .offline-pill .retry:hover { background: color-mix(in oklch, var(--onAlert) 22%, transparent); }
-/* Everything under the pill: dimmed, and nothing to press. */
-.main.offline > .content { opacity: .4; filter: grayscale(.6); pointer-events: none; }
+/* Everything under the pill: dimmed, lighter, so what's on screen can still be read, scrolled and
+   opened (states-05); only what would change something is held back, its keys refused (States.tsx)
+   and its writes too (client.ts). The dim comes and goes over 180 ms. */
+.main > .content { transition: opacity var(--dur-medium) var(--ease), filter var(--dur-medium) var(--ease); }
+.main.offline > .content { opacity: .62; filter: grayscale(.5); }
+.main.down :is(.rd-tools .tool, .rd-acts .btn, .check, .listfoot .lnk, .unpin, .copy, .check-now, .hbar .act) { pointer-events: none; }
+.main.offline :is(.rd-tools .tool, .rd-acts .btn, .check, .listfoot .lnk, .unpin, .copy, .check-now, .hbar .act) { opacity: .4; }
 
 /* Setpoint unreachable at launch (DESIGN.md › Health and states): the mark at 36 px where the sign-in
    card's top sits (#71), dimmed, and the pill 22 px under it. */

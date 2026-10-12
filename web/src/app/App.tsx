@@ -6,7 +6,7 @@
 // Calendar is the agenda, and Settings, ⌘K and News stay on the desktop (a News address opens the Inbox).
 import {useEffect} from 'react';
 import type {CSSProperties} from 'react';
-import {useOfflineSince} from '../api/live.ts';
+import {useDown, useOfflineSince} from '../api/live.ts';
 import {connectFailed, connectNote} from '../logic/settings.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
@@ -28,6 +28,8 @@ import {dismissToast, holdToast, showToast, useToast} from './toast.ts';
 export function App() {
   const route = useRoute();
   const offline = useOfflineSince() !== null;
+  // From the moment the stream drops, before the pill: what would change something takes no pointer (states-05).
+  const down = useDown();
   const phone = usePhone();
 
   // An address for a Settings page opens the modal over the Inbox, and the address becomes the Inbox's.
@@ -82,7 +84,7 @@ export function App() {
   return (
     <div className="app">
       {!phone && <Sidebar route={route} />}
-      <main className={offline ? 'main offline' : 'main'}>
+      <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage key={route.account ?? 'all'} route={route} />
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)

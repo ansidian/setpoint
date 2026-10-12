@@ -4,8 +4,10 @@
 // its own after a dropped connection with the last id; a stream that's refused (the server down, or
 // the session gone) reconnects after a few seconds and asks whether it's still signed in.
 //
-// While the stream is down Setpoint is offline (DESIGN.md › Health and states): the pill says since
-// when, changes are refused rather than queued (client.ts), and Retry now reconnects at once.
+// While the stream is down Setpoint is offline (DESIGN.md › Health and states): changes are refused
+// at once rather than queued (client.ts), and if it's still down after a 2 s grace the pill says since
+// when and the page dims, still readable (the polish audit's states-05), so a laptop waking or a
+// Wi-Fi handoff never cries wolf. Retry now reconnects at once.
 import type {LiveEvent} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {pathsForEvent} from '../logic/live.ts';
@@ -20,23 +22,46 @@ let lastId: string | null = null;
 let timer: number | undefined;
 let onRefused: () => void = () => {};
 
-/** Offline since this moment (the server's clock), or null while the stream is up. */
+/** How long the stream may be down before the page says so (states-05). */
+export const OFFLINE_GRACE_MS = 2000;
+
+/** Down since this moment (the server's clock), or null while the stream is up; changes are refused meanwhile. */
+let downSince: number | null = null;
+/** The same moment once the grace has passed and the page says so, or null. */
 let offlineSince: number | null = null;
+let grace: number | undefined;
 const listeners = new Set<() => void>();
+const tell = () => listeners.forEach(listener => listener());
 
 function setOffline(offline: boolean) {
-  if (offline === (offlineSince !== null)) return;
-  offlineSince = offline ? serverNow() : null;
+  if (offline === (downSince !== null)) return;
+  downSince = offline ? serverNow() : null;
   refuseWrites(offline ? 'Setpoint is offline: changes wait until it’s back.' : null);
-  listeners.forEach(listener => listener());
+  window.clearTimeout(grace);
+  if (offline) {
+    grace = window.setTimeout(() => {
+      offlineSince = downSince;
+      tell();
+    }, OFFLINE_GRACE_MS);
+  } else {
+    offlineSince = null;
+  }
+  tell();
   // Back: whatever changed meanwhile shows.
   if (!offline) refreshAll();
 }
 
-export const useOfflineSince = () => useSyncExternalStore(listener => {
+const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
-}, () => offlineSince);
+};
+
+/** Offline since this moment, once it's lasted the grace: the pill and the dim show it. */
+export const useOfflineSince = () => useSyncExternalStore(subscribe, () => offlineSince);
+
+/** Whether changes are refused now: from the moment the stream drops, before the pill shows. */
+export const writesRefused = () => downSince !== null;
+export const useDown = () => useSyncExternalStore(subscribe, writesRefused);
 
 function connect() {
   timer = undefined;

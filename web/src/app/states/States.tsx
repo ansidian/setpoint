@@ -6,16 +6,18 @@ import type {AccountOut, TriageStatusOut} from '@setpoint/shared';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {checkSession, timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
-import {retryNow, useOfflineSince} from '../../api/live.ts';
+import {retryNow, useOfflineSince, writesRefused} from '../../api/live.ts';
 import {ACCOUNTS_PATH, TRIAGE_PATH} from '../../api/mail.ts';
 import {authorizeGmail} from '../../api/settings.ts';
 import {clockTime} from '../../logic/format.ts';
+import {offlineRefuses} from '../../logic/live.ts';
 import {inboxHealthLines, reconnectLine, reconnectTarget, triageNote} from '../../logic/health.ts';
 import type {SourceLine} from '../../logic/health.ts';
 import {CLEARED_MS, lineMovesOn, nextLines} from '../../logic/stateLines.ts';
 import type {LinePhase, ShownLine} from '../../logic/stateLines.ts';
 import {motion} from '../../tokens.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
+import {isTyping} from '../../ui/keys.ts';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {foldRef, leaveCopy} from '../fold.ts';
@@ -156,21 +158,24 @@ function Pill({text, onRetry, leaves = false}: {text: string; onRetry: () => voi
   );
 }
 
-/** "Offline, as of 9:41 PM, retrying" and Retry now, while Setpoint's live stream is down. */
+/**
+ * "Offline, as of 9:41 PM, retrying" and Retry now, once Setpoint's live stream has been down 2 s
+ * (live.ts).
+ */
 export function OfflinePill() {
   const since = useOfflineSince();
-  const offline = since !== null;
-  // Changes are disabled, not queued: no key reaches the page under the pill. Esc still closes the
-  // topmost thing, and Settings or ⌘K keep their keys (their changes are refused, client.ts).
+  // Changes are refused, not queued, from the moment the stream drops (asked as each key comes, so one
+  // pressed with the drop is caught too): the keys that change something reach nothing, while reading
+  // goes on (J, K, Enter, the arrows; states-05). A field's typing, Settings and ⌘K keep their keys
+  // (their changes are refused, client.ts).
   useEffect(() => {
-    if (!offline) return;
     const block = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || (event.target instanceof Element && event.target.closest('.offline-pill, .settings, .palette'))) return;
+      if (!writesRefused() || !offlineRefuses(event) || isTyping(event) || (event.target instanceof Element && event.target.closest('.offline-pill, .settings, .palette'))) return;
       event.stopPropagation();
     };
     window.addEventListener('keydown', block, true);
     return () => window.removeEventListener('keydown', block, true);
-  }, [offline]);
+  }, []);
   if (since === null) return null;
   return <Pill text={`Offline, as of ${clockTime(since, timeZone())}, retrying`} onRetry={retryNow} leaves />;
 }

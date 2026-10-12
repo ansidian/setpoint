@@ -4,7 +4,7 @@ import type {ItemOut, LiveEvent} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE, deepLinkPath} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {paragraphs} from '../src/logic/body.ts';
-import {pathsForEvent} from '../src/logic/live.ts';
+import {offlineRefuses, pathsForEvent} from '../src/logic/live.ts';
 import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
@@ -201,6 +201,20 @@ describe('live events refresh only what they name', () => {
   ] as [string, LiveEvent, string[]][])('news: %s', (_name, event, expected) => {
     expect(pathsForEvent(event, news)).toEqual(expected);
   });
+});
+
+// The polish audit's states-05: offline, the keys that change something are refused; reading goes on.
+describe('the keys offline refuses', () => {
+  const key = (name: string, mods: {shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean} = {}) => ({key: name, shiftKey: false, metaKey: false, ctrlKey: false, altKey: false, ...mods});
+  test.each([
+    ['H (Done)', key('h'), true], ['E (Trash, Edit)', key('e'), true], ['P (Pin)', key('p'), true], ['C (New event)', key('c'), true], ['D (New task)', key('d'), true],
+    ['Delete', key('Delete'), true], ['Backspace', key('Backspace'), true], ['⇧I (Mark all as read)', key('I', {shiftKey: true}), true], ['⇧U (Mark unread)', key('U', {shiftKey: true}), true],
+    ['⌘Z (Undo)', key('z', {metaKey: true}), true], ['Ctrl-Z', key('z', {ctrlKey: true}), true],
+    ['J', key('j'), false], ['K', key('k'), false], ['Enter', key('Enter'), false], ['Esc', key('Escape'), false], ['/', key('/'), false],
+    ['1', key('1'), false], ['3', key('3'), false], ['←', key('ArrowLeft'), false], ['→', key('ArrowRight'), false], ['U (Unread or All)', key('u'), false],
+    ['O (Open in Gmail)', key('o'), false], ['M', key('m'), false], ['T', key('t'), false], ['N', key('n'), false],
+    ['⌘K', key('k', {metaKey: true}), false], ['⌘,', key(',', {metaKey: true}), false], ['⇧H is no change', key('H', {shiftKey: true}), false],
+  ])('%s: refused %s', (_name, event, refused) => expect(offlineRefuses(event)).toBe(refused));
 });
 
 describe('the toast\'s tone by its words (the one toast: done, taken away, failed, pinned)', () => {

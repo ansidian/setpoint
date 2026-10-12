@@ -12,6 +12,19 @@
 // one naming stories sorted some.
 import type {LiveEvent} from '@setpoint/shared';
 
+/**
+ * The keys refused while Setpoint is offline (states-05): those that change something, H, E, P, C, D,
+ * Delete and Backspace, ⇧I, ⇧U and ⌘Z. Reading keys go through: J, K, Enter, Esc, /, 1, 2, 3, the
+ * arrows, U, O, M, W, T and N.
+ */
+export function offlineRefuses(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'metaKey' | 'ctrlKey' | 'altKey'>): boolean {
+  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  if (event.metaKey || event.ctrlKey) return key === 'z';
+  if (event.altKey) return false;
+  if (event.shiftKey) return key === 'i' || key === 'u';
+  return ['h', 'e', 'p', 'c', 'd', 'Delete', 'Backspace'].includes(key);
+}
+
 const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage'];
 
 export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): string[] {

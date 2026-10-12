@@ -829,7 +829,7 @@ section's label stays under the title (#250).
 | **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#186, #188) |
 | **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#186, #188) |
 | **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#188); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
-| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164); everything under it dimmed, changes disabled |
+| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#190) |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
@@ -2279,3 +2279,14 @@ it changes what's on screen.
     clears by signing in, just folds out. The offline pill comes in from 8 px above over 180 ms and
     fades out over 120 ms. Nothing loops; a line on screen at the first paint shows as it is (Andy,
     2026-10-11, polish audit states-13).
+190. **Offline is read-only for now, not a locked screen, and a blip never cries wolf** (amending
+    Health and states' "everything under it dimmed, changes disabled", which the build had read as
+    nothing to press): changes are refused from the moment the live stream drops, as before
+    (client.ts's refusal; the keys that change something, H E P C D Delete Backspace ⇧I ⇧U ⌘Z, and the
+    controls that would reach nothing), but the pill and the dim wait out a 2 s grace, so a laptop waking or a Wi-Fi
+    handoff shows nothing. Once shown, the page under the pill dims to .62 with `grayscale(.5)` over
+    180 ms (Night's `ink2` still 3.6:1, Light's 2.8:1) and takes the pointer: the list scrolls, J, K,
+    the arrows, Enter and Esc work, and an email or story opens; the controls that change something
+    (the reader's tools and actions, a task's check, Mark all as read, Unpin, Copy, Check now and
+    Reconnect) sit at .4 and take no pointer. Back online, the dim lifts over 180 ms and the pill fades (#189) (Andy,
+    2026-10-11, polish audit states-05).

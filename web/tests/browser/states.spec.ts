@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, collapseGroups, matchGolden, point, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -63,25 +63,59 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
   }
 });
 
-test('offline: the page dims, changes are refused, not queued, Retry now tries again, and the stream\'s return clears it', async () => {
+test('offline: changes are refused at once, not queued; after 2 s the pill shows and the page dims, still readable (states-05); Retry now tries again, and the stream\'s return clears it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.arow').first().waitFor();
-    await page.keyboard.press('j');
-    await page.keyboard.press('j');
+    // Northwind's email read once already, so this browser has it when the network goes.
+    await page.locator('.arow', {hasText: 'Interview availability'}).click();
+    await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.pane').waitFor({state: 'detached'});
+    await page.keyboard.press('k');
     await page.locator('.arow.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    // When the network went, and when the pill came, on the page's own clock.
+    await page.evaluate(() => {
+      const times = {offline: 0, pill: 0};
+      (window as unknown as {times: typeof times}).times = times;
+      addEventListener('offline', () => (times.offline = performance.now()));
+      new MutationObserver(() => {
+        if (!times.pill && document.querySelector('.main > .offline-pill')) times.pill = performance.now();
+      }).observe(document.body, {childList: true, subtree: true});
+    });
+    const writes: string[] = [];
+    page.on('request', request => request.method() !== 'GET' && request.url().includes('/api/') && writes.push(`${request.method()} ${new URL(request.url()).pathname}`));
     await network(page, false);
+    await until('the page knows it\'s offline', () => page.evaluate(() => (window as unknown as {times: {offline: number}}).times.offline), at => at > 0);
+    // H (Done) on the cursor row, at once, long before the pill: it reaches nothing, and nothing is sent or kept for later.
+    await page.keyboard.press('h');
     const pill = page.locator('.offline-pill');
     await pill.waitFor();
-    assert.equal(await page.locator('.main.offline > .content').evaluate(content => getComputedStyle(content).opacity), '0.4');
-    // H (Done) on the cursor row reaches nothing: no change is made or kept for later.
-    await page.keyboard.press('h');
-    // Nothing happens to wait for: offline, H changes nothing.
-    await page.waitForTimeout(300);
-    await setpoint.idle();
+    const times = await page.evaluate(() => (window as unknown as {times: {offline: number; pill: number}}).times);
+    assert.ok(times.pill - times.offline >= 1950, `the pill waited out the 2 s grace (${Math.round(times.pill - times.offline)} ms)`);
     assert.equal(await page.locator('.arow', {hasText: 'Your recovery email was changed'}).count(), 1, 'the row stays');
+    assert.deepEqual(writes, [], 'nothing was sent');
+    // Dimmed lighter, over 180 ms; the page still takes the pointer.
+    const content = page.locator('.main.offline > .content');
+    await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
+    assert.deepEqual(await content.evaluate(element => [getComputedStyle(element).filter, getComputedStyle(element).pointerEvents, getComputedStyle(element).transitionDuration]), ['grayscale(0.5)', 'auto', '0.18s, 0.18s']);
+    // What changes something is held back: Mark all as read at .4, taking no pointer.
+    assert.deepEqual(await page.locator('.listfoot .lnk').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
+    // Reading goes on: the list scrolls, J moves the cursor, Enter opens an email this browser has.
+    const list = page.locator('section.list');
+    await list.hover();
+    await page.mouse.wheel(0, 300);
+    await until('the list scrolled', () => list.evaluate(element => element.scrollTop), top => top > 0);
+    await list.evaluate(element => element.scrollTo({top: 0}));
+    await point(page.locator('.arow', {hasText: 'Your recovery email was changed'}));
+    await page.keyboard.press('j');
+    await page.locator('.arow.cur', {hasText: 'Interview availability'}).waitFor();
+    await page.keyboard.press('Enter');
+    await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.pane').waitFor({state: 'detached'});
     // Settings still opens from the sidebar, and Esc still closes the topmost thing.
     await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
     await page.locator('.settings').waitFor();
@@ -315,6 +349,34 @@ test('state lines fold in as they come, a line whose source is healthy again sho
     await network(page, true);
     await until('the pill gone', () => pill.count(), count => count === 0);
     assert.deepEqual(await arrivals(page), ['none', 'leaving copy']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), never shows the pill or dims the page (states-05)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await recordArrivals(page, '.main > .offline-pill');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    await network(page, false);
+    // The blip: the network gone for half a second.
+    await page.waitForTimeout(500);
+    await network(page, true);
+    // Nothing happens to wait for: past the grace, no pill comes and nothing dims.
+    await page.waitForTimeout(2500);
+    await setpoint.idle();
+    assert.deepEqual(await arrivals(page), []);
+    assert.equal(await page.locator('.main.offline').count(), 0);
+    // And changes work again.
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.locator('.arow.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    await page.keyboard.press('h');
+    await until('Done', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), value => value.attention === 2);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
