@@ -95,7 +95,8 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await options.waitFor({state: 'detached'});
     await settings.getByRole('button', {name: 'Mail', exact: true}).click();
     await settings.getByRole('heading', {name: 'Mail'}).waitFor();
-    assert.deepEqual(await entrance(settings.locator('.set-main > .set-head')), ['set-page-in', '0.12s']);
+    // The head fades up with its page, and draws its hairline as the page scrolls (settings-04).
+    assert.deepEqual(await entrance(settings.locator('.set-main > .set-head')), ['set-page-in, set-head-edge', '0.12s, auto']);
     const settingsClass = await watch(settings, 'class');
     await page.keyboard.press('Escape');
     await settings.waitFor({state: 'detached'});
