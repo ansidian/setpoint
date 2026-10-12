@@ -69,7 +69,8 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
   const listed = message ?? (row?.id === id ? row : undefined);
   const doneable = listed ? readerActions(listed).done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
-  // Unpin on pinned mail, and Open in Gmail on Gmail's mail only, its place held while that's unknown.
+  // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
+  // when its account is Gmail's), its place held while that's unknown.
   const pinned = listed?.pinned ?? false;
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
@@ -79,11 +80,15 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
     if (scroller.current) scroller.current.scrollTop = 0;
   }, [id]);
   const phone = usePhone();
-  // Mark unread on the phone keeps the email open and offers Mark read.
+  // Mark unread on the phone keeps the email open and offers Mark read; the subject shows the unread
+  // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), the first draw doesn't.
   const [unreadFor, setUnreadFor] = useState<number | null>(null);
+  const [toggles, setToggles] = useState<{id: number; count: number}>({id, count: 0});
   const markedUnread = unreadFor === id;
+  const toggled = toggles.id === id ? toggles.count : 0;
   const toggleRead = () => {
     setUnreadFor(markedUnread ? null : id);
+    setToggles({id, count: toggled + 1});
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message));
   };
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
@@ -141,14 +146,24 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
         )}
       </div>
       <div className="rd-scroll" ref={scroller}>
-        {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} />}
+        {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />}
       </div>
+      {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
+          email and its account are known, so none moves in or along when the email arrives; until
+          then the bar stays empty. Done leads, the phone's main job on Attention mail. */}
       {phone && (
         <div className="ph-acts">
-          {doneable && <button type="button" onClick={actions.done}><Icon name="check" size={22} />Done</button>}
-          <button type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
-          <button type="button" onClick={toggleRead}><Icon name={markedUnread ? 'mark_email_read' : 'mark_email_unread'} size={22} />{markedUnread ? 'Mark read' : 'Mark unread'}</button>
-          {gmail !== false && <button type="button" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}><Icon name="open_in_new" size={22} />Open in Gmail</button>}
+          {listed && gmail !== null && (
+            <>
+              {doneable && <button className="ph-done" type="button" onClick={actions.done}><Icon name="check" size={22} />Done</button>}
+              <button type="button" onClick={actions.trash}><Icon name="delete" size={22} />Trash</button>
+              <button type="button" onClick={toggleRead}>
+                <span key={toggled} className={toggled ? 'ph-swap' : undefined}><Icon name={markedUnread ? 'mark_email_read' : 'mark_email_unread'} size={22} /></span>
+                {markedUnread ? 'Mark read' : 'Mark unread'}
+              </button>
+              {gmail && <button type="button" onClick={actions.openInGmail}><Icon name="open_in_new" size={22} />Open in Gmail</button>}
+            </>
+          )}
         </div>
       )}
     </section>
@@ -223,7 +238,7 @@ function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: 
   );
 }
 
-function Message({message, accounts, now, timeZone, marks, onOpen, cards}: {
+function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread}: {
   message: MessageOut;
   accounts: Map<number, AccountOut>;
   now: number;
@@ -231,6 +246,8 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards}: {
   marks: string[];
   onOpen: (id: number) => void;
   cards: Cards;
+  // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
+  unread: boolean;
 }) {
   const account = accounts.get(message.account_id);
   // "Show" loads this email's images this time; it lasts while it's open.
@@ -252,7 +269,7 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards}: {
       )}
       <div className="rd-head">
         {message.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
-        <h1 className={message.protected ? 'rd-subj protected' : 'rd-subj'}>{message.subject}</h1>
+        <h1 className={message.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" title="Unread" />}{message.subject}</h1>
         <div className="rd-meta">
           <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
           <div className="who grow">

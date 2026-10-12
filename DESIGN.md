@@ -719,6 +719,11 @@ Attention mail, #93), Trash,
 Mark read, Mark unread, Mark all as read. Plain search; no calendar editing, no Alfred, Settings only to
 sign in. Dates never wrap.
 
+It feels like an installed app (each line's [Decided while building](#decided-while-building) entry has its values):
+
+- **The reader's actions** share its bottom bar evenly, Done first, its check `good` and its label
+  `ink` 500 (#255).
+- **Marked unread**, an email shows the unread dot before its subject (#263).
 
 ## mantel's mail chip
 
@@ -1487,6 +1492,13 @@ it changes what's on screen.
     repeating task keeps its own line. The calendar fact's `calendar_today` takes the item's colour
     (its own, else its calendar's), as the failed card's does, its name staying `ink2`. The date
     stays the title's subtitle, without a glyph (Andy, 2026-10-11, polish audit calflows-05).
+255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
+    four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
+    Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has
+    its label in `ink` 500 and its check in `good`; the rest keep `ink` icons over `ink2` labels. The
+    bar fills once the email's row or the email is known, with Open in Gmail decided by its account
+    (Gmail's mail always has the link), so nothing moves in or along when the email arrives; until
+    then it's empty (Andy, 2026-10-11, polish audit phone-02).
 258. **From 640 to 1099 px the sidebar is a rail and panes cover what they'd squeeze** (Layout ›
     Compact): an iPad or a half-width window had the reading pane 1 px wide at 640 and 152 at 820,
     and the month grid 252 px at 900. The sidebar is a 56 px rail of icons with Inbox's attention
@@ -1495,3 +1507,7 @@ it changes what's on screen.
     the editor or search, the day's pane not drawn and its health lines atop the grid; the header's
     search narrows first. ⌘K keeps the rail's lost filters: "Inbox · Jobs", and Show or Hide each
     calendar (Andy, 2026-10-11, polish audit phone-06).
+263. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
+    and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
+    before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No
+    toast (Andy, 2026-10-11, polish audit phone-13).

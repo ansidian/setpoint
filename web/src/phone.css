@@ -76,9 +76,18 @@
   .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
   .rd-body { padding: 16px 20px 20px; }
   .mailtext { font-size: 15px; }
-  .ph-acts { height: 80px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px 22px; }
+  /* The actions share the width, 2, 3 or 4 of them (#255); Done leads, its label `ink` 500 and its
+     check `good`, the done glyph's own colour. */
+  .ph-acts { height: 80px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px 22px; }
   .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
   .ph-acts .icon { color: var(--ink); }
+  .ph-acts > .ph-done { color: var(--ink); font-weight: 500; }
+  .ph-acts > .ph-done .icon { color: var(--good); }
+  /* Marked unread, the email shows the list's unread dot before its subject, and the swapped icon
+     pops in with it (#263). */
+  .rd-subj .rd-unread { display: inline-block; width: 6px; height: 6px; border-radius: 999px; background: var(--ink); margin-right: 10px; vertical-align: .3em; animation: ph-pop var(--dur-fast) var(--ease); }
+  .ph-acts .ph-swap { display: block; animation: ph-pop var(--dur-fast) var(--ease); }
+  @keyframes ph-pop { from { transform: scale(.4); } }
   .attach { width: 100%; }
 
   /* ---------- The agenda ---------- */
