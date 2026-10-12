@@ -208,9 +208,24 @@
 .ag-item .spin { margin-left: 0; vertical-align: 0; }
 
 /* SV-20: the calendar's sources' stale and failing lines, atop the right pane (board 19b's .bar.muted). */
-.rpane > .rp-health { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; color: var(--ink3); }
-.rpane > .rp-health.failing { color: var(--caution); padding-top: 7px; padding-bottom: 7px; line-height: 18px; }
-.rpane > .rp-health.failing > .icon { align-self: flex-start; margin-top: 1px; }
+/* Atop the grid instead in the compact tier, where the day's pane isn't drawn (#258). */
+.rpane > .rp-health, .cal-health > .rp-health { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; color: var(--ink3); }
+.rpane > .rp-health.failing, .cal-health > .rp-health.failing { color: var(--caution); padding-top: 7px; padding-bottom: 7px; line-height: 18px; }
+.rpane > .rp-health.failing > .icon, .cal-health > .rp-health.failing > .icon { align-self: flex-start; margin-top: 1px; }
+.cal-health { flex: none; display: flex; flex-direction: column; }
+
+/* The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact, #258): beside the 400 px pane the
+   grid would be 184 to 643 px, its chips cut to "7 A…", so it takes the width, and the right pane
+   lies over its right side, with an overlay's shadow, while it holds the editor or search; the day's
+   own pane isn't drawn. The floating detail floats over it, as it would over the grid. */
+@media (min-width: 640px) and (max-width: 1099px) {
+  .cal-content { flex-direction: column; }
+  .cal-content > .rpane { position: absolute; top: 0; right: 0; bottom: 0; z-index: 4; background: var(--page); border-left: 1px solid var(--edgeOn); box-shadow: var(--shadow-pop); }
+  /* It comes in 24 px from the right over 180 ms; an editor the card hands over keeps its own entrance. */
+  .cal-content > .rpane:not(.handed) { animation: rpane-over var(--dur-medium) var(--ease); }
+  .cal-content .fd { z-index: 5; }
+  @keyframes rpane-over { from { transform: translateX(24px); opacity: 0; } }
+}
 
 /* SV-23: calendar search in the right pane (DESIGN.md › Decided while building #24), on search's own
    values (search.css): the results line as board 06's .bar.muted, rows as the agenda's plus why. */

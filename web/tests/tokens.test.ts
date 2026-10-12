@@ -6,7 +6,7 @@ import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   accountColour, base, calendarColour, colour, cssVariables, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
-  placement, radius, themeVariables, type, type Theme,
+  placement, radius, themeVariables, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -201,6 +201,8 @@ describe('tokens.ts against DESIGN.md', () => {
   test('the layout constants match DESIGN.md', () => {
     const flat = design.replace(/\n\s*/g, ' ');
     expect(flat).toContain(`**Sidebar** ${layout.sidebar} px`);
+    expect(flat).toContain(`the sidebar is a ${layout.rail} px rail`);
+    expect(flat).toContain(`### Compact (${viewport.phoneBelow} to ${viewport.compactBelow - 1} px)`);
     expect(flat).toContain(`**Header** ${layout.header} px`);
     expect(flat).toContain(`the **reading pane** ${layout.readingPane} px, Calendar's **right pane** ${layout.rightPane} px`);
     expect(flat).toContain(`**Card:** ${layout.floatingDetail} px wide`);

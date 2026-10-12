@@ -3,6 +3,7 @@
 // Appearance with the current theme ticked. Typing finds every command, the ones that only have a
 // key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
 // goes back where it was.
+import type {AccountOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react';
 import {markAllRead} from '../../api/mail.ts';
@@ -10,7 +11,7 @@ import {paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {dotStyle} from '../accounts.ts';
+import {dotStyle, useAccounts} from '../accounts.ts';
 import type {SettingsPage} from '../../logic/route.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {openSettings} from '../settings/store.ts';
@@ -37,8 +38,11 @@ const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'security', keywords: 'password passkeys recovery codes'},
 ];
 
-/** The palette's own commands: Go to, Appearance, and the ones with a key that typing finds. */
-function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
+/**
+ * The palette's own commands: Go to, Appearance, and the ones with a key that typing finds, with the
+ * Inbox filtered to each account, which the compact tier's rail has no rows for (#258).
+ */
+function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: AccountOut[]): Command[] {
   const route = currentRoute();
   return [
     {id: 'inbox', section: 'goto', label: 'Inbox', icon: 'inbox', hint: '1', run: () => navigate(toInbox())},
@@ -57,6 +61,9 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
       id: `settings-${page}`, section: 'more', label: `Settings › ${SETTINGS_NAV[page].label}`, icon: SETTINGS_NAV[page].icon, keywords, run: () => openSettings(page),
     })),
     {id: 'sign-out', section: 'more', label: 'Sign out', icon: 'door_open', run: askSignOut},
+    ...accounts.map((account): Command => ({
+      id: `account-${account.id}`, section: 'more', label: `Inbox · ${account.label}`, icon: 'inbox', keywords: 'account filter', run: () => navigate(toInbox(account.id)),
+    })),
   ];
 }
 
@@ -78,11 +85,12 @@ export function Palette() {
 
 function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   const theme = useThemeChoice();
+  const {list: accounts} = useAccounts();
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   // A page's command stands in for the palette's own of the same id (Mark all as read on the Inbox).
-  const groups = paletteList([...offer.commands, ...ownCommands(theme).filter(own => !offer.commands.some(command => command.id === own.id))], query);
+  const groups = paletteList([...offer.commands, ...ownCommands(theme, accounts).filter(own => !offer.commands.some(command => command.id === own.id))], query);
   const items = groups.flatMap(group => group.items);
   const at = Math.min(cursor, Math.max(0, items.length - 1));
 

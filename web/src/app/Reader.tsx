@@ -114,6 +114,8 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
         </div>
       )}
       <div className="rd-tools">
+        {/* Only in the compact tier, where the reader covers the list (#258). */}
+        <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool" type="button" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         <button className="tool" type="button" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
         <button className={pinned ? 'tool active' : 'tool'} type="button" aria-pressed={pinned} onClick={actions.pin}>

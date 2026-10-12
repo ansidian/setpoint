@@ -113,7 +113,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
  * SV-20: "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
  * failing, wrapping so the provider's words show in full (Decided while building #62).
  */
-function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
+export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
   return calendarHealthLines(sources ?? [], now, timeZone).map(line => (
     <div key={line.text} className={`rp-health ${line.state}`}>

@@ -390,7 +390,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
         {open !== null && (
           <StoryPane storyId={open} articleId={route.article} row={rows.get(open)} lookedAt={looked} now={now} timeZone={zone}
             canStep={{previous: neighbourStory(keys, shownOpenKey, -1) !== null, next: neighbourStory(keys, shownOpenKey, 1) !== null}}
-            onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} />
+            onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close} />
         )}
       </div>
     </>

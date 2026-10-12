@@ -20,7 +20,7 @@ import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, Item
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, updateItem} from '../../api/items.ts';
+import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, setCalendarVisible, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, timeRange} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
@@ -37,6 +37,8 @@ import {Icon} from '../../ui/Icon.tsx';
 import {isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
+import {useCommands} from '../palette/commands.ts';
+import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
 import {dismissToast, showToast, toastFailure, UNDO_MS} from '../toast.ts';
@@ -44,7 +46,7 @@ import {AnchoredCard} from './AnchoredCard.tsx';
 import {showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
-import {DayPane} from './DayPane.tsx';
+import {DayPane, HealthLines} from './DayPane.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
@@ -133,6 +135,16 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const today = localDate(now, zone);
   const view = useCalendarView();
   const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  // The compact tier: the grid takes the width, and the right pane lies over it while it holds the
+  // editor or search; the day's pane isn't drawn (#258).
+  const compact = useCompact();
+  // ⌘K shows or hides each calendar, as the sidebar's Calendars do, so the rail (which has none) keeps
+  // the filter (#258).
+  useCommands(() => ({commands: (calendars ?? []).map(calendar => ({
+    id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
+    keywords: 'calendar calendars filter toggle',
+    run: () => void setCalendarVisible(calendar.id, !calendar.visible).catch(toastFailure(`Couldn't ${calendar.visible ? 'hide' : 'show'} ${calendar.name}`)),
+  }))}));
   const selectedKey = route.item ? itemKey(route.item, route.at) : null;
   // A single event or a task's address has only its id: its day comes from the grid, else from it.
   const known = selectedKey ? knownDay(selectedKey) : null;
@@ -722,7 +734,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           : <button className="ibtn" aria-label="Search calendar" title="Search · /" onClick={() => setSearching(true)}><Icon name="search" /></button>}
         <button className="btn" onClick={() => newItem('event')}><Icon name="add" size={17} />New<span className="kbd">C</span></button>
       </header>
-      <div className="content">
+      <div className="content cal-content">
+        {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
+            sit atop the grid instead, so a failing one still shows (#258). */}
+        {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
         {mode === 'week' ? (
           <WeekGrid week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
             calendars={calendarsById} now={now} timeZone={zone} scroll={view.scroll} popover={popover} onSelectDay={clickDay} onSelectItem={selectItem} onPopover={setPopover}
@@ -753,7 +768,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             onClose={closeEditor} onEscape={escape} onDirty={setEditorDirty} onKeep={keepDrafts} place={editor.place} />
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
-        ) : (
+        ) : compact ? null : (
           <DayPane date={selectedDay} today={today} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
             selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
             onShowAll={() => showHidden(calendars ?? [])} />

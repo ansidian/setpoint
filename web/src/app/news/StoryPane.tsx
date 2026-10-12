@@ -17,7 +17,7 @@ import {Icon} from '../../ui/Icon.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {PaneEdge} from '../Reader.tsx';
 
-export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, canStep, onStep, onOriginal, onArticle, onBack}: {
+export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, canStep, onStep, onOriginal, onArticle, onBack, onClose}: {
   storyId: number;
   articleId: number | null;
   // Its row in the list, so the tools are right before the story itself has loaded.
@@ -31,6 +31,8 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   onOriginal: () => void;
   onArticle: (id: number) => void;
   onBack: () => void;
+  // Closes the pane: the compact tier's Back, where the pane covers the list (#258).
+  onClose: () => void;
 }) {
   const width = useReadingPaneWidth();
   const {data} = useResource<StoryOut>(storyPath(storyId));
@@ -61,6 +63,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
     <section className="pane" aria-label="Story" style={style}>
       <PaneEdge width={width} />
       <div className="rd-tools">
+        <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         {lead && <button className="tool" type="button" onClick={onOriginal}><Icon name="open_in_new" />Open at {lead.outlet}<span className="kbd">O</span></button>}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous story" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>

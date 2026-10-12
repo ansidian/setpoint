@@ -354,3 +354,30 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .attach:hover .look { color: var(--ink); }
   :root[data-theme="night"] .attach:hover { background: var(--cardOn); }
 }
+
+/* ---------- The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; #258) ---------- */
+/* An iPad or a half-width window: the sidebar is a 56 px rail of icons, an open email or story covers
+   the list rather than squeezing it (its tools lead with Back; Esc, J / K and ↑ ↓ as before), and the
+   header's search gives way before anything else does. Calendar.css has the grid's part. */
+.rd-tools .rd-back { display: none; margin: 0 4px 0 -8px; }
+@media (min-width: 640px) and (max-width: 1099px) {
+  .app { --sidebar: var(--rail); }
+  .sb { padding: 12px 8px; align-items: center; gap: 4px; }
+  .sb-top { width: 40px; padding: 0; justify-content: center; }
+  .sb .nav { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; flex: none; }
+  .sb .nav > .grow, .sb .nav > .cnt, .sb .nav > .kbd { display: none; }
+  /* The attention pill, as a 16 px badge on Inbox's icon. */
+  .sb .nav > .apill { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
+
+  /* The header keeps everything on screen down to 640: the search field narrows first, then a
+     calendar title longer than its 128 px ("Sep 27 – Oct 3, 2026") ends in "…". */
+  .hd { gap: 10px; }
+  .hd > .search { width: auto; flex: 0 1 var(--mailSearch); min-width: 0; }
+  .hd > .search.active { flex-basis: 520px; }
+  .hd > .cal-title { flex-shrink: .01; overflow: hidden; text-overflow: ellipsis; }
+  .palette { max-width: calc(100% - 32px); }
+
+  .content:has(> .pane) > .pane { position: absolute; inset: 0; width: auto; max-width: none; z-index: 4; background: var(--page); border-left: 0; }
+  .pane > .pane-edge { display: none; }
+  .rd-tools .rd-back { display: inline-grid; }
+}

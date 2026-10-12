@@ -185,6 +185,26 @@ paint doesn't fade.
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
+### Compact (640 to 1099 px)
+
+An iPad or a half-width window keeps the shell's parts and stops squeezing them
+([Decided while building](#decided-while-building) #258):
+
+- **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News and Settings as 40 × 40
+  icons, each named in its tooltip. Inbox's attention pill is a 16 px badge on its icon (2 px from its
+  top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
+  mini-month and Calendars give way; ⌘K filters the Inbox by account ("Inbox · Jobs") and shows or
+  hides each calendar.
+- **Reading pane and story pane:** an open email or story covers the list under the header, its tools
+  led by Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the list, and the edge
+  doesn't drag.
+- **Calendar:** the grid, month or week, takes the width. The right pane lies over its right side (400
+  px, `page`, an `edgeOn` left edge and the popover shadow, in 24 px over 180 ms) while it holds the
+  editor or search; the day's pane isn't drawn, and its sources' health lines sit atop the grid. The
+  floating detail floats over the pane.
+- **Header:** gaps 10; the search field narrows first (from 380, 520 while searching), then a calendar
+  title longer than its 128 px ends in "…".
+
 ### The Today block (mail pages)
 
 28 px rows: the next event ("2:30 PM  Dentist", time in `ink`, 58 px wide, "in 5h" right in `ink3`),
@@ -698,6 +718,7 @@ Back; a read-only agenda for today and the next 7 days, empty days collapsed. Ac
 Attention mail, #93), Trash,
 Mark read, Mark unread, Mark all as read. Plain search; no calendar editing, no Alfred, Settings only to
 sign in. Dates never wrap.
+
 
 ## mantel's mail chip
 
@@ -1466,3 +1487,11 @@ it changes what's on screen.
     repeating task keeps its own line. The calendar fact's `calendar_today` takes the item's colour
     (its own, else its calendar's), as the failed card's does, its name staying `ink2`. The date
     stays the title's subtitle, without a glyph (Andy, 2026-10-11, polish audit calflows-05).
+258. **From 640 to 1099 px the sidebar is a rail and panes cover what they'd squeeze** (Layout ›
+    Compact): an iPad or a half-width window had the reading pane 1 px wide at 640 and 152 at 820,
+    and the month grid 252 px at 900. The sidebar is a 56 px rail of icons with Inbox's attention
+    badge; an open email or story covers the list under the header, with Back leading its tools;
+    Calendar's grid takes the width (764 px at 820) and the right pane lies over it while it holds
+    the editor or search, the day's pane not drawn and its health lines atop the grid; the header's
+    search narrows first. ⌘K keeps the rail's lost filters: "Inbox · Jobs", and Show or Hide each
+    calendar (Andy, 2026-10-11, polish audit phone-06).

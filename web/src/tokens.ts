@@ -230,6 +230,8 @@ export const news = {seenAfterMs: 1000} as const;
 /** Fixed sizes in px (DESIGN.md › Layout and the export's Key measurements). */
 export const layout = {
   sidebar: 248,
+  // The sidebar in the compact tier (DESIGN.md › Layout › Compact).
+  rail: 56,
   header: 56,
   readingPane: 680,
   rightPane: 400,
@@ -260,8 +262,12 @@ export const layout = {
   palette: 640,
 } as const;
 
-/** The design target, the phone layout's breakpoint, and darma's wide-screen zoom. */
-export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, wideFrom: 2200, wideZoom: 1.25} as const;
+/**
+ * The design target, the phone layout's breakpoint, the compact tier's (the rail, panes over what
+ * they'd squeeze), and darma's wide-screen zoom. CSS media queries spell them out; Phone.tsx's hooks
+ * read them from here.
+ */
+export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, wideFrom: 2200, wideZoom: 1.25} as const;
 
 const accountVariables = () => Object.fromEntries(Object.entries(accountColour).map(([name, token]) => [`--a-${name}`, `var(--${token})`]));
 const calendarVariables = () => Object.fromEntries(Object.entries(calendarColour).map(([name, token]) => [`--c-${name}`, `var(--${token})`]));
