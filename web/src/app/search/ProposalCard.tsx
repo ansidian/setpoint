@@ -179,7 +179,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
             {kind === 'event' ? (
               <>
                 <span className="menu-anchor">
-                  <button type="button" className="field pick" aria-label="Calendar" onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
+                  <button type="button" className="field pick" aria-label="Calendar" aria-expanded={menu === 'calendar'} onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
                     <span className="dot sm" style={dotStyle(calendar?.colour ?? undefined)} /><span className="grow">{calendar?.name ?? 'Calendar'}</span><Icon name="expand_more" size={16} />
                   </button>
                   {menu === 'calendar' && (
@@ -194,7 +194,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
                   )}
                 </span>
                 <span className="menu-anchor">
-                  <button type="button" className="field pick" aria-label="Reminder" onClick={() => setMenu(menu === 'reminder' ? null : 'reminder')}>
+                  <button type="button" className="field pick" aria-label="Reminder" aria-expanded={menu === 'reminder'} onClick={() => setMenu(menu === 'reminder' ? null : 'reminder')}>
                     <Icon name="notifications" size={16} /><span className="grow">{reminderLabel(shownReminder)}</span><Icon name="expand_more" size={16} />
                   </button>
                   {menu === 'reminder' && (

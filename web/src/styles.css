@@ -316,6 +316,27 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .attach .open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; height: 100%; text-align: left; }
 .attach .dl, .preview-head .dl { color: var(--ink2); font-size: 12.5px; height: 24px; padding: 0 10px 0 8px; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; white-space: nowrap; flex: none; }
 .pop { background: var(--modal); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
+/* Every menu is one component (DESIGN.md › Decided while building #142): a popover, 6 px inside, its
+   32 px items 2 px apart, each radius 10, `ink2` with a 16 px `ink3` glyph; the pointer and the
+   keyboard's cursor both fill it `sub2` with its words and glyph `ink`; the checked one is `ink` with a
+   check at its end; one that can't be picked is at .5. Places' two-line items are 44. ⌘K's items and
+   News's Upcoming story take the same values in their own markup. */
+.pop.menu { padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.menu-i { width: 100%; height: 32px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.menu-i .icon { color: var(--ink3); }
+.menu-i.cur, .menu-i:focus-visible { background: var(--sub2); color: var(--ink); }
+.menu-i.cur .icon, .menu-i:focus-visible .icon { color: var(--ink); }
+.menu-i[aria-checked="true"] { color: var(--ink); }
+.menu-i[aria-checked] > .icon:last-child, .menu-i .kbd { margin-left: auto; }
+.menu-i[aria-checked] > .icon:last-child { color: var(--ink); }
+.menu-i:disabled { opacity: .5; background: none; color: var(--ink2); }
+/* A menu's button stays lit while its menu is open, so the menu always has an owner: an icon button,
+   a tool or a quiet button `sub2` and `ink` (Settings' row buttons sit in an expanded anchor), a ghost
+   button `sub3`, a field as when it's focused. */
+.ibtn[aria-expanded="true"], [aria-expanded="true"] > .ibtn, .rd-tools .tool[aria-expanded="true"], .btn.quiet[aria-expanded="true"] { background: var(--sub2); color: var(--ink); }
+.btn.ghost[aria-expanded="true"] { background: var(--sub3); }
+.field[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--edgeOn); background: var(--cardOn); }
 .attach-preview { position: absolute; inset: 12px; z-index: 3; display: flex; flex-direction: column; overflow: hidden; }
 .preview-head { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 18px; border-bottom: 1px solid var(--hair); }
 .preview-body { flex: 1 1 auto; min-height: 0; overflow: auto; display: flex; }
@@ -373,6 +394,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .attach:hover { --t-mix: 22%; }
   .attach:hover .look { color: var(--ink); }
   :root[data-theme="night"] .attach:hover { background: var(--cardOn); }
+  .menu-i:not(:disabled):hover { background: var(--sub2); color: var(--ink); }
+  .menu-i:not(:disabled):hover .icon { color: var(--ink); }
 }
 
 /* ---------- The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; #258) ---------- */

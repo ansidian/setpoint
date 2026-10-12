@@ -87,7 +87,7 @@
 .nw-up-pop { position: absolute; left: 50px; top: calc(100% + 4px); width: min(480px, calc(100% - 66px)); padding: 6px; z-index: 5; cursor: default; }
 .nw-up-pop[data-up] { top: auto; bottom: calc(100% + 4px); }
 .nw-up-story { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: var(--r-row); text-align: left; }
-.nw-up-story:hover { background: var(--sub); }
+.nw-up-story:hover { background: var(--sub2); }
 .nw-up-story .hl { color: var(--ink); font-weight: 500; line-height: 1.3; }
 .nw-up-story .sm { color: var(--ink2); font-size: 12.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nw-up-story .nw-meta { margin-top: 2px; }

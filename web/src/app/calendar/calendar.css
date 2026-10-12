@@ -66,7 +66,6 @@
 .more.open { background: var(--sub2); color: var(--ink); border-radius: 6px; align-self: flex-start; }
 
 /* The "+N" popover (board 11b): the day's every item, hanging from the "+N"; Esc closes it. */
-.pop { background: var(--modal); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
 .daypop { position: absolute; width: 280px; padding: 6px 6px 8px; z-index: 3; }
 /* It grows from its "+N" (DayPopover places the point) and fades out over 120 ms, as the floating
    detail closes. */

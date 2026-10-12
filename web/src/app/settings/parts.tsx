@@ -56,7 +56,7 @@ export function Select<T extends string | number>({value, options, label, onChan
       <button className="select" type="button" aria-label={label} aria-haspopup="menu"><span className="num">{shown}</span><Icon name="expand_more" size={16} /></button>
     )}>
       {close => options.map(option => (
-        <button key={String(option.value)} className="mi" type="button" role="menuitemradio" aria-checked={option.value === value} disabled={option.disabled} onClick={() => {
+        <button key={String(option.value)} className="menu-i" type="button" role="menuitemradio" aria-checked={option.value === value} disabled={option.disabled} onClick={() => {
           close();
           if (option.value !== value) onChange(option.value);
         }}>{option.label}{option.value === value && <Icon name="check" size={16} />}</button>

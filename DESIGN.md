@@ -1600,3 +1600,12 @@ it changes what's on screen.
     fading up 4 px, and closed (×, Esc, Cancel, Create) they fold away as a row does, so the email
     slides back up (Andy, 2026-10-11, polish audit motion-01, calflows-03, settings-02, shell-07,
     calpanes-10, reader-12, search-08, motion-08).
+142. **Every menu is one component, and its button stays lit while it's open:** Settings', the
+    reader's More, the editor's, the proposal's, ⌘K's items and News's Upcoming story share one look:
+    a popover of radius 18 with 6 px inside, items 32 px high (Places' two lines 44) 2 px apart, radius
+    10, 10 px in, `ink2` with a 16 px `ink3` glyph; the pointer and the keyboard's cursor both fill an
+    item `sub2` with its words and glyph `ink` (in Light, `sub` on white barely showed); the checked
+    item is `ink` with a check at its end, one that can't be picked .5. The export's 34 px and 12 px
+    items, and Settings' radius 14, give way to it. While its menu is open, the button that opened it
+    keeps a fill: an icon button, a reader tool or a quiet button `sub2` and `ink`, a ghost button
+    `sub3`, a field its focused ring (Andy, 2026-10-11, polish audit motion-06, motion-05, reader-12).

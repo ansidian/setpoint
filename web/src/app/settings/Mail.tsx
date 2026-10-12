@@ -104,11 +104,11 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; 
       <Menu label="Rule options" button={<button className="ibtn sm" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
         {close => (
           <>
-            <button className="mi" type="button" role="menuitem" onClick={() => {
+            <button className="menu-i" type="button" role="menuitem" onClick={() => {
               close();
               void setRuleEnabled(rule.id, !rule.enabled).catch(toastFailure(rule.enabled ? 'Couldn\'t turn the rule off' : 'Couldn\'t turn the rule on'));
             }}><Icon name={rule.enabled ? 'toggle_off' : 'toggle_on'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
-            <button className="mi" type="button" role="menuitem" onClick={() => {
+            <button className="menu-i" type="button" role="menuitem" onClick={() => {
               close();
               void deleteRule(rule.id).catch(toastFailure('Couldn\'t delete the rule'));
             }}><Icon name="delete" size={16} />Delete</button>

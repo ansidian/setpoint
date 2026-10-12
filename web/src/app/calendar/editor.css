@@ -60,17 +60,12 @@
 /* Menus under a field: places, calendars, repeats, reminders, projects. */
 .editor .menu-host { position: relative; display: block; min-width: 0; }
 .editor .prow .menu-host { display: inline-block; }
-.editor .menu { position: absolute; left: 0; top: calc(100% + 4px); min-width: 220px; padding: 6px; z-index: 5; display: flex; flex-direction: column; }
+/* Each the app's one menu (styles.css), hanging under its field. */
+.editor .menu { position: absolute; left: 0; top: calc(100% + 4px); min-width: 220px; z-index: 5; }
 .editor .menu.right { left: auto; right: 0; min-width: 160px; }
 .editor .menu[data-up] { top: auto; bottom: calc(100% + 4px); }
 .editor .menu[data-right] { left: auto; right: 0; }
-.editor .menu-i { height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 10px; color: var(--ink2); width: 100%; text-align: left; white-space: nowrap; flex: none; }
-.editor .menu-i .icon { color: var(--ink3); }
-.editor .menu-i:hover { background: var(--sub); }
-.editor .menu-i.cur { background: var(--sub2); color: var(--ink); }
-.editor .menu-i.cur .icon { color: var(--ink); }
-.editor .menu-i .kbd { margin-left: auto; }
-.editor .places { padding: 6px; margin-top: -2px; }
+.editor .places { padding: 6px; margin-top: -2px; display: flex; flex-direction: column; gap: 2px; }
 .editor .places .menu-i { height: 44px; }
 .editor .place-text { display: flex; flex-direction: column; min-width: 0; }
 .editor .place-name { color: var(--ink); }
@@ -133,7 +128,7 @@
 .editor:focus { outline: none; }
 
 /* The pointer (DESIGN.md › Decided while building #12): fields take an `edgeHover` border. */
-.editor .menu-i, .editor .qchip .x { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.editor .qchip .x { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .editor .field:not(.focus, :focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
 }

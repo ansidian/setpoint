@@ -240,9 +240,9 @@ function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: 
     };
   });
   return (
-    <div ref={menu} className="pop more-menu" role="menu">
-      <button type="button" role="menuitem" className="more-i" onClick={() => onPropose('event')}><Icon name="event" size={16} />Add to calendar</button>
-      <button type="button" role="menuitem" className="more-i" onClick={() => onPropose('task')}><Icon name="task_alt" size={16} />Add as task</button>
+    <div ref={menu} className="pop menu more-menu" role="menu">
+      <button type="button" role="menuitem" className="menu-i" onClick={() => onPropose('event')}><Icon name="event" size={16} />Add to calendar</button>
+      <button type="button" role="menuitem" className="menu-i" onClick={() => onPropose('task')}><Icon name="task_alt" size={16} />Add as task</button>
     </div>
   );
 }

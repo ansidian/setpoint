@@ -159,15 +159,15 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
       <Menu label={`${account.label} options`} button={<button className="ibtn sm" type="button" aria-label={`${account.label} options`}><Icon name="more_horiz" /></button>}>
         {close => (
           <>
-            <button className="mi" type="button" role="menuitem" onClick={() => {
+            <button className="menu-i" type="button" role="menuitem" onClick={() => {
               close();
               setRenaming(true);
             }}><Icon name="edit" size={16} />Rename</button>
-            {source && <button className="mi" type="button" role="menuitem" onClick={() => {
+            {source && <button className="menu-i" type="button" role="menuitem" onClick={() => {
               close();
               check.run();
             }}><Icon name="refresh" size={16} />Check now</button>}
-            <button className="mi" type="button" role="menuitem" onClick={() => {
+            <button className="menu-i" type="button" role="menuitem" onClick={() => {
               close();
               onReconnect();
             }}><Icon name="sync_problem" size={16} />Reconnect</button>
@@ -230,7 +230,7 @@ function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; s
       </span>
       <Menu label={`${name} options`} button={<button className="ibtn sm" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>
         {close => (
-          <button className="mi" type="button" role="menuitem" onClick={() => {
+          <button className="menu-i" type="button" role="menuitem" onClick={() => {
             close();
             check.run();
           }}><Icon name="refresh" size={16} />Check now</button>

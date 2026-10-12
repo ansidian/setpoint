@@ -132,6 +132,82 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
   }
 });
 
+/** A menu's shape and its first item's, and the item's fill under the pointer. */
+async function menuShape(page: Page, menu: Locator, item: Locator) {
+  await item.hover();
+  // The 120 ms fill runs its course.
+  await page.waitForTimeout(200);
+  return {
+    menu: [await style(menu, 'border-radius'), await style(menu, 'padding')],
+    item: [await style(item, 'height'), await style(item, 'border-radius'), await style(item, 'padding-left'), await style(item, 'background-color') === await colour(page, '--sub2')],
+  };
+}
+
+test('every menu is one component: radius 18 and 6 inside, 32 px items of radius 10 and 10 px, `sub2` under the pointer; its button stays lit while it\'s open', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    const shape = {menu: ['18px', '6px'], item: ['32px', '10px', '10px', true]};
+
+    // The reader's More: its button stays `sub2` with the pointer away while the menu is open.
+    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    const moreButton = page.getByRole('button', {name: 'More'});
+    await moreButton.click();
+    const more = page.getByRole('menu');
+    await more.waitFor();
+    await page.mouse.move(700, 28);
+    // The button's 120 ms fill runs its course with the pointer gone.
+    await page.waitForTimeout(200);
+    assert.equal(await style(moreButton, 'background-color'), await colour(page, '--sub2'), 'More stays lit');
+    assert.deepEqual(await menuShape(page, more, more.getByRole('menuitem').first()), shape);
+    await page.keyboard.press('Escape');
+
+    // ⌘K's items take the same height, padding and fill.
+    await page.keyboard.press('Meta+k');
+    const palette = page.locator('.palette');
+    await palette.waitFor();
+    const second = palette.locator('.item').nth(1);
+    await second.hover();
+    await until('the pointer takes the cursor', () => second.getAttribute('class'), classes => classes === 'item cur');
+    // The 120 ms fill runs its course.
+    await page.waitForTimeout(200);
+    assert.deepEqual([await style(second, 'height'), await style(second, 'padding-left'), await style(second, 'background-color') === await colour(page, '--sub2')], ['32px', '10px', true]);
+    await page.keyboard.press('Escape');
+    await palette.waitFor({state: 'detached'});
+
+    // A Settings row's menu; its … stays lit.
+    await page.keyboard.press('Meta+,');
+    const settings = page.locator('.settings');
+    await settings.waitFor();
+    const options = settings.getByRole('button', {name: 'Business options'});
+    await options.click();
+    const menu = settings.getByRole('menu', {name: 'Business options'});
+    await menu.waitFor();
+    assert.deepEqual(await menuShape(page, menu, menu.getByRole('menuitem').first()), shape);
+    await page.mouse.move(700, 28);
+    // The button's 120 ms fill runs its course with the pointer gone.
+    await page.waitForTimeout(200);
+    assert.equal(await style(options, 'background-color'), await colour(page, '--sub2'), 'the row\'s … stays lit');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await settings.waitFor({state: 'detached'});
+
+    // The editor's Reminder menu.
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').fill('Dinner fri 7-9pm');
+    await page.getByRole('button', {name: 'Add reminder', exact: true}).click();
+    const reminders = page.locator('.editor .menu');
+    await reminders.waitFor();
+    assert.deepEqual(await menuShape(page, reminders, reminders.locator('.menu-i').nth(1)), shape);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the toast drops in over 180 ms and again when a new one replaces it, leads with its tone\'s glyph, drains Undo as a hairline, waits under the pointer, and fades out', async () => {
   const setpoint = await startSetpoint();
   try {

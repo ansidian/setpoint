@@ -8,13 +8,14 @@
 .palette .cmdk-in input::placeholder { color: var(--ink3); opacity: 1; }
 .palette .cmdk-list { padding: 4px 8px 8px; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
 .palette .cmdk-label { height: 30px; display: flex; align-items: flex-end; padding: 0 12px 6px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-.palette .item { width: 100%; height: 34px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: var(--r-row); color: var(--ink2); text-align: left; }
+/* Its items take the app's one menu item's 32 px and 10 px (styles.css, DESIGN.md › Decided while building #142). */
+.palette .item { width: 100%; height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; }
 .palette .item .icon { color: var(--ink3); }
 .palette .item.cur { background: var(--sub2); color: var(--ink); }
 .palette .item.cur .icon { color: var(--ink); }
 .palette .item .kbd, .palette .item .tick { margin-left: auto; }
 .palette .item .tick .icon { color: inherit; }
-.palette .none { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink3); }
+.palette .none { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--ink3); }
 /* It rises 6 px into place over 180 ms with its scrim fading in (typing works at once), and fades out
    over 120 ms to .98, taking no clicks, as the floating detail closes (DESIGN.md › Motion). It rises
    without scaling, as Settings does (settings.css). */
