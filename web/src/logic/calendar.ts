@@ -214,6 +214,14 @@ export function itemsByDay(items: ItemOut[], calendars: CalendarOut[] | undefine
   return days;
 }
 
+/**
+ * A day's items with a dragged item's slot where it would land, in the grid's order (polish audit
+ * calflows-09): the slot is `item` as it would be on that day, keyed `slot:`.
+ */
+export function withSlot(items: ItemOut[], item: ItemOut): ItemOut[] {
+  return [...items.filter(one => one.key !== item.key), {...item, key: `slot:${item.key}`}].sort(dayOrder);
+}
+
 /** How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events" (SV-56). */
 export function hiddenOn(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, timeZone: string): number {
   const hidden = new Set((calendars ?? []).filter(calendar => !calendar.visible).map(calendar => calendar.id));

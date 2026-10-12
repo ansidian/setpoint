@@ -285,7 +285,17 @@
 /* Lifted (board 15): tilted −1.5° and scaled 1.04 with the popover shadow, following the pointer. */
 .ev.lift, .tk.lift { position: absolute; z-index: 6; pointer-events: none; transform: var(--lift); box-shadow: var(--shadow-pop); }
 .tk.lift { background: var(--sub2); }
-.cell.drop { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+/* Picked up, it eases into its tilt, scale and shadow over 120 ms (polish audit motion-15). */
+.ev.lift, .tk.lift { animation: lift-in var(--dur-fast) var(--ease); }
+@keyframes lift-in { from { transform: none; box-shadow: none; } }
+/* The day under the drag takes the item's colour (`--dc`; a task's `ink3`), its fill at 9% and a 1.5 px
+   ring at 55% (Light 7% and 50%), over 120 ms, and shows where the item would land among its items as
+   a dashed slot, its colour at 70% over 10% (polish audit calflows-09). */
+.cal-month { --droptint: 9%; --dropedge: 55%; }
+:root[data-theme="light"] .cal-month { --droptint: 7%; --dropedge: 50%; }
+.cell.drop { background: color-mix(in oklch, var(--dc) var(--droptint), transparent); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--dc) var(--dropedge), transparent);
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.ev.slot { background: color-mix(in oklch, var(--c) 10%, transparent); box-shadow: none; outline: 1.5px dashed color-mix(in oklch, var(--c) 70%, transparent); outline-offset: -1.5px; }
 .drag-tip { position: absolute; z-index: 6; height: 22px; display: flex; align-items: center; padding: 0 9px; border-radius: 999px; background: var(--cardOn);
   box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); font-size: 12px; color: var(--ink); white-space: nowrap; pointer-events: none; }
 .ev, .tk { touch-action: none; }

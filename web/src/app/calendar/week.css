@@ -101,7 +101,13 @@
 .wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 .wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }
 .wb.ghost.faded { opacity: .35; }
-.wb.lift { z-index: 5; box-shadow: inset 3px 0 0 var(--c, var(--cool)), var(--shadow-pop); pointer-events: none; animation: none; }
+.wb.lift { z-index: 5; box-shadow: inset 3px 0 0 var(--c, var(--cool)), var(--shadow-pop); pointer-events: none; animation: wb-lift-in var(--dur-fast) var(--ease); }
+/* Picked up, its shadow eases in over 120 ms (polish audit motion-15). */
+@keyframes wb-lift-in { from { box-shadow: inset 3px 0 0 var(--c, var(--cool)), 0 0 0 transparent; } }
+/* The day a move would land on takes the item's colour, as a month's day does (polish audit calflows-09). */
+.cal-week { --droptint: 9%; --dropedge: 55%; }
+:root[data-theme="light"] .cal-week { --droptint: 7%; --dropedge: 50%; }
+.wk-col.drop { background: color-mix(in oklch, var(--dc) var(--droptint), transparent); box-shadow: inset 0 0 0 1.5px color-mix(in oklch, var(--dc) var(--dropedge), transparent); }
 .wb.cont-t { border-top-left-radius: 0; border-top-right-radius: 0; }
 .wb.cont-b { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .wb .spin { position: absolute; right: 5px; top: 3px; margin: 0; }

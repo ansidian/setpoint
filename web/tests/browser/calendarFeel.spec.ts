@@ -883,3 +883,66 @@ test('a deleted chip fades and folds away so the ones under it slide up, and ⌘
     await setpoint.stop();
   }
 });
+
+test('a drag lands where it shows it will: the lift eases in, the day under it takes the item\'s colour with a dashed slot where it would sort in, and the drop settles into place', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    // Dentist (2:30 PM) over Thursday, where the CS 101 lecture (6 PM) and a task are.
+    const dentist = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'});
+    const box = (await dentist.boundingBox())!;
+    const thursday = page.locator('.cell[data-date="2026-10-08"]');
+    const target = (await thursday.boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 40, box.y + box.height / 2 + 10, {steps: 3});
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height - 30, {steps: 5});
+    const lift = page.locator('.ev.lift');
+    await lift.waitFor();
+    assert.deepEqual([await style(lift, 'animation-name'), await style(lift, 'animation-duration')], ['lift-in', '0.12s']);
+    await until('Thursday is the target', () => thursday.getAttribute('class'), classes => !!classes?.split(' ').includes('drop'));
+    const colourOf = (css: string) => thursday.evaluate((element, value) => {
+      const probe = document.createElement('span');
+      probe.style.color = value;
+      element.append(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      return computed;
+    }, css);
+    const [fill, ring] = [await colourOf('color-mix(in oklch, var(--dc) 9%, transparent)'), `${await colourOf('color-mix(in oklch, var(--dc) 55%, transparent)')} 0px 0px 0px 1.5px inset`];
+    await until('it takes Dentist\'s colour', async () => [await style(thursday, 'background-color'), await style(thursday, 'box-shadow')].join(' | '), value => value === `${fill} | ${ring}`);
+    // The slot sorts in between Gym and the lecture.
+    assert.deepEqual(await thursday.locator(':is(.ev, .tk)').evaluateAll(chips => chips.map(chip => (chip.classList.contains('slot') ? 'slot' : chip.textContent))),
+      ['slot', '6 PMCS 101 lecture', 'Renew car registration']);
+    const slot = thursday.locator('.ev.slot');
+    assert.deepEqual([await style(slot, 'outline-style'), await style(slot, 'height')], ['dashed', '20px']);
+
+    // Dropped: it settles from the lift into its place over 180 ms on the glide's curve.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as {settled: string[]}).settled = seen;
+      const watch = () => {
+        for (const animation of document.getAnimations()) {
+          const target = (animation.effect as KeyframeEffect | null)?.target as HTMLElement | null;
+          if (target?.matches('.cell[data-date="2026-10-08"] .ev') && !(animation instanceof CSSAnimation) && !(animation instanceof CSSTransition)) {
+            const timing = animation.effect!.getTiming();
+            seen.push(`${target.textContent} ${timing.duration} ${timing.easing}`);
+            return;
+          }
+        }
+        requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    });
+    await page.mouse.up();
+    await until('it settles', () => page.evaluate(() => (window as unknown as {settled: string[]}).settled), seen => seen.length === 1);
+    assert.match((await page.evaluate(() => (window as unknown as {settled: string[]}).settled))[0]!, /Dentist 180 cubic-bezier\(0?\.22, ?1\.3, ?0?\.36, ?1\)$/);
+    await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
+    assert.equal(await thursday.getAttribute('class').then(classes => classes!.split(' ').includes('drop')), false);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

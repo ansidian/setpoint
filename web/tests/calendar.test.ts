@@ -5,7 +5,7 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
+  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
   itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
 } from '../src/logic/calendar.ts';
 
@@ -322,6 +322,23 @@ describe('the mini-month', () => {
 
   test('stepped to November: today and the selection elsewhere leave no mark; December\'s first two weeks fill its six', () => {
     expect(marks('2026-11', '2026-10-07', '2026-10-17')).toEqual(['1 out', '2 out', '3 out', '4 out', '5 out', '6 out', '7 out', '8 out', '9 out', '10 out', '11 out', '12 out']);
+  });
+});
+
+describe('a dragged item\'s slot (polish audit calflows-09)', () => {
+  const gym = event('Gym', '2026-10-08', '07:00', '08:00');
+  const lecture = event('CS 101 lecture', '2026-10-08', '18:00', '19:30');
+  const rent = task('Pay rent', '2026-10-08');
+  test.each([
+    ['a morning event goes first', event('Dentist', '2026-10-08', '06:30', '07:30'), ['slot:Dentist', 'Gym', 'CS 101 lecture', 'Pay rent']],
+    ['an afternoon one between', event('Dentist', '2026-10-08', '14:30', '15:30'), ['Gym', 'slot:Dentist', 'CS 101 lecture', 'Pay rent']],
+    ['a task after the events, by title', task('Call Mom', '2026-10-08'), ['Gym', 'CS 101 lecture', 'slot:Call Mom', 'Pay rent']],
+    ['an all-day event before everything', item({title: 'Fair', all_day: true, start_date: '2026-10-08', end_date: '2026-10-09'}), ['slot:Fair', 'Gym', 'CS 101 lecture', 'Pay rent']],
+  ])('%s', (_name, moved, order) => {
+    expect(withSlot([gym, lecture, rent], moved).map(one => (one.key.startsWith('slot:') ? `slot:${one.title}` : one.title))).toEqual(order);
+  });
+  test('moved within its own day, its old place goes', () => {
+    expect(withSlot([gym, lecture], {...lecture, starts_at: gym.starts_at}).map(one => one.key.startsWith('slot:'))).toEqual([true, false]);
   });
 });
 

@@ -511,8 +511,10 @@ drop waits, the origin shows as a dashed ghost and the agenda says "Moving to Th
 
 ### Drag
 
-A dragged chip lifts (tilt −1.5°, scale 1.04, popover shadow), its origin becomes a dashed ghost in
-its colour, and a tooltip names the target day and time (board 15). Tasks move by whole day.
+A dragged chip lifts (tilt −1.5°, scale 1.04, popover shadow, easing in over 120 ms), its origin
+becomes a dashed ghost in its colour, and a tooltip names the target day and time (board 15). The day
+under it takes the item's colour and shows a dashed slot where it would land; dropped, the chip settles
+from the lift into its place (#237). Tasks move by whole day.
 
 ### Week view
 
@@ -2082,3 +2084,13 @@ it changes what's on screen.
     (#13), and the cell's "+N" recounts as it goes; a week block fades and shrinks out. Undo or ⌘Z
     brings it back in reverse, unfolding and fading in from .96 over 180 ms, then its tint lands
     (#235) (Andy, 2026-10-11, polish audit calflows-11).
+237. **A drag lands where it shows it will:** picked up, a chip eases into its tilt, scale and shadow
+    over 120 ms (a week block its shadow). The day under it takes the item's own colour rather than
+    the selected day's `sub` (its fill at 9% and a 1.5 px inset ring at 55%, Light 7% and 50%; a task's
+    `ink3`), over 120 ms, so the target reads as inviting and apart from the selection; in the month it
+    also shows a 20 px dashed slot (its colour at 70% over 10%, no text) where the item would sort in
+    among the day's items. Dropped, the chip settles from where the lift was into its slot over 180 ms
+    on the glide's curve, its tilt, scale and shadow easing out, then shows as on its way (#235); a
+    recurring event's drop, which asks which occurrences first, waits where it landed. The week's
+    column under a move takes the same colour (Andy, 2026-10-11, polish audit calflows-09,
+    motion-15).

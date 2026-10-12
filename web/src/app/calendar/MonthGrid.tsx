@@ -8,18 +8,21 @@
 // marked and a tooltip names the day and time; letting go on another day drops it there.
 // F6b: a drag held near the grid's top or bottom edge scrolls it (faster nearer the edge), and an
 // item in the "+N" popover drags out of it onto another day.
+// Polish audit calflows-09, motion-15: the lift eases in; the day under a drag takes the item's colour
+// and shows the slot it would land in; on the drop the chip settles from where it was lifted into
+// its place.
 // Polish audit grids-04: paging and Today glide the grid to their month over 260 ms (from five rows
 // short when it's further than ten), a new page mid-glide going on from where it is; the wheel, a
 // touch or a press stops it.
 import type {CalendarOut, ItemOut, WeatherDayOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, RefObject} from 'react';
-import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, glideStart, isWeekend, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, WEEK_COUNT} from '../../logic/calendar.ts';
+import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, glideStart, isWeekend, withSlot, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, WEEK_COUNT} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {standardEase} from '../../logic/glide.ts';
-import {canMove, dropLabel, edgeScroll} from '../../logic/manipulate.ts';
+import {canMove, dropChange, dropLabel, edgeScroll, movedItem} from '../../logic/manipulate.ts';
 import type {Point} from '../../logic/placement.ts';
-import {drag as dragTokens, layout, monthPaging, motion} from '../../tokens.ts';
+import {drag as dragTokens, glide, layout, monthPaging, motion} from '../../tokens.ts';
 import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
@@ -89,6 +92,8 @@ export function MonthGrid(props: MonthGridProps) {
   // Requests made before this grid was drawn are already answered by its first position.
   const handled = useRef(scroll?.seq ?? 0);
   const [drag, setDrag] = useState<Drag | null>(null);
+  // A drop to settle: the item, the day, and where its lifted chip was in the section.
+  const settling = useRef<{key: string; to: string; at: Point; until: number} | null>(null);
   const ring = useRingColour();
   const press = useRef<{item: ItemOut; from: string; chip: HTMLElement; x: number; y: number} | null>(null);
   const latestDrop = useRef(onDrop);
@@ -240,7 +245,10 @@ export function MonthGrid(props: MonthGridProps) {
       window.addEventListener('click', swallow, {capture: true, once: true});
       setTimeout(() => window.removeEventListener('click', swallow, true), 0);
       const to = dayAt(event.clientX, event.clientY) ?? done.to;
-      if (drop && to && to !== done.from) latestDrop.current(done.item, done.from, to);
+      if (drop && to && to !== done.from) {
+        settling.current = {key: done.item.key, to, at: done.at, until: Date.now() + 1000};
+        latestDrop.current(done.item, done.from, to);
+      }
     };
     const onUp = (event: PointerEvent) => end(event, true);
     const onCancel = (event: PointerEvent) => end(event, false);
@@ -276,21 +284,52 @@ export function MonthGrid(props: MonthGridProps) {
     measure();
   };
 
+  // Dropped, the chip settles from its lift into its place (polish audit calflows-09, motion-15): its
+  // tilt, scale and shadow ease out on the glide's curve over 180 ms, from where the lift was.
+  useLayoutEffect(() => {
+    const landing = settling.current;
+    const host = section.current;
+    if (!landing || !host) return;
+    if (Date.now() > landing.until) {
+      settling.current = null;
+      return;
+    }
+    // A recurring event's drop asks first, its prompt anchored to where it waits: that one doesn't move.
+    if (host.querySelector(`.cell[data-date="${landing.to}"] [data-key="${CSS.escape(`moving:${landing.key}`)}"]`)) {
+      settling.current = null;
+      return;
+    }
+    const chip = host.querySelector<HTMLElement>(`.cell[data-date="${landing.to}"] [data-key="${CSS.escape(landing.key)}"]`);
+    if (!chip) return;
+    settling.current = null;
+    const box = rectIn(chip, host);
+    chip.animate([
+      {transform: `translate(${landing.at.left - box.left}px, ${landing.at.top - box.top}px) ${getComputedStyle(host).getPropertyValue('--lift')}`, boxShadow: 'var(--shadow-pop)'},
+      {transform: 'none', boxShadow: '0 0 0 transparent'},
+    ], {duration: motion.medium, easing: glide.easing});
+  });
+
   const cellLooks = drag ? new Map([...looks, [drag.item.key, 'ghost' as const]]) : looks;
+  // The slot the drag would land in, on the day under it (polish audit calflows-09).
+  const slotFor = (date: string) => {
+    if (!drag || drag.to !== date || drag.to === drag.from) return null;
+    const changes = dropChange(drag.item, date, timeZone);
+    return changes ? movedItem(drag.item, changes) : null;
+  };
+  const liftedColour = drag ? (drag.item.kind === 'task' ? 'var(--ink3)' : colourVar(drag.item.colour ?? calendars.get(drag.item.calendar_id)?.colour ?? 'cool')) : undefined;
   const cells = [];
   for (let row = rows.first; row <= rows.last; row += 1) {
     for (let day = 0; day < 7; day += 1) {
       const date = dayOfWeek(FIRST_WEEK + row, day);
       cells.push(
         <DayCell key={date} date={date} {...{shown, today, selectedDay, selected, now, timeZone, calendars, section}} looks={cellLooks}
-          items={byDay.get(date) ?? []} forecast={weather.get(date)} open={popover === date} dropping={!!drag && drag.to === date && drag.to !== drag.from}
+          items={byDay.get(date) ?? []} slot={slotFor(date)} liftedColour={liftedColour} forecast={weather.get(date)} open={popover === date} dropping={!!drag && drag.to === date && drag.to !== drag.from}
           onSelectDay={onSelectDay} onSelectItem={onSelectItem} onPopover={onPopover} onPress={onPress} onNew={onNew} />,
       );
     }
   }
 
   const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
-  const liftedColour = drag ? colourVar(drag.item.colour ?? calendars.get(drag.item.calendar_id)?.colour ?? 'cool') : undefined;
   return (
     <section className={drag ? 'cal-month dragging' : 'cal-month'} aria-label="Month" ref={section} data-cal-section data-enter={enter === null ? undefined : 'out'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
@@ -333,6 +372,9 @@ interface DayCellProps {
   selected: Set<string>;
   looks: Map<string, ChipLook>;
   items: ItemOut[];
+  // A drag over this day: where it would land, and its colour.
+  slot: ItemOut | null;
+  liftedColour: string | undefined;
   forecast: WeatherDayOut | undefined;
   calendars: Map<number, CalendarOut>;
   now: number;
@@ -347,15 +389,16 @@ interface DayCellProps {
   onNew: (date: string) => void;
 }
 
-function DayCell({date, shown, today, selectedDay, selected, looks, items, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress, onNew}: DayCellProps) {
+function DayCell({date, shown, today, selectedDay, selected, looks, items: own, slot, liftedColour, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress, onNew}: DayCellProps) {
   const head = dayHead(date);
+  const items = slot ? withSlot(own, slot) : own;
   const {shown: fits, more} = fitDay(items.length);
   const out = monthOf(date) !== shown;
   const edges = monthEdges(date, today);
   const className = ['cell', out && 'out', isWeekend(date) && 'weekend', date < today && 'past', date === selectedDay && 'sel', dropping && 'drop', edges.top && 'edge-top', edges.left && 'edge-left', edges.now && 'edge-now'].filter(Boolean).join(' ');
   const wx = forecast ? weatherOf(forecast) : null;
   return (
-    <div className={className} data-date={date} onClick={() => onSelectDay(date)}>
+    <div className={className} data-date={date} onClick={() => onSelectDay(date)} style={dropping ? {'--dc': liftedColour} as CSSProperties : undefined}>
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
         {/* Under the pointer a day offers + to make an event on it (polish audit grids-06); a click on the day only selects it. */}
@@ -367,8 +410,9 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items, forec
           }}><Icon name="add" size={14} /></button>
         {wx && <span className={`wx ${wx.tone}`} title={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={16} /></span>}
       </div>
-      {items.slice(0, fits).map(item => (
-        <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} look={looks.get(item.key)} now={now} timeZone={timeZone}
+      {items.slice(0, fits).map(item => (item.key.startsWith('slot:')
+        ? <div key={item.key} className="ev slot" aria-hidden="true" style={{'--c': liftedColour} as CSSProperties} />
+        : <Chip key={item.key} item={item} calendar={calendars.get(item.calendar_id)} selected={selected.has(item.key)} look={looks.get(item.key)} now={now} timeZone={timeZone}
           onSelect={(one, chip, additive) => onSelectItem(one, date, rectIn(chip, section.current!), additive)} onPress={(one, event) => onPress(one, date, event)} />
       ))}
       {more > 0 && (

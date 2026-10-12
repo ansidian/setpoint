@@ -408,6 +408,9 @@ export function WeekGrid(props: WeekGridProps) {
   const lines = allDay.lines;
   const allDayHeight = 2 * tokens.allDayPadPx + lines * tokens.linePx + (lines - 1) * tokens.lineGapPx;
   const columnClass = (date: string) => [isWeekend(date) && 'wk-weekend', date === selectedDay && 'wk-sel'].filter(Boolean).join(' ');
+  // The day a move would land on takes the item's colour (polish audit calflows-09).
+  const dropDay = drag && drag.press.kind === 'move' && drag.changes && drag.to !== drag.press.from ? drag.to : null;
+  const dropColour = drag && drag.press.kind === 'move' ? (drag.press.item.kind === 'task' ? 'var(--ink3)' : colourVar(drag.press.item.colour ?? calendars.get(drag.press.item.calendar_id)?.colour ?? 'cool')) : undefined;
   const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
   const calendarName = (item: ItemOut) => calendars.get(item.calendar_id)?.name;
 
@@ -489,7 +492,8 @@ export function WeekGrid(props: WeekGridProps) {
               {/* Now, faintly across the week, under today's own line (polish audit grids-08). */}
               {todayColumn >= 0 && <div className="wk-nowx" style={{top: nowTop}} aria-hidden="true" />}
               {days.map((date, column) => (
-                <div key={date} className={`wk-col ${columnClass(date)}`} data-date={date} onClick={event => clickSlot(date, event)}
+                <div key={date} className={`wk-col ${columnClass(date)}${date === dropDay ? ' drop' : ''}`} data-date={date} onClick={event => clickSlot(date, event)}
+                  style={date === dropDay ? {'--dc': dropColour} as CSSProperties : undefined}
                   onPointerDown={event => {
                     leaveSlot();
                     pressEmpty(date, 'hours', event);
