@@ -1,6 +1,6 @@
 // Settings › Notifications (board 18b): ntfy's state with Send test, its Server and Token, the topics in
 // mono with their switches, the reminder defaults, Time to Leave (leaving from Home, set in
-// Calendar, with a buffer) and Reconnect alerts (once per source).
+// Calendar, with a buffer) and Alerts (Reconnect alerts, once per source), every group labelled.
 import type {NotifyStatusOut, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -78,7 +78,7 @@ export function NotificationsPage() {
         </div>
       </Section>
 
-      <Section style={{marginTop: 22}}>
+      <Section label="Time to Leave">
         <div className="set-group">
           <Row title="Time to Leave" sub={noHome ? 'Set Home first' : `Live routes from ${settings.calendar.home!.label}`}>
             <Switch on={leave.enabled && !noHome} disabled={noHome} label="Time to Leave" onChange={on => change({time_to_leave: {enabled: on}})} />
@@ -97,7 +97,7 @@ export function NotificationsPage() {
         </div>
       </Section>
 
-      <Section>
+      <Section label="Alerts">
         <div className="set-group">
           <Row title="Reconnect alerts" sub={noServer ? 'Set a server first' : 'Once per source'}>
             <Switch on={ntfy.reconnect_alerts && !noServer} disabled={noServer} label="Reconnect alerts" onChange={on => change({notifications: {reconnect_alerts: on}})} />

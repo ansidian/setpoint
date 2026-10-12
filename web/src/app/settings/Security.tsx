@@ -86,13 +86,19 @@ export function SecurityPage() {
               <button className="btn quiet sm" type="button" disabled={locked} onClick={() => void change.attempt(() => deletePasskey(passkey.id), () => `Removed ${passkey.label}`)}>Remove</button>
             </Row>
           ))}
-          {security && !security.passkeys.length && editing !== 'passkey' && <Row title="None yet" sub="Sign in with Touch ID or your phone instead of the password" />}
+          {security && !security.passkeys.length && editing !== 'passkey' && (
+            <div className="set-row one">
+              <span className="set-empty-icon"><Icon name="passkey" size={20} /></span>
+              <span className="s set-empty">None yet · <button type="button" disabled={locked} onClick={() => setEditing('passkey')}>Add passkey</button></span>
+            </div>
+          )}
         </div>
       </Section>
 
       <Section label="Recovery codes">
         <div className="set-group">
-          <Row title={security ? `${security.recovery.remaining} left` : '—'} sub={security?.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
+          <Row title="Recovery codes" sub={security?.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
+            <span className="val num">{security ? `${security.recovery.remaining} left` : '—'}</span>
             <button className="btn out sm" type="button" disabled={locked} onClick={() => void change.attempt(regenerateRecoveryCodes).then(made => made && setCodes(made))}>Make new codes</button>
           </Row>
           {codes && (

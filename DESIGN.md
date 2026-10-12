@@ -764,7 +764,8 @@ section's label stays under the title (#250).
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
   `setpoint-mail`: Attention mail · Off for now), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
-  buffer; on for the events given it, #86) and **Reconnect alerts** (once per source).
+  buffer; on for the events given it, #86) and **Alerts** (Reconnect alerts, once per source), every
+  group labelled (#253).
 - **Calendar, Todoist, AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
   Settings](BRIEF.md#settings)).
 - Sign out isn't drawn; it follows darma (the foot of the nav, and ⌘K).
@@ -1655,6 +1656,12 @@ it changes what's on screen.
     meter is `cool` (was `ink2`), turning `caution` from 90% of the cap rather than only at it; its
     fill eases to a new width over 260 ms. At the cap it's full in `caution`, as before (Andy,
     2026-10-11, polish audit settings-10).
+253. **Every Settings group has its label, and an empty one says so as Mail does:** Notifications'
+    last two groups take the labels "Time to Leave" and "Alerts" (Reconnect alerts), spaced as every
+    other group, as #69 gave Calendar's last group a label. Security's empty Passkeys group is the
+    one-line empty state, "None yet · Add passkey" after a 20 px `passkey` in `ink3` (#165), not a
+    row titled "None yet" that read as a passkey's name; the recovery row is titled "Recovery codes"
+    with "8 left" as its value (Andy, 2026-10-11, polish audit settings-11).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

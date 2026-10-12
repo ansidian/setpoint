@@ -36,7 +36,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.locator('.arow').first().waitFor();
     await page.keyboard.press('Meta+,');
     await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
-    await page.getByRole('button', {name: 'Add passkey'}).click();
+    await page.getByRole('button', {name: 'Add passkey'}).first().click();
     await page.locator('.settings input[aria-label="Passkey name"]').fill('Virtual key');
     await page.keyboard.press('Enter');
     await page.locator('.settings .set-row', {hasText: 'Virtual key'}).locator('.s', {hasText: 'Added'}).waitFor();

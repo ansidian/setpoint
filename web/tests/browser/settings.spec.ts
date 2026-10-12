@@ -102,6 +102,9 @@ test('board 18b: Settings › Notifications', async () => {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'notifications');
     await page.locator('.settings .set-label', {hasText: 'Connected · last sent 8:02 AM'}).waitFor();
+    // Every group has its label (the polish audit's settings-11), spaced as every other group is.
+    assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['ntfy', 'Reminder defaults', 'Time to Leave', 'Alerts']);
+    assert.deepEqual(await page.locator('.settings .set-sec').evaluateAll(sections => sections.slice(1).map(section => getComputedStyle(section).marginTop)), ['14px', '14px', '14px']);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '18b-settings-notifications', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -469,7 +472,7 @@ test('S11 (SV-25, D54): Esc in an inline form (Add rule, Connect iCloud, Change 
     await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
     await page.getByRole('button', {name: 'Change', exact: true}).click();
     await escCancels('again', 'input[name="again"]');
-    await page.getByRole('button', {name: 'Add passkey'}).click();
+    await page.getByRole('button', {name: 'Add passkey'}).first().click();
     await escCancels('label', 'input[name="label"]');
 
     // With no form open, Esc closes Settings.
@@ -890,7 +893,18 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     assert.equal(await page.locator('.settings .set-label', {hasText: 'Confirm it'}).count(), 0, 'no password asked for: it was given at the claim');
     // Sign out is the nav's foot only, and Add passkey has its + as Add rule does.
     assert.equal(await page.locator('.settings').getByRole('button', {name: 'Sign out'}).count(), 1);
-    assert.equal(await page.getByRole('button', {name: 'Add passkey'}).locator('svg').count(), 1);
+    assert.equal(await page.locator('.settings .set-label').getByRole('button', {name: 'Add passkey'}).locator('svg').count(), 1);
+    // No passkeys is an empty line, as Mail's "No rules yet · Add rule" is, not a passkey named "None yet";
+    // the recovery row is titled, its count its value (the polish audit's settings-11).
+    const none = page.locator('.settings .set-row', {hasText: 'None yet'});
+    assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
+    assert.deepEqual(await leadGlyph(none), [ICONS.passkey, '20', await computed(page, 'color', 'var(--ink3)'), 12]);
+    const recovery = page.locator('.settings .set-row', {hasText: '8 left'});
+    assert.deepEqual([await recovery.locator('.t').textContent(), await recovery.locator('.val').textContent()], ['Recovery codes', '8 left']);
+    await none.getByRole('button', {name: 'Add passkey'}).click();
+    await page.locator('.settings input[name="label"]').waitFor();
+    await page.keyboard.press('Escape');
+    await none.waitFor();
     await page.getByRole('button', {name: 'Make new codes'}).click();
     const codes = page.locator('.settings pre.codes');
     await codes.waitFor();
