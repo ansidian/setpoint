@@ -383,7 +383,7 @@
 
 /* SV-23: calendar search in the right pane (DESIGN.md › Decided while building #24), on search's own
    values (search.css): the results line as board 06's .bar.muted, rows as the agenda's plus why. */
-.cal-search .bar.muted { flex: none; display: flex; align-items: center; min-height: 32px; padding: 0 16px 0 20px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); }
+.cal-search .bar.muted { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .cal-search .bar.failing { color: var(--caution); }
 .cs-hint { padding: 18px 20px; color: var(--ink3); }
 .cs-result .when .year { display: block; color: var(--ink3); font-size: 11.5px; }

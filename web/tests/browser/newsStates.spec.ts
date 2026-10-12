@@ -23,6 +23,9 @@ const leadGlyph = (line: Locator) => line.evaluate(element => {
   return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
 });
 
+/** A state line's leading glyph: its bundled path, size and colour (the polish audit's states-04). */
+const toneGlyph = (line: Locator) => line.locator('.icon').first().evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]);
+
 const row = (page: Page, headline: string) => page.locator('.nw-list [data-story]', {hasText: headline}).first();
 
 /** A colour as the page computes it, to compare with a computed style. */
@@ -77,12 +80,16 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.deepEqual(await unsorted.evaluate(line => [line.getBoundingClientRect().height, getComputedStyle(line).fontSize]), [32, '12.5px']);
     assert.equal(await unsorted.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--caution)'));
     assert.equal(await unsorted.locator('.btn').getAttribute('class'), 'btn ghost sm');
+    // News's AI down is a source struggling: the `warning` triangle in `caution` (states-04).
+    assert.deepEqual(await toneGlyph(unsorted), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
 
     // AI's muted line under its header, its stories still there.
     const aiLine = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await aiLine.textContent(), 'AI, as of 7:02 AM');
     assert.equal(await aiLine.getAttribute('class'), 'nw-line stale');
     assert.equal(await aiLine.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--ink3)'));
+    // Stale is `history` in `ink3`, as on every page (states-04).
+    assert.deepEqual(await toneGlyph(aiLine), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
     await row(page, 'Anthropic releases Claude Haiku 5.5').waitFor();
     assert.equal(await page.locator('.nw-line').count(), 1, 'only the stale section has a line');
 

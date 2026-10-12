@@ -12,6 +12,7 @@ import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/it
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {authorizeGmail, checkSource, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
+import type {SourceState} from '../../logic/health.ts';
 import {mergeSources, moved, precisionText, sparkPath, sparkTitle} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -20,7 +21,7 @@ import {useNow} from '../clock.ts';
 import {failureLine, toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import type {DragProps} from './order.ts';
-import {escapeCancels, Line, Menu, Page, Section, useAttempt} from './parts.tsx';
+import {escapeCancels, HealthGlyph, Line, Menu, Page, Section, useAttempt} from './parts.tsx';
 
 const ACCOUNT_ICONS: IconName[] = ['storefront', 'person', 'work', 'badge', 'cloud', 'mail', 'inbox', 'computer', 'group', 'lock'];
 const SOURCE_ICONS: Record<string, IconName> = {google_calendar: 'calendar_month', todoist: 'task_alt', weather: 'partly_cloudy_day'};
@@ -131,7 +132,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
   const rename = useAttempt();
   const check = useCheckNow(source);
   return (
-    <div className={['set-row', state.reconnect && 'warn', dragging && 'dragging'].filter(Boolean).join(' ')} data-account={account.id}
+    <div className={['set-row', warnRow(state) && 'warn', dragging && 'dragging'].filter(Boolean).join(' ')} data-account={account.id}
       draggable={!renaming} {...drag}>
       <button className="handle" type="button" aria-label={`Move ${account.label}`} onKeyDown={event => {
         if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
@@ -169,8 +170,8 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
         <div className="lines grow"><span className="t">{account.label}</span><span className="s selectable ell">{account.address}</span></div>
       )}
       <span className="prov">{source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'}</span>
-      <span className={state.tone === 'caution' || check.failed ? 'state caution' : 'state'} title={check.text ?? account.health.reason ?? undefined}>
-        {state.reconnect && <Icon name="sync_problem" size={16} />}
+      <span className={stateClass(state, check.failed)} title={check.text ?? account.health.reason ?? undefined}>
+        <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
       </span>
@@ -225,6 +226,7 @@ function useCheckNow(source: SourceOut | undefined) {
   const failed = check !== null && 'failed' in check ? check.failed : null;
   return {
     text: checking ? 'Checking…' : failed,
+    checking,
     failed: failed !== null,
     run: () => {
       if (!source) return;
@@ -234,16 +236,21 @@ function useCheckNow(source: SourceOut | undefined) {
   };
 }
 
+/** A row in trouble, failing or needing sign-in, takes `caution` at 7%, as Settings › News's failing rows do (states-04). */
+const warnRow = (state: SourceState) => state.kind === 'failing' || state.kind === 'needs_reconnect';
+/** Its state's words: `caution` in trouble, `ink2` once checks stopped, under an `ink3` glyph (settings-01). */
+const stateClass = (state: SourceState, checkFailed: boolean) => (state.tone === 'caution' || checkFailed ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state');
+
 function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; sub: string; now: number}) {
   const state = sourceState(source.health, now, timeZone());
   const check = useCheckNow(source);
   return (
-    <div className={state.reconnect ? 'set-row warn' : 'set-row'} data-source={source.provider}>
+    <div className={warnRow(state) ? 'set-row warn' : 'set-row'} data-source={source.provider}>
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>
       <div className="lines grow"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
       <span className="prov">{syncLine(source, timeZone())}</span>
-      <span className={state.tone === 'caution' || check.failed ? 'state caution' : 'state'} title={check.text ?? source.health.reason ?? undefined}>
-        {state.reconnect && <Icon name="sync_problem" size={16} />}
+      <span className={stateClass(state, check.failed)} title={check.text ?? source.health.reason ?? undefined}>
+        <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
       </span>
       <Menu label={`${name} options`} button={<button className="ibtn sm" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>

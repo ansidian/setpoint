@@ -136,7 +136,7 @@ export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
   return calendarHealthLines(sources ?? [], now, timeZone).map(line => (
     <div key={line.text} className={`rp-health ${line.state}`}>
-      <Icon name={line.state === 'failing' ? 'error' : 'history'} size={16} />
+      <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
       <span className={line.state === 'failing' ? 'num' : 'num ell'} title={line.text}>{line.text}</span>
     </div>
   ));

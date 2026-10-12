@@ -214,7 +214,7 @@ export function SearchResults(props: ResultsProps) {
         </button>
       )}
       {indexing && <div className="bar muted">{indexing}</div>}
-      {search.error && <div className="bar muted failing">{search.error}</div>}
+      {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
       {out && out.total > 0 && (
         <div className={card ? 'bar muted after-card' : 'bar muted'}>
           {resultsLine(out).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span className="num">{part}</span></Fragment>)}

@@ -11,7 +11,7 @@ import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {everyLine, newsSourceState, SECTION_LABELS, sourcesHeader, sourceTile} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
-import {Page, Section} from './parts.tsx';
+import {HealthGlyph, Page, Section} from './parts.tsx';
 
 export function NewsSettingsPage() {
   const {data} = useResource<NewsSourcesOut>(NEWS_SOURCES_PATH);
@@ -35,8 +35,8 @@ function SourceRow({source}: {source: NewsSourceOut}) {
       <span className="aico"><Icon name={sourceTile(source)} size={16} /></span>
       <div className="lines grow"><span className="t ell">{source.name}</span><span className="s ell">{source.reads}</span></div>
       <span className="prov">{everyLine(source.interval_seconds)}</span>
-      <span className={state.tone === 'caution' ? 'state caution' : 'state'} title={state.title ?? undefined}>
-        {state.warn && <Icon name="warning" size={16} />}
+      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} title={state.title ?? undefined}>
+        <HealthGlyph kind={state.kind} />
         <span className="num ell">{state.text}</span>
       </span>
     </div>

@@ -307,7 +307,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
         <section className="nw-list" aria-label={searching ? 'Stories found' : view === 'missed' ? 'Missed stories' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
           {!searching && unsorted && (
             <div className="nw-state failing">
-              <Icon name="pending" size={16} />
+              <Icon name="warning" size={16} />
               <span className="grow num ell" title={unsorted.text}>{unsorted.settings ? <SettingsLink text={unsorted.text} /> : unsorted.text}</span>
               <button className="btn ghost sm" type="button" aria-expanded={showHeadlines} onClick={() => setHeadlines(!headlines)}>{showHeadlines ? 'Hide headlines' : 'Show headlines'}</button>
             </div>
@@ -335,7 +335,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
           )}
           {searching ? (
             <div className="list search-list" ref={list}>
-              {search.error && <div className="bar muted failing">{search.error}</div>}
+              {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
               {search.out && search.out.total > 0 && (
                 <div className="bar muted">
                   {resultsLine({total: search.out.total, order: 'newest'}).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span className="num">{part}</span></Fragment>)}
@@ -384,7 +384,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
                   {view === 'missed' && <div className={header}><Icon name="history" size={14} />{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
-                  {line && <div className={`nw-line ${line.state}`}><span className="num ell" title={line.text}>{line.text}</span></div>}
+                  {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" title={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
                   {empty && <div className="nw-empty"><Icon name="newspaper" size={16} />{empty}</div>}
                   {shelfRows.map((row, at) => (

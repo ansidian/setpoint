@@ -90,6 +90,17 @@
 .settings .state { width: 214px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .settings .state.caution { color: var(--caution); }
 .settings .state .ell { min-width: 0; }
+/* A source's state leads with its glyph, so one glance down the column finds the one in trouble
+   (settings-01, under states-04's tones): a 7 px `good` dot when checked, `history` in `ink3` when
+   checks stopped (its words a step up, `ink2`, still muted), `warning` in `caution` when failing,
+   `sync_problem` when it needs sign-in, and the shared spinner while Check now runs. */
+.settings .state .okdot { margin-right: 1px; }
+.settings .state.stale { color: var(--ink2); }
+.settings .hg.stale { color: var(--ink3); }
+.settings .hg.caution { color: var(--caution); }
+.settings .spin.hg { margin: 0; vertical-align: 0; color: var(--ink3); }
+/* Todoist's Connection row: the glyph before "Connected". */
+.settings .health-t { display: inline-flex; align-items: center; gap: 8px; }
 /* Attention precision leads with its figure, then the 30 days as a line on a 50–100% scale (#251). */
 .settings .precision { display: flex; align-items: center; gap: 20px; padding: 14px 20px 14px 16px; }
 .settings .precision .big { min-width: 64px; font-size: 24px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); }

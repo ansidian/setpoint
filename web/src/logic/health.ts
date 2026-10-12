@@ -65,23 +65,33 @@ export function triageNote(triage: Pick<TriageStatusOut, 'state' | 'as_of'> | un
   return triage.as_of ? `Triage is down, as of ${asOf(triage.as_of, now, timeZone)}` : 'Triage is down';
 }
 
+/**
+ * Which glyph a Settings row's state leads with (the polish audit's settings-01, states-04): a `good`
+ * dot when checked, `history` when checks stopped, `warning` when failing, `sync_problem` when it
+ * needs sign-in; nothing before a first check.
+ */
+export type HealthKind = HealthOut['state'] | null;
+
 /** The state Settings › Accounts writes on a source's row. */
 export interface SourceState {
   tone: 'muted' | 'caution';
   text: string;
   reconnect: boolean;
+  kind: HealthKind;
 }
 
 export function sourceState(health: HealthOut, now: number, timeZone: string): SourceState {
   switch (health.state) {
     case 'needs_reconnect':
-      return {tone: 'caution', text: 'Needs sign-in', reconnect: true};
+      return {tone: 'caution', text: 'Needs sign-in', reconnect: true, kind: 'needs_reconnect'};
     case 'stale':
-      return {tone: 'muted', text: health.as_of ? `Checks stopped, as of ${asOf(health.as_of, now, timeZone)}` : 'Checks stopped', reconnect: false};
+      return {tone: 'muted', text: health.as_of ? `Checks stopped, as of ${asOf(health.as_of, now, timeZone)}` : 'Checks stopped', reconnect: false, kind: 'stale'};
     case 'failing':
-      return {tone: 'caution', text: health.reason ?? 'Failing', reconnect: false};
+      return {tone: 'caution', text: health.reason ?? 'Failing', reconnect: false, kind: 'failing'};
     case 'healthy':
-      return {tone: 'muted', text: health.last_check_at ? `Checked ${asOf(health.last_check_at, now, timeZone)}` : 'Not checked yet', reconnect: false};
+      return health.last_check_at
+        ? {tone: 'muted', text: `Checked ${asOf(health.last_check_at, now, timeZone)}`, reconnect: false, kind: 'healthy'}
+        : {tone: 'muted', text: 'Not checked yet', reconnect: false, kind: null};
   }
 }
 

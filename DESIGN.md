@@ -183,6 +183,14 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
   header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (sidebar, Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, a Settings page its nav's glyph wherever it's named.
+- **Tones** (#186): `caution` and `alert` are close in hue, so a state's shape says how serious it is
+  before its words do. **Caution**, something Setpoint depends on struggling (a source failing or
+  retrying, triage down, News's AI down, a feed failing, ntfy failing, a search that couldn't
+  answer): `warning`, the outlined triangle, in `caution`. **Alert**, something of the user's that
+  failed (a change, the failure toast, Alfred's failure, a Send test) or offline: `error`, the
+  circle, in `alert`; offline keeps `cloud_off`. **Stale**, checks stopped: `history` in `ink3`.
+  **Healthy** shows only in Settings: a 7 px `good` dot (#187). Account trouble keeps `sync_problem`
+  everywhere, the Inbox's needs-reconnect bar included. 16 px in lines and in rows.
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
   stroke (12 px, `ink2` on the grid), or its project's colour clamped to the theme's band, with the
   same colour at 14% inside, as a chip's tint; a ring that completes fills to 24% under the pointer
@@ -731,10 +739,11 @@ Board 28 replaces All's list.
 
 ### States
 
-- **AI down** (29a): a failing line at the top of the list (32 px, `caution` 12.5): "12 articles not
-  sorted yet, Anthropic unreachable since 8:52 AM, retrying". A ghost small **Show headlines**
+- **AI down** (29a): a failing line at the top of the list (32 px, `caution` 12.5, led by `warning`,
+  #186): "12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying". A ghost small **Show headlines**
   lists the raw headlines with their links.
-- **A stale section:** the muted line under its header, "AI, as of 7:02 AM". Its stories stay.
+- **A stale section:** the muted line under its header, "AI, as of 7:02 AM", led by `history`
+  (#186). Its stories stay.
 - **A failing feed** shows only in Settings › News, unless its whole section is affected (BRIEF ›
   When things break).
 - **First run** (29b):
@@ -792,8 +801,9 @@ section's label stays under the title (#250).
 - **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
   drag handle, icon, label, address, how it syncs ("Gmail · Push", "iCloud · IMAP every 2 min") and
-  its state: "Checked 9:11 AM" when healthy, "Checks stopped, as of 9:14 PM" muted when stale, "Needs
-  sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
+  its state, led by its glyph (#187): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
+  stopped, as of 9:14 PM" muted after `history` when stale, the reason in `caution` after `warning`
+  on a `caution` 7% row when failing, "Needs sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
   Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way; then **Attention
   precision**, 82%, the share of attention mail opened before Done, led by the figure (24 / 500), with
   the 30 days as a line on a 50–100% scale (#251).
@@ -815,13 +825,13 @@ section's label stays under the title (#250).
 
 | State | Treatment |
 | --- | --- |
-| **Healthy** | nothing |
-| **Stale** | a muted 32 px line, `ink3` 12.5: "Personal, as of 9:14 PM" |
-| **Failing** | the same line in `caution`, with the reason |
+| **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#187) |
+| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM" (#186) |
+| **Failing** | the same line in `caution`, led by `warning`, with the reason (#186) |
 | **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect"; the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164); everything under it dimmed, changes disabled |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
-| **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" |
+| **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
 | **First backfill** | search's status: "Indexing · 62% · showing what's indexed so far" |
 
@@ -2229,3 +2239,19 @@ it changes what's on screen.
     source is (#186). The Server field, saved, shows a 16 px `check` in `good` 9 px inside its right
     end, in over 120 ms and out over 180 ms after 1.5 s (Andy, 2026-10-11, polish audit states-11,
     settings-07).
+186. **Each tone has one glyph, so seriousness reads from shape** (Glyphs › Tones): `caution` is the
+    `warning` triangle (a source failing or retrying on the Inbox's and the calendar pane's lines,
+    triage down on the Unsorted group, News's AI down and a failing section, a search that couldn't
+    answer, ntfy failing as a `caution` dot), `alert` is the `error` circle (a change failed, the
+    failure toast, Alfred's failure, a Send test), and stale is `history` in `ink3`, the Inbox moving
+    off `schedule` and News's stale section line gaining it. Account trouble keeps `sync_problem`, the
+    Inbox's needs-reconnect bar too. Glyphs are 16 px in lines and rows (the finding's 15 in rows
+    isn't a role size, #164), the lines' gaps unchanged (Andy, 2026-10-11, polish audit states-04).
+187. **Every source's state in Settings leads with its glyph:** in Accounts (Mail and Sources), News
+    and Todoist's Connection row, a 7 px `good` dot before "Checked 9:11 AM", `history` in `ink3`
+    before "Checks stopped, as of 9:14 PM" (the words a step up, `ink2`, still muted), `warning` in
+    `caution` before a failing source's reason with its row at `caution` 7%, as News's failing rows
+    were, and `sync_problem` before "Needs sign-in"; while Check now runs, the shared spinner. The
+    gap stays 8 px, and a source not checked yet has no glyph (amending Health and states' "Healthy:
+    nothing" for Settings, and board 17's bare healthy text) (Andy, 2026-10-11, polish audit
+    settings-01, states-04).

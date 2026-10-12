@@ -3,6 +3,7 @@
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
 import {useEffect, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
+import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
 import {closeSettings} from './store.ts';
@@ -129,6 +130,27 @@ export const escapeCancels = (cancel: () => void) => (event: KeyboardEvent) => {
   event.stopPropagation();
   cancel();
 };
+
+/**
+ * What a source's state leads with (the polish audit's settings-01, under states-04's tones): a 7 px
+ * `good` dot when checked, `history` in `ink3` when checks stopped, `warning` in `caution` when
+ * failing, `sync_problem` when it needs sign-in; the shared spinner while Check now runs.
+ */
+export function HealthGlyph({kind, checking = false}: {kind: HealthKind; checking?: boolean}) {
+  if (checking) return <span className="spin hg"><Icon name="progress_activity" size={16} /></span>;
+  switch (kind) {
+    case 'healthy':
+      return <span className="okdot hg" />;
+    case 'stale':
+      return <Icon name="history" size={16} className="hg stale" />;
+    case 'failing':
+      return <Icon name="warning" size={16} className="hg caution" />;
+    case 'needs_reconnect':
+      return <Icon name="sync_problem" size={16} className="hg caution" />;
+    case null:
+      return null;
+  }
+}
 
 /**
  * A line under a section saying how a change went: its refusal, or what happened. A failure leads

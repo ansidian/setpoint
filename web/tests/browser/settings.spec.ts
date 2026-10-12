@@ -76,6 +76,53 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
   }
 });
 
+test('each source\'s state leads with its glyph (the polish audit\'s settings-01, states-04): a good dot when checked, history when stopped, the warning triangle when failing, sync_problem for sign-in', async () => {
+  const setpoint = await startSetpoint({fixtures: ['needs-reconnect', 'stale-personal', 'failing-work', 'checked', 'stale-todoist'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'accounts');
+    const state = (row: Locator) => row.locator('.state');
+    const lead = (row: Locator) => state(row).evaluate(element => {
+      const first = element.firstElementChild!;
+      return first.classList.contains('okdot')
+        ? ['dot', getComputedStyle(first).width, getComputedStyle(first).backgroundColor]
+        : [first.querySelector('path')!.getAttribute('d'), first.getAttribute('width'), getComputedStyle(first).color];
+    });
+    const [good, ink2, ink3, caution] = [await computed(page, 'background', 'var(--good)'), await computed(page, 'color', 'var(--ink2)'), await computed(page, 'color', 'var(--ink3)'), await computed(page, 'color', 'var(--caution)')];
+    const account = (label: string) => page.locator('.settings [data-account]', {hasText: label});
+    await state(account('Personal')).getByText('Checks stopped, as of 9:14 PM').waitFor();
+    await state(account('Work')).getByText('Gmail answered 503.').waitFor();
+    assert.deepEqual(await lead(account('Jobs')), ['dot', '7px', good], 'checked: a 7 px good dot');
+    assert.deepEqual(await lead(account('Personal')), [ICONS.history, '16', ink3], 'stopped: history in ink3');
+    assert.equal(await state(account('Personal')).evaluate(element => getComputedStyle(element).color), ink2, 'its words a step up, ink2');
+    assert.deepEqual(await lead(account('Work')), [ICONS.warning, '16', caution], 'failing: the warning triangle in caution');
+    assert.deepEqual(await lead(account('Business')), [ICONS.sync_problem, '16', caution], 'sign-in: sync_problem');
+    // A failing row takes caution at 7%, as a row needing sign-in does and Settings › News's failing rows do.
+    assert.deepEqual(await page.locator('.settings .set-row.warn[data-account]').evaluateAll(rows => rows.map(row => row.textContent!.match(/^(Business|Work)/)?.[0])), ['Business', 'Work']);
+    const todoist = page.locator('.settings [data-source="todoist"]');
+    assert.deepEqual(await lead(todoist), [ICONS.history, '16', ink3]);
+    assert.deepEqual(await lead(page.locator('.settings [data-source="weather"]')), ['dot', '7px', good]);
+    // The gap to the words stays 8 px.
+    assert.equal(await state(account('Work')).evaluate(element => getComputedStyle(element).columnGap), '8px');
+
+    // Settings › Todoist's Connection row: the glyph before "Connected".
+    await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
+    const connected = page.locator('.settings .health-t', {hasText: 'Connected'});
+    await connected.waitFor();
+    assert.deepEqual(await connected.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color]), [ICONS.history, ink3]);
+
+    // Settings › News: the seed's FOX 11 failing, the rest checked.
+    await page.locator('.settings .set-nav .nav', {hasText: 'News'}).click();
+    const fox = page.locator('.settings .news-src.warn').first();
+    await fox.waitFor();
+    assert.deepEqual(await lead(fox), [ICONS.warning, '16', caution]);
+    assert.deepEqual(await lead(page.locator('.settings .news-src:not(.warn)').first()), ['dot', '7px', good]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('board 18a: Settings › Mail, consolidatedmessenger.example under the pointer', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {

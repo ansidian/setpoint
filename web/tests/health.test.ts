@@ -69,11 +69,11 @@ describe('health and states', () => {
   ] as const)('triage %j notes %s', (triage, note) => expect(triageNote(triage, now, zone)).toBe(note));
 
   test.each([
-    [health({state: 'healthy', last_check_at: '2026-10-07T16:11:00.000Z'}), {tone: 'muted', text: 'Checked 9:11 AM', reconnect: false}],
-    [health({state: 'healthy'}), {tone: 'muted', text: 'Not checked yet', reconnect: false}],
-    [health({state: 'stale', as_of: YESTERDAY_914}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', reconnect: false}],
-    [health({state: 'failing', reason: 'Gmail answered 503.'}), {tone: 'caution', text: 'Gmail answered 503.', reconnect: false}],
-    [health({state: 'needs_reconnect', reason: 'invalid_grant'}), {tone: 'caution', text: 'Needs sign-in', reconnect: true}],
+    [health({state: 'healthy', last_check_at: '2026-10-07T16:11:00.000Z'}), {tone: 'muted', text: 'Checked 9:11 AM', reconnect: false, kind: 'healthy'}],
+    [health({state: 'healthy'}), {tone: 'muted', text: 'Not checked yet', reconnect: false, kind: null}],
+    [health({state: 'stale', as_of: YESTERDAY_914}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', reconnect: false, kind: 'stale'}],
+    [health({state: 'failing', reason: 'Gmail answered 503.'}), {tone: 'caution', text: 'Gmail answered 503.', reconnect: false, kind: 'failing'}],
+    [health({state: 'needs_reconnect', reason: 'invalid_grant'}), {tone: 'caution', text: 'Needs sign-in', reconnect: true, kind: 'needs_reconnect'}],
   ])('Settings › Accounts writes %j as %j', (value, state) => expect(sourceState(value, now, zone)).toEqual(state));
 
   test.each([

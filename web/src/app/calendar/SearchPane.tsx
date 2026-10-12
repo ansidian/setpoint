@@ -29,7 +29,7 @@ export function SearchPane({search, calendars, selected, today, timeZone, onSele
     <section className="rpane cal-search" aria-label="Search results">
       <div className="rp-scroll">
         {!search.active && <div className="cs-hint">{CALENDAR_SEARCH_HINT}</div>}
-        {search.error && <div className="bar muted failing">{search.error}</div>}
+        {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
         {search.active && out && out.total > 0 && <div className="bar muted"><span className="num">{resultsLine(out).join(' · ')}</span></div>}
         {search.active && calendarResultGroups(results).map(group => (
           <Fragment key={group.heading}>

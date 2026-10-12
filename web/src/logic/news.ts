@@ -16,6 +16,7 @@ import {news} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {age, clockTime, daysBetween, localDate} from './format.ts';
 import {asOf, every} from './health.ts';
+import type {HealthKind} from './health.ts';
 
 export const SECTION_LABELS: Record<NewsSection, string> = {local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'};
 
@@ -407,6 +408,8 @@ export interface NewsSourceState {
   warn: boolean;
   // The provider's words in full.
   title: string | null;
+  // Its glyph (settings-01, states-04): a feed never signs in, so trouble of any kind is failing.
+  kind: HealthKind;
 }
 
 /**
@@ -416,19 +419,21 @@ export interface NewsSourceState {
  * yet (no home location, no key) says so.
  */
 export function newsSourceState(health: NewsSourceHealthOut | null, now: number, timeZone: string): NewsSourceState {
-  if (!health) return {tone: 'muted', text: 'Not checked yet', warn: false, title: null};
+  if (!health) return {tone: 'muted', text: 'Not checked yet', warn: false, title: null, kind: null};
   switch (health.state) {
     case 'healthy':
-      return {tone: 'muted', text: health.last_check_at ? `Checked ${asOf(health.last_check_at, now, timeZone)}` : 'Not checked yet', warn: false, title: null};
+      return health.last_check_at
+        ? {tone: 'muted', text: `Checked ${asOf(health.last_check_at, now, timeZone)}`, warn: false, title: null, kind: 'healthy'}
+        : {tone: 'muted', text: 'Not checked yet', warn: false, title: null, kind: null};
     case 'stale':
-      return {tone: 'muted', text: health.as_of ? `Checks stopped, as of ${asOf(health.as_of, now, timeZone)}` : 'Checks stopped', warn: false, title: null};
+      return {tone: 'muted', text: health.as_of ? `Checks stopped, as of ${asOf(health.as_of, now, timeZone)}` : 'Checks stopped', warn: false, title: null, kind: 'stale'};
     case 'failing':
     case 'needs_reconnect': {
       const reason = health.reason?.trim() || null;
       const code = reason ? /^(\d{3})\b/.exec(reason)?.[1] ?? null : null;
       const since = health.failing_since ? `since ${asOf(health.failing_since, now, timeZone)}` : null;
       const text = code ? ['Failing,', code, since].filter(Boolean).join(' ') : [`Failing${since ? ` ${since}` : ''}`, reason].filter(Boolean).join(', ');
-      return {tone: 'caution', text, warn: true, title: reason};
+      return {tone: 'caution', text, warn: true, title: reason, kind: 'failing'};
     }
   }
 }

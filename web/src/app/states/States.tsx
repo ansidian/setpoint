@@ -38,7 +38,7 @@ export function useHealthBars() {
       )}
       {lines.map(line => (
         <div key={line.text} className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
-          <Icon name={line.state === 'failing' ? 'error' : 'schedule'} size={16} />
+          <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
           <span className="num ell" title={line.text}>{line.text}</span>
         </div>
       ))}
@@ -50,7 +50,7 @@ export function useHealthBars() {
 export function TriageNote() {
   const {data} = useResource<TriageStatusOut>(TRIAGE_PATH);
   const note = triageNote(data, useNow(), timeZone());
-  return note && <span className="gh-note num"><Icon name="error" size={16} />{note}</span>;
+  return note && <span className="gh-note num"><Icon name="warning" size={16} />{note}</span>;
 }
 
 /** The offline pill: `cloud_off`, what's wrong and that it's retrying, and Retry now. */

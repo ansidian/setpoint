@@ -17,6 +17,19 @@ after(cleanUp);
 /** A glyph's bundled path and size, to compare with ICONS. */
 const glyph = async (icon: Locator) => [await icon.locator('path').getAttribute('d'), await icon.getAttribute('width')];
 
+/** A state line's leading glyph: its bundled path, size and colour (the polish audit's states-04). */
+const toneGlyph = (line: Locator) => line.locator('.icon').first().evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]);
+
+/** A colour as the page computes it. */
+const colourOf = (page: Page, colour: string) => page.evaluate(value => {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  document.body.append(probe);
+  const computed = getComputedStyle(probe).color;
+  probe.remove();
+  return computed;
+}, colour);
+
 /** Cuts Setpoint's live stream (the browser goes offline), or brings the network back. */
 const network = (page: Page, online: boolean) => page.context().setOffline(!online);
 
@@ -34,6 +47,9 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#164).
     assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
     assert.deepEqual(await glyph(page.locator('.acct', {hasText: 'Business'}).locator('.reconnect .icon')), [ICONS.sync_problem, '16']);
+    // Each tone has one glyph (states-04): stale is `history` in `ink3`, triage down the `warning` triangle in `caution`.
+    assert.deepEqual(await toneGlyph(page.locator('.hbar.muted')), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
+    assert.deepEqual(await toneGlyph(page.locator('.gh-note')), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
     // Retry now carries refresh, as every Try again does (#164).
@@ -166,6 +182,8 @@ test('a failing account says why in caution, and a healthy Inbox shows no line',
     await line.waitFor();
     assert.equal(await line.textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
     assert.equal(await line.locator('.num').getAttribute('title'), 'Work, as of 9:06 AM, Gmail answered 503.');
+    // A source failing is the `warning` triangle in `caution`, never the `error` circle of a failed change (states-04).
+    assert.deepEqual(await toneGlyph(line), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     assert.equal(await page.locator('.hbar.caution').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -204,6 +222,8 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     }, name);
     assert.equal(stale, await token('ink3'));
     assert.equal(failing, await token('caution'));
+    // Stale `history`, failing the `warning` triangle (states-04).
+    assert.deepEqual([await toneGlyph(lines.nth(0)), await toneGlyph(lines.nth(1))], [[ICONS.history, '16', stale], [ICONS.warning, '16', failing]]);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
     assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('title'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);

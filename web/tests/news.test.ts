@@ -374,14 +374,14 @@ describe('Settings › News (30a)', () => {
   const health = (fields: Partial<NonNullable<Parameters<typeof newsSourceState>[0]>>) =>
     ({state: 'healthy' as const, as_of: since('16:10'), reason: null, last_check_at: since('16:10'), failing_since: null, ...fields});
   test.each([
-    ['checked (the board)', health({}), {tone: 'muted', text: 'Checked 9:10 AM', warn: false, title: null}],
+    ['checked (the board)', health({}), {tone: 'muted', text: 'Checked 9:10 AM', warn: false, title: null, kind: 'healthy'}],
     ['FOX 11 failing, its code standing for the words (the board)', health({state: 'failing', reason: '404 Not Found', as_of: since('12:47'), failing_since: since('13:02')}),
-      {tone: 'caution', text: 'Failing, 404 since 6:02 AM', warn: true, title: '404 Not Found'}],
+      {tone: 'caution', text: 'Failing, 404 since 6:02 AM', warn: true, title: '404 Not Found', kind: 'failing'}],
     ['failing in words', health({state: 'failing', reason: 'The page had no articles.', failing_since: since('13:02')}),
-      {tone: 'caution', text: 'Failing since 6:02 AM, The page had no articles.', warn: true, title: 'The page had no articles.'}],
-    ['failing, not known since when', health({state: 'failing', reason: '503 Service Unavailable'}), {tone: 'caution', text: 'Failing, 503', warn: true, title: '503 Service Unavailable'}],
-    ['checks stopped', health({state: 'stale', as_of: '2026-10-07T04:14:00.000Z'}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', warn: false, title: null}],
-    ['not read yet (no key, no home)', null, {tone: 'muted', text: 'Not checked yet', warn: false, title: null}],
+      {tone: 'caution', text: 'Failing since 6:02 AM, The page had no articles.', warn: true, title: 'The page had no articles.', kind: 'failing'}],
+    ['failing, not known since when', health({state: 'failing', reason: '503 Service Unavailable'}), {tone: 'caution', text: 'Failing, 503', warn: true, title: '503 Service Unavailable', kind: 'failing'}],
+    ['checks stopped', health({state: 'stale', as_of: '2026-10-07T04:14:00.000Z'}), {tone: 'muted', text: 'Checks stopped, as of 9:14 PM', warn: false, title: null, kind: 'stale'}],
+    ['not read yet (no key, no home)', null, {tone: 'muted', text: 'Not checked yet', warn: false, title: null, kind: null}],
   ] as const)('a source\'s state: %s', (_name, value, expected) => {
     expect(newsSourceState(value, now, zone)).toEqual(expected);
   });
