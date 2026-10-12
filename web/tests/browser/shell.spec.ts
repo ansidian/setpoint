@@ -323,9 +323,12 @@ test('a Today task\'s ring shows the done check for 360 ms before its line folds
         if (!line) return note('gone');
         if (line.classList.contains('leaving')) return note('folding');
         if (line.classList.contains('completing')) {
-          const title = getComputedStyle(line.querySelector('.title')!);
+          // Its title goes ink3 over 180 ms (motion-04), so it's read where the transition ends.
+          const title = line.querySelector<HTMLElement>('.title')!;
           const check = line.querySelector('.task-glyph.done');
-          return note(`done: ${check ? getComputedStyle(check).color : 'no check'}, ${title.textDecorationLine} in ${title.color}`);
+          const ending = title.getAnimations().find(animation => (animation as CSSTransition).transitionProperty === 'color');
+          const to = ending ? String(((ending.effect as KeyframeEffect).getKeyframes().at(-1) as {color?: string}).color) : getComputedStyle(title).color;
+          return note(`done: ${check ? getComputedStyle(check).color : 'no check'}, ${getComputedStyle(title).textDecorationLine} in ${to}`);
         }
         // Back from Undo: its height opens (app/fold.ts), not a hover's transition.
         return note(line.getAnimations().some(animation => animation.constructor === Animation) ? 'unfolding' : 'open');

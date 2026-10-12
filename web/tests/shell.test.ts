@@ -53,6 +53,19 @@ describe('the Today block', () => {
     expect(today.event ? [today.event.title, today.event.in] : null).toEqual(expected);
   });
 
+  // shell-06: "in 12m" warms as it nears: `caution` from 15 minutes before, `alert` once under way.
+  test.each([
+    ['five hours away', '2026-10-07T21:30:00.000Z', 'in 5h', null],
+    ['16 minutes away', '2026-10-07T16:25:00.000Z', 'in 16m', null],
+    ['15 minutes away', '2026-10-07T16:24:00.000Z', 'in 15m', 'soon'],
+    ['a minute away', '2026-10-07T16:10:00.000Z', 'in 1m', 'soon'],
+    ['under way', '2026-10-07T16:00:00.000Z', 'now', 'now'],
+  ])('the next event\'s urgency, %s', (_name, starts, words, urgency) => {
+    const at = Date.parse('2026-10-07T16:09:00.000Z');
+    const today = todayBlock([event('Standup', starts, '2026-10-07T23:00:00.000Z')], at, zone);
+    expect([today.event?.in, today.event?.urgency]).toEqual([words, urgency]);
+  });
+
   test.each([
     ['none due: no task lines', [], []],
     ['done tasks don\'t count', [task('Pay rent', '2026-10-07', {done: true}), task('Renew', '2026-10-08')], [['Renew', 'Tomorrow']]],

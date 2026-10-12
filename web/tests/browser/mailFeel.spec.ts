@@ -181,3 +181,54 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     await setpoint.stop();
   }
 });
+
+test('shell-06, motion-04: the Today event leads with its calendar\'s bar and warms as it nears; completing a task lands its check as every task\'s does and fades its title', async () => {
+  // The server's clock holds at the seed's 9:12 AM; the page's is the check's, moved on to Dentist.
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/inbox`);
+    const lines = page.locator('.sb .today-row');
+    await until('the Today block', () => lines.count(), count => count === 4);
+    const dentist = lines.filter({hasText: 'Dentist'});
+    const rent = lines.filter({hasText: 'Pay rent'});
+    const left = (line: typeof dentist, selector: string) => line.locator(selector).evaluate(element => Math.round(element.getBoundingClientRect().left));
+
+    // The bar: 3 × 14, radius 2, in Personal's `cool`, in the rings' 19 px column; the time lines up
+    // with the task titles.
+    const bar = dentist.locator('.evbar > i');
+    assert.deepEqual(await bar.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.width, style.height, style.borderRadius];
+    }), ['3px', '14px', '2px']);
+    assert.equal(await bar.evaluate(element => getComputedStyle(element).backgroundColor), await colourOf(page, '--cool'));
+    assert.equal(await left(dentist, '.evbar'), await left(rent, '.check'));
+    assert.equal(await left(dentist, '.t'), await left(rent, '.title'));
+
+    // Completing Pay rent: its done check lands as every task's does (the shared ring-done, 120 ms), and
+    // its title goes ink3 over 180 ms.
+    await rent.getByRole('button', {name: 'Complete Pay rent'}).click();
+    const check = rent.locator('.check .task-glyph.done');
+    await check.waitFor();
+    assert.deepEqual(await check.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration, getComputedStyle(element).color]),
+      ['ring-done', '0.12s', await colourOf(page, '--good')]);
+    assert.equal(await rent.locator('.title').evaluate(element => getComputedStyle(element).transitionDuration), '0.18s');
+    await page.clock.runFor(1000);
+    await until('Pay rent folded away', () => rent.count(), count => count === 0);
+
+    // At 9:12 AM "in 5h" is ink3; at 2:20 PM "in 10m" is caution 500; at 2:31 PM "now" is alert 500.
+    const time = dentist.locator('.in');
+    const look = async () => [await time.textContent(), ...await time.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight])];
+    assert.deepEqual(await look(), ['in 5h', await colourOf(page, '--ink3'), '400']);
+    await page.clock.fastForward((5 * 60 + 8) * 60_000);
+    await until('in 10m', look, seen => seen[0] === 'in 10m');
+    assert.deepEqual(await look(), ['in 10m', await colourOf(page, '--caution'), '500']);
+    await page.clock.fastForward(11 * 60_000);
+    await until('now', look, seen => seen[0] === 'now');
+    assert.deepEqual(await look(), ['now', await colourOf(page, '--alert'), '500']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

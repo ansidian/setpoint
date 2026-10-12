@@ -99,14 +99,23 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .today-row .check:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
   .today-row .check:hover .ring > .icon { opacity: 1; }
 }
-/* A completed task's done check lands (TaskGlyph, `good`) with its title struck through, for
-   DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then the line folds
-   away (app/fold.ts). */
+/* A completed task's done check lands (TaskGlyph, `good`; `ring-done`, the one completion moment the
+   calendar's pane and card share) with its title struck through, going ink3 over 180 ms (polish audit
+   motion-04), for DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then
+   the line folds away (app/fold.ts). */
 .today-row.completing, .today-row.leaving { pointer-events: none; }
+.today-row .title { transition: color var(--dur-medium) var(--ease); }
 .today-row.completing .title { color: var(--ink3); text-decoration: line-through; }
 .today-row.completing .check .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
 @keyframes ring-done { from { transform: scale(.6); opacity: .4; } }
 .today-row.leaving { overflow: hidden; }
+/* The next event leads with its calendar's bar, 3 × 14 in a 19 px box where tasks have their rings, so
+   its time lines up with their titles; its "in 12m" warms to `caution` from 15 minutes before and to
+   `alert`, the now-line's, once under way (shell-06). */
+.today-row .evbar { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; flex: none; }
+.today-row .evbar > i { width: 3px; height: 14px; border-radius: 2px; background: var(--c); }
+.today-row .in.soon { color: var(--caution); font-weight: 500; }
+.today-row .in.now { color: var(--alert); font-weight: 500; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
 .today-more .ring-space { width: 17px; flex: none; }
 /* The floating detail's card beside the sidebar (detail.css draws it). */

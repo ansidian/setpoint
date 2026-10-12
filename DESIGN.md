@@ -257,8 +257,9 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 
 ### The Today block (mail pages)
 
-28 px rows: the next event ("2:30 PM  Dentist", time in `ink`, 58 px wide, "in 5h" right in `ink3`),
-then each open task due today and tomorrow by name, today's first, behind its ring in its project's
+28 px rows: the next event ("2:30 PM  Dentist", time in `ink`, 58 px wide, "in 5h" right in `ink3`,
+`caution` from 15 minutes before and `alert` once under way), led by its calendar's 3 × 14 bar where
+tasks have their rings (#197), then each open task due today and tomorrow by name, today's first, behind its ring in its project's
 colour, with "Tomorrow" right in `ink3` on tomorrow's. More than three tasks show the first two and
 "3 more due tomorrow" (`ink3`), which shows the rest. Confirmed data only; nothing shows for an empty
 line.
@@ -266,8 +267,8 @@ line.
 A line opens the floating detail's card (without its grip) 8 px right of the sidebar, its title
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
 Calendar's editor on the item; a task's ring, or Complete on its card, completes it in place with
-"Completed Pay rent · Undo": its done check lands and its title is struck through for 360 ms, then
-the line folds away over 180 ms, and Undo folds it back
+"Completed Pay rent · Undo": its done check lands and its title is struck through, fading to `ink3`
+(#198), for 360 ms, then the line folds away over 180 ms, and Undo folds it back
 ([Decided while building](#decided-while-building) #106); an item that isn't a repeating event
 deletes; **Open in Calendar** shows it there with its card. Clone, Copy and Colour stay on Calendar.
 Esc, × or a click elsewhere closes it; another line moves it there (#78).
@@ -2123,3 +2124,13 @@ it changes what's on screen.
     turns to point right over 120 ms while it's collapsed, and its preview fades in over 120 ms. A
     group opened at the foot of the list comes into view (#70) once its rows are in. All's Noise
     opens and closes the same way (Andy, 2026-10-11, polish audit inbox-14).
+197. **The Today block's event leads with its calendar's bar and warms as it nears:** a 3 × 14 bar,
+    radius 2, in its calendar's colour (or its own, once recoloured) sits in the 19 px column where
+    tasks have their rings, so the event reads as an appointment and its time lines up with the task
+    titles; its "in 12m" turns `caution` at 500 from 15 minutes before and `alert` at 500, the
+    now-line's, once it's under way (Andy, 2026-10-11, polish audit shell-06).
+198. **Completing a Today task is the one completion moment:** its done check lands from .6 and .4
+    over 120 ms, the `ring-done` the calendar's pane and card share (#229), and its title, struck
+    through, fades from `ink` to `ink3` over 180 ms rather than at once; the line still folds away
+    after #106's 360 ms. Only the user's own completion plays it (Andy, 2026-10-11, polish audit
+    motion-04).

@@ -4,8 +4,11 @@
 // A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
-// closes it; it follows a click on another line. A completed task shows its done check for a moment,
-// then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds it back.
+// closes it; it follows a click on another line. The event leads with its calendar's bar, and its
+// "in 12m" warms to `caution` from 15 minutes before and `alert` once under way. A completed task
+// shows its done check for a moment (the one completion moment, `ring-done`, which the calendar's pane
+// and card share), then its line folds away as the mail list's rows do (app/fold.ts), and Undo folds
+// it back.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent} from 'react';
@@ -21,6 +24,7 @@ import {DONE_MOMENT_MS, shownTasks, todayBlock, todayRange} from '../logic/today
 import type {TodayTask} from '../logic/today.ts';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
+import {dotStyle} from './accounts.ts';
 import {useRingColour} from './calendar/Chip.tsx';
 import {DetailContent} from './calendar/detail/DetailContent.tsx';
 import type {DetailActions} from './calendar/detail/DetailContent.tsx';
@@ -142,9 +146,11 @@ export function TodayBlock() {
       {today.event && (
         <a className={lineClass(today.event.item)} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)}
           aria-haspopup="dialog" aria-expanded={openKey === today.event.key}>
+          {/* Its calendar's bar (or its own colour's), as calendar chips and the agenda draw it, where tasks have rings (shell-06). */}
+          <span className="evbar" style={dotStyle(today.event.item.colour ?? calendars?.find(calendar => calendar.id === today.event!.item.calendar_id)?.colour ?? undefined)}><i /></span>
           <span className="t num">{today.event.time}</span>
           <span className="ell title">{today.event.title}</span>
-          <span className="in num">{today.event.in}</span>
+          <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span>
         </a>
       )}
       {folded.map(({key, item: {item, title, label, done}, fold}) => {

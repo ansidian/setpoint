@@ -12,7 +12,18 @@ export interface TodayEvent {
   title: string;
   time: string;
   in: string;
+  // "in 12m" warms as it nears (polish audit shell-06): `soon` from 15 minutes before, `now` once under way.
+  urgency: 'soon' | 'now' | null;
   occurrence_start: string | null;
+}
+
+/** How near the next event is to warm its "in 12m": within this many minutes it's soon. */
+export const SOON_MINUTES = 15;
+
+/** Soon from 15 minutes before an event's start (as "in 15m" reads), now once it's under way. */
+export function urgency(startsAt: string, now: number): TodayEvent['urgency'] {
+  const minutes = Math.round((Date.parse(startsAt) - now) / 60_000);
+  return minutes <= 0 ? 'now' : minutes <= SOON_MINUTES ? 'soon' : null;
 }
 
 export interface TodayTask {
@@ -62,7 +73,7 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
     .filter(item => item.kind === 'task' && !item.done && item.due_date === day)
     .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : 0) - (b.due_at ? Date.parse(b.due_at) : 0));
   return {
-    event: next ? {item: next, id: next.id, key: next.key, title: next.title, time: clockTime(next.starts_at!, timeZone), in: startsIn(next.starts_at!, now), occurrence_start: next.occurrence_start} : null,
+    event: next ? {item: next, id: next.id, key: next.key, title: next.title, time: clockTime(next.starts_at!, timeZone), in: startsIn(next.starts_at!, now), urgency: urgency(next.starts_at!, now), occurrence_start: next.occurrence_start} : null,
     tasks: [
       ...due(today).map(item => ({item, title: item.title, label: null})),
       ...due(tomorrow).map(item => ({item, title: item.title, label: 'Tomorrow'})),
