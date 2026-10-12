@@ -17,6 +17,8 @@ import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
 import {colourVar} from '../../accounts.ts';
 import {useNow} from '../../clock.ts';
+import {useRingColour} from '../Chip.tsx';
+import {useJustDone} from '../done.ts';
 import type {DetailTarget} from './motion.ts';
 
 /** The card's icon actions, carried out by the Calendar page, or the ones another page offers. */
@@ -56,13 +58,21 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const reminders = remindersLine(item.reminders);
   const place = placeLines(item.place, item.address);
   const repeat = repeatLine(item, timeZone);
+  // A task's card is drawn as the task is on the grid (polish audit calflows-10, shell-15): its ring in
+  // its project's colour, struck through once done, at .5 with the spinner while Todoist hasn't
+  // confirmed, and Complete landing its done check as everywhere else (done.ts).
+  const ring = useRingColour();
+  const pending = item.command?.state === 'pending';
+  const justDone = useJustDone(item.kind === 'task' ? [item] : []);
   return (
     <>
       <div className="card-h">
-        <span className="fd-mark">
-          {item.kind === 'task' ? <TaskGlyph done={item.done} size={13} /> : <span className="dot" style={{...colour, width: 10, height: 10}} />}
+        <span className={`fd-mark${pending ? ' pending' : ''}${justDone.has(item.key) ? ' just-done' : ''}`}>
+          {item.kind === 'event' ? <span className="dot" style={{...colour, width: 10, height: 10}} />
+            : item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
         </span>
-        <span className="grow ell fd-title" title={item.title}>{item.title}</span>
+        <span className={`grow ell fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} title={item.title}>{item.title}</span>
+        {pending && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
         <button className="ibtn sm" aria-label="Close" title="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="card-b">
@@ -75,7 +85,9 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
         {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}
-        {item.kind === 'task' && item.project && <Fact icon="work"><span>{item.project}</span></Fact>}
+        {item.kind === 'task' && item.project && (
+          <div className="fact project"><span className="fact-dot"><span className="dot" style={ring(item.project)} /></span><span>{item.project}</span></div>
+        )}
         {item.due_string && item.recurring && <Fact icon="repeat"><span>{describeTaskRepeat(item.due_string)}</span></Fact>}
         {reminders && <Fact icon="notifications"><span>{reminders}</span></Fact>}
         <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
@@ -96,9 +108,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {actions?.open && <button className="ibtn sm" aria-label="Open in Calendar" title="Open in Calendar" onClick={() => actions.open!(item)}><Icon name="calendar_month" size={16} /></button>}
         {offers('clone') && <button className="ibtn sm" aria-label="Clone" aria-disabled={fixed || undefined} title="Clone" onClick={act(one => actions!.clone!(one))}><Icon name="control_point_duplicate" size={16} /></button>}
         {offers('copy') && <button className="ibtn sm" aria-label="Copy" aria-disabled={fixed || undefined} title="Copy · ⌘C" onClick={act(one => actions!.copy!(one))}><Icon name="content_copy" size={16} /></button>}
-        {offers('colour') && (
-          <button className="ibtn sm" aria-label="Colour" aria-expanded={picking} aria-disabled={fixed || item.kind === 'task' || undefined}
-            title={item.kind === 'task' ? 'Todoist tasks have no colour of their own' : 'Colour'} onClick={() => !fixed && item.kind === 'event' && setPicking(!picking)}>
+        {offers('colour') && item.kind === 'event' && (
+          <button className="ibtn sm" aria-label="Colour" aria-expanded={picking} aria-disabled={fixed || undefined} title="Colour" onClick={() => !fixed && setPicking(!picking)}>
             <span className="dot" style={{...colour, width: 12, height: 12}} />
           </button>
         )}

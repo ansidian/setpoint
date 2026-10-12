@@ -159,7 +159,14 @@
 .ag-task .ring { --ring-base: var(--ring, var(--ink2)); width: 15px; height: 15px; margin: 0 0 0 2px; }
 .ag-task .task-glyph { margin-left: 2px; }
 .ag-task .title { color: var(--ink); font-weight: 400; }
-.ag-task.done .title { color: var(--ink3); text-decoration: line-through; }
+/* Done, its title struck in `ink3`, the strike a line drawn under the text, so ticking it off draws
+   it left to right over 180 ms as its done check lands (the Today block's, #106; polish audit calpanes-08). */
+.ag-task.done .title { color: var(--ink3); }
+.ag-task.done .title > span { background: linear-gradient(currentColor, currentColor) 0 55% / 100% 1px no-repeat; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.ag-task.just-done .title > span { animation: strike-in var(--dur-medium) var(--ease); }
+.ag-task.just-done .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
+@keyframes strike-in { from { background-size: 0% 1px; } }
+.ag-task .spin { margin-right: 6px; }
 .ag-task .project { font-size: 12px; }
 /* The next event, lifted out of the list (polish audit calpanes-01): a tint of its colour at 9% (14%
    under the pointer, 16% selected), its time in `ink` and "in 5h" in its colour at 500; its content

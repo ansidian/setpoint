@@ -18,6 +18,16 @@
 
 .fd .card-h { display: flex; align-items: center; gap: 10px; padding: 0 10px 0 16px; }
 .fd-mark { width: 17px; display: grid; place-items: center; flex: none; }
+/* A task's card as the task on the grid (polish audit calflows-10, shell-15): its ring in its project's
+   colour, its title struck through in `ink3` once done, at .5 with the spinner after a second while
+   Todoist hasn't confirmed, and Complete landing its done check as the Today block's does (#106). */
+.fd-mark .ring { margin: 0; }
+.fd-mark.pending { opacity: .5; }
+.fd-mark.just-done .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
+.fd-title.done { color: var(--ink3); text-decoration: line-through; }
+.fd .card-h .spin { margin-left: 0; animation: spin-later 0s 1s both; }
+.fd .fact-dot { width: 17px; height: 17px; display: grid; place-items: center; flex: none; margin-top: 1px; }
+.fd .fact-dot .dot { width: 9px; height: 9px; background: oklch(from var(--ring, var(--ink3)) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 .fd-title { font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
 .fd .card-b { padding: 2px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 .fd-when { padding-left: 27px; }

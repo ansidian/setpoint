@@ -453,7 +453,8 @@ editor and calendar search results.
   at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
   Fri", #167), reminder, calendar (its glyph in the item's colour, #167); then **Edit E** and icon
-  actions (duplicate, copy, colour, delete). Delete stands apart after a `hair` divider and turns
+  actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
+  its project as a 9 px dot in it, has no Colour, and is struck through once done (#229). Delete stands apart after a `hair` divider and turns
   `alert` under the pointer, a task's Complete `good` (#132).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
@@ -2015,3 +2016,12 @@ it changes what's on screen.
     row loses its ring at the right end, which beside a ticked box read as a second, unchecked control:
     it's just "Todoist" with its checkbox (amending Sidebar on Calendar's "its ring glyph as its mark"
     and board 11) (Andy, 2026-10-11, polish audit calpanes-11, calpanes-13).
+229. **Ticking a task off is one moment wherever it's done:** as in the Today block (#106), its done
+    check lands from .6 and .4 over 120 ms (the shared `ring-done`), in the right pane and on its card
+    alike. In the pane its strike is drawn under the title, left to right over 180 ms, in `ink3`, and
+    while Todoist hasn't confirmed, the spinner sits before the project, which stays, rather than
+    taking its place. A task's card is the task on the grid: its ring in its project's colour (as #138
+    clamps it), its project fact a 9 px dot in that colour rather than `work`, no Colour (a task has
+    none), its title struck through in `ink3` once done, and its mark at .5 with the spinner after a
+    second while it waits. Reopening plays nothing (Andy, 2026-10-11, polish audit calpanes-08,
+    calflows-10, shell-15).

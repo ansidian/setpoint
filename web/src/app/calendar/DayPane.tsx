@@ -20,6 +20,7 @@ import {calendarHealthLines} from '../../logic/health.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useRingColour} from './Chip.tsx';
+import {useJustDone} from './done.ts';
 import {useCalendarFade} from './view.ts';
 
 interface DayPaneProps {
@@ -48,9 +49,11 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
   const ring = useRingColour();
   // A calendar just toggled fades its rows out or in, as its chips do (polish audit calpanes-11).
   const fade = useCalendarFade();
+  // A task ticked off here lands its done check and draws its strike, the one completion moment (done.ts).
   const title = dayTitle(date);
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
   const day = agenda(date, items, calendars, now, timeZone);
+  const justDone = useJustDone(day.tasks);
   const wx = forecast ? weatherOf(forecast) : null;
   const nowLine = (
     <div className="nowline" key="now">
@@ -81,7 +84,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
         {day.events.length > 0 && day.nowAt === day.events.length && nowLine}
         {day.tasks.length > 0 && <div className="ag-day">{tasksHeading(date, today)}</div>}
         {day.tasks.map(task => (
-          <a key={task.key} className={['ag-item ag-task', task.done && 'done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
+          <a key={task.key} className={['ag-item ag-task', task.done && 'done', justDone.has(task.key) && 'just-done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
             onClick={event => {
               event.preventDefault();
               onSelectItem(task);
@@ -94,8 +97,10 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
               }}>
               {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)}><Icon name="check" size={11} /></span>}
             </button>
-            <span className="grow title">{task.title}</span>
-            {task.command?.state === 'pending' ? <Spinner /> : task.project && <span className="ink3 project">{task.project}</span>}
+            <span className="grow title"><span>{task.title}</span></span>
+            {/* Waiting, the spinner comes before the project, which stays (polish audit calpanes-08). */}
+            {task.command?.state === 'pending' && <Spinner />}
+            {task.project && <span className="ink3 project">{task.project}</span>}
           </a>
         ))}
         {!day.events.length && !day.tasks.length && (hidden > 0

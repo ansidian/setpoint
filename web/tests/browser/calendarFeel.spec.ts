@@ -501,3 +501,88 @@ test('a calendar toggled off fades its chips and rows out over 120 ms before the
     await setpoint.stop();
   }
 });
+
+test('ticking a task off is one moment everywhere: its done check lands over 120 ms as the Today block\'s, the pane draws its strike over 180 ms and keeps its project beside the spinner, and its card is drawn in its project\'s colour', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    let release = () => {};
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    // Todoist's answer is held, so the change waits.
+    await page.route(/\/api\/items\/\d+\/complete$/, async route => {
+      await held;
+      await route.continue();
+    });
+
+    // The pane: Pay rent's ring. Waiting, it keeps "Home" beside the spinner.
+    const row = page.locator('.rpane .ag-task', {hasText: 'Pay rent'});
+    const classes = await watch(row, 'class');
+    await row.getByRole('button', {name: 'Complete Pay rent'}).click();
+    await row.getByRole('button', {name: 'Reopen Pay rent'}).waitFor();
+    assert.deepEqual([await row.locator('.spin').count(), await row.locator('.project').textContent()], [1, 'Home']);
+    assert.deepEqual(await row.evaluate(element => [...element.children].slice(-2).map(child => child.className)), ['spin', 'ink3 project'], 'the spinner before the project');
+    assert.ok((await classes()).some(value => value?.split(' ').includes('just-done')), 'it played the moment');
+    const probe = (className: string, inner: string) => page.evaluate(([outer, child]) => {
+      const host = document.createElement('a');
+      host.className = outer!;
+      host.innerHTML = child!;
+      document.querySelector('.rpane .rp-scroll')!.append(host);
+      const target = host.querySelector('[data-probe]')!;
+      const {animationName, animationDuration} = getComputedStyle(target);
+      host.remove();
+      return `${animationName} ${animationDuration}`;
+    }, [className, inner] as const);
+    assert.equal(await probe('ag-item ag-task done just-done', '<span class="title"><span data-probe>Pay rent</span></span>'), 'strike-in 0.18s', 'the strike draws over 180 ms');
+    assert.equal(await probe('ag-item ag-task done just-done', '<svg class="task-glyph done" data-probe></svg>'), 'ring-done 0.12s', 'the check lands as the Today block\'s');
+    // At rest the strike is a 1 px line across the title.
+    await until('the moment ends', () => row.getAttribute('class'), value => !value?.includes('just-done'));
+    assert.equal(await style(row.locator('.title > span'), 'background-size'), '100% 1px');
+    release();
+    await until('Todoist has it', () => row.locator('.spin').count(), count => count === 0);
+    // Reopened, it plays nothing.
+    const again = await watch(row, 'class');
+    await row.getByRole('button', {name: 'Reopen Pay rent'}).click();
+    await row.getByRole('button', {name: 'Complete Pay rent'}).waitFor();
+    assert.ok(!(await again()).some(value => value?.split(' ').includes('just-done')));
+    await until('reopened at Todoist', () => row.locator('.spin').count(), count => count === 0);
+
+    // A task's card: its ring in its project's colour, the project a dot in it, no Colour.
+    await page.locator('.cell[data-date="2026-10-08"] .tk', {hasText: 'Renew car registration'}).click();
+    const card = page.locator('.fd');
+    await card.waitFor();
+    const ring = card.locator('.fd-mark .ring');
+    assert.equal(await ring.count(), 1);
+    const gridRing = page.locator('.cell[data-date="2026-10-08"] .tk .ring');
+    assert.equal(await style(ring, 'border-top-color'), await style(gridRing, 'border-top-color'), 'as the grid draws it');
+    const dot = card.locator('.fact.project .fact-dot .dot');
+    assert.deepEqual([await dot.count(), await style(dot, 'width'), await card.getByRole('button', {name: 'Colour'}).count()], [1, '9px', 0]);
+    assert.equal(await style(dot, 'background-color'), await style(gridRing, 'border-top-color'));
+    // Complete: struck through in `ink3`, its mark at .5 while Todoist hasn't answered, the check landing.
+    let hold = () => {};
+    const waiting = new Promise<void>(resolve => {
+      hold = resolve;
+    });
+    await page.unroute(/\/api\/items\/\d+\/complete$/);
+    await page.route(/\/api\/items\/\d+\/complete$/, async route => {
+      await waiting;
+      await route.continue();
+    });
+    const mark = card.locator('.fd-mark');
+    const markClasses = await watch(mark, 'class');
+    await card.getByRole('button', {name: 'Complete'}).click();
+    await card.locator('.fd-title.done').waitFor();
+    assert.deepEqual([await style(card.locator('.fd-title'), 'text-decoration-line'), await style(card.locator('.fd-title'), 'color')], ['line-through', await colour(page, '--ink3')]);
+    assert.deepEqual([await style(mark, 'opacity'), await card.locator('.card-h .spin').count()], ['0.5', 1]);
+    assert.ok((await markClasses()).some(value => value?.split(' ').includes('just-done')), 'its check lands');
+    hold();
+    await until('Todoist has it', () => style(mark, 'opacity'), value => value === '1');
+    await page.unroute(/\/api\/items\/\d+\/complete$/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
