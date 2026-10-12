@@ -7,6 +7,7 @@ import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {refresh} from '../../api/client.ts';
 import {useOfflineSince} from '../../api/live.ts';
+import {skeleton} from '../../tokens.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
 import {failureLine} from '../toast.ts';
 import './loading.css';
@@ -19,12 +20,31 @@ export function Bar({w, h = 9, style}: {w: number | string; h?: number; style?: 
 /** A dot, as an account's or an unread one. */
 export const Dot = ({size = 8}: {size?: number}) => <span className="sk-dot" style={{width: size, height: size}} />;
 
+// A skeleton shows at once, without its delay and fade, while the shell's is showing (as Setpoint
+// starts, ShellFrame.tsx) and for a moment after it gives way, so the app's carry on from it.
+let carrying = false;
+let carryUntil = 0;
+
+/** The shell's effect: once its skeleton shows, the app's next skeletons carry on from it. */
+export function carrySkeletons() {
+  const timer = window.setTimeout(() => {
+    carrying = true;
+  }, skeleton.delayMs);
+  return () => {
+    window.clearTimeout(timer);
+    if (carrying) carryUntil = Date.now() + 1000;
+    carrying = false;
+  };
+}
+
 /**
  * A skeleton: its bars breathe together. `kind` names it for the checks; it's hidden from the
  * accessibility tree, which has nothing to read in it.
  */
 export function Sk({kind, className, style, children}: {kind: string; className?: string; style?: CSSProperties; children: ReactNode}) {
-  return <div className={className ? `sk ${className}` : 'sk'} data-skeleton={kind} aria-hidden="true" style={style}>{children}</div>;
+  const [carried] = useState(() => carrying || Date.now() < carryUntil);
+  const classes = ['sk', carried && 'carried', className].filter(Boolean).join(' ');
+  return <div className={classes} data-skeleton={kind} aria-hidden="true" style={style}>{children}</div>;
 }
 
 /**

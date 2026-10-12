@@ -25,7 +25,8 @@ import {OfflinePill} from './states/States.tsx';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, holdToast, showToast, useToast} from './toast.ts';
 
-export function App() {
+/** `arrive`: it follows Setpoint's mark at the start, and fades in (#174). */
+export function App({arrive = false}: {arrive?: boolean}) {
   const route = useRoute();
   const offline = useOfflineSince() !== null;
   // From the moment the stream drops, before the pill: what would change something takes no pointer (states-05).
@@ -82,7 +83,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="app">
+    <div className={arrive ? 'app boot-after' : 'app'}>
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
         {route.page === 'inbox' ? <InboxPage key={route.account ?? 'all'} route={route} />

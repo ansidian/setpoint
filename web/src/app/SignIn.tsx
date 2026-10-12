@@ -21,7 +21,7 @@ import {Icon, Mark} from '../ui/Icon.tsx';
 /** A refusal's shake: across and back, smaller each time, once, over the modal's 260 ms. */
 const SHAKE = [0, -6, 5, -3, 0].map(x => ({translate: `${x}px 0`}));
 
-export function SignIn({leaving = false}: {leaving?: boolean}) {
+export function SignIn({leaving = false, arrive = false}: {leaving?: boolean; arrive?: boolean}) {
   const [status, setStatus] = useState<AuthStatusOut | null>(null);
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
@@ -96,7 +96,7 @@ export function SignIn({leaving = false}: {leaving?: boolean}) {
 
   if (codes) {
     return (
-      <div className={leaving ? 'sign-in-page leaving' : 'sign-in-page'} inert={leaving}>
+      <div className={leaving ? 'sign-in-page leaving' : arrive ? 'sign-in-page boot-after' : 'sign-in-page'} inert={leaving}>
         <div className="sign-in" role="dialog" aria-label="Recovery codes">
           <div className="brand"><Mark size={24} />Setpoint</div>
           <div className="sign-in-fields">
@@ -112,7 +112,7 @@ export function SignIn({leaving = false}: {leaving?: boolean}) {
   }
 
   return (
-    <div className={leaving ? 'sign-in-page leaving' : 'sign-in-page'} inert={leaving}>
+    <div className={leaving ? 'sign-in-page leaving' : arrive ? 'sign-in-page boot-after' : 'sign-in-page'} inert={leaving}>
       <form className="sign-in" ref={card} aria-label="Sign in to Setpoint" onSubmit={event => void submit(event)}>
         <div className="brand"><Mark size={24} />Setpoint</div>
         <div className="sign-in-fields">

@@ -9,6 +9,9 @@
   animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite;
 }
 .sk.on-sub { --sk-fill: var(--skel-on-sub); }
+/* Carried on from the shell's, which was already showing: at once. */
+.sk.carried { animation: none; }
+.sk.carried :is(.sk-bar, .sk-dot, .sk-ring, .sk-box, .sk-img, .sk-thumb, .sk-fav, .sk-tile, .sk-attach, .rail) { animation-delay: 0s; }
 @keyframes sk-in { from { opacity: 0; } }
 @keyframes sk-breathe { 50% { opacity: var(--skel-low); } }
 .sk-bar { display: block; flex: none; max-width: 100%; border-radius: 999px; background: var(--sk-fill); }
@@ -141,4 +144,4 @@
 .boot.starting .mark rect:nth-child(3) { animation-delay: calc(var(--skel-delay) + 140ms); }
 @keyframes boot-chip { from { opacity: 0; translate: 0 -3.67px; } }
 /* What follows a start that showed the mark (the app, the sign-in card) fades in, as a crossfade. */
-.boot-after { height: 100%; animation: sk-arrive var(--dur-medium) var(--ease); }
+.boot-after { animation: sk-arrive var(--dur-medium) var(--ease); }

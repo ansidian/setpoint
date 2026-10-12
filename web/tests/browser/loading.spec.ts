@@ -426,3 +426,109 @@ test('a story opens at once from its row: sections, headline, meta and its image
     await setpoint.stop();
   }
 });
+
+test('Setpoint starting in a new browser shows its mark after 200 ms where the sign-in card\'s top sits, chips settling in turn; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const releaseMe = await hold(page, /^\/api\/me$/);
+    await visit(page, `${setpoint.base}/inbox`);
+    const mark = page.locator('.boot.starting svg.mark');
+    await mark.waitFor();
+    const box = (await mark.boundingBox())!;
+    assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
+    // Each chip settles from 6 px above over 260 ms, 70 ms after the one before, once the start has taken 200 ms.
+    assert.deepEqual(await mark.locator('rect').evaluateAll(rects => rects.map(rect => [getComputedStyle(rect).animationName, getComputedStyle(rect).animationDuration, getComputedStyle(rect).animationDelay])),
+      [['boot-chip', '0.26s', '0.2s'], ['boot-chip', '0.26s', '0.27s'], ['boot-chip', '0.26s', '0.34s']]);
+    await until('the chips settled', () => mark.locator('rect').evaluateAll(rects => rects.map(rect => rect.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
+    assert.equal(await mark.evaluate(svg => getComputedStyle(svg).animationName), 'sk-breathe', 'then it breathes as a skeleton does');
+    await matchGolden(page, 'starting');
+
+    // Setpoint answers: the app fades in; its accounts and Today wait as skeletons, three rows each.
+    const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
+    await releaseMe();
+    await page.locator('.boot-after .app').waitFor();
+    assert.equal(await page.locator('.boot-after').evaluate(element => getComputedStyle(element).animationName), 'sk-arrive');
+    await shown(page, 'accounts');
+    assert.deepEqual(await heights(page, '[data-skeleton="accounts"] .sk-acct'), [28, 28, 28]);
+    assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
+    await release();
+    await page.locator('aside.sb .acct').first().waitFor();
+    assert.equal(await page.locator('aside.sb [data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a browser that was signed in starts on its shell as it last stood: its accounts, counts and Today\'s place, and the page\'s skeleton; the app takes over in place (shell-10)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.today-row').first().waitFor();
+    const sidebar = () => page.locator('aside.sb').evaluate(aside => ({
+      accounts: [...aside.querySelectorAll('.acct')].map(row => row.textContent),
+      inbox: aside.querySelector('.nav')!.textContent,
+      calendarAt: [...aside.querySelectorAll('.nav')].find(nav => nav.textContent === 'Calendar')!.getBoundingClientRect().y,
+    }));
+    const loaded = await sidebar();
+    const todayLines = await page.locator('.today-row').count();
+
+    // The next open: Setpoint hasn't answered yet.
+    const releaseMe = await hold(page, /^\/api\/me$/);
+    await visit(page, `${setpoint.base}/inbox`);
+    await page.locator('.app[data-frame]').waitFor();
+    assert.deepEqual(await sidebar(), loaded, 'the accounts and counts as they were, nothing moved');
+    assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), todayLines, 'Today\'s place, its lines as many as it had');
+    await shown(page, 'inbox');
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'starting-shell', 'sidebar');
+
+    // Setpoint answers before the Inbox's own answers: the app's sidebar keeps the same rows, and its
+    // list's skeleton carries on from the shell's rather than fading in again.
+    const release = await hold(page, /^\/api\/(accounts|mail\/(counts|inbox))$/);
+    await releaseMe();
+    await page.locator('.app:not([data-frame])').waitFor();
+    assert.deepEqual(await sidebar(), loaded);
+    assert.match((await page.locator('[data-skeleton="inbox"]').getAttribute('class'))!, /\bcarried\b/);
+    await release();
+    await page.locator('.list .arow').first().waitFor();
+    assert.deepEqual(await sidebar(), loaded);
+
+    // Signed out, this browser forgets the session's shape.
+    await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
+    await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
+    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
+    await page.locator('.sign-in').waitFor();
+    assert.deepEqual(await page.evaluate(() => [localStorage.getItem('setpoint.signedIn'), localStorage.getItem('setpoint.sidebar')]), [null, null]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone, a signed-in browser starts on its header, tabs and the page\'s skeleton, an email\'s address on its reader\'s (phone-12)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    const releaseMe = await hold(page, /^\/api\/me$/);
+    await visit(page, `${setpoint.base}/inbox`);
+    await page.locator('.app[data-frame] .ph-tabs').waitFor();
+    assert.equal(await page.locator('.hd .hd-title').textContent(), 'Inbox');
+    assert.equal(await page.locator('.hd svg.mark').count(), 1);
+    await shown(page, 'inbox');
+    await matchGolden(page, 'starting-shell-phone');
+    await visit(page, `${setpoint.base}/inbox/5`);
+    await page.locator('.app[data-frame] .pane').waitFor();
+    await shown(page, 'body');
+    await releaseMe();
+    await page.locator('.pane .rd-subj').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

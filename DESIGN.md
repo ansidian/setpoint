@@ -232,7 +232,8 @@ the spinner's 900 ms turn. What replaces it fades in over 120 ms. No shimmer swe
   - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #199): colour dot
     (8 px), label, unread count. A click filters the Inbox to that account (its row the `navOn`
     chip, Inbox its parent in `ink` without a fill); a needs-reconnect account adds a `sync_problem`
-    glyph in `caution` before its count, keeping the count.
+    glyph in `caution` before its count, keeping the count. Until they come, the ones this browser
+    last showed, with their counts, or on a first visit three skeleton rows (#175).
   - **Calendar**.
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
     mini-month and **Calendars** on Calendar.
@@ -853,6 +854,7 @@ section's label stays under the title (#250).
 | **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#186, #188) |
 | **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#188); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#190) |
+| **Starting** | a browser signed in before: the shell as it last stood, its sidebar's accounts and counts and the page's skeleton (#175); a new one: the mark at 36 px where the card's top sits, after 200 ms, its chips settling in turn, then breathing; what follows fades in over 180 ms (#174) |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
@@ -2400,3 +2402,21 @@ it changes what's on screen.
     eases in as it's opened or stepped to: opacity from 0 and 4 px up, over 180 ms. An article
     opening draws its outlet, time and headline from the story's sources and its text's skeleton
     (Andy, 2026-10-11, polish audit news-05).
+174. **Setpoint starting shows its mark, not a black page:** while it asks whether this browser is
+    signed in, a browser it hasn't seen signed in shows the Day stack mark at 36 px where the
+    sign-in card's top sits (and Unreachable's mark, #118), only once the start has taken 200 ms.
+    Its chips settle in turn, each from 6 px above and transparent over 260 ms `--ease`, 70 ms
+    apart, then the mark breathes as a skeleton does. The sign-in card or the app then fades in over
+    180 ms; a quick start shows neither the mark nor the fade (Andy, 2026-10-11, polish audit
+    states-09).
+175. **The app opens already itself:** a browser that was signed in starts on its shell as it last
+    stood while Setpoint answers: the sidebar with the accounts, their colours and counts and the
+    Inbox's pill and count as this browser last showed them, Today's place (as many skeleton lines
+    as it showed today, else three), the page's header and its skeleton; on the phone the mark,
+    the page's name, the Inbox's search row, the tabs and the page's skeleton, an email's address
+    its reader's. The answers then settle the counts in place and nothing under the accounts moves.
+    A first visit draws three skeleton rows for the accounts (a 7 px `sub3` dot, an 8 px bar, a count
+    bar) and three for Today (a 13 px `sub3` ring and a bar). The app's skeletons carry on from the
+    shell's without fading in again. This browser keeps that shape (`setpoint.sidebar`) and that it
+    was signed in (`setpoint.signedIn`) in its own storage, as it keeps the theme, and forgets both
+    on Sign out or when the session ends (Andy, 2026-10-11, polish audit shell-10, phone-12).

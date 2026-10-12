@@ -20,6 +20,7 @@ import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
+import {todayLines} from '../logic/shape.ts';
 import {DONE_MOMENT_MS, shownTasks, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayTask} from '../logic/today.ts';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
@@ -32,6 +33,8 @@ import './calendar/detail/detail.css';
 import {rectIn} from './calendar/geometry.ts';
 import {useNow} from './clock.ts';
 import {foldIn, foldOut, useFold} from './fold.ts';
+import {browserDay, lastShape, rememberShape} from './lastShape.ts';
+import {TodaySkeleton} from './states/Skeletons.tsx';
 import {navigate} from './router.ts';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -50,12 +53,20 @@ interface TaskLine extends TodayTask {
 // Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
 const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
-export function TodayBlock() {
+/**
+ * The block, or its lines' skeleton until today's items come: as many as it showed today in this
+ * browser, else three (#175). `frame`: drawn while Setpoint starts, asking for nothing.
+ */
+export function TodayBlock({frame = false}: {frame?: boolean}) {
   const now = useNow();
   const zone = timeZone();
   const range = todayRange(now, zone);
-  const {data} = useResource<ItemsOut>(itemsPath(range.from, range.to));
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  const {data} = useResource<ItemsOut>(frame ? null : itemsPath(range.from, range.to));
+  const {data: calendars} = useResource<CalendarOut[]>(frame ? null : CALENDARS_PATH);
+  // How many lines it showed today, read as it first draws, and today by this browser's own clock,
+  // which a start has before Setpoint's answer gives the server's.
+  const [kept] = useState(lastShape);
+  const [day] = useState(browserDay);
   const ring = useRingColour();
   // "3 more due tomorrow" opens every line until the page reloads.
   const [all, setAll] = useState(false);
@@ -78,8 +89,21 @@ export function TodayBlock() {
   const folded = useFold(entries, FOLDS);
   const lines = [...(today.event ? [today.event.item] : []), ...today.tasks.map(task => task.item)];
   const opened = lines.find(item => item.key === openKey) ?? null;
+  const shownLines = (today.event ? 1 : 0) + folded.length + (more ? 1 : 0);
+  useEffect(() => {
+    if (data) rememberShape({today: {date: day, lines: shownLines}});
+  }, [data, day, shownLines]);
 
-  if (!data || (!today.event && !folded.length)) return null;
+  if (!data) {
+    const count = todayLines(kept, day);
+    return count > 0 && (
+      <div className="sb-sec today">
+        <div className="sb-label">Today</div>
+        <TodaySkeleton lines={count} />
+      </div>
+    );
+  }
+  if (!today.event && !folded.length) return null;
 
   // The card goes with its item.
   const hide = (item: ItemOut) => {

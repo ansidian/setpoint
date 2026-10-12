@@ -8,20 +8,24 @@
 // From 640 to 1099 px (the compact tier, #258) it's a 56 px rail: the mark, then Inbox, Calendar, News
 // and Settings as icons, each named in its tooltip, with the attention pill as a badge on Inbox. The
 // accounts and the page's section give way; ⌘K still filters by account and toggles calendars.
-import type {MailCountsOut} from '@setpoint/shared';
-import {useEffect, useRef, useState} from 'react';
+import type {AccountOut, MailCountsOut} from '@setpoint/shared';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
-import {COUNTS_PATH} from '../api/mail.ts';
+import {ACCOUNTS_PATH, COUNTS_PATH} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
+import {FIRST_ACCOUNTS, shapeOf} from '../logic/shape.ts';
+import type {ShapeAccount} from '../logic/shape.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {motion} from '../tokens.ts';
 import {CalendarSidebar} from './calendar/CalendarSidebar.tsx';
 import {Count} from './Count.tsx';
 import {useCompact} from './Phone.tsx';
+import {lastShape, rememberShape} from './lastShape.ts';
+import {AccountsSkeleton} from './states/Skeletons.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
-import {dotStyle, useAccounts} from './accounts.ts';
+import {dotStyle} from './accounts.ts';
 import {navigate} from './router.ts';
 import {openSettings} from './settings/store.ts';
 import {toInbox} from './toInbox.ts';
@@ -64,9 +68,22 @@ function AttentionPill({value}: {value: number}) {
   return <span ref={pill} className={classes} title="Attention, not Done"><Count value={current.shown} /></span>;
 }
 
-export function Sidebar({route}: {route: Route}) {
-  const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
-  const {list: accounts} = useAccounts();
+/**
+ * The sidebar. Its accounts and counts are this browser's last-known ones until their answers come,
+ * which then settle them in place, or a skeleton on a first visit, so nothing under them moves (#175).
+ * `frame`: drawn while Setpoint starts, before it may ask for anything (ShellFrame.tsx).
+ */
+export function Sidebar({route, frame = false}: {route: Route; frame?: boolean}) {
+  const {data: loadedCounts} = useResource<MailCountsOut>(frame ? null : COUNTS_PATH);
+  const {data: loadedAccounts} = useResource<AccountOut[]>(frame ? null : ACCOUNTS_PATH);
+  // What the sidebar last showed, read as it first draws.
+  const [kept] = useState(lastShape);
+  const fresh = useMemo(() => (loadedAccounts ? shapeOf(loadedAccounts, loadedCounts, null) : null), [loadedAccounts, loadedCounts]);
+  useEffect(() => {
+    if (fresh?.counts) rememberShape({accounts: fresh.accounts, counts: fresh.counts});
+  }, [fresh]);
+  const accounts: ShapeAccount[] | null = fresh?.accounts ?? kept?.accounts ?? null;
+  const counts = loadedCounts ?? kept?.counts ?? null;
   const unreadOf = (id: number) => counts?.accounts.find(account => account.account_id === id)?.unread ?? 0;
   const filtered = route.page === 'inbox' ? route.account : null;
   const rail = useCompact();
@@ -88,11 +105,12 @@ export function Sidebar({route}: {route: Route}) {
         {counts && counts.unread > 0 && <span className="cnt num"><Count value={counts.unread} /></span>}
       </Link>
       {/* On Calendar the accounts fold away to the page's section (board 11), over 180 ms rather than
-          in one frame, so Calendar slides up under the pointer that clicked it (shell-08). */}
+          in one frame, so Calendar slides up under the pointer that clicked it (shell-08). Until they
+          come, the ones this browser last showed, or a skeleton on a first visit (#175). */}
       {!rail && (
         <div className={route.page === 'calendar' ? 'sb-accts folded' : 'sb-accts'} inert={route.page === 'calendar'}>
           <div>
-            {accounts.map(account => {
+            {accounts === null ? <AccountsSkeleton count={FIRST_ACCOUNTS} /> : accounts.map(account => {
               const unread = unreadOf(account.id);
               const on = filtered === account.id;
               return (
@@ -100,7 +118,7 @@ export function Sidebar({route}: {route: Route}) {
                   to={route.page === 'inbox' ? {...route, account: on ? null : account.id, open: null} : toInbox(account.id)}>
                   <span className="dot sm" />
                   {account.label}
-                  {account.health.state === 'needs_reconnect' && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
+                  {account.reconnect && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
                   {unread > 0 && <span className="cnt num"><Count value={unread} /></span>}
                 </Link>
               );
@@ -116,7 +134,7 @@ export function Sidebar({route}: {route: Route}) {
         <Icon name="newspaper" />
         <span className="grow">News</span>
       </Link>
-      {!rail && (route.page === 'calendar' ? <CalendarSidebar route={route} /> : <TodayBlock />)}
+      {!rail && (route.page === 'calendar' ? !frame && <CalendarSidebar route={route} /> : <TodayBlock frame={frame} />)}
       <div className="sb-foot">
         {/* Settings opens over the page (settings/store.ts); its address still works in a new tab. */}
         <a className="nav" title={named('Settings · ⌘,')} href={routePath({page: 'settings', section: 'accounts'})} onClick={event => {
