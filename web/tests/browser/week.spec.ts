@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, startSetpoint, until, writeOutput} from './harness.ts';
+import {cleanUp, startSetpoint, still, until, writeOutput} from './harness.ts';
 
 after(cleanUp);
 
@@ -40,6 +40,8 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('w');
     await block(page, '2026-10-07', 'Dentist').waitFor();
+    // Measured once Week has zoomed in from Month (polish audit grids-09).
+    await still(page);
     assert.match(page.url(), /\/calendar\?view=week$/);
     assert.equal(await page.locator('.hd-title').textContent(), 'Oct 4 – 10, 2026');
     assert.equal(await page.title(), 'Oct 4 – 10, 2026 · Calendar');

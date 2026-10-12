@@ -56,9 +56,10 @@
 .cell::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cellHover); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 .dadd { width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; flex: none; color: var(--ink3); opacity: 0;
   transition: opacity var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+/* A drag says where it's going on its own (the drop day), so nothing answers the pointer meanwhile. */
 @media (hover: hover) {
-  .cell:hover:not(.sel, .drop)::before { opacity: 1; }
-  .cell:hover .dadd { opacity: 1; }
+  .cal-month:not(.dragging) .cell:hover:not(.sel)::before { opacity: 1; }
+  .cal-month:not(.dragging) .cell:hover .dadd { opacity: 1; }
   .dadd:hover { background: var(--sub2); color: var(--ink); }
 }
 .dadd:active { transform: scale(.92); background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }

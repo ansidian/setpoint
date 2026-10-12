@@ -9,7 +9,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -140,6 +140,8 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       // The week's grid takes the width too.
       await page.keyboard.press('w');
       await page.locator('section.cal-week').waitFor();
+      // Measured once Week has zoomed in from Month (polish audit grids-09).
+      await still(page);
       assert.equal((await page.locator('section.cal-week').boundingBox())!.width, width - layout.rail);
       await page.keyboard.press('m');
       await page.locator('section.cal-month').waitFor();

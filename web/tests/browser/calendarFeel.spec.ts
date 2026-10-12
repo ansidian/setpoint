@@ -329,8 +329,9 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 40));
     const slot = column.locator('.wk-hover');
     await until('10:30 AM under the pointer', () => slot.textContent(), text => text === '10:30 AM');
-    assert.deepEqual([await style(slot, 'height'), await style(slot, 'transform'), await style(slot, 'transition-duration'), await opacity(slot)],
-      ['22px', `matrix(1, 0, 0, 1, 0, ${minuteTop(10 * 60 + 30)})`, '0.12s, 0.12s', '1']);
+    await until('faded in', () => opacity(slot), value => value === '1');
+    assert.deepEqual([await style(slot, 'height'), await style(slot, 'transform'), await style(slot, 'transition-duration'), await style(slot, 'animation-duration')],
+      ['22px', `matrix(1, 0, 0, 1, 0, ${minuteTop(10 * 60 + 30)})`, '0.12s, 0.12s', '0.12s']);
     assert.equal(await style(slot, 'background-color'), await colour(page, '--sub'));
     // A step further down it moves there.
     await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 50));

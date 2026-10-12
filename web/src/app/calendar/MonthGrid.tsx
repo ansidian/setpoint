@@ -292,7 +292,7 @@ export function MonthGrid(props: MonthGridProps) {
   const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
   const liftedColour = drag ? colourVar(drag.item.colour ?? calendars.get(drag.item.calendar_id)?.colour ?? 'cool') : undefined;
   return (
-    <section className="cal-month" aria-label="Month" ref={section} data-cal-section data-enter={enter === null ? undefined : 'out'}
+    <section className={drag ? 'cal-month dragging' : 'cal-month'} aria-label="Month" ref={section} data-cal-section data-enter={enter === null ? undefined : 'out'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
       onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
       <div className="cal-dow">{WEEKDAYS.map(name => <span key={name}>{name}</span>)}</div>

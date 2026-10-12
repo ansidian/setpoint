@@ -342,7 +342,7 @@ test('SV-29: New, C and D leave a started draft be and say so; a folded draft go
     await page.locator('.cell[data-date="2026-10-14"]').click({position: {x: 70, y: 150}});
     await page.locator('.cell[data-date="2026-10-14"].sel').waitFor();
     const toast = page.locator('.toast', {hasText: 'Create or cancel the draft first'});
-    for (const press of [() => page.keyboard.press('c'), () => page.keyboard.press('d'), () => page.getByRole('button', {name: /^New/}).click()]) {
+    for (const press of [() => page.keyboard.press('c'), () => page.keyboard.press('d'), () => page.locator('.hd').getByRole('button', {name: /^New/}).click()]) {
       await press();
       await toast.waitFor();
       assert.equal(await page.locator('.editor[aria-label="New event"]').count(), 1);
