@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {colour, evtint, lightColour} from '../../src/tokens.ts';
 import {closeBrowser, compareImages, GOLDENS, launchBrowser, ROOT} from './harness.ts';
 
 export interface Patch {
@@ -134,8 +135,16 @@ const SETTINGS_NEWS_NAV: Patch = {
   to: `<span class="grow">Mail</span></a>\n    <a class="nav" href="#"><svg class="ms" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor" style="display: block; flex: none"><path d="${NEWSPAPER}"></path></svg><span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>\n    <a class="nav" href="#"><span class="ms">auto_awesome</span>`,
 };
 
+// Override 29: the polish audit's token values over the export's, for every board (each links fonts.css once).
+const AUDIT_TOKENS: Patch = {
+  why: 'Override 29: the polish audit\'s token values (Night ink3, panel and cyan; Light ink2, cardOn, cyan and the calendar tint)',
+  from: 'styles/fonts.css">',
+  to: `styles/fonts.css">\n<style>.sp{--ink3:${colour.ink3};--panel:${colour.panel};--cyan:${colour.cyan}} .sp.light{--ink2:${lightColour.ink2};--cardOn:${lightColour.cardOn};--cyan:${lightColour.cyan};--evtint:${evtint.light}%}</style>`,
+};
+
 /** Patches for every board that draws what they change; a board without it skips them. */
 const EVERY_BOARD: Patch[] = [
+  AUDIT_TOKENS,
   TODAY_NAMED,
   SETTINGS_NEWS_NAV,
   newsNav('\n  <a class="nav" href="#" style="margin-top: 2px"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>'),
