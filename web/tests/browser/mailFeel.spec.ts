@@ -2,8 +2,8 @@
 // #195–#219): rows fold text first, Done and Trash beat before the fold, groups open and close like
 // drawers; the Today block's bar and its warming time, and the completion moment; the sidebar's
 // folding accounts and rolling counts; All caught up; the rows' pin, sticky headers, code countdown
-// and filtered account column; the reader's swap, code card and edge; search's reasons and chips;
-// ⌘K's matches and the segmented control's thumb. Each single value stated once.
+// and filtered account column; the reader's swap, code card and edge; search's reasons, chips and
+// widening field; ⌘K's matches. Each single value stated once.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
