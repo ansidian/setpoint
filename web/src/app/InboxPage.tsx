@@ -54,6 +54,18 @@ import {dismissToast, showToast, toastFailure} from './toast.ts';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
 
+/**
+ * Whether any of the Pinned shelf shows in the list, where a pin lands; with no shelf yet, whether the
+ * list is at its top, where the new one comes.
+ */
+function shelfInView(): boolean {
+  const list = document.querySelector<HTMLElement>('.content > .list');
+  if (!list) return true;
+  const shelf = [...list.querySelectorAll<HTMLElement>('.row.shelf:not(.leaving)')].at(-1);
+  if (!shelf) return list.scrollTop <= 0;
+  return shelf.getBoundingClientRect().bottom > list.getBoundingClientRect().top + 1;
+}
+
 // Groups the user collapsed or expanded, kept for the session across pages and account filters.
 let rememberedCollapse: Collapse = {};
 // The email last opened, so the address following an open doesn't open it twice; a deep link,
@@ -316,8 +328,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
     }, 'Couldn\'t move it to Trash', 'Couldn\'t bring it back from Trash'),
     pin: () => {
       if (target === null) return;
-      const pinned = rowOf(target)?.pinned ?? false;
-      void setPinned(target, !pinned).catch(toastFailure(pinned ? 'Couldn\'t unpin it' : 'Couldn\'t pin it'));
+      const id = target;
+      const pinned = rowOf(id)?.pinned ?? false;
+      // Out of the shelf's sight, a pin says where it went, with Undo (inbox-09).
+      const unseen = !pinned && !phone && !shelfInView();
+      void setPinned(id, !pinned).then(() => {
+        if (unseen) showToast('Pinned', {label: 'Undo', run: () => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'))});
+      }, toastFailure(pinned ? 'Couldn\'t unpin it' : 'Couldn\'t pin it'));
     },
     openInGmail: () => {
       const url = open ? getCached<MessageOut>(messagePath(open))?.open_url : null;
@@ -463,7 +480,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
         )}
         <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
-      <div className="content" style={accountWidth}>
+      {/* Filtered to one account, the rows drop the account they'd all repeat (inbox-12). */}
+      <div className={route.account && !phone ? 'content filtered' : 'content'} style={accountWidth}>
         {searching ? (
           <SearchResults search={{...search, results}} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone}
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}

@@ -216,6 +216,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh.att { background: color-mix(in srgb, var(--caution) var(--attTint), var(--panel)); color: var(--caution); border-bottom-color: color-mix(in srgb, var(--caution) 20%, transparent); }
 .gh.att .n { color: var(--caution); }
 .gh.first { border-top: 0; }
+/* Group headers and All's day headings stay at the top while their rows scroll under them, each next
+   one sliding over the last (inbox-10); the keyboard's cursor never parks a row under one. In All the
+   day outranks the lanes: its name `ink2`, its date `ink3`. */
+.list .gh { position: sticky; top: 0; z-index: 2; }
+.list { scroll-padding-top: 30px; }
+.list.all .gh.day { color: var(--ink2); }
+.list.all .gh.day .date { color: var(--ink3); }
 /* Each group's glyph before its label (#160): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
 .gh.att .gi { color: var(--caution); }
@@ -352,6 +359,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .row.shelf .hact { display: none; width: 64px; flex: none; justify-content: flex-end; }
 @media (hover: hover) { .row.shelf:hover .hact { display: flex; } }
 @media (hover: hover) { .row.shelf:hover .age { display: none; } }
+/* A pinned email's row in its group (inbox-09): a 14 px keep-fill in `ink3` just before its account;
+   pinned here, it grows in from .6 over 120 ms. (A row folding onto the shelf holds `sub3` after its
+   fold, app/fold.ts › foldInLanding.) */
+.pinmark { display: grid; color: var(--ink3); flex: none; margin-left: -4px; }
+.pinmark.new { animation: beat-in var(--dur-fast) var(--ease); }
+/* While the list is filtered to one account its rows drop the account they'd all repeat (inbox-12):
+   the age keeps its column and the subject runs wider. */
+.content.filtered :is(.row .ac, .arow .r1 .dot, .arow .r1 .label) { display: none; }
 .unpin { height: 22px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12px; flex: none; }
 @media (hover: hover) { .unpin:hover { background: var(--sub3); } }
 /* The pattern prompt at the end of Attention (board 09). */
@@ -392,7 +407,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @keyframes toast-out { to { opacity: 0; transform: translateX(-50%) translateY(-4px); } }
 /* Its tone's 16 px glyph leads, 10 px before the words: done `check` in `good`, taken away `delete` in
    `ink3`, a failure `error` in `alert` with an `alert` ring and an 8% `alert` wash. */
-.toast.done, .toast.gone, .toast.failed { padding-left: 12px; }
+.toast.done, .toast.gone, .toast.failed, .toast.pinned { padding-left: 12px; }
+/* A pin made out of the shelf's sight leads with `keep` in `ink3` (inbox-09). */
+.toast.pinned .tone { color: var(--ink3); }
 .toast .tone { width: 18px; height: 18px; display: grid; place-items: center; margin-right: -4px; flex: none; }
 .toast.done .tone { color: var(--good); }
 .toast.gone .tone { color: var(--ink3); }

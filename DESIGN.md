@@ -292,8 +292,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   Noise is a count.
 - **Row** 38 px, padding 0 16 0 12: unread gutter (12), sender or organisation (172, ellipsis),
   subject then " · " and the summary in `ink3` (ellipsis), the **account** (dot and label in `ink3`
-  12, 76 px, on every row and never dropped, decision 41), the age (64, right, `ink3` 12). Hover
-  `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
+  12, 76 px, on every row, decision 41, dropped only while the list is filtered to one account,
+  #205), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#127). Other chips drop while the reading pane is open; the
   account never does.
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
@@ -306,7 +306,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   (Settings › Mail sets this). A copy the browser refuses says "Couldn't copy it"
   ([Decided while building](#decided-while-building) #109).
 - **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
-  email's line is its subject and summary.
+  email's line is its subject and summary. Its row in its group keeps a 14 px `keep-fill` before its
+  account (#202).
 - **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#164).
 - **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#201); the
   reading pane collapses.
@@ -2152,3 +2153,16 @@ it changes what's on screen.
     260 ms, 70 ms apart, then at rest), "All caught up" at 15 / 500 in `ink`, and Open All with its U
     hint, the line and the button fading in over 180 ms after 60 ms. No new words; the mark keeps its
     own colours in both themes (Andy, 2026-10-11, polish audit states-10, inbox-08).
+202. **A pinned email shows its pin where it is:** its row in its group keeps a 14 px `keep-fill` in
+    `ink3` just before its account, growing in from .6 over 120 ms when it's pinned there; the row
+    folding onto the shelf holds `sub3` after its fold and lets it go over 260 ms; and a pin made while
+    the shelf is out of sight says "Pinned" in the toast, led by `keep` in `ink3`, with Undo (amending
+    #140's tones) (Andy, 2026-10-11, polish audit inbox-09).
+203. **Headers stay with their rows:** Unread's group headers and All's day headings stick to the top
+    of the list while their rows scroll under them, each next one sliding over the last, and J and K
+    keep a row clear of them; in All a day's name is `ink2` and its date `ink3`, above the lanes'
+    `ink3` (Andy, 2026-10-11, polish audit inbox-10).
+205. **A list filtered to one account drops the account** (amending decision 41): while an account in
+    the sidebar filters the Inbox (Unread, All and its search), rows and Attention rows leave out the
+    account they'd all repeat; the age keeps its column and the subject runs wider. Unfiltered every
+    row keeps it, and the phone's rows keep theirs (Andy, 2026-10-11, polish audit inbox-12).

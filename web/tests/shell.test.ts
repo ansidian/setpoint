@@ -203,8 +203,10 @@ describe('live events refresh only what they name', () => {
   });
 });
 
-describe('the toast\'s tone by its words (the one toast: done, taken away, failed)', () => {
+describe('the toast\'s tone by its words (the one toast: done, taken away, failed, pinned)', () => {
   test.each([
+    // A pin made out of the shelf's sight says so with its glyph (inbox-09).
+    ['Pinned', 'pinned'],
     ['Marked Done', 'done'], ['Marked 14 as read', 'done'], ['Completed Pay rent', 'done'],
     ['Moved to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Deleted 2 items', 'gone'],
     ['Couldn\'t pin it, Gmail didn\'t answer in time.', 'failed'], ['Couldn\'t copy it', 'failed'], ['Couldn’t reorder rules, Can’t reach Setpoint', 'failed'],

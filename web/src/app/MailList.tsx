@@ -99,7 +99,8 @@ export function MailList(props: ListProps) {
 /** One entry: a leaving one keeps its look, without its cursor, its key or the pointer, while it folds. */
 function Part({entry, delay, first, ...props}: ListProps & {entry: Folded<Part>; delay: number; first: boolean}) {
   const {item, fold} = entry;
-  const ref = foldRef(fold, delay);
+  // A row folding onto the shelf holds `sub3` a moment after, so it's clear where the email landed (inbox-09).
+  const ref = foldRef(fold, delay, item.kind === 'row' && item.view.group === 'pinned');
   const leaving = fold === 'out';
   if (item.kind === 'header') {
     return <GroupHeader view={item.view} first={first} cur={!leaving && props.cursor === entry.key} leaving={leaving} fold={ref} onPoint={props.onPoint} onToggle={props.onToggle} />;
@@ -110,15 +111,21 @@ function Part({entry, delay, first, ...props}: ListProps & {entry: Folded<Part>;
   return item.view.group === 'attention' ? <AttentionRow {...rowProps} /> : <Row {...rowProps} pinnedShelf={item.view.group === 'pinned'} noise={item.view.group === 'noise'} />;
 }
 
-/** Scrolls the list just enough to show a group's last row, never past its header (Decided while building #70). */
+/**
+ * Scrolls the list just enough to show a group's last row, never past its header (Decided while
+ * building #70). The header's own place is where the row before it ends, as a stuck header (inbox-10)
+ * reports where it's stuck.
+ */
 function revealGroup(header: HTMLElement | null) {
   const list = header?.closest<HTMLElement>('.list');
   if (!header || !list) return;
   let last: Element = header;
   for (let next = header.nextElementSibling; next && !next.classList.contains('gh'); next = next.nextElementSibling) last = next;
   const box = list.getBoundingClientRect();
+  const before = header.previousElementSibling;
+  const top = before ? before.getBoundingClientRect().bottom : box.top - list.scrollTop;
   const below = last.getBoundingClientRect().bottom - box.bottom;
-  if (below > 0) list.scrollBy({top: Math.min(below, header.getBoundingClientRect().top - box.top), behavior: 'smooth'});
+  if (below > 0) list.scrollBy({top: Math.min(below, top - box.top), behavior: 'smooth'});
 }
 
 type FoldRef = Ref<HTMLDivElement> | undefined;
@@ -186,6 +193,16 @@ function rowAttributes({row, rowKey: key, leaving, fold, onPoint, onOpen}: RowPr
   return leaving ? {ref: fold, 'aria-hidden': true} : {ref: fold, 'data-key': key, 'data-id': row.id, onMouseMove: () => onPoint(key), onClick: () => onOpen(row.id, key)};
 }
 
+/**
+ * A pinned email's row in its group keeps a 14 px keep-fill in `ink3` before its account (inbox-09), so
+ * P visibly sticks a pin in it; one pinned while the list shows it grows in from .6 over 120 ms.
+ */
+function PinMark({pinned}: {pinned: boolean}) {
+  const [atFirst] = useState(pinned);
+  if (!pinned) return null;
+  return <span className={atFirst ? 'pinmark' : 'pinmark new'} title="Pinned"><Icon name="keep-fill" size={14} /></span>;
+}
+
 function Account({account}: {account: AccountOut | undefined}) {
   return <><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></>;
 }
@@ -204,6 +221,7 @@ function Row(props: RowProps) {
       {line.code ? <CodeLine code={line.code} now={now} /> : (
         <span className="subj"><b>{line.subject}</b>{line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}</span>
       )}
+      {!pinnedShelf && <PinMark pinned={row.pinned} />}
       <span className="ac"><Account account={accounts.get(row.account_id)} /></span>
       <span className="age" title={fullTimestamp(row.received_at, timeZone)}>{age(row.received_at, now, timeZone)}</span>
       {/* On the Pinned shelf, Unpin takes the age's place under the pointer (board 10). */}
@@ -260,6 +278,7 @@ function AttentionRow(props: RowProps) {
         {row.protected && <span className="tag alert"><Icon name="shield" size={14} />Protected</span>}
       </div>
       <div className="r1">
+        <PinMark pinned={row.pinned} />
         <Account account={accounts.get(row.account_id)} />
         <span className="age" title={fullTimestamp(row.received_at, timeZone)}>{age(row.received_at, now, timeZone)}</span>
       </div>

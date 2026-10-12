@@ -90,7 +90,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
         }
         if (item.kind === 'day') {
           const heading = dayHeading(item.date, today);
-          return <div key={key} ref={ref} className={['gh', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{heading.label} <span className="date">{heading.date}</span></div>;
+          return <div key={key} ref={ref} className={['gh', 'day', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{heading.label} <span className="date">{heading.date}</span></div>;
         }
         if (item.kind === 'lane') {
           return <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{item.label} <span className="n"><Count value={item.count} /></span></div>;

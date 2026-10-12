@@ -100,7 +100,7 @@ export function App() {
   );
 }
 
-const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error'} as const;
+const TONE_GLYPHS = {done: 'check', gone: 'delete', failed: 'error', pinned: 'keep'} as const;
 
 /**
  * The one toast, over every page and above Settings; its action runs once, then it goes. Keyed by

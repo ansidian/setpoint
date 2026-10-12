@@ -351,3 +351,98 @@ test('states-10, inbox-08: All caught up is three rows: the mark settling in at 
     await setpoint.stop();
   }
 });
+
+test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the shelf\'s sight says so; headers stay at the top; a filtered list drops the account', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    // A short window, so the list scrolls.
+    const page = await setpoint.page({width: 1677, height: 560});
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    const list = page.locator('.content > .list');
+    const ink3 = await colourOf(page, '--ink3');
+
+    // Headers stick to the top, each sliding over the last; J and K keep a row clear of them.
+    assert.deepEqual(await page.locator('.list .gh').first().evaluate(header => [getComputedStyle(header).position, getComputedStyle(header).top, getComputedStyle(header).zIndex]), ['sticky', '0px', '2']);
+    assert.equal(await list.evaluate(element => getComputedStyle(element).scrollPaddingTop), '30px');
+    await list.evaluate(element => element.scrollBy(0, 300));
+    const stuck = await page.evaluate(() => {
+      const box = document.querySelector('.content > .list')!.getBoundingClientRect();
+      const top = document.elementFromPoint(box.left + 200, box.top + 15)?.closest('.gh');
+      return top ? top.textContent : null;
+    });
+    assert.ok(stuck && !/^Pinned/.test(stuck), `a later group's header is on top: ${stuck}`);
+
+    // P on Woodgrove Pay in Money, with the shelf scrolled away: its row keeps a 14 px keep-fill in
+    // ink3 before its account, growing in; the toast says Pinned with its keep glyph, and Undo.
+    const pay = page.locator('.row:not(.shelf)', {hasText: 'Woodgrove Pay'});
+    await pay.scrollIntoViewIfNeeded();
+    await point(pay);
+    // What the row arriving on the shelf plays, as it arrives.
+    await page.evaluate(() => {
+      const landings: string[][] = [];
+      (window as unknown as {landings: string[][]}).landings = landings;
+      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement) || !node.matches('.row.shelf')) return;
+        landings.push(node.getAnimations().filter(animation => !(animation instanceof CSSTransition) && !(animation instanceof CSSAnimation)).map(animation => {
+          const timing = animation.effect!.getComputedTiming();
+          const first = (animation.effect as KeyframeEffect).getKeyframes()[0] as {backgroundColor?: string};
+          // Its colour as the page computes it.
+          const probe = document.body.appendChild(document.createElement('i'));
+          probe.style.backgroundColor = first.backgroundColor ?? '';
+          const colour = first.backgroundColor ? getComputedStyle(probe).backgroundColor : '';
+          probe.remove();
+          return `${timing.duration} ${timing.delay} ${colour}`;
+        }));
+      }))).observe(document.querySelector('.content > .list')!, {childList: true});
+    });
+    await page.keyboard.press('p');
+    const mark = pay.locator('.pinmark');
+    await mark.waitFor();
+    assert.deepEqual(await mark.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('svg')!.getAttribute('width'), getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]),
+      ['pinmark new', ink3, '14', 'beat-in', '0.12s']);
+    // Just before the account, the row's 10 px gap between them (its place, not its growing box).
+    assert.equal(await pay.evaluate(row => {
+      const [glyph, account] = [row.querySelector<HTMLElement>('.pinmark')!, row.querySelector<HTMLElement>('.ac')!];
+      return account.offsetLeft - (glyph.offsetLeft + glyph.offsetWidth);
+    }), 10);
+    const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
+    await toast.waitFor();
+    assert.equal(await toast.locator('.tone .icon').evaluate(icon => getComputedStyle(icon).color), ink3);
+    // It landed on the shelf: it folded in, then holds `sub3` and lets it go over 260 ms.
+    await page.locator('.row.shelf', {hasText: 'Woodgrove Pay'}).waitFor();
+    const sub3 = await backgroundOf(page, 'var(--sub3)');
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {landings: string[][]}).landings), [['180 0 ', `260 180 ${sub3}`]]);
+    // Undo unpins it, and the toast goes.
+    await toast.getByRole('button', {name: 'Undo'}).click();
+    await until('unpinned', () => mark.count(), count => count === 0);
+    await until('the toast gone', () => page.locator('.toast').count(), count => count === 0);
+
+    // With the shelf in view, a pin needs no toast; an Attention row keeps its glyph before its account too.
+    await list.evaluate(element => element.scrollTo(0, 0));
+    const exams = page.locator('.arow', {hasText: 'Contoso University'});
+    await point(exams);
+    await page.keyboard.press('p');
+    await exams.locator('.r1 .pinmark + .dot').waitFor();
+    await setpoint.idle();
+    assert.equal(await page.locator('.toast', {hasText: 'Pinned'}).count(), 0);
+
+    // Filtered to Personal: no row repeats the account; the age keeps its column.
+    await page.locator('.sb .acct', {hasText: 'Personal'}).click();
+    await page.locator('.content.filtered').waitFor();
+    await page.locator('.hd-title', {hasText: 'Inbox · Personal'}).waitFor();
+    await page.locator('.content.filtered .list .row').first().waitFor();
+    assert.deepEqual(await page.locator('.list .row .ac, .list .arow .r1 .dot, .list .arow .r1 .label').evaluateAll(parts => [...new Set(parts.map(part => getComputedStyle(part).display))]), ['none']);
+    assert.ok(await page.locator('.list .row .age').first().isVisible());
+
+    // All's day headings outrank its lanes: the day ink2, its date ink3.
+    await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
+    await page.keyboard.press('u');
+    const day = page.locator('.list.all .gh.day').first();
+    await day.waitFor();
+    assert.deepEqual([await day.evaluate(element => getComputedStyle(element).color), await day.locator('.date').evaluate(element => getComputedStyle(element).color)], [await colourOf(page, '--ink2'), ink3]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

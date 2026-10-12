@@ -81,10 +81,21 @@ export function foldIn(element: HTMLElement | null, delay = 0) {
   animation.oncancel = done;
 }
 
+/**
+ * An email folding onto the Pinned shelf: it folds in, then holds `sub3` and lets it go over 260 ms,
+ * so it's clear where it landed (polish audit inbox-09), whatever the list does meanwhile.
+ */
+export function foldInLanding(element: HTMLElement | null, delay = 0) {
+  foldIn(element, delay);
+  const held = element ? getComputedStyle(element).getPropertyValue('--sub3').trim() : '';
+  element?.animate([{backgroundColor: held}, {}], {duration: motion.slow, delay: delay + motion.medium, easing: motion.ease, fill: 'backwards'});
+}
+
 type FoldCallback = (element: HTMLElement | null) => void;
 // One ref per delay, so a row's ref stays the same function from render to render.
 const outRefs = new Map<number, FoldCallback>();
 const inRefs = new Map<number, FoldCallback>();
+const landingRefs = new Map<number, FoldCallback>();
 function cached(refs: Map<number, FoldCallback>, delay: number, fold: (element: HTMLElement | null, delay: number) => void): FoldCallback {
   let ref = refs.get(delay);
   if (!ref) {
@@ -94,10 +105,10 @@ function cached(refs: Map<number, FoldCallback>, delay: number, fold: (element: 
   return ref;
 }
 
-/** The ref that folds an entry its way after `delay` ms; none for an entry staying put. */
-export function foldRef(fold: Fold, delay = 0): FoldCallback | undefined {
+/** The ref that folds an entry its way after `delay` ms (landing on the shelf, with its hold); none for an entry staying put. */
+export function foldRef(fold: Fold, delay = 0, landing = false): FoldCallback | undefined {
   if (fold === 'out') return cached(outRefs, delay, foldOut);
-  if (fold === 'in') return cached(inRefs, delay, foldIn);
+  if (fold === 'in') return cached(landing ? landingRefs : inRefs, delay, landing ? foldInLanding : foldIn);
   return undefined;
 }
 
