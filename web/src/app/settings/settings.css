@@ -92,9 +92,20 @@
    that can't be picked yet at .5 (an AI model without its key, UX #14), and a long list scrolls. */
 .settings .menu.pick { max-height: 320px; overflow-y: auto; }
 .settings .swatches { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; padding: 4px; min-width: 0; }
+/* In a picker, the current colour is ringed in itself, 4.5 px clear of its dot, and a dot swells to 1.25
+   under the pointer, so the choice and the pointer never look alike (DESIGN.md › Decided while
+   building #148). */
+.settings .swatches .sw.on { background: none; box-shadow: inset 0 0 0 1.5px var(--c); }
+.settings .swatches .sw::before { transition: transform var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .settings .swatches .sw:enabled:hover { background: none; }
+  .settings .swatches .sw:enabled:hover::before { transform: scale(1.25); }
+}
 /* Todoist's 20 colours (SV-25), in four rows of five. */
 .settings .swatches.todoist { grid-template-columns: repeat(5, 24px); }
 .settings .icons { display: grid; grid-template-columns: repeat(5, 30px); gap: 4px; padding: 4px; min-width: 0; }
+/* An account's icons, after its options: set off by a hairline. */
+.settings .menu .icons { border-top: 1px solid var(--hair); margin-top: 4px; padding-top: 8px; }
 .settings .icons button { width: 30px; height: 30px; border-radius: var(--r-row); display: grid; place-items: center; color: var(--ink2); }
 .settings .icons button:hover, .settings .icons button.on { background: var(--sub2); color: var(--ink); }
 
@@ -164,6 +175,12 @@
   .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
   .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--modal)); }
 }
+
+/* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and
+   its check `good` (DESIGN.md › Decided while building #148). */
+.settings [role="radiogroup"] .set-row[aria-checked="true"] { background: var(--sub2); }
+.settings [role="radiogroup"] .set-row[aria-checked="true"] .aico { background: var(--ink); color: var(--onInk); }
+.settings [role="radiogroup"] .set-row[aria-checked="true"] > .icon { color: var(--good); }
 
 /* News (board 30a): the head's counts, each section's count by its label, 44 px rows, and a state as
    wide as "Failing, 404 since 6:02 AM". */

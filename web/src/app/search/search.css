@@ -9,6 +9,12 @@
 .search .qchip .k { color: var(--ink3); font-size: 11px; }
 .search .qchip .x, .no-results .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); flex: none; }
 .search .qchip .x:hover, .no-results .x:hover { background: var(--sub3); color: var(--ink); }
+/* A chip answers as a whole when its × is under the pointer, so it's clear which one goes; a word that
+   becomes a chip pops in over 120 ms (Search.tsx collapses a removed one away). DESIGN.md › Decided
+   while building #147. */
+.search .qchip { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); animation: qchip-in var(--dur-fast) var(--ease); }
+@keyframes qchip-in { from { opacity: 0; transform: scale(.92); } }
+@media (hover: hover) { .search .qchip:has(.x:hover) { background: var(--sub3); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
 mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 
 /* ---------- Results ---------- */

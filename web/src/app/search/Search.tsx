@@ -8,8 +8,10 @@ import type {KeyboardEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
+import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
+import {leaveCopy} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
 import type {Search, SearchFieldState} from './state.ts';
 import './search.css';
@@ -62,6 +64,15 @@ export function selectSearch() {
  */
 export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLLabelElement>(null);
+  // A chip removed (its × or Backspace) collapses away over 120 ms, and the rest close up after it; a
+  // new one pops in (search.css).
+  const removeChip = (index: number) => {
+    leaveCopy(field.current?.querySelectorAll(':scope > .qchip')[index] ?? null,
+      chip => [{maxWidth: `${chip.offsetWidth}px`, opacity: 1}, {maxWidth: '0px', opacity: 0, paddingLeft: '0px', paddingRight: '0px', marginRight: '-8px'}],
+      {duration: motion.fast, easing: motion.ease});
+    search.removeChip(index);
+  };
   // The field is a label for its words: a click on a chip, the glyph or the hint goes to them, and
   // its hover lights no chip's ×, which, as the label's first button, would otherwise be its control.
   const inputId = useId();
@@ -103,11 +114,11 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       if (search.active) search.clear();
       input.current?.blur();
     } else if (event.key === 'Backspace' && !search.text && search.chips.length) {
-      search.removeChip(search.chips.length - 1);
+      removeChip(search.chips.length - 1);
     }
   };
   return (
-    <label className={search.active ? 'search active' : 'search'} htmlFor={inputId}>
+    <label ref={field} className={search.active ? 'search active' : 'search'} htmlFor={inputId}>
       <Icon name="search" size={16} />
       {search.chips.map((chip, index) => (
         <span className={whole ? 'qchip sel' : 'qchip'} key={chipKey(chip)}>
@@ -115,7 +126,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
           {/* Its own click stays its own: the label would send it on to the words. */}
           <button className="x" type="button" aria-label={`Remove ${chip.label}`} onClick={event => {
             event.preventDefault();
-            search.removeChip(index);
+            removeChip(index);
           }}><Icon name="close" size={14} /></button>
         </span>
       ))}

@@ -42,8 +42,16 @@ export function foldOut(element: HTMLElement | null) {
  * once; a copy of it, taking nothing, stays in its place for the fold, then goes.
  */
 export function foldAway(element: Element | null) {
-  if (!(element instanceof HTMLElement) || !element.isConnected || element.dataset.folded !== undefined) return;
-  element.dataset.folded = '';
+  leaveCopy(element, card => [{height: `${card.offsetHeight}px`}, closed], timing);
+}
+
+/**
+ * Something the page drops on purpose leaves in motion: a copy of it, taking nothing and hidden from
+ * assistive tech, stays in its place for `keyframes` (built from the element as it was), then goes.
+ */
+export function leaveCopy(element: Element | null, keyframes: (element: HTMLElement) => Keyframe[], options: KeyframeAnimationOptions) {
+  if (!(element instanceof HTMLElement) || !element.isConnected || element.dataset.left !== undefined) return;
+  element.dataset.left = '';
   const ghost = element.cloneNode(true) as HTMLElement;
   ghost.inert = true;
   ghost.setAttribute('aria-hidden', 'true');
@@ -53,7 +61,7 @@ export function foldAway(element: Element | null) {
   element.after(ghost);
   // The copy arrives as a new element: its own entrance doesn't play again.
   ghost.getAnimations({subtree: true}).forEach(animation => animation.cancel());
-  ghost.animate([{height: `${element.offsetHeight}px`}, closed], timing).onfinish = () => ghost.remove();
+  ghost.animate(keyframes(element), {...options, fill: 'forwards'}).onfinish = () => ghost.remove();
 }
 
 /** An arriving row's ref: it opens from nothing to its height (and back from a fold out not finished). */

@@ -284,6 +284,61 @@ test('a calendar chip deepens in its own colour under the pointer and gives when
   }
 });
 
+test('a search chip answers as a whole under its ×, pops in and collapses away; a colour picker rings the current colour in itself and swells the one under the pointer; the chosen theme\'s row is filled', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    await page.keyboard.press('/');
+    await page.keyboard.type('northwind rejection');
+    await page.keyboard.press('Enter');
+    const chip = page.locator('.search .qchip:not([aria-hidden])', {hasText: 'Northwind'});
+    await chip.waitFor();
+    assert.deepEqual([await chip.evaluate(element => getComputedStyle(element).animationName), await chip.evaluate(element => getComputedStyle(element).animationDuration)], ['qchip-in', '0.12s']);
+    await chip.locator('.x').hover();
+    // The 120 ms fill runs its course.
+    await page.waitForTimeout(200);
+    assert.deepEqual(await chip.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow]),
+      [await computed(page, 'var(--sub3)'), `${await computed(page, 'var(--edgeHover)')} 0px 0px 0px 1px inset`]);
+    await chip.locator('.x').click();
+    // It goes from the field at once; a copy that takes nothing collapses away in its place.
+    assert.equal(await chip.count(), 0);
+    await page.locator('.search .qchip[aria-hidden]').waitFor({state: 'detached'});
+    await page.keyboard.press('Escape');
+
+    // Accounts: Business's colour picker rings its current colour in that colour, with no fill.
+    await openSettings(page, setpoint.base, 'accounts');
+    await page.getByRole('button', {name: 'Business colour'}).click();
+    const picker = page.getByRole('menu', {name: 'Business colour'});
+    const current = picker.locator('.sw.on');
+    await current.waitFor();
+    assert.deepEqual(await current.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow.replace(/ 0px 0px 0px 1\.5px inset$/, '') === getComputedStyle(element, '::before').backgroundColor]), ['rgba(0, 0, 0, 0)', true]);
+    const other = picker.locator('.sw:not(.on)').first();
+    await other.hover();
+    await until('the dot swells', () => other.evaluate(element => getComputedStyle(element, '::before').transform), transform => transform === 'matrix(1.25, 0, 0, 1.25, 0, 0)');
+    await page.keyboard.press('Escape');
+    // The account's options set its icons off with a hairline.
+    await page.getByRole('button', {name: 'Business options'}).click();
+    const icons = page.getByRole('group', {name: 'Icon'});
+    assert.deepEqual(await icons.evaluate(element => [getComputedStyle(element).borderTopWidth, getComputedStyle(element).borderTopColor]), ['1px', await computed(page, 'var(--hair)')]);
+    await page.keyboard.press('Escape');
+
+    // Appearance: the chosen theme is filled `sub2`, its tile inverted, its check `good`.
+    await page.locator('.settings .set-nav').getByRole('button', {name: 'Appearance'}).click();
+    const night = page.getByRole('radio', {checked: true});
+    await night.waitFor();
+    await page.mouse.move(1, 1);
+    // A hover fill the move left fades out.
+    await page.waitForTimeout(200);
+    assert.deepEqual(await night.evaluate(row => [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.aico')!).backgroundColor, getComputedStyle(row.querySelector(':scope > .icon')!).color]),
+      [await computed(page, 'var(--sub2)'), await computed(page, 'var(--ink)'), await computed(page, 'var(--good)')]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('press on the phone: a tapped row fills `sub2` at once and nothing stays lit after; no tap highlight', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

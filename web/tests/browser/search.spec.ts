@@ -37,7 +37,8 @@ async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
   return all.days.flatMap(day => day.rows).find(row => row.subject.startsWith(subjectStart))!.id;
 }
 
-const chips = (page: Page) => page.locator('.search .qchip').allTextContents();
+// The field's chips, not a removed one's copy collapsing away (Search.tsx).
+const chips = (page: Page) => page.locator('.search .qchip:not([aria-hidden])').allTextContents();
 
 /** Setpoint with Alfred's key set and its model calls going to the fake. */
 async function withAlfred() {
@@ -178,8 +179,8 @@ test('"!" leaves out what a word names: a Not chip, or the mail with a word kept
     await until('Northwind without its rejections', () => page.locator('.list .arow.result .l2').allTextContents(),
       shown => shown.length === 2 && !shown.some(text => /Update on your application|Data Engineer Intern/.test(text)));
     // A word that forms no chip stays in the field, "!" and all.
-    await page.locator('.search .qchip .x').first().click();
-    await page.locator('.search .qchip .x').first().click();
+    await page.locator('.search .qchip:not([aria-hidden]) .x').first().click();
+    await page.locator('.search .qchip:not([aria-hidden]) .x').first().click();
     await page.locator('.search input').fill('renewal !lease');
     await page.keyboard.press('Enter');
     await until('the renewals but the lease', () => page.locator('.list .arow.result').count(), count => count === 2);

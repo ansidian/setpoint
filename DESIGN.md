@@ -1648,6 +1648,16 @@ it changes what's on screen.
     radius 6, its count where the chips' titles start) and a `sub` hover, its open state staying
     `sub2` and `ink`, and after the count up to three 6 px dots show what it folds: an event's in its
     colour, a task's as a ring in its project's (Andy, 2026-10-11, polish audit grids-12).
+147. **A search chip answers as a whole:** with its × under the pointer the whole chip takes `sub3`
+    and an `edgeHover` ring, so it's clear which one goes; a word that becomes a chip pops in from .92
+    over 120 ms, and a removed chip collapses away over 120 ms as the rest close up. Mail's,
+    Calendar's and News's fields alike (Andy, 2026-10-11, polish audit search-09).
+148. **Settings marks a choice as the nav marks its page:** in a colour picker the current colour is
+    ringed in itself (1.5 px, 4.5 px clear of its dot) rather than sitting on a `sub2` disc, and a
+    dot swells to 1.25 under the pointer over 120 ms, so the choice and the pointer never look alike;
+    an account's icons sit under a hairline after its options. In Appearance the chosen theme's row
+    is filled `sub2`, its icon tile `ink` with an `onInk` glyph, its check `good` (Andy, 2026-10-11,
+    polish audit settings-09, settings-12).
 149. **The glide carries its content across** (amending The glide, override 30): the old content
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
