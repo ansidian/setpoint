@@ -724,6 +724,8 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
 - **The reader's actions** share its bottom bar evenly, Done first, its check `good` and its label
   `ink` 500 (#255).
 - **Marked unread**, an email shows the unread dot before its subject (#263).
+- **Search** has a clear button where the desktop's Esc hint is, no Mark all as read meanwhile, and
+  Back reads "Search" from a result (#259).
 
 ## mantel's mail chip
 
@@ -1507,6 +1509,11 @@ it changes what's on screen.
     the editor or search, the day's pane not drawn and its health lines atop the grid; the header's
     search narrows first. ⌘K keeps the rail's lost filters: "Inbox · Jobs", and Show or Hide each
     calendar (Andy, 2026-10-11, polish audit phone-06).
+259. **Phone search has a way out, and acts only on what it shows:** while searching, a 32 px round
+    clear button (an 18 px `close` in `ink3`; `sub2` and `ink` while pressed) stands where the
+    desktop's Esc hint is, and a tap empties the field and lets go of it. Mark all as read leaves the
+    header meanwhile, as it would read the hidden Inbox's mail, and an email opened from the results
+    reads "‹ Search", going back to them (Andy, 2026-10-11, polish audit phone-07).
 263. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
     and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
     before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No

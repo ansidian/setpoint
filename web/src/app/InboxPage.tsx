@@ -419,7 +419,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
                 {accountList.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}
               </select>
             </label>
-            <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>
+            {/* Not while searching: it would read the hidden Inbox's mail, not the results (#259). */}
+            {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
           </>
         )}
         <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
@@ -448,7 +449,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           </section>
         )}
         {open !== null && (
-          <Reader id={open} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)}
+          <Reader id={open} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
             marks={searching ? readerMarks(open, search.results, alfred.turns) : []}
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}

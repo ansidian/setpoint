@@ -44,7 +44,7 @@ export interface ReaderActions {
   markUnread: () => void;
 }
 
-export function Reader({id, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen}: {
+export function Reader({id, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
   id: number;
   // Its row in the list, so the tools are right before the email itself has loaded.
   row: MessageRowOut | undefined;
@@ -56,6 +56,8 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
   marks?: string[];
   // Opens another email (an Answer card's source).
   onOpen: (id: number) => void;
+  // Where the phone's Back goes: the Inbox, or the search results the email was opened from.
+  back?: 'Inbox' | 'Search';
 }) {
   const width = useReadingPaneWidth();
   const {data} = useResource<MessageOut>(messagePath(id));
@@ -111,7 +113,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
       {!phone && <PaneEdge width={width} />}
       {phone && (
         <div className="ph-top">
-          <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />Inbox</button>
+          <button className="btn quiet ph-back" type="button" onClick={actions.close}><Icon name="chevron_left" size={20} />{back}</button>
           <span className="grow" />
           <button className="ibtn ph-icon" type="button" aria-label={pinned ? 'Unpin' : 'Pin'} aria-pressed={pinned} onClick={actions.pin}>
             <Icon name={pinned ? 'keep-fill' : 'keep'} size={20} />

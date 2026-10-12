@@ -10,6 +10,7 @@ import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resu
 import type {Segment} from '../../logic/search.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
+import {usePhone} from '../Phone.tsx';
 import type {Search, SearchFieldState} from './state.ts';
 import './search.css';
 
@@ -66,6 +67,8 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const inputId = useId();
   // The chips are selected with the words (selectSearch) until the next key, click or blur.
   const [whole, setWhole] = useState(false);
+  // The phone has no Esc: a search there is left by its clear button, where the hint would be.
+  const phone = usePhone();
   useEffect(() => {
     const select = () => {
       input.current?.focus();
@@ -118,7 +121,14 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       ))}
       <input ref={input} id={inputId} className="grow" placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
         onChange={event => search.setText(event.target.value)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onBlur={() => setWhole(false)} />
-      <span className="kbd">{search.active ? 'Esc' : '/'}</span>
+      {phone && search.active ? (
+        // Its own tap stays its own: the label would send it on to the words.
+        <button className="search-clear" type="button" aria-label="Clear search" onClick={event => {
+          event.preventDefault();
+          search.clear();
+          input.current?.blur();
+        }}><Icon name="close" size={18} /></button>
+      ) : <span className="kbd">{search.active ? 'Esc' : '/'}</span>}
     </label>
   );
 }

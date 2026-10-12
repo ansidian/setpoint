@@ -25,6 +25,9 @@
   /* Plain search: the words as typed, no key hints, no Alfred. */
   .hd > .search, .hd > .search.active { order: 1; flex: 0 0 100%; width: auto; height: 40px; margin: 0 4px 8px -4px; padding: 0 12px; border-radius: 12px; }
   .hd > .search .kbd { display: none; }
+  /* A search's way out, where the Esc hint is on the desktop (#259). */
+  .hd > .search .search-clear { width: 32px; height: 32px; margin-right: -8px; border-radius: 999px; display: grid; place-items: center; flex: none; color: var(--ink3); }
+  .hd > .search .search-clear:active { background: var(--sub2); color: var(--ink); }
   .hd > .search input { font-size: 16px; }
   .hd > .search input::placeholder { font-size: 13px; }
   .search-list .ask { display: none; }

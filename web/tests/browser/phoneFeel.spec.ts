@@ -44,6 +44,12 @@ const actionBar = (page: Page) => page.locator('.ph-acts button').evaluateAll(bu
   icon: getComputedStyle(button.querySelector('.icon')!).color,
 })));
 
+/** Computed styles of the first match. */
+const styles = (page: Page, selector: string, names: string[]) => page.locator(selector).first().evaluate((element, keys) => {
+  const style = getComputedStyle(element);
+  return keys.map(key => style.getPropertyValue(key));
+}, names);
+
 test('the reader\'s actions share the bar evenly, Done leads in `good`, and none moves in as the email arrives', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -136,3 +142,47 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
   }
 });
 
+
+test('phone search: a clear button where the hint was, no Mark all as read meanwhile, and Back to Search from a result', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const markAll = page.locator('.hd button[aria-label="Mark all as read"]');
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).tap();
+    assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
+    await page.locator('.ph-back').tap();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+
+    await page.locator('.search input').tap();
+    await page.keyboard.type('northwind');
+    await page.locator('.search-list .result').first().waitFor();
+    // The way out, where the desktop's Esc hint is: 32 px round, an 18 px `close` in `ink3`, 4 px in
+    // from the field's border (8 px into its 12 px padding).
+    const clear = page.locator('.search .search-clear');
+    const [field, button, icon] = [await page.locator('.hd > .search').boundingBox(), await clear.boundingBox(), await clear.locator('svg').boundingBox()];
+    assert.deepEqual([button!.width, button!.height, icon!.width, Math.round(field!.x + field!.width - 1 - (button!.x + button!.width))], [32, 32, 18, 4]);
+    assert.deepEqual(await styles(page, '.search .search-clear', ['color', 'border-radius']), [await tokenColour(page, 'ink3'), '999px']);
+    assert.equal(await page.locator('.search .kbd').count(), 0);
+    // Mark all as read would read the hidden Inbox's mail, not the results: it's gone while searching.
+    assert.equal(await markAll.count(), 0);
+    // An email from the results goes back to them.
+    await page.locator('.search-list .result', {hasText: 'Interview availability'}).tap();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.equal(await page.locator('.ph-back').textContent(), 'Search');
+    await page.locator('.ph-back').tap();
+    await until('back at the results', () => page.locator('.pane').count(), count => count === 0);
+    assert.equal(await page.locator('.hd-title').textContent(), 'Search');
+    assert.ok(await page.locator('.search-list .result').first().isVisible());
+    // One tap leaves search: the field empties and lets go, and the Inbox and Mark all as read come back.
+    await clear.tap();
+    await page.locator('.content > .list .gh').first().waitFor();
+    assert.equal(await page.locator('.search input').inputValue(), '');
+    assert.equal(await page.locator('.hd-title').textContent(), 'Inbox');
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'BODY');
+    assert.equal(await clear.count(), 0);
+    await markAll.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
