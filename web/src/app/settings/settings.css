@@ -19,7 +19,7 @@
 .settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .settings .set-nav .nav { width: 100%; text-align: left; }
-/* The keyboard's fill is `sub`; the current page keeps its `sub2` with the keys on it. */
+/* A page under keyboard focus takes hover's `sub`; the current one keeps its raised chip (#129). */
 .settings .set-nav .nav:not(.on):focus-visible { background: var(--sub); }
 .settings .set-nav .nav .warn { color: var(--caution); }
 /* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution (#164). */

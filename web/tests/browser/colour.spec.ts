@@ -278,6 +278,18 @@ for (const theme of ['night', 'light'] as const) {
       await until('Inbox without a fill', () => style(inboxNav, 'backgroundColor'), fill => fill === 'rgba(0, 0, 0, 0)');
       const ink = await colourOf(page, 'var(--ink)');
       assert.deepEqual([await style(inboxNav, 'color'), await style(inboxNav.locator('.icon'), 'color')], [ink, ink]);
+      // Settings' current page is the same chip, focused as Settings opens from its address.
+      await page.goto(`${setpoint.base}/settings/notifications`);
+      const current = page.locator('.settings .set-nav .nav.on');
+      await current.waitFor();
+      await until('Settings\' current page focused', () => current.evaluate(element => element === document.activeElement), focused => focused);
+      await until('Settings\' current page raised', () => style(current, 'backgroundColor'), fill => fill === raised[0]);
+      // Its glyph is the accent; a warning glyph in the nav stays caution, current or not (#126).
+      assert.equal(await style(current.locator('> .icon'), 'color'), await colourOf(page, 'var(--accent)'));
+      const caution = await colourOf(page, 'var(--caution)');
+      const warnings = await page.locator('.settings .set-nav .nav .warn .icon').evaluateAll(all => all.map(icon => getComputedStyle(icon).color));
+      assert.ok(warnings.length > 0, 'a warning in the nav (FOX 11 fails)');
+      assert.deepEqual(warnings, warnings.map(() => caution));
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
