@@ -16,9 +16,12 @@ import {HealthGlyph, Line, Menu, Page, Row, Section, Select, SkeletonRows, useAt
 const INBOX = '';
 
 export function TodoistPage() {
-  const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
-  const {data: projects} = useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH);
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
+  const sources = sourcesLoad.data;
+  const projectsLoad = {path: TODOIST_PROJECTS_PATH, ...useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH)};
+  const projects = projectsLoad.data;
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
   const now = useNow();
   const connect = useAttempt();
   const save = useAttempt();
@@ -27,7 +30,7 @@ export function TodoistPage() {
   const connected = source !== undefined && (source.has_credentials || source.dev);
 
   return (
-    <Page title="Todoist">
+    <Page title="Todoist" loads={[sourcesLoad, projectsLoad, settingsLoad]}>
       <Section label="Connection">
         {/* Whether it's connected is said only once it's known (states-01). */}
         {!sources ? <SkeletonRows count={1} /> : <div className="set-group">

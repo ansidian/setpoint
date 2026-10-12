@@ -6,10 +6,16 @@ import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
-import {Bar, Sk} from '../states/Loading.tsx';
+import {Bar, LoadFailed, Sk, useLoadFailed} from '../states/Loading.tsx';
+import type {Load} from '../states/Loading.tsx';
 import {closeSettings} from './store.ts';
 
-export function Page({title, actions, children}: {title: string; actions?: ReactNode; children: ReactNode}) {
+/**
+ * A Settings page: its head, then its sections, or, when one of its `loads` failed with nothing to
+ * show, why, with Try again (states-06, #173).
+ */
+export function Page({title, actions, loads = [], children}: {title: string; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
+  const failed = useLoadFailed(loads);
   return (
     <section className="set-main" aria-label={title}>
       <button className="ibtn set-x" type="button" aria-label="Close settings" onClick={closeSettings}><Icon name="close" /></button>
@@ -17,7 +23,7 @@ export function Page({title, actions, children}: {title: string; actions?: React
         <h2 className="set-title">{title}</h2>
         {actions && <><span className="grow" />{actions}</>}
       </div>
-      {children}
+      {failed ? <LoadFailed what={`Settings › ${title}`} loads={loads} /> : children}
     </section>
   );
 }

@@ -204,3 +204,62 @@ test('Calendar loading: the right pane and Calendars draw skeletons, never "Noth
     await setpoint.stop();
   }
 });
+
+/** Answers every matching /api request with the server's 500 while `failing()` says so; the rest pass. */
+async function failWhile(page: Page, pattern: RegExp, failing: () => boolean) {
+  await page.route(url => url.pathname.startsWith('/api/') && pattern.test(url.pathname + url.search), route => (failing()
+    ? route.fulfill({status: 500, json: {error: {code: 'internal', message: 'Something went wrong.'}}})
+    : route.continue()));
+}
+
+test('a load that fails says so in place, in caution with its warning, and Try again loads it (states-06)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    let failing = true;
+    await failWhile(page, /^\/api\/mail\/inbox$/, () => failing);
+    await visit(page, `${setpoint.base}/inbox`);
+    const line = page.locator('section.list .load-failed');
+    await line.waitFor();
+    assert.equal(await line.innerText(), 'Couldn’t load the Inbox, Something went wrong.\n·\nTry again');
+    assert.equal(await line.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'caution'));
+    assert.deepEqual(await line.locator('.icon').evaluateAll(icons => icons.map(icon => icon.getAttribute('width'))), ['16', '16']);
+    assert.equal(await line.evaluate(element => element.getBoundingClientRect().height), 32);
+    assert.equal(await page.locator('[data-skeleton="inbox"]').count(), 0, 'no skeleton says it\'s still coming');
+    failing = false;
+    await line.getByRole('button', {name: 'Try again'}).click();
+    await page.locator('.list .arow').first().waitFor();
+    assert.equal(await line.count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the reader\'s body, Calendar\'s day, News and a Settings page each say in place when they couldn\'t load (states-06)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    // Opening it would answer with the email too (POST …/open), so it fails as well.
+    await failWhile(page, /^\/api\/(mail\/messages\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
+    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.pane .load-failed', {hasText: 'Couldn’t load this email, Something went wrong.'}).waitFor();
+
+    await page.keyboard.press('2');
+    await page.locator('.rpane .load-failed', {hasText: 'Couldn’t load this day, Something went wrong.'}).waitFor();
+    assert.equal(await page.locator('[data-skeleton="agenda"]').count(), 0);
+
+    await page.keyboard.press('3');
+    await page.locator('.nw-list .load-failed', {hasText: 'Couldn’t load News, Something went wrong.'}).waitFor();
+
+    await page.keyboard.press('Meta+,');
+    await page.locator('.settings .set-nav').getByRole('button', {name: 'AI', exact: true}).click();
+    await page.locator('.settings .load-failed', {hasText: 'Couldn’t load Settings › AI, Something went wrong.'}).waitFor();
+    assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -14,17 +14,21 @@ import {Line, Menu, Page, Row, Section, SkeletonRows, Switch, useAttempt} from '
 import {KeyRow, SecretRow} from './Ai.tsx';
 
 export function CalendarPage() {
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
-  const {data: secrets} = useResource<SecretOut[]>(SECRETS_PATH);
-  const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
+  const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
+  const calendars = calendarsLoad.data;
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
+  const secretsLoad = {path: SECRETS_PATH, ...useResource<SecretOut[]>(SECRETS_PATH)};
+  const secrets = secretsLoad.data;
+  const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
+  const sources = sourcesLoad.data;
   const weather = sources?.find(source => source.provider === 'weather');
   const save = useAttempt();
   const [editingHome, setEditingHome] = useState(false);
   const home = settings?.calendar.home ?? null;
 
   return (
-    <Page title="Calendar">
+    <Page title="Calendar" loads={[calendarsLoad, settingsLoad, secretsLoad, sourcesLoad]}>
       <Section label="Calendars">
         {!calendars ? <SkeletonRows count={4} one /> : (
           <div className="set-group">

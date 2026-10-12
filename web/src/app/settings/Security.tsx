@@ -19,7 +19,8 @@ const MODES: {value: AuthMode; label: string}[] = [
 ];
 
 export function SecurityPage() {
-  const {data: security} = useResource<SecurityOut>(SECURITY_PATH);
+  const securityLoad = {path: SECURITY_PATH, ...useResource<SecurityOut>(SECURITY_PATH)};
+  const security = securityLoad.data;
   const now = useNow();
   const zone = timeZone();
   const change = useAttempt();
@@ -29,7 +30,7 @@ export function SecurityPage() {
   const locked = !security?.recent_password;
 
   return (
-    <Page title="Security">
+    <Page title="Security" loads={[securityLoad]}>
       {security && locked && <ConfirmPassword />}
 
       <Section label="Sign-in">

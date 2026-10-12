@@ -48,6 +48,7 @@ import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
 import {DayPane, HealthLines} from './DayPane.tsx';
+import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
@@ -154,7 +155,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const zone = timeZone();
   const today = localDate(now, zone);
   const view = useCalendarView();
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
+  const calendars = calendarsLoad.data;
   // The compact tier: the grid takes the width, and the right pane lies over it while it holds the
   // editor or search; the day's pane isn't drawn (#258).
   const compact = useCompact();
@@ -261,6 +263,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // The pane reads the selected day's month itself, so a day far from the grid's still shows.
   const dayMonthLoad = {path: monthItemsPath(monthOf(selectedDay)), ...useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)))};
   const dayMonth = dayMonthLoad.data;
+  // The day's items or the calendars couldn't load: the pane says so where its agenda would be (#173).
+  const dayFailed = useLoadFailed([dayMonthLoad, calendarsLoad]);
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
   const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, calendars, zone, selectedDay]);
   // What the calendars toggled off hide on that day, so its pane doesn't call it free (SV-56).
@@ -863,7 +867,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
         ) : compact && !dayPane ? null : (
-          <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
+          <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems}
+            failed={dayFailed ? <LoadFailed what="this day" loads={[dayMonthLoad, calendarsLoad]} /> : null} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
             selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
             onShowAll={() => showHidden(calendars ?? [])} />
         )}

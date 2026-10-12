@@ -14,9 +14,10 @@ import {useNow} from '../clock.ts';
 import {HealthGlyph, Page, Section, SkeletonLabel, SkeletonRows} from './parts.tsx';
 
 export function NewsSettingsPage() {
-  const {data} = useResource<NewsSourcesOut>(NEWS_SOURCES_PATH);
+  const dataLoad = {path: NEWS_SOURCES_PATH, ...useResource<NewsSourcesOut>(NEWS_SOURCES_PATH)};
+  const data = dataLoad.data;
   return (
-    <Page title="News" actions={data && <span className="head-note num">{sourcesHeader(data)}</span>}>
+    <Page title="News" loads={[dataLoad]} actions={data && <span className="head-note num">{sourcesHeader(data)}</span>}>
       {/* Its sections' names come with the answer: until then, a group's skeleton under a label's. */}
       {!data && <Section label={<SkeletonLabel />}><SkeletonRows count={6} tile /></Section>}
       {data?.sections.map(({section, sources}) => (

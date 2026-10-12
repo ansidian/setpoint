@@ -88,7 +88,7 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
           <div className="rp-date">{title}</div>
           {wx
             ? <div className="rp-sub ink2"><span className={wx.tone}><Icon name={wx.icon} size={16} /></span><span className="num">{wx.line}</span></div>
-            : loading ? <DayLineSkeleton /> : <div className="rp-sub ink3 num">{dayCounts(items)}</div>}
+            : loading ? (failed ? null : <DayLineSkeleton />) : <div className="rp-sub ink3 num">{dayCounts(items)}</div>}
         </div>
         <button className="ibtn" aria-label={`New event on ${title.slice(5)}`} onClick={() => onNew('event')}><Icon name="add" /></button>
       </div>

@@ -49,6 +49,7 @@ import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
 import {toastFailure} from '../toast.ts';
+import {LoadFailed} from '../states/Loading.tsx';
 import {StoryPane} from './StoryPane.tsx';
 import './news.css';
 
@@ -115,7 +116,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const zone = timeZone();
   const {view} = route;
   const path = pathOf(view);
-  const {data} = useResource<Answer>(path);
+  const {data, error} = useResource<Answer>(path);
   const latest = useMemo(() => (data ? listing(view, data) : null), [view, data]);
 
   const [hold, setHold] = useState<Hold>(() => ({path, stale: getCached(path), held: null, known: new Map(), named: {}, from: null}));
@@ -350,6 +351,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
             </div>
           ) : (
           <div className="list" ref={list}>
+            {/* Its first answer didn't come: why, with Try again (#173). */}
+            {!latest && <LoadFailed what="News" loads={[{path, data, error}]} />}
             {showHeadlines && (
               <>
                 <div className="nw-sec first"><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>

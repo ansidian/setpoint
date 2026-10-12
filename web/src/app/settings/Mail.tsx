@@ -29,16 +29,19 @@ const DESTINATIONS: {value: string; label: string}[] = [
 ];
 
 export function MailPage() {
-  const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
-  const {data: domains} = useResource<TrustedDomainOut[]>(TRUSTED_PATH);
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const rulesLoad = {path: RULES_PATH, ...useResource<RuleOut[]>(RULES_PATH)};
+  const rules = rulesLoad.data;
+  const domainsLoad = {path: TRUSTED_PATH, ...useResource<TrustedDomainOut[]>(TRUSTED_PATH)};
+  const domains = domainsLoad.data;
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
   const [adding, setAdding] = useState(false);
   const save = useAttempt();
   const {written, learned} = splitRules(rules ?? []);
   const order = useLiveOrder(written, 'text/x-setpoint-rule', ids => void reorderRules(ids).catch(toastFailure('Couldn\'t reorder rules')));
 
   return (
-    <Page title="Mail">
+    <Page title="Mail" loads={[rulesLoad, domainsLoad, settingsLoad]}>
       <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => setAdding(!adding)}><Icon name="add" size={17} />Add rule</button>}>
         {/* "No rules yet" only once the rules are known (states-01). */}
         {!rules && !adding ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>

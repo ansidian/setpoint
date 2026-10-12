@@ -117,6 +117,10 @@
 .load-failed .act .icon { color: var(--ink2); }
 .load-failed .act:disabled { opacity: .5; }
 @media (hover: hover) { .load-failed .act:enabled:hover { background: var(--sub); } }
+/* In place: on the reader's body's line, under the right pane's date, in a Settings page's column. */
+.rd-body > .load-failed { padding: 0; }
+.rpane .load-failed { margin-top: 10px; padding: 0 16px 0 20px; }
+.settings .load-failed { padding: 0 4px; }
 
 /* ---------- Setpoint starting (#174): the mark where Unreachable's sits (states.css .boot) ---------- */
 /* Its chips settle in turn once the start has taken a moment, then it breathes as a skeleton does.

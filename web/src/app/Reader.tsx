@@ -32,6 +32,7 @@ import {setReadingPaneWidth, useReadingPaneWidth} from './readingPane.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {ProposalCard} from './search/ProposalCard.tsx';
 import {Marked} from './search/Search.tsx';
+import {LoadFailed} from './states/Loading.tsx';
 import {useAlfred} from './search/state.ts';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -71,7 +72,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const [arrived] = useState(id);
   const [moved, setMoved] = useState(false);
   if (!moved && id !== arrived) setMoved(true);
-  const {data} = useResource<MessageOut>(messagePath(id));
+  const messageLoad = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
+  const {data} = messageLoad;
   const message = data?.id === id ? data : undefined;
   const cards = useCards(id);
   // The More menu, open for this email; it shows only on Security and Noise mail, where it holds the
@@ -164,6 +166,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
             opened on arrives with the pane. The tools stay still. */}
         <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>
           {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />}
+        {!message && <div className="rd-body"><LoadFailed what="this email" loads={[messageLoad]} /></div>}
         </div>
       </div>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the

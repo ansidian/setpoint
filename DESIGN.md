@@ -849,6 +849,7 @@ section's label stays under the title (#250).
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
 | **First backfill** | search's status: the shared spinner, "Indexing · 62% · showing what's indexed so far", and its progress along the line's foot (#192) |
+| **A load failed** | in place of what didn't load, the failing line's look: `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." in the server's words, then · **Try again** with `refresh`; data already shown stays and says nothing (#173) |
 
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
@@ -2350,3 +2351,12 @@ it changes what's on screen.
     Dentist. Calendars in the sidebar are four 30 px rows of a 14 px box (radius 4) and a bar. The
     grid draws no stand-in chips, which would read as events; the phone's agenda draws two days of
     skeleton rows (Andy, 2026-10-11, polish audit calpanes-03, states-01).
+173. **A page that couldn't load says so where it would be:** when a page's first answer fails (a
+    500, a timeout) while Setpoint is reachable, the list, the reader's body, the right pane's day,
+    News's list or the Settings page shows one 32 px line in its place, the failing line's look:
+    a 16 px `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." (the server's
+    words after a comma; "this email", "this day", "News", "Settings › AI"), then " · " and **Try
+    again** in `ink` with its `refresh`, which asks again. Its skeleton goes, so nothing claims it's
+    still coming. A refresh failing under data already shown keeps the data and says nothing; the
+    next live event tries again. Offline, the pill already says so, and the skeleton waits (Andy,
+    2026-10-11, polish audit states-06).

@@ -24,9 +24,12 @@ const SAVED_MS = 1500;
 const NONE = '';
 
 export function NotificationsPage() {
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
-  const {data: status} = useResource<NotifyStatusOut>(NOTIFY_STATUS_PATH);
-  const {data: secrets} = useResource<SecretOut[]>(SECRETS_PATH);
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
+  const statusLoad = {path: NOTIFY_STATUS_PATH, ...useResource<NotifyStatusOut>(NOTIFY_STATUS_PATH)};
+  const status = statusLoad.data;
+  const secretsLoad = {path: SECRETS_PATH, ...useResource<SecretOut[]>(SECRETS_PATH)};
+  const secrets = secretsLoad.data;
   const now = useNow();
   const save = useAttempt();
   const test = useAttempt();
@@ -37,7 +40,7 @@ export function NotificationsPage() {
   // Until its answers come, its groups' skeleton: nothing said about ntfy that isn't known (states-01).
   if (!settings || !secrets) {
     return (
-      <Page title="Notifications">
+      <Page title="Notifications" loads={[settingsLoad, statusLoad, secretsLoad]}>
         <Section label="ntfy" style={{marginTop: 0}}><SkeletonRows count={4} /></Section>
         <Section label="Reminder defaults"><SkeletonRows count={2} one /></Section>
         <Section style={{marginTop: 22}}><SkeletonRows count={3} /></Section>
@@ -64,7 +67,7 @@ export function NotificationsPage() {
   });
 
   return (
-    <Page title="Notifications">
+    <Page title="Notifications" loads={[settingsLoad, statusLoad, secretsLoad]}>
       <Section label="ntfy" right={(
         <>
           {state && <span className="ink2 num" style={{display: 'inline-flex', alignItems: 'center', gap: 7}}><span className={state.dot} />{state.text}</span>}

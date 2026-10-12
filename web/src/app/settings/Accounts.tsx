@@ -28,12 +28,18 @@ const ACCOUNT_ICONS: IconName[] = ['storefront', 'person', 'work', 'badge', 'clo
 const SOURCE_ICONS: Record<string, IconName> = {google_calendar: 'calendar_month', todoist: 'task_alt', weather: 'partly_cloudy_day'};
 
 export function AccountsPage() {
-  const {data: accounts} = useResource<AccountOut[]>(ACCOUNTS_PATH);
-  const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
-  const {data: precision} = useResource<PrecisionOut>(PRECISION_PATH);
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
-  const {data: projects} = useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH);
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
+  const accountsLoad = {path: ACCOUNTS_PATH, ...useResource<AccountOut[]>(ACCOUNTS_PATH)};
+  const accounts = accountsLoad.data;
+  const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
+  const sources = sourcesLoad.data;
+  const precisionLoad = {path: PRECISION_PATH, ...useResource<PrecisionOut>(PRECISION_PATH)};
+  const precision = precisionLoad.data;
+  const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
+  const calendars = calendarsLoad.data;
+  const projectsLoad = {path: TODOIST_PROJECTS_PATH, ...useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH)};
+  const projects = projectsLoad.data;
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
   const now = useNow();
   const connect = useAttempt();
   // The iCloud form: a new account, or an account's new app password (Reconnect).
@@ -55,7 +61,7 @@ export function AccountsPage() {
   const order = useLiveOrder(list, 'text/x-setpoint-account', ids => void reorderAccounts(ids).catch(toastFailure('Couldn\'t reorder accounts')));
 
   return (
-    <Page title="Accounts" actions={(
+    <Page title="Accounts" loads={[accountsLoad, sourcesLoad, precisionLoad, calendarsLoad, projectsLoad, settingsLoad]} actions={(
       <>
         <button className="btn out sm" type="button" disabled={connect.busy} onClick={() => gmail()}><Icon name="add" size={17} />Connect Gmail</button>
         <button className="btn out sm" type="button" onClick={() => setIcloud(icloud ? null : {address: ''})}><Icon name="add" size={17} />Connect iCloud</button>

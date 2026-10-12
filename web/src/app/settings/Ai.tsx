@@ -28,9 +28,12 @@ const MODELS: {setting: ModelSetting; title: string; sub: string; current: (ai: 
 const DEFAULT = '';
 
 export function AiPage() {
-  const {data: ai} = useResource<AiOut>(AI_PATH);
-  const {data: settings} = useResource<Settings>(SETTINGS_PATH);
-  const {data: secrets} = useResource<SecretOut[]>(SECRETS_PATH);
+  const aiLoad = {path: AI_PATH, ...useResource<AiOut>(AI_PATH)};
+  const ai = aiLoad.data;
+  const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
+  const settings = settingsLoad.data;
+  const secretsLoad = {path: SECRETS_PATH, ...useResource<SecretOut[]>(SECRETS_PATH)};
+  const secrets = secretsLoad.data;
   const save = useAttempt();
   const cap = useAttempt();
   const label = (id: string) => ai?.models.find(model => model.id === id)?.label ?? id;
@@ -42,7 +45,7 @@ export function AiPage() {
   const usage = ai?.usage_this_month;
 
   return (
-    <Page title="AI">
+    <Page title="AI" loads={[aiLoad, settingsLoad, secretsLoad]}>
       <Section label="Keys">
         {/* What's set, and which model is in use, only once it's known (states-01). */}
         {!secrets ? <SkeletonRows count={2} /> : (
