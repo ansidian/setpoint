@@ -15,7 +15,7 @@ import {chipTime, isPast} from '../../logic/calendar.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useLanding} from './landing.ts';
-import {useCalendarFade} from './view.ts';
+import {useCalendarFade, useSearchDim} from './view.ts';
 
 /**
  * How the grid draws an item besides its own state: a ghost (a draft, a drag's origin), faded (a drop
@@ -57,6 +57,8 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const fade = useCalendarFade()(item.calendar_id);
   // An event's change arriving brightens its tint once (polish audit calflows-02).
   const landing = useLanding<HTMLDivElement>(item);
+  // What a calendar search doesn't match dims (polish audit search-10).
+  const dim = useSearchDim()(item.id);
   const onClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     onSelect(item, event.currentTarget, event.metaKey || event.ctrlKey || event.shiftKey);
@@ -64,7 +66,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const onPointerDown = onPress ? (event: PointerEvent<HTMLElement>) => onPress(item, event) : undefined;
   const pending = item.command?.state === 'pending';
   const failed = item.command?.state === 'failed';
-  const state = `${pending ? ' pending' : failed ? ' failed' : ''}${fade ? ` ${fade}` : ''}`;
+  const state = `${pending ? ' pending' : failed ? ' failed' : ''}${fade ? ` ${fade}` : ''}${dim ? ' unmatched' : ''}`;
   const ghost = ghostly(look) ? ` ghost${look === 'faded' ? ' faded' : ''}` : look ? ` ${look}` : '';
   const plain = !ghostly(look);
   if (item.kind === 'task') {

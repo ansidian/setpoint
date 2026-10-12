@@ -946,3 +946,36 @@ test('a drag lands where it shows it will: the lift eases in, the day under it t
     await setpoint.stop();
   }
 });
+
+test('a calendar search dims what it doesn\'t match to .3 over 180 ms and lights its matches, every occurrence of a series; Esc brings the grid back', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const dentist = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'});
+    const gym = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'});
+    const task = page.locator('.cell[data-date="2026-10-07"] .tk').first();
+    await page.keyboard.press('/');
+    await page.keyboard.type('dentist');
+    await page.locator('.cal-search .cs-result', {hasText: 'Dentist'}).first().waitFor();
+    await until('the rest dims to .3', async () => [await style(gym, 'filter'), await style(task, 'filter')].join(), value => value === 'opacity(0.3),opacity(0.3)');
+    assert.equal(await dentist.getAttribute('class'), 'ev');
+    assert.match(await style(gym, 'transition'), /filter 0\.18s/);
+
+    // A series: every Gym matches.
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type('gym');
+    await page.locator('.cal-search .cs-result', {hasText: 'Gym'}).first().waitFor();
+    await until('Gym lights up, every occurrence', () => page.locator('.cal-grid .ev.unmatched', {hasText: 'Gym'}).count(), count => count === 0);
+    assert.ok(await page.locator('.cal-grid .ev', {hasText: 'Gym'}).count() > 3);
+    await until('Dentist dims', () => dentist.getAttribute('class'), classes => !!classes?.split(' ').includes('unmatched'));
+
+    // Esc: the grid comes back.
+    await page.keyboard.press('Escape');
+    await until('nothing dims', () => page.locator('.cal-grid .unmatched').count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

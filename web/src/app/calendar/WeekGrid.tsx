@@ -31,7 +31,7 @@ import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
 import type {Slot} from './Editor.tsx';
 import {pointIn, rectIn, zoomOf} from './geometry.ts';
 import {useLanding} from './landing.ts';
-import {useCalendarFade} from './view.ts';
+import {useCalendarFade, useSearchDim} from './view.ts';
 import type {ScrollRequest} from './view.ts';
 import './week.css';
 
@@ -593,8 +593,9 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
   const lines = blockLines(box.height, narrow);
   const fade = useCalendarFade()(item.calendar_id);
   const landing = useLanding<HTMLDivElement>(item);
+  const dim = useSearchDim()(item.id);
   const ghost = ghostly(look);
-  const classes = ['wb', fade, short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !ghost && 'sel', isPast(item, now, timeZone) && !ghost && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
+  const classes = ['wb', fade, dim && 'unmatched', short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !ghost && 'sel', isPast(item, now, timeZone) && !ghost && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
     ghost && 'ghost', look === 'faded' && 'faded', !ghost && look, lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
   const edges = resizable(item) && !look && !lifted;
   return (

@@ -97,7 +97,8 @@
 .wb.restoring { animation: chip-in var(--dur-medium) var(--ease); }
 .wb.restoring:not(.sel) { animation: chip-in var(--dur-medium) var(--ease), landed 420ms var(--ease) var(--dur-medium); }
 @keyframes chip-in { from { opacity: 0; transform: scale(.96); } }
-.wb { transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.wb { transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
+.wb.unmatched { filter: opacity(.3); }
 .wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 .wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }
 .wb.ghost.faded { opacity: .35; }

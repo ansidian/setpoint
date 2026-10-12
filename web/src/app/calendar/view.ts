@@ -28,6 +28,8 @@ export interface CalendarView {
   gliding: string | null;
   // Calendars just toggled (polish audit calpanes-11): their items fading out before they're hidden, or in as they're shown.
   fade: CalendarFade;
+  // While a calendar search shows all its results, the ids they're of (a recurring event's every occurrence shares one): the rest dim (polish audit search-10).
+  matches: ReadonlySet<number> | null;
 }
 
 export interface CalendarFade {
@@ -36,7 +38,7 @@ export interface CalendarFade {
 }
 
 const STILL: CalendarFade = {leaving: new Set(), entering: new Set()};
-let view: CalendarView = {shown: null, mini: null, selected: null, scroll: null, anchor: null, week: null, weekJump: 0, gliding: null, fade: STILL};
+let view: CalendarView = {shown: null, mini: null, selected: null, scroll: null, anchor: null, week: null, weekJump: 0, gliding: null, fade: STILL, matches: null};
 let seq = 0;
 const listeners = new Set<() => void>();
 const set = (next: Partial<CalendarView>) => {
@@ -55,6 +57,14 @@ export function useCalendarFade(): (calendarId: number) => 'leaving' | 'entering
   const fade = useSyncExternalStore(subscribe, () => view.fade);
   return calendarId => (fade.leaving.has(calendarId) ? 'leaving' : fade.entering.has(calendarId) ? 'entering' : null);
 }
+
+/** Whether an item dims on the grid while a calendar search shows what matches (polish audit search-10). */
+export function useSearchDim(): (itemId: number) => boolean {
+  const matches = useSyncExternalStore(subscribe, () => view.matches);
+  return itemId => matches !== null && itemId > 0 && !matches.has(itemId);
+}
+
+export const setSearchMatches = (matches: ReadonlySet<number> | null) => set({matches});
 
 const without = (ids: ReadonlySet<number>, id: number) => new Set([...ids].filter(one => one !== id));
 

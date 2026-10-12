@@ -449,7 +449,7 @@ then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px
 bars as the week's (#227), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#233).
 An empty day offers New event C and New task D as dashed ghost rows (#234); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
-editor and calendar search results.
+editor and calendar search results; while those show, the grid dims what they don't match (#238).
 
 ### The floating detail
 
@@ -2094,3 +2094,9 @@ it changes what's on screen.
     recurring event's drop, which asks which occurrences first, waits where it landed. The week's
     column under a move takes the same colour (Andy, 2026-10-11, polish audit calflows-09,
     motion-15).
+238. **A calendar search lights up its matches on the grid:** while the search shows its results, the
+    month's chips and the week's blocks it doesn't match dim to .3 over 180 ms (a filter, so a match's
+    own .5 while waiting stays), and matches keep their full strength with no ring, since a selected
+    item is the solid chip; a recurring event's every occurrence matches with its series. Clearing the
+    query or Esc brings the grid back over the same 180 ms. A search with more results still to load
+    (past 50) dims nothing, so no match is ever dimmed (Andy, 2026-10-11, polish audit search-10).

@@ -57,7 +57,7 @@ import {MonthGrid} from './MonthGrid.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import {SearchPane} from './SearchPane.tsx';
 import {rememberMode} from './mode.ts';
-import {knownDay, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
+import {knownDay, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSearchMatches, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
 import {WeekGrid} from './WeekGrid.tsx';
 
 type CalendarRoute = Extract<Route, {page: 'calendar'}>;
@@ -447,6 +447,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else return false;
     return true;
   };
+  // A search with all its results shown dims the grid's other items (polish audit search-10); one with
+  // more to load doesn't, so nothing it matches dims.
+  const matchIds = searching && search.active && search.out && search.out.next_offset === null ? search.results.map(result => result.item.id).join(',') : null;
+  useEffect(() => {
+    setSearchMatches(matchIds === null ? null : new Set(matchIds ? matchIds.split(',').map(Number) : []));
+    return () => setSearchMatches(null);
+  }, [matchIds]);
   // Whether the open search has had a query: emptied again, it closes, as Esc does (SV-29).
   const [searched, setSearched] = useState(false);
   const closeSearch = () => {
