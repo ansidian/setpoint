@@ -273,6 +273,17 @@ export function shownState(row: Pick<StoryRowOut, 'id' | 'state'>, visit: VisitD
 /** The facts since that look, newest first. */
 export const factsSince = <F extends {at: string}>(facts: readonly F[], since: string) => facts.filter(fact => fact.at > since).reverse();
 
+/**
+ * New since you looked, folded (the polish audit's news-12): the newest `cap` facts, then the rest
+ * behind "6 more", so the story's own summary stays in view. Five or fewer all show: folding one
+ * fact away would save nothing.
+ */
+export const foldFacts = <F>(facts: readonly F[], cap = 4): {shown: F[]; folded: F[]} =>
+  (facts.length > cap + 1 ? {shown: facts.slice(0, cap), folded: facts.slice(cap)} : {shown: [...facts], folded: []});
+
+/** The fold's line: "6 more" while it's closed, "Show fewer" once open. */
+export const foldLine = (count: number, open: boolean) => (open ? 'Show fewer' : `${count} more`);
+
 /** Whether a row's story still waits to be seen: new or updated. */
 export const unseen = (row: Pick<StoryRowOut, 'state'>) => row.state !== 'seen';
 

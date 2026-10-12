@@ -6,7 +6,7 @@ import type {StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, initials, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
+  articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
   rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
@@ -160,6 +160,23 @@ describe('the held order and the pill', () => {
   test('the facts since that look, newest first', () => {
     const facts = [{at: '2026-10-05T13:12:00.000Z', text: 'Broke out'}, {at: '2026-10-07T13:55:00.000Z', text: 'Schools closed'}, {at: '2026-10-07T15:40:00.000Z', text: 'Grew to 400 acres'}];
     expect(factsSince(facts, LAST_LOOK).map(fact => fact.text)).toEqual(['Grew to 400 acres', 'Schools closed']);
+  });
+
+  const numbers = (count: number) => Array.from({length: count}, (_, index) => index + 1);
+  test.each([
+    [0, 0, 0],
+    [2, 2, 0],
+    [5, 5, 0],
+    [6, 4, 2],
+    [10, 4, 6],
+  ])('New since you looked with %i facts shows %i, folding %i (news-12)', (count, shown, folded) => {
+    const fold = foldFacts(numbers(count));
+    expect([fold.shown.length, fold.folded.length]).toEqual([shown, folded]);
+    expect([...fold.shown, ...fold.folded]).toEqual(numbers(count));
+  });
+
+  test('the fold\'s line', () => {
+    expect([foldLine(6, false), foldLine(6, true), foldLine(1, false)]).toEqual(['6 more', 'Show fewer', '1 more']);
   });
 });
 

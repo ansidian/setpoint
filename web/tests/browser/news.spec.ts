@@ -346,6 +346,47 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
   }
 });
 
+test('New since you looked shows the newest four facts, then "6 more"; a click opens the rest and the card grows over 180 ms (the polish audit\'s news-12)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    // Eight more facts for the brush fire story since the user's last look, ten in all.
+    await newsChange(setpoint, Array.from({length: 8}, (_, index) => `INSERT INTO news_facts (story_id, at, text)
+      SELECT id, '2026-10-07T${String(5 + index).padStart(2, '0')}:00:00.000Z', 'Fact ${index + 1} since the last look' FROM news_stories
+      WHERE headline = 'Brush fire near the 210 grows to 400 acres';`).join('\n'));
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210 grows to 400 acres').click();
+    const card = page.locator('.pane .st-new');
+    await card.locator('.st-fold').waitFor();
+    const visible = () => card.locator('.it').evaluateAll(lines => lines.filter(line => line.getBoundingClientRect().height > 0 && !line.closest('[inert]')).map(line => line.lastElementChild!.textContent));
+    assert.deepEqual(await visible(), ['Grew from 150 to 400 acres overnight; evacuation warnings widened', 'Two schools in the warning area are closed for the day', 'Fact 8 since the last look', 'Fact 7 since the last look']);
+    assert.equal(await card.locator('.st-fold').textContent(), '6 more');
+    assert.deepEqual(await glyphs(card.locator('.st-fold .icon')), [['expand_more', '16', await colourOf(page, 'var(--ink3)')]]);
+    // The fold sits level with the facts' text, in ink2 12.5, 20 px high.
+    const textLeft = await card.locator('.it').first().locator('span').last().evaluate(text => text.getBoundingClientRect().left);
+    assert.deepEqual(await card.locator('.st-fold').evaluate(fold => {
+      const range = document.createRange();
+      range.selectNodeContents(fold.firstChild!);
+      return [range.getBoundingClientRect().left, fold.getBoundingClientRect().height, getComputedStyle(fold).fontSize, getComputedStyle(fold).color];
+    }), [textLeft, 20, '12.5px', await colourOf(page, 'var(--ink2)')]);
+    const closed = await card.evaluate(element => element.getBoundingClientRect().height);
+    assert.equal(await card.locator('.st-more').evaluate(more => getComputedStyle(more).transitionDuration), '0.18s');
+
+    await card.locator('.st-fold').click();
+    await until('all ten facts', visible, lines => lines.length === 10);
+    assert.equal(await card.locator('.st-fold').textContent(), 'Show fewer');
+    assert.deepEqual((await glyphs(card.locator('.st-fold .icon')))[0]![0], 'expand_less');
+    // Grown by the six facts' lines once it settles.
+    await until('the card grown', () => card.evaluate(element => element.getBoundingClientRect().height), height => height > closed + 6 * 20);
+    await card.locator('.st-fold').click();
+    await until('back to four', visible, lines => lines.length === 4);
+    await until('the card back', () => card.evaluate(element => element.getBoundingClientRect().height), height => height === closed);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a section (27): "12 more in Local" opens Local\'s full list, biggest first, the first as a lead; the stories behind it stay new until it shows them', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -6,13 +6,13 @@
 // `O`, its head, image and extracted text; one whose page can't be read here (board 26b) shows its
 // feed summary under a note with Read at, then Also in this story.
 import type {ArticleOut, StoryOut, StoryRowOut, StorySourceOut} from '@setpoint/shared';
-import {Fragment} from 'react';
+import {Fragment, useState} from 'react';
 import type {CSSProperties} from 'react';
 import {useResource} from '../../api/client.ts';
 import {articlePath, storyPath} from '../../api/news.ts';
 import {paragraphs} from '../../logic/body.ts';
 import {age, fullTimestamp, readerTime} from '../../logic/format.ts';
-import {articleNote, dayWord, factsSince, initials, SECTION_GLYPHS, SECTION_LABELS, stamp, storyMeta} from '../../logic/news.ts';
+import {articleNote, dayWord, factsSince, foldFacts, foldLine, initials, SECTION_GLYPHS, SECTION_LABELS, stamp, storyMeta} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {PaneEdge} from '../Reader.tsx';
@@ -87,14 +87,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
               </div>
             )}
             <div className="st-body">
-              {lookedAt && fresh.length > 0 && (
-                <div className="st-new">
-                  <div className="lab">New since you looked · {stamp(lookedAt, now, timeZone)}</div>
-                  {fresh.map(fact => (
-                    <div className="it" key={`${fact.at}:${fact.text}`}><span className="t" title={fullTimestamp(fact.at, timeZone)}>{dayWord(fact.at, now, timeZone)}</span><span>{fact.text}</span></div>
-                  ))}
-                </div>
-              )}
+              {lookedAt && fresh.length > 0 && <NewSince key={story.id} facts={fresh} lookedAt={lookedAt} now={now} timeZone={timeZone} />}
               {story.summary && <p className="st-sum">{story.summary}</p>}
               {story.sources.length > 0 && (
                 <>
@@ -107,6 +100,33 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * New since you looked: the newest four facts, then "6 more" folding the rest away, so the story's
+ * summary stays in view (the polish audit's news-12); a click opens the fold, the card growing over
+ * 180 ms, and its chevron turns. Five facts or fewer all show.
+ */
+function NewSince({facts, lookedAt, now, timeZone}: {facts: StoryOut['facts']; lookedAt: string; now: number; timeZone: string}) {
+  const [open, setOpen] = useState(false);
+  const {shown, folded} = foldFacts(facts);
+  const line = (fact: StoryOut['facts'][number]) => (
+    <div className="it" key={`${fact.at}:${fact.text}`}><span className="t" title={fullTimestamp(fact.at, timeZone)}>{dayWord(fact.at, now, timeZone)}</span><span>{fact.text}</span></div>
+  );
+  return (
+    <div className="st-new">
+      <div className="lab">New since you looked · {stamp(lookedAt, now, timeZone)}</div>
+      {shown.map(line)}
+      {folded.length > 0 && (
+        <>
+          <div className={open ? 'st-more open' : 'st-more'} inert={!open}><div className="in">{folded.map(line)}</div></div>
+          <button className="st-fold" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {foldLine(folded.length, open)}<Icon name={open ? 'expand_less' : 'expand_more'} size={16} />
+          </button>
+        </>
+      )}
+    </div>
   );
 }
 

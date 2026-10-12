@@ -647,7 +647,8 @@ navigation.
   - **New since you looked**, only on a story updated since Andy's last look: a card (radius 14,
     `cool` at 8% over `card`, `cool` 24% ring). It has the label "New since you looked · Mon 10:40
     PM" (11.5 uppercase `cool`) and one line per new fact: its time (60 px, `ink2` 12.5), then the
-    fact in `ink`.
+    fact in `ink`. With six facts or more, the newest four show, then "6 more" folds the rest away
+    (#248).
   - The summary (14 / 1.6, `ink`, max 600), in the body's one 600 px column (#98).
   - The **Sources** label with its count, then the outlets in a `sub` group, radius 14. Each row is
     at least 52 px:
@@ -1597,6 +1598,13 @@ it changes what's on screen.
     14.5 / 1.6 gave about 87. In Night it's `ink` mixed 10% toward `ink2`, so a long article doesn't
     glare at 17:1 on the near-black page; Light keeps `ink`. The story's summary stays 14 / 1.6, as it's
     short (Andy, 2026-10-11, polish audit news-11).
+248. **New since you looked folds past four facts:** an updated story with ten new facts drew about
+    420 px of card, pushing its own summary below the fold and its Sources off screen. With six facts
+    or more the card shows the newest four, then a 20 px line "6 more" in `ink2` 12.5 with a 16 px
+    `expand_more` in `ink3`, level with the facts' text (72 px in), as the list's "12 more in Local"
+    reads. A click opens the rest, the card growing over 180 ms, and the line reads "Show fewer" with
+    `expand_less`. Five or fewer all show, as folding one away saves nothing (Andy, 2026-10-11,
+    polish audit news-12).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

@@ -136,6 +136,17 @@
 .st-new .lab { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
 .st-new .it { display: flex; gap: 12px; color: var(--ink); line-height: 1.45; }
 .st-new .it .t { width: 60px; flex: none; color: var(--ink2); font-variant-numeric: tabular-nums; font-size: 12.5px; padding-top: 1px; }
+/* Past four facts the rest fold behind "6 more", level with the facts' text; opening it grows the card over
+   180 ms (a grid row from 0fr to 1fr) and turns the chevron (#248). */
+.st-more { display: grid; grid-template-rows: 0fr; margin-top: -8px; transition: grid-template-rows var(--dur-medium) var(--ease); }
+.st-more.open { grid-template-rows: 1fr; }
+.st-more > .in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+.st-more > .in::before { content: ""; }
+.st-fold { align-self: flex-start; height: 20px; display: inline-flex; align-items: center; gap: 4px; padding-left: 72px; color: var(--ink2); font-size: 12.5px; transition: color var(--dur-fast) var(--ease); }
+.st-fold > .icon { color: var(--ink3); }
+@media (hover: hover) {
+  .st-fold:hover { color: var(--ink); }
+}
 .st-sum { color: var(--ink); font-size: 14px; line-height: 1.6; max-width: 600px; margin: 0; user-select: text; -webkit-user-select: text; }
 .st-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); display: flex; align-items: center; gap: 8px; }
 .st-label .n { letter-spacing: 0; color: var(--ink2); font-variant-numeric: tabular-nums; }
