@@ -706,6 +706,12 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
 
     assert.deepEqual(await fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height]), [160, 90]);
     assert.equal(await fire.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 160px');
+    // Under 480 px a row's headline wraps to two 18 px lines and its summary goes; the row keeps its height, 66 px and its hairline (#246).
+    const carWash = row(page, 'Federal agents detain 9 at a car wash');
+    assert.deepEqual(await carWash.locator('.hl').evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).webkitLineClamp, getComputedStyle(element).lineHeight, element.getBoundingClientRect().height]),
+      ['normal', '2', '18px', 36]);
+    assert.equal(await carWash.locator('.sm').isVisible(), false, 'no summary');
+    assert.equal(await carWash.evaluate(element => element.getBoundingClientRect().height), 67);
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, 'news-narrow', 'news');

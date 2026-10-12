@@ -593,7 +593,8 @@ navigation.
 - **Story row:**
   - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below.
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
-  - Under it, the summary in `ink3` 12.5, one line, ellipsis.
+  - Under it, the summary in `ink3` 12.5, one line, ellipsis. In a list under 480 px the headline
+    wraps to two 18 px lines instead and the summary goes; the row keeps its height (#246).
   - The meta, right-aligned on two lines: the leading outlet and "+N" in `ink2` 12, then the age in
     `ink3` 12, or "Updated 7:55 AM" in `cool`.
   - The thumbnail: 72 × 48, radius 8. A story without an image leaves the column empty, never a
@@ -1593,6 +1594,11 @@ it changes what's on screen.
     at 400 rather than dropping to `ink2`, so on a second visit the day's top stories still outrank
     Upcoming's names and the rows; new and seen leads differ by weight and the dot. Rows keep `ink2`
     once seen. Board 25 draws a seen lead in `ink2` (Andy, 2026-10-11, polish audit news-04).
+246. **A narrow News list wraps its rows' headlines:** with a story open at 1280 the list is 420 px
+    (#99), and the meta and thumbnail left each headline about 220 px, so every one was cut at 25–30
+    characters and its summary too. Under 480 px of list a row's headline wraps to two lines (18 px,
+    clamped with an ellipsis) and the summary goes; the thumbnail, meta and dot stay, and the row
+    keeps its 66 px. Extends #99 (Andy, 2026-10-11, polish audit news-10).
 247. **An article in the pane reads at a reader app's size:** the extracted text is 16 / 1.65 at
     −.003em with paragraphs 16 apart, about 79 characters a line in the 600 px column (#98), where
     14.5 / 1.6 gave about 87. In Night it's `ink` mixed 10% toward `ink2`, so a long article doesn't
