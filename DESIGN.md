@@ -275,9 +275,9 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #160), 11.5 uppercase
   .08em `ink3`, count in `ink2`. Attention's band is the loudest: `caution` 8% into its `panel`
   (Light 6%), label and count in `caution`, a `caution` 20% line under it (#130). A collapsed group
-  adds the first three
-  organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge Video") and a chevron; under the pointer it lays
-  `sub` over its band, and the keyboard cursor `sub2`, as a row does over the page (#121). Every group
+  adds the first three organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge
+  Video") and a chevron; under the pointer it lays `sub` over its band, and the keyboard cursor
+  `sub2`, as a row does over the page (#121). Every group
   starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
 - **Order:** Pinned (only with pins), Attention, Unsorted (only when triage is down), Security,
   Deliveries, Money, Career, People, Updates, Other, Noise. Empty groups are left out. Collapsed,
@@ -913,8 +913,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 29. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
     `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
-    (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The boards keep
-    the export's values.
+    (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
+    its values; the board audit draws every board with these.
 30. **Alfred's mark is `auto_awesome` in its gradient** (#136): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
 
