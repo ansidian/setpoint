@@ -413,7 +413,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   width: 380px; display: flex; flex-direction: column; gap: 20px; padding: 24px 24px 20px;
   background: var(--modal); border: 1px solid var(--edgeOn); border-radius: var(--r-modal); box-shadow: var(--shadow-modal);
 }
-.sign-in .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; padding-left: 2px; }
+/* A little more of the brand: the mark at 24, the name 15 / 600 (#254). */
+.sign-in .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; padding-left: 2px; }
+/* In Night the modal shadow drew a faint box on the near-black page; deeper, it reads as depth. Light keeps the modal's. */
+:root[data-theme="night"] .sign-in { box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+/* Signed in, the card scales to .98 and fades over 180 ms while the app fades in under it (Root.tsx). */
+.sign-in-page.leaving { position: fixed; inset: 0; z-index: 60; background: transparent; pointer-events: none; }
+.sign-in-page.leaving .sign-in { animation: sign-in-out var(--dur-medium) var(--ease) forwards; }
+#root:has(> .sign-in-page.leaving) > .app { animation: sign-in-app var(--dur-medium) var(--ease); }
+@keyframes sign-in-out { to { opacity: 0; scale: .98; } }
+@keyframes sign-in-app { from { opacity: 0; } }
 .sign-in-fields { display: flex; flex-direction: column; gap: 8px; }
 .input { width: 100%; height: 36px; flex: none; padding: 0 12px; border-radius: var(--r-row); background: var(--chip); border: 1px solid var(--edge); font-size: 13.5px; color: var(--ink); transition: border-color var(--dur-fast) var(--ease); }
 .input:focus { border-color: var(--edgeFocus); }
@@ -424,7 +433,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sign-in-line { margin: 0; padding-left: 2px; font-size: 12.5px; color: var(--ink3); }
 .sign-in-line .mono { font-family: var(--mono); letter-spacing: -.01em; }
 .sign-in-line.failed { color: var(--alert); }
-.sign-in-foot { display: flex; justify-content: flex-end; gap: 8px; }
+/* The foot runs right to left from its main action; the quiet link keeps the left edge, and where all three
+   don't fit (passkeys offered, the phone) it goes under the others rather than past the card's edge. */
+.sign-in-foot { display: flex; flex-direction: row-reverse; flex-wrap: wrap; gap: 8px; }
 .sign-in-foot .btn.quiet { margin: 0 auto 0 -10px; }
 .input.code { font-family: var(--mono); font-size: 13px; letter-spacing: .04em; }
 .input.code::placeholder { font-family: var(--sans); font-size: 13.5px; letter-spacing: 0; }

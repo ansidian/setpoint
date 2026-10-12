@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {after, describe, test} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
@@ -43,6 +44,105 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
     await page.getByLabel('Password').fill('a long enough password');
     await page.keyboard.press('Enter');
     await page.locator('.arow').first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the sign-in card answers: a refusal shakes it once over 260 ms and selects what was typed; Use a passkey leads while nothing is typed; signed in, it scales away as the app fades in (the polish audit\'s states-14)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const port = new URL(setpoint.base).port;
+    const page = await setpoint.page('target');
+    // Passkeys registered: the harness answers the card's status with one, so the card offers it.
+    await page.route('**/api/auth/status', async route => {
+      const response = await route.fetch();
+      await route.fulfill({response, json: {...await response.json() as object, passkeys: true}});
+    });
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
+    await page.reload();
+    const card = page.locator('.sign-in');
+    const passkey = page.getByRole('button', {name: 'Use a passkey'});
+    const signIn = page.getByRole('button', {name: 'Sign in'});
+    await passkey.waitFor();
+    // The brand: the mark at 24, the name 15 / 600.
+    assert.deepEqual(await card.locator('.brand').evaluate(brand => [brand.querySelector('.mark')!.getBoundingClientRect().width, getComputedStyle(brand).fontSize, getComputedStyle(brand).fontWeight]), [24, '15px', '600']);
+    // In Night the card's shadow reads as depth on the near-black page.
+    assert.equal(await card.evaluate(element => getComputedStyle(element).boxShadow), 'rgba(0, 0, 0, 0.6) 0px 30px 80px 0px');
+    // Nothing typed: Use a passkey is the solid button, with its glyph, and Sign in the ghost; a character
+    // turns them back.
+    const kinds = async () => [await passkey.getAttribute('class'), await signIn.getAttribute('class')];
+    assert.deepEqual(await kinds(), ['btn', 'btn ghost']);
+    assert.deepEqual(await passkey.locator('.icon').evaluate(icon => [icon.getAttribute('width'), icon.querySelector('path')!.getAttribute('d')]), ['16', ICONS.passkey]);
+    // Three don't fit the card's row: Use a recovery code goes under the other two, inside the card.
+    assert.deepEqual(await card.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const [main, , recovery] = [...element.querySelectorAll('.sign-in-foot .btn')].map(button => button.getBoundingClientRect());
+      return [[...element.querySelectorAll('.sign-in-foot .btn')].every(button => button.getBoundingClientRect().left >= box.left && button.getBoundingClientRect().right <= box.right), recovery!.top > main!.bottom];
+    }), [true, true]);
+    await page.getByLabel('Password').press('a');
+    await until('Sign in leads again', kinds, classes => classes.join() === 'btn ghost,btn');
+    await page.getByLabel('Password').press('Backspace');
+    await until('Use a passkey leads', kinds, classes => classes.join() === 'btn,btn ghost');
+
+    // A wrong password: the line, one shake (0 → −6 → 5 → −3 → 0 px over 260 ms, the modal's timing), and
+    // what was typed selected, so typing replaces it.
+    await page.evaluate(() => {
+      const shakes: {keyframes: unknown; options: unknown}[] = [];
+      (window as unknown as {shakes: typeof shakes}).shakes = shakes;
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function (keyframes, options) {
+        if (this.classList.contains('sign-in')) shakes.push({keyframes, options});
+        return animate.call(this, keyframes, options);
+      };
+    });
+    await page.getByLabel('Password').fill('not the password');
+    await page.keyboard.press('Enter');
+    await page.locator('.sign-in-line.failed', {hasText: 'Wrong password'}).waitFor();
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {shakes: unknown[]}).shakes), [{
+      keyframes: [0, -6, 5, -3, 0].map(x => ({translate: `${x}px 0`})),
+      options: {duration: 260, easing: 'cubic-bezier(.2,0,0,1)'},
+    }]);
+    assert.deepEqual(await page.getByLabel('Password').evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd, input.value.length]), [0, 16, 16]);
+    await page.keyboard.type(`browser checks only ${port}`);
+    assert.equal(await page.getByLabel('Password').inputValue(), `browser checks only ${port}`, 'typing replaced it');
+
+    // Signed in: the card scales to .98 and fades over 180 ms while the app fades in under it, then goes.
+    await page.evaluate(() => {
+      const seen: string[][] = [];
+      (window as unknown as {leaving: string[][]}).leaving = seen;
+      const observer = new MutationObserver(() => {
+        const leaving = document.querySelector('.sign-in-page.leaving');
+        const app = document.querySelector('#root > .app');
+        if (!leaving || !app || seen.length) return;
+        const style = getComputedStyle(leaving.querySelector('.sign-in')!);
+        seen.push([style.animationName, style.animationDuration], [getComputedStyle(app).animationName, getComputedStyle(app).animationDuration]);
+      });
+      observer.observe(document.getElementById('root')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
+    });
+    await page.keyboard.press('Enter');
+    await page.locator('.arow').first().waitFor();
+    await until('the card gone', () => page.locator('.sign-in').count(), count => count === 0);
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {leaving: string[][]}).leaving), [['sign-in-out', '0.18s'], ['sign-in-app', '0.18s']]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('in Light the sign-in card keeps the modal\'s shadow (states-14 deepens Night\'s only)', async () => {
+  const setpoint = await startSetpoint({claim: false});
+  try {
+    const page = await setpoint.page('target');
+    await page.emulateMedia({colorScheme: 'light'});
+    await page.goto(`${setpoint.base}/inbox`);
+    const card = page.locator('.sign-in');
+    await page.getByLabel('Setup token').waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
+    assert.equal(await card.evaluate(element => getComputedStyle(element).boxShadow), 'rgba(15, 20, 28, 0.18) 0px 30px 80px 0px');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

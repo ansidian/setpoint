@@ -5,15 +5,23 @@
 // and says why in place of the hint. With a passkey registered (Settings › Security) it offers one;
 // where Setpoint asks for both, the passkey follows the password. A lost password is replaced with
 // a recovery code: the code and a new password, then new codes, shown once as the claim's are.
+//
+// The card answers (the polish audit's states-14): a refusal shakes it once and selects what was
+// typed, so typing replaces it; with passkeys registered and nothing typed, Use a passkey is the
+// solid button; and signed in, it scales away as the app fades in (Root.tsx keeps it, `leaving`).
 import {MIN_PASSWORD_LENGTH} from '@setpoint/shared';
 import type {AuthStatusOut} from '@setpoint/shared';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {authStatus, claim, continueIn, failureLine, recover, signIn, signInWithPasskey} from '../api/auth.ts';
 import {tabTitle} from '../logic/title.ts';
-import {Mark} from '../ui/Icon.tsx';
+import {motion} from '../tokens.ts';
+import {Icon, Mark} from '../ui/Icon.tsx';
 
-export function SignIn() {
+/** A refusal's shake: across and back, smaller each time, once, over the modal's 260 ms. */
+const SHAKE = [0, -6, 5, -3, 0].map(x => ({translate: `${x}px 0`}));
+
+export function SignIn({leaving = false}: {leaving?: boolean}) {
   const [status, setStatus] = useState<AuthStatusOut | null>(null);
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +33,8 @@ export function SignIn() {
   // Signing in with a recovery code and a new password instead.
   const [recovering, setRecovering] = useState(false);
   const [code, setCode] = useState('');
+  const card = useRef<HTMLFormElement>(null);
+  const passwordField = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.title = tabTitle({page: 'sign-in'});
@@ -34,6 +44,17 @@ export function SignIn() {
   const claiming = status ? !status.claimed : false;
   const ready = !sending && password.length > 0 && (!claiming || token.trim().length > 0) && (!recovering || code.trim().length > 0);
   const newPassword = claiming || recovering;
+  // With passkeys registered, Use a passkey leads until a character of the password is typed.
+  const offerPasskey = Boolean(status?.passkeys) && !claiming && !recovering;
+  const passkeyFirst = offerPasskey && password === '';
+
+  /** A refusal: its line, the field's text selected so typing replaces it, and one shake of the card. */
+  function refused(error: unknown) {
+    setFailure(failureLine(error));
+    const field = card.current?.querySelector<HTMLInputElement>('input:focus') ?? passwordField.current;
+    field?.select();
+    card.current?.animate(SHAKE, {duration: motion.slow, easing: motion.ease});
+  }
 
   function recoverInstead(next: boolean) {
     setRecovering(next);
@@ -57,7 +78,7 @@ export function SignIn() {
         await withPasskey();
       }
     } catch (error) {
-      setFailure(failureLine(error));
+      refused(error);
     }
     setSending(false);
   }
@@ -75,9 +96,9 @@ export function SignIn() {
 
   if (codes) {
     return (
-      <div className="sign-in-page">
+      <div className={leaving ? 'sign-in-page leaving' : 'sign-in-page'} inert={leaving}>
         <div className="sign-in" role="dialog" aria-label="Recovery codes">
-          <div className="brand"><Mark />Setpoint</div>
+          <div className="brand"><Mark size={24} />Setpoint</div>
           <div className="sign-in-fields">
             <p className="sign-in-line">Your recovery codes, shown once. Keep them somewhere safe.</p>
             <pre className="recovery">{codes.join('\n')}</pre>
@@ -91,9 +112,9 @@ export function SignIn() {
   }
 
   return (
-    <div className="sign-in-page">
-      <form className="sign-in" aria-label="Sign in to Setpoint" onSubmit={event => void submit(event)}>
-        <div className="brand"><Mark />Setpoint</div>
+    <div className={leaving ? 'sign-in-page leaving' : 'sign-in-page'} inert={leaving}>
+      <form className="sign-in" ref={card} aria-label="Sign in to Setpoint" onSubmit={event => void submit(event)}>
+        <div className="brand"><Mark size={24} />Setpoint</div>
         <div className="sign-in-fields">
           {claiming && (
             <input className={failure ? 'input token failed' : 'input token'} value={token} placeholder="Setup token" aria-label="Setup token"
@@ -111,7 +132,7 @@ export function SignIn() {
                 setFailure(null);
               }} />
           )}
-          <input className={failure ? 'input failed' : 'input'} type="password" value={password} aria-label={newPassword ? 'New password' : 'Password'}
+          <input ref={passwordField} className={failure ? 'input failed' : 'input'} type="password" value={password} aria-label={newPassword ? 'New password' : 'Password'}
             placeholder={newPassword ? 'New password' : 'Password'} autoFocus={!claiming && !recovering} autoComplete={newPassword ? 'new-password' : 'current-password'}
             onChange={event => {
               setPassword(event.target.value);
@@ -123,15 +144,17 @@ export function SignIn() {
             : recovering ? <p className="sign-in-line">This replaces the password, removes passkeys and makes new codes.</p> : null}
         </div>
         <div className="sign-in-foot">
-          {passkeyNext ? <button className="btn" type="button" disabled={sending} onClick={() => void withPasskey()}>Use passkey</button> : (
+          {passkeyNext ? <button className="btn" type="button" disabled={sending} onClick={() => void withPasskey()}><Icon name="passkey" size={16} />Use passkey</button> : (
+            // Right to left, the main action first (styles.css), so where three don't fit the recovery
+            // code's link goes under the others rather than past the card's edge.
             <>
+              <button className={passkeyFirst ? 'btn ghost' : 'btn'} type="submit" disabled={!ready}>{claiming ? 'Claim Setpoint' : 'Sign in'}</button>
+              {offerPasskey && <button className={passkeyFirst ? 'btn' : 'btn ghost'} type="button" disabled={sending} onClick={() => void withPasskey()}><Icon name="passkey" size={16} />Use a passkey</button>}
               {status?.claimed && (
                 <button className="btn quiet" type="button" disabled={sending} onClick={() => recoverInstead(!recovering)}>
                   {recovering ? 'Use the password' : 'Use a recovery code'}
                 </button>
               )}
-              {status?.passkeys && !claiming && !recovering && <button className="btn ghost" type="button" disabled={sending} onClick={() => void withPasskey()}>Use a passkey</button>}
-              <button className="btn" type="submit" disabled={!ready}>{claiming ? 'Claim Setpoint' : 'Sign in'}</button>
             </>
           )}
         </div>

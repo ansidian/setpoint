@@ -1662,6 +1662,17 @@ it changes what's on screen.
     one-line empty state, "None yet · Add passkey" after a 20 px `passkey` in `ink3` (#165), not a
     row titled "None yet" that read as a passkey's name; the recovery row is titled "Recovery codes"
     with "8 left" as its value (Andy, 2026-10-11, polish audit settings-11).
+254. **The sign-in card answers and carries a little more of the brand:** a refused password, code
+    or token shakes the card once (0 → −6 → 5 → −3 → 0 px over 260 ms, `--ease`, the modal's timing)
+    and selects what was typed, so typing replaces it; the border and the line stay as they were.
+    With passkeys registered and nothing typed, **Use a passkey** is the solid button and Sign in
+    the ghost, until a character is typed; it and Use passkey carry a 16 px `passkey`. Where the
+    three foot buttons don't fit the card (passkeys offered, the phone), Use a recovery code goes
+    under the other two rather than past the card's edge. The brand row's mark is 24 px and the name
+    15 / 600. Signed in, the card scales to .98 and fades over 180 ms while the app fades in under
+    it. In Night the card's shadow is `0 30px 80px rgba(0,0,0,.6)`, depth rather than the faint box
+    the modal shadow drew on the near-black page; Light keeps the modal's (Andy, 2026-10-11, polish
+    audit states-14).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has
