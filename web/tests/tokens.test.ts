@@ -245,8 +245,11 @@ describe('the glide against motion/glide.json', () => {
   test('height, content, selection, open, close and edit', () => {
     expect(g.height.durationMs).toBe(glide.heightMs);
     expect(squash(g.height.easing)).toBe(motion.ease);
-    expect(g.oldContent.fadeOut).toBe(`0–${glide.oldContentOutMs} ms`);
-    expect(g.newContent.fadeIn).toMatch(new RegExp(`^${glide.newContentInFromMs}–${glide.newContentInToMs} ms`));
+    // Override 30: the contents crossfade with a 50 ms overlap, where glide.json leaves a gap at 90 ms.
+    expect(g.oldContent.fadeOut).toBe('0–90 ms');
+    expect(g.newContent.fadeIn).toMatch(/^90–220 ms/);
+    expect([glide.oldContentOutMs, glide.newContentInFromMs, glide.newContentInToMs]).toEqual([120, 70, 220]);
+    expect(design.replace(/\n\s*/g, ' ')).toContain(`**The glide's contents crossfade**: old content fades out 0–${glide.oldContentOutMs} ms and new content in ${glide.newContentInFromMs}–${glide.newContentInToMs} ms`);
     expect(g.newContent.slidePx).toBe(glide.newContentSlidePx);
     expect(g.selection.newItem).toContain(`at ${glide.selectionSolidAtMs} ms`);
     expect(g.selection.oldItem).toContain(`at ${glide.selectionOldAtMs} ms`);

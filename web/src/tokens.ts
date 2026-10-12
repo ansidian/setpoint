@@ -164,8 +164,10 @@ export const glide = {
   stepPx: 400,
   capMs: 380,
   heightMs: 220,
-  oldContentOutMs: 90,
-  newContentInFromMs: 90,
+  // The contents crossfade, overlapping by 50 ms, so the card never travels blank (DESIGN.md override
+  // 30, polish audit calflows-12); glide.json still says 0–90 out and 90–220 in.
+  oldContentOutMs: 120,
+  newContentInFromMs: 70,
   newContentInToMs: 220,
   newContentSlidePx: 6,
   selectionSolidAtMs: 60,

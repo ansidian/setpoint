@@ -413,8 +413,8 @@ Clicking another item while the card is open moves the **same card** to it. From
 | Duration | `min(380, 280 + 40 × distance / 400)` ms (454 px → 325, 1,000 → 380) |
 | Edges | the overshoot never crosses the grid's edge: near an edge it shrinks to the room left (decision 47) |
 | Height | 220 ms, `cubic-bezier(.2,0,0,1)` |
-| Old content | fades out 0–90 ms |
-| New content | fades in 90–220 ms with a 6 px slide in the direction of travel |
+| Old content | fades out 0–120 ms (override 30) |
+| New content | fades in 70–220 ms with a 6 px slide in the direction of travel, crossfading with the old (override 30) |
 | Selection | the new item turns solid at 60 ms; the old one goes back to tinted at 0 |
 | Interruption | a click mid-glide retargets from the current position and velocity: no restart, no close |
 
@@ -855,6 +855,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 29. **An agenda line names its calendar; the place has its own line** (#166): where boards 11, 12a,
     12b, 12d, 15, 15b, 19b and 22b draw "2:30 – 3:30 PM · Smile Dental" or "7:00 – 9:00 PM · Blue
     Door", the app reads "· Personal", then the place under it after `location_on`.
+30. **The glide's contents crossfade**: old content fades out 0–120 ms and new content in 70–220 ms
+    (#149), overlapping by 50 ms, where `motion/glide.json` has 0–90 and 90–220 and the card travels
+    blank between them.
 
 ## Not designed yet
 
@@ -1622,3 +1625,7 @@ it changes what's on screen.
     lets go over 180 ms, the bar's and the tabs' glyphs giving to .88; hover fills answer only a pointer
     that hovers, so nothing stays lit after a tap, and the browser's own tap box is gone (Andy,
     2026-10-11, polish audit motion-02, shell-09, phone-01).
+149. **The glide carries its content across** (amending The glide, override 30): the old content
+    fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
+    never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
+    (Andy, 2026-10-11, polish audit calflows-12).

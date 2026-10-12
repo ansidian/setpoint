@@ -331,7 +331,10 @@ export class DetailMotion {
     this.segment = null;
   }
 
-  /** Old content out over 0–90 ms; new content in over 90–220 ms with its 6 px slide; height over 220. */
+  /**
+   * Old content out over 0–120 ms; new content in over 70–220 ms with its 6 px slide, the two
+   * crossfading (the old layer lies over the new), so the card is never blank mid-flight; height over 220.
+   */
   private swapContent(from: Point, to: Point, incoming: HTMLElement | null) {
     const outgoing = this.layerElement('out');
     const body = this.body;
