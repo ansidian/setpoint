@@ -118,10 +118,20 @@ export function timeLeft(end: string, now: number): string {
   return minutes % 60 ? `${hours}h ${minutes % 60}m left` : `${hours}h left`;
 }
 
-/** A code row's countdown: "Expires in 11 min" (whole minutes, rounded up). */
+/**
+ * A code row's countdown: "Expires in 11 min" (whole minutes, rounded up), and in its last minute
+ * "Expires in 42 sec" (polish audit inbox-11).
+ */
 export function expiresIn(at: string, now: number): string {
-  const minutes = Math.ceil((Date.parse(at) - now) / MINUTE);
-  return minutes <= 0 ? 'Expired' : `Expires in ${minutes} min`;
+  const left = Date.parse(at) - now;
+  if (left <= 0) return 'Expired';
+  return left <= MINUTE ? `Expires in ${Math.ceil(left / 1000)} sec` : `Expires in ${Math.ceil(left / MINUTE)} min`;
+}
+
+/** Whether a code is in its last minute, its countdown in seconds and `caution`. */
+export function expiresSoon(at: string, now: number): boolean {
+  const left = Date.parse(at) - now;
+  return left > 0 && left <= MINUTE;
 }
 
 /**

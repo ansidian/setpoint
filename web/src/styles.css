@@ -373,6 +373,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
 .prompt .prompt-icon { color: var(--ink3); }
 .code-line .copy .icon { color: var(--ink2); }
+/* Copied confirms in `good` for its 1.5 s (inbox-11): a 14% `good` fill, words and glyph `good`, under
+   the pointer too; in its last minute the countdown reads in seconds, in `caution`. */
+.btn.ghost.copy.copied, .btn.ghost.copy.copied:enabled:hover { background: color-mix(in oklch, var(--good) 14%, transparent); color: var(--good); }
+:is(.code-line, .code-card) .copy.copied .icon { color: var(--good); }
+.row .code-line .sum.soon, .code-card .expiry.soon { color: var(--caution); }
 /* All (board 05, #48): the Pinned shelf (D105), day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
 .gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }

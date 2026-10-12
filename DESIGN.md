@@ -2162,6 +2162,10 @@ it changes what's on screen.
     of the list while their rows scroll under them, each next one sliding over the last, and J and K
     keep a row clear of them; in All a day's name is `ink2` and its date `ink3`, above the lanes'
     `ink3` (Andy, 2026-10-11, polish audit inbox-10).
+204. **A code's last minute counts down, and Copied is green:** Copied takes a 14% `good` fill with
+    its words and check in `good` for its 1.5 s, under the pointer too; in a code's last minute its
+    countdown reads "Expires in 42 sec" in `caution`, a second at a time, and the row folds away at
+    expiry as before (Andy, 2026-10-11, polish audit inbox-11).
 205. **A list filtered to one account drops the account** (amending decision 41): while an account in
     the sidebar filters the Inbox (Unread, All and its search), rows and Attention rows leave out the
     account they'd all repeat; the age keeps its column and the subject runs wider. Unfiltered every

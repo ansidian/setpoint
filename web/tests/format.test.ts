@@ -2,7 +2,7 @@
 // Pacific) so the brief's ages come out: 20m, 2h, 7h, Yesterday, Mon, Sep 30.
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, fullTimestamp, localDate, monthName, readerTime, startsIn, timeLeft} from '../src/logic/format.ts';
+import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, expiresSoon, fullTimestamp, localDate, monthName, readerTime, startsIn, timeLeft} from '../src/logic/format.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -82,10 +82,25 @@ test.each([
 test.each([
   ['the code, 11 minutes left', '2026-10-07T16:23:00.000Z', now, 'Expires in 11 min'],
   ['a few seconds later, still 11', '2026-10-07T16:23:00.000Z', now + 5_000, 'Expires in 11 min'],
-  ['rounded up', '2026-10-07T16:12:30.000Z', now, 'Expires in 1 min'],
+  ['rounded up', '2026-10-07T16:13:30.000Z', now, 'Expires in 2 min'],
+  // The last minute counts down in seconds (inbox-11), rounded up.
+  ['a minute left', '2026-10-07T16:13:00.000Z', now, 'Expires in 60 sec'],
+  ['42 seconds left', '2026-10-07T16:12:42.000Z', now, 'Expires in 42 sec'],
+  ['part of a second left', '2026-10-07T16:12:00.400Z', now, 'Expires in 1 sec'],
   ['past', '2026-10-07T16:11:00.000Z', now, 'Expired'],
 ])('expiresIn: %s', (_name, at, at_now, expected) => {
   expect(expiresIn(at, at_now)).toBe(expected);
+});
+
+// The last minute is the soon one, drawn in `caution`.
+test.each([
+  ['11 minutes', '2026-10-07T16:23:00.000Z', false],
+  ['a minute and a second', '2026-10-07T16:13:01.000Z', false],
+  ['a minute', '2026-10-07T16:13:00.000Z', true],
+  ['seconds', '2026-10-07T16:12:10.000Z', true],
+  ['expired', '2026-10-07T16:11:00.000Z', false],
+])('expiresSoon: %s', (_name, at, expected) => {
+  expect(expiresSoon(at, now)).toBe(expected);
 });
 
 // When "Expires in 11 min" next changes its words, so the row moves on then, not on the app's next

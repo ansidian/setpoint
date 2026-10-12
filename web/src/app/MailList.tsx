@@ -6,18 +6,18 @@
 import type {AccountOut, MessageRowOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, Ref} from 'react';
-import {age, codeGroups, expiresIn, fullTimestamp} from '../logic/format.ts';
+import {age, codeGroups, fullTimestamp} from '../logic/format.ts';
 import {GROUP_GLYPHS, groupKey, promptText, rowKey, rowLine, sender, showsPending} from '../logic/inbox.ts';
 import type {GroupView, PatternPrompt} from '../logic/inbox.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {motion} from '../tokens.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
+import {CodeCopy, useCountdown} from './Code.tsx';
 import {Count} from './Count.tsx';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, STAGGER_CAP_MS, useFold} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {TriageNote, useHealthBars} from './states/States.tsx';
-import {showToast} from './toast.ts';
 
 export interface ListProps {
   views: GroupView[];
@@ -218,7 +218,7 @@ function Row(props: RowProps) {
     <div className={`${rowClasses('row', props)}${pinnedShelf ? ' shelf' : ''}${noise ? ' noise' : ''}`} title={line.title ?? undefined} {...rowAttributes(props)}>
       <Gutter beat={props.beat} />
       <span className="from">{line.from}</span>
-      {line.code ? <CodeLine code={line.code} now={now} /> : (
+      {line.code ? <CodeLine code={line.code} /> : (
         <span className="subj"><b>{line.subject}</b>{line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}</span>
       )}
       {!pinnedShelf && <PinMark pinned={row.pinned} />}
@@ -230,27 +230,14 @@ function Row(props: RowProps) {
   );
 }
 
-const COPIED_MS = 1500;
-
 /** A code row: the code in two groups of three, Copy (the code without its space), and its countdown. */
-function CodeLine({code, now}: {code: {value: string; expires_at: string}; now: number}) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const timer = window.setTimeout(() => setCopied(false), COPIED_MS);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-  // A clipboard that refuses says so (#41).
-  const copy = (event: MouseEvent) => {
-    event.stopPropagation();
-    const writing = navigator.clipboard ? navigator.clipboard.writeText(code.value) : Promise.reject(new Error('No clipboard'));
-    writing.then(() => setCopied(true), () => showToast('Couldn\'t copy it'));
-  };
+function CodeLine({code}: {code: {value: string; expires_at: string}}) {
+  const countdown = useCountdown(code.expires_at);
   return (
     <span className="subj code-line">
       <span className="code">{codeGroups(code.value)}</span>
-      <button className="btn ghost sm copy" type="button" onClick={copy}><Icon name={copied ? 'check' : 'content_copy'} size={14} />{copied ? 'Copied' : 'Copy'}</button>
-      <span className="sum">{expiresIn(code.expires_at, now)}</span>
+      <CodeCopy value={code.value} />
+      <span className={countdown.soon ? 'sum soon' : 'sum'}>{countdown.text}</span>
     </span>
   );
 }

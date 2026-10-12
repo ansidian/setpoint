@@ -502,6 +502,18 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     await row.locator('button', {hasText: 'Copy'}).click();
     await row.locator('button', {hasText: 'Copied'}).waitFor();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
+    // Copied confirms in `good`: a 14% fill, its words and glyph `good` (inbox-11).
+    const copied = row.locator('.copy.copied');
+    const look = () => copied.evaluate(button => [getComputedStyle(button).backgroundColor, getComputedStyle(button).color, getComputedStyle(button.querySelector('.icon')!).color]);
+    const green = [await page.evaluate(() => {
+        const probe = document.body.appendChild(document.createElement('i'));
+        probe.style.background = 'color-mix(in oklch, var(--good) 14%, transparent)';
+        const colour = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return colour;
+      }), await tokenColour(page, 'good'), await tokenColour(page, 'good')];
+    // Its fill and words change over 120 ms.
+    await until('Copied in good', look, seen => JSON.stringify(seen) === JSON.stringify(green));
     assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
     // "Copied" for a second and a half.
     await page.clock.runFor(1500);
@@ -514,8 +526,14 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     await page.locator('.toast', {hasText: 'Couldn\'t copy it'}).waitFor();
     assert.equal(await row.locator('.copy').textContent(), 'Copy');
     // It leaves the Inbox at its expiry, without a reload (the server's own list is mail.test.ts's),
-    // and not up to 15 s later on the app's clock, still saying "Expires in 1 min".
-    assert.equal(await row.locator('.sum').textContent(), 'Expires in 1 min');
+    // and not up to 15 s later on the app's clock; its last minute counts down in seconds (inbox-11).
+    const countdown = row.locator('.sum');
+    const seconds = Number(/^Expires in (\d+) sec$/.exec((await countdown.textContent())!)?.[1]);
+    assert.ok(seconds > 0 && seconds <= 12, `${seconds} seconds left`);
+    assert.equal(await countdown.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'caution'));
+    // A second later it reads one less.
+    await page.clock.runFor(1000);
+    await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
     await page.clock.runFor(loaded + 12_000 + 400 - await page.evaluate(() => Date.now()));
     // Its fold out has begun (its end waits on the paused clock).
     await until('the code row leaves', () => page.locator('.row:not(.leaving)', {hasText: 'Contoso Insurance'}).count(), count => count === 0);
