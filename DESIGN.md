@@ -89,7 +89,9 @@ Personal, which are account names). The UI says "Done", never "handled".
   swatches in Settings.
 - **Mixes** are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
-  (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 12%).
+  (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 12%),
+  deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
+  colour, and by 28% while pressed (#145).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -362,8 +364,11 @@ offered for protected mail.
   **selected item turns solid** (colour fill, `onInk` text, no bar) and is the only selection mark: no
   outline ring. **Past** items are at .55 opacity. Titles end in "…".
 - **Tasks:** the ring or done glyph and the title in `ink` 12; hover and selected `sub2`.
-- **Overflow:** what doesn't fit folds into "+3" (`ink3` 12). Its popover lists the day's every item
-  (board 11b) and closes with Esc.
+- **Overflow:** what doesn't fit folds into "+3" (`ink3` 12) on a chip's footprint (20 px, radius 6,
+  the count lined up with the chips' titles, `sub` and `ink2` under the pointer), then up to three
+  6 px dots 3 px apart for the first items it folds: an event's filled in its colour, a task's a
+  1.5 px ring in its project's (#146). Its popover lists the day's every item (board 11b) and closes
+  with Esc.
 - Infinite vertical scroll through months.
 
 ### Sidebar on Calendar
@@ -1634,6 +1639,15 @@ it changes what's on screen.
     own cursors. A calendar's checkbox fills or empties over 120 ms, its check growing in from .6 or
     shrinking away, and a Settings switch's knob stretches to 20 px toward where it's going while
     pressed (Andy, 2026-10-11, polish audit motion-09, motion-11, motion-14).
+145. **A calendar chip answers in its own colour** (amending #12, where `sub` lay over chips):
+    under the pointer a month chip or a week block lays its own colour at `--evhover` (Night 18%,
+    Light 14%) over its tint, so it deepens rather than greying, over 120 ms; pressed, it gives to .97
+    and deepens to 28% until a drag's lift takes over. A selected, solid chip keeps its `sub` (Andy,
+    2026-10-11, polish audit grids-05).
+146. **"+N" looks like a door into the day:** the month's "+3" takes a chip's footprint (20 px,
+    radius 6, its count where the chips' titles start) and a `sub` hover, its open state staying
+    `sub2` and `ink`, and after the count up to three 6 px dots show what it folds: an event's in its
+    colour, a task's as a ring in its project's (Andy, 2026-10-11, polish audit grids-12).
 149. **The glide carries its content across** (amending The glide, override 30): the old content
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay

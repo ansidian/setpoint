@@ -66,6 +66,13 @@
 .more { font-size: 12px; color: var(--ink3); padding: 0 6px; height: 18px; display: flex; align-items: center; flex: none; }
 .more:hover { color: var(--ink2); }
 .more.open { background: var(--sub2); color: var(--ink); border-radius: 6px; align-self: flex-start; }
+/* The month's "+N" has a chip's footprint, its count lined up with the chips' titles, `sub` under the
+   pointer, then a dot for each of the first three items it folds (DESIGN.md › Month grid). */
+.cell .more { height: var(--calendarChip); padding: 0 6px 0 9px; border-radius: 6px; align-self: flex-start; gap: 5px; }
+@media (hover: hover) { .cell .more:not(.open):hover { background: var(--sub); } }
+.more-dots { display: inline-flex; align-items: center; gap: 3px; }
+.more-dots .md { width: 6px; height: 6px; border-radius: 999px; background: var(--c, var(--cool)); }
+.more-dots .md.task { background: none; box-shadow: inset 0 0 0 1.5px var(--ring, var(--ink2)); }
 
 /* The "+N" popover (board 11b): the day's every item, hanging from the "+N"; Esc closes it. */
 .daypop { position: absolute; width: 280px; padding: 6px 6px 8px; z-index: 3; }
@@ -256,9 +263,15 @@
 /* Items and cells are controls: the arrow, never the text cursor (DESIGN.md › Decided while building #144). */
 .ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
-   `sub` lies over it. */
-.ev { position: relative; }
-.ev::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sub); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+   answer lies over it: its own colour at `--evhover`, deepening it (a solid, selected chip keeps the
+   `sub` it had). Pressed, it gives to .97 and deepens to 28% until a drag lifts it (DESIGN.md › Decided
+   while building #145). */
+.ev { position: relative; transition: transform var(--dur-fast) var(--ease); }
+.ev::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+.ev.sel::after { background: var(--sub); }
+.ev:not(.ghost, .lift):active { transform: scale(.97); transition-duration: var(--dur-press); }
+.ev:not(.ghost, .lift):active::after { opacity: 1; }
+.ev:not(.ghost, .lift, .sel):active::after { background: color-mix(in oklch, var(--c, var(--cool)) 28%, transparent); }
 @media (hover: hover) {
   .ev:not(.ghost, .lift):hover::after { opacity: 1; }
   .ag-task .check:enabled:hover .ring { border-color: var(--ink); }

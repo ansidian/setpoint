@@ -312,8 +312,24 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items, forec
             onPopover(open ? null : date);
           }}>
           +{more}
+          <FoldedDots items={items.slice(fits)} calendars={calendars} />
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * What "+N" folds, without words (DESIGN.md › Month grid › Overflow): up to three 6 px dots, an event's
+ * filled in its colour, a task's a ring in its project's.
+ */
+function FoldedDots({items, calendars}: {items: ItemOut[]; calendars: Map<number, CalendarOut>}) {
+  const ring = useRingColour();
+  return (
+    <span className="more-dots" aria-hidden="true">
+      {items.slice(0, 3).map(item => (item.kind === 'task'
+        ? <span key={item.key} className="md task" style={ring(item.project)} />
+        : <span key={item.key} className="md" style={{'--c': colourVar(item.colour ?? calendars.get(item.calendar_id)?.colour ?? 'cool')} as CSSProperties} />))}
+    </span>
   );
 }

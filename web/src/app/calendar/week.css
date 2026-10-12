@@ -107,8 +107,14 @@
 @keyframes wk-in-prev { from { transform: translateX(calc(-1 * var(--weekSlide))); opacity: 0; } }
 @keyframes wk-fade { from { opacity: 0; } }
 
-/* As a chip's: the pointer's `sub` lies over the block's own fill (DESIGN.md #12). */
-.wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sub); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+/* As a chip's (calendar.css, DESIGN.md #145): the pointer lays the block's own colour at `--evhover`
+   over its fill (a selected block `sub`), and a press gives it to .97 and 28%. */
+.wb { transition: transform var(--dur-fast) var(--ease); }
+.wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+.wb.sel::after { background: var(--sub); }
+.wb:not(.ghost, .lift):active { transform: scale(.97); transition-duration: var(--dur-press); }
+.wb:not(.ghost, .lift):active::after { opacity: 1; }
+.wb:not(.ghost, .lift, .sel):active::after { background: color-mix(in oklch, var(--c, var(--cool)) 28%, transparent); }
 @media (hover: hover) {
   .wb:not(.ghost, .lift):hover::after { opacity: 1; }
 }

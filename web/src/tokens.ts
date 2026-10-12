@@ -108,6 +108,8 @@ export const mix = {
   searchHighlight: {colour: 'sun', fill: 26, on: 'transparent'},
 } as const;
 export const evtint = {night: 16, light: 12} as const;
+/** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`, polish audit grids-05). */
+export const evhover = {night: 18, light: 14} as const;
 
 /** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
 export const glyphColour = {
@@ -322,6 +324,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   for (const [name, value] of Object.entries(light ? lightColour : colour)) vars[`--${name}`] = value;
   for (const [name, value] of Object.entries(light ? lightShadow : shadow)) vars[`--shadow-${name}`] = value;
   vars['--evtint'] = `${light ? evtint.light : evtint.night}%`;
+  vars['--evhover'] = `${light ? evhover.light : evhover.night}%`;
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   return vars;
 }

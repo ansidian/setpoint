@@ -239,6 +239,51 @@ test('News rows and task chips fade over 120 ms and a hovered task isn\'t select
   }
 });
 
+test('a calendar chip deepens in its own colour under the pointer and gives when pressed; "+3" has a chip\'s footprint and dots for what it folds', async () => {
+  const setpoint = await startSetpoint({fixtures: ['busy-saturday'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    const dentist = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'});
+    await dentist.waitFor();
+    const own = (percent: string) => dentist.evaluate((chip, mix) => {
+      const probe = document.createElement('div');
+      probe.style.color = `color-mix(in oklch, ${getComputedStyle(chip).getPropertyValue('--c')} ${mix}, transparent)`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    }, percent);
+    const layer = () => dentist.evaluate(chip => [getComputedStyle(chip, '::after').backgroundColor, getComputedStyle(chip, '::after').opacity]);
+    await answers(page, 'an event chip', dentist, element => getComputedStyle(element, '::after').opacity);
+    assert.deepEqual(await layer(), [await own('18%'), '1'], 'under the pointer, its own colour at 18% (Night)');
+    const [transform, pressedLayer] = await (async () => {
+      await page.mouse.down();
+      // The 80 ms press goes in.
+      await page.waitForTimeout(150);
+      const held = [await dentist.evaluate(chip => getComputedStyle(chip).transform), (await layer())[0]];
+      // Let go where it was pressed (moving away would drag it): a click, which selects it.
+      await page.mouse.up();
+      return held;
+    })();
+    assert.deepEqual([transform, pressedLayer], ['matrix(0.97, 0, 0, 0.97, 0, 0)', await own('28%')]);
+
+    // Saturday's "+3": a chip's 20 px and radius 6, its count where the chips' titles start, three dots.
+    await page.goto(`${setpoint.base}/calendar/2026-10-17`);
+    const more = page.locator('.cell[data-date="2026-10-17"] .more');
+    await more.waitFor();
+    assert.equal(await more.textContent(), '+3');
+    assert.deepEqual(await more.evaluate(element => [getComputedStyle(element).height, getComputedStyle(element).borderRadius, getComputedStyle(element).paddingLeft]), ['20px', '6px', '9px']);
+    assert.deepEqual(await more.locator('.md').evaluateAll(dots => dots.map(dot => [dot.classList.contains('task') ? 'task' : 'event', dot.getBoundingClientRect().width])),
+      [['event', 6], ['task', 6], ['task', 6]]);
+    await answers(page, '"+3"', more, fill);
+    assert.equal(await more.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'var(--sub)'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('press on the phone: a tapped row fills `sub2` at once and nothing stays lit after; no tap highlight', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

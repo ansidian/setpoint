@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColour, base, calendarColour, colour, cssVariables, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
+  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
   placement, radius, themeVariables, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
@@ -39,7 +39,7 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
 /** Theme variables tokens.ts adds that the export doesn't define. */
-const NOT_IN_EXPORT = ['--sub4', '--scrollbar-thumb'];
+const NOT_IN_EXPORT = ['--sub4', '--evhover', '--scrollbar-thumb'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 
@@ -169,6 +169,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`tags (\`alert\` ${mix.tagAlert.fill}% on \`chip\` with a ${mix.tagAlert.edge}% edge; \`caution\` ${mix.tagCaution.fill}% with a ${mix.tagCaution.edge}% edge)`);
     expect(flat).toContain(`the needs-reconnect bar (\`caution\` ${mix.reconnectBar.fill}% on \`page\`, ${mix.reconnectBar.edge}% bottom edge)`);
     expect(flat).toContain(`calendar tint \`--evtint\` (Night ${evtint.night}%, Light ${evtint.light}%)`);
+    expect(flat).toContain(`deepening under the pointer by \`--evhover\` (Night ${evhover.night}%, Light ${evhover.light}%)`);
     expect(flat).toContain(`search highlight (${mix.searchHighlight.fill}% mix)`);
   });
 
