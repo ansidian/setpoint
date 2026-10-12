@@ -124,13 +124,13 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
       <div className="rd-tools">
         {/* Only in the compact tier, where the reader covers the list (#258). */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
-        {doneable && <button className="tool" type="button" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
-        <button className="tool" type="button" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
-        <button className={pinned ? 'tool active' : 'tool'} type="button" aria-pressed={pinned} onClick={actions.pin}>
+        {doneable && <button className="tool" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
+        <button className="tool" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
+        <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
           <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
         </button>
         {gmail !== false && (
-          <button className="tool" type="button" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
+          <button className="tool" type="button" data-hint="o" onClick={actions.openInGmail} style={gmail === null ? {visibility: 'hidden'} : undefined}>
             <Icon name="open_in_new" />Open in Gmail<span className="kbd">O</span>
           </button>
         )}

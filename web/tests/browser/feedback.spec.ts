@@ -1,12 +1,13 @@
 // Every control answers the pointer, and the lists move (F10; DESIGN.md › Decided while building
 // #12–14; darma SV-21): a hover state on each kind of control, at 120 ms, and none on a disabled one;
+// a press on each (going in over 80 ms; a key pressing its button; a tap on the phone, SV-59);
 // the mail list's rows folding out and in over 180 ms; Settings › Accounts reordering live while an
 // account is dragged; menus inside clipped containers open fully in view.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, point, startSetpoint, still, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -109,6 +110,105 @@ test('hover: the primary, quiet and outlined buttons, segmented controls, fields
     await page.locator('.settings input[aria-label="Home"]').fill('blue door');
     await answers(page, 'a Home suggestion', page.locator('.settings button.set-row', {hasText: 'Blue Door Bistro'}), fill);
     await answers(page, 'a switch', page.getByRole('switch', {name: 'Show Classes'}), fill);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** A colour as the page computes it, from a token or any colour expression. */
+const computed = (page: Page, value: string) => page.evaluate(css => {
+  const probe = document.createElement('div');
+  probe.style.color = css;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+}, value);
+
+/**
+ * `control`'s scale, fill and transition held down, once the 80 ms press has gone in; then let go off
+ * it, so the press is read without the click doing anything.
+ */
+async function pressed(page: Page, control: Locator): Promise<[string, string, string]> {
+  await control.hover();
+  // The hover's 120 ms fill runs its course before the press.
+  await page.waitForTimeout(200);
+  await page.mouse.down();
+  // The 80 ms press goes in.
+  await page.waitForTimeout(150);
+  const held = await control.evaluate(element => [getComputedStyle(element).transform, getComputedStyle(element).backgroundColor, getComputedStyle(element).transitionDuration.split(', ').at(-1)!] as [string, string, string]);
+  await page.mouse.move(700, 28);
+  await page.mouse.up();
+  return held;
+}
+
+const scale = (factor: number) => `matrix(${factor}, 0, 0, ${factor}, 0, 0)`;
+
+test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub3`, a row only its `sub3` step, going in over 80 ms; a key presses its button; a disabled one doesn\'t give', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    const [sub3, sub4] = [await computed(page, 'var(--sub3)'), await computed(page, 'var(--sub4)')];
+
+    // A row takes `sub3`, never scaling.
+    assert.deepEqual(await pressed(page, page.locator('.row').first()), ['none', sub3, '0.08s']);
+    // The segmented control: .97 and `sub3`.
+    assert.deepEqual(await pressed(page, page.locator('.seg button', {hasText: 'All'})), [scale(0.97), sub3, '0.08s']);
+
+    // The reader: a tool .97 and `sub3`; a round icon button .92 and `sub3`; Previous, disabled, gives nothing.
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.deepEqual(await pressed(page, page.locator('.rd-tools .tool', {hasText: 'Pin'})), [scale(0.97), sub3, '0.08s']);
+    assert.deepEqual(await pressed(page, page.getByRole('button', {name: 'Next email'})), [scale(0.92), sub3, '0.08s']);
+    // An outlined button: .97 and `sub2`.
+    assert.deepEqual((await pressed(page, page.locator('.rd-acts .btn.out', {hasText: 'Add to calendar'}))).slice(0, 2), [scale(0.97), await computed(page, 'var(--sub2)')]);
+    // On the list's first email, Previous is disabled.
+    await page.locator('.list [data-id]').first().click();
+    const previous = page.getByRole('button', {name: 'Previous email'});
+    assert.equal(await previous.isDisabled(), true);
+    assert.equal((await pressed(page, previous))[0], 'none', 'a disabled button doesn\'t give');
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+
+    // P presses Pin, as its click would.
+    const pin = page.locator('.rd-tools .tool', {hasText: 'Pin'});
+    const echo = await watch(pin, 'data-echo');
+    await page.mouse.move(700, 28);
+    await page.keyboard.press('p');
+    await until('P presses Pin', echo, seen => seen.includes(''));
+    await until('and lets go', () => pin.getAttribute('data-echo'), value => value === null);
+
+    // Calendar's New, the primary button: .97 and its fill a step darker than its hover.
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
+    assert.deepEqual(await pressed(page, page.locator('.hd .btn', {hasText: 'New'})),
+      [scale(0.97), await computed(page, 'color-mix(in oklch, var(--ink) 78%, var(--page))'), '0.08s']);
+    assert.deepEqual((await pressed(page, page.locator('.hd .btn.ghost', {hasText: 'Today'}))).slice(0, 2), [scale(0.97), sub4]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('press on the phone: a tapped row fills `sub2` at once and nothing stays lit after; no tap highlight', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox`);
+    const row = page.locator('.arow', {hasText: 'Northwind Talent'});
+    await row.waitFor();
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color')), 'rgba(0, 0, 0, 0)');
+    assert.deepEqual(await pressed(page, row), ['none', await computed(page, 'var(--sub2)'), '0s']);
+    // The reader's Pin, tapped: no hover fill stays on it under the finger.
+    await row.tap();
+    const pin = page.locator('.ph-top .ph-icon');
+    await pin.tap();
+    // The 120 ms press lets go.
+    await page.waitForTimeout(300);
+    assert.equal(await pin.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)', 'nothing stays lit after a tap');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

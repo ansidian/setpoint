@@ -39,7 +39,7 @@ import type {Layout, Sightings, VisitDots} from '../../logic/news.ts';
 import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {isTyping, plainKey} from '../../ui/keys.ts';
+import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
@@ -247,7 +247,10 @@ export function NewsPage({route}: {route: NewsRoute}) {
       else if (plainKey(event, 'k')) move(-1);
       else if (plainKey(event, 'Enter') && cursor !== null && keys.includes(cursor)) run(() => openAt(cursor));
       else if (plainKey(event, 'n') && pill) run(takeNew);
-      else if (plainKey(event, 'o') && open !== null) run(openOriginal);
+      else if (plainKey(event, 'o') && open !== null) {
+        echoKey('o');
+        run(openOriginal);
+      }
       else if (plainKey(event, 'Escape')) {
         if (route.article !== null) run(() => go({article: null}));
         else if (open !== null) run(close);

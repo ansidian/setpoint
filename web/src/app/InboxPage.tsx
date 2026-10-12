@@ -33,7 +33,7 @@ import {phoneGroups} from '../logic/phone.ts';
 import type {MailView, Route} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
-import {isTyping, plainKey} from '../ui/keys.ts';
+import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
@@ -361,8 +361,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
   useLayoutEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (isTyping(event) || event.defaultPrevented) return;
-      const run = (action: () => void) => {
+      // A key with a visible button presses it too (`hint`, ui/keys.ts › echoKey).
+      const run = (action: () => void, hint?: string) => {
         event.preventDefault();
+        if (hint) echoKey(hint);
         action();
       };
       if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !event.altKey && search.active) {
@@ -388,16 +390,16 @@ export function InboxPage({route}: {route: InboxRoute}) {
           const view = views.find(item => item.group === cursorStop.group);
           if (view) run(() => toggle(view));
         } else if (cursorStop?.kind === 'noise') run(() => toggleNoise(cursorStop.date));
-      } else if (plainKey(event, 'h')) run(actions.done);
+      } else if (plainKey(event, 'h')) run(actions.done, 'h');
       else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
-      else if (plainKey(event, 'e')) run(actions.trash);
-      else if (plainKey(event, 'p')) run(actions.pin);
-      else if (plainKey(event, 'o')) run(actions.openInGmail);
-      else if (plainKey(event, 'i', {shift: true})) run(actions.markAllRead);
+      else if (plainKey(event, 'e')) run(actions.trash, 'e');
+      else if (plainKey(event, 'p')) run(actions.pin, 'p');
+      else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
+      else if (plainKey(event, 'i', {shift: true})) run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
       // U switches Unread and All (#105); 1, the Inbox's key elsewhere, only goes back to it from a
       // search or on the phone.
-      else if (plainKey(event, 'u') && !searching && !phone) run(actions.switchView);
+      else if (plainKey(event, 'u') && !searching && !phone) run(actions.switchView, 'u');
       else if (plainKey(event, '1') && (searching || phone)) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (open !== null) run(close);
@@ -435,8 +437,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {!searching && !phone && (
           <span className="seg">
             {/* U's hint sits on the one it switches to (#105). */}
-            <button type="button" className={viewOf('unread')} onClick={() => go({view: 'unread', open: null})}>Unread{all && <span className="kbd">U</span>}</button>
-            <button type="button" className={viewOf('all')} onClick={() => go({view: 'all', open: null})}>All{!all && <span className="kbd">U</span>}</button>
+            <button type="button" className={viewOf('unread')} data-hint={all ? 'u' : undefined} onClick={() => go({view: 'unread', open: null})}>Unread{all && <span className="kbd">U</span>}</button>
+            <button type="button" className={viewOf('all')} data-hint={all ? undefined : 'u'} onClick={() => go({view: 'all', open: null})}>All{!all && <span className="kbd">U</span>}</button>
           </span>
         )}
         <span className="grow" />

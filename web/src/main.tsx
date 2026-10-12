@@ -9,4 +9,6 @@ import {applyTokens} from './tokens.ts';
 
 applyTokens(document.documentElement);
 startTheme(document.documentElement);
+// iOS Safari draws `:active` (every tap's press, phone.css) only under a touch listener.
+document.addEventListener('touchstart', () => {}, {passive: true});
 createRoot(document.getElementById('root')!).render(<StrictMode><Root /></StrictMode>);

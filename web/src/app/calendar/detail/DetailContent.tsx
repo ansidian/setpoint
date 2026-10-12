@@ -81,7 +81,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
       </div>
       <div className="card-acts">
-        <button className="btn ghost sm" aria-disabled={item.read_only || undefined} title={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}
+        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} title={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}
           onClick={item.read_only ? undefined : onEdit}>
           <Icon name="edit" size={16} />Edit<span className="kbd">E</span>
         </button>

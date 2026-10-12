@@ -48,7 +48,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         <div className="rd-tools">
           <button className="tool" type="button" onClick={onBack}><Icon name="arrow_back" />Back to story<span className="kbd">Esc</span></button>
           <span className="grow" />
-          {article && <button className="tool" type="button" onClick={onOriginal}><Icon name="open_in_new" />Open at {article.outlet}<span className="kbd">O</span></button>}
+          {article && <button className="tool" type="button" data-hint="o" onClick={onOriginal}><Icon name="open_in_new" />Open at {article.outlet}<span className="kbd">O</span></button>}
         </div>
         <div className="rd-scroll">
           {article && <Article key={article.id} article={article} story={story} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} />}
@@ -64,7 +64,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
       <PaneEdge width={width} />
       <div className="rd-tools">
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
-        {lead && <button className="tool" type="button" onClick={onOriginal}><Icon name="open_in_new" />Open at {lead.outlet}<span className="kbd">O</span></button>}
+        {lead && <button className="tool" type="button" data-hint="o" onClick={onOriginal}><Icon name="open_in_new" />Open at {lead.outlet}<span className="kbd">O</span></button>}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous story" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next story" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>

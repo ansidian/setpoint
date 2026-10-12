@@ -34,7 +34,7 @@ import {tabTitle} from '../../logic/title.ts';
 import {movedLine, resizedLine, visibleItems, weekMonth, weekStart, weekTitle} from '../../logic/week.ts';
 import {glide} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {isTyping, plainKey} from '../../ui/keys.ts';
+import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
 import {useCommands} from '../palette/commands.ts';
@@ -655,12 +655,21 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       let handled = true;
       if ((plain && event.key === 'ArrowLeft') || plainKey(event, 'p')) page(-1);
       else if ((plain && event.key === 'ArrowRight') || plainKey(event, 'n')) page(1);
-      else if (plainKey(event, 't')) goToday();
+      else if (plainKey(event, 't')) {
+        echoKey('t');
+        goToday();
+      }
       else if (plainKey(event, 'm')) switchMode('month');
       else if (plainKey(event, 'w')) switchMode('week');
-      else if (plainKey(event, 'c')) newItem('event');
+      else if (plainKey(event, 'c')) {
+        echoKey('c');
+        newItem('event');
+      }
       else if (plainKey(event, 'd')) newItem('task');
-      else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && !selection.length) editItem(selectedItem, true);
+      else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && !selection.length) {
+        echoKey('e');
+        editItem(selectedItem, true);
+      }
       else if (plain && (event.key === 'Delete' || event.key === 'Backspace') && writable.length && !editor) remove(writable);
       else if (command && event.key.toLowerCase() === 'c' && selectedItems.length && !window.getSelection()?.toString()) copy(selectedItems);
       else if (command && event.key.toLowerCase() === 'v' && clipboard.current.length && !editor) paste();
@@ -718,7 +727,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         </span>
         <span className="cal-step">
           <button className="ibtn sm" aria-label={`Previous ${mode}`} title={`Previous ${mode} · ←`} onClick={() => page(-1)}><Icon name="chevron_left" /></button>
-          <button className="btn ghost sm" title="Today · T" onClick={goToday}>Today</button>
+          <button className="btn ghost sm" title="Today · T" data-hint="t" onClick={goToday}>Today</button>
           <button className="ibtn sm" aria-label={`Next ${mode}`} title={`Next ${mode} · →`} onClick={() => page(1)}><Icon name="chevron_right" /></button>
         </span>
         {/* Search hides Month | Week, as mail's hides Unread | All (D48); the grid still pages. */}
@@ -732,7 +741,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         {searching
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
           : <button className="ibtn" aria-label="Search calendar" title="Search · /" onClick={() => setSearching(true)}><Icon name="search" /></button>}
-        <button className="btn" onClick={() => newItem('event')}><Icon name="add" size={17} />New<span className="kbd">C</span></button>
+        <button className="btn" data-hint="c" onClick={() => newItem('event')}><Icon name="add" size={17} />New<span className="kbd">C</span></button>
       </header>
       <div className="content cal-content">
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines

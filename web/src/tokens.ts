@@ -28,6 +28,8 @@ export const colour = {
   sub: 'rgba(255,255,255,.055)',
   sub2: 'rgba(255,255,255,.09)',
   sub3: 'rgba(255,255,255,.13)',
+  // A ghost button pressed: one step past its hover's `sub3` (polish audit motion-02).
+  sub4: 'rgba(255,255,255,.17)',
   stripe: 'rgba(255,255,255,.045)',
   scrim: 'rgba(0,0,0,.72)',
   caution: 'oklch(0.75 0.16 40)',
@@ -64,6 +66,7 @@ export const lightColour: Record<ColourToken, string> = {
   sub: 'rgba(29,30,33,.04)',
   sub2: 'rgba(29,30,33,.07)',
   sub3: 'rgba(29,30,33,.11)',
+  sub4: 'rgba(29,30,33,.15)',
   stripe: 'rgba(29,30,33,.05)',
   scrim: 'rgba(20,26,32,.35)',
   caution: 'oklch(0.535 0.16 40)',
@@ -144,8 +147,11 @@ export const type = {
 /** DESIGN.md › Shape, in the table's order. Settings' row groups are 16. */
 export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row: 10, segment: 8, chip: 6, hint: 5} as const;
 
-/** mantel's timings; a lifted calendar chip's tilt and scale; the theme fade. */
-export const motion = {fast: 120, medium: 180, slow: 260, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04, themeFade: 180} as const;
+/**
+ * mantel's timings; a press going in (its release takes `fast`, polish audit motion-02); a lifted
+ * calendar chip's tilt and scale; the theme fade.
+ */
+export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04, themeFade: 180} as const;
 
 /** The floating detail's glide (design-export/motion/glide.json; DESIGN.md › The glide). */
 export const glide = {
@@ -288,6 +294,7 @@ export function cssVariables(): Record<string, string> {
   vars['--dur-fast'] = `${motion.fast}ms`;
   vars['--dur-medium'] = `${motion.medium}ms`;
   vars['--dur-slow'] = `${motion.slow}ms`;
+  vars['--dur-press'] = `${motion.press}ms`;
   vars['--theme-fade'] = `${motion.themeFade}ms`;
   vars['--sans'] = font.sans;
   vars['--mono'] = font.mono;

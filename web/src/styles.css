@@ -11,6 +11,8 @@
 /* No focus rings or browser outlines anywhere (DESIGN.md › Principles). */
 *:focus, *:focus-visible { outline: none; }
 html, body, #root { height: 100%; margin: 0; }
+/* A tap shows as the press each control draws (DESIGN.md › Motion), not the browser's own box. */
+html { -webkit-tap-highlight-color: transparent; }
 :root { --zoom: 1; zoom: var(--zoom); }
 @media (min-width: 2200px) { :root { --zoom: 1.25; } }
 body {
@@ -55,13 +57,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sb-top .mark { width: 18px; height: 18px; }
 .nav { height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); font-weight: 500; flex: none; }
 .nav .icon { color: var(--ink3); }
-.nav:hover { background: var(--sub); }
+@media (hover: hover) { .nav:hover { background: var(--sub); } }
 .nav.on { background: var(--sub2); color: var(--ink); }
 .nav.on .icon { color: var(--ink); }
 .nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
 .apill { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
 .acct { height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; border-radius: 10px; color: var(--ink2); flex: none; }
-.acct:hover { background: var(--sub); }
+@media (hover: hover) { .acct:hover { background: var(--sub); } }
 .acct.on { background: var(--sub2); color: var(--ink); }
 .acct .cnt { color: var(--ink3); font-size: 12px; margin-left: auto; }
 .acct .reconnect { color: var(--caution); margin-left: auto; }
@@ -72,7 +74,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 10px; height: 24px; display: flex; align-items: center; gap: 6px; }
 .sb-foot { margin-top: auto; }
 .today-row { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; }
-.today-row:hover { background: var(--sub); }
+@media (hover: hover) { .today-row:hover { background: var(--sub); } }
 .today-row .t { color: var(--ink); width: 58px; flex: none; }
 .today-row .title { color: var(--ink); }
 .today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; }
@@ -81,7 +83,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row.on { background: var(--sub2); }
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
-.today-row .check:hover .ring { border-color: var(--ink); }
+@media (hover: hover) { .today-row .check:hover .ring { border-color: var(--ink); } }
 /* A completed task's done check lands (TaskGlyph, `good`) with its title struck through, for
    DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then the line folds
    away (app/fold.ts). */
@@ -104,7 +106,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
 .hd-title { font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
 .seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; }
-.seg > * { height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; transition: background-color var(--dur-fast) var(--ease); }
+.seg > * { height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; }
 .seg > .on { background: var(--sub3); color: var(--ink); }
 .search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
 .search:focus-within { border-color: var(--edgeOn); background: var(--cardOn); color: var(--ink); }
@@ -113,13 +115,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 5px; background: var(--sub2); color: var(--ink3); font-size: 11px; font-weight: 500; line-height: 1; flex: none; }
 .btn { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; border-radius: 999px; background: var(--ink); color: var(--onInk); font-weight: 500; font-size: 13px; white-space: nowrap; flex: none; }
 .btn.ghost { background: var(--sub2); color: var(--ink); }
-.btn.ghost:enabled:hover { background: var(--sub3); }
+@media (hover: hover) { .btn.ghost:enabled:hover { background: var(--sub3); } }
 .btn.out { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .btn.quiet { background: transparent; color: var(--ink2); padding: 0 10px; }
 .btn.sm { height: 26px; padding: 0 10px; font-size: 12.5px; }
 .btn:disabled { opacity: .5; }
 .ibtn { width: 30px; height: 30px; border-radius: 999px; display: inline-grid; place-items: center; color: var(--ink2); flex: none; }
-.ibtn:hover { background: var(--sub2); color: var(--ink); }
+@media (hover: hover) { .ibtn:hover { background: var(--sub2); color: var(--ink); } }
 .ibtn:disabled { opacity: .4; background: none; color: var(--ink2); }
 .content { display: flex; min-height: 0; min-width: 0; position: relative; }
 .list { flex: 1 1 auto; min-width: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
@@ -132,12 +134,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .gh.att .n { color: var(--caution); }
 .gh.first { border-top: 0; }
-.gh.collapsed:hover, .gh.collapsed.cur { background: var(--cardOn); }
+.gh.collapsed.cur { background: var(--cardOn); }
+@media (hover: hover) { .gh.collapsed:hover { background: var(--cardOn); } }
 /* Each group's glyph before its label (#160): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
 .gh.att .gi { color: var(--caution); }
 .row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
-.row:hover { background: var(--sub); }
+@media (hover: hover) { .row:hover { background: var(--sub); } }
 .row.cur, .row.open { background: var(--sub2); }
 .ud { width: 12px; flex: none; display: grid; place-items: center; }
 .ud::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; }
@@ -161,7 +164,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .code { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--ink); }
 .arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px 16px 10px 12px; color: var(--ink2); position: relative; flex: none; border-bottom: 1px solid var(--hair); }
 .arow:last-child { border-bottom: 0; }
-.arow:hover { background: var(--sub); }
+@media (hover: hover) { .arow:hover { background: var(--sub); } }
 .arow.cur, .arow.open { background: var(--sub2); }
 .arow .ud { grid-row: 1; height: 18px; }
 .arow .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
@@ -183,7 +186,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .listfoot .lnk { color: var(--ink2); display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; }
 /* Mark all as read's glyph, as ⌘K's same command (#164), 6 px before its label. */
 .listfoot .lnk > .icon { margin-right: -2px; }
-.listfoot .lnk:hover { background: var(--sub); }
+@media (hover: hover) { .listfoot .lnk:hover { background: var(--sub); } }
 /* All caught up (board 04). */
 .empty { flex: 1 1 auto; display: grid; place-items: center; padding-bottom: 96px; }
 .empty-line { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 14px; }
@@ -192,7 +195,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* ---------- The reader ---------- */
 .rd-tools { height: 48px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); }
 .rd-tools .tool { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 999px; color: var(--ink2); font-size: 12.5px; flex: none; }
-.rd-tools .tool:hover { background: var(--sub2); color: var(--ink); }
+@media (hover: hover) { .rd-tools .tool:hover { background: var(--sub2); color: var(--ink); } }
 .rd-tools .tool .kbd { margin-left: 2px; }
 /* In a pane under 600 px the key hints drop (the keys still work, ⌘K lists them) and the
    labels stay, so previous, next and More stay in view down to the pane's 480. */
@@ -221,10 +224,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* ---------- Mail details (F2) ---------- */
 /* The Pinned shelf: Unpin takes the age's place under the pointer (board 10). */
 .row.shelf .hact { display: none; width: 64px; flex: none; justify-content: flex-end; }
-.row.shelf:hover .hact { display: flex; }
-.row.shelf:hover .age { display: none; }
+@media (hover: hover) { .row.shelf:hover .hact { display: flex; } }
+@media (hover: hover) { .row.shelf:hover .age { display: none; } }
 .unpin { height: 22px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12px; flex: none; }
-.unpin:hover { background: var(--sub3); }
+@media (hover: hover) { .unpin:hover { background: var(--sub3); } }
 /* The pattern prompt at the end of Attention (board 09). */
 .prompt { margin: 6px 16px 10px 24px; padding: 10px 10px 10px 14px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edgeOn); display: flex; align-items: center; gap: 12px; color: var(--ink); flex: none; }
 .prompt .prompt-icon { color: var(--ink3); }
@@ -293,13 +296,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .imgbar { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px 0 12px; border-radius: var(--r-bar); background: var(--sub); color: var(--ink2); font-size: 12.5px; flex: none; }
 .imgbar .sep { color: var(--ink3); }
 .imgbar .lnk { color: var(--ink); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; }
-.imgbar .lnk:hover { background: var(--sub2); }
+@media (hover: hover) { .imgbar .lnk:hover { background: var(--sub2); } }
 /* An HTML email: a sandboxed frame as wide as the reading pane, radius 14 on white, as tall as its page says it is. */
 .mailframe { display: block; width: 100%; border: 0; border-radius: var(--r-card); background: #ffffff; flex: none; color-scheme: light; }
 /* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10; Decided while building #61). */
 .attachments { display: flex; flex-wrap: wrap; gap: 8px; }
 .attach { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 8px 0 7px; border-radius: var(--r-card); background: var(--card); box-shadow: inset 0 0 0 1px var(--edge); width: max-content; min-width: var(--attachment); max-width: 100%; text-align: left; flex: none; --t: var(--ink2); --t-mix: 14%; }
-.attach:hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+@media (hover: hover) { .attach:hover { box-shadow: inset 0 0 0 1px var(--edgeHover); } }
 /* The type's tile (#163): 30 px, concentric in the card, its colour by type; 12 px before the name. */
 .attach .type { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; margin-right: 2px; color: var(--t); background: color-mix(in oklch, var(--t) var(--t-mix), transparent); transition: background-color var(--dur-fast) var(--ease); }
 .attach[data-type="pdf"] { --t: var(--alert); }
@@ -378,8 +381,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The export's hover where it draws one; otherwise a `sub` fill on flat controls, rows and menu items,
    an `edgeHover` border on outlined buttons and fields, and the primary button a touch dimmer. Fills
    and borders change over 120 ms. Disabled controls don't answer, and a touch screen has no hover. */
-.btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .listfoot .lnk, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input {
-  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+.btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .listfoot .lnk, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input, .seg > *, .retry, .hbar .act {
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 @media (hover: hover) {
   .btn:not(.ghost, .out, .quiet):enabled:hover { background: color-mix(in oklch, var(--ink) 86%, var(--page)); }
@@ -456,3 +459,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 @keyframes turn-in { from { opacity: 0; transform: translateY(4px); } }
 .answer, .prop { animation: card-in var(--dur-medium) var(--ease); }
 .answer .card-b > :is(.ans, .ans-none, .srcs, .waiting, .q:has(+ .waiting), .prop) { animation: turn-in var(--dur-medium) var(--ease); }
+
+/* ---------- Every press registers (DESIGN.md › Motion: in over 80 ms, out over 120) ---------- */
+/* Pills give a little (.97) and round icon buttons more (.92), each a fill step past its hover; wide
+   things (rows, nav, menu items) never scale, they only take the step. A key with a visible button
+   presses it too (`data-echo`, ui/keys.ts › echoKey). A disabled control doesn't answer. After every
+   hover rule, so a press wins over the hover under it. */
+:is(.btn, .rd-tools .tool, .seg > *, .unpin, .listfoot .lnk, .imgbar .lnk, .dl, .retry, .hbar .act):not(:disabled, [aria-disabled="true"]):is(:active, [data-echo]) { transform: scale(.97); transition-duration: var(--dur-press); }
+.ibtn:not(:disabled, [aria-disabled="true"]):is(:active, [data-echo]) { transform: scale(.92); background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
+.btn:not(.ghost, .out, .quiet):enabled:is(:active, [data-echo]) { background: color-mix(in oklch, var(--ink) 78%, var(--page)); }
+.btn.ghost:not(:disabled):is(:active, [data-echo]) { background: var(--sub4); }
+.btn.out:not(:disabled):is(:active, [data-echo]) { background: var(--sub2); }
+:is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .listfoot .lnk, .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
+:is(.row, .arow, .nav, .acct, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }

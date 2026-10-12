@@ -70,7 +70,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the attention pill and on solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
-| `sub` / `sub2` / `sub3` | `rgba(255,255,255,.055)` / `.09` / `.13` | `rgba(29,30,33,.04)` / `.07` / `.11` | hover / keyboard cursor, open row, selection / tracks, segmented "on" |
+| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed (#143) |
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
 | `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | attention pill and count, needs-reconnect bar, failing lines |
@@ -136,7 +136,7 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
-paint doesn't fade.
+paint doesn't fade. A press goes in over **80 ms** and lets go over 120 ms (#143).
 
 Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
@@ -1609,3 +1609,16 @@ it changes what's on screen.
     items, and Settings' radius 14, give way to it. While its menu is open, the button that opened it
     keeps a fill: an icon button, a reader tool or a quiet button `sub2` and `ink`, a ghost button
     `sub3`, a field its focused ring (Andy, 2026-10-11, polish audit motion-06, motion-05, reader-12).
+143. **Every press registers before its result** (extending Motion and #12): a press goes in over 80
+    ms and lets go over 120. A pill (a button, a reader tool, a segment, Unpin, Copy, the list's and
+    the images bar's links, Download, Retry now, Reconnect) gives to .97 and a round icon button to
+    .92, each taking a fill one step past its hover: the primary button `ink` at 78% on `page`, a ghost
+    button the new `sub4` (Night `rgba(255,255,255,.17)`, Light `rgba(29,30,33,.15)`), an outlined one
+    `sub2`, the rest `sub3` with `ink`. Wide things (rows, nav, account and Today lines, agenda items,
+    News rows, calendar rows, menu items, ⌘K's items) never scale; they only take `sub3`. A disabled
+    control doesn't give. A key whose button shows its hint presses that button as a click would (H
+    Done, E Trash, P Pin, O Open, U, ⇧I Mark all as read, C New, T Today, E Edit). On the phone a tap
+    fills a row, a group header, an agenda item or the reader's bottom-bar button `sub2` at once and
+    lets go over 180 ms, the bar's and the tabs' glyphs giving to .88; hover fills answer only a pointer
+    that hovers, so nothing stays lit after a tap, and the browser's own tap box is gone (Andy,
+    2026-10-11, polish audit motion-02, shell-09, phone-01).

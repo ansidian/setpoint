@@ -39,7 +39,7 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
 /** Theme variables tokens.ts adds that the export doesn't define. */
-const NOT_IN_EXPORT = ['--scrollbar-thumb'];
+const NOT_IN_EXPORT = ['--sub4', '--scrollbar-thumb'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 
@@ -196,6 +196,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`**${motion.fast} ms** hover and fills, **${motion.medium} ms** popovers and panes, **${motion.slow} ms** modals, all \`${motion.ease}\``);
     expect(flat).toContain(`A lifted calendar chip tilts ${minus(String(motion.liftTilt))}° and scales ${motion.liftScale}.`);
     expect(flat).toContain(`Theme switches fade every colour over ${motion.themeFade} ms`);
+    expect(flat).toContain(`A press goes in over **${motion.press} ms** and lets go over ${motion.fast} ms`);
   });
 
   test('the layout constants match DESIGN.md', () => {

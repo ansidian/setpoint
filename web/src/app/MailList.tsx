@@ -81,7 +81,7 @@ export function MailList(props: ListProps) {
         </div>
       ) : props.markable && (
         <div className="listfoot">
-          <button className="lnk" type="button" onClick={props.onMarkAllRead}><Icon name="mark_email_read" size={16} />Mark all as read <span className="kbd">⇧I</span></button>
+          <button className="lnk" type="button" data-hint="shift+i" onClick={props.onMarkAllRead}><Icon name="mark_email_read" size={16} />Mark all as read <span className="kbd">⇧I</span></button>
         </div>
       )}
     </>
