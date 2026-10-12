@@ -378,6 +378,20 @@ export function WeekGrid(props: WeekGridProps) {
     press.current = {kind: 'create', area, date, minutes: Math.max(0, Math.min(DAY, at.minutes)), x: event.clientX, y: event.clientY, week};
   };
 
+  // Where a press on empty hours would start (polish audit grids-07): the 15-minute step under the
+  // pointer, as a 30-minute slot holding + and its time; gone over a block, off the hours, on a press.
+  const [hovered, setHovered] = useState<{date: string; minutes: number; shown: boolean} | null>(null);
+  const hoverSlot = (date: string, event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== 'mouse' || press.current || event.target !== event.currentTarget) {
+      if (hovered?.shown) setHovered({...hovered, shown: false});
+      return;
+    }
+    const at = whereAt(event.clientX, event.clientY);
+    const minutes = Math.max(0, Math.min(DAY - 2 * tokens.snapMinutes, Math.floor(at.minutes / tokens.snapMinutes) * tokens.snapMinutes));
+    if (hovered?.date !== date || hovered.minutes !== minutes || !hovered.shown) setHovered({date, minutes, shown: true});
+  };
+  const leaveSlot = () => setHovered(current => (current?.shown ? {...current, shown: false} : current));
+
   const clickSlot = (date: string, event: ReactMouseEvent<HTMLElement>) => {
     const at = whereAt(event.clientX, event.clientY);
     onSelectDay(date, Math.max(0, Math.min(DAY - tokens.snapMinutes, Math.floor(at.minutes / tokens.snapMinutes) * tokens.snapMinutes)));
@@ -471,7 +485,17 @@ export function WeekGrid(props: WeekGridProps) {
             </div>
             <div className="wk-cols" ref={cols} data-dir={slide} key={`cols:${week}`}>
               {days.map((date, column) => (
-                <div key={date} className={`wk-col ${columnClass(date)}`} data-date={date} onPointerDown={event => pressEmpty(date, 'hours', event)} onClick={event => clickSlot(date, event)}>
+                <div key={date} className={`wk-col ${columnClass(date)}`} data-date={date} onClick={event => clickSlot(date, event)}
+                  onPointerDown={event => {
+                    leaveSlot();
+                    pressEmpty(date, 'hours', event);
+                  }}
+                  onPointerMove={event => hoverSlot(date, event)} onPointerLeave={leaveSlot}>
+                  {hovered?.date === date && !drag && (
+                    <div className={`wk-hover num${hovered.shown ? '' : ' gone'}`} style={{transform: `translateY(${minuteTop(hovered.minutes)}px)`}} aria-hidden="true">
+                      <Icon name="add" size={12} />{clockTime(instantAt(date, hovered.minutes, timeZone), timeZone)}
+                    </div>
+                  )}
                   {perDay[column]!.blocks.map(block => (
                     <TimedBlock key={`${block.item.key}:${block.date}`} block={block} calendar={calendars.get(block.item.calendar_id)} selected={selected.has(block.item.key)}
                       look={lookOf(block.item.key)} lifted={preview.lifted.has(block.item.key)} now={now} timeZone={timeZone}

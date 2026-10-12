@@ -386,7 +386,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else scrollToMonth(monthOf(selectedDay));
     navigate({...route, view: next});
   };
-  const openEditor = (open: EditorOpen, handed = false) => {
+  const openEditor = (open: EditorOpen, handed = false, at = addressOf(route)) => {
     // A draft with something in it leaves only by Create, Save, Cancel or Esc: New, C, D and E say so
     // and leave it be (SV-29, replacing D56's second draft).
     if (editor && editorDirty) {
@@ -397,10 +397,17 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setPopover(null);
     setAsk(null);
     editorSeq.current += 1;
-    setEditor({...open, handed, seq: editorSeq.current, at: addressOf(route)});
+    setEditor({...open, handed, seq: editorSeq.current, at});
     setEditorDirty(false);
   };
   const newItem = (kind: 'event' | 'task') => openEditor({kind, date: selectedDay});
+  // A day's + on the month: that day, selected, and a new event on it (polish audit grids-06).
+  const newOn = (date: string) => {
+    const there: CalendarRoute = {page: 'calendar', date, item: null, at: null};
+    // A started draft stays, as New says (openEditor), and so does the day.
+    if (!(editor && editorDirty)) selectDay(date);
+    openEditor({kind: 'event', date}, false, addressOf(there));
+  };
   // A range dragged on the week: a new event there, its line still to write.
   const createAt = (date: string, slot: Slot) => openEditor({kind: 'event', date, slot});
   const editItem = (item: ItemOut, handed = false) => openEditor({kind: item.kind, date: selectedDay, item}, handed);
@@ -787,7 +794,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         ) : (
           <MonthGrid enter={zoom?.to === 'month' ? zoom.y : null} onEntered={() => setZoom(null)} shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
             now={now} timeZone={zone} scroll={view.scroll} popover={popover} onShownMonth={setShownMonth} onSelectDay={clickDay}
-            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} detail={detailProps} overlays={overlays} />
+            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} onNew={newOn} detail={detailProps} overlays={overlays} />
         )}
         {editor ? (
           <Editor key={editor.seq} open={editor} calendars={calendars} today={today} timeZone={zone} handed={editor.handed}

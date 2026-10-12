@@ -399,7 +399,10 @@ offered for protected mail.
 
 - **Weekday row** 30 px, 11.5 uppercase. **Columns** 147 px at the design target, **rows** 176. Cells
   have `hair` right and bottom lines; weekends take `dayOff`, days outside the month `dayOut` (an
-  outside weekend too), the selected day `sub` (#123).
+  outside weekend too), the selected day `sub` (#123). A day under the pointer takes `sub` at 55% over
+  its tints (120 ms), and a 20 px + after its number (`add` 14 in `ink3`, `sub2` and `ink` under the
+  pointer, "New event · C") makes an event on that day, selecting it; a click on the day still only
+  selects it (#223).
 - **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#124); today a 22 px
   `alert` disc with `onAlert` 600 (#128); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
   sun `sunGlyph`, cloud `ink2`, rain `cool`), after the high in `ink2` and the low in `ink3` (#137).
@@ -516,7 +519,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   down to about 90 with titles cut). The **day heads** (48 px) and the **all-day row** stay put while
   the hours scroll under them. The right pane stays.
 - **Day head:** the weekday (11.5 uppercase `ink3`), the date (today the 22 px `alert` disc, #128), the
-  weather icon. A click selects the day.
+  weather icon. A click selects the day; under the pointer it takes a month day's wash (#223).
 - **All-day row:** all-day events as tinted bars spanning their days, then each day's tasks (a timed
   one prefixed "9:00 AM"), 20 px lines 2 px apart, at least two lines and at most three: a day with
   more shows two and "+N", which opens the day's popover (board 11b). An event of 24 h or more is a
@@ -541,6 +544,10 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **A click** on an empty slot or a day head selects the day; with a new draft open it moves the
   draft to that day and, on a slot, that time (keeping its length), unless its line names them (#47).
   A click never creates on its own.
+- **Where a press would start:** under the pointer, empty hours show a 30-minute slot (22 px, radius 6,
+  `sub` with an `edge` inset) at the 15-minute step a press would start at, holding + and that time
+  ("10:30 AM", 11 `ink3`), moving with the pointer over 120 ms and fading in and out; it goes over a
+  block, off the hours and on a press (#224).
 - **Create:** press on an empty slot and drag: a dashed ghost in the default calendar's colour, "New
   event" and its range, in 15-minute steps; letting go opens the editor in the right pane with that
   day and range, the title focused. Dragging across days in the all-day row makes an all-day event
@@ -1965,3 +1972,16 @@ it changes what's on screen.
     Event | Task, News's sections, Code expiry) no longer jumps its fill: when another segment turns
     on, a `sub3` thumb slides from the last one to it over 180 ms, then hands it back its own fill
     (Andy, 2026-10-11, polish audit grids-09).
+223. **A day answers the pointer, and + makes an event on it** (amending Week view's "a click never
+    creates on its own" only by adding a control: a click on a day still only selects it): a month day
+    under the pointer lays `sub` at 55% over its weekend or outside tint, fading over 120 ms (not on
+    the selected day, nor a drop target), and shows a 20 px round + after its number, `add` at 14 in
+    `ink3`, taking `sub2` and `ink` under the pointer and giving to .92 when pressed, titled "New event
+    · C". It selects the day and opens New event on it, as C would there. A week's day head takes the
+    same wash. Only with a pointer that hovers (Andy, 2026-10-11, polish audit grids-06).
+224. **The week's empty hours show where a press would start:** a 30-minute slot (left 4, right 5,
+    22 px, radius 6, `sub` with an `edge` inset) at the 15-minute step under the pointer, holding `add`
+    at 12 and the step's time in 11 `ink3`, moves with the pointer over 120 ms and fades in and out
+    over 120 ms; over a block, off the hours, while dragging or on a press it goes, the press handing
+    over to the dashed create ghost. Only with a pointer that hovers (Andy, 2026-10-11, polish audit
+    grids-07).

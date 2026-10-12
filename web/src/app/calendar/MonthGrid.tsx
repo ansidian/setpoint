@@ -58,6 +58,8 @@ export interface MonthGridProps {
   onPopover: (date: string | null) => void;
   // A chip dropped on another day.
   onDrop: (item: ItemOut, from: string, to: string) => void;
+  // A day's + : a new event on it (polish audit grids-06).
+  onNew: (date: string) => void;
   // F5's floating detail, drawn in the month section over the grid and placed by its geometry.
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   // Overlays anchored to items (the drop prompt, the failed card), drawn in the month section.
@@ -78,7 +80,7 @@ interface Drag {
 }
 
 export function MonthGrid(props: MonthGridProps) {
-  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, detail, overlays, enter = null, onEntered} = props;
+  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, onNew, detail, overlays, enter = null, onEntered} = props;
   // The "+N" popover fades out once closed (ui/exit.ts).
   const {shown: shownPopover, closing: popoverClosing} = useExit(popover);
   const section = useRef<HTMLElement>(null);
@@ -282,7 +284,7 @@ export function MonthGrid(props: MonthGridProps) {
       cells.push(
         <DayCell key={date} date={date} {...{shown, today, selectedDay, selected, now, timeZone, calendars, section}} looks={cellLooks}
           items={byDay.get(date) ?? []} forecast={weather.get(date)} open={popover === date} dropping={!!drag && drag.to === date && drag.to !== drag.from}
-          onSelectDay={onSelectDay} onSelectItem={onSelectItem} onPopover={onPopover} onPress={onPress} />,
+          onSelectDay={onSelectDay} onSelectItem={onSelectItem} onPopover={onPopover} onPress={onPress} onNew={onNew} />,
       );
     }
   }
@@ -342,9 +344,10 @@ interface DayCellProps {
   onSelectItem: (item: ItemOut, date: string, rect: Rect, additive: boolean) => void;
   onPopover: (date: string | null) => void;
   onPress: (item: ItemOut, date: string, event: ReactPointerEvent<HTMLElement>) => void;
+  onNew: (date: string) => void;
 }
 
-function DayCell({date, shown, today, selectedDay, selected, looks, items, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress}: DayCellProps) {
+function DayCell({date, shown, today, selectedDay, selected, looks, items, forecast, calendars, now, timeZone, open, dropping, section, onSelectDay, onSelectItem, onPopover, onPress, onNew}: DayCellProps) {
   const head = dayHead(date);
   const {shown: fits, more} = fitDay(items.length);
   const out = monthOf(date) !== shown;
@@ -355,6 +358,13 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items, forec
     <div className={className} data-date={date} onClick={() => onSelectDay(date)}>
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
+        {/* Under the pointer a day offers + to make an event on it (polish audit grids-06); a click on the day only selects it. */}
+        <button type="button" className="dadd" aria-label={`New event on ${dayTitle(date)}`} title="New event · C"
+          onPointerDown={event => event.stopPropagation()}
+          onClick={event => {
+            event.stopPropagation();
+            onNew(date);
+          }}><Icon name="add" size={14} /></button>
         {wx && <span className={`wx ${wx.tone}`} title={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={16} /></span>}
       </div>
       {items.slice(0, fits).map(item => (

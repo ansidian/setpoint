@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
+import {minuteTop} from '../../src/logic/week.ts';
 import {layout, monthPaging} from '../../src/tokens.ts';
 import {cleanUp, startSetpoint, until, watch} from './harness.ts';
 
@@ -273,6 +274,77 @@ test('Week zooms in from the selected week\'s row in Month and Month settles bac
     await until('the thumb slides under All and hands it its fill', inboxSliding, seen => seen.join() === ',');
     const all = await thumb(inbox);
     assert.ok(all.on[0] > 2 && all.x === all.on[0] && all.width === all.on[1], 'under All');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+const opacity = (target: Locator, pseudo?: string) => style(target, 'opacity', pseudo);
+
+test('a day answers the pointer with `sub` at 55% over its tints and offers + to make an event on it; a week\'s head answers too, and its empty hours show where a press would start', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+
+    // Thursday the 15th under the pointer: its wash fades in over 120 ms, and its + shows.
+    const cell = page.locator('.cell[data-date="2026-10-15"]');
+    const plus = cell.locator('.dadd');
+    assert.deepEqual([await opacity(cell, '::before'), await opacity(plus)], ['0', '0'], 'nothing at rest');
+    await cell.hover({position: {x: 70, y: 150}});
+    await until('the day answers', async () => [await opacity(cell, '::before'), await opacity(plus)], values => values.join() === '1,1');
+    assert.deepEqual([await style(cell, 'background-color', '::before'), await style(cell, 'transition-duration', '::before')],
+      [await colour(page, 'color-mix(in srgb, var(--sub) 55%, transparent)'), '0.12s']);
+    assert.deepEqual([await plus.getAttribute('title'), await plus.locator('svg').getAttribute('width')], ['New event · C', '14']);
+    // The selected day keeps its own fill.
+    const selected = page.locator('.cell[data-date="2026-10-07"]');
+    await selected.hover({position: {x: 70, y: 150}});
+    // The wash of the day left fades out over 120 ms; the selected day's never shows.
+    await page.waitForTimeout(250);
+    assert.deepEqual([await opacity(selected, '::before'), await opacity(cell, '::before')], ['0', '0']);
+
+    // Its + takes `sub2` under the pointer, and a click makes an event on that day, selecting it.
+    await cell.hover({position: {x: 70, y: 150}});
+    await plus.hover();
+    const sub2 = await colour(page, '--sub2');
+    await until('the + answers', () => style(plus, 'background-color'), fill => fill === sub2);
+    await plus.click();
+    await page.locator('.editor').waitFor();
+    await until('Thu, Oct 15 is selected', () => cell.getAttribute('class'), classes => !!classes?.split(' ').includes('sel'));
+    assert.equal(await page.getByLabel('Date', {exact: true}).inputValue(), 'Thu, Oct 15');
+    await page.keyboard.press('Escape');
+    await page.locator('.editor').waitFor({state: 'detached'});
+
+    // Week: a head answers as a day does.
+    await page.keyboard.press('w');
+    const head = page.locator('.wk-dhead[data-date="2026-10-13"]');
+    await head.hover();
+    await until('the head answers', () => opacity(head, '::before'), value => value === '1');
+
+    // The empty hours: the 15-minute step under the pointer, as a 30-minute slot with + and its time.
+    const column = page.locator('.wk-col[data-date="2026-10-14"]');
+    const box = (await column.boundingBox())!;
+    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 40));
+    const slot = column.locator('.wk-hover');
+    await until('10:30 AM under the pointer', () => slot.textContent(), text => text === '10:30 AM');
+    assert.deepEqual([await style(slot, 'height'), await style(slot, 'transform'), await style(slot, 'transition-duration'), await opacity(slot)],
+      ['22px', `matrix(1, 0, 0, 1, 0, ${minuteTop(10 * 60 + 30)})`, '0.12s, 0.12s', '1']);
+    assert.equal(await style(slot, 'background-color'), await colour(page, '--sub'));
+    // A step further down it moves there.
+    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 50));
+    await until('10:45 AM', () => slot.textContent(), text => text === '10:45 AM');
+    // Over a block, or off the hours, it goes.
+    const gym = page.locator('.wb', {hasText: 'Gym'}).first();
+    await gym.hover();
+    await until('gone over Gym', () => page.locator('.wk-hover').evaluateAll(slots => slots.map(one => one.className)), classes => classes.every(name => name.includes('gone')));
+    // Reaching Gym may have scrolled the hours.
+    const again = (await column.boundingBox())!;
+    await page.mouse.move(again.x + 60, again.y + minuteTop(11 * 60 + 10));
+    await until('back on empty hours', () => page.locator('.wk-hover:not(.gone)').textContent(), text => text === '11:00 AM');
+    await page.mouse.move(800, 28);
+    await until('gone off the hours', () => page.locator('.wk-hover:not(.gone)').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

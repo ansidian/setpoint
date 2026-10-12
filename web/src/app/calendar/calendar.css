@@ -50,6 +50,19 @@
 .cell.edge-top::after { border-top: 1.5px solid var(--edge); }
 .cell.edge-left::after { border-left: 1.5px solid var(--edge); }
 .dhead { display: flex; align-items: center; gap: 4px; height: var(--dayHead); padding: 0 2px 0 4px; flex: none; }
+/* A day answers the pointer (polish audit grids-06): `sub` at 55% laid over its tints, over 120 ms, and
+   a 20 px + after its number that makes an event on it (only where there's a pointer to hover). */
+.cell { --cellHover: color-mix(in srgb, var(--sub) 55%, transparent); }
+.cell::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--cellHover); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
+.dadd { width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; flex: none; color: var(--ink3); opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .cell:hover:not(.sel, .drop)::before { opacity: 1; }
+  .cell:hover .dadd { opacity: 1; }
+  .dadd:hover { background: var(--sub2); color: var(--ink); }
+}
+.dadd:active { transform: scale(.92); background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
+@media (hover: none) { .dadd { display: none; } }
 .dn { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 999px; }
 /* Today is a disc in the now-line's `alert` (#128), in the month, the week's heads and the mini-month. */
 .dn.today { background: var(--alert); color: var(--onAlert); font-weight: 600; }
