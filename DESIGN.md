@@ -399,7 +399,7 @@ offered for protected mail.
 
 - **Weekday row** 30 px, 11.5 uppercase. **Columns** 147 px at the design target, **rows** 176. Cells
   have `hair` right and bottom lines; weekends take `dayOff`, days outside the month `dayOut` (an
-  outside weekend too), the selected day `sub` (#123). A day under the pointer takes `sub` at 55% over
+  outside weekend too), the selected day `sub` (#123) with its number on a `sub3` disc (#233). A day under the pointer takes `sub` at 55% over
   its tints (120 ms), and a 20 px + after its number (`add` 14 in `ink3`, `sub2` and `ink` under the
   pointer, "New event · C") makes an event on that day, selecting it; a click on the day still only
   selects it (#223).
@@ -445,7 +445,9 @@ line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zo
 once under way under the now-line with "45m left" and its bar filling, #226; past ones grey, #226; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
-bars as the week's (#227), then **Tasks · due today** with their projects. A day whose items are only hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
+bars as the week's (#227), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#233).
+An empty day offers New event C and New task D as dashed ghost rows (#234); one whose items are only
+hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
 editor and calendar search results.
 
 ### The floating detail
@@ -574,7 +576,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   resize, the failed card, multi-select, Clone, Copy, Paste (the copied time on the selected day),
   Colour, Delete, ⌘Z.
 - **States:** the grid, heads and hours draw at once and blocks fade in (120 ms) as they arrive; an
-  empty week draws nothing more (the agenda says "No events · New event"); a failing source's line
+  empty week draws nothing more (the agenda offers its ghost rows, #234); a failing source's line
   sits atop the right pane (#62), and offline dims the grid.
 - **Labels:** each block reads "Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal" to assistive tech, the
   hours are a labelled region, the arrows "Previous week" and "Next week". No focus rings
@@ -878,7 +880,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
-All", "No events · New event"; a day whose items are only hidden, "4 hidden · Show all" (#113). Each
+All"; the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#234); a
+day whose items are only hidden, "4 hidden · Show all" (#113). Each
 leads with its glyph in `ink3`, 20 px and 12 px before the words, or 16 px and 8 px in a row 44 px or
 shorter (#165). The UI says "Done".
 
@@ -2051,3 +2054,15 @@ it changes what's on screen.
     Repeat menus mark the current choice as Settings' do, a 16 px `check` in `ink` at its row's end
     (#142), leaving the `sub2` fill to the pointer and the keyboard's cursor (Andy, 2026-10-11, polish
     audit calflows-08).
+233. **Picking a day answers in all three places:** the grid's selected day keeps its `sub` and its
+    number takes a `sub3` disc with `ink` at 500 (today keeps its `alert` disc), echoing the mini-month's
+    selected disc (#231); the pane's content slides in 6 px over 120 ms from the side the new day lies
+    on, later from the right, earlier from the left, and its date heading fades in over the same 120 ms.
+    Nothing plays on the way out, or when the same day is picked again or an item changes (Andy,
+    2026-10-11, polish audit calpanes-06).
+234. **An empty day is room to plan:** the right pane's empty day, past or to come, shows two 36 px
+    ghost rows 6 px apart, radius 10, in the grid's draft language (a 1.5 px dashed `edgeOn` outline):
+    `add` 16 in `ink3` "New event" with its `C`, and an open ring "New task" with its `D`, `ink2`; under
+    the pointer `sub`, `ink` and an `edgeHover` outline over 120 ms. The line under the date stays the
+    one line ("Nothing planned", or the forecast). Replacing Copy's "No events · New event" there (Andy,
+    2026-10-11, polish audit calpanes-09).

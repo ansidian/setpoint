@@ -42,6 +42,8 @@
 .cell.out { background: var(--dayOut); }
 .cell.out .dn { color: var(--ink3); }
 .cell.sel { background: var(--sub); }
+/* The selected day's number takes a `sub3` disc, as the mini-month's and the pane's heading carry it (polish audit calpanes-06). */
+.cell.sel .dn:not(.today) { background: var(--sub3); color: var(--ink); font-weight: 500; }
 /* A day that's over keeps its number in ink3 (#124). */
 .cell.past .dn:not(.today, .month) { color: var(--ink3); }
 /* Each month's boundary, as v1 traces it: today's month in `accent`, the others fainter. */
@@ -136,6 +138,13 @@
 .rp-sub .cloud { color: var(--ink2); }
 .rp-sub .rain { color: var(--cool); }
 .rp-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+/* Another day picked: its items slide in 6 px from its side over 120 ms, its heading fades in (polish audit calpanes-06). */
+.rp-scroll[data-dir="next"] { animation: day-in-next var(--dur-fast) var(--ease); }
+.rp-scroll[data-dir="prev"] { animation: day-in-prev var(--dur-fast) var(--ease); }
+.rp-head > [data-swap] { animation: day-head-in var(--dur-fast) var(--ease); }
+@keyframes day-in-next { from { opacity: 0; transform: translateX(6px); } }
+@keyframes day-in-prev { from { opacity: 0; transform: translateX(-6px); } }
+@keyframes day-head-in { from { opacity: 0; } }
 .ag-day { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 18px 20px 8px; }
 .ag-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
 .ag-item:hover { background: var(--sub); }
@@ -188,6 +197,15 @@
 .ag-empty > .icon { margin-right: 2px; }
 .ag-empty button { color: var(--ink2); }
 .ag-empty button:hover { color: var(--ink); }
+/* An empty day's ghost rows (polish audit calpanes-09): 36 px, radius 10, the drafts' dashed outline in
+   `edgeOn`, `ink2`; under the pointer `sub`, `ink` and an `edgeHover` outline, over 120 ms. */
+.ag-ghosts { display: flex; flex-direction: column; gap: 6px; padding: 14px 8px 0; }
+.ag-ghost { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px; border-radius: 10px; outline: 1.5px dashed var(--edgeOn); outline-offset: -1.5px; color: var(--ink2); text-align: left;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), outline-color var(--dur-fast) var(--ease); }
+.ag-ghost > .icon { color: var(--ink3); margin: 0 -1px; }
+.ag-ghost > .ring { width: 14px; height: 14px; margin: 0 0 0 1px; }
+@media (hover: hover) { .ag-ghost:hover { background: var(--sub); color: var(--ink); outline-color: var(--edgeHover); } }
+.ag-ghost:active { background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
 /* SV-56: every calendar off, a glyph after the header's title says the view is filtered. */
 .cal-hidden { display: inline-flex; vertical-align: -2px; margin-left: 6px; }
 .rp-foot { margin-top: auto; padding: 12px 16px 16px 20px; border-top: 1px solid var(--hair); display: flex; gap: 8px; align-items: center; color: var(--ink3); flex: none; }

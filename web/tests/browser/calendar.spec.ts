@@ -351,11 +351,11 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     assert.equal(await page.locator('.hd-title').textContent(), 'October 2026');
     // The grid stays quiet: Wed Oct 7's cell has nothing in it.
     assert.deepEqual(await chips(page, '2026-10-07'), []);
-    // A day with nothing on it at all still reads No events.
+    // A day with nothing on it at all offers New event and New task as ghost rows (polish audit calpanes-09).
     await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
     await until('Sat, Oct 24', () => text(page, '.rp-date'), title => title === 'Sat, Oct 24');
-    assert.equal(await empty.textContent(), 'No events · New event');
-    assert.deepEqual(await leadGlyph(empty), [ICONS.event_available, '16', await tokenColour(page, 'ink3'), 8], 'it leads with event_available');
+    assert.deepEqual(await page.locator('.rpane .ag-ghost').allTextContents(), ['New eventC', 'New taskD']);
+    assert.equal(await empty.count(), 0);
     await page.locator('.cell[data-date="2026-10-07"]').click({position: {x: 100, y: 150}});
     await until('Wed, Oct 7 again', () => empty.textContent(), line => line === '4 hidden · Show all');
 

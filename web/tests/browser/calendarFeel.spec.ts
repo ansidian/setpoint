@@ -678,8 +678,8 @@ test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the poin
     assert.equal(await mini.locator('button').count(), 42);
     assert.deepEqual([await style(day('2026-10-09'), 'width'), await style(day('2026-10-09'), 'height')], ['26px', '26px']);
     // The selected day: `sub3`, `ink` at 500; the pointer elsewhere `sub2`.
-    assert.deepEqual([await style(day('2026-10-09'), 'background-color'), await style(day('2026-10-09'), 'color'), await style(day('2026-10-09'), 'font-weight')],
-      [await colour(page, '--sub3'), await colour(page, '--ink'), '500']);
+    const [sub3, ink] = [await colour(page, '--sub3'), await colour(page, '--ink')];
+    await until('the selected day', async () => [await style(day('2026-10-09'), 'background-color'), await style(day('2026-10-09'), 'color'), await style(day('2026-10-09'), 'font-weight')].join(' '), value => value === `${sub3} ${ink} 500`);
     await day('2026-10-21').hover();
     const sub2 = await colour(page, '--sub2');
     await until('the pointer', () => style(day('2026-10-21'), 'background-color'), fill => fill === sub2);
@@ -703,7 +703,7 @@ test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the poin
     const band = page.locator('.sb .mini .wk');
     assert.deepEqual(await band.allTextContents(), ['4', '5', '6', '7', '8', '9', '10']);
     assert.deepEqual([await style(band.first(), 'border-top-left-radius'), await style(band.nth(1), 'border-top-left-radius'), await style(band.last(), 'border-top-right-radius')], ['999px', '0px', '999px']);
-    assert.equal(await style(band.nth(1), 'background-color'), sub2);
+    await until('the band fills in', () => style(band.nth(1), 'background-color'), fill => fill === sub2);
     assert.match(await style(page.locator('.sb .mini .wk.t'), 'background-image'), /^radial-gradient/);
     await page.keyboard.press('m');
     await page.locator('.cal-month').waitFor();
@@ -725,6 +725,61 @@ test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the poin
     const current = page.getByRole('menuitemradio', {checked: true});
     assert.equal(await current.count(), 1);
     assert.deepEqual([await current.locator('svg').count(), await current.getAttribute('class')], [1, 'menu-i']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a day picked answers in three places: its number\'s `sub3` disc, the mini-month\'s, and the pane sliding in from its side; an empty day offers New event C and New task D as ghost rows', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const recordPane = () => page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as {pane: string[]}).pane = seen;
+      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
+        const style = getComputedStyle(node);
+        if (node.matches('.rp-scroll, .rp-head > *')) seen.push(`${node.className} ${node.dataset.dir ?? node.dataset.swap ?? '-'} ${style.animationName} ${style.animationDuration}`);
+      }))).observe(document.querySelector('.rpane')!, {subtree: true, childList: true});
+    });
+    const pane = () => page.evaluate(() => (window as unknown as {pane: string[]}).pane);
+
+    // Fri 9, later: its number on a `sub3` disc, the pane sliding in from the right.
+    await recordPane();
+    await page.locator('.cell[data-date="2026-10-09"]').click({position: {x: 100, y: 150}});
+    await until('Fri, Oct 9', () => page.locator('.rp-date').textContent(), title => title === 'Fri, Oct 9');
+    const number = page.locator('.cell[data-date="2026-10-09"] .dn');
+    assert.deepEqual([await style(number, 'background-color'), await style(number, 'color'), await style(number, 'font-weight')], [await colour(page, '--sub3'), await colour(page, '--ink'), '500']);
+    const sub3 = await colour(page, '--sub3');
+    await until('as the mini-month marks it', () => style(page.locator('.sb .mini button[aria-label="2026-10-09"]'), 'background-color'), fill => fill === sub3);
+    assert.deepEqual((await pane()).sort(), ['grow next day-head-in 0.12s', 'rp-scroll next day-in-next 0.12s']);
+    // Mon 5, earlier: from the left. Today keeps its own disc.
+    await recordPane();
+    await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 100, y: 150}});
+    await until('Mon, Oct 5', () => page.locator('.rp-date').textContent(), title => title === 'Mon, Oct 5');
+    assert.ok((await pane()).includes('rp-scroll prev day-in-prev 0.12s'));
+    // The same day again plays nothing.
+    await recordPane();
+    await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 100, y: 150}});
+    await setpoint.idle();
+    assert.deepEqual(await pane(), []);
+
+    // An empty day: two dashed ghost rows, New event C and New task D; each opens the editor.
+    await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
+    const ghosts = page.locator('.rpane .ag-ghost');
+    await until('Sat, Oct 24\'s ghost rows', () => ghosts.allTextContents(), rows => rows.join() === 'New eventC,New taskD');
+    assert.deepEqual([await style(ghosts.first(), 'height'), await style(ghosts.first(), 'border-top-left-radius'), await style(ghosts.first(), 'outline-style'), await style(ghosts.first(), 'outline-width')], ['36px', '10px', 'dashed', '1.5px']);
+    assert.equal(await style(ghosts.first(), 'outline-color'), await colour(page, '--edgeOn'));
+    await ghosts.first().hover();
+    const sub = await colour(page, '--sub');
+    await until('it answers the pointer', () => style(ghosts.first(), 'background-color'), fill => fill === sub);
+    await ghosts.nth(1).click();
+    await page.getByRole('form', {name: 'New task'}).waitFor();
+    assert.equal(await page.getByLabel('Due date', {exact: true}).inputValue(), 'Sat, Oct 24');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

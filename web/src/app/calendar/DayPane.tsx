@@ -9,6 +9,7 @@
 // failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
 // all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place.
 import type {CalendarOut, ItemOut, SourceOut, WeatherDayOut} from '@setpoint/shared';
+import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../../api/client.ts';
 import {SOURCES_PATH} from '../../api/settings.ts';
@@ -54,6 +55,10 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
   const day = agenda(date, items, calendars, now, timeZone);
   const justDone = useJustDone(day.tasks);
+  // Another day picked: its heading fades in, its items slide in 6 px from the side it lies on (polish
+  // audit calpanes-06); the same day again, or an item changing, plays nothing.
+  const [shownDay, setShownDay] = useState<{date: string; dir: 'next' | 'prev' | undefined}>({date, dir: undefined});
+  if (shownDay.date !== date) setShownDay({date, dir: date > shownDay.date ? 'next' : 'prev'});
   const wx = forecast ? weatherOf(forecast) : null;
   const nowLine = (
     <div className="nowline" key="now">
@@ -66,7 +71,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
     <section className="rpane" aria-label={title}>
       <HealthLines now={now} timeZone={timeZone} />
       <div className="rp-head">
-        <div className="grow">
+        <div className="grow" key={date} data-swap={shownDay.dir}>
           <div className="rp-date">{title}</div>
           {wx
             ? <div className="rp-sub ink2"><span className={wx.tone}><Icon name={wx.icon} size={16} /></span><span className="num">{wx.line}</span></div>
@@ -75,7 +80,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
         <button className="ibtn" aria-label={`New event on ${title.slice(5)}`} onClick={() => onNew('event')}><Icon name="add" /></button>
       </div>
 
-      <div className="rp-scroll">
+      <div className="rp-scroll" key={date} data-dir={shownDay.dir}>
         {day.events.length > 0 && <div className="ag-day">Events</div>}
         {day.events.map((event, index) => (
           <AgendaRow key={event.item.key} {...{event, index, nowAt: day.nowAt, nowLine, selected, now, timeZone, onSelectItem}} fade={fade(event.item.calendar_id)} colour={event.item.colour ?? colours.get(event.item.calendar_id) ?? null}
@@ -103,9 +108,15 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
             {task.project && <span className="ink3 project">{task.project}</span>}
           </a>
         ))}
+        {/* An empty day is room to plan (polish audit calpanes-09): New event C and New task D as dashed ghost rows. */}
         {!day.events.length && !day.tasks.length && (hidden > 0
           ? <div className="ag-empty"><Icon name="visibility_off" size={16} />{hidden} hidden · <button onClick={onShowAll}>Show all</button></div>
-          : <div className="ag-empty"><Icon name="event_available" size={16} />No events · <button onClick={() => onNew('event')}>New event</button></div>)}
+          : (
+            <div className="ag-ghosts">
+              <button type="button" className="ag-ghost" onClick={() => onNew('event')}><Icon name="add" size={16} /><span className="grow">New event</span><span className="kbd">C</span></button>
+              <button type="button" className="ag-ghost" onClick={() => onNew('task')}><span className="ring" /><span className="grow">New task</span><span className="kbd">D</span></button>
+            </div>
+          ))}
       </div>
 
       <div className="rp-foot">
