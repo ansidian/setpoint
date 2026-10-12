@@ -585,8 +585,11 @@ navigation.
 - **Lead story** (each block's first; also the first of a section's list and of each Missed day):
   - Layout: a grid of 12 | 232 | text, 14 apart, padding 14 16 14 12, `hair` below.
   - Image: 232 × 130 px, radius 12.
-  - Text: the headline 16 / 500 `ink` at 1.35; the summary `ink3` 13 / 1.45, clamped to two lines;
-    the meta line at the foot.
+  - Text: the headline 16 / 500 `ink` at 1.35, still `ink` once seen, at 400; the summary `ink3` 13 /
+    1.45, clamped to two lines; the meta line at the foot (#245).
+  - When the list is 1000 px or wider (nothing open at the design target), the lead grows: 12 | 320
+    | text, 18 apart, padding 16 16 16 12; the image 320 × 180; the headline 19 at 1.3, −.01em, max
+    760; the summary 13.5 / 1.5, three lines, max 680 (#245).
 - **Story row:**
   - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below.
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
@@ -1579,6 +1582,15 @@ it changes what's on screen.
     repeating task keeps its own line. The calendar fact's `calendar_today` takes the item's colour
     (its own, else its calendar's), as the failed card's does, its name staying `ink2`. The date
     stays the title's subtitle, without a glyph (Andy, 2026-10-11, polish audit calflows-05).
+245. **A block's lead is unmistakably the lead:** the boards were drawn with the pane open, a list
+    about 750 px wide; with nothing open it's 1,429 px at the design target, and the lead's 232 ×
+    130 image filled 16% of its row while its one-line headline ran past 1,000 px. From a list 1000
+    px wide the lead grows: 12 | 320 | text, 18 apart, padding 16 16 16 12, the image 320 × 180, the
+    headline 19 at 1.3 and −.01em (max 760), the summary 13.5 / 1.5 on up to three lines (max 680);
+    narrower lists keep 232 × 130, and 160 × 90 under 600 (#99). Seen, a lead's headline stays `ink`
+    at 400 rather than dropping to `ink2`, so on a second visit the day's top stories still outrank
+    Upcoming's names and the rows; new and seen leads differ by weight and the dot. Rows keep `ink2`
+    once seen. Board 25 draws a seen lead in `ink2` (Andy, 2026-10-11, polish audit news-04).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

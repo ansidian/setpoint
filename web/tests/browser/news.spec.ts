@@ -134,11 +134,16 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.deepEqual(await row(page, 'Man arrested after a stabbing').locator('.side .nw-meta').allTextContents(), ['NBC LA +2', 'Updated 7:55 AM']);
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('.side .nw-meta').allTextContents(), ['LAist +3', 'Yesterday']);
 
-    // The single values: the lead's image, a row's grid and thumbnail, and the dots.
+    // The single values: the lead's image, a row's grid and thumbnail, and the dots. With nothing open
+    // the list is 1,429 px wide, and its leads grow: 320 × 180, the headline 19 (#245).
     const lead = row(page, 'Brush fire near the 210');
-    assert.deepEqual(await lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]),
-      [232, 130, 'cover', '12px']);
-    assert.equal(await lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 232px');
+    const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]);
+    const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' '));
+    const leadHeadline = () => lead.locator('.hl').evaluate(element => [getComputedStyle(element).fontSize, getComputedStyle(element).lineHeight, getComputedStyle(element).fontWeight]);
+    assert.deepEqual(await leadImage(), [320, 180, 'cover', '12px']);
+    assert.equal(await leadColumns(), '12px 320px');
+    assert.deepEqual(await leadHeadline(), ['19px', '24.7px', '500']);
+    assert.equal(await lead.locator('.sm').evaluate(element => getComputedStyle(element).webkitLineClamp), '3');
     const redFlag = row(page, 'Red Flag Warning');
     assert.match(await redFlag.evaluate(element => getComputedStyle(element).gridTemplateColumns), /^12px \S+ \S+ 72px$/);
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).borderRadius]), [72, 48, '8px']);
@@ -168,6 +173,12 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
+    // With the pane open the list is under 1000 px, and the lead is the boards' 232 × 130 again; opened,
+    // it's seen, and stays ink, at 400 (#245).
+    assert.deepEqual(await leadImage(), [232, 130, 'cover', '12px']);
+    assert.equal(await leadColumns(), '12px 232px');
+    assert.deepEqual(await leadHeadline(), ['16px', '21.6px', '400']);
+    assert.equal(await lead.locator('.hl').evaluate(element => getComputedStyle(element).color), await colourOf(page, 'var(--ink)'));
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '25-news-a-typical-morning', 'main');
@@ -466,6 +477,11 @@ test('seen: about a second fully on screen, or opened; flicking past doesn\'t co
     await row(page, 'Red Flag Warning').waitFor();
     assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bseen\b/);
     assert.match(await row(page, 'Hurricane Teresa').getAttribute('class') ?? '', /\bseen\b/);
+    // A seen lead keeps its ink, at 400, so it never ranks below a row; a seen row is ink2 (#245).
+    const ink = (headline: string) => row(page, headline).locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
+    assert.match(await row(page, 'Brush fire near the 210').getAttribute('class') ?? '', /^nw-lead seen\b/);
+    assert.deepEqual(await ink('Brush fire near the 210'), [await colourOf(page, 'var(--ink)'), '400']);
+    assert.deepEqual(await ink('Red Flag Warning'), [await colourOf(page, 'var(--ink2)'), '400']);
     // Seen by Pixel Watch's opening, even off screen.
     await page.goto(`${setpoint.base}/news/story/${pixel}`);
     await until('Pixel Watch seen', () => stateOf(setpoint, pixel), state => state === 'seen');

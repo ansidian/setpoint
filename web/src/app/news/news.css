@@ -50,7 +50,8 @@
 .nw-lead .nd { height: 22px; }
 .nw-lead .txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .nw-lead .hl { font-size: 16px; line-height: 1.35; font-weight: 500; color: var(--ink); letter-spacing: -.005em; }
-.nw-lead.seen .hl { color: var(--ink2); font-weight: 400; }
+/* Seen, a lead keeps its ink and drops to 400: new and seen differ by weight and the dot, and a lead never ranks below a row (#245). */
+.nw-lead.seen .hl { color: var(--ink); font-weight: 400; }
 .nw-lead .sm { color: var(--ink3); font-size: 13px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nw-lead .nw-meta { margin-top: auto; }
 
@@ -92,6 +93,16 @@
 .nw-up-story .sm { color: var(--ink2); font-size: 12.5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .nw-up-story .nw-meta { margin-top: 2px; }
 .nw-up-wait { height: 64px; display: grid; place-items: center; color: var(--ink3); }
+
+/* A list 1000 px or wider (nothing open at the design target): the lead grows, so the biggest story
+   looks big rather than sparse (#245). Narrower lists keep 232 × 130. */
+@container (min-width: 1000px) {
+  .nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px 16px 16px 12px; }
+  .nw-lead .nw-img { width: 320px; height: 180px; }
+  .nw-lead .nd { height: 25px; }
+  .nw-lead .hl { font-size: 19px; line-height: 1.3; letter-spacing: -.01em; max-width: 760px; }
+  .nw-lead .sm { font-size: 13.5px; line-height: 1.5; -webkit-line-clamp: 3; max-width: 680px; }
+}
 
 /* A list the story pane leaves under 600 px (D104): Upcoming drops its label and outlet, its name · date
    cut short, and a lead's image shrinks so its headline keeps some width. */
