@@ -451,7 +451,10 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
     await until('Dentist under way', () => dentist.getAttribute('class'), classes => classes === 'ag-item next ongoing');
     assert.equal(await left.textContent(), '45m left');
-    assert.equal(await style(dentist, '--done'), '25%');
+    // A quarter full. The page's clock runs on from the seed's moment while the page loads, seconds
+    // more on a slowed CPU (25.2% under stress), so a quarter within 18 seconds of it.
+    const done = parseFloat(await style(dentist, '--done'));
+    assert.ok(Math.abs(done - 25) <= 0.5, `a quarter full, not ${done}%`);
     const order = await page.locator('.rpane .rp-scroll > *').evaluateAll(rows => rows.map(row => (row.classList.contains('nowline') ? 'now' : row.querySelector('.title')?.textContent ?? row.textContent)));
     assert.deepEqual(order.slice(0, 4), ['Events', 'Gym', 'now', 'Dentist'], 'under the now-line');
     assert.deepEqual(setpoint.pageErrors, []);
