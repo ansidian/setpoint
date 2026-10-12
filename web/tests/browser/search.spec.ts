@@ -360,7 +360,7 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     assert.deepEqual(await page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection]), ['twinkle', '1.2s', 'alternate']);
     await page.locator('.answer .ans').waitFor({timeout: 10_000});
     // The answer fades up where its place was held; the trail folds away.
-    assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'ans-in');
+    assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'turn-in');
     await page.locator('.answer .trail').waitFor({state: 'detached'});
     assert.equal(await page.locator('.answer [data-skeleton]').count(), 0);
     const total = Number((await page.locator('.answer .ans').textContent())!.split(' ')[0]);

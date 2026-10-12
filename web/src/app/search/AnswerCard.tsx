@@ -58,8 +58,6 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
     if (failed && !draft) setDraft(failed);
   }
   const asking = waiting !== null;
-  // The turns there as the card opened don't fade in; those answered since do.
-  const [shownAtOpen] = useState(() => new Set(turns.map(turn => turn.turn_id)));
   // The trail of the question just answered, folding away over 180 ms as its answer lands.
   const [was, setWas] = useState({asking, turns: turns.length});
   const [folding, setFolding] = useState<AskStep[] | null>(null);
@@ -89,14 +87,14 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
             {index > 0 && <div className="turn-sep" />}
             {showsQuestion(index, scoped) && <div className="q">{turn.question}</div>}
             {folding && index === turns.length - 1 && <Trail steps={folding} folding />}
-            {turn.answer ? <p className={shownAtOpen.has(turn.turn_id) ? 'ans' : 'ans arrive'}><Bold text={turn} /></p> : (
-              <div className={shownAtOpen.has(turn.turn_id) ? 'ans-none' : 'ans-none arrive'}>
+            {turn.answer ? <p className="ans"><Bold text={turn} /></p> : (
+              <div className="ans-none">
                 <p className="ans">Couldn’t find that in your mail</p>
                 {searchedLine(turn.searched) && <span className="searched">{searchedLine(turn.searched)}</span>}
               </div>
             )}
             {turn.sources.length > 0 && (
-              <div className={shownAtOpen.has(turn.turn_id) ? 'srcs' : 'srcs arrive'}>
+              <div className="srcs">
                 {shownSources(turn.sources, allSources.has(turn.turn_id)).shown.map(source => (
                   <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} onClick={() => onOpen(source.message_id)}>
                     <span className="line">

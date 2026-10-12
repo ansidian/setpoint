@@ -447,8 +447,8 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
     // Setpoint answers: the app fades in; its accounts and Today wait as skeletons, three rows each.
     const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
     await releaseMe();
-    await page.locator('.boot-after .app').waitFor();
-    assert.equal(await page.locator('.boot-after').evaluate(element => getComputedStyle(element).animationName), 'sk-arrive');
+    await page.locator('.app.boot-after').waitFor();
+    assert.equal(await page.locator('.app.boot-after').evaluate(element => getComputedStyle(element).animationName), 'sk-arrive');
     await shown(page, 'accounts');
     assert.deepEqual(await heights(page, '[data-skeleton="accounts"] .sk-acct'), [28, 28, 28]);
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
