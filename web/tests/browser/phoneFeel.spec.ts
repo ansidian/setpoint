@@ -498,3 +498,23 @@ test('a busy day\'s head stays in view as its items scroll under it', async () =
     await setpoint.stop();
   }
 });
+
+test('on the phone the sign-in card sits 18% from the top, clear of the keyboard, and so does the mark when Setpoint can\'t be reached', async () => {
+  const setpoint = await startSetpoint({claim: false});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.getByLabel('Setup token').waitFor();
+    // 18vh, to the 1/64 px layout rounds to.
+    const near = (y: number) => Math.abs(y - 844 * 0.18) < 0.05;
+    assert.ok(near((await page.locator('.sign-in').boundingBox())!.y), 'the card');
+    const boot = await setpoint.page('iphone');
+    await boot.route('**/api/me', route => route.fulfill({status: 502, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>'}));
+    await boot.goto(`${setpoint.base}/inbox`);
+    await boot.locator('.boot .offline-pill').waitFor();
+    assert.ok(near((await boot.locator('.boot svg.mark').boundingBox())!.y), 'the mark');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

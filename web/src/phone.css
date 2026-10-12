@@ -172,7 +172,10 @@
   .ph-settings p { margin: 0; }
 
   /* ---------- Signing in ---------- */
-  .sign-in { width: calc(100% - 32px); }
+  /* About 18% from the top rather than near the middle, so the keyboard never covers Sign in (#264). */
+  .sign-in { width: calc(100% - 32px); top: 18vh; }
+  /* The mark that stands where the card's top sits while Setpoint can't be reached (#118) follows it. */
+  .boot-at { top: 18vh; }
   /* 16 px, so iOS doesn't zoom the page into a field it focuses (as search's); placeholders as they were. */
   .sign-in .input { font-size: 16px; }
   .sign-in .input::placeholder { font-size: 13.5px; }

@@ -739,6 +739,7 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
 - **The list** reads a step up ([Type](#type), #262).
 - **The agenda** reads "Today" in `ink` 500, puts the now-line among today's items, draws events as
   their calendar's chips, and keeps each day's head in view (#256).
+- **Signing in**, the card sits 18% from the top (#264).
 
 ## mantel's mail chip
 
@@ -1562,3 +1563,6 @@ it changes what's on screen.
     and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
     before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No
     toast (Andy, 2026-10-11, polish audit phone-13).
+264. **On the phone the sign-in card sits 18% from the top** rather than near the middle, so the
+    keyboard never covers Sign in; the mark shown while Setpoint can't be reached (#118) stands there
+    too. The desktop is unchanged (Andy, 2026-10-11, polish audit phone-08; darma D145).
