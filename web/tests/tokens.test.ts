@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
+  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, news, week,
   attTint, mailDim, placement, radius, ringL, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
@@ -210,6 +210,7 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`A lifted calendar chip tilts ${minus(String(motion.liftTilt))}° and scales ${motion.liftScale}.`);
     expect(flat).toContain(`Theme switches fade every colour over ${motion.themeFade} ms`);
     expect(flat).toContain(`A press goes in over **${motion.press} ms** and lets go over ${motion.fast} ms`);
+    expect(flat).toContain(`settle in from \`sub2\` over ${news.landedMs} ms`);
   });
 
   test('the layout constants match DESIGN.md', () => {

@@ -161,6 +161,8 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     await newsChange(setpoint, THREE_NEW_ONE_UPDATED);
     const pill = page.locator('.nw-pill');
     await until('the pill', () => pill.textContent(), text => text === '3 new · 1 updatedN');
+    // It drops into place over 180 ms (news-06): measured once it's there.
+    await pill.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)));
     const pillBox = await pill.evaluate(element => {
       const box = element.getBoundingClientRect();
       const strip = document.querySelector('.nw-missed')!.getBoundingClientRect();
@@ -300,6 +302,13 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     const fireId = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
     await until('seen on the server', () => stateOf(setpoint, fireId), state => state === 'seen');
     assert.match(await fire.getAttribute('class') ?? '', /\bseen\b/);
+    // Its dot shrinks out in its colour over 180 ms rather than vanishing, and its headline eases to seen's
+    // colour over 120 ms (news-06).
+    const dot = fire.locator('.nd');
+    assert.deepEqual(await dot.evaluate(element => [getComputedStyle(element, '::before').transitionProperty, getComputedStyle(element, '::before').transitionDuration, getComputedStyle(element, '::before').transitionDelay]),
+      ['transform, background-color', '0.18s, 0s', '0s, 0.18s']);
+    await until('the dot shrunk away', () => dot.evaluate(element => getComputedStyle(element, '::before').transform), transform => transform === 'matrix(0, 0, 0, 0, 0, 0)');
+    assert.deepEqual(await fire.locator('.hl').evaluate(element => [getComputedStyle(element).transitionProperty, getComputedStyle(element).transitionDuration]), ['color', '0.12s']);
     // Still new since the user's last look before this visit.
     await pane.locator('.st-new').waitFor();
 
@@ -551,14 +560,45 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
     await newsChange(setpoint, `${THREE_NEW_ONE_UPDATED}
       UPDATE news_stories SET last_new_fact_at = '2026-10-07T16:06:00.000Z' WHERE headline = 'Federal agents detain 9 at a car wash';
       UPDATE news_stories SET one_line = 'Gusts to 60 mph, humidity under 8%' WHERE headline = 'Red Flag Warning for the valleys until Thu 6 PM';`);
-    await page.locator('.nw-pill', {hasText: '3 new · 1 updated'}).waitFor();
+    const pill = page.locator('.nw-pill', {hasText: '3 new · 1 updated'});
+    await pill.waitFor();
     await row(page, 'Red Flag Warning').locator('.sm', {hasText: 'Gusts to 60 mph, humidity under 8%'}).waitFor();
     await until('the car wash turns updated in place', classes, seen => seen.some(value => /\bupd\b/.test(value ?? '')));
     assert.deepEqual(await order(), before, 'nothing moved');
+    // The pill drops in over 180 ms; under the pointer its ring turns edgeHover and its arrow ink (news-06).
+    assert.deepEqual(await pill.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['nw-pill-in', '0.18s']);
+    const ring = (edge: string) => page.evaluate(value => {
+      const probe = document.createElement('div');
+      probe.style.boxShadow = `inset 0 0 0 1px var(${value}), var(--shadow-pill)`;
+      document.body.append(probe);
+      const shadow = getComputedStyle(probe).boxShadow;
+      probe.remove();
+      return shadow;
+    }, edge);
+    const hovered = [await ring('--edgeHover'), await colourOf(page, 'var(--ink)')];
+    await pill.hover();
+    await until('the pill answers the pointer', () => pill.evaluate(element => [getComputedStyle(element).boxShadow, getComputedStyle(element.querySelector('.icon')!).color]),
+      answer => answer.join() === hovered.join());
+    await page.mouse.move(700, 28);
     await list(page).evaluate(scroller => scroller.scrollTo({top: 400}));
+    // Each row N brings onto the list settles in from sub2 over 900 ms: noted as it lands.
+    await page.evaluate(() => {
+      const landed: string[][] = [];
+      (window as unknown as {landed: string[][]}).landed = landed;
+      new MutationObserver(() => {
+        for (const element of document.querySelectorAll<HTMLElement>('.nw-list .landed')) {
+          if (!landed.some(([id]) => id === element.dataset.story)) landed.push([element.dataset.story!, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]);
+        }
+      }).observe(document.querySelector('.nw-list')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
+    });
     // N takes the new order and scrolls to the top.
     await page.keyboard.press('n');
     await until('the new order', () => page.locator('.nw-list [data-story]').first().textContent(), text => text?.startsWith('Water main break floods an intersection') ?? false);
+    const arrived = [...new Set((await order()).filter(id => !before.includes(id)))].sort();
+    assert.deepEqual(arrived.length, 4, 'Water main, cooling centers, visionOS and Hugging Face');
+    const landed = await page.evaluate(() => (window as unknown as {landed: string[][]}).landed);
+    assert.deepEqual([...landed].sort(), arrived.map(id => [id, 'nw-landed', '0.9s']));
+    await until('they settle', () => page.locator('.nw-list .landed').count(), count => count === 0);
     assert.equal(await page.locator('.nw-pill').count(), 0);
     assert.equal(await list(page).evaluate(scroller => scroller.scrollTop), 0);
     assert.deepEqual((await page.locator('.nw-list [data-story]').allTextContents()).slice(0, 2).map(text => text.slice(0, 20)), ['Water main break flo', 'County opens cooling']);

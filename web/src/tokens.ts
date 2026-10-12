@@ -283,8 +283,11 @@ export const week = {
   edgePageMs: 600,
 } as const;
 
-/** News (DESIGN.md › News › Keys and behaviour): how long a row stays fully on screen before its story is seen. */
-export const news = {seenAfterMs: 1000} as const;
+/**
+ * News (DESIGN.md › News › Keys and behaviour): how long a row stays fully on screen before its story
+ * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion, #249).
+ */
+export const news = {seenAfterMs: 1000, landedMs: 900} as const;
 
 /** Fixed sizes in px (DESIGN.md › Layout and the export's Key measurements). */
 export const layout = {
@@ -349,6 +352,7 @@ export function cssVariables(): Record<string, string> {
   vars['--dur-slow'] = `${motion.slow}ms`;
   vars['--dur-press'] = `${motion.press}ms`;
   vars['--theme-fade'] = `${motion.themeFade}ms`;
+  vars['--news-landed'] = `${news.landedMs}ms`;
   vars['--sans'] = font.sans;
   vars['--mono'] = font.mono;
   for (const [name, value] of Object.entries(radius)) vars[`--r-${name}`] = `${value}px`;

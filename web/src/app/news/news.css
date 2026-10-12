@@ -7,8 +7,15 @@
 .nw-missed { flex: none; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px 0 22px; color: var(--ink); background: color-mix(in oklch, var(--accent) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--accent) 22%, transparent); }
 .nw-missed > .icon { color: var(--accent); }
 .nw-missed b { font-weight: 500; }
-.nw-pill { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12.5px; font-weight: 500; white-space: nowrap; z-index: 3; }
-.nw-pill > .icon { color: var(--ink2); }
+/* The pill drops in 8 px as it fades in over 180 ms, and under the pointer its ring and arrow deepen (#249). */
+.nw-pill { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12.5px; font-weight: 500; white-space: nowrap; z-index: 3;
+  transition: box-shadow var(--dur-fast) var(--ease); animation: nw-pill-in var(--dur-medium) var(--ease); }
+@keyframes nw-pill-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+.nw-pill > .icon { color: var(--ink2); transition: color var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .nw-pill:hover { box-shadow: inset 0 0 0 1px var(--edgeHover), var(--shadow-pill); }
+  .nw-pill:hover > .icon { color: var(--ink); }
+}
 .nw-pill .upd { color: var(--accent); }
 
 .nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
@@ -34,9 +41,16 @@
 
 /* The new / updated dot. */
 .nd { width: 12px; flex: none; display: grid; place-items: center; height: 20px; }
-.nd::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; transition: background-color var(--dur-fast) var(--ease); }
+.nd::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: transparent; transition: transform var(--dur-medium) var(--ease), background-color var(--dur-fast) var(--ease); }
 .new > .nd::before { background: var(--ink); }
 .upd > .nd::before { background: var(--accent); }
+/* Opened (or seen, from the next visit), the dot shrinks out in its colour over 180 ms rather than vanishing (#249). */
+.seen > .nd::before { transform: scale(0); transition: transform var(--dur-medium) var(--ease), background-color 0s linear var(--dur-medium); }
+/* A headline turning from new's ink to seen's eases as a fill does. */
+.nw-row .hl, .nw-lead .hl { transition: color var(--dur-fast) var(--ease); }
+/* A story N brings onto the list settles in from sub2 over 900 ms: the one longer motion, kept for arrivals (#249). */
+.nw-row.landed, .nw-lead.landed { animation: nw-landed var(--news-landed) var(--ease); }
+@keyframes nw-landed { from { background: var(--sub2); } }
 
 /* Setpoint's copies, cropped to fill; a story without one leaves its place empty. */
 .nw-img { display: block; object-fit: cover; flex: none; background: var(--sub2); }

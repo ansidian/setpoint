@@ -30,7 +30,7 @@ import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, hazardGlyph, keyStory, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
+  dueSeen, emptySectionLine, firstRunLine, hazardGlyph, keyStory, landed, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
   pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
   unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -38,6 +38,7 @@ import {resultsLine} from '../../logic/search.ts';
 import type {Layout, Sightings, VisitDots} from '../../logic/news.ts';
 import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
+import {news as newsTiming} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
@@ -150,11 +151,19 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const pending = held && latest ? waiting(held.layout, latest.layout, latest.rows) : null;
   const pill = pending ? pillParts(pending) : null;
   const list = useRef<HTMLDivElement>(null);
+  // The rows N brought onto the list, settling in from `sub2` for a moment (#249).
+  const [arrived, setArrived] = useState<ReadonlySet<number>>(() => new Set());
   const takeNew = () => {
     if (!latest) return;
+    setArrived(landed(held?.layout ?? [], latest.layout));
     setHold({...current, held: {layout: latest.layout}});
     list.current?.scrollTo({top: 0});
   };
+  useEffect(() => {
+    if (!arrived.size) return;
+    const timer = window.setTimeout(() => setArrived(new Set()), newsTiming.landedMs);
+    return () => window.clearTimeout(timer);
+  }, [arrived]);
 
   // Missed, opened with nothing left in it, is All (D92). Emptied during the visit, as its rows are
   // seen, its held order keeps the list until the visit leaves it, as All's does (the polish audit's news-01).
@@ -277,7 +286,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   };
   const segOn = (section: NewsView) => ((view === 'missed' ? 'all' : view) === section ? 'on' : undefined);
   const missed = view === 'all' && !searching ? latest?.missed ?? null : null;
-  const rowProps = {rows, cursor, openKey: shownOpenKey, now, zone, onPoint: (key: string) => key !== cursor && setCursor(key), onOpen: openAt};
+  const rowProps = {rows, cursor, openKey: shownOpenKey, arrived, now, zone, onPoint: (key: string) => key !== cursor && setCursor(key), onOpen: openAt};
   const firstShelf = !showHeadlines;
 
   return (
@@ -407,6 +416,8 @@ interface RowProps {
   section: StoryRowOut['sections'][number] | null;
   cursor: string | null;
   openKey: string | null;
+  // The stories N just brought onto the list.
+  arrived: ReadonlySet<number>;
   now: number;
   zone: string;
   onPoint: (key: string) => void;
@@ -416,12 +427,12 @@ interface RowProps {
 const STATE_CLASS = {new: 'new', updated: 'upd', seen: 'seen'} as const;
 
 /** A story's row: a block's lead (its large image, headline, two lines of summary, meta), or a row with its thumbnail. */
-function StoryRow({row, lead, rowKey, section, cursor, openKey, now, zone, onPoint, onOpen}: RowProps) {
+function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zone, onPoint, onOpen}: RowProps) {
   const meta = rowMeta(row, now, zone, section);
   const image = lead ? row.image?.large ?? row.image?.thumb : row.image?.thumb;
   // A hazard source's story without a photo shows its hazard's glyph instead (#162).
   const hazard = hazardGlyph(row);
-  const classes = [lead ? 'nw-lead' : 'nw-row', STATE_CLASS[row.state], lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open'].filter(Boolean).join(' ');
+  const classes = [lead ? 'nw-lead' : 'nw-row', STATE_CLASS[row.state], lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open', arrived.has(row.id) && 'landed'].filter(Boolean).join(' ');
   const attributes = {className: classes, 'data-key': rowKey, 'data-story': row.id, onMouseMove: () => onPoint(rowKey), onClick: () => onOpen(rowKey)};
   if (lead) {
     return (

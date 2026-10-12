@@ -153,8 +153,7 @@ export interface Waiting {
 }
 
 export function waiting(held: Layout, latest: Layout, rows: ReadonlyMap<number, StoryRowOut>): Waiting {
-  const shown = new Set(held.flatMap(shelf => shelf.ids));
-  const arriving = new Set(latest.flatMap(shelf => shelf.ids).filter(id => !shown.has(id)));
+  const arriving = landed(held, latest);
   let fresh = 0;
   let updated = 0;
   for (const id of arriving) {
@@ -283,6 +282,15 @@ export const foldFacts = <F>(facts: readonly F[], cap = 4): {shown: F[]; folded:
 
 /** The fold's line: "6 more" while it's closed, "Show fewer" once open. */
 export const foldLine = (count: number, open: boolean) => (open ? 'Show fewer' : `${count} more`);
+
+/**
+ * The stories the latest order brings onto the list, which the order it held didn't show: what the
+ * pill counts, and the rows that settle in from `sub2` once N takes it (the polish audit's news-06).
+ */
+export function landed(held: Layout, latest: Layout): Set<number> {
+  const shown = new Set(held.flatMap(shelf => shelf.ids));
+  return new Set(latest.flatMap(shelf => shelf.ids).filter(id => !shown.has(id)));
+}
 
 /** Whether a row's story still waits to be seen: new or updated. */
 export const unseen = (row: Pick<StoryRowOut, 'state'>) => row.state !== 'seen';

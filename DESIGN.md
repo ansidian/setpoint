@@ -159,7 +159,9 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
-paint doesn't fade. A press goes in over **80 ms** and lets go over 120 ms (#143).
+paint doesn't fade. A press goes in over **80 ms** and lets go over 120 ms (#143). The stories `N`
+brings onto News's list settle in from `sub2` over 900 ms (#249): the one longer motion, kept for
+arrivals.
 
 Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
@@ -603,8 +605,8 @@ navigation.
   - A lead without an image led by a hazard source puts its hazard's 18 px glyph in `caution` before
     the headline, rather than a large empty tile (#162).
 - **The dot** (6 px in the 12 px gutter): `ink` for **new**, as unread mail; `cool` for
-  **updated**; none once seen, from the next visit (#95). Hover is `sub`; the keyboard cursor and
-  the open story are `sub2`.
+  **updated**; none once seen, from the next visit (#95), an opened story's shrinking out in its
+  colour over 180 ms (#249). Hover is `sub`; the keyboard cursor and the open story are `sub2`.
 - **Meta copy:** "KTLA +4 · 1h · Updated 8:40 AM". Ages follow [Copy](#copy). Missed rows lead with
   the section, the story's main one (#96): "General · NPR +9 · Tue".
 - **Images:** Setpoint's own resized copy, cropped to fill (`object-fit: cover`). The boards draw
@@ -628,7 +630,10 @@ navigation.
   - A 32 px pill centred 10 px below the list's top (under the Missed strip when there is one):
     `cardOn`, an `edgeOn` ring, the pill shadow.
   - It shows `arrow_upward`, "3 new · 1 updated" (the updated count in `cool`) and the `N` hint.
-  - A click or `N` re-sorts the list and scrolls it to the top.
+  - A click or `N` re-sorts the list and scrolls it to the top. The stories it brings onto the list
+    settle in from `sub2` over 900 ms.
+  - It drops 8 px into place as it fades in over 180 ms; under the pointer its ring turns `edgeHover`
+    and its arrow `ink` (#249).
 - **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon", only
   when its own list is empty too. A block whose stories all show in other blocks (#96) has just its
   "2 more in Tech" link (#116).
@@ -1611,6 +1616,16 @@ it changes what's on screen.
     reads. A click opens the rest, the card growing over 180 ms, and the line reads "Show fewer" with
     `expand_less`. Five or fewer all show, as folding one away saves nothing (Andy, 2026-10-11,
     polish audit news-12).
+249. **News answers the pointer and shows what N brought:** the new-stories pill, the one element
+    whose job is to draw the eye, was the quietest on the page (`cardOn`, 1.02:1 on Light's page),
+    appeared in one frame and had no hover; N re-sorted the list in one frame, the arrivals looking
+    like every other row; and an opened story's dot vanished. Now the pill drops 8 px into place as
+    it fades in over 180 ms, and under the pointer its ring turns `edgeHover` and its arrow `ink`
+    (120 ms); the stories N (or the pill) brings onto the list, those the held order didn't show,
+    settle in from `sub2` over 900 ms, a deliberate extension of the motion vocabulary used only for
+    arrivals (`news.landedMs`); an opened story's dot shrinks out in its colour over 180 ms; and a
+    headline turning from new's `ink` to seen's `ink2` eases over 120 ms. The rows' own 120 ms hover
+    and every press state are the motion pass's (Andy, 2026-10-11, polish audit news-06).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

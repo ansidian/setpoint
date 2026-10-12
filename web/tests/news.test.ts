@@ -6,7 +6,7 @@ import type {StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
+  articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, landed, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
   rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
@@ -133,6 +133,18 @@ describe('the held order and the pill', () => {
     ['only the "more" changed', [{key: 'local', ids: [1, 2, 3], more: 13}, {key: 'tech', ids: [4], more: 7}], {fresh: 0, updated: 0, changed: true}],
   ] as [string, Layout, ReturnType<typeof waiting>][])('%s', (_name, latest, expected) => {
     expect(waiting(held, latest, rows)).toEqual(expected);
+  });
+
+  // The rows N brings onto the list settle in from sub2 (the polish audit's news-06): whatever the held
+  // order didn't show, seen or not; not a row re-ranked among those shown, nor one leaving.
+  test.each([
+    ['nothing changed', held, []],
+    ['the board\'s three new and one updated, and Local\'s 2 moved to AI', [{key: 'local', ids: [5, 7, 1], more: 13}, {key: 'tech', ids: [6, 4], more: 6}, {key: 'ai', ids: [2], more: 0}], [5, 7, 6]],
+    ['a seen story moving into view lands too', [{key: 'local', ids: [1, 2, 3], more: 12}, {key: 'tech', ids: [8, 4], more: 6}], [8]],
+    ['re-ranked among those shown, or leaving: nothing lands', [{key: 'local', ids: [3, 1], more: 13}, {key: 'tech', ids: [4], more: 7}], []],
+    ['one story in two blocks lands once', [{key: 'local', ids: [1, 2, 3], more: 12}, {key: 'tech', ids: [5, 4], more: 7}, {key: 'ai', ids: [5], more: 0}], [5]],
+  ] as [string, Layout, number[]][])('landed: %s', (_name, latest, expected) => {
+    expect([...landed(held, latest)]).toEqual(expected);
   });
 
   test.each([
