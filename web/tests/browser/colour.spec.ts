@@ -556,3 +556,25 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 }
+
+test('the compact rail carries the roles: the current page is the navOn chip with its icon in accent, Inbox staying current while an account filters it (#129)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 820, height: 1050});
+    for (const theme of ['night', 'light'] as const) {
+      await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
+      await page.goto(`${setpoint.base}/inbox?account=2`);
+      await page.locator('.arow').first().waitFor();
+      await page.mouse.move(700, 28);
+      const inbox = page.locator('.sb .nav', {has: page.locator('.icon')}).first();
+      assert.equal(await inbox.getAttribute('title'), 'Inbox');
+      assert.equal(await inbox.getAttribute('class'), 'nav on', `${theme}: Inbox current in the rail, filtered`);
+      await until(`${theme}: the raised chip`, () => style(inbox, 'backgroundColor'), fill => fill !== 'rgba(0, 0, 0, 0)');
+      assert.equal(await style(inbox, 'backgroundColor'), await colourOf(page, 'var(--navOn)'));
+      assert.equal(await style(inbox.locator('> .icon'), 'color'), await colourOf(page, 'var(--accent)'));
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

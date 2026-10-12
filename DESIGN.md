@@ -234,7 +234,8 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 ([Decided while building](#decided-while-building) #258):
 
 - **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News and Settings as 40 × 40
-  icons, each named in its tooltip. Inbox's attention pill is a 16 px badge on its icon (2 px from its
+  icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#129;
+  Inbox stays current while an account filters it, as the rail has no accounts). Inbox's attention pill is a 16 px badge on its icon (2 px from its
   top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
   mini-month and Calendars give way; ⌘K filters the Inbox by account ("Inbox · Jobs") and shows or
   hides each calendar.

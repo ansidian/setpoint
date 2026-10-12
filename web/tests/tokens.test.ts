@@ -6,7 +6,7 @@ import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, week,
-  placement, radius, themeVariables, tintL, type, type Theme, viewport, attTint, mailDim, ringL,
+  attTint, mailDim, placement, radius, ringL, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
