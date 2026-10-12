@@ -104,7 +104,11 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     const [from, subject] = [await box(page, '.row.shelf .from'), await box(page, '.row.shelf .subj')];
     assert.ok(subject.y >= from.y + from.height, 'the subject sits under the sender');
     assert.equal(await page.locator('.row.shelf .from').evaluate(text => text.scrollWidth <= text.clientWidth), true, '"Parkside Apartments" whole');
-    assert.equal(await page.locator('.row.shelf .subj b').evaluate(text => text.getBoundingClientRect().right <= text.parentElement!.getBoundingClientRect().right), true, '"Lease renewal terms" whole');
+    // … and the subject takes the row's whole width under it (at the list's 15 px, #262, a long one
+    // still ends in "…").
+    const [shelf, line] = [await box(page, '.row.shelf'), await box(page, '.row.shelf .subj')];
+    assert.equal(line.x, from.x, 'the subject starts under the sender');
+    assert.equal(Math.round(line.x + line.width), shelf.x + shelf.width - 16, 'and runs to the row\'s end');
     const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
     assert.equal(scroll[0], scroll[1]);
     // The reader takes the whole screen, with Back.

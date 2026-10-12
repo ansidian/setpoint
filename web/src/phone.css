@@ -41,11 +41,18 @@
   .search-list .ask { display: none; }
 
   /* ---------- The Inbox ---------- */
-  .gh { height: 28px; padding: 0 16px 0 20px; }
+  /* At arm's length the list reads a step up from the desktop's (#262), as the reader's body does:
+     rows 15, ages and account labels 13, Attention's summaries 13.5, group headers 12; search's
+     rows the same. The colours stay; the size makes `ink3` legible. */
+  .list { font-size: 15px; }
+  .row .ac, .row .age, .arow .r1, .arow .r1 .age, .arow .why { font-size: 13px; }
+  .arow .ud, .arow .l1, .arow .r1 { height: 20px; }
+  .arow .l3 { font-size: 13.5px; }
+  .gh { height: 30px; font-size: 12px; padding: 0 16px 0 20px; }
   .gh .preview { display: none; }
   /* Two lines a row, as Attention's (Decided while building #66): the sender, account and age, then
      the subject under the sender, so neither is cut to a few characters. */
-  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 56px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 2px; }
+  .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 3px; }
   .row .ud { grid-area: ud; }
   .row .from, .list.all .row .from { grid-area: from; width: auto; }
   .row .subj { grid-area: subj; }
@@ -55,7 +62,7 @@
   /* … and an Attention row's age hugs its account, as board 21 draws it (#89). */
   .arow .r1 .age { width: auto; min-width: 0; white-space: nowrap; }
   .row .subj.code-line { gap: 6px; }
-  .code-line .copy { height: 26px; gap: 4px; }
+  .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
   .code-line .sum { display: none; }
   .arow { padding: 8px 16px 9px 8px; }
   /* Taps, not a pointer or keys: no hover fill or keyboard cursor stays behind on a row. */

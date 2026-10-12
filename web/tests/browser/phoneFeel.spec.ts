@@ -389,3 +389,36 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
     await setpoint.stop();
   }
 });
+
+test('the phone\'s list reads a step up: rows 15, ages and accounts 13, summaries 13.5, group headers 12, search\'s rows too', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const ink3 = await tokenColour(page, 'ink3');
+    assert.deepEqual(await styles(page, '.row .from', ['font-size']), ['15px']);
+    assert.deepEqual(await styles(page, '.row', ['min-height', 'row-gap']), ['62px', '3px']);
+    assert.deepEqual(await styles(page, '.row .age', ['font-size', 'color']), ['13px', ink3]);
+    assert.deepEqual(await styles(page, '.row .ac', ['font-size', 'color']), ['13px', ink3]);
+    assert.deepEqual(await styles(page, '.arow .r1', ['font-size', 'height']), ['13px', '20px']);
+    assert.deepEqual(await styles(page, '.arow .l1', ['height']), ['20px']);
+    assert.deepEqual(await styles(page, '.arow .l2', ['font-size']), ['15px']);
+    assert.deepEqual(await styles(page, '.arow .l3', ['font-size', 'color']), ['13.5px', ink3]);
+    assert.deepEqual(await styles(page, '.gh', ['font-size', 'height']), ['12px', '30px']);
+    assert.deepEqual(await styles(page, '.code-line .copy', ['height', 'font-size', 'padding-left', 'padding-right']), ['30px', '13px', '10px', '10px']);
+    // The unread dot stays level with the larger first line.
+    const [dot, from] = await page.locator('.arow.unread').first().evaluate(row => [row.querySelector('.ud')!, row.querySelector('.from')!].map(part => {
+      const box = part.getBoundingClientRect();
+      return box.top + box.height / 2;
+    }));
+    assert.ok(Math.abs(dot! - from!) <= 1, 'the dot is level with the sender');
+    await page.locator('.search input').tap();
+    await page.keyboard.type('northwind');
+    await page.locator('.search-list .result').first().waitFor();
+    assert.deepEqual(await styles(page, '.search-list .result .r1 .age', ['font-size']), ['13px']);
+    assert.deepEqual(await styles(page, '.search-list .result .why', ['font-size']), ['13px']);
+    assert.deepEqual(await styles(page, '.search-list .result .l2', ['font-size']), ['15px']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

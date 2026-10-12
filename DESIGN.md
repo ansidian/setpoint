@@ -113,6 +113,10 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 | Keyboard hints | 11 / 500 |
 | Verification codes | Geist Mono 13 / 500 / .06em |
 
+On the phone the list reads a step up, as the reader's body (15) does: rows 15; ages, counts and
+account labels 13; summaries in Attention 13.5; group headers 12; search's rows the same
+([Decided while building](#decided-while-building) #262).
+
 ### Shape
 
 | Radius | Elements |
@@ -732,6 +736,7 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
   page shows, and a tap on the current tab takes its list back to the top (#260).
 - **The edges:** the page reaches the screen's edges, kept clear of the status bar and the home
   indicator by their insets, and Safari's bars take the drawn theme's `page` (#261).
+- **The list** reads a step up ([Type](#type), #262).
 
 ## mantel's mail chip
 
@@ -1539,6 +1544,10 @@ it changes what's on screen.
     home indicator's inset when there is one, rather than a fixed 18 and 22 px. One `theme-color`
     follows the drawn theme's `page` (Night #050506, Light #f6f6f4), so Safari tints its bars to the
     theme picked in the app, not the system's (Andy, 2026-10-11, polish audit phone-10).
+262. **The phone's list reads a step up** (Type): rows 15, ages and account labels 13, Attention's
+    summaries 13.5, group headers 12 at 30 px, rows at least 62 px, a code's Copy 30 px; search's rows
+    the same. The colours stay: the size makes `ink3` legible (Andy, 2026-10-11, polish audit
+    phone-11).
 263. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
     and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
     before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No
