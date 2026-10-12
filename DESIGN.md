@@ -415,6 +415,13 @@ offered for protected mail.
   1.5 px ring in its project's (#146). Its popover lists the day's every item (board 11b) and closes
   with Esc.
 - Infinite vertical scroll through months.
+- **Paging:** ← → or `P` `N` a month and `T` today glide the grid there over 260 ms; a month more
+  than 10 rows away is first jumped to 5 rows short, on the side it comes from, and glided from
+  there. Pressed again mid-glide it goes on from where it is, and the wheel, a touch or a press stops
+  it; the mini-month, links and Month from Week jump. The header's title swaps over 120 ms, rising 6 px
+  for a later month and falling for an earlier one, a week's sliding 6 px with its days; as Today
+  lands, today's disc (here, in the week's heads and in the mini-month) swells to 1.18 and back over
+  260 ms (#220, #221).
 
 ### Sidebar on Calendar
 
@@ -1938,3 +1945,15 @@ it changes what's on screen.
     pointer the track takes 86% of itself into `modal`. Off is an `ink3` knob on `sub3` in both
     themes (Light's `ink2` knob was nearly as heavy as on). Its press stretch is #144's; a disabled
     switch stays at .5 (Andy, 2026-10-11, polish audit settings-06).
+220. **Month paging glides, so P, N and T say which way you went** (as Week's paging slides): the
+    grid's scroll eases to the month over 260 ms (`cubic-bezier(.2,0,0,1)`), through the rows between,
+    so next month comes up from below and last month drops in from above. Today from further than 10
+    rows jumps to 5 rows short on the side it comes from first, so a year away still lands with its
+    direction. A page mid-glide goes on from the month it's going to (N N N chains), and the wheel, a
+    touch or a press in the grid stops it where it is. The mini-month, links, Back and Month from Week
+    stay jumps. The header's title swaps over 120 ms, rising 6 px into place for a later month,
+    falling for an earlier one, and sliding 6 px sideways for a week (Andy, 2026-10-11, polish audit
+    grids-04, motion-12).
+221. **T always answers:** as Today lands (once the month's glide is there, at once when nothing had
+    to move), today's disc on the grid, in the week's heads and in the mini-month swells to 1.18 and
+    back over 260 ms, once (Andy, 2026-10-11, polish audit grids-11).

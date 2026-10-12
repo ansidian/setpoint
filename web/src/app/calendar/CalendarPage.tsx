@@ -55,7 +55,7 @@ import {MonthGrid} from './MonthGrid.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import {SearchPane} from './SearchPane.tsx';
 import {rememberMode} from './mode.ts';
-import {knownDay, rememberDay, revealDay, scrollToMonth, setAnchor, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
+import {knownDay, pulseToday, rememberDay, revealDay, scrollToMonth, setAnchor, setSelectedDay, setShownMonth, showWeek, useCalendarView} from './view.ts';
 import {WeekGrid} from './WeekGrid.tsx';
 
 type CalendarRoute = Extract<Route, {page: 'calendar'}>;
@@ -264,6 +264,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   useEffect(() => {
     document.title = tabTitle({page: 'calendar', title});
   }, [title]);
+  // The header's title swaps the way the grid went (polish audit grids-04): a later month rises in,
+  // an earlier one falls, a week slides as its days do. A switch of view or Search just shows.
+  const titleKey = searching ? 'search' : `${mode}:${mode === 'week' ? week : shown}`;
+  const [titleMove, setTitleMove] = useState<{key: string; dir: 'next' | 'prev' | undefined}>({key: titleKey, dir: undefined});
+  if (titleMove.key !== titleKey) {
+    const [was, is] = [titleMove.key.split(':'), titleKey.split(':')];
+    setTitleMove({key: titleKey, dir: was[0] === is[0] && was.length === 2 ? (is[1]! > was[1]! ? 'next' : 'prev') : undefined});
+  }
   // The mini-month follows the week shown.
   useEffect(() => {
     if (mode === 'week') setShownMonth(weekMonth(week));
@@ -334,16 +342,22 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     navigate({page: 'calendar', date: null, item: item.id, at: item.occurrence_start});
   }, [selection, selectedKey]);
 
+  // Paging glides the month (polish audit grids-04): pressed again mid-glide, it goes on from the
+  // month it's gliding to, not the one passing by.
   const page = (delta: number) => {
     setPopover(null);
     if (mode === 'week') showWeek(addDays(week, 7 * delta), 'page');
-    else scrollToMonth(addMonths(shown, delta));
+    else scrollToMonth(addMonths(view.gliding ?? shown, delta), 'page');
   };
+  // Today's disc swells as it lands (polish audit grids-11): the month's once its glide is there, the
+  // week's once its days are drawn.
   const goToday = () => {
     setPopover(null);
     navigate({page: 'calendar', date: null, item: null, at: null});
-    if (mode === 'week') revealDay(today);
-    else scrollToMonth(monthOf(today));
+    if (mode === 'week') {
+      revealDay(today);
+      requestAnimationFrame(() => requestAnimationFrame(pulseToday));
+    } else scrollToMonth(monthOf(today), 'today');
   };
   /** Month | Week, M and W: Week opens on the selected day's week, Month on its month. */
   const switchMode = (next: CalendarMode) => {
@@ -721,7 +735,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   return (
     <>
       <header className="hd">
-        <span className="hd-title cal-title num">
+        <span className="hd-title cal-title num" key={titleKey} data-dir={titleMove.dir} data-view={mode}>
           {searching ? 'Search' : title}
           {!searching && allHidden && <span className="cal-hidden ink3" title="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}
         </span>

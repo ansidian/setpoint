@@ -4,6 +4,18 @@
 
 /* ---------- The header ---------- */
 .cal-title { min-width: 128px; }
+/* Paging swaps the title the way the grid went (polish audit grids-04): a later month rises in 6 px,
+   an earlier one falls in; a week slides in from the side its days come from. */
+.cal-title[data-dir] { animation: cal-title-in var(--titleSwap) var(--ease); }
+.cal-title[data-dir="next"] { --title-from: translateY(var(--titleShift)); }
+.cal-title[data-dir="prev"] { --title-from: translateY(calc(-1 * var(--titleShift))); }
+.cal-title[data-view="week"][data-dir="next"] { --title-from: translateX(var(--titleShift)); }
+.cal-title[data-view="week"][data-dir="prev"] { --title-from: translateX(calc(-1 * var(--titleShift))); }
+@keyframes cal-title-in { from { opacity: 0; transform: var(--title-from); } }
+/* T always answers (polish audit grids-11): as Today lands, today's disc on the grid, in the week's
+   heads and in the mini-month swells to 1.18 and back over 260 ms, once. */
+.dn.today.pulse, .mini > .t.pulse { animation: today-pulse var(--dur-slow) var(--ease); }
+@keyframes today-pulse { 40% { transform: scale(1.18); } }
 .cal-step { display: inline-flex; align-items: center; gap: 2px; flex: none; }
 .ibtn.sm { width: 26px; height: 26px; }
 .hd .btn .kbd { background: color-mix(in srgb, var(--onInk) 12%, transparent); color: var(--onInk); }

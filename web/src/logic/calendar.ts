@@ -3,7 +3,7 @@
 // the agenda's lines and the now-line, the mini-month, and where the "+N" popover hangs. Local
 // days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday (SV-29).
 import type {CalendarOut, ItemOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
-import {layout} from '../tokens.ts';
+import {layout, monthPaging} from '../tokens.ts';
 import {addDays, clockTime, daysBetween, localDate, startsIn} from './format.ts';
 import {placeName} from './place.ts';
 
@@ -50,6 +50,16 @@ export const monthTopRow = (month: string) => weekIndex(firstOfMonth(month)) - F
 export function monthAtScroll(scrollTop: number, height: number, rowHeight: number = layout.monthRow): string {
   const row = Math.max(0, Math.floor((scrollTop + Math.max(height / 2, rowHeight)) / rowHeight));
   return monthOf(dayOfWeek(FIRST_WEEK + row, 3));
+}
+
+/**
+ * Where paging's glide sets out from (DESIGN.md › Month grid › Paging, polish audit grids-04): where
+ * the grid is, or, when the month is more than `farRows` away, `leadRows` short of it on the side
+ * it's coming from, so Today from a year away still glides in from that side.
+ */
+export function glideStart(from: number, to: number, rowHeight: number = layout.monthRow): number {
+  if (Math.abs(to - from) <= monthPaging.farRows * rowHeight) return from;
+  return to - Math.sign(to - from) * monthPaging.leadRows * rowHeight;
 }
 
 /** The grid rows to draw for a viewport: the rows in view and `overscan` more on each side. */

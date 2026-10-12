@@ -284,6 +284,14 @@ export const week = {
 } as const;
 
 /**
+ * The month grid's paging (DESIGN.md › Month grid › Paging; polish audit grids-04): P, N and Today
+ * glide the grid over `slow`; more than `farRows` away it first jumps to `leadRows` short of the
+ * month, on the side it comes from, and glides those. The header's title swaps as it goes, rising
+ * (or falling, or sliding with the week) `titleShiftPx` over `fast`.
+ */
+export const monthPaging = {glideMs: motion.slow, farRows: 10, leadRows: 5, titleShiftPx: 6, titleMs: motion.fast} as const;
+
+/**
  * News (DESIGN.md › News › Keys and behaviour): how long a row stays fully on screen before its story
  * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion, #249).
  */
@@ -367,6 +375,8 @@ export function cssVariables(): Record<string, string> {
   vars['--weekPage'] = `${week.pageMs}ms`;
   vars['--weekSlide'] = `${week.pageSlidePx}px`;
   vars['--weekFade'] = `${week.fadeMs}ms`;
+  vars['--titleShift'] = `${monthPaging.titleShiftPx}px`;
+  vars['--titleSwap'] = `${monthPaging.titleMs}ms`;
   return vars;
 }
 

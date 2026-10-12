@@ -8,14 +8,18 @@
 // marked and a tooltip names the day and time; letting go on another day drops it there.
 // F6b: a drag held near the grid's top or bottom edge scrolls it (faster nearer the edge), and an
 // item in the "+N" popover drags out of it onto another day.
+// Polish audit grids-04: paging and Today glide the grid to their month over 260 ms (from five rows
+// short when it's further than ten), a new page mid-glide going on from where it is; the wheel, a
+// touch or a press stops it.
 import type {CalendarOut, ItemOut, WeatherDayOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, RefObject} from 'react';
-import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, isWeekend, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, WEEK_COUNT} from '../../logic/calendar.ts';
+import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, glideStart, isWeekend, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, WEEK_COUNT} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
+import {standardEase} from '../../logic/glide.ts';
 import {canMove, dropLabel, edgeScroll} from '../../logic/manipulate.ts';
 import type {Point} from '../../logic/placement.ts';
-import {drag as dragTokens, layout} from '../../tokens.ts';
+import {drag as dragTokens, layout, monthPaging, motion} from '../../tokens.ts';
 import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
@@ -25,9 +29,11 @@ import {DayPopover} from './DayPopover.tsx';
 import {FloatingDetail} from './detail/FloatingDetail.tsx';
 import {pointIn, rectIn} from './geometry.ts';
 import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
+import {pulseToday, stopGliding} from './view.ts';
 import type {ScrollRequest} from './view.ts';
 
 const ROW = layout.monthRow;
+const ease = standardEase(motion.ease);
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export interface MonthGridProps {
@@ -98,9 +104,46 @@ export function MonthGrid(props: MonthGridProps) {
     const element = scroller.current!;
     element.scrollTop = monthTopRow(monthOf(selectedDay)) * ROW;
     measure();
+    stopGliding();
     // Only once: later moves come from scroll requests.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Paging's glide (polish audit grids-04): the frame it's on and the scroll it's going to.
+  const gliding = useRef<{frame: number; to: number} | null>(null);
+  const stopGlide = () => {
+    if (!gliding.current) return;
+    cancelAnimationFrame(gliding.current.frame);
+    gliding.current = null;
+    stopGliding();
+  };
+  useEffect(() => () => stopGlide(), []);
+  // `landed` runs once it's there (Today's pulse), not when it's stopped or sent elsewhere.
+  const glideTo = (element: HTMLElement, to: number, landed?: () => void) => {
+    // Mid-glide it goes on from where it is; from rest, a far month is first brought within reach.
+    const from = gliding.current ? element.scrollTop : glideStart(element.scrollTop, to);
+    if (gliding.current) cancelAnimationFrame(gliding.current.frame);
+    gliding.current = null;
+    element.scrollTop = from;
+    const land = () => {
+      gliding.current = null;
+      stopGliding();
+      // The rows it lands on are drawn on the next frame's scroll.
+      if (landed) requestAnimationFrame(landed);
+    };
+    if (from === to) {
+      land();
+      return;
+    }
+    const begin = performance.now();
+    const step = (time: number) => {
+      const progress = Math.min(1, Math.max(0, (time - begin) / monthPaging.glideMs));
+      element.scrollTop = from + (to - from) * ease(progress);
+      if (progress < 1) gliding.current = {frame: requestAnimationFrame(step), to};
+      else land();
+    };
+    gliding.current = {frame: requestAnimationFrame(step), to};
+  };
 
   // Paging, Today, the mini-month and links from elsewhere move the grid.
   useLayoutEffect(() => {
@@ -108,10 +151,19 @@ export function MonthGrid(props: MonthGridProps) {
     if (!scroll || !element || scroll.seq <= handled.current) return;
     handled.current = scroll.seq;
     if (scroll.kind === 'month') {
-      element.scrollTop = monthTopRow(scroll.month) * ROW;
+      const to = monthTopRow(scroll.month) * ROW;
+      if (scroll.how === 'jump') {
+        stopGlide();
+        element.scrollTop = to;
+      } else glideTo(element, to, scroll.how === 'today' ? pulseToday : undefined);
     } else {
+      // A day already in view where a glide is going stays put (Today's day, as it lands).
+      const at = gliding.current?.to ?? element.scrollTop;
       const top = (weekIndex(scroll.date) - FIRST_WEEK) * ROW;
-      if (top < element.scrollTop || top + ROW > element.scrollTop + element.clientHeight) element.scrollTop = monthTopRow(monthOf(scroll.date)) * ROW;
+      if (top < at || top + ROW > at + element.clientHeight) {
+        stopGlide();
+        element.scrollTop = monthTopRow(monthOf(scroll.date)) * ROW;
+      }
     }
     measure();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,7 +289,7 @@ export function MonthGrid(props: MonthGridProps) {
   return (
     <section className="cal-month" aria-label="Month" ref={section} data-cal-section>
       <div className="cal-dow">{WEEKDAYS.map(name => <span key={name}>{name}</span>)}</div>
-      <div className="cal-scroll" ref={scroller} onScroll={onScroll} data-cal-scroll>
+      <div className="cal-scroll" ref={scroller} onScroll={onScroll} onWheel={stopGlide} onTouchStart={stopGlide} onPointerDown={stopGlide} data-cal-scroll>
         <div className="cal-track" style={{height: WEEK_COUNT * ROW}}>
           <div className="cal-grid" style={{top: rows.first * ROW}} data-cal-grid>{cells}</div>
         </div>

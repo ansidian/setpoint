@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, motion, news, week,
+  accountColour, base, calendarColour, colour, cssVariables, evhover, evtint, glide, glyphColour, layout, lightColour, mix, monthPaging, motion, news, week,
   attTint, mailDim, placement, radius, ringL, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
@@ -240,6 +240,15 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(week.lanes).toBe(3);
     expect(flat).toContain(`the grid slides ${week.pageSlidePx} px and fades over ${week.pageMs} ms`);
     expect(flat).toContain(`blocks fade in (${week.fadeMs} ms)`);
+  });
+
+  test('the month\'s paging matches DESIGN.md › Month grid › Paging (polish audit grids-04)', () => {
+    const flat = design.replace(/\n\s*/g, ' ');
+    expect(monthPaging.glideMs).toBe(motion.slow);
+    expect(flat).toContain(`\`T\` today glide the grid there over ${monthPaging.glideMs} ms; a month more than ${monthPaging.farRows} rows away is first jumped to ${monthPaging.leadRows} rows short`);
+    expect(monthPaging.titleMs).toBe(motion.fast);
+    expect(flat).toContain(`The header's title swaps over ${monthPaging.titleMs} ms, rising ${monthPaging.titleShiftPx} px`);
+    expect([cssVariables()['--titleShift'], cssVariables()['--titleSwap']]).toEqual([`${monthPaging.titleShiftPx}px`, `${monthPaging.titleMs}ms`]);
   });
 });
 

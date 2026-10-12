@@ -5,7 +5,7 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, hangFrom, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
+  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
   itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
 } from '../src/logic/calendar.ts';
 
@@ -88,6 +88,19 @@ describe('scrolling through months', () => {
     ['at the very top nothing before row 0', 0, 964, [0, 7]],
     ['mid-row', top('2026-10') + 100, 964, [monthTopRow('2026-10') - 2, monthTopRow('2026-10') + 8]],
   ])('%s', (_name, scrollTop, height, [first, last]) => expect(rowsInView(scrollTop, height, ROW)).toEqual({first, last}));
+});
+
+describe('paging glides (polish audit grids-04)', () => {
+  const top = (month: string) => monthTopRow(month) * ROW;
+  test.each([
+    ['N from October: from where the grid is', top('2026-10'), top('2026-11'), top('2026-10')],
+    ['P from October, up', top('2026-10'), top('2026-09'), top('2026-10')],
+    ['exactly ten rows down still glides the whole way', top('2026-10'), top('2026-10') + 10 * ROW, top('2026-10')],
+    ['eleven rows down jumps to five rows short, above it', top('2026-10'), top('2026-10') + 11 * ROW, top('2026-10') + 6 * ROW],
+    ['Today from a year ahead: five rows below October, so it comes down from there', top('2027-10'), top('2026-10'), top('2026-10') + 5 * ROW],
+    ['Today from a year back: five rows above October', top('2025-10'), top('2026-10'), top('2026-10') - 5 * ROW],
+    ['nowhere to go', top('2026-10'), top('2026-10'), top('2026-10')],
+  ])('%s', (_name, from, to, start) => expect(glideStart(from, to, ROW)).toBe(start));
 });
 
 describe('a day cell', () => {
