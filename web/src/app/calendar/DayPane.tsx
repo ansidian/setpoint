@@ -97,7 +97,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
         ))}
         {!day.events.length && !day.tasks.length && (hidden > 0
           ? <div className="ag-empty"><Icon name="visibility_off" size={16} />{hidden} hidden · <button onClick={onShowAll}>Show all</button></div>
-          : <div className="ag-empty">No events · <button onClick={() => onNew('event')}>New event</button></div>)}
+          : <div className="ag-empty"><Icon name="event_available" size={16} />No events · <button onClick={() => onNew('event')}>New event</button></div>)}
       </div>
 
       <div className="rp-foot">

@@ -47,7 +47,7 @@ export function MailPage() {
               if (next !== written) void reorderRules(next.map(one => one.id)).catch(toastFailure('Couldn\'t reorder rules'));
             }} />
           ))}
-          {!written.length && !adding && <div className="set-row one"><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
+          {!written.length && !adding && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
         </div>
         <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · no rule can move it</div>
       </Section>

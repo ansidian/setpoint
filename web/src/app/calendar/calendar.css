@@ -109,6 +109,8 @@
 .nowline .t { width: 64px; color: var(--alert); font-size: 12px; font-weight: 500; }
 .nowline .line { height: 1px; flex: 1; background: var(--alert); opacity: .7; }
 .ag-empty { padding: 18px 20px 8px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
+/* An empty day leads with its glyph (event_available, or visibility_off when calendars hide its items), 8 px before the words (#165). */
+.ag-empty > .icon { margin-right: 2px; }
 .ag-empty button { color: var(--ink2); }
 .ag-empty button:hover { color: var(--ink); }
 /* SV-56: every calendar off, a glyph after the header's title says the view is filtered. */

@@ -14,6 +14,6 @@
 .palette .item.cur .icon { color: var(--ink); }
 .palette .item .kbd, .palette .item .tick { margin-left: auto; }
 .palette .item .tick .icon { color: inherit; }
-.palette .none { height: 34px; display: flex; align-items: center; padding: 0 12px; color: var(--ink3); }
+.palette .none { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink3); }
 /* The pointer takes the cursor (a `sub2` fill), over 120 ms (DESIGN.md › Decided while building #12). */
 .palette .item { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }

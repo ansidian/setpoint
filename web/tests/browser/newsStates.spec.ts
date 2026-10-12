@@ -8,11 +8,20 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after, test} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
+
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+const leadGlyph = (line: Locator) => line.evaluate(element => {
+  const icon = element.querySelector('.icon')!;
+  const range = document.createRange();
+  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+});
 
 const row = (page: Page, headline: string) => page.locator('.nw-list [data-story]', {hasText: headline}).first();
 
@@ -82,6 +91,7 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await tech.textContent(), 'Nothing new in Tech since Mon');
     assert.deepEqual(await tech.evaluate(line => [line.className, line.getBoundingClientRect().height]), ['nw-empty', 44]);
     assert.equal(await tech.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--ink3)'));
+    assert.deepEqual(await leadGlyph(tech), [ICONS.newspaper, '16', await colourOf(page, 'var(--ink3)'), 8], 'it leads with newspaper (#165)');
     assert.equal(await page.locator('.nw-up').count(), 0);
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '4 more in AI', '9 more in General']);
     await settle(page);

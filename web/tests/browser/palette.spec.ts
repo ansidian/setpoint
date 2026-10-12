@@ -5,10 +5,19 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
+
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+const leadGlyph = (line: Locator) => line.evaluate(element => {
+  const icon = element.querySelector('.icon')!;
+  const range = document.createRange();
+  range.selectNode(icon.nextSibling!);
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+});
 
 const items = (page: Page) => page.locator('.palette .item').allTextContents();
 const current = (page: Page) => page.locator('.palette .item.cur').textContent();
@@ -173,6 +182,20 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
       await page.keyboard.press('Escape');
       await page.locator('.settings').waitFor({state: 'detached'});
     }
+    // Nothing found leads with search_off, 16 px in ink3, 8 px before its words (#165).
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('zebra');
+    const none = page.locator('.palette .none', {hasText: 'No command matches'});
+    await none.waitFor();
+    const ink3 = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--ink3)';
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    });
+    assert.deepEqual(await leadGlyph(none), [ICONS.search_off, '16', ink3, 8]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

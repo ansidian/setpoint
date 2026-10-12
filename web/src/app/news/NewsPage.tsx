@@ -373,7 +373,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   {view === 'missed' && <div className={header}><Icon name="history" size={14} />{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
                   {line && <div className={`nw-line ${line.state}`}><span className="num ell" title={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
-                  {empty && <div className="nw-empty">{empty}</div>}
+                  {empty && <div className="nw-empty"><Icon name="newspaper" size={16} />{empty}</div>}
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={view === 'missed' ? named[row.id] ?? row.sections[0]! : null} {...rowProps} />
                   ))}

@@ -26,6 +26,8 @@ mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: v
 .ask > .icon { color: var(--ink); }
 .no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
 .no-results b { color: var(--ink); font-weight: 500; }
+/* Nothing found leads with search_off, 20 px in ink3, 12 px before the words (#165). */
+.no-results > .icon { color: var(--ink3); margin-right: 6px; }
 .no-results .part { display: inline-flex; align-items: center; gap: 2px; }
 
 /* ---------- Cards: the Answer card and the proposal ---------- */

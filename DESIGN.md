@@ -288,7 +288,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   Type Rejection", `ink3` 12) and highlights matches (`sun` at 26%).
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80).
-- No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable.
+- No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable, after a 20
+  px `search_off` (#165).
 
 ### Alfred's Answer card
 
@@ -734,8 +735,9 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
-All", "No events · New event"; a day whose items are only hidden, "4 hidden · Show all" (#113). The
-UI says "Done".
+All", "No events · New event"; a day whose items are only hidden, "4 hidden · Show all" (#113). Each
+leads with its glyph in `ink3`, 20 px and 12 px before the words, or 16 px and 8 px in a row 44 px or
+shorter (#165). The UI says "Done".
 
 ## Overrides to the export
 
@@ -1434,3 +1436,12 @@ it changes what's on screen.
     Mark all as read carries `mark_email_read`, as ⌘K's does. Stale and failing lines keep their
     glyphs here; their tone rule is settled with the health states (Andy, 2026-10-11, polish audit
     motion-10).
+165. **Every one-line empty state leads with its glyph, as All caught up does:** in `ink3`, 20 px and 12
+    px before the words, or 16 px and 8 px in a row 44 px or shorter. Calendar's empty day
+    `event_available` ("No events · New event", 16), search's and ⌘K's nothing found `search_off`
+    ("No emails match …", "No events or tasks match …", "No stories match …" at 20; "No command
+    matches" at 16), Settings' "No rules yet · Add rule" `rule` (20), News's empty section
+    `newspaper` ("Nothing new in Tech since Mon", 16); "4 hidden · Show all" keeps its
+    `visibility_off`, now 8 px before its words. No new copy. The phone agenda's "No events" stays a
+    bare label: it sits at the end of a day's header, beside the forecast's glyph, not alone on a
+    line (Andy, 2026-10-11, polish audit motion-13).

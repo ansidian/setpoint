@@ -9,12 +9,21 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred} from './fakeAlfred.ts';
 import {cleanUp, startSetpoint, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
+
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+const leadGlyph = (line: Locator) => line.evaluate(element => {
+  const icon = element.querySelector('.icon')!;
+  const range = document.createRange();
+  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+});
 
 async function load(setpoint: Setpoint): Promise<Page> {
   const page = await setpoint.page('target');
@@ -95,6 +104,15 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await page.keyboard.type('zebra');
     await page.locator('.no-results', {hasText: 'No emails match'}).waitFor();
     assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwind·Rejection·zebra');
+    const ink3 = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--ink3)';
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    });
+    assert.deepEqual(await leadGlyph(page.locator('.no-results')), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#165)');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await page.locator('.arow.result').first().waitFor();
     // Typing over the selected query replaces it, chips and words; ⌘F selects the words again.

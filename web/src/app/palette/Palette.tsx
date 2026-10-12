@@ -157,7 +157,7 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
               })}
             </div>
           ))}
-          {!items.length && <div className="none">No command matches</div>}
+          {!items.length && <div className="none"><Icon name="search_off" size={16} />No command matches</div>}
         </div>
       </div>
     </>

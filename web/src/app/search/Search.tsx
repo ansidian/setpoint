@@ -127,6 +127,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
 export function NoResults({lead, search}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>}) {
   return (
     <div className="no-results">
+      <Icon name="search_off" size={20} />
       <span>{lead}</span>
       {search.chips.map((chip, index) => (
         <Fragment key={chipKey(chip)}>

@@ -14,11 +14,19 @@ import type {AddressInfo} from 'node:net';
 import path from 'node:path';
 import {after, test} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, matchGolden, ROOT, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
+
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+const leadGlyph = (line: Locator) => line.evaluate(element => {
+  const icon = element.querySelector('.icon')!;
+  const range = document.createRange();
+  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+});
 
 /** The Inbox under Settings, loaded, then Settings at `page` (from its address, as a link would). */
 async function openAt(page: Page, base: string, settingsPage: string) {
@@ -438,6 +446,7 @@ test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, rea
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
+    assert.deepEqual(await leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'})), [ICONS.rule, '20', await computed(page, 'color', 'var(--ink3)'), 12], 'it leads with rule (#165)');
     const empty = page.locator('.settings .set-row', {hasText: 'No rules yet'}).getByRole('button', {name: 'Add rule'});
     const colour = () => empty.evaluate(button => getComputedStyle(button).color);
     const resting = await colour();
@@ -468,14 +477,14 @@ test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox
       return {
         row: element.offsetHeight, group: element.parentElement!.offsetHeight, line: line.offsetHeight,
         wordsTop: Math.round(words.getBoundingClientRect().top), buttonTop: Math.round(line.querySelector('button')!.getBoundingClientRect().top),
-        wordsLeft: Math.round(words.getBoundingClientRect().left - element.getBoundingClientRect().left),
+        leadLeft: Math.round(element.querySelector('.icon')!.getBoundingClientRect().left - element.getBoundingClientRect().left),
       };
     });
     assert.ok(shape.line < 24, `one line, not ${shape.line}px`);
     assert.ok(Math.abs(shape.wordsTop - shape.buttonTop) <= 2, 'Add rule sits on the words\' line');
     assert.ok(shape.row <= 46, `a 46px row, not ${shape.row}px`);
     assert.equal(shape.group, shape.row, 'the group holds just the row');
-    assert.ok(shape.wordsLeft <= 17, 'it starts at the row\'s inset, as the domains\' None yet does');
+    assert.ok(shape.leadLeft <= 17, 'its glyph starts at the row\'s inset, as the domains\' None yet does (#165)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

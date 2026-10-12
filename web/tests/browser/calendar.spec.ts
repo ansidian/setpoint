@@ -5,9 +5,18 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
+import type {Locator, Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
+
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+const leadGlyph = (line: Locator) => line.evaluate(element => {
+  const icon = element.querySelector('.icon')!;
+  const range = document.createRange();
+  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+});
 
 after(cleanUp);
 
@@ -322,7 +331,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     for (const name of names.slice(1)) await page.locator('.calrow', {hasText: name}).click();
     await until('the pane says what\'s hidden', () => empty.textContent(), line => line === '4 hidden · Show all');
     assert.equal(await empty.locator('.icon').count(), 1, 'with the visibility_off glyph');
-    assert.deepEqual(await empty.locator('.icon').evaluate(icon => [icon.getAttribute('width'), getComputedStyle(icon).color]), ['16', await tokenColour(page, 'ink3')]);
+    assert.deepEqual(await leadGlyph(empty), [ICONS.visibility_off, '16', await tokenColour(page, 'ink3'), 8]);
     await hiddenMark.waitFor();
     assert.equal(await hiddenMark.locator('.icon').getAttribute('width'), '16');
     assert.equal(await hiddenMark.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'ink3'));
@@ -333,6 +342,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
     await until('Sat, Oct 24', () => text(page, '.rp-date'), title => title === 'Sat, Oct 24');
     assert.equal(await empty.textContent(), 'No events · New event');
+    assert.deepEqual(await leadGlyph(empty), [ICONS.event_available, '16', await tokenColour(page, 'ink3'), 8], 'it leads with event_available');
     await page.locator('.cell[data-date="2026-10-07"]').click({position: {x: 100, y: 150}});
     await until('Wed, Oct 7 again', () => empty.textContent(), line => line === '4 hidden · Show all');
 
