@@ -161,7 +161,8 @@ function Open({offer, closing, onClose}: {offer: Offer; closing: boolean; onClos
                 return (
                   <button key={command.id} type="button" role="option" aria-selected={mine === at} className={mine === at ? 'item cur' : 'item'}
                     onMouseMove={() => mine !== at && setCursor(mine)} onClick={() => run(command)}>
-                    <Icon name={command.icon} />
+                    {/* Alfred's sparkle is drawn in his ink wherever it shows (#136). */}
+                    <Icon name={command.icon} alfred={command.icon === 'auto_awesome'} />
                     <span>{command.label}</span>
                     {command.hint && <span className="kbd">{command.hint}</span>}
                     {command.ticked && <span className="tick"><Icon name="check" size={16} /></span>}

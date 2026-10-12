@@ -2,10 +2,28 @@
 // DESIGN.md's sizes: 18 in the sidebar and rows, 16 in buttons and tools, 14 in chips, 17 in facts.
 import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
 
-export function Icon({name, size = 18}: {name: IconName; size?: number}) {
+/** An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #136). */
+export function Icon({name, size = 18, alfred = false}: {name: IconName; size?: number; alfred?: boolean}) {
   return (
-    <svg className="icon" width={size} height={size} viewBox={ICON_VIEWBOX} fill="currentColor" aria-hidden="true">
-      <path d={ICONS[name]} />
+    <svg className={alfred ? 'icon alfred' : 'icon'} width={size} height={size} viewBox={ICON_VIEWBOX} fill="currentColor" aria-hidden="true">
+      <path d={ICONS[name]} fill={alfred ? 'url(#alfred-ink)' : undefined} />
+    </svg>
+  );
+}
+
+/**
+ * Alfred's one mark (#136): auto_awesome in a gradient from `cool` to `violet`, two of Day stack's
+ * own colours, bottom left to top right. Drawn once, out of sight, for every `alfred` icon to fill from.
+ */
+export function AlfredInk() {
+  return (
+    <svg width="0" height="0" aria-hidden="true" style={{position: 'absolute'}}>
+      <defs>
+        <linearGradient id="alfred-ink" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" style={{stopColor: 'var(--cool)'}} />
+          <stop offset="1" style={{stopColor: 'var(--violet)'}} />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }

@@ -57,7 +57,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   return (
     <div ref={card} className="card answer" aria-label="Alfred's answer">
       <div className="card-h">
-        <Icon name="auto_awesome" size={16} />
+        <Icon name="auto_awesome" size={16} alfred />
         <span className="card-title">Alfred</span>
         <span className="grow" />
         <button className="ibtn sm" type="button" aria-label="Close answer" onClick={close}><Icon name="close" size={16} /></button>

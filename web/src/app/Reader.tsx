@@ -105,7 +105,7 @@ export function Reader({id, row, accounts, now, timeZone, canStep, actions, mark
       ...(message.open_url === null ? [] : [{id: 'gmail', section: 'email' as const, label: 'Open in Gmail', icon: 'open_in_new' as const, hint: 'O', run: actions.openInGmail}]),
       {id: 'event', section: 'email', label: 'Add to calendar', icon: 'event', run: () => cards.propose('event')},
       {id: 'task', section: 'email', label: 'Add as task', icon: 'task_alt', run: () => cards.propose('task')},
-      {id: 'ask', section: 'email', label: 'Ask about this email', icon: 'forum', keywords: 'alfred', run: cards.ask},
+      {id: 'ask', section: 'email', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: cards.ask},
       {id: 'unread', section: 'email', label: 'Mark unread', icon: 'mark_email_unread', hint: '⇧U', run: actions.markUnread},
     ],
   } : {commands: []}));
@@ -309,7 +309,7 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread
               <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
             </>
           )}
-          <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="forum" size={17} />Ask about this email</button>
+          <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
         </div>
       </div>
       <div className="rd-body">

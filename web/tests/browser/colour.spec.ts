@@ -424,3 +424,35 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 }
+
+test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred, the Answer card, the reader\'s and ⌘K\'s Ask about this email; Ask Alfred reads in ink (#136)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    for (const theme of ['night', 'light'] as const) {
+      await inbox(page, setpoint.base, theme);
+      assert.equal(await page.locator('linearGradient#alfred-ink').count(), 1);
+      const stops = await page.locator('linearGradient#alfred-ink stop').evaluateAll(all => all.map(stop => getComputedStyle(stop).stopColor));
+      assert.deepEqual(stops, [await colourOf(page, 'var(--cool)'), await colourOf(page, 'var(--violet)')], `${theme}: cool to violet`);
+      const inked = (icon: Locator) => icon.locator('path').evaluate(path => getComputedStyle(path).fill);
+      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      const ask = page.locator('.rd-acts .btn', {hasText: 'Ask about this email'});
+      assert.equal(await inked(ask.locator('.icon')), 'url("#alfred-ink")', 'the reader\'s Ask about this email');
+      await page.keyboard.press('Meta+k');
+      const item = page.locator('.palette .item', {hasText: 'Ask about this email'});
+      assert.equal(await inked(item.locator('.icon')), 'url("#alfred-ink")', '⌘K\'s');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('/');
+      await page.keyboard.type('northwind');
+      await page.keyboard.press('Enter');
+      const row = page.locator('button.ask');
+      await row.waitFor();
+      assert.equal(await inked(row.locator('.icon')), 'url("#alfred-ink")', 'Ask Alfred');
+      await page.mouse.move(1, 1);
+      assert.equal(await style(row, 'color'), await colourOf(page, 'var(--ink)'), 'Ask Alfred in ink');
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

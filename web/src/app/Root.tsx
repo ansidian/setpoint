@@ -5,6 +5,7 @@
 import {useEffect} from 'react';
 import {checkSession, useAuth} from '../api/auth.ts';
 import {RECONNECT_MS, startLive, stopLive} from '../api/live.ts';
+import {AlfredInk} from '../ui/Icon.tsx';
 import {App} from './App.tsx';
 import {SignIn} from './SignIn.tsx';
 import {Unreachable} from './states/States.tsx';
@@ -35,5 +36,5 @@ export function Root() {
 
   if (auth === 'checking') return null;
   if (auth === 'unreachable') return <Unreachable />;
-  return auth === 'in' ? <App /> : <SignIn />;
+  return auth === 'in' ? <><AlfredInk /><App /></> : <SignIn />;
 }

@@ -28,9 +28,9 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
 .arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }
 .arow .why b { font-weight: 400; color: var(--ink2); }
-.ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink2); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
+/* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own (#136). */
+.ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
 .ask:hover { background: var(--sub); }
-.ask > .icon { color: var(--ink); }
 .no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
 .no-results b { color: var(--ink); font-weight: 500; }
 /* Nothing found leads with search_off, 20 px in ink3, 12 px before the words (#165). */

@@ -208,7 +208,7 @@ export function SearchResults(props: ResultsProps) {
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
       {out && !card && (
         <button className="ask" type="button" onClick={props.onAsk}>
-          <Icon name="auto_awesome" size={16} />
+          <Icon name="auto_awesome" size={16} alfred />
           <span className="grow ell">Ask Alfred <span className="ink3">· {parts.join(' · ')}</span></span>
           <span className="kbd">⌘Enter</span>
         </button>

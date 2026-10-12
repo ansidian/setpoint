@@ -186,6 +186,9 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
   `caution` lifted and tilted −6° in the middle, a shorter `violet` below. A bare 18 px glyph before
   the name, no tile, in the theme's tokens; they are the brand's and stay put when an account or
   calendar is recoloured. Never show it beside the pending spinner.
+- **Alfred's mark** is `auto_awesome` filled with a gradient from `cool` to `violet` (bottom left to
+  top right), two of Day stack's colours, wherever Alfred shows: Ask Alfred, the Answer card's header,
+  and Ask about this email in the reader and ⌘K (#136). Nothing else about the AI takes a hue.
 - **Favicon:** `favicon.svg` (the mark on darma's 32 px `card` tile, radius 7, with an `edgeOn`
   border, in Night's colours), 16 and 32 px PNGs (the 16 px one redrawn on its pixel grid: the middle
   chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`; no web
@@ -351,7 +354,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   Type Rejection", `ink3` 12) and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
   yellow in Light, #135).
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
-  ([Decided while building](#decided-while-building) #80).
+  ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
+  after it in `ink3` (#136).
 - No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable, after a 20
   px `search_off` (#165).
 
@@ -905,6 +909,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The boards keep
     the export's values.
+30. **Alfred's mark is `auto_awesome` in its gradient** (#136): boards 06 and 07 draw it in `ink`, and
+    boards 01, 03 and 20 draw Ask about this email with `forum`.
 
 ## Not designed yet
 
@@ -1803,3 +1809,9 @@ it changes what's on screen.
     Answer and proposal cards' fields, the editor's, Settings' and sign-in's. While the header field
     has focus its hint reads `Esc`, as / then types a slash (Andy, 2026-10-11, polish audit
     search-02, search-06).
+136. **Alfred has one recognisable mark:** `auto_awesome` filled with a gradient from `cool` to
+    `violet` (two of Day stack's own colours, so no new hue), drawn once as an unseen SVG gradient
+    that every Alfred icon fills from: Ask Alfred, the Answer card's header, and Ask about this email
+    in the reader and ⌘K, which leave `forum`. Ask Alfred reads in `ink`, its query in `ink3`. No
+    wash on the card and no tinted hover: the AI has no hue of its own, so it never outshouts mail
+    (Andy, 2026-10-11, polish audit search-05, color-01).
