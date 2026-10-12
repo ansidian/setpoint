@@ -104,6 +104,7 @@
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
   .rd-head { padding: 10px 20px 0; gap: 16px; }
   .rd-subj { font-size: 21px; }
+  .rd-sum { margin-top: -10px; font-size: 15px; }
   .rd-acts { display: none; }
   .rd-meta { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; }
   .rd-meta .avatar { grid-row: 1 / 3; }

@@ -3,7 +3,7 @@
 import type {MessageOut, RemoteContentOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, parseCsv, previewKind, readerActions, remoteImages, senderLine, whenLabel} from '../src/logic/reader.ts';
+import {attachmentLabel, attachmentType, factRows, fileSize, hasRemoteContent, paneWidth, parseCsv, previewKind, readerActions, readerSummary, remoteImages, senderLine, whenLabel} from '../src/logic/reader.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -41,6 +41,15 @@ describe('senderLine', () => {
   ])('%s', (_name, message, line) => {
     expect(senderLine(message)).toEqual(line);
   });
+});
+
+describe('readerSummary', () => {
+  test.each([
+    ['triage\'s summary', {summary: 'Pick a 30-minute slot this week', fact: null}, 'Pick a 30-minute slot this week'],
+    ['none written', {summary: null, fact: null}, null],
+    ['an empty one', {summary: '', fact: null}, null],
+    ['security mail: its facts card says it', {summary: 'New sign-in · MacBook Pro · Los Angeles', fact: 'New sign-in · MacBook Pro · Los Angeles'}, null],
+  ] as const)('%s', (_name, row, expected) => expect(readerSummary(row)).toBe(expected));
 });
 
 describe('readerActions', () => {

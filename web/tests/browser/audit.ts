@@ -351,7 +351,17 @@ const readerDate = (drawn: string, shown: string): Patch => ({why: 'Decided whil
 const ruleSentence = (words: string): Patch => ({why: 'Decided while building #90: a mail rule\'s words read as one sentence',
   from: `<div class="rule grow">${words}<span class="ms to">`, to: `<div class="rule grow"><span class="ell">${words}</span><span class="ms to">`});
 
+// Decided while building #238 (SV-67): the reader shows the email's summary under its subject.
+const readerSummary = (subject: string, summary: string, phone = false): Patch => {
+  const h1 = `<h1 class="rd-subj"${phone ? ' style="font-size: 21px"' : ''}>${subject}</h1>`;
+  return {why: 'Decided while building #238: the reader shows the summary under its subject', from: h1,
+    to: `${h1}<p style="margin: ${phone ? -10 : -6}px 0 0; color: var(--ink2); font-size: ${phone ? 15 : 14}px; line-height: 1.45; max-width: 680px">${summary}</p>`};
+};
+const NORTHWIND_SUMMARY = 'Pick a 30-minute slot this week';
+const LEASE_SUMMARY = 'Renewal offer for the lease ending Nov 30 · sign by Oct 31';
+
 const BOARD_01_PATCHES: Patch[] = [
+  readerSummary('Interview availability for Software Engineer I', NORTHWIND_SUMMARY),
   NO_EMPTY_MORE,
       {why: 'Override 2 (decision 48): with Northwind open the sidebar reads Inbox (3) 18', from: '<span class="apill num">3</span><span class="cnt num">19</span>', to: '<span class="apill num">3</span><span class="cnt num">18</span>'},
       {why: 'Override 2 (decision 48): with Northwind open, Jobs reads 1', from: 'Jobs<span class="cnt num">2</span>', to: 'Jobs<span class="cnt num">1</span>'},
@@ -441,6 +451,7 @@ const dayTemps = (tone: string, glyph: string, temps: string): Patch => ({
   to: `<span class="wx ${tone}" style="display: inline-flex; align-items: center; gap: 4px"><span class="num" style="font-size: 11.5px; letter-spacing: 0; color: var(--ink3)">${temps}</span><span class="ms" style="font-size: 17px">${glyph}</span></span></div>`,
 });
 const BOARD_21_PATCHES: Patch[] = [
+  readerSummary('Interview availability for Software Engineer I', NORTHWIND_SUMMARY, true),
   {why: 'The phone\'s frame and rounded corners are the device\'s, not the page\'s', from: 'border-radius: 44px; border: 1px solid var(--edgeOn);', to: 'border-radius: 0; border: 0;'},
   {why: '… and so is the status bar: the page keeps clear of it by its inset (#143), none in a browser', from: '.sp .safe { height: 40px; flex: none; }', to: '.sp .safe { display: none; }'},
   {why: 'F8: the phone takes taps only, so no row is swiped; Mark read and Done are the reader\'s',
@@ -795,6 +806,7 @@ export const BOARDS: Board[] = [
     name: '02-deliveries-expanded-images-hidden', file: '02-deliveries-expanded-images-hidden.html', width: 1677, height: 1050,
     // Contoso Coffee is Noise, so its More holds Add to calendar and Add as task (#23), as drawn.
     patches: [
+      readerSummary('The Contoso Coffee Journal · October', 'A new harvest from Huila, brewing notes'),
       NO_DONE,
       ...openedPersonal('Contoso Coffee'),
       ...codeLeadsSecurity('<div class="gh">Deliveries'),
@@ -870,6 +882,7 @@ export const BOARDS: Board[] = [
     // Fixture second-pin pins the DMV's notice; the check opens Parkside's lease and points at the DMV row.
     name: '10-pinned-shelf', file: '10-pinned-shelf.html', width: 1677, height: 1050,
     patches: [
+      readerSummary('Lease renewal terms', LEASE_SUMMARY),
       NO_DONE,
       NO_EMPTY_MORE,
       {why: 'D10: the row under the pointer is the keyboard cursor, a sub2 fill (the board draws a sub hover)', from: '<div class="row hov">', to: '<div class="row cur">'},
@@ -926,6 +939,7 @@ export const BOARDS: Board[] = [
   {
     name: '07-alfred-s-answer-card', file: '07-alfred-s-answer-card.html', width: 1677, height: 1050,
     patches: [
+      readerSummary('Lease renewal terms', LEASE_SUMMARY),
       NO_DONE,
       NO_EMPTY_MORE,
       readerDate('Sep 30', 'Sep 30, 2:15 PM'),
@@ -967,6 +981,7 @@ export const BOARDS: Board[] = [
   {
     name: '08-proposal-add-to-calendar', file: '08-proposal-add-to-calendar.html', width: 1677, height: 1050,
     patches: [
+      readerSummary('Final exam schedule · CS 101', 'Fall 2026 finals, rooms and times'),
       NO_EMPTY_MORE,
       readerDate('Mon', 'Oct 5, 10:05 AM'),
       {why: 'Override 8: a new event takes Settings\' reminder default, 10 min before', from: '<span class="grow" style="text-align: left">1 day before</span>', to: '<span class="grow" style="text-align: left">10 min before</span>'},

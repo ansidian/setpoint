@@ -353,7 +353,7 @@ anything waits there and All when Unread would say "All caught up" (#102).
   Gmail, empty until reply exists. In a pane under 600 px the key hints drop and the labels stay
   ([Decided while building](#decided-while-building) #107). Done's check is `good` and its label
   `ink`, the others `ink2` (#163); Trash turns `alert` under the pointer and presses in `alert` (#169).
-- **Head** (padding 20 28 16): the subject (20 / 500), then a 32 px avatar, the sender's name, " ·
+- **Head** (padding 20 28 16): the subject (20 / 500), then triage's summary (#238), then a 32 px avatar, the sender's name, " ·
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
   ([Decided while building](#decided-while-building) #88). A verification code follows in its
@@ -2447,3 +2447,7 @@ it changes what's on screen.
     header) in place of the left column, so FYI never reads as one flat run. Wide, the column stays
     (#48, #119). Opening or closing the pane scrolls the list by the subheadings' height above the
     email, so the row clicked stays where it was (Andy, 2026-10-12; darma SV-67).
+238. **The reader shows the summary under the subject:** the summary the list showed in the
+    subject's place (#35, #74) is the head's second line, `ink2` 14 / 1.45 (15 on the phone), max
+    680, 6 px under the subject, on every size and from the row at once. An email with no summary
+    has no line, and security mail none (its facts card says it) (Andy, 2026-10-12; darma SV-67).

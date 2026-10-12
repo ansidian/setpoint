@@ -950,6 +950,29 @@ test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, 
   }
 });
 
+test('#238: the reader shows the email\'s summary under its subject, and none when triage wrote none', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, '/inbox/all');
+    await page.locator('.list.all .row', {hasText: 'Fabrikam'}).first().click();
+    await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    const summary = page.locator('.rd-sum');
+    assert.equal(await summary.textContent(), 'Data Analyst');
+    assert.equal(await summary.evaluate(node => getComputedStyle(node).color), await tokenColour(page, 'ink2'));
+    // Under the subject, 6 px below it, and above the sender.
+    const [subject, sum, meta] = [await page.locator('.rd-subj').boundingBox(), await summary.boundingBox(), await page.locator('.rd-meta').boundingBox()];
+    assert.equal(Math.round(sum!.y - (subject!.y + subject!.height)), 6);
+    assert.ok(meta!.y > sum!.y + sum!.height, 'the sender comes after it');
+    // An email with no summary has no line for it.
+    await page.locator('.list.all .row', {hasText: 'You sent $42.00 to Sam Lee'}).first().click();
+    await page.locator('.rd-subj', {hasText: 'You sent $42.00 to Sam Lee'}).waitFor();
+    assert.equal(await summary.count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
   const setpoint = await startSetpoint();
   try {

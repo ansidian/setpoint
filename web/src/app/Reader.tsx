@@ -18,7 +18,7 @@ import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
 import {paragraphs} from '../logic/body.ts';
 import {fullTimestamp, readerTime} from '../logic/format.ts';
-import {factRows, hasRemoteContent, READING_PANE, readerActions, remoteImages, senderLine} from '../logic/reader.ts';
+import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
@@ -323,10 +323,13 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
   const who = listed.organisation ?? listed.from_name;
   const line = senderLine(message ?? listed);
   const offers = readerActions(listed);
+  const summary = readerSummary(listed);
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
       <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" title="Unread" />}{listed.subject}</h1>
+      {/* Triage's summary, which the list shows in the subject's place, kept here once it's open (#238). */}
+      {summary && <p className="rd-sum selectable">{summary}</p>}
       <div className="rd-meta">
         <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
         <div className="who grow">

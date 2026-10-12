@@ -1,7 +1,7 @@
 // The reader's rules (DESIGN.md › The reader; BRIEF.md › The reader and Security mail): who it's
 // from, which actions it offers, the security facts card, whether remote images load, and the
 // attachments' labels and previews.
-import type {AttachmentOut, MessageOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
+import type {AttachmentOut, MessageOut, MessageRowOut, RemoteContentOut, SecurityFacts} from '@setpoint/shared';
 import {clockTime, daysBetween, localDate} from './format.ts';
 
 /**
@@ -31,6 +31,12 @@ export function readerActions(message: Pick<MessageOut, 'kind' | 'lane' | 'done'
     ask: true,
   };
 }
+
+/**
+ * The summary under the reader's subject (#238): triage's, which the list showed in the subject's
+ * place, unless the email's security facts carry it, since its facts card says the same.
+ */
+export const readerSummary = (row: Pick<MessageRowOut, 'summary' | 'fact'>): string | null => (row.fact ? null : row.summary || null);
 
 /** "Today, 8:52 AM", "Yesterday, 6:41 PM", "Mon, Oct 5, 10:05 AM", with the year once it isn't this year's. */
 export function whenLabel(at: string, now: number, timeZone: string): string {
