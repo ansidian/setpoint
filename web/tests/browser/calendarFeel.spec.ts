@@ -350,3 +350,37 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     await setpoint.stop();
   }
 });
+
+test('the week reads by its dates and its now: the date 14 / 500 `ink` on a 24 px disc, today\'s 24 px at 600, and now faintly across every day under today\'s line', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await page.locator('.wb').first().waitFor();
+    const date = page.locator('.wk-dhead[data-date="2026-10-08"] .dn');
+    assert.deepEqual([await style(date, 'font-size'), await style(date, 'font-weight'), await style(date, 'height'), await style(date, 'min-width')], ['14px', '500', '24px', '24px']);
+    assert.equal(await style(date, 'color'), await colour(page, '--ink'));
+    const today = page.locator('.wk-dhead .dn.today');
+    assert.deepEqual([await style(today, 'font-weight'), await style(today, 'height'), await style(today, 'min-width')], ['600', '24px', '24px']);
+    assert.equal(await style(page.locator('.wk-dhead[data-date="2026-10-08"]'), 'column-gap'), '7px');
+    // The weekday stays 11.5 uppercase `ink3`.
+    assert.deepEqual([await style(page.locator('.wk-dhead[data-date="2026-10-08"] .dw'), 'font-size'), await style(page.locator('.wk-dhead[data-date="2026-10-08"] .dw'), 'text-transform')], ['11.5px', 'uppercase']);
+
+    // Now across the week: one 1 px line at today's line's height, `alert` at 55%, under it.
+    const across = page.locator('.wk-cols > .wk-nowx');
+    const line = page.locator('.wk-now');
+    assert.equal(await across.count(), 1);
+    assert.equal(await style(across, 'top'), await style(line, 'top'));
+    assert.deepEqual([await style(across, 'height'), await style(across, 'z-index'), await style(line, 'z-index')], ['1px', '2', '3']);
+    assert.equal(await style(across, 'background-color'), await colour(page, 'color-mix(in oklch, var(--alert) 55%, transparent)'));
+    const [columns, width] = [await page.locator('.wk-cols').boundingBox(), (await across.boundingBox())!.width];
+    assert.equal(Math.round(width), Math.round(columns!.width), 'across all seven days');
+    // Another week has none.
+    await page.keyboard.press('n');
+    await until('the next week', () => page.locator('.hd-title').textContent(), text => text === 'Oct 11 – 17, 2026');
+    assert.equal(await page.locator('.wk-nowx').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

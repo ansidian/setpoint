@@ -518,8 +518,9 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Layout:** a 56 px gutter, then seven columns filling the width (139 px at the design target,
   down to about 90 with titles cut). The **day heads** (48 px) and the **all-day row** stay put while
   the hours scroll under them. The right pane stays.
-- **Day head:** the weekday (11.5 uppercase `ink3`), the date (today the 22 px `alert` disc, #128), the
-  weather icon. A click selects the day; under the pointer it takes a month day's wash (#223).
+- **Day head:** the weekday (11.5 uppercase `ink3`), the date (14 / 500 `ink` on a 24 px disc, today
+  the 24 px `alert` disc at 600, #128, #226), the weather icon, 7 px apart. A click selects the day; under
+  the pointer it takes a month day's wash (#223).
 - **All-day row:** all-day events as tinted bars spanning their days, then each day's tasks (a timed
   one prefixed "9:00 AM"), 20 px lines 2 px apart, at least two lines and at most three: a day with
   more shows two and "+N", which opens the day's popover (board 11b). An event of 24 h or more is a
@@ -527,7 +528,8 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Hours:** all 24, 44 px each, `hair` lines, the gutter's labels in `ink3` 11. Weekends take
   `dayOff`, the **selected day's column `sub`** (today by default, so board 16 reads the same),
   and today's column the **now-line** (1.5 px `alert`, an 8 px dot at its start, the time in the
-  gutter in `alert` 500).
+  gutter in `alert` 500), which runs on faintly through the other six days (1 px, `alert` at 55%, under
+  today's, #225).
 - **Opening scroll:** this week puts the now-line about a third down; another week an hour before
   its first timed item, else 7 AM. Paging keeps the scroll.
 - **Blocks:** the month chip's tint, bar and colours (`.wb` in board 16): the title at 500, the time
@@ -1985,3 +1987,11 @@ it changes what's on screen.
     over 120 ms; over a block, off the hours, while dragging or on a press it goes, the press handing
     over to the dashed create ghost. Only with a pointer that hovers (Andy, 2026-10-11, polish audit
     grids-07).
+225. **Now is a horizon across the week:** when the week shown holds today, a 1 px line in `alert` at
+    55% runs across all seven days at now's height, under today's own 1.5 px line and dot, moving with
+    the clock, so the rest of the week reads as before and after now (Andy, 2026-10-11, polish audit
+    grids-08).
+226. **The week's dates are its columns' anchors:** a head's date is 14 / 500 in `ink` on a 24 px
+    disc (today's `alert` disc grows to 24 px, keeping 600), 7 px from its weekday, which stays 11.5
+    uppercase `ink3` (`ink2` on the selected day); the month's numbers are unchanged (Andy,
+    2026-10-11, polish audit grids-10).

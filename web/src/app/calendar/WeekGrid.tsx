@@ -484,6 +484,8 @@ export function WeekGrid(props: WeekGridProps) {
               {todayColumn >= 0 && <span className="wk-gut now num" style={{top: nowTop - 7}}>{clockTime(now, timeZone)}</span>}
             </div>
             <div className="wk-cols" ref={cols} data-dir={slide} key={`cols:${week}`}>
+              {/* Now, faintly across the week, under today's own line (polish audit grids-08). */}
+              {todayColumn >= 0 && <div className="wk-nowx" style={{top: nowTop}} aria-hidden="true" />}
               {days.map((date, column) => (
                 <div key={date} className={`wk-col ${columnClass(date)}`} data-date={date} onClick={event => clickSlot(date, event)}
                   onPointerDown={event => {

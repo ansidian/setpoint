@@ -28,6 +28,11 @@
 .wk-dhead::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--sub) 55%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 @media (hover: hover) { .wk-dhead:hover:not(.wk-sel)::before { opacity: 1; } }
 .wk-dhead .wx { margin-left: auto; flex: none; }
+/* The dates are the columns' anchors (polish audit grids-10): 14 / 500 `ink` on a 24 px disc, today's
+   disc 24 px too at 600. */
+.wk-dhead { gap: 7px; }
+.wk-dhead .dn { font-size: 14px; min-width: 24px; height: 24px; }
+.wk-dhead .dn:not(.today) { font-weight: 500; color: var(--ink); }
 /* Narrow days keep the date and drop the weather. */
 .wk-dhead { container-type: inline-size; }
 @container (max-width: 96px) { .wk-dhead .wx { display: none; } }
@@ -58,6 +63,9 @@
   background: repeating-linear-gradient(to bottom, var(--hair) 0 1px, transparent 1px var(--weekHour)); }
 .wk-col { position: relative; border-left: 1px solid var(--hair); min-width: 0; }
 
+/* Now runs faintly across the whole week (polish audit grids-08): `alert` at 55%, 1 px, under today's line. */
+.wk-cols { position: relative; }
+.wk-nowx { position: absolute; left: 0; right: 0; height: 1px; background: color-mix(in oklch, var(--alert) 55%, transparent); z-index: 2; pointer-events: none; }
 /* Today's now-line: 1.5 px `alert`, an 8 px dot at its start. */
 .wk-now { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--alert); z-index: 3; pointer-events: none; }
 .wk-now::before { content: ''; position: absolute; left: -4px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
