@@ -357,6 +357,9 @@
 .rpane > .rp-health, .cal-health > .rp-health { flex: none; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; color: var(--ink3); }
 .rpane > .rp-health.failing, .cal-health > .rp-health.failing { color: var(--caution); padding-top: 7px; padding-bottom: 7px; line-height: 18px; }
 .rpane > .rp-health.failing > .icon, .cal-health > .rp-health.failing > .icon { align-self: flex-start; margin-top: 1px; }
+/* Check now on the line (states-08), kept whole after the words; on a failing line that wraps, beside its first line. */
+.rp-health > .rp-act { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+.rp-health.failing > .rp-act { align-self: flex-start; margin-top: -3px; }
 .cal-health { flex: none; display: flex; flex-direction: column; }
 
 /* The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact, #258): beside the 400 px pane the

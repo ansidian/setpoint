@@ -353,7 +353,7 @@ test('a long page keeps its title and × in place while it scrolls, a hairline u
   }
 });
 
-test('the modal: ⌘, and the sidebar open it over the page, not in the address bar; Esc closes; Reconnect opens Accounts', async () => {
+test('the modal: ⌘, and the sidebar open it over the page, not in the address bar; Esc closes; the bar\'s Reconnect goes straight to Google for its one Gmail account', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -400,10 +400,19 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     }), true);
     await page.keyboard.press('Escape');
 
+    // The bar's Reconnect goes straight to Google's sign-in for the one Gmail account needing it, not
+    // to Settings first (the polish audit's states-08). Google stands in as an address back here.
     await page.goto(`${setpoint.base}/inbox`);
+    const business = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Business')!;
+    await page.route('**/api/accounts/gmail/authorize', route => route.fulfill({json: {url: `${setpoint.base}/inbox?consented`}}));
+    const asked = page.waitForRequest(request => request.url().endsWith('/api/accounts/gmail/authorize'));
     await page.locator('.hbar.caution .act').click();
+    assert.deepEqual((await asked).postDataJSON(), {account_id: business.id});
+    await page.waitForURL(/\/inbox\?consented$/);
+    await page.unroute('**/api/accounts/gmail/authorize');
+    assert.equal(await page.locator('.settings').count(), 0, 'not Settings first');
+    await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
     await page.locator('.settings .set-title', {hasText: 'Accounts'}).waitFor();
-    assert.equal(new URL(page.url()).pathname, '/inbox');
     await page.keyboard.press('Meta+f');
     assert.equal(await page.evaluate(() => document.activeElement?.closest('.settings') !== null), true, '⌘F doesn\'t reach the Inbox\'s search');
     assert.deepEqual(setpoint.pageErrors, []);

@@ -4,13 +4,13 @@
 // Todoist, Weather) the same way; then attention precision with its 30-day sparkline.
 import type {AccountOut, CalendarOut, PrecisionOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS} from '@setpoint/shared';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import type {FormEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
-import {refresh, useResource} from '../../api/client.ts';
+import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
-import {authorizeGmail, checkSource, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
+import {authorizeGmail, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
 import type {SourceState} from '../../logic/health.ts';
 import {mergeSources, moved, precisionText, sparkPath, sparkTitle} from '../../logic/settings.ts';
@@ -18,7 +18,8 @@ import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
 import {useNow} from '../clock.ts';
-import {failureLine, toastFailure} from '../toast.ts';
+import {useCheckNow} from '../states/checkNow.ts';
+import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import type {DragProps} from './order.ts';
 import {escapeCancels, HealthGlyph, Line, Menu, Page, Section, useAttempt} from './parts.tsx';
@@ -130,7 +131,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
   const state = sourceState(account.health, now, timeZone());
   const [renaming, setRenaming] = useState(false);
   const rename = useAttempt();
-  const check = useCheckNow(source);
+  const check = useCheckNow(source, SOURCES_PATH);
   return (
     <div className={['set-row', warnRow(state) && 'warn', dragging && 'dragging'].filter(Boolean).join(' ')} data-account={account.id}
       draggable={!renaming} {...drag}>
@@ -205,37 +206,6 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
   );
 }
 
-/**
- * Check now on a row (SV-25, D54): its state reads "Checking…" from the click until the source's
- * health moves on, asking again each second for up to 15 s, or why the check couldn't start.
- */
-function useCheckNow(source: SourceOut | undefined) {
-  const [check, setCheck] = useState<{from: string} | {failed: string} | null>(null);
-  const health = JSON.stringify(source?.health ?? null);
-  const checking = check !== null && 'from' in check && check.from === health;
-  useEffect(() => {
-    if (!checking) return;
-    // The server sends a health event only when a state changes, so a check that stays healthy is asked after.
-    const poll = window.setInterval(() => void refresh(SOURCES_PATH), 1000);
-    const stop = window.setTimeout(() => setCheck(null), 15_000);
-    return () => {
-      window.clearInterval(poll);
-      window.clearTimeout(stop);
-    };
-  }, [checking]);
-  const failed = check !== null && 'failed' in check ? check.failed : null;
-  return {
-    text: checking ? 'Checking…' : failed,
-    checking,
-    failed: failed !== null,
-    run: () => {
-      if (!source) return;
-      setCheck({from: health});
-      void checkSource(source.id).catch((error: unknown) => setCheck({failed: failureLine('Couldn\'t check', error)}));
-    },
-  };
-}
-
 /** A row in trouble, failing or needing sign-in, takes `caution` at 7%, as Settings › News's failing rows do (states-04). */
 const warnRow = (state: SourceState) => state.kind === 'failing' || state.kind === 'needs_reconnect';
 /** Its state's words: `caution` in trouble, `ink2` once checks stopped, under an `ink3` glyph (settings-01). */
@@ -243,7 +213,7 @@ const stateClass = (state: SourceState, checkFailed: boolean) => (state.tone ===
 
 function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; sub: string; now: number}) {
   const state = sourceState(source.health, now, timeZone());
-  const check = useCheckNow(source);
+  const check = useCheckNow(source, SOURCES_PATH);
   return (
     <div className={warnRow(state) ? 'set-row warn' : 'set-row'} data-source={source.provider}>
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>

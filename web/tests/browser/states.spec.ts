@@ -7,7 +7,7 @@
 // pill, not the sign-in card, and asks again until it answers.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
-import type {MailCountsOut} from '@setpoint/shared';
+import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harness.ts';
@@ -180,11 +180,34 @@ test('a failing account says why in caution, and a healthy Inbox shows no line',
     await page.goto(`${setpoint.base}/inbox`);
     const line = page.locator('.hbar.failing');
     await line.waitFor();
-    assert.equal(await line.textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
+    assert.equal(await line.locator('.num').textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
     assert.equal(await line.locator('.num').getAttribute('title'), 'Work, as of 9:06 AM, Gmail answered 503.');
     // A source failing is the `warning` triangle in `caution`, never the `error` circle of a failed change (states-04).
     assert.deepEqual(await toneGlyph(line), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     assert.equal(await page.locator('.hbar.caution').count(), 0);
+
+    // The fix is on the line (states-08): " · Check now", the bar's Reconnect look in ink2, 12.5 and 24 px
+    // tall; it checks Work's own source, reading "Checking…" until the check lands.
+    const button = line.getByRole('button', {name: 'Check now'});
+    assert.deepEqual(await line.locator('.sep').evaluate(dot => [dot.textContent, getComputedStyle(dot).color]), ['·', await colourOf(page, 'var(--ink3)')]);
+    assert.deepEqual(await button.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize, element.getBoundingClientRect().height, getComputedStyle(element).paddingLeft]),
+      [await colourOf(page, 'var(--ink2)'), '12.5px', 24, '9px']);
+    const work = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Work')!;
+    let release = () => {};
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    await page.route('**/api/sources/*/check', async route => {
+      await held;
+      await route.continue();
+    });
+    const checked = page.waitForRequest(request => request.url().includes('/api/sources/') && request.url().endsWith('/check'));
+    await button.click();
+    assert.equal(new URL((await checked).url()).pathname, `/api/sources/${work.source_id}/check`);
+    await line.locator('.check-now', {hasText: 'Checking…'}).waitFor();
+    release();
+    await until('the check lands', () => page.locator('.hbar .check-now.checking').count(), count => count === 0, 20_000);
+    await page.unroute('**/api/sources/*/check');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -209,7 +232,7 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const lines = page.locator('.rpane > .rp-health');
     await until('both lines', () => lines.count(), count => count === 2);
-    assert.deepEqual(await lines.allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
+    assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
     const [stale, failing] = await lines.evaluateAll(all => all.map(line => getComputedStyle(line).color));
     const token = (name: string) => page.evaluate(value => {
@@ -224,6 +247,8 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     assert.equal(failing, await token('caution'));
     // Stale `history`, failing the `warning` triangle (states-04).
     assert.deepEqual([await toneGlyph(lines.nth(0)), await toneGlyph(lines.nth(1))], [[ICONS.history, '16', stale], [ICONS.warning, '16', failing]]);
+    // Each line carries Check now (states-08), whole after its words.
+    assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
     assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('title'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);

@@ -3,7 +3,7 @@
 import type {HealthOut, SourceOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {asOf, calendarHealthLines, healthLine, inboxHealthLines, listOf, reconnectLine, sourceState, syncLine, triageNote} from '../src/logic/health.ts';
+import {asOf, calendarHealthLines, healthLine, inboxHealthLines, listOf, reconnectLine, reconnectTarget, sourceState, syncLine, triageNote} from '../src/logic/health.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -27,6 +27,13 @@ describe('health and states', () => {
   ])('the reconnect bar for %j', (accounts, line) => expect(reconnectLine(accounts)).toBe(line));
 
   test.each([
+    ['one Gmail account: straight to Google', [{id: 1, provider: 'gmail', health: health({state: 'needs_reconnect'})}, {id: 2, provider: 'gmail', health: health({state: 'stale'})}], {gmail: 1}],
+    ['iCloud: its app password is in Settings', [{id: 5, provider: 'icloud', health: health({state: 'needs_reconnect'})}], 'settings'],
+    ['two accounts: Settings, to pick', [{id: 1, provider: 'gmail', health: health({state: 'needs_reconnect'})}, {id: 3, provider: 'gmail', health: health({state: 'needs_reconnect'})}], 'settings'],
+    ['none (the bar isn\'t shown)', [], 'settings'],
+  ] as const)('the bar\'s Reconnect, %s', (_, accounts, target) => expect(reconnectTarget([...accounts])).toEqual(target));
+
+  test.each([
     ['healthy', health({last_check_at: TODAY_840}), null],
     ['needs reconnect (its bar says so)', health({state: 'needs_reconnect'}), null],
     ['stale', health({state: 'stale', as_of: YESTERDAY_914}), {state: 'stale', text: 'Personal, as of 9:14 PM'}],
@@ -34,12 +41,12 @@ describe('health and states', () => {
     ['failing', health({state: 'failing', as_of: TODAY_840, reason: 'Gmail answered 503.'}), {state: 'failing', text: 'Personal, as of 8:40 AM, Gmail answered 503.'}],
   ] as const)('the line for %s', (_, value, line) => expect(healthLine('Personal', value, now, zone)).toEqual(line));
 
-  test('the Inbox lists each stale or failing account in order', () => {
+  test('the Inbox lists each stale or failing account in order, keyed by its name, with the source Check now checks', () => {
     expect(inboxHealthLines([
-      {label: 'Business', health: health({state: 'needs_reconnect'})},
-      {label: 'Personal', health: health({state: 'stale', as_of: YESTERDAY_914})},
-      {label: 'iCloud', health: health({state: 'failing', as_of: TODAY_840, reason: 'IMAP said no.'})},
-    ], now, zone).map(line => line.text)).toEqual(['Personal, as of 9:14 PM', 'iCloud, as of 8:40 AM, IMAP said no.']);
+      {label: 'Business', source_id: 1, health: health({state: 'needs_reconnect'})},
+      {label: 'Personal', source_id: 2, health: health({state: 'stale', as_of: YESTERDAY_914})},
+      {label: 'iCloud', source_id: 5, health: health({state: 'failing', as_of: TODAY_840, reason: 'IMAP said no.'})},
+    ], now, zone).map(line => [line.key, line.source, line.text])).toEqual([['Personal', 2, 'Personal, as of 9:14 PM'], ['iCloud', 5, 'iCloud, as of 8:40 AM, IMAP said no.']]);
   });
 
   // SV-20: the calendar's right pane, its sources' lines in order; Google Calendar's accounts as one, the worst.
@@ -59,6 +66,11 @@ describe('health and states', () => {
     ['Google Calendar needing sign-in has no line here (Settings and the Inbox say so)', [source(1, 'google_calendar', {state: 'needs_reconnect'})], []],
   ] as const)('the calendar\'s lines: %s', (_, sources, lines) => {
     expect(calendarHealthLines([...sources], now, zone).map(line => `${line.state} ${line.text}`)).toEqual(lines);
+  });
+
+  test('a calendar line is keyed by its source\'s name and checks that source; Google Calendar\'s worst account', () => {
+    const lines = calendarHealthLines([source(1, 'google_calendar', {}), source(4, 'google_calendar', {state: 'stale', as_of: TODAY_840}), source(3, 'weather', {state: 'failing', as_of: TODAY_840})], now, zone);
+    expect(lines.map(line => [line.key, line.source])).toEqual([['Google Calendar', 4], ['Weather', 3]]);
   });
 
   test.each([

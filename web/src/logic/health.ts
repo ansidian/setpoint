@@ -26,6 +26,16 @@ export function reconnectLine(accounts: Pick<AccountOut, 'label' | 'health'>[]):
   return `${listOf(names)} ${names.length === 1 ? 'needs' : 'need'} sign-in`;
 }
 
+/**
+ * Where the needs-reconnect bar's Reconnect goes (states-08): straight to Google's sign-in for the
+ * one Gmail account needing it, as its row in Settings › Accounts does; for iCloud's app password,
+ * or several accounts, Settings › Accounts.
+ */
+export function reconnectTarget(accounts: Pick<AccountOut, 'id' | 'provider' | 'health'>[]): {gmail: number} | 'settings' {
+  const needing = accounts.filter(account => account.health.state === 'needs_reconnect');
+  return needing.length === 1 && needing[0]!.provider === 'gmail' ? {gmail: needing[0]!.id} : 'settings';
+}
+
 export interface HealthLine {
   state: 'stale' | 'failing';
   text: string;
@@ -39,9 +49,22 @@ export function healthLine(name: string, health: HealthOut, now: number, timeZon
   return {state: health.state, text: `${name}, ${since}${reason}`};
 }
 
+/**
+ * A page's line for one source: its words, keyed by the name it gives (stable while the words
+ * change), with the source Check now checks and its health, to see the check land (states-08).
+ */
+export interface SourceLine extends HealthLine {
+  key: string;
+  source: number | null;
+  health: HealthOut;
+}
+
 /** The Inbox's stale and failing lines, one per mail account, in the accounts' order. */
-export function inboxHealthLines(accounts: Pick<AccountOut, 'label' | 'health'>[], now: number, timeZone: string): HealthLine[] {
-  return accounts.flatMap(account => healthLine(account.label, account.health, now, timeZone) ?? []);
+export function inboxHealthLines(accounts: Pick<AccountOut, 'label' | 'health' | 'source_id'>[], now: number, timeZone: string): SourceLine[] {
+  return accounts.flatMap(account => {
+    const line = healthLine(account.label, account.health, now, timeZone);
+    return line ? [{...line, key: account.label, source: account.source_id, health: account.health}] : [];
+  });
 }
 
 // The calendar's sources, in the order their lines show, by the names Settings › Accounts gives them.
@@ -52,10 +75,12 @@ const CALENDAR_SOURCES = [['google_calendar', 'Google Calendar'], ['todoist', 'T
  * for Google Calendar (its accounts' sources as one, the worst, as Settings › Accounts shows it),
  * Todoist and Weather.
  */
-export function calendarHealthLines(sources: SourceOut[], now: number, timeZone: string): HealthLine[] {
+export function calendarHealthLines(sources: SourceOut[], now: number, timeZone: string): SourceLine[] {
   return CALENDAR_SOURCES.flatMap(([provider, name]) => {
     const source = mergeSources(sources.filter(one => one.provider === provider));
-    return (source && healthLine(name, source.health, now, timeZone)) ?? [];
+    const line = source && healthLine(name, source.health, now, timeZone);
+    // Google Calendar's accounts show as one, the worst; Check now checks that one.
+    return source && line ? [{...line, key: name, source: source.id, health: source.health}] : [];
   });
 }
 

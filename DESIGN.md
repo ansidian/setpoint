@@ -826,9 +826,9 @@ section's label stays under the title (#250).
 | State | Treatment |
 | --- | --- |
 | **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#187) |
-| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM" (#186) |
-| **Failing** | the same line in `caution`, led by `warning`, with the reason (#186) |
-| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect"; the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
+| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#186, #188) |
+| **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#186, #188) |
+| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#188); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164); everything under it dimmed, changes disabled |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
@@ -2255,3 +2255,13 @@ it changes what's on screen.
     gap stays 8 px, and a source not checked yet has no glyph (amending Health and states' "Healthy:
     nothing" for Settings, and board 17's bare healthy text) (Andy, 2026-10-11, polish audit
     settings-01, states-04).
+188. **The fix is on the line:** each stale or failing line on the Inbox and atop the calendar's pane
+    (Google Calendar, Todoist, Weather; above the grid in the compact tier) ends " · Check now", the
+    dot `ink3` and the button the bar's Reconnect look in `ink2` (12.5, 24 px tall, padding 0 9, `sub`
+    and `ink` under the pointer); it checks that account's or source's own (Google Calendar's worst
+    account), and reads "Checking…" until the check lands, as Settings' rows do (#42), or why it
+    couldn't start. On a failing calendar line that wraps, it sits beside the first line. The
+    needs-reconnect bar's Reconnect goes straight to Google's sign-in when one Gmail account needs it,
+    as its row in Settings does; for iCloud, or several accounts, it opens Settings › Accounts (amending
+    Health and states, where only Needs reconnect had an action) (Andy, 2026-10-11, polish audit
+    states-08).

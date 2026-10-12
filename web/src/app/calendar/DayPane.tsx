@@ -18,8 +18,11 @@ import {agenda, dayCounts, dayTitle, tasksHeading, timeRange, weatherOf} from '.
 import {agendaOverlap} from '../../logic/conflict.ts';
 import {leaveLine} from '../../logic/detail.ts';
 import {calendarHealthLines} from '../../logic/health.ts';
+import type {SourceLine} from '../../logic/health.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
+import {useCheckNow} from '../states/checkNow.ts';
+import {CheckNow} from '../states/States.tsx';
 import {useRingColour} from './Chip.tsx';
 import {useJustDone} from './done.ts';
 import {useCalendarFade} from './view.ts';
@@ -130,16 +133,23 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
 
 /**
  * SV-20: "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
- * failing, wrapping so the provider's words show in full (Decided while building #62).
+ * failing, wrapping so the provider's words show in full (Decided while building #62), each with
+ * Check now on it (states-08).
  */
 export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
-  return calendarHealthLines(sources ?? [], now, timeZone).map(line => (
-    <div key={line.text} className={`rp-health ${line.state}`}>
+  return calendarHealthLines(sources ?? [], now, timeZone).map(line => <HealthLine key={line.key} line={line} />);
+}
+
+function HealthLine({line}: {line: SourceLine}) {
+  const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, SOURCES_PATH);
+  return (
+    <div className={`rp-health ${line.state}`}>
       <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
       <span className={line.state === 'failing' ? 'num' : 'num ell'} title={line.text}>{line.text}</span>
+      {line.source !== null && <span className="rp-act"><CheckNow check={check} /></span>}
     </div>
-  ));
+  );
 }
 
 interface AgendaRowProps {

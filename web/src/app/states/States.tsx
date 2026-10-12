@@ -2,23 +2,27 @@
 // and the stale and failing lines at the top of the Inbox, and the offline pill over the page, with
 // everything under it dimmed and changes disabled (App.tsx dims; client.ts refuses changes). The
 // same pill says when Setpoint can't be reached at launch, under the mark (Root.tsx).
-import type {TriageStatusOut} from '@setpoint/shared';
+import type {AccountOut, TriageStatusOut} from '@setpoint/shared';
 import {useEffect} from 'react';
 import {checkSession, timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {retryNow, useOfflineSince} from '../../api/live.ts';
-import {TRIAGE_PATH} from '../../api/mail.ts';
+import {ACCOUNTS_PATH, TRIAGE_PATH} from '../../api/mail.ts';
+import {authorizeGmail} from '../../api/settings.ts';
 import {clockTime} from '../../logic/format.ts';
-import {inboxHealthLines, reconnectLine, triageNote} from '../../logic/health.ts';
+import {inboxHealthLines, reconnectLine, reconnectTarget, triageNote} from '../../logic/health.ts';
+import type {SourceLine} from '../../logic/health.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {openSettings} from '../settings/store.ts';
+import {toastFailure} from '../toast.ts';
+import {useCheckNow} from './checkNow.ts';
 import './states.css';
 
 /**
- * "Business needs sign-in · Reconnect", then "Personal, as of 9:14 PM" for each stale or failing
- * account; null while every account is healthy.
+ * "Business needs sign-in · Reconnect", then "Personal, as of 9:14 PM · Check now" for each stale or
+ * failing account; null while every account is healthy.
  */
 export function useHealthBars() {
   const {list} = useAccounts();
@@ -33,15 +37,45 @@ export function useHealthBars() {
           <Icon name="sync_problem" size={16} />
           <span>{reconnect}</span>
           <span>·</span>
-          <button className="act" type="button" onClick={() => openSettings('accounts')}>Reconnect</button>
+          <button className="act" type="button" onClick={() => reconnectFrom(list)}>Reconnect</button>
         </div>
       )}
-      {lines.map(line => (
-        <div key={line.text} className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
-          <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
-          <span className="num ell" title={line.text}>{line.text}</span>
-        </div>
-      ))}
+      {lines.map(line => <HealthBar key={line.key} line={line} />)}
+    </>
+  );
+}
+
+/** The bar's Reconnect: Google's sign-in for the one Gmail account needing it, else Settings › Accounts (states-08). */
+function reconnectFrom(accounts: AccountOut[]) {
+  const target = reconnectTarget(accounts);
+  if (target === 'settings') {
+    openSettings('accounts');
+    return;
+  }
+  const label = accounts.find(account => account.id === target.gmail)?.label ?? 'the account';
+  authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Couldn't reconnect ${label}`));
+}
+
+/** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands (states-08). */
+function HealthBar({line}: {line: SourceLine}) {
+  const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, ACCOUNTS_PATH);
+  return (
+    <div className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
+      <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
+      <span className="num ell" title={line.text}>{line.text}</span>
+      {line.source !== null && <CheckNow check={check} />}
+    </div>
+  );
+}
+
+/** " · Check now" after a line's words: the button, "Checking…" while it runs, or why it couldn't start. */
+export function CheckNow({check}: {check: ReturnType<typeof useCheckNow>}) {
+  return (
+    <>
+      <span className="sep">·</span>
+      {check.text === null
+        ? <button className="check-now" type="button" onClick={check.run}>Check now</button>
+        : <span className={check.failed ? 'check-now failed' : 'check-now checking'} role="status">{check.text}</span>}
     </>
   );
 }
