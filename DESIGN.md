@@ -214,10 +214,10 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
     `navOnEdge` hairline and its icon in `accent`, #129): the **attention pill** (18 px,
     `caution` fill, `onInk` 11.5 / 600 text; not-Done attention, read or not) then the unread count
     (`ink3` 12).
-  - **Accounts** under Inbox (28 px, indented 34 px): colour dot (8 px), label, unread count. A click
-    filters the Inbox to that account (its row the `navOn` chip, Inbox its parent in `ink` without a
-    fill); a needs-reconnect account adds a `sync_problem` glyph in
-    `caution` before its count, keeping the count.
+  - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #199): colour dot
+    (8 px), label, unread count. A click filters the Inbox to that account (its row the `navOn`
+    chip, Inbox its parent in `ink` without a fill); a needs-reconnect account adds a `sync_problem`
+    glyph in `caution` before its count, keeping the count.
   - **Calendar**.
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
     mini-month and **Calendars** on Calendar.
@@ -2134,3 +2134,15 @@ it changes what's on screen.
     through, fades from `ink` to `ink3` over 180 ms rather than at once; the line still folds away
     after #106's 360 ms. Only the user's own completion plays it (Andy, 2026-10-11, polish audit
     motion-04).
+199. **The sidebar reshapes for each page instead of jumping:** on Calendar the account rows fold away
+    over 180 ms, as a mail row folds, and come back the same way, so Calendar and News slide to their
+    places rather than jumping from under the pointer that clicked them; the page's section (Today, or
+    the mini-month and Calendars) fades in over 120 ms. The content still switches at once (Andy,
+    2026-10-11, polish audit shell-08).
+200. **Counts roll, and a rise in Attention registers:** the attention pill, Inbox's and each account's
+    unread count, a group header's and All's lane counts roll when they change, for 180 ms, the old
+    number leaving 6 px one way as the new comes in from 6 px the other: down for a fall, up for a rise.
+    When the attention count rises (never on a fall, the first paint or a page switch) the pill swells
+    to 1.22 at 40% over 260 ms; from none it scales in from .6 over 180 ms, and at none it scales out
+    over 120 ms before it goes. The user's own Done only rolls (Andy, 2026-10-11, polish audit
+    shell-11, motion-07).

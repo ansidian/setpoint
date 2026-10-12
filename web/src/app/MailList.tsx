@@ -13,6 +13,7 @@ import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {motion} from '../tokens.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
+import {Count} from './Count.tsx';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, STAGGER_CAP_MS, useFold} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {TriageNote, useHealthBars} from './states/States.tsx';
@@ -148,7 +149,7 @@ function GroupHeader({view, first, cur, leaving, fold, onPoint, onToggle}: {
   return (
     <div className={classes} ref={fold} {...attributes}>
       <span className="gi"><Icon name={GROUP_GLYPHS[view.group]} size={14} /></span>
-      {view.label} <span className="n">{view.count}</span>
+      {view.label} <span className="n"><Count value={view.count} /></span>
       {view.preview && <span className="preview">{view.preview}</span>}
       {view.group === 'unsorted' && <TriageNote />}
       {/* One chevron, turned to point right while the group is collapsed (inbox-14). */}

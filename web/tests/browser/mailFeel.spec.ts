@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until} from './harness.ts';
+import {cleanUp, point, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -227,6 +227,87 @@ test('shell-06, motion-04: the Today event leads with its calendar\'s bar and wa
     await page.clock.fastForward(11 * 60_000);
     await until('now', look, seen => seen[0] === 'now');
     assert.deepEqual(await look(), ['now', await colourOf(page, '--alert'), '500']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts roll; the attention pill swells on a rise, scales in from none and out at none', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    const nav = (name: string) => page.locator('.sb .nav', {hasText: name});
+    const accounts = page.locator('.sb-accts');
+
+    // The accounts fold over 180 ms on Calendar and the page's section fades in over 120 ms; folded,
+    // Calendar sits 2 px under Inbox as it did.
+    assert.match(await accounts.evaluate(element => getComputedStyle(element).transition), /grid-template-rows 0\.18s/);
+    await nav('Calendar').click();
+    await page.waitForURL(/\/calendar/);
+    await until('the accounts folded', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height === 0);
+    assert.equal(await accounts.evaluate(element => (element as HTMLElement).inert), true);
+    const [inbox, calendar] = [(await nav('Inbox').boundingBox())!, (await nav('Calendar').boundingBox())!];
+    assert.equal(calendar.y - (inbox.y + inbox.height), 2);
+    assert.deepEqual(await page.locator('.sb .sb-sec').first().evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['fade-in', '0.12s']);
+    await nav('Inbox').click();
+    await page.waitForURL(/\/inbox/);
+    await until('the accounts back', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height > 100);
+
+    // Done takes the pill from 3 to 2: the count rolls down (the 3 leaves below, the 2 comes from above), quietly.
+    const pill = page.locator('.sb .apill');
+    const count = pill.locator('.count');
+    const rolls = await watch(count, 'data-dir');
+    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await page.keyboard.press('h');
+    await until('the pill reads 2', () => pill.textContent(), text => text === '2');
+    await until('it rolled', rolls, seen => seen.includes(null));
+    assert.deepEqual((await rolls()).filter(Boolean), ['down']);
+    assert.equal(await pill.evaluate(element => element.getAnimations().filter(animation => !(animation instanceof CSSTransition)).length), 0, 'a fall doesn\'t swell it');
+    // The group's count rolls with it.
+    assert.equal(await page.locator('.list .gh.att .n').textContent(), '2');
+
+    // Undo is a rise: the count rolls up and the pill swells to 1.22 at 40% over 260 ms.
+    const swells = await page.evaluate(() => {
+      const seen: string[] = [];
+      const element = document.querySelector('.sb .apill')!;
+      const original = element.animate.bind(element);
+      element.animate = (frames, options) => {
+        const timing = options as KeyframeAnimationOptions;
+        seen.push(`${JSON.stringify(frames)} ${timing.duration} ${timing.easing}`);
+        return original(frames, options);
+      };
+      (window as unknown as {swells: string[]}).swells = seen;
+      return true;
+    });
+    assert.ok(swells);
+    const risen = await watch(count, 'data-dir');
+    await page.locator('.toast button', {hasText: 'Undo'}).click();
+    await until('the pill reads 3', () => pill.textContent(), text => text === '3');
+    await until('it rolled up', risen, seen => seen.includes('up'));
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {swells: string[]}).swells),
+      ['[{"transform":"none"},{"transform":"scale(1.22)","offset":0.4},{"transform":"none"}] 260 cubic-bezier(.2,0,0,1)']);
+
+    // Every attention email Done elsewhere: the pill scales out over 120 ms, then goes; one back scales it in from .6.
+    const inbox2 = await setpoint.api<{groups: {group: string; rows: {id: number}[]}[]}>('GET', '/mail/inbox');
+    const attention = inbox2.groups.find(group => group.group === 'attention')!.rows.map(row => row.id);
+    const going = await watch(pill, 'class');
+    for (const id of attention) await setpoint.api('POST', `/mail/messages/${id}/done`, {done: true});
+    await until('the pill gone', () => pill.count(), number => number === 0);
+    assert.ok((await going()).includes('apill num going'), 'it scaled out first');
+    assert.deepEqual(await page.evaluate(() => {
+      const probe = document.querySelector('.sb .nav')!.appendChild(document.createElement('span'));
+      probe.className = 'apill going';
+      const style = getComputedStyle(probe);
+      const seen = [style.animationName, style.animationDuration];
+      probe.remove();
+      return seen;
+    }), ['apill-out', '0.12s']);
+    await setpoint.api('POST', `/mail/messages/${attention[0]}/done`, {done: false});
+    await until('the pill back', () => pill.count(), number => number === 1);
+    assert.deepEqual(await pill.evaluate(element => [element.className, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['apill num arriving', 'apill-in', '0.18s']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

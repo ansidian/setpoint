@@ -15,6 +15,7 @@ import {GROUP_GLYPHS, GROUP_LABELS, groupKey, rowKey, showsPending} from '../log
 import {Icon} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, useFold} from './fold.ts';
+import {Count} from './Count.tsx';
 import {Gutter} from './MailList.tsx';
 
 // A row's `noise` is the day whose Noise it's under, folded or not.
@@ -83,7 +84,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
         if (item.kind === 'shelf') {
           return (
             <div key={key} ref={ref} className={['gh', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
-              <span className="gi"><Icon name={GROUP_GLYPHS.pinned} size={14} /></span>{GROUP_LABELS.pinned} <span className="n">{item.count}</span>
+              <span className="gi"><Icon name={GROUP_GLYPHS.pinned} size={14} /></span>{GROUP_LABELS.pinned} <span className="n"><Count value={item.count} /></span>
             </div>
           );
         }
@@ -92,7 +93,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
           return <div key={key} ref={ref} className={['gh', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{heading.label} <span className="date">{heading.date}</span></div>;
         }
         if (item.kind === 'lane') {
-          return <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{item.label} <span className="n">{item.count}</span></div>;
+          return <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{item.label} <span className="n"><Count value={item.count} /></span></div>;
         }
         if (item.kind === 'noise') {
           const folded = !item.open && !leaving;

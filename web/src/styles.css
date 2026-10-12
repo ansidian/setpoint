@@ -69,6 +69,29 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .nav.on > .icon { color: var(--accent); }
 .nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
 .apill { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
+/* The attention pill registers a rise (shell-11): it swells to 1.22 at 40% over 260 ms (Sidebar.tsx
+   plays it; never on a fall, the first paint or a page switch); from none it scales in from .6 over
+   180 ms, and at none it scales out over 120 ms before it goes. */
+.apill.arriving { animation: apill-in var(--dur-medium) var(--ease); }
+.apill.going { animation: apill-out var(--dur-fast) var(--ease) forwards; }
+@keyframes apill-in { from { transform: scale(.6); opacity: 0; } }
+@keyframes apill-out { to { transform: scale(.6); opacity: 0; } }
+/* A count rolls when it changes (Count.tsx, motion-07): for 180 ms the old number (::after) leaves 6 px
+   one way as the new comes in from 6 px the other, down for a fall and up for a rise, in one clipped
+   cell. At rest it's the number alone. */
+.count { display: inline-grid; }
+.count > .now, .count::after { grid-area: 1 / 1; }
+.count[data-dir] { clip-path: inset(0); }
+.count[data-was]::after { content: attr(data-was); animation: var(--dur-medium) var(--ease) forwards; }
+.count[data-dir] > .now { animation: var(--dur-medium) var(--ease); }
+.count[data-dir="down"] > .now { animation-name: count-from-above; }
+.count[data-dir="down"]::after { animation-name: count-out-below; }
+.count[data-dir="up"] > .now { animation-name: count-from-below; }
+.count[data-dir="up"]::after { animation-name: count-out-above; }
+@keyframes count-from-above { from { transform: translateY(-6px); opacity: 0; } }
+@keyframes count-from-below { from { transform: translateY(6px); opacity: 0; } }
+@keyframes count-out-below { to { transform: translateY(6px); opacity: 0; } }
+@keyframes count-out-above { to { transform: translateY(-6px); opacity: 0; } }
 .acct { height: 28px; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; border-radius: 10px; color: var(--ink2); flex: none; }
 @media (hover: hover) { .acct:hover { background: var(--sub); } }
 .acct.on { background: var(--navOn); box-shadow: inset 0 0 0 1px var(--navOnEdge); color: var(--ink); }
@@ -82,6 +105,15 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* A Todoist project's dot, clamped to the theme's band as its tasks' rings are (#138). */
 .dot.todoist { background: oklch(from var(--c) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 .sb-sec { margin-top: 18px; display: flex; flex-direction: column; gap: 2px; }
+/* The sidebar reshapes for each page (shell-08): on Calendar the account rows fold away over 180 ms,
+   as a mail row folds, and come back the same way, so Calendar and News slide to their places rather
+   than jumping from under the pointer; the page's section (Today, or the mini-month and Calendars)
+   fades in over 120 ms. Folded, the rows take no room: Calendar sits 2 px under Inbox, as before. */
+.sb-accts { display: grid; grid-template-rows: 1fr; flex: none; margin-bottom: 2px;
+  transition: grid-template-rows var(--dur-medium) var(--ease), opacity var(--dur-medium) var(--ease), margin var(--dur-medium) var(--ease); }
+.sb-accts > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+.sb-accts.folded { grid-template-rows: 0fr; opacity: 0; margin: -2px 0 0; pointer-events: none; }
+.sb-sec { animation: fade-in var(--dur-fast) var(--ease); }
 .sb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 10px; height: 24px; display: flex; align-items: center; gap: 6px; }
 .sb-foot { margin-top: auto; }
 .today-row { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; }

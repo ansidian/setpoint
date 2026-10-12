@@ -429,7 +429,8 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await northwind.waitFor();
     await until('Northwind folded back', () => folds(page), list => list.some(fold => fold.fold === 'in' && /Northwind Talent/.test(fold.text)));
-    assert.match((await folds(page)).find(fold => fold.fold === 'in')!.motion[0]!, MOTION);
+    // Its row's own fold (the group's count rolling in beside it is Count's, motion-07).
+    assert.match((await folds(page)).find(fold => fold.fold === 'in' && /Northwind Talent/.test(fold.text))!.motion[0]!, MOTION);
     await until('Contoso University back below it', async () => (await exams.boundingBox())!.y, y => y > place);
 
     // Pin folds a row onto the shelf (its header with it).
