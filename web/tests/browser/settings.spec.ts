@@ -1048,6 +1048,47 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
   }
 });
 
+test('Security: a load that reaches the server just after a change there ended the session it was sent under is asked again under the new one, not taken as signed out', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'security');
+    await page.locator('.settings .set-row', {hasText: '8 left'}).waitFor();
+    // Mail › Rules' load is held until Make new codes has ended every session, then reaches the server
+    // under the one the browser had when it asked, which refuses it, as a slow connection can have it.
+    const oldSession = `${setpoint.cookie!.name}=${setpoint.cookie!.value}`;
+    let release = () => {};
+    const changed = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    // Only once its page asks for it: Settings' early loads go through.
+    let armed = false;
+    let asked = 0;
+    await page.route('**/api/mail/rules', async route => {
+      if (!armed) return route.continue();
+      asked += 1;
+      if (asked > 1) return route.continue();
+      await changed;
+      const response = await fetch(route.request().url(), {headers: {Cookie: oldSession, Origin: setpoint.base, Accept: 'application/json'}});
+      await route.fulfill({status: response.status, contentType: 'application/json', body: await response.text()});
+    });
+    armed = true;
+    await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
+    await until('Rules asked for', async () => asked, count => count >= 1);
+    await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
+    await page.getByRole('button', {name: 'Make new codes'}).click();
+    await page.locator('.settings pre.codes').waitFor();
+    release();
+    await until('Rules asked again', async () => asked, count => count >= 2);
+    await setpoint.idle();
+    assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
+    assert.equal(await page.locator('.settings pre.codes').count(), 1, 'the new codes still shown');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline pill keep their sizes and places', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

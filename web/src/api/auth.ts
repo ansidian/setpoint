@@ -31,7 +31,12 @@ function set(next: AuthState) {
 
 export const useAuth = () => useSyncExternalStore(subscribe, () => state);
 
-onUnauthorized(() => set('out'));
+// A refusal asks /me whether the session is still there (a change in Settings › Security replaces it, and
+// refuses what left under the old one): it shows the sign-in card if it isn't.
+onUnauthorized(async () => {
+  await checkSession();
+  return state === 'in';
+});
 
 function learn(answer: MeOut) {
   me = answer;

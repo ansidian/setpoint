@@ -1,8 +1,9 @@
 // Setpoint's JSON API, with darma's small shared cache: a view shows what it last fetched at once
 // and refreshes behind it, on mount, on focus and when a live event names it (live.ts). A write's
 // answer, or its at-once effect (opening an email drops the counts), goes into the cache straight
-// away. A 401 means the session is gone, and the sign-in card takes over (auth.ts). This folder is
-// the only place that talks to the server (the lint enforces it).
+// away. A 401 means the session is gone, and the sign-in card takes over (auth.ts), unless this
+// browser has replaced it meanwhile. This folder is the only place that talks to the server (the lint
+// enforces it).
 import type {ApiError} from '@setpoint/shared';
 import {useEffect, useSyncExternalStore} from 'react';
 
@@ -20,10 +21,10 @@ export class ApiFailure extends Error {
   }
 }
 
-let unauthorized = () => {};
+let unauthorized: () => Promise<boolean> = async () => false;
 
-/** What a 401 does: auth.ts shows the sign-in card. */
-export function onUnauthorized(handler: () => void) {
+/** What a 401 does: auth.ts asks whether this browser is still signed in, and shows the sign-in card if it isn't. */
+export function onUnauthorized(handler: () => Promise<boolean>) {
   unauthorized = handler;
 }
 
@@ -36,7 +37,7 @@ export function refuseWrites(reason: string | null) {
 // Writes made since a load began can't be in its answer, so a load only stands if none came after.
 let writes = 0;
 
-async function request<T>(method: string, path: string, body?: unknown, {quiet401 = false, keepalive = false} = {}): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, {quiet401 = false, keepalive = false} = {}, again = false): Promise<T> {
   let response: Response;
   let json: unknown;
   try {
@@ -51,7 +52,10 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
   } catch {
     throw new ApiFailure(0, 'unreachable', 'Can’t reach Setpoint');
   }
-  if (response.status === 401 && !quiet401) unauthorized();
+  // A change in Settings › Security ends every session and answers with a new one, so a request that
+  // left under the old one and reached the server after the change is refused though this browser is
+  // still signed in: then it's asked once more, under the new one.
+  if (response.status === 401 && !quiet401 && !again && await unauthorized()) return request<T>(method, path, body, {quiet401, keepalive}, true);
   if (!response.ok) {
     const error = (json as ApiError | undefined)?.error;
     throw new ApiFailure(response.status, error?.code ?? 'http_error', error?.message ?? response.statusText, error?.details);
