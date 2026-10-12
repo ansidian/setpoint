@@ -11,7 +11,7 @@ import {GROUP_GLYPHS, groupKey, promptText, rowKey, rowLine, sender, showsPendin
 import type {GroupView, PatternPrompt} from '../logic/inbox.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {motion} from '../tokens.ts';
-import {Icon} from '../ui/Icon.tsx';
+import {Icon, Mark} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
 import {Count} from './Count.tsx';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, STAGGER_CAP_MS, useFold} from './fold.ts';
@@ -79,11 +79,12 @@ export function MailList(props: ListProps) {
       {bars}
       {shown.map((entry, index) => <Part key={entry.key} entry={entry} delay={delays.get(entry.key) ?? 0} first={index === 0 && !bars} {...props} />)}
       {caughtUp ? (
+        // A small finish (states-10, inbox-08): the mark settles in, then the line, then Open All with its U.
         <div className="empty">
           <div className="empty-line">
-            <Icon name="done_all" size={20} />
-            <span>All caught up</span>
-            <button className="btn ghost sm" type="button" onClick={props.onOpenAll}>Open All</button>
+            <Mark size={44} settle />
+            <span className="t">All caught up</span>
+            <button className="btn ghost sm" type="button" onClick={props.onOpenAll}>Open All<span className="kbd">U</span></button>
           </div>
         </div>
       ) : props.markable && (

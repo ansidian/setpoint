@@ -42,13 +42,14 @@ export function TaskGlyph({done, size = 13}: {done: boolean; size?: number}) {
 
 /** Day stack (decision 44, #87): three calendar chips, the middle one lifted, in the theme's own
  * `cool`, `caution` and `violet`, which stay put when an account or calendar is recoloured.
- * web/public/favicon.svg draws the same chips on darma's tile. */
-export function Mark({size = 18}: {size?: number}) {
+ * web/public/favicon.svg draws the same chips on darma's tile. `settle` lets each chip settle into
+ * place once as it's drawn (All caught up, states-10). */
+export function Mark({size = 18, settle = false}: {size?: number; settle?: boolean}) {
   return (
-    <svg className="mark" width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="2" y="2.6" width="13.5" height="4.6" rx="2.3" style={{fill: 'var(--cool)'}} />
-      <rect x="5.5" y="8.7" width="13.5" height="4.6" rx="2.3" style={{fill: 'var(--caution)'}} transform="rotate(-6 12.25 11)" />
-      <rect x="2" y="14.8" width="10" height="4.6" rx="2.3" style={{fill: 'var(--violet)'}} />
+    <svg className={settle ? 'mark settle' : 'mark'} width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
+      <g><rect x="2" y="2.6" width="13.5" height="4.6" rx="2.3" style={{fill: 'var(--cool)'}} /></g>
+      <g><rect x="5.5" y="8.7" width="13.5" height="4.6" rx="2.3" style={{fill: 'var(--caution)'}} transform="rotate(-6 12.25 11)" /></g>
+      <g><rect x="2" y="14.8" width="10" height="4.6" rx="2.3" style={{fill: 'var(--violet)'}} /></g>
     </svg>
   );
 }

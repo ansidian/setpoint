@@ -308,7 +308,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
   email's line is its subject and summary.
 - **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#164).
-- **Empty:** "All caught up" with "Open All" (board 04); the reading pane collapses.
+- **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#201); the
+  reading pane collapses.
 
 ### All
 
@@ -888,7 +889,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
-All"; the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#234); a
+All" (stacked under the mark, #201); the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#234); a
 day whose items are only hidden, "4 hidden · Show all" (#113). Each
 leads with its glyph in `ink3`, 20 px and 12 px before the words, or 16 px and 8 px in a row 44 px or
 shorter (#165). The UI says "Done".
@@ -2146,3 +2147,8 @@ it changes what's on screen.
     to 1.22 at 40% over 260 ms; from none it scales in from .6 over 180 ms, and at none it scales out
     over 120 ms before it goes. The user's own Done only rolls (Andy, 2026-10-11, polish audit
     shell-11, motion-07).
+201. **All caught up is a small finish** (amending #165 for it): three rows 14 px apart, centred as
+    before: the mark at 44 px, its chips settling into place once (each from 6 px above, fading in over
+    260 ms, 70 ms apart, then at rest), "All caught up" at 15 / 500 in `ink`, and Open All with its U
+    hint, the line and the button fading in over 180 ms after 60 ms. No new words; the mark keeps its
+    own colours in both themes (Andy, 2026-10-11, polish audit states-10, inbox-08).

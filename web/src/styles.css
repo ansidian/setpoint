@@ -293,10 +293,20 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Mark all as read's glyph, as ⌘K's same command (#164), 6 px before its label. */
 .listfoot .lnk > .icon { margin-right: -2px; }
 @media (hover: hover) { .listfoot .lnk:hover { background: var(--sub); } }
-/* All caught up (board 04). */
+/* All caught up (board 04), a small finish (states-10, inbox-08): three rows 14 px apart, centred as
+   before. The mark at 44 px, its chips settling in once (each from 6 px above, fading in over 260 ms,
+   70 ms apart, then at rest); "All caught up" at 15 / 500 `ink`; Open All with its U, the two fading
+   in over 180 ms after 60 ms. */
 .empty { flex: 1 1 auto; display: grid; place-items: center; padding-bottom: 96px; }
-.empty-line { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 14px; }
-.empty-line .icon { color: var(--ink3); }
+.empty-line { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.empty-line .t { color: var(--ink); font-size: 15px; font-weight: 500; }
+.empty-line > :not(.mark) { animation: fade-in var(--dur-medium) var(--ease) 60ms backwards; }
+.empty-line .btn .kbd { margin-left: 2px; }
+.mark.settle > g { animation: mark-settle var(--dur-slow) var(--ease) backwards; }
+.mark.settle > g:nth-child(2) { animation-delay: 70ms; }
+.mark.settle > g:nth-child(3) { animation-delay: 140ms; }
+/* 3 of the mark's 22 units: 6 px at 44. */
+@keyframes mark-settle { from { opacity: 0; transform: translateY(-3px); } }
 
 /* ---------- The reader ---------- */
 .rd-tools { height: 48px; flex: none; display: flex; align-items: center; gap: 2px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); }

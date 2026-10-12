@@ -6,8 +6,9 @@
 // ⌘K's matches and the segmented control's thumb. Each single value stated once.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
+import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, readSecurity, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -308,6 +309,43 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
     await setpoint.api('POST', `/mail/messages/${attention[0]}/done`, {done: false});
     await until('the pill back', () => pill.count(), number => number === 1);
     assert.deepEqual(await pill.evaluate(element => [element.className, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['apill num arriving', 'apill-in', '0.18s']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('states-10, inbox-08: All caught up is three rows: the mark settling in at 44 px, the line, then Open All with its U', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    await readSecurity(setpoint);
+    await setpoint.api('POST', '/mail/mark-all-read', {});
+    await until('Mark all as read confirmed', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), counts => counts.unread_fyi === 0);
+    const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
+    for (const row of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    const empty = page.locator('.empty-line');
+    await empty.waitFor();
+    const mark = empty.locator('svg.mark.settle');
+    const [box, line, button] = [(await mark.boundingBox())!, (await empty.locator('.t').boundingBox())!, (await empty.getByRole('button', {name: 'Open All'}).boundingBox())!];
+    assert.deepEqual([box.width, box.height], [44, 44]);
+    assert.equal(Math.round(line.y - (box.y + box.height)), 14);
+    assert.equal(Math.round(button.y - (line.y + line.height)), 14);
+    assert.ok(Math.abs((box.x + box.width / 2) - (button.x + button.width / 2)) < 1, 'centred, one above the other');
+    assert.deepEqual(await empty.locator('.t').evaluate(element => [element.textContent, getComputedStyle(element).fontSize, getComputedStyle(element).fontWeight, getComputedStyle(element).color]),
+      ['All caught up', '15px', '500', await colourOf(page, '--ink')]);
+    assert.equal(await empty.locator('.btn .kbd').textContent(), 'U');
+    // Each chip settles once, from 6 px above (3 of its 22 units), 70 ms apart; the line and the button fade in after 60 ms.
+    assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => {
+      const style = getComputedStyle(chip);
+      return [style.animationName, style.animationDuration, style.animationDelay, style.animationIterationCount];
+    })), [['mark-settle', '0.26s', '0s', '1'], ['mark-settle', '0.26s', '0.07s', '1'], ['mark-settle', '0.26s', '0.14s', '1']]);
+    assert.deepEqual(await empty.locator('.t').evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration, getComputedStyle(element).animationDelay]),
+      ['fade-in', '0.18s', '0.06s']);
+    // U opens All, as the button does.
+    await page.keyboard.press('u');
+    await page.waitForURL(/\/inbox\/all/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
