@@ -6,7 +6,7 @@ import {COLOURS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   accountColour, base, calendarColour, colour, cssVariables, evhover, evland, evtint, glide, glyphColour, layout, lightColour, mix, monthPaging, motion, news, week,
-  attTint, mailDim, placement, radius, ringL, themeVariables, tintL, type, type Theme, viewport,
+  attTint, mailDim, placement, radius, ringL, skeleton, themeVariables, tintL, type, type Theme, viewport,
 } from '../src/tokens.ts';
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8');
@@ -213,6 +213,18 @@ describe('tokens.ts against DESIGN.md', () => {
     expect(flat).toContain(`Theme switches fade every colour over ${motion.themeFade} ms`);
     expect(flat).toContain(`A press goes in over **${motion.press} ms** and lets go over ${motion.fast} ms`);
     expect(flat).toContain(`settle in from \`sub2\` over ${news.landedMs} ms`);
+  });
+
+  test('loading matches the Motion section\'s Loading', () => {
+    const flat = design.replace(/\n\s*/g, ' ');
+    const low = String(skeleton.breatheLow).replace(/^0/, '');
+    expect(flat).toContain(`bars in \`${skeleton.fill}\` (\`${skeleton.fillOnSub}\` inside a \`sub\` group)`);
+    expect(flat).toContain(`It appears only after ${skeleton.delayMs} ms, so a quick answer never shows one, fades in over ${motion.medium} ms`);
+    expect(flat).toContain(`opacity 1 → ${low} → 1 over ${skeleton.breatheMs} ms \`${skeleton.breatheEase}\``);
+    expect(flat).toContain(`What replaces it fades in over ${motion.fast} ms.`);
+    const vars = cssVariables();
+    expect([vars['--skel'], vars['--skel-on-sub'], vars['--skel-delay'], vars['--skel-breathe'], vars['--skel-low'], vars['--skel-ease']])
+      .toEqual([`var(--${skeleton.fill})`, `var(--${skeleton.fillOnSub})`, `${skeleton.delayMs}ms`, `${skeleton.breatheMs}ms`, String(skeleton.breatheLow), skeleton.breatheEase]);
   });
 
   test('the layout constants match DESIGN.md', () => {

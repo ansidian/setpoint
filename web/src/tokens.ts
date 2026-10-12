@@ -208,6 +208,15 @@ export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row
  */
 export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04, themeFade: 180} as const;
 
+/**
+ * Loading (DESIGN.md › Motion, Decided while building #170): a skeleton's bars are `sub2` on the
+ * page and `sub3` inside a `sub` group (Settings, cards); a skeleton appears only after `delayMs`,
+ * so a fast answer never flashes one, fades in over motion.medium, then breathes, every bar in
+ * phase, its opacity down to `breatheLow` and back over `breatheMs`. What replaces it fades in over
+ * motion.fast. The one loop beside the spinner's 900 ms turn.
+ */
+export const skeleton = {fill: 'sub2', fillOnSub: 'sub3', delayMs: 200, breatheMs: 1600, breatheLow: 0.45, breatheEase: 'cubic-bezier(.4,0,.6,1)'} as const;
+
 /** The floating detail's glide (design-export/motion/glide.json; DESIGN.md › The glide). */
 export const glide = {
   easing: 'cubic-bezier(.22,1.3,.36,1)',
@@ -365,6 +374,12 @@ export function cssVariables(): Record<string, string> {
   vars['--dur-press'] = `${motion.press}ms`;
   vars['--theme-fade'] = `${motion.themeFade}ms`;
   vars['--news-landed'] = `${news.landedMs}ms`;
+  vars['--skel'] = `var(--${skeleton.fill})`;
+  vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;
+  vars['--skel-delay'] = `${skeleton.delayMs}ms`;
+  vars['--skel-breathe'] = `${skeleton.breatheMs}ms`;
+  vars['--skel-low'] = String(skeleton.breatheLow);
+  vars['--skel-ease'] = skeleton.breatheEase;
   vars['--sans'] = font.sans;
   vars['--mono'] = font.mono;
   for (const [name, value] of Object.entries(radius)) vars[`--r-${name}`] = `${value}px`;

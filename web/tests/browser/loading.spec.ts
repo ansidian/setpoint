@@ -1,0 +1,113 @@
+// Loading in the browser (the polish audit's loading slice, SV-61; DESIGN.md › Motion › Loading and
+// Decided while building #170–#181): each page's skeleton while its data is held at the server's
+// door, in its rows' shapes and the quiet breathing, never a false empty; a load that fails says so
+// in place with Try again; Setpoint starting shows its mark, or the shell when this browser was
+// signed in; the reader and the story pane draw their heads from their rows at once; search keeps
+// the list, then a skeleton, then spins. Every check holds the answer it's about, so "while it
+// loads" is as long as the check needs, and releases it to see the rows replace the skeleton.
+import assert from 'node:assert/strict';
+import {after, test} from 'node:test';
+import type {Page, Route} from 'playwright-core';
+import {skeleton} from '../../src/tokens.ts';
+import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+
+after(cleanUp);
+
+/**
+ * Holds every /api request whose path (and query) matches until the returned release is called;
+ * those asked after it pass. Installed before the page asks.
+ */
+async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
+  const waiting: Route[] = [];
+  let held = true;
+  const matches = (url: URL) => url.pathname.startsWith('/api/') && pattern.test(url.pathname + url.search);
+  await page.route(matches, route => {
+    if (held) waiting.push(route);
+    else void route.continue();
+  });
+  return async () => {
+    held = false;
+    await Promise.all(waiting.splice(0).map(route => route.continue().catch(() => {})));
+  };
+}
+
+/** Goes to an address without waiting for its data (the harness's goto waits for it, which a held answer never gives). */
+const visit = (page: Page, url: string) => page.mainFrame().goto(url).then(() => {});
+
+/** A token's colour as the page computes it. */
+const tokenColour = (page: Page, token: string) => page.evaluate(name => {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--${name})`;
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+}, token);
+
+/** Waits until a skeleton has come in after its delay, and is drawn. */
+async function shown(page: Page, kind: string) {
+  const found = page.locator(`[data-skeleton="${kind}"]`).first();
+  await found.waitFor();
+  await until(`the ${kind} skeleton in`, () => found.evaluate(element => element.getAnimations().find(animation => (animation as CSSAnimation).animationName === 'sk-in')?.playState ?? 'none'), state => state === 'finished');
+  return found;
+}
+
+const heights = (page: Page, selector: string) => page.locator(selector).evaluateAll(all => all.map(element => element.getBoundingClientRect().height));
+
+test('Unread loading: a skeleton in the rows\' shapes after 200 ms, breathing, never All caught up; the rows replace it where it stood (states-03, inbox-13)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const release = await hold(page, /^\/api\/mail\/inbox$/);
+    await visit(page, `${setpoint.base}/inbox`);
+    const sk = await shown(page, 'inbox');
+    // Its motion: in after 200 ms over 180, then breathing over 1600 ms, every bar in phase (the block breathes, not each bar).
+    const motion = await sk.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.animationName, style.animationDuration, style.animationDelay, style.animationTimingFunction, style.animationIterationCount];
+    });
+    assert.deepEqual(motion, ['sk-in, sk-breathe', `0.18s, ${skeleton.breatheMs / 1000}s`, `${skeleton.delayMs / 1000}s, ${(skeleton.delayMs + 180) / 1000}s`,
+      `cubic-bezier(0.2, 0, 0, 1), ${skeleton.breatheEase.replace(/,/g, ', ').replace(/\.(\d)/g, '0.$1')}`, '1, infinite']);
+    assert.equal(await page.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor), await tokenColour(page, 'sub2'));
+    // Nothing says the Inbox is empty, and no row is a skeleton's.
+    assert.equal(await page.locator('.empty').count(), 0, 'no All caught up');
+    assert.equal(await page.locator('.list .row, .list .arow, .list .gh').count(), 0);
+    const before = {gh: await heights(page, '.sk-gh'), arow: await heights(page, '.sk-arow'), row: await heights(page, '.sk-row')};
+    assert.deepEqual([before.gh[0], before.row[0]], [30, 38]);
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-inbox', 'list');
+
+    await release();
+    await page.locator('.list .arow').first().waitFor();
+    assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    assert.equal(await page.locator('section.list').getAttribute('class'), 'list sk-arrive', 'the rows fade in');
+    // The rows stand where the skeleton's did: a header, Attention's three-line rows, and the others.
+    assert.equal((await heights(page, '.list .gh'))[0], before.gh[0]);
+    assert.equal((await heights(page, '.list .arow'))[0], before.arow[0]);
+    assert.equal((await heights(page, '.list .row'))[0], before.row[0]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('All loading: its skeleton under the Pinned shelf', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    const release = await hold(page, /^\/api\/mail\/all/);
+    await page.locator('.seg button', {hasText: 'All'}).click();
+    const sk = await shown(page, 'all');
+    // The shelf, from Unread's list, stays above it.
+    assert.ok((await page.locator('.list.all .row.shelf').first().boundingBox())!.y < (await sk.boundingBox())!.y);
+    assert.equal(await page.locator('.list.all .row:not(.shelf)').count(), 0);
+    await release();
+    await page.locator('.list.all .row:not(.shelf)').first().waitFor();
+    assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

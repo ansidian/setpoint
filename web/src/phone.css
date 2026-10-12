@@ -64,6 +64,17 @@
   .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; }
   /* … and an Attention row's age hugs its account, as board 21 draws it (#89). */
   .arow .r1 .age { width: auto; min-width: 0; white-space: nowrap; }
+  /* The skeleton's rows (loading.css) take the same two lines and padding (#170). */
+  .sk-gh { height: 28px; padding: 0 16px 0 20px; }
+  .sk-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 56px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 2px; }
+  .sk-row > .ud { grid-area: ud; }
+  .sk-row > .from, .list.all .sk-row > .from { grid-area: from; width: auto; }
+  .sk-row > .subj { grid-area: subj; }
+  .sk-row > .from, .sk-row > .subj { display: flex; align-items: center; font-size: 13px; line-height: 1.35; height: 1.35em; }
+  .sk-row > .ac { grid-area: ac; width: auto; }
+  .sk-row > .age, .list.all .sk-row > .age { grid-area: age; width: auto; min-width: 36px; }
+  .sk-row > .kd { display: none; }
+  .sk-arow { padding: 8px 16px 9px 8px; }
   .row .subj.code-line { gap: 6px; }
   .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
   .code-line .sum { display: none; }

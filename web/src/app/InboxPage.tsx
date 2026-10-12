@@ -50,6 +50,8 @@ import type {Command} from './palette/commands.ts';
 import {navigate} from './router.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {SearchField, SearchResults} from './search/Search.tsx';
+import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
+import {AllSkeleton, InboxSkeleton} from './states/Skeletons.tsx';
 import {useAlfred, useSearch} from './search/state.ts';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
@@ -128,7 +130,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const filteredTo = route.account ? accounts.get(route.account)?.label ?? null : null;
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
-  const {data: inbox} = useResource<InboxOut>(inboxPath(route.account));
+  const inboxLoad = {path: inboxPath(route.account), ...useResource<InboxOut>(inboxPath(route.account))};
+  const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
   const {data: openMessageData} = useResource<MessageOut>(route.open ? messagePath(route.open) : null);
   const [collapse, setCollapse] = useState<Collapse>(rememberedCollapse);
@@ -143,7 +146,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   // All's pages: the first, then one more each time the list nears its end.
   const [befores, setBefores] = useState<string[]>([]);
-  const allPages = useResources<AllOut>(all ? [allPath(route.account), ...befores.map(before => allPath(route.account, before))] : []);
+  const allPaths = all ? [allPath(route.account), ...befores.map(before => allPath(route.account, before))] : [];
+  const allPages = useResources<AllOut>(allPaths);
+  const {error: allError} = useResource<AllOut>(all ? allPath(route.account) : null);
   const days = useMemo(() => groupByDay(allPages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).filter(row => !trashing.has(row.id)), zone),
     [allPages, trashing, zone]);
   // The days whose Noise the user opened here; each day's starts folded.
@@ -467,6 +472,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
   ]}));
 
   const allCaughtUp = groups ? caughtUp(groups, held) : false;
+  // Until the list's first answer: its skeleton, or why it didn't come (DESIGN.md #170, #173).
+  const allLoad = {path: all ? allPath(route.account) : null, data: allPages[0], error: allError};
+  const listFailed = useLoadFailed([all ? allLoad : inboxLoad]);
+  const listArrived = useArrival(all ? allPages[0] !== undefined : inbox !== undefined, route.view);
+  // All's next page on its way, as the list nears its end.
+  const allMore = all && allPages.length > 1 && allPages.at(-1) === undefined;
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
   const viewOf = (view: MailView) => (route.view === view ? 'on' : undefined);
 
@@ -510,9 +521,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
             onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onAsk={askAlfred} />
         ) : all ? (
           <AllList days={dayViews} shelf={shelf} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone}
+            arrived={listArrived} more={allMore}
+            loading={allPages[0] === undefined ? (listFailed ? <LoadFailed what="All" loads={[allLoad]} /> : <AllSkeleton first={!shelf.length} />) : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} />
         ) : (
-          <section className="list" aria-label="Inbox">
+          <section className={listArrived ? 'list sk-arrive' : 'list'} aria-label="Inbox">
+            {!inbox && (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad]} /> : <InboxSkeleton />)}
             {/* Another account's list starts afresh: its rows don't fold. */}
             {inbox && (
               <MailList key={route.account ?? 'all'} views={views} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone} caughtUp={allCaughtUp} markable={markAllReadIds(withHeld(groups ?? [], held)).length > 0}

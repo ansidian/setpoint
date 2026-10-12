@@ -173,6 +173,12 @@ menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N"
 it's opened, slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
 fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms; menus close at once.
 
+**Loading** ([Decided while building](#decided-while-building) #170): a page whose data is on its
+way draws its rows' skeleton in their shapes, bars in `sub2` (`sub3` inside a `sub` group). It
+appears only after 200 ms, so a quick answer never shows one, fades in over 180 ms, then breathes,
+every bar in phase: opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`, the one loop beside
+the spinner's 900 ms turn. What replaces it fades in over 120 ms. No shimmer sweeps.
+
 ## Glyphs, icons and the mark
 
 - **Icons:** Material Symbols Rounded, weight 300, FILL 0 (the `-fill` files are FILL 1 uses), as SVG
@@ -321,6 +327,9 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#164).
 - **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#201); the
   reading pane collapses.
+- **Loading:** until the list's first answer, its skeleton (#170): Attention's three-line rows and
+  the groups' rows under their headers, never All caught up; All's day under its heading below the
+  Pinned shelf, and three more rows at the foot while its next page loads.
 
 ### All
 
@@ -2308,3 +2317,14 @@ it changes what's on screen.
     "you are here"'s colour, and where states-15 drew a 48 × 3 meter inline; one foot serves both
     findings and News. A search on its way turns the field's glyph (polish audit search-03) (Andy,
     2026-10-11, polish audit states-15, search-12).
+170. **A page that's loading says so, in its rows' shapes:** until its data's first answer, a page
+    draws a skeleton where its rows will be, built to their geometry (the Inbox's header 30 px,
+    Attention's three-line rows, the other rows 38 px), so the rows replace it where it stood. Its
+    bars are `sub2`, `sub3` inside a `sub` group, rounded, 9 px for a line of text, 11 for a title;
+    dots 8 px (7 for an account's), images radius 12, thumbnails 72 × 48 radius 8. It shows only
+    after 200 ms, so a quick answer never flashes one, fades in over 180 ms, then breathes, every
+    bar together, opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`: a new loop, for
+    loading only, beside the spinner's turn. No shimmer sweeps, which would be louder than the
+    house style. What replaces it fades in over 120 ms. A page shows no empty state ("All caught
+    up", "No events", "Not connected") until it knows (Andy, 2026-10-11, polish audit states-03,
+    inbox-13).

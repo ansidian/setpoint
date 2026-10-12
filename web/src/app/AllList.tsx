@@ -6,7 +6,7 @@
 // A trashed row folds out and Undo folds it back in, as in Unread (app/fold.ts).
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useMemo} from 'react';
-import type {MouseEvent, UIEvent} from 'react';
+import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
@@ -17,6 +17,7 @@ import {dotStyle} from './accounts.ts';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, useFold} from './fold.ts';
 import {Count} from './Count.tsx';
 import {Gutter} from './MailList.tsx';
+import {AllSkeleton} from './states/Skeletons.tsx';
 
 // A row's `noise` is the day whose Noise it's under, folded or not.
 type Part = {kind: 'shelf'; count: number} | {kind: 'day'; date: string} | {kind: 'lane'; lane: AllLane; label: string; count: number}
@@ -34,7 +35,7 @@ const RULES: FoldRules<Part> = {
 // A row's run, for staggering rows that fold together: its day's lane, or its day's Noise.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
-export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin}: {
+export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, loading, arrived, more, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin}: {
   days: DayView[];
   // The Pinned shelf's rows, newest pin first.
   shelf: MessageRowOut[];
@@ -43,6 +44,11 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
+  // Until the first page: its skeleton, or why it didn't load. `arrived`: the rows came after it,
+  // and fade in. `more`: the next page is on its way.
+  loading: ReactNode;
+  arrived: boolean;
+  more: boolean;
   onPoint: (key: string) => void;
   onOpen: (id: number, key: string) => void;
   onToggleNoise: (date: string) => void;
@@ -76,7 +82,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
   // A row Trash took beats first; rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   return (
-    <section className="list all" aria-label="All mail" onScroll={onScroll}>
+    <section className={arrived ? 'list all sk-arrive' : 'list all'} aria-label="All mail" onScroll={onScroll}>
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key));
         const leaving = fold === 'out';
@@ -135,6 +141,9 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, o
           </div>
         );
       })}
+      {/* Under the Pinned shelf, which comes with Unread's list. */}
+      {loading}
+      {more && <AllSkeleton more />}
     </section>
   );
 }

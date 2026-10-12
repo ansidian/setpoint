@@ -1,0 +1,119 @@
+/* Loading (DESIGN.md › Motion, Decided while building #170): a skeleton shows after --skel-delay
+   (none on a quick answer), fades in over 180 ms, then breathes, every bar in phase: its opacity to
+   --skel-low and back over --skel-breathe. Bars are `sub2` on the page, `sub3` inside a `sub` group.
+   What replaces it fades in over 120 ms (.sk-arrive). */
+.sk {
+  --sk-fill: var(--skel);
+  animation: sk-in var(--dur-medium) var(--ease) var(--skel-delay) both,
+    sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite;
+  pointer-events: none;
+}
+.sk.on-sub { --sk-fill: var(--skel-on-sub); }
+@keyframes sk-in { from { opacity: 0; } }
+@keyframes sk-breathe { 50% { opacity: var(--skel-low); } }
+.sk-bar { display: block; flex: none; max-width: 100%; border-radius: 999px; background: var(--sk-fill); }
+.sk-dot { display: block; flex: none; border-radius: 999px; background: var(--sk-fill); }
+.sk-arrive { animation: sk-arrive var(--dur-fast) var(--ease); }
+@keyframes sk-arrive { from { opacity: 0; } }
+
+/* A list's skeleton fills the list and no more. */
+.sk-list { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.sk-group { flex: none; display: flex; flex-direction: column; }
+.sk-more { flex: none; display: flex; flex-direction: column; }
+
+/* ---------- Mail: .gh, .row, .arow, All's .lh and kind column (styles.css) ---------- */
+.sk-gh { height: 30px; flex: none; display: flex; align-items: center; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.sk-gh.first { border-top: 0; }
+.sk-row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; flex: none; }
+.sk-row > .ud { width: 12px; flex: none; }
+.sk-row > .from { width: 172px; flex: none; }
+.sk-row > .subj { flex: 1 1 auto; min-width: 0; }
+.sk-row > .ac { display: flex; align-items: center; gap: 6px; flex: none; width: var(--ac-w, 76px); }
+.sk-row > .age { width: 64px; flex: none; display: flex; justify-content: flex-end; }
+.sk-row > .kd { width: 100px; margin-left: 12px; margin-right: -10px; flex: none; }
+.list.all .sk-row > .from { width: 200px; }
+.list.all .sk-row > .age { width: 72px; }
+.content:has(> .pane) .list.all .sk-row > .kd { display: none; }
+.sk-lh { height: 26px; flex: none; display: flex; align-items: flex-end; padding: 0 16px 6px 24px; }
+.sk-arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px 16px 10px 12px; flex: none; border-bottom: 1px solid var(--hair); }
+.sk-arow > .l1, .sk-arow > .r1 { height: 18px; display: flex; align-items: center; gap: 8px; }
+.sk-arow > .l1 { grid-column: 2; }
+.sk-arow > .r1 { grid-column: 3; justify-content: flex-end; }
+/* Lines 2 and 3 as tall as their text: 13 and 12.5 px at 1.35. */
+.sk-arow > .l2, .sk-arow > .l3 { grid-column: 2 / 4; display: flex; align-items: center; line-height: 1.35; height: 1.35em; }
+.sk-arow > .l2 { font-size: 13px; }
+.sk-arow > .l3 { font-size: 12.5px; }
+
+/* ---------- The sidebar: .acct, .today-row (styles.css) ---------- */
+.sk-accounts, .sk-today { display: flex; flex-direction: column; gap: 2px; }
+.sk-acct { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; }
+.sk-acct .sk-dot { background: var(--skel-on-sub); }
+.sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+.sk-ring { width: 13px; height: 13px; flex: none; border-radius: 999px; border: 1.5px solid var(--skel-on-sub); margin: 0 3px 0 1px; }
+
+/* ---------- The reader's body (.rd-body, .mailtext) and an attachment (.attach) ---------- */
+.sk-body { display: flex; flex-direction: column; gap: 12px; max-width: 600px; padding-top: 6px; }
+.sk-body .sk-break { height: 10px; flex: none; }
+.sk-body .sk-attach { width: var(--attachment); height: 44px; margin-top: 16px; border-radius: var(--r-card); background: var(--sk-fill); flex: none; }
+
+/* ---------- Calendar: .rp-sub, .ag-item, .calrow (calendar.css) ---------- */
+.sk-rp-sub { height: 16.875px; margin-top: 2px; display: flex; align-items: center; }
+.sk-ag { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
+.sk-ag > .when { width: 64px; flex: none; height: 17px; display: flex; align-items: center; }
+.sk-ag > .rail { width: 3px; align-self: stretch; border-radius: 3px; background: var(--skel-on-sub); flex: none; }
+.sk-ag > .lines { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.sk-ag > .lines > .t, .sk-ag > .lines > .s { display: flex; align-items: center; line-height: 1.35; height: 1.35em; }
+.sk-ag > .lines > .t { font-size: 13px; }
+.sk-ag > .lines > .s { font-size: 12.5px; }
+.sk-agenda { padding-top: 10px; }
+.sk-calendars { display: flex; flex-direction: column; }
+.sk-calrow { height: var(--calendarRow); flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+.sk-calrow .sk-box { width: 14px; height: 14px; flex: none; border-radius: 4px; background: var(--sk-fill); }
+
+/* ---------- News: .nw-sec, .nw-lead, .nw-row (news.css) and the story pane ---------- */
+.sk-nw-sec { height: 32px; flex: none; display: flex; align-items: center; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.sk-nw-sec.first { border-top: 0; }
+.sk-nw-lead { display: grid; grid-template-columns: 12px 232px minmax(0, 1fr); column-gap: 14px; padding: 14px 16px 14px 12px; border-bottom: 1px solid var(--hair); flex: none; }
+.sk-nw-lead .sk-img { width: 232px; height: 130px; border-radius: 12px; background: var(--sk-fill); }
+.sk-nw-lead .txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding-top: 4px; }
+.sk-nw-lead .txt .foot { margin-top: auto; padding-bottom: 3px; }
+.sk-nw-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 72px; column-gap: 12px; align-items: center; padding: 9px 16px 9px 12px; border-bottom: 1px solid var(--hair); flex: none; }
+.sk-nw-row .txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sk-nw-row .side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.sk-nw-row .sk-thumb { width: 72px; height: 48px; border-radius: 8px; background: var(--sk-fill); }
+@container (max-width: 599px) {
+  .sk-nw-lead { grid-template-columns: 12px 160px minmax(0, 1fr); }
+  .sk-nw-lead .sk-img { width: 160px; height: 90px; }
+}
+.sk-story { display: flex; flex-direction: column; gap: 18px; max-width: 600px; }
+.sk-story .sk-sum { display: flex; flex-direction: column; gap: 11px; padding-top: 4px; }
+.sk-story .st-label { color: var(--ink3); }
+.sk-srcs { display: flex; flex-direction: column; border-radius: 14px; background: var(--sub); --sk-fill: var(--skel-on-sub); }
+.sk-src { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--hair); }
+.sk-src:last-child { border-bottom: 0; }
+.sk-src .sk-fav { width: 26px; height: 26px; border-radius: 8px; flex: none; background: var(--sk-fill); }
+.sk-src .lines { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-width: 0; }
+
+/* ---------- Search: a result (.arow.result, search.css) ---------- */
+.sk-result { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; padding: 12px 16px 13px 12px; flex: none; border-bottom: 1px solid var(--hair); }
+.sk-result > .l1 { grid-column: 2; }
+.sk-result > .r1 { grid-column: 3; }
+.sk-result > .l2, .sk-result > .l3 { grid-column: 2 / 4; }
+
+/* ---------- A failed load (#173): the failing health line's look, in place of what didn't load ---------- */
+.load-failed { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; color: var(--caution); font-size: 12.5px; min-width: 0; }
+.load-failed .act { color: var(--ink); height: 26px; padding: 0 10px 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; margin-left: -10px; flex: none; transition: background-color var(--dur-fast) var(--ease); }
+.load-failed .act .icon { color: var(--ink2); }
+.load-failed .act:disabled { opacity: .5; }
+@media (hover: hover) { .load-failed .act:enabled:hover { background: var(--sub); } }
+
+/* ---------- Setpoint starting (#174): the mark where Unreachable's sits (states.css .boot) ---------- */
+/* Its chips settle in turn once the start has taken a moment, then it breathes as a skeleton does.
+   `translate` (3.67 of the mark's 22 units: 6 px at 36) composes with the middle chip's tilt. */
+.boot.starting .mark { animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + 140ms + var(--dur-slow)) infinite; }
+.boot.starting .mark rect { animation: boot-chip var(--dur-slow) var(--ease) var(--skel-delay) both; }
+.boot.starting .mark rect:nth-child(2) { animation-delay: calc(var(--skel-delay) + 70ms); }
+.boot.starting .mark rect:nth-child(3) { animation-delay: calc(var(--skel-delay) + 140ms); }
+@keyframes boot-chip { from { opacity: 0; translate: 0 -3.67px; } }
+/* What follows a start that showed the mark (the app, the sign-in card) fades in, as a crossfade. */
+.boot-after { height: 100%; animation: sk-arrive var(--dur-medium) var(--ease); }
