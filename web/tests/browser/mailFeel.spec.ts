@@ -553,3 +553,23 @@ test('reader-10: a newsletter whose images give only their width keeps its shape
     await setpoint.stop();
   }
 });
+
+test('shell-13: ⌘K marks what was typed', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+
+    // ⌘K: "ne" marks News's Ne in ink at 600, no fill.
+    await page.keyboard.press('Meta+k');
+    await page.keyboard.type('ne');
+    const mark = page.locator('.palette .item', {hasText: 'News'}).first().locator('mark');
+    await mark.waitFor();
+    assert.deepEqual(await mark.evaluate(element => [element.textContent, getComputedStyle(element).fontWeight, getComputedStyle(element).color, getComputedStyle(element).backgroundColor]),
+      ['Ne', '600', await colourOf(page, '--ink'), 'rgba(0, 0, 0, 0)']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

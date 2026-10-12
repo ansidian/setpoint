@@ -14,6 +14,9 @@
 .palette .item.cur { background: var(--sub2); color: var(--ink); }
 .palette .item.cur .icon { color: var(--ink); }
 .palette .item .kbd, .palette .item .tick { margin-left: auto; }
+/* What was typed, marked where it matched a word's start (shell-13): `ink` at 600 with no fill, so it
+   stands out of an `ink2` row and the cursor's `ink` row carries it by weight. */
+.palette .item mark { background: none; color: var(--ink); font-weight: 600; }
 .palette .item .tick .icon { color: inherit; }
 .palette .none { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--ink3); }
 /* It rises 6 px into place over 180 ms with its scrim fading in (typing works at once), and fades out

@@ -5,9 +5,9 @@
 // goes back where it was. It rises in over 180 ms and fades out over 120 ms (DESIGN.md › Motion).
 import type {AccountOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
-import type {KeyboardEvent as ReactKeyboardEvent} from 'react';
+import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';
-import {paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
+import {matchedRuns, paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {useExit, useFocusReturn} from '../../ui/exit.ts';
@@ -163,7 +163,7 @@ function Open({offer, closing, onClose}: {offer: Offer; closing: boolean; onClos
                     onMouseMove={() => mine !== at && setCursor(mine)} onClick={() => run(command)}>
                     {/* Alfred's sparkle is drawn in his ink wherever it shows (#136). */}
                     <Icon name={command.icon} alfred={command.icon === 'auto_awesome'} />
-                    <span>{command.label}</span>
+                    <span><Matched label={command.label} query={query} /></span>
                     {command.hint && <span className="kbd">{command.hint}</span>}
                     {command.ticked && <span className="tick"><Icon name="check" size={16} /></span>}
                   </button>
@@ -176,4 +176,17 @@ function Open({offer, closing, onClose}: {offer: Offer; closing: boolean; onClos
       </div>
     </>
   );
+}
+
+/** A command's label with the word prefixes typed marked (shell-13), so the results answer what was typed. */
+function Matched({label, query}: {label: string; query: string}) {
+  const parts: ReactNode[] = [];
+  let at = 0;
+  for (const run of matchedRuns(label, query)) {
+    if (run.start > at) parts.push(label.slice(at, run.start));
+    parts.push(<mark key={run.start}>{label.slice(run.start, run.end)}</mark>);
+    at = run.end;
+  }
+  parts.push(label.slice(at));
+  return <>{parts}</>;
 }

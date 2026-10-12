@@ -1,6 +1,6 @@
 // ⌘K's list as a table: what typing finds, in which sections, and the keyboard cursor.
 import {describe, expect, test} from 'vitest';
-import {matches, paletteList, stepCursor} from '../src/logic/palette.ts';
+import {matchedRuns, matches, paletteList, stepCursor} from '../src/logic/palette.ts';
 import type {Matchable} from '../src/logic/palette.ts';
 
 const COMMANDS: Matchable[] = [
@@ -32,4 +32,16 @@ describe('⌘K', () => {
   test.each([
     [0, 1, 3, 1], [2, 1, 3, 0], [0, -1, 3, 2], [1, -1, 3, 0], [0, 1, 0, 0],
   ] as const)('the cursor at %i moved %i among %i lands on %i', (cursor, delta, count, at) => expect(stepCursor(cursor, delta, count)).toBe(at));
+});
+
+// shell-13: the word prefixes a query matched, marked in its label.
+test.each([
+  ['News', 'ne', [[0, 2]]],
+  ['New event', 'new ev', [[0, 3], [4, 6]]],
+  ['Settings › News', 'ne', [[11, 13]]],
+  ['Mark all as read', 'MA', [[0, 2]]],
+  ['Night', 'dark', []],
+  ['Inbox · Jobs', '', []],
+] as const)('%s matched by "%s"', (label, query, runs) => {
+  expect(matchedRuns(label, query).map(run => [run.start, run.end])).toEqual(runs);
 });

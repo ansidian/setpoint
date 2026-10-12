@@ -2198,3 +2198,7 @@ it changes what's on screen.
     words is a 56 px band its line's width; and a placeholder with no alt text shows the 20 px
     `hide_image` glyph at its centre in the frame's grey, so it still says "picture" (Andy,
     2026-10-11, polish audit reader-10).
+214. **⌘K marks what was typed:** in each result's label the start of each word a typed word matched
+    is drawn `ink` at 600 with no fill, so rows off the cursor show it against their `ink2` and the
+    cursor's row by weight; a match in a command's keywords alone marks nothing (Andy, 2026-10-11,
+    polish audit shell-13).

@@ -22,6 +22,21 @@ export function matches(command: Matchable, query: string): boolean {
   return words(query).every(typed => own.some(word => word.startsWith(typed)));
 }
 
+/**
+ * Where what's typed matched a command's label (polish audit shell-13): the start of each of its words
+ * that a typed word begins, as long as that typed word, so ⌘K can mark it. A match in its keywords
+ * only ("dark" for Night) marks nothing.
+ */
+export function matchedRuns(label: string, query: string): {start: number; end: number}[] {
+  const typed = words(query);
+  const runs: {start: number; end: number}[] = [];
+  for (const word of label.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const longest = Math.max(0, ...typed.filter(one => word[0].toLowerCase().startsWith(one)).map(one => one.length));
+    if (longest) runs.push({start: word.index, end: word.index + longest});
+  }
+  return runs;
+}
+
 /** The sections to show for what's typed, each with its commands in their order; empty sections left out. */
 export function paletteList<T extends Matchable>(commands: T[], query: string): {section: PaletteSection; items: T[]}[] {
   const typed = query.trim() !== '';
