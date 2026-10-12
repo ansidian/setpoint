@@ -720,7 +720,7 @@ test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new tas
     await page.getByRole('menuitem', {name: 'waiting'}).click();
     await page.getByRole('button', {name: 'Remove label errand'}).click();
     await page.getByRole('button', {name: 'Repeat'}).click();
-    await page.getByRole('menuitem', {name: 'Every fri'}).click();
+    await page.getByRole('menuitemradio', {name: 'Every fri'}).click();
     await page.getByRole('button', {name: 'Create task'}).click();
     await page.locator('.cell[data-date="2026-10-09"] .tk', {hasText: 'Water plants'}).waitFor();
     await settled(setpoint, '2026-10-09');
@@ -735,7 +735,7 @@ test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new tas
     await page.getByRole('button', {name: 'Add label'}).click();
     await page.getByRole('menuitem', {name: 'errand'}).click();
     await page.getByRole('button', {name: 'Repeat'}).click();
-    await page.getByRole('menuitem', {name: 'Every month'}).click();
+    await page.getByRole('menuitemradio', {name: 'Every month'}).click();
     await page.getByLabel('Due date', {exact: true}).fill('Oct 8');
     await page.getByLabel('Due date', {exact: true}).press('Enter');
     await page.keyboard.press('Meta+Enter');
@@ -763,7 +763,7 @@ test('F6b: an event moves to another calendar of its account; a repeating one go
     await page.getByRole('button', {name: 'Calendar', exact: true}).click();
     // Only Personal's account: Jobs is another Google account.
     assert.deepEqual(await page.locator('.editor .menu .menu-i').allTextContents(), ['Personal', 'Classes']);
-    await page.getByRole('menuitem', {name: 'Classes'}).click();
+    await page.getByRole('menuitemradio', {name: 'Classes'}).click();
     await page.getByRole('button', {name: 'Save'}).click();
     await page.locator('.editor').waitFor({state: 'detached'});
     await settled(setpoint, '2026-10-09');
@@ -775,7 +775,7 @@ test('F6b: an event moves to another calendar of its account; a repeating one go
     await page.locator('.fd').waitFor();
     await page.keyboard.press('e');
     await page.getByRole('button', {name: 'Calendar', exact: true}).click();
-    await page.getByRole('menuitem', {name: 'Classes'}).click();
+    await page.getByRole('menuitemradio', {name: 'Classes'}).click();
     await page.getByRole('button', {name: 'Save'}).click();
     await page.locator('.scope-pop').waitFor();
     assert.deepEqual(await page.locator('.scope-pop .ropt-label').allTextContents(), ['This and following', 'All events']);
@@ -806,7 +806,7 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
     await line.waitFor();
     await line.pressSequentially('Office hours sat 3pm');
     await page.getByRole('button', {name: 'Calendar', exact: true}).click();
-    await page.getByRole('menuitem', {name: 'Classes'}).click();
+    await page.getByRole('menuitemradio', {name: 'Classes'}).click();
     await page.getByRole('button', {name: 'Add reminder'}).click();
     await page.getByRole('menuitem', {name: '1 hour before'}).click();
     await page.keyboard.press('Meta+Enter');
@@ -821,7 +821,7 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
     await page.getByLabel('Project', {exact: true}).click();
     await page.getByRole('option', {name: 'School'}).click();
     await page.getByRole('button', {name: 'Repeat'}).click();
-    await page.getByRole('menuitem', {name: 'Every Saturday'}).click();
+    await page.getByRole('menuitemradio', {name: 'Every Saturday'}).click();
     await page.getByRole('button', {name: 'Add label'}).click();
     await page.getByRole('menuitem', {name: 'waiting'}).click();
     await page.keyboard.press('Meta+Enter');
@@ -834,7 +834,7 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').pressSequentially('Coffee sun 10am');
     await page.getByRole('button', {name: 'Repeat'}).click();
-    await page.getByRole('menuitem', {name: 'Daily'}).click();
+    await page.getByRole('menuitemradio', {name: 'Daily'}).click();
     // A press outside an open menu closes it, and only it (SV-24).
     for (const opener of ['Calendar', 'Repeat']) {
       await page.getByRole('button', {name: opener, exact: true}).click();

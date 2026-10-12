@@ -84,23 +84,33 @@ export interface MiniDay {
   // Outside the month.
   out: boolean;
   today: boolean;
-  // The selected day, unless it's today (today's disc says it) or a range is shown: `sub`.
+  // The selected day, unless it's today (today's disc says it), a range or a week is shown: a `sub3` disc.
   selected: boolean;
+  // The week view's shown week, one band, and its first and last days (polish audit calpanes-05).
+  inWeek: boolean;
+  weekStart: boolean;
+  weekEnd: boolean;
   // SV-29: in the range an event's Date picks, and its first and last days.
   inRange: boolean;
   rangeStart: boolean;
   rangeEnd: boolean;
 }
 
+/** The mini-month always draws six weeks, the next month's days after its own, so it never changes height (polish audit calpanes-05). */
+export const MINI_WEEKS = 6;
+
 /**
- * The mini-month (DESIGN.md › Sidebar on Calendar): today a disc, the selected day `sub`, no other
- * marks; an event's Date shows its `range` as a band instead (SV-29). The week view marks its shown
- * `week` the selected day's way (board 16).
+ * The mini-month (DESIGN.md › Sidebar on Calendar): today a disc, the selected day a `sub3` disc, no
+ * other marks; an event's Date shows its `range` as a band instead (SV-29); the week view marks its
+ * shown `week` as one band (calpanes-05). Six weeks, whatever the month.
  */
 export function miniMonth(month: string, today: string, selected: string | null, range: {from: string; to: string} | null = null, week: string | null = null): MiniDay[][] {
-  const inWeek = (date: string) => week !== null && date >= week && daysBetween(week, date) < 7;
-  return monthWeeks(month).map(days => days.map(date => ({
-    date, day: Number(date.slice(8)), out: monthOf(date) !== month, today: date === today, selected: !range && (date === selected || inWeek(date)) && date !== today,
+  const inWeek = (date: string) => !range && week !== null && date >= week && daysBetween(week, date) < 7;
+  const weeks = monthWeeks(month);
+  while (weeks.length < MINI_WEEKS) weeks.push(weeks.at(-1)!.map(date => addDays(date, 7)));
+  return weeks.map(days => days.map(date => ({
+    date, day: Number(date.slice(8)), out: monthOf(date) !== month, today: date === today, selected: !range && week === null && date === selected && date !== today,
+    inWeek: inWeek(date), weekStart: inWeek(date) && date === week, weekEnd: inWeek(date) && daysBetween(week!, date) === 6,
     inRange: !!range && date >= range.from && date <= range.to, rangeStart: date === range?.from, rangeEnd: date === range?.to,
   })));
 }

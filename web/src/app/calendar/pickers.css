@@ -15,3 +15,9 @@
 .mini > .in.rs:not(.t), .mini > .in.re:not(.t) { background: color-mix(in oklch, var(--accent) 50%, transparent); }
 .mini > .in:not(.t):hover { background: color-mix(in oklch, var(--accent) 38%, transparent); }
 .mini > .in.rs:not(.t):hover, .mini > .in.re:not(.t):hover { background: color-mix(in oklch, var(--accent) 60%, transparent); }
+/* Inside the date picker the chosen day is the strongest mark (polish audit calflows-08): a task's due
+   day, or an event's one day, is the `accent` 50% disc at 600 (#104's colour); today steps back to a
+   1.5 px `alert` ring around an `ink` number; then the pointer's `sub2`. A chosen today takes both. */
+.datepop .mini > .t, .datepop .mini > .t:hover { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--alert); }
+.datepop .mini > .val, .datepop .mini > .val:hover, .datepop .mini > .in.rs.re { width: var(--miniDay); justify-self: center; background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--ink); font-weight: 600; }
+.datepop .mini > .val.t, .datepop .mini > .in.rs.re.t { box-shadow: inset 0 0 0 1.5px var(--alert); }

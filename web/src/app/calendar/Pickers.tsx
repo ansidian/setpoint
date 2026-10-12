@@ -26,15 +26,19 @@ export interface ProjectOption {
 export const ProjectDot = ({colour}: {colour: TodoistColour | null | undefined}) =>
   <span className="dot sm todoist" style={{'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink3)'} as CSSProperties} />;
 
-/** A menu that keeps focus in its field: ↑/↓ move `cur`, a click picks; ↵ marks the one Enter picks. */
-export function ProjectMenu({choices, projects, cur, onPick}: {choices: ProjectChoice[]; projects: ProjectOption[]; cur: number; onPick: (choice: ProjectChoice) => void}) {
+/**
+ * A menu that keeps focus in its field: ↑/↓ move `cur`, a click picks; ↵ marks the one Enter picks,
+ * and a check the project the field holds (polish audit calflows-08).
+ */
+export function ProjectMenu({choices, projects, cur, value = null, onPick}: {choices: ProjectChoice[]; projects: ProjectOption[]; cur: number; value?: string | null; onPick: (choice: ProjectChoice) => void}) {
   return (
     <div ref={placeMenu} className="pop menu" role="listbox" aria-label="Projects">
       {choices.map((choice, index) => (
-        <div key={`${choice.isNew}:${choice.name}`} role="option" aria-selected={index === cur} className={`menu-i${index === cur ? ' cur' : ''}`}
-          onMouseDown={event => event.preventDefault()} onClick={() => onPick(choice)}>
+        <div key={`${choice.isNew}:${choice.name}`} role="option" aria-selected={index === cur} aria-checked={!choice.isNew && choice.name.toLowerCase() === value?.trim().toLowerCase()}
+          className={`menu-i${index === cur ? ' cur' : ''}`} onMouseDown={event => event.preventDefault()} onClick={() => onPick(choice)}>
           {choice.isNew ? <><Icon name="add" size={16} />New project “{choice.name}”</> : <><ProjectDot colour={projects.find(one => one.name === choice.name)?.colour} />{choice.name}</>}
           {index === cur && <span className="kbd">↵</span>}
+          {!choice.isNew && choice.name.toLowerCase() === value?.trim().toLowerCase() && <Icon name="check" size={16} />}
         </div>
       ))}
     </div>
@@ -98,7 +102,7 @@ export function ProjectField({value, isNew, projects, placeholder, className = '
           }} />
         {isNew && <span className="tag">New</span>}
       </label>
-      {shown && choices.length > 0 && <ProjectMenu choices={choices} projects={projects} cur={cur} onPick={pick} />}
+      {shown && choices.length > 0 && <ProjectMenu choices={choices} projects={projects} cur={cur} value={value} onPick={pick} />}
     </span>
   );
 }
@@ -109,7 +113,9 @@ const HEADS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
  * The mini month (DESIGN.md › Sidebar on Calendar): ‹ › step it, a day picks; `cursor` is the one
- * Enter picks. An event's Date shows its days as a band (`range`, SV-29), following the pointer.
+ * Enter picks. An event's Date shows its days as a band (`range`, SV-29), following the pointer; the
+ * week view's shown week is one band too, and stepping slides the days in from the side they come
+ * from (polish audit calpanes-05). The date picker marks its `value` most strongly (calflows-08).
  */
 export function MiniMonth({month, today, value, cursor = null, range = null, week = null, headClass = '', onMonth, onPick, onHover}: {
   month: string;
@@ -124,6 +130,9 @@ export function MiniMonth({month, today, value, cursor = null, range = null, wee
   onPick: (date: string) => void;
   onHover?: (date: string | null) => void;
 }) {
+  // A month after the last slides in from the right, one before it from the left; the first doesn't.
+  const [stepped, setStepped] = useState<{month: string; dir: 'next' | 'prev' | undefined}>({month, dir: undefined});
+  if (stepped.month !== month) setStepped({month, dir: month > stepped.month ? 'next' : 'prev'});
   return (
     <>
       <div className={`${headClass} mini-head`.trim()}>
@@ -133,11 +142,12 @@ export function MiniMonth({month, today, value, cursor = null, range = null, wee
           <button type="button" className="ibtn sm" aria-label="Next month" onClick={() => onMonth(addMonths(month, 1))}><Icon name="chevron_right" size={16} /></button>
         </span>
       </div>
-      <div className="mini num" onMouseLeave={onHover && (() => onHover(null))}>
+      <div className="mini num" key={month} data-dir={stepped.dir} onMouseLeave={onHover && (() => onHover(null))}>
         {HEADS.map((head, index) => <span key={index} className="h">{head}</span>)}
         {miniMonth(month, today, value, range, week).flat().map(day => (
           <button key={day.date} type="button"
-            className={[day.out && 'o', day.today && 't', day.selected && 'vis', day.date === cursor && 'cur', day.inRange && 'in', day.rangeStart && 'rs', day.rangeEnd && 're'].filter(Boolean).join(' ') || undefined}
+            className={[day.out && 'o', day.today && 't', day.selected && 'vis', day.date === value && !range && 'val', day.date === cursor && 'cur', day.inRange && 'in', day.rangeStart && 'rs', day.rangeEnd && 're',
+              day.inWeek && 'wk', day.weekStart && 'ws', day.weekEnd && 'we'].filter(Boolean).join(' ') || undefined}
             aria-label={day.date} aria-current={day.today ? 'date' : undefined}
             onClick={() => onPick(day.date)} onMouseEnter={onHover && (() => onHover(day.date))}>
             {day.day}

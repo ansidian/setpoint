@@ -816,10 +816,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 {menu === 'repeat' && (
                   <div ref={menuRef} className="pop menu" role="menu">
                     {taskRepeatChoices(draft.date, draft.repeat).map(choice => (
-                      <button key={choice.repeat ?? 'none'} type="button" role="menuitem" className={`menu-i${choice.repeat === draft.repeat ? ' cur' : ''}`} onClick={() => {
+                      <button key={choice.repeat ?? 'none'} type="button" role="menuitemradio" aria-checked={choice.repeat === draft.repeat} className="menu-i" onClick={() => {
                         change({repeat: choice.repeat}, ['recurrence']);
                         setMenu(null);
-                      }}>{choice.label}</button>
+                      }}>{choice.label}{choice.repeat === draft.repeat && <Icon name="check" size={16} />}</button>
                     ))}
                   </div>
                 )}
@@ -879,11 +879,12 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 {menu === 'calendar' && (
                   <div ref={menuRef} className="pop menu" role="menu">
                     {calendarChoices.map(one => (
-                      <button key={one.id} type="button" role="menuitem" className={`menu-i${one.id === draft.calendarId ? ' cur' : ''}`} onClick={() => {
+                      <button key={one.id} type="button" role="menuitemradio" aria-checked={one.id === draft.calendarId} className="menu-i" onClick={() => {
                         change({calendarId: one.id}, ['calendar']);
                         setMenu(null);
                       }}>
                         <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{one.name}
+                        {one.id === draft.calendarId && <Icon name="check" size={16} />}
                       </button>
                     ))}
                   </div>
@@ -1032,7 +1033,9 @@ function RepeatRow({draft, open, menuRef, onToggle, onPick}: {draft: Draft; open
         {open && (
           <div ref={menuRef} className="pop menu" role="menu">
             {repeatChoices(draft.date, draft.recurrence).map(choice => (
-              <button key={choice.rule ?? 'none'} type="button" role="menuitem" className={`menu-i${choice.rule === draft.recurrence ? ' cur' : ''}`} onClick={() => onPick(choice.rule)}>{choice.label}</button>
+              <button key={choice.rule ?? 'none'} type="button" role="menuitemradio" aria-checked={choice.rule === draft.recurrence} className="menu-i" onClick={() => onPick(choice.rule)}>
+                {choice.label}{choice.rule === draft.recurrence && <Icon name="check" size={16} />}
+              </button>
             ))}
           </div>
         )}

@@ -665,3 +665,68 @@ test('ticking a task off is one moment everywhere: its done check lands over 120
     await setpoint.stop();
   }
 });
+
+test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the pointer `sub2`, six rows always, a band for the week, days sliding in as it steps; the date picker marks its choice most and today with a ring; menus tick their choice', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    await page.locator('.ev').first().waitFor();
+    const mini = page.locator('.sb .mini');
+    const day = (date: string) => mini.locator(`button[aria-label="${date}"]`);
+    // Six rows of seven, October's five and November's first week.
+    assert.equal(await mini.locator('button').count(), 42);
+    assert.deepEqual([await style(day('2026-10-09'), 'width'), await style(day('2026-10-09'), 'height')], ['26px', '26px']);
+    // The selected day: `sub3`, `ink` at 500; the pointer elsewhere `sub2`.
+    assert.deepEqual([await style(day('2026-10-09'), 'background-color'), await style(day('2026-10-09'), 'color'), await style(day('2026-10-09'), 'font-weight')],
+      [await colour(page, '--sub3'), await colour(page, '--ink'), '500']);
+    await day('2026-10-21').hover();
+    const sub2 = await colour(page, '--sub2');
+    await until('the pointer', () => style(day('2026-10-21'), 'background-color'), fill => fill === sub2);
+
+    // Stepping: the days slide in from the side they come from, and Calendars under it stays put.
+    const calendars = async () => (await page.locator('.calrow').first().boundingBox())!.y;
+    const before = await calendars();
+    for (let step = 0; step < 3; step += 1) await page.locator('.sb .mini-head').getByRole('button', {name: 'Next month'}).click();
+    await page.locator('.sb .mini-head', {hasText: 'January 2027'}).waitFor();
+    assert.equal(await page.locator('.sb .mini').getAttribute('data-dir'), 'next');
+    assert.deepEqual([await style(page.locator('.sb .mini > button').first(), 'animation-name'), await style(page.locator('.sb .mini > button').first(), 'animation-duration')], ['mini-in-next', '0.18s']);
+    assert.equal(await calendars(), before, 'January\'s six weeks move nothing');
+    await page.locator('.sb .mini-head').getByRole('button', {name: 'Previous month'}).click();
+    assert.equal(await page.locator('.sb .mini').getAttribute('data-dir'), 'prev');
+    for (let step = 0; step < 2; step += 1) await page.locator('.sb .mini-head').getByRole('button', {name: 'Previous month'}).click();
+    await page.locator('.sb .mini-head', {hasText: 'October 2026'}).waitFor();
+
+    // Week: the shown week one band, its ends round, today's disc on it.
+    await page.keyboard.press('w');
+    await page.locator('.sb .mini .wk').first().waitFor();
+    const band = page.locator('.sb .mini .wk');
+    assert.deepEqual(await band.allTextContents(), ['4', '5', '6', '7', '8', '9', '10']);
+    assert.deepEqual([await style(band.first(), 'border-top-left-radius'), await style(band.nth(1), 'border-top-left-radius'), await style(band.last(), 'border-top-right-radius')], ['999px', '0px', '999px']);
+    assert.equal(await style(band.nth(1), 'background-color'), sub2);
+    assert.match(await style(page.locator('.sb .mini .wk.t'), 'background-image'), /^radial-gradient/);
+    await page.keyboard.press('m');
+    await page.locator('.cal-month').waitFor();
+
+    // The date picker: a task due Fri 9, its day the `accent` disc at 600, today a ring.
+    await page.keyboard.press('d');
+    await page.getByLabel('Due date', {exact: true}).click();
+    const sheet = page.locator('.datepop');
+    await sheet.waitFor();
+    const chosen = sheet.locator('button[aria-label="2026-10-09"]');
+    assert.deepEqual([await style(chosen, 'background-color'), await style(chosen, 'font-weight'), await style(chosen, 'width')], [await colour(page, 'color-mix(in oklch, var(--accent) 50%, transparent)'), '600', '26px']);
+    const today = sheet.locator('button[aria-label="2026-10-07"]');
+    assert.deepEqual([await style(today, 'background-color'), await style(today, 'color')], ['rgba(0, 0, 0, 0)', await colour(page, '--ink')]);
+    assert.equal(await style(today, 'box-shadow'), `${await colour(page, '--alert')} 0px 0px 0px 1.5px inset`);
+    await page.keyboard.press('Escape');
+
+    // The menus tick the current choice and leave the fill to the pointer.
+    await page.getByRole('button', {name: 'Repeat', exact: true}).click();
+    const current = page.getByRole('menuitemradio', {checked: true});
+    assert.equal(await current.count(), 1);
+    assert.deepEqual([await current.locator('svg').count(), await current.getAttribute('class')], [1, 'menu-i']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

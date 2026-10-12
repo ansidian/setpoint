@@ -57,7 +57,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');
     // Tasks sit in the all-day row; the mini-month marks the week.
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
-    assert.deepEqual(await page.locator('.mini .vis').allTextContents(), ['4', '5', '6', '8', '9', '10']);
+    assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week (polish audit calpanes-05)');
     assert.equal(await block(page, '2026-10-07', 'Dentist').getAttribute('aria-label'), 'Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal');
     writeOutput('week.target.png', await page.screenshot());
 

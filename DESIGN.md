@@ -428,8 +428,9 @@ offered for protected mail.
 
 ### Sidebar on Calendar
 
-The **mini-month** (26 px day cells; today an `alert` disc (#128); the visible week or selected day `sub`; no
-other marks) with ‹ › stepping. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
+The **mini-month** (26 px discs, six rows always; today an `alert` disc (#128); the selected day a
+`sub3` disc, the pointer `sub2`; in Week the shown week one `sub2` band; no other marks, #231) with
+‹ › stepping, the days sliding in from the side they come from. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
 on the left (off: an outline, and the name `ink3`), the name; **Todoist** reads as the others, its
 checkbox and name with no mark of its own. Toggled, a calendar's items fade out over 120 ms before they
 go, or fade back in over 180 ms (#228). With every calendar off, a 16 px `ink3` `visibility_off`
@@ -493,7 +494,8 @@ field shows where it's typed, the cut side fading, #110), **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
-1h 30m"). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
+1h 30m"). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
+menus tick their current choice (#232). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
 only dashed until it's picked and lands, and a field another's change moved flashes (#230). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
 editor with project, labels and due date.
 
@@ -2035,3 +2037,17 @@ it changes what's on screen.
     moved flashes `cardOn` back to its own fill over 600 ms: the Date when the End runs into the next
     day, the address a picked place fills in, and an End on a later day says "+1" after it (11.5,
     `ink3`, raised) (Andy, 2026-10-11, polish audit calflows-06).
+231. **The mini-month is crisp:** its days are true 26 px discs, not 31 × 26 lozenges; the selected
+    day is a `sub3` disc with its number `ink` at 500 and the pointer only `sub2`, so what's picked and
+    what's pointed at never look alike; in Week the shown week is one `sub2` band across its cells, its
+    ends round, today's `alert` disc on it (amending "the visible week or selected day `sub`"). It
+    always draws six weeks, the next month's days after its own, so stepping into a six-week month never
+    moves Calendars under it, and ‹ › slide the days in 8 px from the side they come from with a fade
+    over 180 ms. The editor's date picker shares it (Andy, 2026-10-11, polish audit calpanes-05).
+232. **A choice is the strongest mark in its picker:** inside the date picker only (the sidebar keeps
+    its disc), the chosen day (a task's due day, an event's one day) is the `accent` 50% disc at 600,
+    #104's colour, and today steps back to a 1.5 px `alert` ring around an `ink` number; a chosen today
+    takes both; the pointer stays `sub2` under them. The editor's Calendar, Repeat, Project and a task's
+    Repeat menus mark the current choice as Settings' do, a 16 px `check` in `ink` at its row's end
+    (#142), leaving the `sub2` fill to the pointer and the keyboard's cursor (Andy, 2026-10-11, polish
+    audit calflows-08).

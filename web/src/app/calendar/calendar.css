@@ -200,11 +200,27 @@
 .mini-head .step { display: inline-flex; }
 .mini { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; padding: 0 6px; }
 .mini > * { height: var(--miniDay); display: grid; place-items: center; font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; border-radius: 999px; }
-.mini > button:hover { background: var(--sub); }
+/* True 26 px discs (polish audit calpanes-05): the pointer `sub2`, the selected day `sub3` with its
+   number `ink` at 500, so the two never look alike; the week view's shown week one `sub2` band, its
+   ends round, today's disc on it; six rows always, so nothing under it moves; ‹ › slide the days in
+   8 px from the side they come from over 180 ms. */
+.mini > button { width: var(--miniDay); justify-self: center; }
+.mini > button:hover { background: var(--sub2); }
 .mini > .h { font-size: 11px; color: var(--ink3); height: 22px; }
 .mini > .o { color: var(--ink3); opacity: .6; }
 .mini > .t, .mini > .t:hover { background: var(--alert); color: var(--onAlert); font-weight: 600; }
-.mini > .vis { background: var(--sub); }
+.mini > .vis { background: var(--sub3); color: var(--ink); font-weight: 500; }
+.mini > .wk, .mini > .in { width: auto; justify-self: stretch; }
+.mini > .wk { border-radius: 0; background: var(--sub2); color: var(--ink); }
+.mini > .wk.o { opacity: 1; color: var(--ink3); }
+.mini > .wk.ws { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
+.mini > .wk.we { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
+.mini > .wk:not(.t):hover { background: var(--sub3); }
+.mini > .wk.t, .mini > .wk.t:hover { background: radial-gradient(circle, var(--alert) 0 calc(var(--miniDay) / 2 - .5px), transparent calc(var(--miniDay) / 2 + .5px)), var(--sub2); color: var(--onAlert); font-weight: 600; }
+.mini[data-dir="next"] > button { animation: mini-in-next var(--dur-medium) var(--ease); }
+.mini[data-dir="prev"] > button { animation: mini-in-prev var(--dur-medium) var(--ease); }
+@keyframes mini-in-next { from { opacity: 0; transform: translateX(8px); } }
+@keyframes mini-in-prev { from { opacity: 0; transform: translateX(-8px); } }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }
 /* Off, a calendar's name recedes with its box (polish audit calpanes-11); Todoist has no mark of its own (calpanes-13). */

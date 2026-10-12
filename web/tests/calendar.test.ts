@@ -293,8 +293,15 @@ describe('the mini-month', () => {
   const marks = (month: string, today: string, selected: string | null) => miniMonth(month, today, selected).flat()
     .filter(day => day.out || day.today || day.selected).map(day => `${day.day}${day.out ? ' out' : ''}${day.today ? ' today' : ''}${day.selected ? ' selected' : ''}`);
 
-  test('board 11: today a disc, Sep 27–30 outside, the selected day (today) unmarked', () => {
-    expect(marks('2026-10', '2026-10-07', '2026-10-07')).toEqual(['27 out', '28 out', '29 out', '30 out', '7 today']);
+  test('board 11: today a disc, Sep 27–30 outside, the selected day (today) unmarked, and November\'s first week after, so six weeks', () => {
+    expect(marks('2026-10', '2026-10-07', '2026-10-07')).toEqual(['27 out', '28 out', '29 out', '30 out', '7 today', '1 out', '2 out', '3 out', '4 out', '5 out', '6 out', '7 out']);
+    expect(miniMonth('2026-10', '2026-10-07', null).length).toBe(6);
+  });
+
+  // Polish audit calpanes-05: never 5 rows one month and 6 the next.
+  test.each([['2026-10', 5], ['2026-11', 5], ['2027-01', 6], ['2026-02', 4], ['2027-02', 5]])('%s: its %d weeks, drawn as six', (month, own) => {
+    expect(monthWeeks(month).length).toBe(own);
+    expect(miniMonth(month, '2026-10-07', null).length).toBe(6);
   });
 
   test('board 11b: Sat 17 selected', () => {
@@ -307,14 +314,14 @@ describe('the mini-month', () => {
     expect(band).toEqual(['13 first', '14', '15', '16', '17 last']);
   });
 
-  test('board 16: the week view marks its shown week, today keeping its disc', () => {
-    const week = miniMonth('2026-10', '2026-10-07', '2026-10-07', null, '2026-10-04').flat().filter(day => day.selected || day.today)
-      .map(day => `${day.day}${day.today ? ' today' : ''}`);
-    expect(week).toEqual(['4', '5', '6', '7 today', '8', '9', '10']);
+  test('board 16: the week view marks its shown week as one band, today keeping its disc, and no single day', () => {
+    const week = miniMonth('2026-10', '2026-10-07', '2026-10-09', null, '2026-10-04').flat().filter(day => day.inWeek || day.selected || day.today)
+      .map(day => `${day.day}${day.today ? ' today' : ''}${day.weekStart ? ' first' : ''}${day.weekEnd ? ' last' : ''}${day.selected ? ' selected' : ''}`);
+    expect(week).toEqual(['4 first', '5', '6', '7 today', '8', '9', '10 last']);
   });
 
-  test('stepped to November: today and the selection elsewhere leave no mark', () => {
-    expect(marks('2026-11', '2026-10-07', '2026-10-17')).toEqual(['1 out', '2 out', '3 out', '4 out', '5 out']);
+  test('stepped to November: today and the selection elsewhere leave no mark; December\'s first two weeks fill its six', () => {
+    expect(marks('2026-11', '2026-10-07', '2026-10-17')).toEqual(['1 out', '2 out', '3 out', '4 out', '5 out', '6 out', '7 out', '8 out', '9 out', '10 out', '11 out', '12 out']);
   });
 });
 
