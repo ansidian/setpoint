@@ -98,6 +98,10 @@
 .sk-nw-row .txt { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .sk-nw-row .side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .sk-nw-row .sk-thumb { width: 72px; height: 48px; border-radius: 8px; background: var(--sk-fill); }
+@container (min-width: 1000px) {
+  .sk-nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px 16px 16px 12px; }
+  .sk-nw-lead .sk-img { width: 320px; height: 180px; }
+}
 @container (max-width: 599px) {
   .sk-nw-lead { grid-template-columns: 12px 160px minmax(0, 1fr); }
   .sk-nw-lead .sk-img { width: 160px; height: 90px; }

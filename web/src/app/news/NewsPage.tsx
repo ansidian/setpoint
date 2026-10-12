@@ -49,7 +49,9 @@ import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
 import {toastFailure} from '../toast.ts';
-import {LoadFailed} from '../states/Loading.tsx';
+import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
+import {NewsSkeleton} from '../states/Skeletons.tsx';
+import {NewsImage} from './NewsImage.tsx';
 import {StoryPane} from './StoryPane.tsx';
 import './news.css';
 
@@ -118,6 +120,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const path = pathOf(view);
   const {data, error} = useResource<Answer>(path);
   const latest = useMemo(() => (data ? listing(view, data) : null), [view, data]);
+  const listLoad = {path, data, error};
+  const listFailed = useLoadFailed([listLoad]);
+  const listArrived = useArrival(latest !== null, view);
 
   const [hold, setHold] = useState<Hold>(() => ({path, stale: getCached(path), held: null, known: new Map(), named: {}, from: null}));
   let current: Hold = hold.path === path ? hold : {path, stale: getCached(path), held: null, known: new Map(), named: {}, from: null};
@@ -350,9 +355,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
               {search.out && search.out.total === 0 && <NoResults lead="No stories match" search={search} />}
             </div>
           ) : (
-          <div className="list" ref={list}>
-            {/* Its first answer didn't come: why, with Try again (#173). */}
-            {!latest && <LoadFailed what="News" loads={[{path, data, error}]} />}
+          <div className={listArrived ? 'list sk-arrive' : 'list'} ref={list}>
+            {/* Until its first answer, the list's skeleton in its rows' shapes (news-03, #178), or why it didn't come (#173). */}
+            {!latest && (listFailed ? <LoadFailed what="News" loads={[listLoad]} /> : <NewsSkeleton blocks={view === 'all'} />)}
             {showHeadlines && (
               <>
                 <div className="nw-sec first"><Icon name="pending" size={14} />Unsorted<span className="day num">{waitingOut ? waitingOut.count.toLocaleString('en-US') : ''}</span></div>
@@ -445,7 +450,7 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zo
     return (
       <div {...attributes}>
         <span className="nd" />
-        {image && <img className="nw-img" src={image.url} alt="" />}
+        {image && <NewsImage key={image.url} src={image.url} />}
         <div className="txt">
           <div className="hl">{hazard && <span className="hz"><Icon name={hazard} size={18} /></span>}{row.headline}</div>
           {row.one_line && <div className="sm">{row.one_line}</div>}
@@ -469,7 +474,7 @@ function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zo
         <span className="nw-meta">{meta.section && <><span>{meta.section}</span><span>·</span></>}<span className="outlet">{meta.outlet}</span></span>
         <span className="nw-meta">{meta.updated ? <span className="upd">{meta.updated}</span> : meta.age}</span>
       </div>
-      {image ? <img className="nw-img" src={image.url} alt="" /> : hazard ? <span className="nw-hz"><Icon name={hazard} size={22} /></span> : <span />}
+      {image ? <NewsImage key={image.url} src={image.url} /> : hazard ? <span className="nw-hz"><Icon name={hazard} size={22} /></span> : <span />}
     </div>
   );
 }

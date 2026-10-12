@@ -229,7 +229,7 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     await lead.click();
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
-    await page.locator('.pane .st-img img').evaluate((image: HTMLImageElement) => image.decode());
+    await page.locator('.pane .st-img .nw-img').evaluate((image: HTMLImageElement) => image.decode());
     assert.equal(await style('.st-new', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))'));
     assert.equal(await style('.st-new .lab', 'color'), await colourOf(page, 'var(--accent)'));
     assert.equal(await style('.src-list', 'backgroundColor'), await backgroundOf(page, 'var(--sub)'));
@@ -326,7 +326,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.equal(await pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom), '16px');
     assert.equal(await pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height), 240);
     assert.deepEqual(await Promise.all(['.st-img.article', '.ar-text'].map(column)), [[28, 600], [28, 600]]);
-    await page.locator('.st-img.article img').evaluate((image: HTMLImageElement) => image.decode());
+    await page.locator('.st-img.article .nw-img').evaluate((image: HTMLImageElement) => image.decode());
     await settle(page);
     await matchGolden(page, '26a-an-article-in-the-pane', 'reader');
     // Esc goes back to the story.

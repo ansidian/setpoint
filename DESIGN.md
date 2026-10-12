@@ -671,7 +671,10 @@ navigation.
 - **Meta copy:** "KTLA +4 · 1h · Updated 8:40 AM". Ages follow [Copy](#copy). Missed rows lead with
   the section, the story's main one (#96): "General · NPR +9 · Tue".
 - **Images:** Setpoint's own resized copy, cropped to fill (`object-fit: cover`). The boards draw
-  tinted placeholders instead.
+  tinted placeholders instead. While one loads its box breathes in a skeleton's fill, then it
+  fades in over 180 ms; every news image has a 1 px `edge` hairline inside its edge (#177).
+- **Loading:** until the list's first answer, its skeleton: a section header, a lead and three
+  rows per block in All, a lead and six rows in a section (#178).
 - **Upcoming** (Tech, under its header): a 46 px row with:
   - a 26 px `event` tile, `violet` on `violet` at 16%, radius 8
   - the label "UPCOMING" (11.5 uppercase `ink3`)
@@ -703,6 +706,9 @@ navigation.
 
 - **Tools** (48 px): **Open at KTLA** `O` (the leading outlet's article), then a spacer, previous,
   next and More.
+- **Opening** (#179): the head and the image draw from the story's row at once; the summary and
+  Sources are a skeleton until the story comes; each story or article eases in as it's opened or
+  stepped to.
 - **Head** (padding 18 28 14):
   - its sections as tags, each with its section's 14 px glyph in `ink3` (#161), plus "Updated" as a
     `cool` tag when it changed since Andy last looked
@@ -2373,3 +2379,24 @@ it changes what's on screen.
     from (a link) has a skeleton head too. An HTML email's frame holds 240 px on `sub`, unseen,
     until its page says its height, then fades in over 120 ms. An attachment's preview loading is
     a page's skeleton, not "Loading…" (Andy, 2026-10-11, polish audit reader-01, phone-04).
+177. **A news image waits in its own box and fades in:** each list thumbnail, lead, story-pane
+    and article image holds its box from the start, filled as a skeleton is (`sub2`; Light `sub3`,
+    which shows on the page where `cardOn` didn't) and breathing with it after 200 ms, then fades
+    in over 180 ms once loaded, the fill gone under it. Every news image carries a 1 px `edge`
+    outline inside its edge, which shows only where an image is white (a product shot on the
+    Light page). No shimmer sweep: the image's wait breathes as every skeleton does (#170) (Andy,
+    2026-10-11, polish audit news-02).
+178. **News opens into its own shape:** until its first answer, the list draws its skeleton, built
+    to its rows (#170): in All, two blocks of a 32 px section header with a 46 px bar, a lead (a
+    232 × 130 image radius 12, two 12 px title bars, a summary bar and a 90 px meta bar at its
+    foot) and three rows (title over summary, a 56 and a 28 px meta bar, a 72 × 48 thumbnail
+    radius 8); in a section or Missed, a lead and six rows. The stories replace it where it stood,
+    fading in over 120 ms (Andy, 2026-10-11, polish audit news-03).
+179. **A story opens at once from its row:** opening a story (a click, Enter, J or K) draws its
+    sections as tags, the headline and its meta ("5 outlets · first reported … · updated …", from
+    the row) and its image at once; the image is the large copy, over the row's thumbnail blurred
+    6 px until the large one is in. The summary is four 11 px skeleton lines and Sources three
+    skeleton rows until the story comes, then they fade in over 120 ms. Each story or article
+    eases in as it's opened or stepped to: opacity from 0 and 4 px up, over 180 ms. An article
+    opening draws its outlet, time and headline from the story's sources and its text's skeleton
+    (Andy, 2026-10-11, polish audit news-05).

@@ -337,3 +337,92 @@ test('on the phone, a tapped email opens at once from its row, its body a skelet
     await setpoint.stop();
   }
 });
+
+test('News loading: its list\'s skeleton in the blocks\' shapes, a header, a lead and its rows, which the stories replace where they stood (news-03)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const release = await hold(page, /^\/api\/news$/);
+    await visit(page, `${setpoint.base}/news`);
+    const sk = await shown(page, 'news');
+    assert.deepEqual(await sk.evaluate(element => [element.querySelectorAll('.sk-nw-sec').length, element.querySelectorAll('.sk-nw-lead').length, element.querySelectorAll('.sk-nw-row').length]), [2, 2, 6]);
+    assert.equal(await page.locator('.nw-list :is(.nw-lead, .nw-row, .nw-sec, .nw-empty)').count(), 0, 'no story, and no "Nothing new"');
+    const before = {sec: await heights(page, '.sk-nw-sec'), lead: await heights(page, '.sk-nw-lead'), row: await heights(page, '.sk-nw-row')};
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-news', 'news');
+    await release();
+    await page.locator('.nw-lead').first().waitFor();
+    assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    assert.equal(await page.locator('.nw-list .list').getAttribute('class'), 'list sk-arrive', 'the stories fade in');
+    // The header, the lead and a row with its thumbnail stand where the skeleton's did.
+    assert.equal((await heights(page, '.nw-sec'))[0], before.sec[0]);
+    assert.equal((await heights(page, '.nw-lead'))[0], before.lead[0]);
+    assert.equal(await page.locator('.nw-row', {hasText: 'Federal agents detain 9'}).evaluate(row => row.getBoundingClientRect().height), before.row[0]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a news image\'s box waits with a skeleton\'s fill, Light\'s `sub3`, and the image fades in over it with a hairline edge (news-02)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    let release = await hold(page, /^\/api\/news\/images\//);
+    await visit(page, `${setpoint.base}/news`);
+    const box = page.locator('.nw-lead .nw-ph').first();
+    await box.waitFor();
+    const look = () => box.evaluate(element => {
+      const image = element.querySelector('.nw-img')!;
+      return [element.className, getComputedStyle(element).backgroundColor, getComputedStyle(element).animationName, getComputedStyle(image).opacity];
+    });
+    assert.deepEqual(await look(), ['nw-ph', await tokenColour(page, 'sub2'), 'sk-breathe', '0']);
+    assert.deepEqual(await box.locator('.nw-img').evaluate(image => [getComputedStyle(image).outlineStyle, getComputedStyle(image).outlineWidth, getComputedStyle(image).outlineOffset, getComputedStyle(image).outlineColor, getComputedStyle(image).transitionDuration]),
+      ['solid', '1px', '-1px', await tokenColour(page, 'edge'), '0.18s']);
+    await release();
+    assert.deepEqual(await until('the image faded in', look, value => value[3] === '1'), ['nw-ph done', 'rgba(0, 0, 0, 0)', 'none', '1']);
+
+    // In Light, the box's fill is `sub3`, which shows on the page.
+    await page.evaluate(() => localStorage.setItem('setpoint.theme', 'light'));
+    release = await hold(page, /^\/api\/news\/images\//);
+    await visit(page, `${setpoint.base}/news`);
+    await box.waitFor();
+    assert.equal(await box.evaluate(element => getComputedStyle(element).backgroundColor), await tokenColour(page, 'sub3'));
+    await release();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a story opens at once from its row: sections, headline, meta and its image, the thumbnail blurred until the large copy; its summary and sources a skeleton (news-05)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await page.locator('.nw-lead').first().waitFor();
+    const release = await hold(page, /^\/api\/news\/stories\/\d+$/);
+    const lead = page.locator('.nw-lead', {hasText: 'Brush fire near the 210'});
+    const headline = await lead.locator('.hl').textContent();
+    await lead.click();
+    const pane = page.locator('section.pane');
+    await pane.locator('.rd-subj', {hasText: headline!}).waitFor();
+    assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local']);
+    const meta = await pane.locator('.st-meta').textContent();
+    // Its image: the large copy over the row's thumbnail, blurred, which stands in until the large is in.
+    assert.equal(await pane.locator('.st-img .nw-ph .nw-blur').evaluate(image => getComputedStyle(image).filter), 'blur(6px)');
+    await shown(page, 'story');
+    assert.equal(await pane.locator('.st-sum').count(), 0);
+    assert.equal(await pane.locator('.st-swap').evaluate(element => getComputedStyle(element).animationName), 'st-in');
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-story', 'reader');
+    await release();
+    await pane.locator('.st-sum').waitFor();
+    await pane.locator('.src-row').first().waitFor();
+    assert.equal(await pane.locator('[data-skeleton]').count(), 0);
+    assert.equal(await pane.locator('.st-meta').textContent(), meta, 'the meta drawn from the row is the story\'s');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

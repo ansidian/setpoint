@@ -53,15 +53,24 @@
 .nw-row.landed, .nw-lead.landed { animation: nw-landed var(--news-landed) var(--ease); }
 @keyframes nw-landed { from { background: var(--sub2); } }
 
-/* Setpoint's copies, cropped to fill; a story without one leaves its place empty. */
-.nw-img { display: block; object-fit: cover; flex: none; background: var(--sub2); }
+/* Setpoint's copies, cropped to fill; a story without one leaves its place empty. While one loads its
+   box holds a skeleton's fill, breathing (`sub2`, Light `sub3` to show on the page), and the image fades
+   in over it; a hairline edge keeps a white image off the Light page (#177). */
+.nw-ph { display: block; position: relative; overflow: hidden; flex: none; background: var(--skel); animation: sk-breathe var(--skel-breathe) var(--skel-ease) var(--skel-delay) infinite; }
+:root[data-theme="light"] .nw-ph { background: var(--skel-on-sub); }
+.nw-ph.done { background: none; animation: none; }
+.nw-img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity var(--dur-medium) var(--ease); outline: 1px solid var(--edge); outline-offset: -1px; }
+.nw-img.in { opacity: 1; }
+/* The story pane's: the row's thumbnail, blurred, until the large copy is in (#179). */
+.nw-blur { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(6px); transform: scale(1.04); }
+.nw-ph > .nw-img { position: relative; }
 
 /* A block's top story. */
 .nw-lead { display: grid; grid-template-columns: 12px 232px minmax(0, 1fr); column-gap: 14px; padding: 14px 16px 14px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
 .nw-lead.noimg { grid-template-columns: 12px minmax(0, 1fr); }
 .nw-lead:hover { background: var(--sub); }
 .nw-lead.cur, .nw-lead.open { background: var(--sub2); }
-.nw-lead .nw-img { width: 232px; height: 130px; border-radius: 12px; }
+.nw-lead .nw-ph { width: 232px; height: 130px; border-radius: 12px; }
 .nw-lead .nd { height: 22px; }
 .nw-lead .txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .nw-lead .hl { font-size: 16px; line-height: 1.35; font-weight: 500; color: var(--ink); letter-spacing: -.005em; }
@@ -79,7 +88,7 @@
 .nw-row .hl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); line-height: 20px; }
 .nw-row.new .hl, .nw-row.upd .hl { color: var(--ink); font-weight: 500; }
 .nw-row .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
-.nw-row .nw-img { width: 72px; height: 48px; border-radius: 8px; }
+.nw-row .nw-ph { width: 72px; height: 48px; border-radius: 8px; }
 /* A hazard source's story without a photo: its hazard's glyph in a caution tile where the photo would go (#162). */
 .nw-hz { width: 72px; height: 48px; border-radius: 8px; display: grid; place-items: center; color: var(--caution); background: color-mix(in oklch, var(--caution) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 22%, transparent); }
 /* A lead without one: the glyph inline before the headline, not a large empty tile. */
@@ -113,7 +122,7 @@
    looks big rather than sparse (#245). Narrower lists keep 232 × 130. */
 @container (min-width: 1000px) {
   .nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px 16px 16px 12px; }
-  .nw-lead .nw-img { width: 320px; height: 180px; }
+  .nw-lead .nw-ph { width: 320px; height: 180px; }
   .nw-lead .nd { height: 25px; }
   .nw-lead .hl { font-size: 19px; line-height: 1.3; letter-spacing: -.01em; max-width: 760px; }
   .nw-lead .sm { font-size: 13.5px; line-height: 1.5; -webkit-line-clamp: 3; max-width: 680px; }
@@ -124,7 +133,7 @@
 @container (max-width: 599px) {
   .nw-up .lab, .nw-up .nw-meta { display: none; }
   .nw-lead { grid-template-columns: 12px 160px minmax(0, 1fr); }
-  .nw-lead .nw-img { width: 160px; height: 90px; }
+  .nw-lead .nw-ph { width: 160px; height: 90px; }
 }
 
 /* A list under 480 px (a story open at 1280, D104's 420 px): a row's headline wraps to two lines and its
@@ -143,7 +152,9 @@
 .nw-back .t { font-size: 14px; font-weight: 500; color: var(--ink); }
 .nw-back .n { color: var(--ink3); font-size: 12.5px; }
 
-/* The story pane. */
+/* The story pane. A story's or an article's content eases in as it's opened or stepped to (news-05, #179). */
+.st-swap { display: flex; flex-direction: column; flex: none; animation: st-in var(--dur-medium) var(--ease); }
+@keyframes st-in { from { opacity: 0; transform: translateY(4px); } }
 .st-head { padding: 18px 28px 14px; display: flex; flex-direction: column; gap: 10px; flex: none; }
 .st-secs { display: flex; gap: 6px; }
 .st-secs .tag > .icon { color: var(--ink3); }
@@ -151,7 +162,7 @@
 .st-meta { color: var(--ink3); font-size: 12.5px; display: flex; gap: 6px; align-items: center; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
 .st-img { position: relative; margin: 0 28px; max-width: 600px; height: 220px; border-radius: 14px; overflow: hidden; flex: none; }
 .st-img.article { height: 240px; }
-.st-img .nw-img { width: 100%; height: 100%; }
+.st-img .nw-ph { width: 100%; height: 100%; }
 .st-img .cap { position: absolute; left: 10px; bottom: 9px; font-size: 11px; color: var(--ink2); background: color-mix(in srgb, var(--page) 72%, transparent); padding: 2px 8px; border-radius: 999px; }
 .st-body { padding: 18px 28px 24px; display: flex; flex-direction: column; gap: 18px; }
 /* The pane's body is one column at the reading measure, however wide the pane is dragged (#98). */
