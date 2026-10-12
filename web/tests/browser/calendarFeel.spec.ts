@@ -241,8 +241,17 @@ test('Week zooms in from the selected week\'s row in Month and Month settles bac
     // At rest Month draws its own `sub3` fill, the thumb hidden under it.
     const first = await thumb(seg);
     assert.deepEqual([first.x, first.width], first.on, 'the thumb waits under Month');
-    assert.deepEqual([first.onFill, await style(seg, 'visibility', '::before')], [await colour(page, '--sub3'), 'hidden']);
-    assert.deepEqual([await style(seg, 'transition-property', '::before'), await style(seg, 'transition-duration', '::before')], ['transform, width', '0.18s, 0.18s']);
+    assert.deepEqual([first.onFill, await style(seg, 'visibility', '::before'), await style(seg, 'transition-property', '::before')], [await colour(page, '--sub3'), 'hidden', 'all']);
+    // Sliding, it moves over 180 ms.
+    assert.equal(await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.className = 'seg';
+      probe.dataset.sliding = '';
+      document.body.append(probe);
+      const {transitionProperty, transitionDuration} = getComputedStyle(probe, '::before');
+      probe.remove();
+      return `${transitionProperty} ${transitionDuration}`;
+    }), 'transform, width 0.18s, 0.18s');
     const sliding = await watch(seg, 'data-sliding');
 
     let entrances = await recordEntrances(page);

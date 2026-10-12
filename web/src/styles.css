@@ -134,8 +134,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .seg { position: relative; }
 .seg > * { position: relative; }
 .seg::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); border-radius: 8px; background: var(--sub3);
-  visibility: hidden; transition: transform var(--dur-medium) var(--ease), width var(--dur-medium) var(--ease); }
-.seg[data-sliding]::before { visibility: visible; }
+  visibility: hidden; }
+/* It moves only while it slides; at rest it follows the segment's size at once (the fonts arriving). */
+.seg[data-sliding]::before { visibility: visible; transition: transform var(--dur-medium) var(--ease), width var(--dur-medium) var(--ease); }
 .seg[data-sliding] > .on { background: transparent; }
 .search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
 /* A focused field wakes: `edgeFocus`, stronger than hover's border, on `cardOn` (white in Light) (#135). */
