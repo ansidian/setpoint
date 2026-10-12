@@ -732,8 +732,8 @@ key (New event, New task, Mark all as read).
 
 A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the address bar, with a
 **220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16; switches are 34 ×
-20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3`, the knob
-stretching toward its travel as it's pressed (#139). A reconnect link opens it at Accounts.
+20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3` (#139), the knob
+stretching toward its travel as it's pressed (#144). A reconnect link opens it at Accounts.
 
 - **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
@@ -911,12 +911,12 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 **The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #120–#139).
 
-29. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
+31. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
     `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
     its values; the board audit draws every board with these.
-30. **Alfred's mark is `auto_awesome` in its gradient** (#136): boards 06 and 07 draw it in `ink`, and
+32. **Alfred's mark is `auto_awesome` in its gradient** (#136): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
 
 ## Not designed yet
@@ -1839,6 +1839,5 @@ it changes what's on screen.
     into `modal`, Light `good`) with a `switchKnobOn` knob (Night `ink`, Light white), so a column of
     switches no longer reads as a column of primary buttons and on ties to the healthy dots; under the
     pointer the track takes 86% of itself into `modal`. Off is an `ink3` knob on `sub3` in both
-    themes (Light's `ink2` knob was nearly as heavy as on). A press stretches the knob to 20 px toward
-    its travel over 120 ms; a disabled switch stays at .5 (Andy, 2026-10-11, polish audit
-    settings-06).
+    themes (Light's `ink2` knob was nearly as heavy as on). Its press stretch is #144's; a disabled
+    switch stays at .5 (Andy, 2026-10-11, polish audit settings-06).

@@ -212,9 +212,9 @@ for (const theme of ['night', 'light'] as const) {
       const [x2, y2] = await blank(exams, 400);
       assert.notDeepEqual(await pixel(page, x, y), await pixel(page, x2, y2), 'the open row and the cursor\'s look different');
 
-      // A press: sub3 at once, before the email opens.
+      // A press: sub3 over the rows' shared --dur-press, before the email opens.
       await page.mouse.down();
-      assert.deepEqual([await style(exams, 'backgroundColor'), await exams.evaluate(row => getComputedStyle(row).transitionDuration)], [await colourOf(page, 'var(--sub3)'), '0s']);
+      await until('the press\'s sub3', () => style(exams, 'backgroundColor'), fill => fill === sub3);
       await page.mouse.up();
       await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
 
@@ -338,10 +338,12 @@ for (const theme of ['night', 'light'] as const) {
       await trash.hover();
       await until('Trash turns alert', () => style(trash, 'color'), colour => colour === alert);
       assert.equal(await style(trash, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 12%, transparent)'));
-      // Pressed, it gives: .96 and a stronger alert, eased over 120 ms; let go elsewhere, nothing's trashed.
+      // Pressed, it gives as every pill does (.97) on a stronger alert, in alert; let go elsewhere, nothing's trashed.
       await page.mouse.down();
-      await until('Trash pressed in', () => style(trash, 'transform'), transform => transform === 'matrix(0.96, 0, 0, 0.96, 0, 0)');
-      assert.equal(await style(trash, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 20%, transparent)'));
+      await until('Trash pressed in', () => style(trash, 'transform'), transform => transform === 'matrix(0.97, 0, 0, 0.97, 0, 0)');
+      const pressed = await backgroundOf(page, 'color-mix(in oklch, var(--alert) 20%, transparent)');
+      await until('Trash pressed in alert', () => style(trash, 'backgroundColor'), fill => fill === pressed);
+      assert.equal(await style(trash, 'color'), alert);
       await page.mouse.move(700, 28);
       await page.mouse.up();
 

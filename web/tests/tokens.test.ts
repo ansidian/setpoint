@@ -34,13 +34,13 @@ const glideJson = JSON.parse(read('../../design-export/motion/glide.json')) as {
  */
 const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string; why: string}[] = [
   {theme: 'light', variable: '--page', exported: '#f8f8f6', ours: '#f6f6f4', why: 'Override 5: Light page is #f6f6f4, as darma\'s'},
-  {theme: 'night', variable: '--ink3', exported: '#707277', ours: '#7d7f84', why: 'Override 29: Night ink3 reads on cursor rows and in menus'},
-  {theme: 'light', variable: '--ink2', exported: '#56585d', ours: '#4b4d52', why: 'Override 29: Light ink2 steps clear of ink3'},
-  {theme: 'night', variable: '--panel', exported: '#08090a', ours: '#0b0c0e', why: 'Override 29: Night panel reads as a layer'},
-  {theme: 'light', variable: '--cardOn', exported: '#f4f4f2', ours: '#ffffff', why: 'Override 29: Light cardOn floats, white'},
-  {theme: 'light', variable: '--evtint', exported: '12%', ours: '14%', why: 'Override 29: Light chips\' tint shows on the grid'},
-  {theme: 'night', variable: '--cyan', exported: 'oklch(0.8 0.11 195)', ours: 'oklch(0.86 0.11 182)', why: 'Override 29: Classes\' cyan moves away from Personal\'s cool'},
-  {theme: 'light', variable: '--cyan', exported: 'oklch(0.54 0.09 195)', ours: 'oklch(0.58 0.1 182)', why: 'Override 29: Classes\' cyan moves away from Personal\'s cool'},
+  {theme: 'night', variable: '--ink3', exported: '#707277', ours: '#7d7f84', why: 'Override 31: Night ink3 reads on cursor rows and in menus'},
+  {theme: 'light', variable: '--ink2', exported: '#56585d', ours: '#4b4d52', why: 'Override 31: Light ink2 steps clear of ink3'},
+  {theme: 'night', variable: '--panel', exported: '#08090a', ours: '#0b0c0e', why: 'Override 31: Night panel reads as a layer'},
+  {theme: 'light', variable: '--cardOn', exported: '#f4f4f2', ours: '#ffffff', why: 'Override 31: Light cardOn floats, white'},
+  {theme: 'light', variable: '--evtint', exported: '12%', ours: '14%', why: 'Override 31: Light chips\' tint shows on the grid'},
+  {theme: 'night', variable: '--cyan', exported: 'oklch(0.8 0.11 195)', ours: 'oklch(0.86 0.11 182)', why: 'Override 31: Classes\' cyan moves away from Personal\'s cool'},
+  {theme: 'light', variable: '--cyan', exported: 'oklch(0.54 0.09 195)', ours: 'oklch(0.58 0.1 182)', why: 'Override 31: Classes\' cyan moves away from Personal\'s cool'},
 ];
 /** Override 4: the done glyph is `good`; the export's `.ring.done` fills with `--comf`. */
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};

@@ -7,7 +7,7 @@ import type {Colour} from '@setpoint/shared';
 
 export type Theme = 'night' | 'light';
 
-/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` are the polish audit's (override 29). */
+/** Night. Keys are DESIGN.md's token names; `panel`, `ink3` and `cyan` are the polish audit's (override 31). */
 export const colour = {
   page: '#050506',
   panel: '#0b0c0e',
@@ -66,7 +66,7 @@ export type ColourToken = keyof typeof colour;
 
 /**
  * Light: darma's Light tokens (decision 45), with `page` #f6f6f4 (DESIGN.md override 5) and the polish
- * audit's own (override 29): a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger calendar tint.
+ * audit's own (override 31): a deeper `ink2`, a white `cardOn`, a greener `cyan` and a stronger calendar tint.
  */
 export const lightColour: Record<ColourToken, string> = {
   page: '#f6f6f4',

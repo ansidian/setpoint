@@ -135,9 +135,9 @@ const SETTINGS_NEWS_NAV: Patch = {
   to: `<span class="grow">Mail</span></a>\n    <a class="nav" href="#"><svg class="ms" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor" style="display: block; flex: none"><path d="${NEWSPAPER}"></path></svg><span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>\n    <a class="nav" href="#"><span class="ms">auto_awesome</span>`,
 };
 
-// Override 29: the polish audit's token values over the export's, for every board (each links fonts.css once).
+// Override 31: the polish audit's token values over the export's, for every board (each links fonts.css once).
 const AUDIT_TOKENS: Patch = {
-  why: 'Override 29: the polish audit\'s token values (Night ink3, panel and cyan; Light ink2, cardOn, cyan and the calendar tint)',
+  why: 'Override 31: the polish audit\'s token values (Night ink3, panel and cyan; Light ink2, cardOn, cyan and the calendar tint)',
   from: 'styles/fonts.css">',
   to: `styles/fonts.css">\n<style>.sp{--ink3:${colour.ink3};--panel:${colour.panel};--cyan:${colour.cyan}} .sp.light{--ink2:${lightColour.ink2};--cardOn:${lightColour.cardOn};--cyan:${lightColour.cyan};--evtint:${evtint.light}%}</style>`,
 };
