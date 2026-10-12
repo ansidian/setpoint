@@ -162,7 +162,8 @@ mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **2
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
 paint doesn't fade. A segmented control's fill slides to the segment turned on over 180 ms (#222). A
 press goes in over **80 ms** and lets go over 120 ms (#143). The stories `N` brings onto News's list
-settle in from `sub2` over 900 ms (#249): the one longer motion, kept for arrivals.
+settle in from `sub2` over 900 ms (#249): the longer motions are kept for arrivals, as are a
+calendar change's landing (420 ms, #235) and an editor field another's change moved (600 ms, #230).
 
 Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
