@@ -1,12 +1,13 @@
 // All (DESIGN.md › All; board 05): every email, Noise included, newest first, under day headings,
 // with clock times. Each day groups its rows by lane, the kind once in a left column where an FYI run
-// starts, and folds its Noise to one line that opens in place (#48). Pinned email sits on Unread's
+// starts (a subheading over the run where the column has no room, #237), and folds its Noise to one
+// line that opens in place (#48). Pinned email sits on Unread's
 // Pinned shelf above the days, with ages and Unpin under the pointer, and leaves its day meanwhile (D105).
 // Pages load as the list nears its end. What shows comes from logic/all.ts; actions are the page's.
 // A trashed row folds out and Undo folds it back in, as in Unread (app/fold.ts).
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
-import {useMemo} from 'react';
-import type {MouseEvent, ReactNode, UIEvent} from 'react';
+import {useLayoutEffect, useMemo, useRef} from 'react';
+import type {MouseEvent, ReactNode, RefObject, UIEvent} from 'react';
 import {allRowLine, dayHeading, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
@@ -20,7 +21,7 @@ import {Gutter} from './MailList.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 
 // A row's `noise` is the day whose Noise it's under, folded or not.
-type Part = {kind: 'shelf'; count: number} | {kind: 'day'; date: string} | {kind: 'lane'; lane: AllLane; label: string; count: number}
+type Part = {kind: 'shelf'; count: number} | {kind: 'day'; date: string} | {kind: 'lane'; lane: AllLane; label: string; count: number} | {kind: 'kh'; group: InboxGroup}
   | {kind: 'noise'; date: string; count: number; preview: string; open: boolean} | {kind: 'row'; row: MessageRowOut; group: InboxGroup | null; shelf: boolean; noise: string | null};
 // Every row folds, and a day's Noise opens like a drawer, its rows folding in (inbox-14).
 const RULES: FoldRules<Part> = {
@@ -72,7 +73,10 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
     {key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}},
     ...day.lanes.flatMap(lane => [
       {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', lane: lane.lane, label: lane.label, count: lane.rows.length}} satisfies Entry<Part>,
-      ...lane.rows.map(({row, kind}) => rowEntry(row, kind)),
+      ...lane.rows.flatMap(({row, kind}) => [
+        ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
+        rowEntry(row, kind),
+      ]),
     ]),
     ...(day.noise ? [
       {key: noiseKey(day.date), id: null, item: {kind: 'noise', date: day.date, count: day.noise.count, preview: day.noise.preview, open: day.noise.open}} satisfies Entry<Part>,
@@ -81,10 +85,14 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
     ]),
   ], [days, shelf]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
+  const [list, keep] = useKeptRow(openId);
   // A row Trash took beats first; rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   return (
-    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="All mail" onScroll={onScroll}>
+    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="All mail" ref={list} onScroll={event => {
+      keep();
+      onScroll(event);
+    }}>
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key));
         const leaving = fold === 'out';
@@ -102,6 +110,13 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
         }
         if (item.kind === 'lane') {
           return <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{item.label} <span className="n"><Count value={item.count} /></span></div>;
+        }
+        if (item.kind === 'kh') {
+          return (
+            <div key={key} ref={ref} className={['kh', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+              <Icon name={GROUP_GLYPHS[item.group]} size={13} />{GROUP_LABELS[item.group]}
+            </div>
+          );
         }
         if (item.kind === 'noise') {
           const folded = !item.open && !leaving;
@@ -148,4 +163,38 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
       {more && <AllSkeleton more />}
     </section>
   );
+}
+
+/**
+ * The reading pane opening or closing shows or hides the kinds' subheadings (#237), which would move
+ * every row under them; the list scrolls by as much, so the email opened, or the one just closed,
+ * stays where it was. On the phone they always show, and nothing moves. The open row's place is
+ * noted after every render and scroll: the list takes the ref, and calls the note on scroll.
+ */
+function useKeptRow(openId: number | null): [RefObject<HTMLElement | null>, () => void] {
+  const list = useRef<HTMLElement>(null);
+  const kept = useRef<{id: number | null; top: number; headed: boolean}>({id: null, top: 0, headed: false});
+  const rowOf = (id: number | null) => (id === null ? null : list.current?.querySelector<HTMLElement>(`.row[data-id="${id}"]`) ?? null);
+  const topOf = (row: HTMLElement) => row.getBoundingClientRect().top - list.current!.getBoundingClientRect().top;
+  const headed = () => (list.current?.querySelector('.kh')?.getClientRects().length ?? 0) > 0;
+  const note = () => {
+    const row = rowOf(openId);
+    kept.current = {id: openId, top: row ? topOf(row) : 0, headed: headed()};
+  };
+  useLayoutEffect(() => {
+    const scroller = list.current;
+    const was = kept.current;
+    if (scroller && headed() !== was.headed) {
+      const row = rowOf(openId ?? was.id);
+      // Opened: the subheadings above its row came in. Closed: they went, so it's back by its noted place.
+      if (row && openId !== null) {
+        const above = [...scroller.querySelectorAll<HTMLElement>('.kh')].filter(kh => kh.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING);
+        scroller.scrollTop += above.reduce((sum, kh) => sum + kh.offsetHeight, 0);
+      } else if (row) {
+        scroller.scrollTop += topOf(row) - was.top;
+      }
+    }
+    note();
+  });
+  return [list, note];
 }

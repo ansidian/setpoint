@@ -312,7 +312,7 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   12, 76 px, on every row, decision 41, dropped only while the list is filtered to one account,
   #207), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
-  account never does.
+  account never does, and All's kind becomes a subheading (#237).
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
   (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
   line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
@@ -337,7 +337,8 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 The header's **All**. Every email, Noise included, newest first, under day headings ("TODAY Wed,
 Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39). Each day
 groups its rows by lane, and the kind shows once, in a left column, where an FYI run starts, after
-its group's glyph at 13 px (#119); each
+its group's glyph at 13 px (#119); with the reading pane open and on the phone, where the column has
+no room, it's a subheading over its run instead (#237); each
 day's Noise folds to one line ([Decided while building](#decided-while-building) #48). Pinned
 email sits on Unread's Pinned shelf above the first day, with ages and Unpin under the pointer, and
 leaves its day until it's unpinned (#101).
@@ -2440,3 +2441,9 @@ it changes what's on screen.
     1.2 s, back and forth). When the answer lands, the trail folds away over 180 ms and the answer
     and its sources fade up 4 px over 180 ms. About one email, the first step reads "Reading this
     email…" (#108) (Andy, 2026-10-11, polish audit search-04).
+237. **All's kinds become subheadings where their column has no room:** with the reading pane open
+    and on the phone, each FYI run of one kind starts with a 24 px subheading (its group's glyph at
+    13 px, 6 px before the kind's word, 11 uppercase .04em, `ink3`, padding 0 16 4 24, as the lane's
+    header) in place of the left column, so FYI never reads as one flat run. Wide, the column stays
+    (#48, #119). Opening or closing the pane scrolls the list by the subheadings' height above the
+    email, so the row clicked stays where it was (Andy, 2026-10-12; darma SV-67).

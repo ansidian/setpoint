@@ -411,8 +411,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .row.shelf .hact { width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
 .list.all .row .subj .code { font-size: 13px; }
-/* Other chips drop while the reading pane is open; the account never does. */
+/* Other chips drop while the reading pane is open; the account never does. The kind, which has no
+   room left, becomes a subheading over its run instead (#237). */
 .content:has(> .pane) .list.all .row .kd { display: none; }
+.list.all .kh { display: none; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.content:has(> .pane) .list.all .kh { display: flex; }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
    (#169): the floating detail's Delete and Complete, the editor's More › Delete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }

@@ -916,6 +916,40 @@ test('All: every email by day with clock times, grouped by lane, Noise folded pe
   }
 });
 
+test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, and the row clicked stays where it was', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, '/inbox/all');
+    const ink3 = await tokenColour(page, 'ink3');
+    const subheads = page.locator('.list.all .kh');
+    // Wide, the kinds sit in the left column and no subheading shows.
+    assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), true);
+    assert.equal(await subheads.first().isVisible(), false);
+    const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
+    const before = (await fabrikam.boundingBox())!.y;
+    await fabrikam.click();
+    await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    // Each FYI run of one kind gets its subheading, its glyph at 13 px in ink3; the column goes.
+    await subheads.first().waitFor();
+    assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
+    assert.deepEqual((await glyphs(subheads.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
+    assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), false);
+    // Today's subheadings sit under FYI's header, each before its run's first row.
+    const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
+    assert.equal(order[order.indexOf('lh:FYI 8') + 1], 'kh:Security');
+    // The subheadings came in above the row, and the list scrolled by as much: it hasn't moved.
+    assert.equal(Math.round((await fabrikam.boundingBox())!.y), Math.round(before));
+    // Closed again, the column is back and the row is still where it was.
+    await page.keyboard.press('Escape');
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    assert.equal(await subheads.first().isVisible(), false);
+    assert.equal(Math.round((await fabrikam.boundingBox())!.y), Math.round(before));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
   const setpoint = await startSetpoint();
   try {

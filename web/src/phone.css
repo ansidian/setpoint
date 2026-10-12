@@ -94,6 +94,7 @@
   .ph-acts > button:active .icon, .ph-tab:active .icon { transform: scale(.88); }
   .arow .l1 .via { display: none; }
   .list.all .row .kd { display: none; }
+  .list.all .kh { display: flex; }
   .listfoot { display: none; }
 
   /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
