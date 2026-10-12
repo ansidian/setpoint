@@ -130,22 +130,45 @@ export const escapeCancels = (cancel: () => void) => (event: KeyboardEvent) => {
   cancel();
 };
 
-/** A line under a section saying how a change went: its refusal, or what happened. */
-export function Line({text, tone}: {text: string | null; tone?: 'failed' | 'caution'}) {
-  return text ? <p className={tone ? `line ${tone}` : 'line'} role={tone ? 'alert' : 'status'}>{text}</p> : null;
+/**
+ * A line under a section saying how a change went: its refusal, or what happened. A failure leads
+ * with `error` in `alert`, and a test that worked with `check` in `good` (the polish audit's states-11).
+ */
+export function Line({text, tone}: {text: string | null; tone?: LineTone}) {
+  if (!text) return null;
+  return (
+    <p className={tone ? `line ${tone}` : 'line'} role={tone === 'failed' || tone === 'caution' ? 'alert' : 'status'}>
+      {tone === 'failed' && <Icon name="error" size={16} />}
+      {tone === 'done' && <Icon name="check" size={16} />}
+      {text}
+    </p>
+  );
 }
 
-/** A change's state for its line: runs `send`, keeping its refusal's words. */
+export type LineTone = 'failed' | 'caution' | 'done';
+
+/** A moment that shows for `ms`, then goes (a test sent, a field saved); `flash` starts it again. */
+export function useFlash(ms: number): [boolean, () => void] {
+  const [at, setAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (at === null) return;
+    const timer = window.setTimeout(() => setAt(null), ms);
+    return () => window.clearTimeout(timer);
+  }, [at, ms]);
+  return [at !== null, () => setAt(Date.now())];
+}
+
+/** A change's state for its line: runs `send`, keeping its refusal's words; `done` words what happened. */
 export function useAttempt() {
-  const [line, setLine] = useState<{text: string; tone?: 'failed'} | null>(null);
+  const [line, setLine] = useState<{text: string; tone?: 'failed' | 'done'} | null>(null);
   const [busy, setBusy] = useState(false);
-  async function attempt<T>(send: () => Promise<T>, done?: (value: T) => string | null): Promise<T | undefined> {
+  async function attempt<T>(send: () => Promise<T>, done?: (value: T) => string | {text: string; tone: 'done'} | null): Promise<T | undefined> {
     setBusy(true);
     setLine(null);
     try {
       const value = await send();
-      const text = done?.(value) ?? null;
-      setLine(text ? {text} : null);
+      const said = done?.(value) ?? null;
+      setLine(typeof said === 'string' ? {text: said} : said);
       return value;
     } catch (error) {
       setLine({text: error instanceof Error ? error.message : 'Something went wrong.', tone: 'failed'});

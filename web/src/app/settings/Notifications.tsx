@@ -9,13 +9,17 @@ import {SETTINGS_PATH} from '../../api/items.ts';
 import {NOTIFY_STATUS_PATH, patchSettings, SECRETS_PATH, sendTestNotification} from '../../api/settings.ts';
 import {asOf} from '../../logic/health.ts';
 import {EVENT_REMINDERS, minutesBefore, TASK_TIMES, taskTime} from '../../logic/settings.ts';
+import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
 import {SecretRow} from './Ai.tsx';
-import {Line, Page, Row, Section, Select, Stepper, Switch, useAttempt} from './parts.tsx';
+import {Line, Page, Row, Section, Select, Stepper, Switch, useAttempt, useFlash} from './parts.tsx';
 import {openSettings} from './store.ts';
 
 const BUFFER_STEP = 5;
+// How long Send test's check stays after a test went, and the Server field's after a save (settings-07).
+const SENT_MS = 2000;
+const SAVED_MS = 1500;
 // A reminder default's None in its menu (D49).
 const NONE = '';
 
@@ -26,6 +30,10 @@ export function NotificationsPage() {
   const now = useNow();
   const save = useAttempt();
   const test = useAttempt();
+  // A test that went: Send test's glyph is `check` in `good` for 2 s (settings-07).
+  const [sent, flashSent] = useFlash(SENT_MS);
+  // The server saved: a `check` at the field's end, fading in, then out after 1.5 s.
+  const [serverSaved, flashServerSaved] = useFlash(SAVED_MS + motion.medium);
   if (!settings) return <Page title="Notifications">{null}</Page>;
   const {notifications: ntfy, reminders, time_to_leave: leave} = settings;
   const change = (patch: Parameters<typeof patchSettings>[0]) => void save.attempt(() => patchSettings(patch));
@@ -34,9 +42,16 @@ export function NotificationsPage() {
   // Leave. Without it a switch shows off and can't be turned on, and says what's missing (UX #13).
   const noServer = !ntfy.ntfy_server;
   const noHome = !settings.calendar.home;
+  // ntfy failing is a source struggling: `caution`, as every failing source is (states-04).
   const state = !status?.configured ? {dot: 'okdot off', text: 'Not set up'}
-    : status.last_error ? {dot: 'okdot bad', text: `Failing, ${status.last_error}`}
+    : status.last_error ? {dot: 'okdot warn', text: `Failing, ${status.last_error}`}
       : {dot: 'okdot', text: status.last_sent_at ? `Connected · last sent ${asOf(status.last_sent_at, now, timeZone())}` : 'Connected · nothing sent yet'};
+  // Send test answers clearly (states-11, settings-07): anything but sent is a failure, in `alert`.
+  const sendTest = () => void test.attempt(sendTestNotification, out => {
+    if (out.state !== 'sent') throw new Error(`Not sent, ${out.error ?? out.state}`);
+    flashSent();
+    return {text: `Sent to ${ntfy.topics.reminders}`, tone: 'done'};
+  });
 
   return (
     <Page title="Notifications">
@@ -44,15 +59,20 @@ export function NotificationsPage() {
         <>
           <span className="ink2 num" style={{display: 'inline-flex', alignItems: 'center', gap: 7}}><span className={state.dot} />{state.text}</span>
           {!noServer && (
-            <button className="btn out sm" type="button" disabled={test.busy} onClick={() => void test.attempt(sendTestNotification, sent => (
-              sent.state === 'sent' ? `Sent to ${ntfy.topics.reminders}` : `Not sent, ${sent.error ?? sent.state}`
-            ))}><Icon name="send" size={17} />Send test</button>
+            <button className="btn out sm send-test" type="button" disabled={test.busy} onClick={sendTest}>
+              {/* While it sends, the shared spinner takes the glyph's place, so the button keeps its width. */}
+              {test.busy ? <span className="spin"><Icon name="progress_activity" size={17} /></span> : <Icon name={sent ? 'check' : 'send'} size={17} className={sent ? 'sent' : undefined} />}
+              Send test
+            </button>
           )}
         </>
       )} style={{marginTop: 0}}>
         <div className="set-group">
           <Row title="Server" kind="ctl">
-            <ServerField key={ntfy.ntfy_server ?? ''} value={ntfy.ntfy_server} onSave={server => change({notifications: {ntfy_server: server}})} />
+            <span className="fld-at">
+              <ServerField key={ntfy.ntfy_server ?? ''} value={ntfy.ntfy_server} onSave={server => void save.attempt(() => patchSettings({notifications: {ntfy_server: server}})).then(saved => saved && flashServerSaved())} />
+              {serverSaved && <span className="saved" aria-label="Saved"><Icon name="check" size={16} /></span>}
+            </span>
           </Row>
           <SecretRow name="ntfy_token" title="Token" noun="token" sub="If the server asks for one" secrets={secrets} />
           <Row title={ntfy.topics.reminders} sub={noServer ? 'Set a server first' : 'Reminders · Time to Leave · Reconnect alerts'} mono>
@@ -109,7 +129,10 @@ export function NotificationsPage() {
   );
 }
 
-/** ntfy's server: saved on Enter or leaving the field; empty turns ntfy off. */
+/**
+ * ntfy's server: saved on Enter or leaving the field; empty turns ntfy off. The field is keyed by the
+ * saved server, so the page, not the field a save replaces, shows that it saved.
+ */
 function ServerField({value, onSave}: {value: string | null; onSave: (server: string | null) => void}) {
   const [text, setText] = useState(value ?? '');
   const save = () => {

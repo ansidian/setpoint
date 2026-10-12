@@ -799,8 +799,9 @@ section's label stays under the title (#250).
   the 30 days as a line on a 50–100% scale (#251).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved by any rule.
-- **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", Send test, Server, Token
-  ([Decided while building](#decided-while-building) #82)), the
+- **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
+  `caution` dot; Send test, which turns while it sends and says under the group how it went, #185;
+  Server, Token ([Decided while building](#decided-while-building) #82)), the
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
   `setpoint-mail`: Attention mail · Off for now), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
@@ -2218,3 +2219,13 @@ it changes what's on screen.
     is drawn `ink` at 600 with no fill, so rows off the cursor show it against their `ink2` and the
     cursor's row by weight; a match in a command's keywords alone marks nothing (Andy, 2026-10-11,
     polish audit shell-13).
+185. **Send test answers clearly:** while it sends, the shared spinner (`progress_activity`, 900 ms)
+    takes its `send` glyph's 17 px place, so the button keeps its width. Anything but sent is a
+    failure: the line under the group is `alert`, led by a 16 px `error`, in words ("Not sent, Can’t
+    reach ntfy.example.net", "Not sent, ntfy.example.net didn’t answer in time", "Not sent, ntfy
+    answered 401, unauthorized" with ntfy's own words), never the network library's "fetch failed".
+    A test that went reads "Sent to setpoint-reminders" in `ink3` after a 16 px `check` in `good`, and
+    the button's glyph is that check for 2 s. The header's failing dot is `caution`, as every failing
+    source is (#186). The Server field, saved, shows a 16 px `check` in `good` 9 px inside its right
+    end, in over 120 ms and out over 180 ms after 1.5 s (Andy, 2026-10-11, polish audit states-11,
+    settings-07).

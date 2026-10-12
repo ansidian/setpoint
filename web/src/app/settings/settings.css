@@ -61,9 +61,11 @@
 .settings .t { color: var(--ink); }
 .settings .s { color: var(--ink3); font-size: 12.5px; }
 .settings .lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.settings .line { margin: 0; padding: 6px 4px 0; color: var(--ink3); font-size: 12.5px; }
+.settings .line { margin: 0; padding: 6px 4px 0; color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
 .settings .line.failed { color: var(--alert); }
 .settings .line.caution { color: var(--caution); }
+/* A test that worked leads with `check` in `good`; its words stay `ink3` (states-11). */
+.settings .line.done > .icon { color: var(--good); }
 .settings .note { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 4px; color: var(--ink3); font-size: 12.5px; flex: none; }
 
 /* A switch: 34 × 20. On is a `switchOn` track (`good`) with a `switchKnobOn` knob, off recedes to an
@@ -168,7 +170,18 @@
 .settings .stepper .v { min-width: 52px; text-align: center; color: var(--ink); }
 .settings .okdot { width: 7px; height: 7px; border-radius: 999px; background: var(--good); flex: none; }
 .settings .okdot.off { background: var(--ink3); }
-.settings .okdot.bad { background: var(--alert); }
+/* ntfy failing is a source struggling, so `caution`, as every failing source is (states-04). */
+.settings .okdot.warn { background: var(--caution); }
+/* Send test (states-11, settings-07): while it sends the shared spinner stands in its glyph's 17 px
+   place, and a test that went ticks `good` for 2 s. */
+.settings .send-test .spin { margin: 0; color: inherit; vertical-align: 0; }
+.settings .send-test .icon.sent { color: var(--good); }
+/* The Server field says it saved: a `check` in `good` at its right end, in over 120 ms, out over 180 ms after 1.5 s. */
+.settings .fld-at { position: relative; display: inline-flex; flex: none; }
+.settings .fld-at .saved { position: absolute; right: 9px; top: 50%; margin-top: -8px; display: grid; color: var(--good); pointer-events: none;
+  animation: saved-in var(--dur-fast) var(--ease), saved-out var(--dur-medium) var(--ease) 1500ms forwards; }
+@keyframes saved-in { from { opacity: 0; } }
+@keyframes saved-out { to { opacity: 0; } }
 
 /* Security: recovery codes, shown once. */
 .settings .codes { margin: 0; padding: 12px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.7; color: var(--ink); user-select: text; -webkit-user-select: text; columns: 2; }

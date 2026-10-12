@@ -1,5 +1,7 @@
 // notify(): ntfy delivery against a fake ntfy server, with topics, click deep links, Send test,
 // the log, "once" keys and Settings' switches.
+import http from 'node:http';
+import type {AddressInfo} from 'node:net';
 import {describe, expect, test} from 'vitest';
 import {Notifier} from '../src/notify/index.ts';
 import {setSecret} from '../src/secrets/store.ts';
@@ -59,13 +61,27 @@ describe('notify()', () => {
     const {ntfy, notifier} = await setUp();
     const alert = {kind: 'reconnect' as const, topic: 'reminders' as const, title: 'Business needs sign-in', body: 'Reconnect it.', dedupe: 'reconnect:1:x'};
     ntfy.refuseWith(403, 'forbidden');
-    expect(await notifier.notify(alert)).toMatchObject({state: 'failed', error: 'ntfy answered 403: forbidden'});
-    expect(notifier.status()).toMatchObject({configured: true, last_sent_at: null, last_error: 'ntfy answered 403: forbidden'});
+    expect(await notifier.notify(alert)).toMatchObject({state: 'failed', error: 'ntfy answered 403, forbidden'});
+    expect(notifier.status()).toMatchObject({configured: true, last_sent_at: null, last_error: 'ntfy answered 403, forbidden'});
     ntfy.accept();
     expect(await notifier.notify(alert)).toMatchObject({state: 'sent'});
     expect(await notifier.notify(alert)).toMatchObject({state: 'sent'});
     expect(ntfy.published).toHaveLength(1);
     expect(notifier.status()).toMatchObject({last_error: null});
+  });
+
+  // The polish audit's states-11: Node's own "fetch failed" isn't words the user can act on.
+  test('a server that can\'t be reached, or doesn\'t answer in time, is said in words, by its host', async () => {
+    const w = world({seed: true});
+    const closed = http.createServer();
+    await new Promise<void>(resolve => closed.listen(0, '127.0.0.1', resolve));
+    const {port} = closed.address() as AddressInfo;
+    await new Promise<void>(resolve => closed.close(() => resolve()));
+    updateSettings(w.store, {notifications: {ntfy_server: `http://127.0.0.1:${port}/`}});
+    expect(await new Notifier(w.store, {publicUrl: PUBLIC}).sendTest()).toMatchObject({state: 'failed', error: `Can’t reach 127.0.0.1:${port}`});
+    updateSettings(w.store, {notifications: {ntfy_server: 'https://ntfy.example.net'}});
+    const timedOut = () => Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+    expect(await new Notifier(w.store, {publicUrl: PUBLIC, fetch: timedOut}).sendTest()).toMatchObject({state: 'failed', error: 'ntfy.example.net didn’t answer in time'});
   });
 
   test('without ntfy set up, nothing is sent and the log says why', async () => {

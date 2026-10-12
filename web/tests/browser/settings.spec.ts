@@ -697,6 +697,75 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
   }
 });
 
+test('Send test (the polish audit\'s states-11, settings-07): it turns while it sends at its own width, a failure reads as one in alert and in words, a test that went ticks good, and the Server field says it saved', async () => {
+  const ntfy = await fakeNtfy();
+  // A server nothing answers at: a port just closed.
+  const closed = http.createServer();
+  await new Promise<void>(resolve => closed.listen(0, '127.0.0.1', resolve));
+  const unreachable = `127.0.0.1:${(closed.address() as AddressInfo).port}`;
+  await new Promise(resolve => closed.close(resolve));
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'notifications');
+    const server = page.locator('.settings input[aria-label="ntfy server"]');
+    await server.fill(`http://${unreachable}`);
+    await page.keyboard.press('Enter');
+    // Saved, a check in good at the field's right end.
+    const saved = page.locator('.settings .fld-at .saved');
+    await saved.waitFor();
+    assert.deepEqual(await saved.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]),
+      [ICONS.check, '16', await computed(page, 'color', 'var(--good)')]);
+    const [field, mark] = [(await server.boundingBox())!, (await saved.boundingBox())!];
+    assert.equal(Math.round(field.x + field.width - (mark.x + mark.width)), 9, 'at the field\'s right end');
+    // It goes after 1.5 s and its fade.
+    await saved.waitFor({state: 'detached'});
+
+    const button = page.getByRole('button', {name: 'Send test'});
+    const width = (await button.boundingBox())!.width;
+    let release = () => {};
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    await page.route('**/api/notifications/test', async route => {
+      await held;
+      await route.continue();
+    });
+    await button.click();
+    // While it sends, the shared spinner stands where its glyph was, and the button keeps its width.
+    await button.locator('.spin .icon').waitFor();
+    assert.equal(await button.locator('.spin .icon path').getAttribute('d'), ICONS.progress_activity);
+    assert.equal((await button.boundingBox())!.width, width);
+    release();
+    // A failure is a failure: in alert, led by error, in words rather than Node's "fetch failed".
+    const line = page.locator('.settings .line');
+    await line.filter({hasText: `Not sent, Can’t reach ${unreachable}`}).waitFor();
+    assert.deepEqual(await line.evaluate(element => [element.className, element.textContent, getComputedStyle(element).color, element.querySelector('.icon path')?.getAttribute('d'), element.querySelector('.icon')?.getAttribute('width')]),
+      ['line failed', `Not sent, Can’t reach ${unreachable}`, await computed(page, 'color', 'var(--alert)'), ICONS.error, '16']);
+    // The header agrees, as a source failing does: a caution dot.
+    const header = page.locator('.settings .set-label', {hasText: 'ntfy'});
+    await header.getByText(`Failing, Can’t reach ${unreachable}`).waitFor();
+    assert.equal(await header.locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor), await computed(page, 'background', 'var(--caution)'));
+    await page.unroute('**/api/notifications/test');
+
+    // A server that answers: the test goes, its line ticks in good, and so does the button for 2 s.
+    await server.fill(ntfy.url);
+    await page.keyboard.press('Enter');
+    await settled('the server', () => setpoint.api<Settings>('GET', '/settings'), value => value.notifications.ntfy_server === ntfy.url);
+    await button.click();
+    await line.filter({hasText: 'Sent to setpoint-reminders'}).waitFor();
+    const good = await computed(page, 'color', 'var(--good)');
+    assert.deepEqual(await line.evaluate(element => [element.className, getComputedStyle(element.querySelector('.icon')!).color, element.querySelector('.icon path')?.getAttribute('d')]), ['line done', good, ICONS.check]);
+    assert.deepEqual(await button.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color]), [ICONS.check, good]);
+    await until('the button\'s glyph back to send', () => button.locator('.icon path').getAttribute('d'), d => d === ICONS.send);
+    assert.equal(ntfy.published.length, 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+    await ntfy.close();
+  }
+});
+
 test('Calendar, Todoist and Appearance: a calendar hidden, Home set with its coordinates, weather off, the default project, Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
