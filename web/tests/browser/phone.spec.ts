@@ -57,6 +57,39 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
   }
 });
 
+test('#239: on the phone a row\'s summary wraps to a second line rather than being cut, and All shows its kinds as subheadings', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    // Parkside's line (its subject and summary, on the shelf) runs to two lines, all of it there.
+    const lease = page.locator('.row.shelf .subj');
+    const lines = await lease.evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight)));
+    assert.equal(lines, 2);
+    // Every row's line and every Attention summary in the seed fits in its two lines, none cut.
+    const cut = await page.locator('.list .row .subj:not(.code-line), .list .arow .l3').evaluateAll(all => all.filter(node => node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
+    assert.deepEqual(cut, []);
+    // All: the kind column has no room on the phone, so each FYI run gets its subheading.
+    await page.goto(`${setpoint.base}/inbox/all`);
+    await page.locator('.list.all .row').first().waitFor();
+    const subheads = page.locator('.list.all .kh');
+    await subheads.first().waitFor();
+    assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
+    assert.equal(await page.locator('.list.all .row .kd').first().isVisible(), false);
+    // They show already, so opening an email and coming back moves nothing.
+    const bank = page.locator('.list.all .row', {hasText: 'Proseware'}).first();
+    await bank.scrollIntoViewIfNeeded();
+    const before = (await bank.boundingBox())!.y;
+    await bank.tap();
+    await page.locator('.rd-subj', {hasText: 'Bill is ready'}).waitFor();
+    await page.locator('.ph-back').tap();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    assert.equal(Math.round((await bank.boundingBox())!.y), Math.round(before));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoom the page; placeholders stay 13.5 px', async () => {
   const setpoint = await startSetpoint({claim: false});
   try {
@@ -105,7 +138,7 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     assert.ok(subject.y >= from.y + from.height, 'the subject sits under the sender');
     assert.equal(await page.locator('.row.shelf .from').evaluate(text => text.scrollWidth <= text.clientWidth), true, '"Parkside Apartments" whole');
     // … and the subject takes the row's whole width under it (at the list's 15 px, #144, a long one
-    // still ends in "…").
+    // wraps to a second line and ends in "…" past it, #239).
     const [shelf, line] = [await box(page, '.row.shelf'), await box(page, '.row.shelf .subj')];
     assert.equal(line.x, from.x, 'the subject starts under the sender');
     assert.equal(Math.round(line.x + line.width), shelf.x + shelf.width - 16, 'and runs to the row\'s end');

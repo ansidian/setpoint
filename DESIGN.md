@@ -2451,3 +2451,6 @@ it changes what's on screen.
     subject's place (#35, #74) is the head's second line, `ink2` 14 / 1.45 (15 on the phone), max
     680, 6 px under the subject, on every size and from the row at once. An email with no summary
     has no line, and security mail none (its facts card says it) (Andy, 2026-10-12; darma SV-67).
+239. **On the phone a row's summary wraps to a second line** (amending #66): a row's line under the
+    sender, and an Attention row's summary, take up to two lines, ending in "…" past them, rather
+    than being cut at about 45 characters (Andy, 2026-10-12; darma SV-67).

@@ -58,7 +58,10 @@
   .row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; grid-template-areas: "ud from ac age" ". subj subj subj"; align-items: center; height: auto; min-height: 62px; padding: 8px 16px 8px 8px; column-gap: 8px; row-gap: 3px; }
   .row .ud { grid-area: ud; }
   .row .from, .list.all .row .from { grid-area: from; width: auto; }
+  /* The summary in the subject's place wraps to a second line rather than being cut at ~45
+     characters, and Attention's does the same (#239). */
   .row .subj { grid-area: subj; }
+  .row .subj:not(.code-line), .arow .l3 { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .row .ac { grid-area: ac; width: auto; }
   /* Dates never wrap (override 11): the age takes the room it needs. */
   .row .age, .list.all .row .age { grid-area: age; width: auto; min-width: 36px; white-space: nowrap; }
