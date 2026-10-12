@@ -6,7 +6,7 @@
 import type {CalendarOut, CalendarSearchResultOut} from '@setpoint/shared';
 import {Fragment} from 'react';
 import type {CSSProperties} from 'react';
-import {CALENDAR_SEARCH_HINT, calendarResultGroups, calendarResultLine, resultDay, resultsLine, segments} from '../../logic/search.ts';
+import {CALENDAR_SEARCH_HINT, calendarResultGroups, calendarResultLine, resultDay, resultsLine, segments, shownCalendarReasons} from '../../logic/search.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useRingColour} from './Chip.tsx';
@@ -63,6 +63,7 @@ function ResultRow({result, calendar, selected, today, timeZone, onSelect}: Resu
   const task = item.kind === 'task';
   // One line, cut with an ellipsis and whole in its title, so the calendar never sits alone on a second.
   const line = calendarResultLine(result, calendar?.name, timeZone);
+  const reasons = shownCalendarReasons(result);
   return (
     <a className={`ag-item cs-result${task ? ' ag-task' : ''}${task && item.done ? ' done' : ''}${selected ? ' sel' : ''}`} href="#" data-key={item.key}
       style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties}
@@ -75,14 +76,17 @@ function ResultRow({result, calendar, selected, today, timeZone, onSelect}: Resu
       <span className="grow">
         <span className="title"><Marked parts={segments(item.title, result.highlights)} /></span>
         <span className="ink3 num line ell" title={line}>{line}</span>
-        <span className="why">
-          {result.reasons.map((reason, index) => (
-            <Fragment key={`${reason.field}:${reason.value}`}>
-              {index > 0 && <span>·</span>}
-              <span>{reason.key} <b><Marked parts={segments(reason.value, reason.runs)} /></b></span>
-            </Fragment>
-          ))}
-        </span>
+        {/* Only what the row doesn't already show (search-11). */}
+        {reasons.length > 0 && (
+          <span className="why">
+            {reasons.map((reason, index) => (
+              <Fragment key={`${reason.field}:${reason.value}`}>
+                {index > 0 && <span>·</span>}
+                <span>{reason.key} <b><Marked parts={segments(reason.value, reason.runs)} /></b></span>
+              </Fragment>
+            ))}
+          </span>
+        )}
       </span>
       {item.recurring && <span className="repeat"><Icon name="repeat" size={16} /></span>}
     </a>

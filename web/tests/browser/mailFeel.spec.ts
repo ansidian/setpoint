@@ -554,6 +554,67 @@ test('reader-10: a newsletter whose images give only their width keeps its shape
   }
 });
 
+test('search-11, -13, -14, -15: a reason shows only when the row doesn\'t; no results are chips; the field widens with the panes; the answer\'s fact is underlined', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    // The field widens over 180 ms, and Unread | All fades out over 120 ms as the first key goes in.
+    assert.match(await page.locator('.hd > .search').evaluate(field => getComputedStyle(field).transition), /width 0\.18s/);
+    await page.evaluate(() => {
+      const fades: string[] = [];
+      (window as unknown as {fades: string[]}).fades = fades;
+      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement) || !node.classList.contains('seg')) return;
+        fades.push(node.getAnimations().map(animation => {
+          const frames = (animation.effect as KeyframeEffect).getKeyframes().map(frame => frame.opacity).join(' → ');
+          return `${frames} ${animation.effect!.getComputedTiming().duration}`;
+        }).join());
+      }))).observe(document.querySelector('.hd')!, {childList: true});
+    });
+    await page.keyboard.press('/');
+    await page.keyboard.type('north');
+    await page.locator('.arow.result').first().waitFor();
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {fades: string[]}).fades), ['1 → 0 120']);
+    // Free text in the highlighted sender: no why line, three lines a row.
+    assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').count(), 1);
+    assert.equal(await page.locator('.arow.result .why').count(), 0);
+
+    // No results: each part is the field's own chip, with no dots between them; a Not chip keeps its Not.
+    await page.locator('.search input').fill('northwind !confirmation zebra');
+    await page.keyboard.press('Enter');
+    const parts = page.locator('.no-results .part');
+    await until('no results', () => parts.count(), count => count >= 2);
+    assert.equal(await page.locator('.no-results .ink3').count(), 0);
+    assert.deepEqual(await parts.first().evaluate(part => {
+      const style = getComputedStyle(part);
+      return [style.height, style.paddingLeft, style.paddingRight, style.borderTopLeftRadius, style.fontWeight];
+    }), ['22px', '9px', '4px', '999px', '400']);
+    assert.equal(await parts.first().evaluate(part => getComputedStyle(part).backgroundColor), await backgroundOf(page, 'var(--sub2)'));
+    assert.equal(await page.locator('.no-results').evaluate(line => getComputedStyle(line).columnGap), '8px');
+    const not = parts.filter({has: page.locator('.k')});
+    if (await not.count()) assert.equal(await not.locator('.k').textContent(), 'Not');
+    const before = await parts.count();
+    await parts.last().getByRole('button').click();
+    await until('a chip knocked off', () => parts.count(), count => count === before - 1);
+
+    // The answer's key fact: underlined 2 px, 3 px under, in Night's `sun` at 70%.
+    assert.deepEqual(await page.evaluate(() => {
+      const answer = document.querySelector('.content')!.appendChild(document.createElement('p'));
+      answer.className = 'ans';
+      const fact = answer.appendChild(document.createElement('b'));
+      const style = getComputedStyle(fact);
+      const seen = [style.textDecorationLine, style.textDecorationThickness, style.textUnderlineOffset, style.textDecorationColor, style.fontWeight];
+      answer.remove();
+      return seen;
+    }), ['underline', '2px', '3px', await colourOf(page, 'color-mix(in oklch, var(--sun) 70%, transparent)'), '500']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('shell-13: ⌘K marks what was typed', async () => {
   const setpoint = await startSetpoint();
   try {

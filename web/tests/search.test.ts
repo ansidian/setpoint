@@ -2,11 +2,11 @@
 // Proposal) as tables: highlighted runs, reasons, the results line, what Alfred is asked, what the
 // reader highlights, and how a proposal's time reads; SV-23's calendar results: Upcoming then Past,
 // the row's day, and its line with a series' rule.
-import type {AnswerOut, ItemOut, ProposalItemOut, SearchChip, SearchResultOut} from '@setpoint/shared';
+import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  alfredQuestion, alfredStepLine, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownSources,
+  alfredQuestion, alfredStepLine, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -53,6 +53,37 @@ describe('resultSender: the organisation, else the name, with that field\'s high
   });
   test('no organisation: the name', () => {
     expect(resultSender(result({organisation: null, from_name: 'Sam Lee', highlights: [{field: 'from_name', start: 4, end: 7}]}))).toEqual([{text: 'Sam ', mark: false}, {text: 'Lee', mark: true}]);
+  });
+});
+
+// search-11: a reason shows only when the row doesn't already show it.
+describe('shownReasons: what a result\'s why line keeps', () => {
+  const org: MatchReasonOut = {field: 'organisation', label: 'Org Northwind', matched: ['Northwind']};
+  const type: MatchReasonOut = {field: 'type', label: 'Type Rejection', matched: []};
+  const date: MatchReasonOut = {field: 'date', label: 'Date Mar 14', matched: []};
+  const sender: MatchReasonOut = {field: 'sender', label: 'Sender north', matched: ['north']};
+  const subject: MatchReasonOut = {field: 'subject', label: 'Subject lease renewal', matched: ['lease', 'renewal']};
+  const body: MatchReasonOut = {field: 'body', label: 'Body signed', matched: ['signed']};
+  const account: MatchReasonOut = {field: 'account', label: 'Account Jobs', matched: []};
+  test.each<[string, Partial<SearchResultOut>, string[]]>([
+    ['chips: the highlighted organisation and the row\'s own day go, the type stays', {reasons: [org, type, date], highlights: [{field: 'organisation', start: 0, end: 9}]}, ['Type Rejection']],
+    ['an organisation chip with nothing highlighted stays', {reasons: [org, type], highlights: []}, ['Org Northwind', 'Type Rejection']],
+    ['free text in the highlighted sender goes', {reasons: [sender], highlights: [{field: 'organisation', start: 0, end: 5}]}, []],
+    ['the sender is the name when there\'s no organisation', {organisation: null, reasons: [sender], highlights: [{field: 'organisation', start: 0, end: 5}]}, ['Sender north']],
+    ['a highlighted subject and excerpt: both go', {reasons: [subject, body], highlights: [{field: 'subject', start: 0, end: 5}, {field: 'excerpt', start: 3, end: 9}]}, []],
+    ['a body match the excerpt doesn\'t show stays', {reasons: [subject, body], highlights: [{field: 'subject', start: 0, end: 5}]}, ['Body signed']],
+    ['an account chip stays', {reasons: [account], highlights: []}, ['Account Jobs']],
+  ])('%s', (_name, fields, expected) => {
+    expect(shownReasons(result(fields)).map(reason => reason.label)).toEqual(expected);
+  });
+
+  test.each<[string, {field: string; key: string; value: string}[], number, string[]]>([
+    ['a highlighted title and the row\'s own day go; its calendar stays', [{field: 'title', key: 'Title', value: 'Dentist'}, {field: 'calendar', key: 'Calendar', value: 'Classes'}, {field: 'date', key: 'Date', value: 'Oct 8'}], 1, ['Calendar']],
+    ['a place, which its line doesn\'t highlight, stays', [{field: 'place', key: 'Place', value: 'Blue Door'}], 0, ['Place']],
+    ['a title match nothing highlights stays', [{field: 'title', key: 'Title', value: 'Dinner'}], 0, ['Title']],
+  ])('calendar: %s', (_name, reasons, highlights, expected) => {
+    const shown = shownCalendarReasons({reasons: reasons.map(reason => ({...reason, runs: []})), highlights: Array.from({length: highlights}, () => ({start: 0, end: 3}))} as never);
+    expect(shown.map(reason => reason.key)).toEqual(expected);
   });
 });
 

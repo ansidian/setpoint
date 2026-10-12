@@ -210,7 +210,9 @@ test('Search news: the stories found replace the list, the archive too; one open
     // Mail's search header (#8): Search, no segmented control, the field 520 wide with its Esc hint.
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     assert.equal(await page.locator('.hd .seg').count(), 0);
-    assert.deepEqual(await page.locator('.hd .search').evaluate(field => [field.getBoundingClientRect().width, field.querySelector('.kbd')?.textContent]), [520, 'Esc']);
+    // It widens over 180 ms (search-14).
+    await until('the field 520 wide', () => page.locator('.hd .search').evaluate(field => [field.getBoundingClientRect().width, field.querySelector('.kbd')?.textContent]),
+      seen => seen[0] === 520 && seen[1] === 'Esc');
     assert.equal(await results.locator('.bar.muted').textContent(), '1 result·newest first');
     assert.equal(await page.locator('.nw-missed, .nw-sec, .nw-pill').count(), 0, 'the list, its strip and headers, are replaced');
     const found = results.locator('[data-story]');

@@ -370,14 +370,14 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **"!" before a word leaves out what it names** (#85): one that forms a chip gives a **Not** chip
   ("Not Type Confirmation ×"); one that doesn't stays in the field as typed ("!proseware") and leaves
   out the mail that has it.
-- A results line: "2 results · newest first". Each result shows why it matched ("Org Northwind ·
-  Type Rejection", `ink3` 12) and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
+- A results line: "2 results · newest first". Each result shows why it matched ("Type Rejection",
+  `ink3` 12) where its lines don't already show it (#210), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
   yellow in Light, #135).
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
   after it in `ink3` (#136).
-- No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable, after a 20
-  px `search_off` (#165).
+- No results: "No emails match" and each chip as the field draws it, removable by its × (#211),
+  after a 20 px `search_off` (#165).
 
 ### Alfred's Answer card
 
@@ -2198,6 +2198,22 @@ it changes what's on screen.
     words is a 56 px band its line's width; and a placeholder with no alt text shows the 20 px
     `hide_image` glyph at its centre in the frame's grey, so it still says "picture" (Andy,
     2026-10-11, polish audit reader-10).
+210. **A result's why line says only what the row doesn't** (amending Search's "each result shows
+    why it matched" and #24): a sender's, organisation's, subject's or body's reason goes when its
+    words are highlighted in the row's lines, and a date's always, as the row's own day is its age (or
+    its day column); a type, kind, account or place, and a body match the excerpt doesn't hold, stay.
+    With none left the row has no why line and is three lines high. Calendar results the same: a
+    highlighted title and the date go (Andy, 2026-10-11, polish audit search-11).
+211. **No results reads as the field's chips:** "No emails match", then each chip and the words drawn
+    as the field draws them (22 px, `sub2`, `ink` at 400, padding 0 4 0 9, its × and the whole chip
+    answering, #147), 8 px apart with no dots between; a Not chip keeps its "Not" in `ink3`. Calendar's
+    and News's the same (Andy, 2026-10-11, polish audit search-13).
+212. **Starting a search makes room rather than cutting:** the mail header's field grows leftward from
+    380 to 520 px over 180 ms (the compact tier's too), and Unread | All fades out over 120 ms as the
+    title becomes Search (Andy, 2026-10-11, polish audit search-14).
+213. **The answer's key fact points at its evidence:** Alfred's bold runs are underlined, 2 px thick and
+    3 px under, in Night's `sun` at 70% and Light's `hl`, the yellow the email marks the same words
+    with, without filling the card (Andy, 2026-10-11, polish audit search-15).
 214. **⌘K marks what was typed:** in each result's label the start of each word a typed word matched
     is drawn `ink` at 600 with no fill, so rows off the cursor show it against their `ink2` and the
     cursor's row by weight; a match in a command's keywords alone marks nothing (Andy, 2026-10-11,

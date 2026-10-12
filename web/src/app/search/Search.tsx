@@ -6,7 +6,7 @@ import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '
 import {Fragment, useEffect, useId, useRef, useState} from 'react';
 import type {KeyboardEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
-import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine} from '../../logic/search.ts';
+import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -150,23 +150,23 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   );
 }
 
-/** "No emails match **Northwind · Rejection · Mar 2026**", each chip and the words removable. */
+/**
+ * "No emails match", then each chip and the words as the same chips the field draws, each knocked off
+ * by its × (search-13); a Not chip keeps its "Not" label.
+ */
 export function NoResults({lead, search}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>}) {
   return (
     <div className="no-results">
       <Icon name="search_off" size={20} />
       <span>{lead}</span>
       {search.chips.map((chip, index) => (
-        <Fragment key={chipKey(chip)}>
-          {index > 0 && <span className="ink3">·</span>}
-          <span className="part"><b>{negated(chip) ? `Not ${chip.label}` : chip.label}</b><button className="x" type="button" aria-label={`Remove ${chip.label}`} onClick={() => search.removeChip(index)}><Icon name="close" size={14} /></button></span>
-        </Fragment>
+        <span className="part" key={chipKey(chip)}>
+          {negated(chip) && <span className="k">Not</span>}{chip.label}
+          <button className="x" type="button" aria-label={`Remove ${chip.label}`} onClick={() => search.removeChip(index)}><Icon name="close" size={14} /></button>
+        </span>
       ))}
       {search.text.trim() && (
-        <>
-          {search.chips.length > 0 && <span className="ink3">·</span>}
-          <span className="part"><b>{search.text.trim()}</b><button className="x" type="button" aria-label={`Remove ${search.text.trim()}`} onClick={search.clearText}><Icon name="close" size={14} /></button></span>
-        </>
+        <span className="part">{search.text.trim()}<button className="x" type="button" aria-label={`Remove ${search.text.trim()}`} onClick={search.clearText}><Icon name="close" size={14} /></button></span>
       )}
     </div>
   );
@@ -229,6 +229,7 @@ export function SearchResults(props: ResultsProps) {
 
 function ResultRow({result, cursor, openId, accounts, now, timeZone, onPoint, onOpen}: ResultsProps & {result: SearchResultOut}) {
   const key = resultKey(result.id);
+  const reasons = shownReasons(result);
   const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open'].filter(Boolean).join(' ');
   return (
     <div className={classes} data-key={key} data-id={result.id} onMouseMove={() => onPoint(key)} onClick={() => onOpen(result.id, key)}>
@@ -246,12 +247,15 @@ function ResultRow({result, cursor, openId, accounts, now, timeZone, onPoint, on
       </div>
       <div className="l2"><Marked parts={fieldSegments(result, 'subject')} /></div>
       {result.excerpt && <div className="l3"><Marked parts={fieldSegments(result, 'excerpt')} /></div>}
-      <div className="why">
-        {result.reasons.map((reason, index) => {
-          const {key: kind, value} = reasonParts(reason.label);
-          return <Fragment key={reason.label}>{index > 0 && <span>·</span>}<span>{kind} <b>{value}</b></span></Fragment>;
-        })}
-      </div>
+      {/* Only what the row doesn't already show (search-11); none left, no line. */}
+      {reasons.length > 0 && (
+        <div className="why">
+          {reasons.map((reason, index) => {
+            const {key: kind, value} = reasonParts(reason.label);
+            return <Fragment key={reason.label}>{index > 0 && <span>·</span>}<span>{kind} <b>{value}</b></span></Fragment>;
+          })}
+        </div>
+      )}
     </div>
   );
 }

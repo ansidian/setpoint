@@ -415,7 +415,14 @@ test('the phone\'s list reads a step up: rows 15, ages and accounts 13, summarie
     await page.keyboard.type('northwind');
     await page.locator('.search-list .result').first().waitFor();
     assert.deepEqual(await styles(page, '.search-list .result .r1 .age', ['font-size']), ['13px']);
-    assert.deepEqual(await styles(page, '.search-list .result .why', ['font-size']), ['13px']);
+    // A why line shows only what a row doesn't (search-11), so here none does: one put in a result reads it.
+    assert.deepEqual(await page.locator('.search-list .result').first().evaluate(row => {
+      const why = row.appendChild(document.createElement('div'));
+      why.className = 'why';
+      const size = getComputedStyle(why).fontSize;
+      why.remove();
+      return [size];
+    }), ['13px']);
     assert.deepEqual(await styles(page, '.search-list .result .l2', ['font-size']), ['15px']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

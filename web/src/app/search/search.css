@@ -2,8 +2,11 @@
    (design-export/styles/setpoint.css › .qchip, mark.hl, .bar, .card, .field) and the boards' own. */
 
 /* ---------- The field ---------- */
-/* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc. */
+/* While it holds a search, the field widens to 520 (boards 06 and 07) and its hint reads Esc; it grows
+   leftward over 180 ms, with the panes, rather than jumping (search-14). */
 .search.active { width: 520px; }
+.hd > .search { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+  width var(--dur-medium) var(--ease), flex-basis var(--dur-medium) var(--ease); }
 .search .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
 .search .qchip.sel { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 .search .qchip .k { color: var(--ink3); font-size: 11px; }
@@ -31,11 +34,15 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 /* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own (#136). */
 .ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
 .ask:hover { background: var(--sub); }
-.no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
-.no-results b { color: var(--ink); font-weight: 500; }
+.no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
 /* Nothing found leads with search_off, 20 px in ink3, 12 px before the words (#165). */
-.no-results > .icon { color: var(--ink3); margin-right: 6px; }
-.no-results .part { display: inline-flex; align-items: center; gap: 2px; }
+.no-results > .icon { color: var(--ink3); margin-right: 4px; }
+/* Each part is the field's own chip (search-13): 22 px, `sub2`, `ink` at 400, its × and its whole-chip
+   answer (#147); a Not chip keeps its "Not" in `ink3`, as the field's label is. */
+.no-results .part { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 9px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.no-results .part .k { color: var(--ink3); font-size: 11px; }
+@media (hover: hover) { .no-results .part:has(.x:hover) { background: var(--sub3); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
 
 /* ---------- Cards: the Answer card and the proposal ---------- */
 .answer, .prop { background: var(--cardOn); border-radius: var(--r-popover); box-shadow: inset 0 0 0 1px var(--edgeOn); flex: none; }
@@ -59,6 +66,10 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .answer .card-h > .icon { color: var(--ink); }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }
 .ans b { font-weight: 500; }
+/* The answer's key fact points at its evidence (search-15): underlined in the yellow the email marks it
+   with (`sun` at 70% in Night, Light's `hl`), 2 px and 3 px under. */
+.ans b { text-decoration: underline; text-decoration-color: color-mix(in oklch, var(--sun) 70%, transparent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+:root[data-theme="light"] .ans b { text-decoration-color: var(--hl); }
 .ans-none { display: flex; flex-direction: column; gap: 2px; }
 .ans-none .ans { color: var(--ink2); }
 .ans-none .searched { color: var(--ink3); font-size: 12.5px; }

@@ -1,7 +1,7 @@
 // Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
 // card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
 // what the reader highlights, and how a proposal's time reads.
-import type {AnswerOut, AskStep, CalendarSearchResultOut, HighlightOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
@@ -60,6 +60,28 @@ export function resultSender(result: Pick<SearchResultOut, 'organisation' | 'fro
 
 export const fieldSegments = (result: Pick<SearchResultOut, 'subject' | 'excerpt' | 'highlights'>, field: 'subject' | 'excerpt') =>
   segments(result[field], result.highlights.filter(run => run.field === field));
+
+/**
+ * The reasons a mail result shows (polish audit search-11): only what its lines don't already show. A
+ * sender's or organisation's goes when the sender line is highlighted, a subject's when the subject is,
+ * a body's when the excerpt is, and a date's always (it's the row's own day, in its age column). Type,
+ * kind, account and a body match the excerpt doesn't hold stay. None left, the row has no why line.
+ */
+export function shownReasons(result: Pick<SearchResultOut, 'reasons' | 'highlights' | 'organisation'>): MatchReasonOut[] {
+  const marked = (field: HighlightOut['field']) => result.highlights.some(run => run.field === field && run.end > run.start);
+  const senderField: HighlightOut['field'] = result.organisation ? 'organisation' : 'from_name';
+  return result.reasons.filter(reason => {
+    if (reason.field === 'sender' || reason.field === 'organisation') return !marked(senderField);
+    if (reason.field === 'subject') return !marked('subject');
+    if (reason.field === 'body') return !marked('excerpt');
+    return reason.field !== 'date';
+  });
+}
+
+/** The same for a calendar result: its title's when the title is highlighted, and its date's always (the row's day column). */
+export function shownCalendarReasons(result: Pick<CalendarSearchResultOut, 'reasons' | 'highlights'>): CalendarMatchReasonOut[] {
+  return result.reasons.filter(reason => !(reason.field === 'title' && result.highlights.length > 0) && reason.field !== 'date');
+}
 
 /** "Org Northwind" → Org, Northwind: the label's first word is its kind (`ink3`), the rest what matched. */
 export function reasonParts(label: string): {key: string; value: string} {

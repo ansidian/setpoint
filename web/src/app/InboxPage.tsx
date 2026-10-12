@@ -32,13 +32,14 @@ import type {Collapse, GroupView, HeldRow, PatternPrompt, Stop} from '../logic/i
 import {phoneGroups} from '../logic/phone.ts';
 import type {MailView, Route} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
+import {motion} from '../tokens.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {segThumb} from '../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
-import {beats, foldAway} from './fold.ts';
+import {beats, foldAway, leaveCopy} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {MailList} from './MailList.tsx';
 import {usePhone} from './Phone.tsx';
@@ -54,6 +55,18 @@ import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
+
+/**
+ * Unread | All's ref: its sliding thumb (ui/seg.ts), and when it goes as a search starts, a copy of it
+ * that fades out over 120 ms where it was, rather than vanishing (polish audit search-14).
+ */
+function fadingSeg(seg: HTMLSpanElement | null) {
+  const stop = segThumb(seg);
+  return () => {
+    stop?.();
+    leaveCopy(seg, () => [{opacity: 1}, {opacity: 0}], {duration: motion.fast, easing: motion.ease});
+  };
+}
 
 /**
  * Whether any of the Pinned shelf shows in the list, where a pin lands; with no shelf yet, whether the
@@ -466,7 +479,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" title="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
         {!searching && !phone && (
-          <span className="seg" ref={segThumb}>
+          // Going as a search starts, it fades out over 120 ms (search-14).
+          <span className="seg" ref={fadingSeg}>
             {/* U's hint sits on the one it switches to (#105). */}
             <button type="button" className={viewOf('unread')} data-hint={all ? 'u' : undefined} onClick={() => go({view: 'unread', open: null})}>Unread{all && <span className="kbd">U</span>}</button>
             <button type="button" className={viewOf('all')} data-hint={all ? undefined : 'u'} onClick={() => go({view: 'all', open: null})}>All{!all && <span className="kbd">U</span>}</button>

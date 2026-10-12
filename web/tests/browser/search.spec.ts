@@ -66,14 +66,16 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await until('the finished words chipped', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection');
     assert.equal(await page.locator('.search input').inputValue(), 'march');
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
-    assert.equal(await page.locator('.hd .seg').count(), 0);
+    // Unread | All goes (a copy of it fading out, search-14, aside).
+    assert.equal(await page.locator('.hd .seg:not([aria-hidden])').count(), 0);
     // Enter: the chips the server found, and the keys go to the results.
     await page.keyboard.press('Enter');
     await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection | DateMar 2026');
     assert.equal(await page.locator('.search input').inputValue(), '');
     assert.equal(await page.locator('.search-list .bar').textContent(), '2 results·newest first');
     assert.deepEqual(await page.locator('.arow.result .l2').allTextContents(), ['Update on your application', 'Your application for Data Engineer Intern']);
-    assert.equal(await page.locator('.arow.result .why').first().textContent(), 'Org Northwind·Type Rejection·Date Mar 14');
+    // Only the reason the row doesn't already show (search-11): its organisation is highlighted, its day is its age.
+    assert.equal(await page.locator('.arow.result .why').first().textContent(), 'Type Rejection');
     assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').textContent(), 'Northwind');
     assert.equal(await page.locator('.ask').textContent(), 'Ask Alfred · Northwind · Rejection · Mar 2026⌘Enter');
     // The cursor starts on the first; J, K move it; Enter opens it and logs its position.
@@ -104,7 +106,7 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     // No results: each part removable.
     await page.keyboard.type('zebra');
     await page.locator('.no-results', {hasText: 'No emails match'}).waitFor();
-    assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwind·Rejection·zebra');
+    assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwindRejectionzebra');
     const ink3 = await page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'var(--ink3)';
@@ -592,7 +594,7 @@ test('calendar search: the header turns into Search, chips and results in the ri
     assert.deepEqual(await calendarRows(page), ['CS 101 lecture', 'Study group']);
     const lecture = page.locator('.cal-search .cs-result').first();
     assert.equal(await lecture.locator('.line').textContent(), '6:00 – 7:15 PM · Weekly on Tue, Thu · Classes');
-    assert.equal(await lecture.locator('.why').textContent(), 'Calendar Classes·Date Oct 8');
+    assert.equal(await lecture.locator('.why').textContent(), 'Calendar Classes');
     await detailOf(page, 'CS 101 lecture').waitFor();
     await until('the marked row', () => selectedRow(page), rows => rows.join() === 'CS 101 lecture');
     assert.deepEqual(await page.locator('.cell[data-date="2026-10-08"] .ev.sel').allTextContents(), ['6 PMCS 101 lecture']);
@@ -685,7 +687,7 @@ test('calendar search: the button and ⌘F, Todoist as every task under Upcoming
     // No results: each part removable.
     await page.keyboard.type('zebra');
     await page.locator('.cal-search .no-results').waitFor();
-    assert.equal(await page.locator('.cal-search .no-results').textContent(), 'No events or tasks matchTodoist·zebra');
+    assert.equal(await page.locator('.cal-search .no-results').textContent(), 'No events or tasks matchTodoistzebra');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await until('the rows', () => calendarRows(page), rows => rows.length === 4);
     // SV-29: a query emptied after searching closes the search, as Esc would.
