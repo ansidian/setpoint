@@ -2111,3 +2111,15 @@ it changes what's on screen.
     the editor or search take its place, as they take each other's. Closed on every load, and no new
     key; under 720 px, where the header has no room left, New is its + alone (titled "New event · C");
     the desktop is unchanged (Andy left it to Claude, 2026-10-11, polish audit calpanes-14).
+195. **A row leaving shows why, then folds text first** (amending #13): Done tints the row `good`
+    (14%, Light 12%) and swaps its dot for a 14 px `check` in `good`, growing in from .6; Trash tints it
+    `alert` 8% with a 14 px `delete` in `alert`. That 120 ms beat comes before the fold, which then
+    takes its text away by 72 ms and closes its height over the rest of the 180 ms; an arriving row is
+    the mirror, its height first and its text over the last 72 ms, so a folding row never shows a
+    squashed slice of its lines (a closed card folds the same way). The cursor and the next email move
+    at once; the toast's glyph is #140's (Andy, 2026-10-11, polish audit inbox-05, inbox-06).
+196. **A group opens and closes like a drawer:** collapsing it folds its rows out and expanding it
+    folds them in, as other rows fold, each 12 ms after the one above it up to 60; its one chevron
+    turns to point right over 120 ms while it's collapsed, and its preview fades in over 120 ms. A
+    group opened at the foot of the list comes into view (#70) once its rows are in. All's Noise
+    opens and closes the same way (Andy, 2026-10-11, polish audit inbox-14).

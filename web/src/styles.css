@@ -163,6 +163,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .gh .chev { margin-left: auto; color: var(--ink3); }
 .gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* A group opens and closes like a drawer (inbox-14): its one chevron turns to point right while it's
+   collapsed, over 120 ms, its rows fold (app/fold.ts), and a collapsed group's preview fades in. */
+:is(.gh, .nfold) .chev .icon { transition: transform var(--dur-fast) var(--ease); }
+:is(.gh, .nfold).collapsed .chev .icon { transform: rotate(-90deg); }
+:is(.gh, .nfold) .preview { animation: fade-in var(--dur-fast) var(--ease); }
+@keyframes fade-in { from { opacity: 0; } }
 /* Attention is the loudest block (#130): its band takes `caution` into its panel, its label and count
    `caution` over a 20% caution line; its unread dots are `caution`, and a row read but not Done keeps
    a 6 px caution ring, as it's still counted in the pill. */
@@ -192,6 +198,18 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .row.noise:not(.unread) .from, .row.noise:not(.unread) .subj b { color: var(--ink3); }
 /* A row (or header, or the prompt) leaving folds away under app/fold.ts's motion, out of the pointer's way. */
 .list .leaving { overflow: hidden; pointer-events: none; }
+/* Before it folds, a row Done or Trash took plays a 120 ms beat (inbox-05): Done tints it `good` (14%,
+   Light 12%) and its dot gives way to a 14 px check in `good`; Trash tints it `alert` 8% with a 14 px
+   bin in `alert`. The tint is the row's own 120 ms fill change; the glyph grows in from .6. */
+:is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 14%, transparent); }
+:root[data-theme="light"] :is(.row, .arow).beat-done { background: color-mix(in oklch, var(--good) 12%, transparent); }
+:is(.row, .arow).beat-trash { background: color-mix(in oklch, var(--alert) 8%, transparent); }
+:is(.beat-done, .beat-trash) .ud { position: relative; }
+.list :is(.row, .arow):is(.beat-done, .beat-trash) .ud::before { background: transparent; box-shadow: none; position: absolute; inset: 0; margin: auto; }
+.ud > .icon { animation: beat-in var(--dur-fast) var(--ease); }
+.beat-done .ud > .icon { color: var(--good); }
+.beat-trash .ud > .icon { color: var(--alert); }
+@keyframes beat-in { from { opacity: 0; transform: scale(.6); } }
 .row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj .sum { color: var(--ink3); }

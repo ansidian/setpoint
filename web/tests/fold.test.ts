@@ -60,4 +60,18 @@ describe('the list while it changes', () => {
     expect(shown(foldList(before, ['group:career', 'career:4', 'career:5', 'group:pinned', 'pinned:4'].map(entry), rules, new Set([5]))))
       .toEqual(['group:career', 'career:4', 'career:5', 'group:pinned', 'pinned:4']);
   });
+
+  // inbox-14: a group opens and closes like a drawer, its rows folding, never shown before or not.
+  const drawer = {
+    folds: () => true,
+    arrives: () => true,
+    opens: (item: Entry<string>, was: (key: string) => Folded<string> | undefined) => was(`group:${item.key.split(':')[0]}`)?.item === 'collapsed',
+  };
+  test('closing a group folds its rows out; opening one folds in rows it never showed, and only its own', () => {
+    expect(shown(foldList(['group:noise', 'noise:7', 'noise:8'].map(written), ['group:noise'].map(entry), drawer, new Set())))
+      .toEqual(['group:noise', 'noise:7-', 'noise:8-']);
+    const before = [{...written('group:noise'), item: 'collapsed'}, written('group:people'), written('people:3')];
+    expect(shown(foldList(before, ['group:noise', 'noise:7', 'noise:8', 'group:people', 'people:3', 'people:9'].map(entry), drawer, new Set())))
+      .toEqual(['group:noise', 'noise:7+', 'noise:8+', 'group:people', 'people:3', 'people:9']);
+  });
 });

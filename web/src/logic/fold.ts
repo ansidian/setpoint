@@ -19,15 +19,17 @@ export interface Folded<T> extends Entry<T> {
 export interface FoldRules<T> {
   // Whether an entry gone from the list folds out (otherwise it just goes, as a collapsed group's rows do).
   folds: (gone: Folded<T>) => boolean;
-  // Whether a new entry may fold in (otherwise it just shows, as an expanded group's rows do).
+  // Whether a new entry whose email was shown, or left lately, may fold in.
   arrives: (entry: Entry<T>, was: (key: string) => Folded<T> | undefined) => boolean;
+  // Whether a new entry folds in although its email wasn't shown: a group's rows as it opens.
+  opens?: (entry: Entry<T>, was: (key: string) => Folded<T> | undefined) => boolean;
 }
 
 /**
  * The list after a change: `next` in its order, each entry gone from `before` that folds kept after
  * the entry it followed (as 'out', until the list drops it), and each new row folding in when its
- * email was shown before or is in `returning` (emails that left lately), or it was still folding
- * out. A new header folds in with its first row.
+ * email was shown before or is in `returning` (emails that left lately), or its group opens, or it
+ * was still folding out. A new header folds in with its first row.
  */
 export function foldList<T>(before: Folded<T>[], next: Entry<T>[], rules: FoldRules<T>, returning: ReadonlySet<number>): Folded<T>[] {
   const nextKeys = new Set(next.map(entry => entry.key));
@@ -45,8 +47,9 @@ export function foldList<T>(before: Folded<T>[], next: Entry<T>[], rules: FoldRu
   }
   // An entry back before its fold out ended always folds in again: its element is still closed.
   const leaving = new Set(before.filter(entry => entry.fold === 'out').map(entry => entry.key));
-  const folds = next.map((entry): Fold => (!live.has(entry.key) && (leaving.has(entry.key) || (entry.id !== null && (shownIds.has(entry.id) || returning.has(entry.id))
-    && rules.arrives(entry, key => live.get(key)))) ? 'in' : null));
+  const was = (key: string) => live.get(key);
+  const folds = next.map((entry): Fold => (!live.has(entry.key) && (leaving.has(entry.key) || (entry.id !== null
+    && (((shownIds.has(entry.id) || returning.has(entry.id)) && rules.arrives(entry, was)) || (rules.opens?.(entry, was) ?? false)))) ? 'in' : null));
   const result: Folded<T>[] = [...after.get(null) ?? []];
   next.forEach((entry, index) => {
     const fold = folds[index] ?? (entry.id === null && !live.has(entry.key) && folds[index + 1] === 'in' ? 'in' : null);

@@ -38,7 +38,8 @@ import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
-import {foldAway} from './fold.ts';
+import {beats, foldAway} from './fold.ts';
+import type {Beat} from './fold.ts';
 import {MailList} from './MailList.tsx';
 import {usePhone} from './Phone.tsx';
 import {Reader} from './Reader.tsx';
@@ -252,8 +253,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
    * it back where it was in this visit's list, read or not, and an open email back in the reader.
    * `undo` puts it back on screen at once and gives what to send once the change itself is in.
    */
-  function leave(id: number, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>, failed: string, undoFailed: string) {
+  function leave(id: number, beat: Beat, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>, failed: string, undoFailed: string) {
     const wasOpen = id === open;
+    // Its row beats before it folds: ticked off, or thrown away (inbox-05).
+    beats.set(id, beat);
     const from = visit;
     const places = withHeld(groups ?? [], held).flatMap(group => {
       const index = group.rows.findIndex(row => row.id === id);
@@ -269,6 +272,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     takeOut([id]);
     // Whether the server took the change; Undo waits for it, as an untrash sent before the trash is refused.
     const sent = change(id).then(() => true, (error: unknown) => {
+      beats.delete(id);
       toastFailure(failed)(error);
       return false;
     });
@@ -277,6 +281,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (at < 0) return;
       undos.splice(at, 1);
       dismissToast();
+      beats.delete(id);
       const send = undo(id);
       void sent.then(done => done && send().catch(toastFailure(undoFailed)));
       setKept(state => (state.visit === from ? {...state, out: new Set([...state.out].filter(one => one !== id)), held: [...state.held, ...places]} : state));
@@ -292,14 +297,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   }
 
   const actions = {
-    done: () => target !== null && doneable(target) && leave(target, id => {
+    done: () => target !== null && doneable(target) && leave(target, 'done', id => {
       search.mark(id, {done: true});
       return setDone(id);
     }, 'Marked Done', id => {
       search.mark(id, {done: false});
       return () => setDone(id, false);
     }, 'Couldn\'t mark it Done', 'Couldn\'t undo Done'),
-    trash: () => target !== null && leave(target, id => {
+    trash: () => target !== null && leave(target, 'trash', id => {
       setTrashing(ids => new Set(ids).add(id));
       return trashMessage(id).catch(error => {
         untrashing(id);

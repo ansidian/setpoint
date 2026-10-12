@@ -4,15 +4,17 @@
 // the page's (InboxPage.tsx). Rows fold out as they leave and in as they arrive (app/fold.ts). A
 // group opened at the foot of the list scrolls its rows into view.
 import type {AccountOut, MessageRowOut} from '@setpoint/shared';
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, Ref} from 'react';
 import {age, codeGroups, expiresIn, fullTimestamp} from '../logic/format.ts';
 import {GROUP_GLYPHS, groupKey, promptText, rowKey, rowLine, sender, showsPending} from '../logic/inbox.ts';
 import type {GroupView, PatternPrompt} from '../logic/inbox.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
+import {motion} from '../tokens.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {dotStyle} from './accounts.ts';
-import {foldIn, foldOut, useFold} from './fold.ts';
+import {beats, FOLD_HOLD_MS, foldDelays, foldRef, STAGGER_CAP_MS, useFold} from './fold.ts';
+import type {Beat} from './fold.ts';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {showToast} from './toast.ts';
 
@@ -50,27 +52,31 @@ function parts(views: GroupView[], prompt: PatternPrompt | null): Entry<Part>[] 
 
 const groupOf = (part: Part) => (part.kind === 'prompt' ? 'attention' : part.view.group);
 
+// Every row that leaves (Done, Trash, Mark all as read, read elsewhere, Unpin, its group closing)
+// folds out, and one moved or brought back (Pin, Undo) folds in, as do a group's rows as it opens
+// (inbox-14), like a drawer.
+const RULES: FoldRules<Part> = {
+  folds: () => true,
+  arrives: () => true,
+  opens: (entry, was) => {
+    const header = was(groupKey(groupOf(entry.item)))?.item;
+    return header?.kind === 'header' && header.view.collapsed;
+  },
+};
+
 export function MailList(props: ListProps) {
   const {views, caughtUp, prompt} = props;
   // All caught up keeps the Pinned shelf above the line (board 04).
   const entries = useMemo(() => parts(caughtUp ? views.filter(view => view.group === 'pinned') : views, prompt), [views, caughtUp, prompt]);
-  // A collapsed group's rows just go and an expanded one's just show; every other row that leaves
-  // (Done, Trash, Mark all as read, read elsewhere, Unpin) folds out, and one moved or brought back
-  // (Pin, Undo) folds in.
-  const rules: FoldRules<Part> = {
-    folds: gone => gone.item.kind !== 'row' || !views.find(view => view.group === groupOf(gone.item))?.collapsed,
-    arrives: (entry, was) => {
-      const header = was(groupKey(groupOf(entry.item)))?.item;
-      return !(header?.kind === 'header' && header.view.collapsed);
-    },
-  };
-  const shown = useFold(entries, rules);
+  const shown = useFold(entries, RULES, FOLD_HOLD_MS);
+  // A row Done or Trash took beats first; a group's rows folding together start one after another.
+  const delays = foldDelays(shown, entry => (entry.item.kind === 'row' ? entry.item.view.group : null));
   // Under a health bar the first group keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
   return (
     <>
       {bars}
-      {shown.map((entry, index) => <Part key={entry.key} entry={entry} first={index === 0 && !bars} {...props} />)}
+      {shown.map((entry, index) => <Part key={entry.key} entry={entry} delay={delays.get(entry.key) ?? 0} first={index === 0 && !bars} {...props} />)}
       {caughtUp ? (
         <div className="empty">
           <div className="empty-line">
@@ -89,15 +95,16 @@ export function MailList(props: ListProps) {
 }
 
 /** One entry: a leaving one keeps its look, without its cursor, its key or the pointer, while it folds. */
-function Part({entry, first, ...props}: ListProps & {entry: Folded<Part>; first: boolean}) {
+function Part({entry, delay, first, ...props}: ListProps & {entry: Folded<Part>; delay: number; first: boolean}) {
   const {item, fold} = entry;
-  const ref = fold === 'out' ? foldOut : fold === 'in' ? foldIn : undefined;
+  const ref = foldRef(fold, delay);
   const leaving = fold === 'out';
   if (item.kind === 'header') {
     return <GroupHeader view={item.view} first={first} cur={!leaving && props.cursor === entry.key} leaving={leaving} fold={ref} onPoint={props.onPoint} onToggle={props.onToggle} />;
   }
   if (item.kind === 'prompt') return <Prompt prompt={item.prompt} onAnswer={props.onAnswer} leaving={leaving} fold={ref} />;
-  const rowProps = {...props, row: item.row, rowKey: entry.key, leaving, fold: ref, ...(leaving ? {cursor: null, openId: null} : {})};
+  const beat = leaving ? beats.get(item.row.id) ?? null : null;
+  const rowProps = {...props, row: item.row, rowKey: entry.key, leaving, beat, fold: ref, ...(leaving ? {cursor: null, openId: null} : {})};
   return item.view.group === 'attention' ? <AttentionRow {...rowProps} /> : <Row {...rowProps} pinnedShelf={item.view.group === 'pinned'} noise={item.view.group === 'noise'} />;
 }
 
@@ -125,11 +132,15 @@ function GroupHeader({view, first, cur, leaving, fold, onPoint, onToggle}: {
 }) {
   const classes = ['gh', first && 'first', view.group === 'attention' && 'att', view.collapsible && 'toggle', view.collapsed && 'collapsed', cur && 'cur', leaving && 'leaving']
     .filter(Boolean).join(' ');
-  // Opened (not shown open from the start): its rows come into view, its header kept on screen.
+  // Opened (not shown open from the start): once its rows have folded in, they come into view, its
+  // header kept on screen.
   const wasCollapsed = useRef(view.collapsed);
-  useLayoutEffect(() => {
-    if (wasCollapsed.current && !view.collapsed) revealGroup(document.querySelector<HTMLElement>(`.list .gh[data-key="${groupKey(view.group)}"]`));
+  useEffect(() => {
+    const opened = wasCollapsed.current && !view.collapsed;
     wasCollapsed.current = view.collapsed;
+    if (!opened) return;
+    const timer = window.setTimeout(() => revealGroup(document.querySelector<HTMLElement>(`.list .gh[data-key="${groupKey(view.group)}"]`)), motion.medium + STAGGER_CAP_MS);
+    return () => window.clearTimeout(timer);
   }, [view.collapsed, view.group]);
   const attributes = leaving ? {'aria-hidden': true} : {
     'data-key': groupKey(view.group), onClick: view.collapsible ? () => onToggle(view) : undefined, onMouseMove: view.collapsed ? () => onPoint(groupKey(view.group)) : undefined,
@@ -140,7 +151,8 @@ function GroupHeader({view, first, cur, leaving, fold, onPoint, onToggle}: {
       {view.label} <span className="n">{view.count}</span>
       {view.preview && <span className="preview">{view.preview}</span>}
       {view.group === 'unsorted' && <TriageNote />}
-      {view.collapsible && <span className="chev"><Icon name={view.collapsed ? 'chevron_right' : 'expand_more'} /></span>}
+      {/* One chevron, turned to point right while the group is collapsed (inbox-14). */}
+      {view.collapsible && <span className="chev"><Icon name="expand_more" /></span>}
     </div>
   );
 }
@@ -152,12 +164,19 @@ interface RowProps extends ListProps {
   // A Noise row recedes (DESIGN.md #131).
   noise?: boolean;
   leaving: boolean;
+  // Leaving by Done or Trash: its beat before it folds (inbox-05).
+  beat: Beat | null;
   fold: FoldRef;
 }
 
-function rowClasses(base: string, {row, rowKey: key, cursor, openId, leaving}: RowProps): string {
+function rowClasses(base: string, {row, rowKey: key, cursor, openId, leaving, beat}: RowProps): string {
   return [base, row.unread && 'unread', row.protected && base === 'arow' && 'protected', cursor === key && 'cur', openId === row.id && 'open',
-    showsPending(row) && 'pending', leaving && 'leaving'].filter(Boolean).join(' ');
+    showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`].filter(Boolean).join(' ');
+}
+
+/** The unread gutter: its dot, or while a row beats, Done's check or Trash's bin in its place. */
+export function Gutter({beat}: {beat: Beat | null}) {
+  return <span className="ud">{beat && <Icon name={beat === 'done' ? 'check' : 'delete'} size={14} />}</span>;
 }
 
 /** A row's own attributes: a leaving one has no key, no id and no handlers, and is hidden from the tree. */
@@ -178,7 +197,7 @@ function Row(props: RowProps) {
   };
   return (
     <div className={`${rowClasses('row', props)}${pinnedShelf ? ' shelf' : ''}${noise ? ' noise' : ''}`} title={line.title ?? undefined} {...rowAttributes(props)}>
-      <span className="ud" />
+      <Gutter beat={props.beat} />
       <span className="from">{line.from}</span>
       {line.code ? <CodeLine code={line.code} now={now} /> : (
         <span className="subj"><b>{line.subject}</b>{line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}</span>
@@ -232,7 +251,7 @@ function AttentionRow(props: RowProps) {
   const {row, accounts, now, timeZone} = props;
   return (
     <div className={`${rowClasses('arow', props)} att`} {...rowAttributes(props)}>
-      <span className="ud" />
+      <Gutter beat={props.beat} />
       <div className="l1">
         <span className="from">{sender(row)}</span>
         {row.via && <span className="via">via {row.via}</span>}
