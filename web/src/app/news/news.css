@@ -82,9 +82,9 @@
 
 /* Upcoming's row opens the story that announced it (SV-50): a popover under its name, the story as
    a row's headline, line and meta, which opens it. */
-.nw-up { position: relative; cursor: pointer; }
+.nw-up { position: relative; }
 .nw-up:hover, .nw-up.on { background: var(--sub); }
-.nw-up-pop { position: absolute; left: 50px; top: calc(100% + 4px); width: min(480px, calc(100% - 66px)); padding: 6px; z-index: 5; cursor: default; }
+.nw-up-pop { position: absolute; left: 50px; top: calc(100% + 4px); width: min(480px, calc(100% - 66px)); padding: 6px; z-index: 5; }
 .nw-up-pop[data-up] { top: auto; bottom: calc(100% + 4px); }
 .nw-up-story { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: var(--r-row); text-align: left; }
 .nw-up-story:hover { background: var(--sub2); }
@@ -154,4 +154,9 @@
 .ar-note > .icon { color: var(--ink3); }
 .ar-body .st-label { margin-top: 8px; }
 .ar-body .src-list { max-width: 600px; }
+
+/* Every control answers the pointer over 120 ms, as the mail list's rows do (DESIGN.md › Decided
+   while building #12, #144); rows are controls, so the arrow, never the text cursor. */
+.nw-row, .nw-lead, .nw-up, .nw-up-story, .nw-raw, .nw-more, .src-row { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.nw-row, .nw-lead, .nw-up { cursor: default; }
 

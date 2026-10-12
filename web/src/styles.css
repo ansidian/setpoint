@@ -25,7 +25,10 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
-a { text-decoration: none; color: inherit; }
+/* Controls show the arrow, as darma's do (DESIGN.md › Decided while building #144): a link that is a
+   control (the nav, account rows, Today lines, agenda items) too, and rows never the text cursor. */
+a { text-decoration: none; color: inherit; cursor: default; }
+.row, .arow, .gh, .nfold { cursor: default; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
 input { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
 /* Controls can't be selected; titles, addresses, codes and bodies can (DESIGN.md › Interaction rules). */
@@ -238,7 +241,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .lh.att .n { color: var(--caution); }
-.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); cursor: pointer; }
+.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .nfold .chev { margin-left: auto; }
 .nfold.cur { background: var(--cardOn); }

@@ -193,6 +193,52 @@ test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub
   }
 });
 
+test('News rows and task chips fade over 120 ms and a hovered task isn\'t selected-looking; controls show the arrow; a calendar\'s check fades; a switch\'s knob stretches on press', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const cursor = (locator: Locator) => locator.first().evaluate(element => getComputedStyle(element).cursor);
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.arow').first().waitFor();
+    // The arrow on controls, links included, and on rows.
+    assert.deepEqual([await cursor(page.locator('a.nav')), await cursor(page.locator('.acct')), await cursor(page.locator('.row')), await cursor(page.locator('.arow'))], ['default', 'default', 'default', 'default']);
+
+    await page.goto(`${setpoint.base}/news`);
+    const story = page.locator('.nw-row').first();
+    await story.waitFor();
+    assert.match(await story.evaluate(timing), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
+    assert.deepEqual([await cursor(story), await cursor(page.locator('.nw-up'))], ['default', 'default']);
+
+    await page.goto(`${setpoint.base}/calendar`);
+    const task = page.locator('.cell[data-date="2026-10-07"] .tk').first();
+    await task.waitFor();
+    assert.match(await task.evaluate(timing), /0\.12s/);
+    await answers(page, 'a task chip', task, fill);
+    assert.equal(await task.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'var(--sub)'), 'a hovered task is `sub`, not the selection\'s `sub2`');
+    assert.equal(await cursor(page.locator('.ev')), 'default');
+    // A calendar turned off: its check shrinks away over 120 ms rather than vanishing.
+    const check = page.locator('.calrow .chk').first();
+    assert.match(await check.evaluate(element => getComputedStyle(element, '::after').transitionDuration), /^0\.12s/);
+    await page.locator('.calrow').first().click();
+    await page.locator('.calrow .chk.off').first().waitFor();
+    await until('the check gone', () => check.evaluate(element => getComputedStyle(element, '::after').opacity), opacity => opacity === '0');
+
+    // Settings: a switch's knob stretches to 20 px while pressed.
+    await page.goto(`${setpoint.base}/settings/calendar`);
+    const toggle = page.getByRole('switch', {name: 'Show Classes'});
+    await toggle.waitFor();
+    await still(page);
+    await toggle.hover();
+    await page.mouse.down();
+    await until('the knob stretched', () => toggle.evaluate(element => getComputedStyle(element, '::after').width), width => width === '20px');
+    await page.mouse.move(700, 28);
+    await page.mouse.up();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('press on the phone: a tapped row fills `sub2` at once and nothing stays lit after; no tap highlight', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

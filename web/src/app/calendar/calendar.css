@@ -60,7 +60,9 @@
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .task-glyph.done { color: var(--good); }
 .tk.done { color: var(--ink3); text-decoration: line-through; text-decoration-color: var(--ink3); }
-.tk:hover, .tk.sel { background: var(--sub2); }
+/* Under the pointer `sub`, so a hovered task doesn't look selected (`sub2`). */
+.tk.sel { background: var(--sub2); }
+@media (hover: hover) { .tk:not(.sel, .ghost, .lift):hover { background: var(--sub); } }
 .more { font-size: 12px; color: var(--ink3); padding: 0 6px; height: 18px; display: flex; align-items: center; flex: none; }
 .more:hover { color: var(--ink2); }
 .more.open { background: var(--sub2); color: var(--ink); border-radius: 6px; align-self: flex-start; }
@@ -142,7 +144,10 @@
 .chk { width: 14px; height: 14px; border-radius: 4px; background: var(--c); display: grid; place-items: center; flex: none; }
 .chk::after { content: ""; width: 3px; height: 7px; border: solid var(--onAccent); border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); }
 .chk.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
-.chk.off::after { display: none; }
+.chk.off::after { opacity: 0; transform: translateY(-1px) rotate(45deg) scale(.6); }
+/* Toggled, it fills or empties and its check grows in or shrinks away over 120 ms. */
+.chk { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.chk::after { transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 
 /* ---------- F6: direct manipulation and changes in place ---------- */
 /* A draft, a drag's origin, or a drop waiting on its scope: a dashed ghost in the item's colour
@@ -247,7 +252,9 @@
 .cal-search .no-results { padding-left: 20px; }
 
 /* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
-.more, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more, .ag-task .check .ring { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more, .ag-task .check .ring { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+/* Items and cells are controls: the arrow, never the text cursor (DESIGN.md › Decided while building #144). */
+.ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
    `sub` lies over it. */
 .ev { position: relative; }

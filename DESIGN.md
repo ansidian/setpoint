@@ -1625,6 +1625,15 @@ it changes what's on screen.
     lets go over 180 ms, the bar's and the tabs' glyphs giving to .88; hover fills answer only a pointer
     that hovers, so nothing stays lit after a tap, and the browser's own tap box is gone (Andy,
     2026-10-11, polish audit motion-02, shell-09, phone-01).
+144. **The same kind of thing answers the same way on every page** (extending #12): News's rows,
+    leads, Upcoming and its story, Show headlines' lines, More and the story pane's sources fade their
+    hover over 120 ms as the mail list does, and so do calendar task chips, whose hover is `sub` so a
+    hovered task no longer looks selected (`sub2`). Controls show the arrow, as darma's do: a link
+    that's a control (the sidebar's nav, account rows and Today lines, agenda items), Noise's fold and
+    Upcoming too, and rows, chips and day cells never the text cursor; dragging and resizing keep their
+    own cursors. A calendar's checkbox fills or empties over 120 ms, its check growing in from .6 or
+    shrinking away, and a Settings switch's knob stretches to 20 px toward where it's going while
+    pressed (Andy, 2026-10-11, polish audit motion-09, motion-11, motion-14).
 149. **The glide carries its content across** (amending The glide, override 30): the old content
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
