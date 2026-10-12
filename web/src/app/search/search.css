@@ -9,7 +9,8 @@
   width var(--dur-medium) var(--ease), flex-basis var(--dur-medium) var(--ease); }
 /* A search on its way (#180): once it's taken a moment, the glass gives way to the spinner. */
 .search .glass { position: relative; display: grid; flex: none; }
-.search .glass > .spin { position: absolute; inset: 0; place-items: center; animation: glass-on 0s var(--skel-delay) both; }
+/* The shared spinner (states.css), in the glass's place and colour. */
+.search .glass > .spin { position: absolute; inset: 0; display: grid; place-items: center; margin-left: 0; vertical-align: 0; color: inherit; animation: glass-on 0s var(--skel-delay) both; }
 .search.pending .glass > .icon { animation: glass-off 0s var(--skel-delay) both; }
 @keyframes glass-on { from { visibility: hidden; } }
 @keyframes glass-off { to { visibility: hidden; } }
@@ -108,6 +109,8 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .answer .trail { display: grid; grid-template-rows: 1fr; }
 .answer .trail-in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
 .answer .done-step { height: 20px; display: flex; align-items: center; gap: 9px; padding-left: 1px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The shared spinner leads the step now, on the trail's glyph line. */
+.answer .waiting .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .answer .waiting .now { background: linear-gradient(90deg, var(--ink3) 35%, var(--ink) 50%, var(--ink3) 65%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: alfred-shimmer 1.6s linear infinite; }
 @keyframes alfred-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .answer .trail.folding { animation: trail-fold var(--dur-medium) var(--ease) forwards; }
