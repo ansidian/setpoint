@@ -316,6 +316,8 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await pane.locator('.src-row', {hasText: 'NBC Los Angeles'}).click();
     await page.waitForURL(/\/news\/story\/\d+\/article\/\d+$/);
     await pane.locator('.ar-text p').first().waitFor();
+    // Measured where the article rests, once it has slid in.
+    await still(page);
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Back to storyEscOpen at NBC Los AngelesO');
     assert.equal(await pane.locator('.ar-out').textContent(), 'NBCNBC Los Angeles·7:10 AM·Staff report');
     assert.equal(await pane.locator('.ar-title').textContent(), 'Fire burns 400 acres in the foothills; evacuation warnings issued');
