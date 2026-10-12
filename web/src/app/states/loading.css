@@ -136,12 +136,11 @@
 .settings .load-failed { padding: 0 4px; }
 
 /* ---------- Setpoint starting (#174): the mark where Unreachable's sits (states.css .boot) ---------- */
-/* Its chips settle in turn once the start has taken a moment, then it breathes as a skeleton does.
-   `translate` (3.67 of the mark's 22 units: 6 px at 36) composes with the middle chip's tilt. */
+/* Its chips settle in turn as All caught up's do (styles.css › mark-settle, #201), once the start has
+   taken a moment, then it breathes as a skeleton does. */
 .boot.starting .mark { animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + 140ms + var(--dur-slow)) infinite; }
-.boot.starting .mark rect { animation: boot-chip var(--dur-slow) var(--ease) var(--skel-delay) both; }
-.boot.starting .mark rect:nth-child(2) { animation-delay: calc(var(--skel-delay) + 70ms); }
-.boot.starting .mark rect:nth-child(3) { animation-delay: calc(var(--skel-delay) + 140ms); }
-@keyframes boot-chip { from { opacity: 0; translate: 0 -3.67px; } }
+.boot.starting .mark > g { animation: mark-settle var(--dur-slow) var(--ease) var(--skel-delay) both; }
+.boot.starting .mark > g:nth-child(2) { animation-delay: calc(var(--skel-delay) + 70ms); }
+.boot.starting .mark > g:nth-child(3) { animation-delay: calc(var(--skel-delay) + 140ms); }
 /* What follows a start that showed the mark (the app, the sign-in card) fades in, as a crossfade. */
 .boot-after { animation: sk-arrive var(--dur-medium) var(--ease); }

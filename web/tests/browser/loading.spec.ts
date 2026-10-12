@@ -437,10 +437,10 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
     await mark.waitFor();
     const box = (await mark.boundingBox())!;
     assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
-    // Each chip settles from 6 px above over 260 ms, 70 ms after the one before, once the start has taken 200 ms.
-    assert.deepEqual(await mark.locator('rect').evaluateAll(rects => rects.map(rect => [getComputedStyle(rect).animationName, getComputedStyle(rect).animationDuration, getComputedStyle(rect).animationDelay])),
-      [['boot-chip', '0.26s', '0.2s'], ['boot-chip', '0.26s', '0.27s'], ['boot-chip', '0.26s', '0.34s']]);
-    await until('the chips settled', () => mark.locator('rect').evaluateAll(rects => rects.map(rect => rect.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
+    // Each chip settles as All caught up's do (#201), once the start has taken 200 ms, 70 ms after the one before.
+    assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => [getComputedStyle(chip).animationName, getComputedStyle(chip).animationDuration, getComputedStyle(chip).animationDelay])),
+      [['mark-settle', '0.26s', '0.2s'], ['mark-settle', '0.26s', '0.27s'], ['mark-settle', '0.26s', '0.34s']]);
+    await until('the chips settled', () => mark.locator('g').evaluateAll(chips => chips.map(chip => chip.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
     assert.equal(await mark.evaluate(svg => getComputedStyle(svg).animationName), 'sk-breathe', 'then it breathes as a skeleton does');
     await matchGolden(page, 'starting');
 

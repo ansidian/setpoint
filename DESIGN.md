@@ -2407,8 +2407,8 @@ it changes what's on screen.
 174. **Setpoint starting shows its mark, not a black page:** while it asks whether this browser is
     signed in, a browser it hasn't seen signed in shows the Day stack mark at 36 px where the
     sign-in card's top sits (and Unreachable's mark, #118), only once the start has taken 200 ms.
-    Its chips settle in turn, each from 6 px above and transparent over 260 ms `--ease`, 70 ms
-    apart, then the mark breathes as a skeleton does. The sign-in card or the app then fades in over
+    Its chips settle in turn as All caught up's do (#201), each from 6 px above and transparent over
+    260 ms `--ease`, 70 ms apart, then the mark breathes as a skeleton does. The sign-in card or the app then fades in over
     180 ms; a quick start shows neither the mark nor the fade (Andy, 2026-10-11, polish audit
     states-09).
 175. **The app opens already itself:** a browser that was signed in starts on its shell as it last
