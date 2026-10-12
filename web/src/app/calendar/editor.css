@@ -44,7 +44,25 @@
   background: color-mix(in oklch, var(--c-shown) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c-shown) 60%, transparent); }
 
 .editor .eg { display: grid; grid-template-columns: 20px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; align-items: center; padding: 16px 20px 0; }
-.editor .eg > .icon { color: var(--ink3); justify-self: center; }
+.editor .eg > .icon { color: var(--ink3); justify-self: center; transition: color var(--dur-fast) var(--ease); }
+/* Each word typed lands in its field (polish audit calflows-06): a row the line filled takes its
+   mark's colour on its glyph, `ink3` again once set by hand; the mark still being typed, its menu
+   open, is only a dashed underline, and a picked one brightens once as it lands; a field another's
+   change moved flashes `cardOn` back to its own fill, and an End on a later day says "+1". */
+.editor .eg > .icon.from-when { color: var(--cool); }
+.editor .eg > .icon.from-place { color: var(--comf); }
+.editor .eg > .icon.from-cal { color: var(--c); }
+.editor .eg > .icon.from-proj { color: oklch(from var(--c, var(--ink3)) clamp(var(--ringMin), l, var(--ringMax)) c h); }
+.editor .tok-d { --tok: var(--cool); }
+.editor .tok-p { --tok: var(--comf); }
+.editor .tok-c { --tok: var(--c); }
+.editor .tok-j { --tok: var(--c-shown); }
+.editor .nl-text .live { background: linear-gradient(to right, color-mix(in oklch, var(--tok) 70%, transparent) 50%, transparent 50%) 0 100% / 6px 1.5px repeat-x; box-shadow: none; }
+.editor .nl-text .landed { animation: tok-in var(--dur-slow) var(--ease); }
+@keyframes tok-in { from { background-color: color-mix(in oklch, var(--tok) 36%, transparent); } }
+.editor .field.flash, .editor .place-address.flash { animation: side-flash 600ms var(--ease); }
+@keyframes side-flash { from { background-color: var(--cardOn); } }
+.editor .later { font-size: 11.5px; color: var(--ink3); align-self: flex-start; margin: 2px 0 0 -4px; }
 .editor .prow { display: flex; align-items: center; gap: 8px; min-width: 0; }
 /* The date and times shrink from these widths so the row and its × fit the column (SV-25). */
 .editor .prow .pick-date { flex: 0 1 118px; min-width: 0; }

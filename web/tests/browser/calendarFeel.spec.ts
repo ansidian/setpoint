@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {minuteTop} from '../../src/logic/week.ts';
 import {layout, monthPaging} from '../../src/tokens.ts';
 import {cleanUp, startSetpoint, until, watch} from './harness.ts';
@@ -496,6 +497,84 @@ test('a calendar toggled off fades its chips and rows out over 120 ms before the
     assert.ok(arrived.some(line => /^ev .*entering ev-in 0\.18s$/.test(line)), `the chip fades in: ${JSON.stringify(arrived.slice(0, 4))}`);
     assert.ok(arrived.some(line => /^ag-item .*entering ev-in 0\.18s$/.test(line)), 'and its row');
     await until('it lets go of the fade', () => gym.getAttribute('class'), classes => !classes?.includes('entering'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** Records, from now on, each element in the editor that starts to flash, by its class. */
+async function recordFlashes(page: Page): Promise<() => Promise<string[]>> {
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as {flashes: string[]}).flashes = seen;
+    const note = (element: Element) => element.classList.contains('flash') && seen.push(element.className);
+    new MutationObserver(records => records.forEach(record => {
+      if (record.type === 'attributes') note(record.target as Element);
+      record.addedNodes.forEach(node => node instanceof Element && [node, ...node.querySelectorAll('.flash')].forEach(note));
+    })).observe(document.querySelector('.editor')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
+  });
+  return () => page.evaluate(() => [...(window as unknown as {flashes: string[]}).flashes]);
+}
+
+test('each word typed lands in its field: the rows it fills take its colour, a mark being typed is only dashed until it\'s picked and lands, and a field moved by another flashes', async () => {
+  const setpoint = await startSetpoint({fixtures: ['no-dinner'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    await line.waitFor();
+    const icon = (name: string) => page.locator(`.editor .eg > .icon:has(path[d="${ICONS[name as keyof typeof ICONS]}"])`);
+    const [cool, comf, ink3] = [await colour(page, '--cool'), await colour(page, '--comf'), await colour(page, '--ink3')];
+    assert.equal(await style(icon('schedule'), 'color'), ink3, 'nothing from the line yet');
+
+    await line.pressSequentially('Dinner with Sam fri 7-9pm @Blue');
+    await page.locator('.places .menu-i', {hasText: 'Blue Door'}).first().waitFor();
+    // The time row came from the line: its clock in the mark's `cool`, over 120 ms.
+    await until('the clock echoes the date', () => style(icon('schedule'), 'color'), value => value === cool);
+    assert.equal(await style(icon('schedule'), 'transition-duration'), '0.12s');
+    // "@Blue", its Places open, is still being typed: only a dashed underline.
+    const place = page.locator('.nl .tok-p');
+    assert.match((await place.getAttribute('class'))!, /\blive\b/);
+    assert.deepEqual([await style(place, 'background-color'), await style(place, 'background-size')], ['rgba(0, 0, 0, 0)', '6px 1.5px']);
+    // Enter picks it: a normal mark again, brightening once over 260 ms as it lands; the pin takes `comf`.
+    const classes = await watch(place, 'class');
+    let flashes = await recordFlashes(page);
+    await page.keyboard.press('Enter');
+    await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
+    await until('it lands', async () => (await classes()).concat(await page.locator('.nl .tok-p').getAttribute('class')), seen => seen.some(value => value?.split(' ').includes('landed')));
+    assert.equal(await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.className = 'tok-p landed';
+      document.querySelector('.editor .nl-text')!.append(probe);
+      const {animationName, animationDuration} = getComputedStyle(probe);
+      probe.remove();
+      return `${animationName} ${animationDuration}`;
+    }), 'tok-in 0.26s');
+    await until('the pin echoes the place', () => style(icon('location_on'), 'color'), value => value === comf);
+    // The address the pick filled in flashes.
+    await until('the address flashes', flashes, seen => seen.some(name => name.includes('place-address')));
+
+    // A time set by hand: the clock is `ink3` again.
+    await page.getByLabel('Start', {exact: true}).fill('4p');
+    await page.keyboard.press('Enter');
+    await until('set by hand', () => style(icon('schedule'), 'color'), value => value === ink3);
+    // An End before the start runs into the next day: the Date flashes and End says "+1".
+    flashes = await recordFlashes(page);
+    await page.getByLabel('End', {exact: true}).fill('2p');
+    await page.keyboard.press('Enter');
+    await until('the Date flashes', flashes, seen => seen.some(name => name.includes('date')));
+    assert.deepEqual([await page.locator('.editor .later').textContent(), await style(page.locator('.editor .later'), 'font-size')], ['+1', '11.5px']);
+    assert.equal(await page.evaluate(() => {
+      const probe = document.createElement('label');
+      probe.className = 'field flash';
+      document.querySelector('.editor .eg')!.append(probe);
+      const {animationName, animationDuration} = getComputedStyle(probe);
+      probe.remove();
+      return `${animationName} ${animationDuration}`;
+    }), 'side-flash 0.6s');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

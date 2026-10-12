@@ -1,11 +1,15 @@
 // Icons and the Todoist rings, drawn from the bundled paths in glyphs.ts in currentColor, and the mark.
 // DESIGN.md's sizes: 18 in the sidebar and rows, 16 in buttons and tools, 14 in chips, 17 in facts.
+import type {CSSProperties} from 'react';
 import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
 
-/** An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #136). */
-export function Icon({name, size = 18, alfred = false}: {name: IconName; size?: number; alfred?: boolean}) {
+/**
+ * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #136);
+ * `className` and `style` add to its own (the editor's rows echoing the line's marks, polish audit calflows-06).
+ */
+export function Icon({name, size = 18, alfred = false, className, style}: {name: IconName; size?: number; alfred?: boolean; className?: string; style?: CSSProperties}) {
   return (
-    <svg className={alfred ? 'icon alfred' : 'icon'} width={size} height={size} viewBox={ICON_VIEWBOX} fill="currentColor" aria-hidden="true">
+    <svg className={['icon', alfred && 'alfred', className].filter(Boolean).join(' ')} style={style} width={size} height={size} viewBox={ICON_VIEWBOX} fill="currentColor" aria-hidden="true">
       <path d={ICONS[name]} fill={alfred ? 'url(#alfred-ink)' : undefined} />
     </svg>
   );

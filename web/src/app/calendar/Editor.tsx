@@ -29,6 +29,7 @@ import {addDays, daysBetween, instantAt, localDate, minutesOf} from '../../logic
 import {dayOf} from '../../logic/manipulate.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
 import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
+import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
@@ -285,20 +286,49 @@ const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', 
 
 /**
  * The line's text with its marks: a #calendar in its calendar's colour, a #project in its project's
- * (SV-56; `ink2` while it names no project yet, or a new one).
+ * (SV-56; `ink2` while it names no project yet, or a new one). The mark still being typed, its menu
+ * open, is `live`, only a dashed underline; the one just picked lands, its tint brightening once
+ * (polish audit calflows-06).
  */
-function Marked({text, marks, calendarColour, projectColour}: {text: string; marks: Mark[]; calendarColour?: Colour | null; projectColour?: string | null}) {
+function Marked({text, marks, calendarColour, projectColour, live = null, landed = null}: {
+  text: string;
+  marks: Mark[];
+  calendarColour?: Colour | null;
+  projectColour?: string | null;
+  // Where the live mark and the one just picked start.
+  live?: number | null;
+  landed?: number | null;
+}) {
   const parts: ReactNode[] = [];
   let at = 0;
   for (const mark of marks) {
     if (mark.start > at) parts.push(text.slice(at, mark.start));
     const colour = mark.kind === 'calendar' ? colourVar(calendarColour ?? undefined) : mark.kind === 'project' && projectColour ? projectColour : null;
-    parts.push(<span key={mark.start} className={markClass[mark.kind]} style={colour ? {'--c': colour} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
+    const state = mark.start === live ? ' live' : mark.start === landed ? ' landed' : '';
+    parts.push(<span key={mark.start} className={`${markClass[mark.kind]}${state}`} style={colour ? {'--c': colour} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
     at = mark.end;
   }
   parts.push(text.slice(at));
   return <>{parts}</>;
 }
+
+/**
+ * Whether a field just changed as a side effect, for its 600 ms flash (polish audit calflows-06):
+ * `value` changed while `cause`, the field's own input, didn't (the address has none: a pick fills it).
+ */
+function useFlash(value: string, cause: string): boolean {
+  const [last, setLast] = useState({value, cause, at: 0});
+  if (last.value !== value || last.cause !== cause) setLast({value, cause, at: last.cause === cause && last.value !== value ? last.at + 1 : last.at});
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (!last.at) return;
+    const timer = window.setTimeout(() => setShown(last.at), FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [last.at]);
+  return last.at > shown;
+}
+
+const FLASH_MS = 600;
 
 const MIRROR_EVENTS = ['scroll', 'input', 'select', 'keyup', 'focus', 'blur'] as const;
 
@@ -527,10 +557,18 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     line.current?.setSelectionRange(caret.current, caret.current);
     caret.current = null;
   }, [draft.text]);
+  // The mark just picked, brightening once as it lands (polish audit calflows-06).
+  const [landed, setLanded] = useState<{start: number; seq: number} | null>(null);
+  useEffect(() => {
+    if (!landed) return;
+    const timer = window.setTimeout(() => setLanded(current => (current === landed ? null : current)), motion.slow);
+    return () => window.clearTimeout(timer);
+  }, [landed]);
   /** A pick for the line's "@place" or "#name" (its mark): the line reads the name in full, then a space (SV-29). */
   const completeLine = (mark: Mark, name: string, picked: Partial<Draft>) => {
     const next = completeToken(draft.text, mark.start, mark.end, name);
     caret.current = next.caret;
+    setLanded({start: mark.start, seq: (landed?.seq ?? 0) + 1});
     setDrafts(list => list.map(one => (one.id === draft.id ? retype({...one, ...picked}, next.text, today, google, projectNames) : one)));
   };
   const pickLine = (index: number) => {
@@ -649,6 +687,20 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const calendar = (calendars ?? []).find(one => one.id === draft.calendarId);
   // An event's last day (SV-29): its date for a one-day event and every task.
   const lastDay = kind === 'event' ? addDays(draft.date, extraDays(draft.start, draft.end, draft.days)) : draft.date;
+  // Each row whose value the line gave takes its mark's colour on its glyph; set by hand, it's `ink3`
+  // again (polish audit calflows-06).
+  const fromLine = (kind: Mark['kind'], ...fields: Manual[]) => !editing && parsed.marks.some(one => one.kind === kind) && !fields.some(field => draft.manual.includes(field));
+  const echo = {
+    when: fromLine('when', 'date', 'time') ? 'from-when' : undefined,
+    place: fromLine('place', 'place') ? 'from-place' : undefined,
+    calendar: fromLine('calendar', 'calendar') ? 'from-cal' : undefined,
+    project: fromLine('project', 'project') ? 'from-proj' : undefined,
+  };
+  const liveMark = editing ? null : placesOpen ? parsed.marks.find(one => one.kind === 'place')?.start ?? null : lineOpen ? hashMark?.start ?? null : null;
+  // A field changed by another's change flashes: the Date when the End runs into the next day, the address a picked place fills in.
+  const flashDate = useFlash(lastDay, draft.date);
+  const flashAddress = useFlash(draft.address ?? '', '');
+  const laterDays = draft.end !== null ? extraDays(draft.start, draft.end, 1) : 0;
   const unpicked = (todoistLabels ?? []).filter(label => !draft.labels.includes(label.name));
   // A recurring event moving to another calendar goes as a series (Google can't move one occurrence).
   const choices = original && draft.calendarId !== original.calendarId && calendar ? calendarMoveChoices(original.date, calendar.name) : original ? scopeChoices(original.date, draft.date) : [];
@@ -691,7 +743,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           ) : (
             <label className="field big nl">
               <span ref={lineMarks} className="nl-marks" aria-hidden="true">
-                <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null} /></span>
+                <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null}
+                  live={liveMark} landed={landed?.start ?? null} key={landed?.seq ?? 0} /></span>
               </span>
               <input ref={line} className="nl-input" aria-label={`Describe the ${noun}`} value={draft.text} spellCheck={false} autoComplete="off"
                 placeholder={kind === 'event' ? 'Dinner with Sam fri 7-9pm @Blue Door' : 'Pay rent fri'}
@@ -708,9 +761,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          <Icon name="schedule" size={17} />
+          <Icon name="schedule" size={17} className={echo.when} />
           <div className={`prow${lastDay !== draft.date ? ' days' : ''}`}>
-            <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.date}
+            <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.date}
               shown={lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
               today={today} read={text => parseDay(text, today)} onValue={date => change({date}, ['date'])}
               range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change(spanTo(from, to, draft.start, draft.end), ['date'])} : undefined} />
@@ -723,6 +776,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                     <span className="ink3">–</span>
                     <TimeField className={`time num${changed('end') ? ' changed' : ''}`} label="End" value={draft.end} choices={endChoices(draft.start, draft.end)}
                       read={text => readEnd(text, draft.start!, draft.end!)} onValue={end => change({end}, ['time'])} />
+                    {laterDays > 0 && <span className="later num" title={`Ends ${dayTitle(lastDay)}`}>+{laterDays}</span>}
                   </>
                 )}
                 <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} title={kind === 'event' ? 'All day' : 'Remove time'}
@@ -775,7 +829,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
           {kind === 'event' && (
             <>
-              <Icon name="location_on" size={17} />
+              <Icon name="location_on" size={17} className={echo.place} />
               <label className={`field${placesOpen ? ' focus' : ''}`}>
                 <input className="grow" aria-label="Place" placeholder="Add place" value={draft.place}
                   onChange={event => change({place: event.target.value, address: null, picked: null}, ['place'])} />
@@ -789,7 +843,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               {draft.address && (
                 <>
                   <span />
-                  <span className="ell ink3 place-address">{draft.address}</span>
+                  <span className={`ell ink3 place-address${flashAddress ? ' flash' : ''}`}>{draft.address}</span>
                 </>
               )}
               {placesOpen && (
@@ -803,7 +857,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
           {kind === 'event' ? (
             <>
-              <Icon name="calendar_today" size={17} />
+              <Icon name="calendar_today" size={17} className={echo.calendar} style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
               <span className="menu-host">
                 <button type="button" className="field" aria-label="Calendar" aria-expanded={menu === 'calendar'}
                   onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
@@ -838,7 +892,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           ) : (
             <>
-              <Icon name="work" size={17} />
+              <Icon name="work" size={17} className={echo.project} style={projectTodoist ? {'--c': TODOIST_COLOURS[projectTodoist]} as CSSProperties : undefined} />
               <ProjectField value={draft.project ?? ''} isNew={draft.newProject} projects={projects ?? []} noNew={!!editing}
                 placeholder={settings?.todoist.default_project ?? projects?.find(one => one.inbox)?.name ?? 'Inbox'}
                 line={lineOpen ? {cur: lineCur} : null}

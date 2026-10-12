@@ -493,7 +493,8 @@ field shows where it's typed, the cut side fading, #110), **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
-1h 30m"). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
+1h 30m"). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
+only dashed until it's picked and lands, and a field another's change moved flashes (#230). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
 editor with project, labels and due date.
 
 ### Recurring events
@@ -2025,3 +2026,12 @@ it changes what's on screen.
     none), its title struck through in `ink3` once done, and its mark at .5 with the spinner after a
     second while it waits. Reopening plays nothing (Andy, 2026-10-11, polish audit calpanes-08,
     calflows-10, shell-15).
+230. **Each word typed lands in its field:** a row the editor's line filled takes the mark's colour on
+    its glyph, over 120 ms: the clock `cool` for a date or time, the pin `comf` for a place, the
+    calendar glyph its calendar's colour, the project glyph its project's (clamped as its ring); set
+    by hand, the glyph is `ink3` again. The mark still being typed, its Places or # menu open, is only a
+    dashed 1.5 px underline in its colour at 70% (6 px dashes, no fill); picked (Enter, Tab or a
+    click), it's a mark again and its tint brightens from 36% once over 260 ms. A field another's change
+    moved flashes `cardOn` back to its own fill over 600 ms: the Date when the End runs into the next
+    day, the address a picked place fills in, and an End on a later day says "+1" after it (11.5,
+    `ink3`, raised) (Andy, 2026-10-11, polish audit calflows-06).
