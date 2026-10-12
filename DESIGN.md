@@ -717,9 +717,10 @@ Board 28 replaces All's list.
 - **AI** (board 30b) adds a **News** group:
   - **Articles and grouping** (Claude Haiku 5.5) and **Stories and ranking** (Claude Sonnet 5.5)
   - **Monthly cap** ($40)
-  - **This month**: a 160 × 6 meter, then "$18.40 of $40"
+  - **This month**: a 160 × 6 meter in `cool`, `caution` from 90% of the cap, then "$18.40 of $40" in
+    `ink` (#252)
   - **Usage this month** lists Triage, Alfred and News, with News broken into articles, grouping,
-    stories and ranking.
+    stories and ranking, each cost in `ink` 500; its label carries the month's total (#252).
 
 ### Keys and behaviour
 
@@ -1648,6 +1649,12 @@ it changes what's on screen.
     no chart, only "—" and its line. Each day's column names it on hover as the app writes dates:
     "Tue, Oct 6 · 9 of 11 opened first", or "· nothing Done". Board 17 draws 30 bars and the figure
     inline (Andy, 2026-10-11, polish audit settings-08).
+252. **Settings › AI puts the money first:** each cost in Usage this month is `ink` 500 (was `ink2`
+    400), its label carries the month's total ("$21.35", `ink2`, Triage, Alfred and News together) so
+    This month's News-only "$18.40 of $40" no longer reads as the whole, the amount is `ink`, and the
+    meter is `cool` (was `ink2`), turning `caution` from 90% of the cap rather than only at it; its
+    fill eases to a new width over 260 ms. At the cap it's full in `caution`, as before (Andy,
+    2026-10-11, polish audit settings-10).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

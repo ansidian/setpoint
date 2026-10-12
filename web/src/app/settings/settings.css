@@ -206,11 +206,13 @@
 .settings .set-label .n { letter-spacing: 0; color: var(--ink2); }
 .settings .set-row.slim { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 .settings .news-src .state { width: 230px; }
-/* AI's News group (board 30b): a model in use, this month's 160 × 6 meter (`caution` at the cap) and its amount. */
+/* AI's News group (board 30b): a model in use, this month's 160 × 6 meter and its amount. The money reads
+   first: the amount and each cost in ink, the costs at 500, and the meter `cool`, turning `caution` from
+   90% of the cap, before it's reached (#252). */
 .settings .val { color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; }
 .settings .meter { width: 160px; height: 6px; border-radius: 999px; background: var(--sub3); overflow: hidden; flex: none; }
-.settings .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--ink2); }
-.settings .meter.capped > span { background: var(--caution); }
-.settings .amount { color: var(--ink2); font-size: 12.5px; width: 92px; text-align: right; flex: none; white-space: nowrap; }
-.settings .cost { color: var(--ink2); flex: none; }
+.settings .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--cool); transition: width var(--dur-slow) var(--ease), background-color var(--dur-fast) var(--ease); }
+.settings .meter.near > span, .settings .meter.capped > span { background: var(--caution); }
+.settings .amount { color: var(--ink); font-size: 12.5px; width: 92px; text-align: right; flex: none; white-space: nowrap; }
+.settings .cost { color: var(--ink); font-weight: 500; flex: none; }
 .settings .s > .caution { color: var(--caution); }

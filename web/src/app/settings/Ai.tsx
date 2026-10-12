@@ -12,7 +12,7 @@ import {SETTINGS_PATH} from '../../api/items.ts';
 import {AI_PATH, patchSettings, SECRETS_PATH, setSecret} from '../../api/settings.ts';
 import {readerTime} from '../../logic/format.ts';
 import {CAP_CHOICES, capMeter, cappedLine, dollars, newsUsageParts} from '../../logic/news.ts';
-import {usageLine} from '../../logic/settings.ts';
+import {monthTotal, usageLine} from '../../logic/settings.ts';
 import {useNow} from '../clock.ts';
 import {Line, Page, Row, Section, Select, useAttempt} from './parts.tsx';
 
@@ -88,14 +88,14 @@ export function AiPage() {
               onChange={value => void cap.attempt(() => patchSettings({news: {monthly_cap_usd: value}}))} />
           </Row>
           <Row title="This month" sub={capped ? <span className="caution">{capped}</span> : undefined} kind="ctl">
-            {meter && <span className={capped ? 'meter capped' : 'meter'} role="meter" aria-label="This month" aria-valuemin={0} aria-valuemax={1} aria-valuenow={meter.fill}><span style={{width: `${meter.fill * 100}%`}} /></span>}
+            {meter && <span className={capped ? 'meter capped' : meter.near ? 'meter near' : 'meter'} role="meter" aria-label="This month" aria-valuemin={0} aria-valuemax={1} aria-valuenow={meter.fill}><span style={{width: `${meter.fill * 100}%`}} /></span>}
             {meter && <span className="amount num">{meter.text}</span>}
           </Row>
         </div>
         <Line text={cap.line?.text ?? null} tone={cap.line?.tone} />
       </Section>
 
-      <Section label="Usage this month">
+      <Section label="Usage this month" right={usage && <span className="num ink2">{dollars(monthTotal(usage), true)}</span>}>
         <div className="set-group">
           <Row title="Triage" sub={usage ? usageLine(usage.triage) : ''}>{usage && <span className="cost num">{dollars(usage.triage.cost_usd, true)}</span>}</Row>
           <Row title="Alfred" sub={usage ? usageLine(usage.alfred) : ''}>{usage && <span className="cost num">{dollars(usage.alfred.cost_usd, true)}</span>}</Row>

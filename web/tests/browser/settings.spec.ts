@@ -172,7 +172,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     const amount = page.locator('.settings .amount');
     await amount.waitFor();
     assert.equal(await amount.textContent(), '$18.40 of $40');
-    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Keys', 'Mail', 'News', 'Usage this month']);
+    assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['Keys', 'Mail', 'News', 'Usage this month']);
     const news = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: /^News$/})});
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
@@ -181,7 +181,9 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     await still(page);
     const meter = news.locator('.meter');
     assert.deepEqual(await meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10]), [160, 6, 73.6]);
-    assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), await computed(page, 'background', 'var(--ink2)'));
+    // The money first (the polish audit's settings-10): a cool meter, the amount in ink.
+    assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), await computed(page, 'background', 'var(--cool)'));
+    assert.equal(await amount.evaluate(element => getComputedStyle(element).color), await computed(page, 'color', 'var(--ink)'));
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '30b-settings-ai', 'settings');
 
@@ -193,13 +195,24 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
       ['Alfred', '18 calls · 112k tokens in · 8k out', '$0.85'],
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
     ]);
+    // The month's total in the label, each cost in ink at 500.
+    assert.equal(await usage.locator('.set-label .r').textContent(), '$21.35');
+    assert.deepEqual(await usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight]), [await computed(page, 'color', 'var(--ink)'), '500']);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, 'settings-ai-usage', 'settings');
 
-    // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings.
+    // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
+    // the meter turns caution, before the cap is reached; under that, cool again.
+    await choose(page, 'Monthly cap', '$20');
+    await amount.filter({hasText: '$18.40 of $20'}).waitFor();
+    assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
+    assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).transitionDuration), '0.26s, 0.12s', 'the fill eases to its new width');
+    const caution = await computed(page, 'background', 'var(--caution)');
+    await until('the meter in caution', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === caution);
     await choose(page, 'Monthly cap', '$50');
     await settled('the cap saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.news.monthly_cap_usd === 50);
     await amount.filter({hasText: '$18.40 of $50'}).waitFor();
+    assert.equal(await meter.getAttribute('class'), 'meter');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

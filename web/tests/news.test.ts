@@ -412,8 +412,19 @@ describe('Settings › AI\'s News group (30b)', () => {
     expect([dollars(40), dollars(18.4), dollars(18.4, true), dollars(0, true)]).toEqual(['$40', '$18.40', '$18.40', '$0.00']);
     expect(capMeter({this_month_usd: 18.4, monthly_cap_usd: 40}).text).toBe('$18.40 of $40');
     expect(capMeter({this_month_usd: 18.4, monthly_cap_usd: 40}).fill).toBeCloseTo(0.46);
-    expect(capMeter({this_month_usd: 52, monthly_cap_usd: 40})).toEqual({text: '$52.00 of $40', fill: 1});
+    expect(capMeter({this_month_usd: 52, monthly_cap_usd: 40})).toEqual({text: '$52.00 of $40', fill: 1, near: true});
     expect(capMeter({this_month_usd: 0, monthly_cap_usd: 0}).fill).toBe(1);
+  });
+
+  // The meter turns caution from 90% of the cap, before it's reached (the polish audit's settings-10).
+  test.each([
+    [18.4, 40, false],
+    [35.99, 40, false],
+    [36, 40, true],
+    [18.4, 20, true],
+    [52, 40, true],
+  ])('$%f of $%i is near the cap: %s', (spent, cap, near) => {
+    expect(capMeter({this_month_usd: spent, monthly_cap_usd: cap}).near).toBe(near);
     expect(CAP_CHOICES).toContain(40);
   });
 

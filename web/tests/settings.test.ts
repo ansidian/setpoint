@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, minutesBefore, moved, placed, precisionText, ruleWords, senderMatch, shifts, sparkPath, sparkTitle, splitRules, taskTime, withPatch,
+  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, precisionText, ruleWords, senderMatch, shifts, sparkPath, sparkTitle, splitRules, taskTime, withPatch,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -78,6 +78,11 @@ describe('Settings', () => {
     const spark = sparkPath([day('2026-10-05', 1, 1), day('2026-10-06', 1, 1), day('2026-10-07', 1, 1), day('2026-10-08', 1, 1)], SPARK);
     expect(spark.reference).toBe(13.7);
     expect(spark.columns).toEqual([{x: 0, width: 33}, {x: 33, width: 57}, {x: 90, width: 57}, {x: 147, width: 33}]);
+  });
+
+  test('the month\'s AI spend, for Usage this month\'s label: Triage, Alfred and News together', () => {
+    expect(monthTotal({triage: {cost_usd: 2.1}, alfred: {cost_usd: 0.85}, news: {cost_usd: 18.4}})).toBeCloseTo(21.35);
+    expect(monthTotal({triage: {cost_usd: 0}, alfred: {cost_usd: 0}, news: {cost_usd: 0}})).toBe(0);
   });
 
   test.each([

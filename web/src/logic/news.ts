@@ -445,10 +445,13 @@ export const dollars = (amount: number, cents = false) => (!cents && Number.isIn
 /** The monthly cap's choices; one set elsewhere still shows as itself. */
 export const CAP_CHOICES = [10, 20, 30, 40, 50, 75, 100];
 
-/** This month's meter: "$18.40 of $40", and how full it is (0–1). */
-export function capMeter(news: Pick<NewsAiOut, 'this_month_usd' | 'monthly_cap_usd'>): {text: string; fill: number} {
+/** How full This month's meter is when it turns `caution`, before the cap rather than at it (the polish audit's settings-10). */
+export const NEAR_CAP = 0.9;
+
+/** This month's meter: "$18.40 of $40", how full it is (0–1), and whether that's near the cap (90% or more). */
+export function capMeter(news: Pick<NewsAiOut, 'this_month_usd' | 'monthly_cap_usd'>): {text: string; fill: number; near: boolean} {
   const fill = news.monthly_cap_usd > 0 ? Math.min(1, news.this_month_usd / news.monthly_cap_usd) : 1;
-  return {text: `${dollars(news.this_month_usd, true)} of ${dollars(news.monthly_cap_usd)}`, fill};
+  return {text: `${dollars(news.this_month_usd, true)} of ${dollars(news.monthly_cap_usd)}`, fill, near: fill >= NEAR_CAP};
 }
 
 /**
