@@ -50,8 +50,9 @@ import type {Command} from './palette/commands.ts';
 import {navigate} from './router.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {SearchField, SearchResults} from './search/Search.tsx';
-import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
-import {AllSkeleton, InboxSkeleton} from './states/Skeletons.tsx';
+import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
+import {AllSkeleton, InboxSkeleton, SearchSkeleton} from './states/Skeletons.tsx';
+import {skeleton} from '../tokens.ts';
 import {useAlfred, useSearch} from './search/state.ts';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
@@ -143,6 +144,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const search = useSearch(route.account, phone);
   const alfred = useAlfred();
   const searching = search.active || alfred.open;
+  // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
+  // skeleton once it's taken a moment (search-03, #180).
+  const firstWait = search.active && search.out === null && search.error === null && !alfred.open;
+  const waitedLong = useAfter(firstWait, skeleton.delayMs);
 
   // All's pages: the first, then one more each time the list nears its end.
   const [befores, setBefores] = useState<string[]>([]);
@@ -516,17 +521,19 @@ export function InboxPage({route}: {route: InboxRoute}) {
       </header>
       {/* Filtered to one account, the rows drop the account they'd all repeat (inbox-12). */}
       <div className={route.account && !phone ? 'content filtered' : 'content'} style={accountWidth}>
-        {searching ? (
+        {firstWait && waitedLong ? (
+          <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
+        ) : searching && !firstWait ? (
           <SearchResults search={{...search, results}} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone}
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onAsk={askAlfred} />
         ) : all ? (
           <AllList days={dayViews} shelf={shelf} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone}
-            arrived={listArrived} more={allMore}
+            arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={allPages[0] === undefined ? (listFailed ? <LoadFailed what="All" loads={[allLoad]} /> : <AllSkeleton first={!shelf.length} />) : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin} />
         ) : (
-          <section className={listArrived ? 'list sk-arrive' : 'list'} aria-label="Inbox">
+          <section className={['list', listArrived && 'sk-arrive', firstWait && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox">
             {!inbox && (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad]} /> : <InboxSkeleton />)}
             {/* Another account's list starts afresh: its rows don't fold. */}
             {inbox && (

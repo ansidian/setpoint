@@ -239,10 +239,13 @@ export function StoryBodySkeleton() {
   );
 }
 
-/** Search's results before the first answer (search-03): rows shaped as results (.arow). */
-export function SearchSkeleton() {
+/**
+ * Search's results before the first answer (search-03): rows shaped as results (.arow). `immediate`:
+ * shown after its own wait (the list it replaces stayed meanwhile), so at once.
+ */
+export function SearchSkeleton({immediate = false}: {immediate?: boolean}) {
   return (
-    <Sk kind="search" className="sk-list sk-results">
+    <Sk kind="search" className="sk-list sk-results" immediate={immediate}>
       {Array.from({length: 6}, (_, index) => (
         <div className="sk-result" key={index}>
           <span />

@@ -7,6 +7,18 @@
 .search.active { width: 520px; }
 .hd > .search { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
   width var(--dur-medium) var(--ease), flex-basis var(--dur-medium) var(--ease); }
+/* A search on its way (#180): once it's taken a moment, the glass gives way to the spinner. */
+.search .glass { position: relative; display: grid; flex: none; }
+.search .glass > .spin { position: absolute; inset: 0; place-items: center; animation: glass-on 0s var(--skel-delay) both; }
+.search.pending .glass > .icon { animation: glass-off 0s var(--skel-delay) both; }
+@keyframes glass-on { from { visibility: hidden; } }
+@keyframes glass-off { to { visibility: hidden; } }
+/* Waiting for its first answer, the list it replaces stays, dimmed; its results fade in, and a
+   refinement on its way dims the results it replaces once it's taken a moment. */
+.list.search-wait { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
+.search-list.arrive { animation: sk-arrive var(--dur-fast) var(--ease); }
+.search-list > .arow.result { transition: opacity var(--dur-fast) var(--ease); }
+.search-list.pending > .arow.result { opacity: .55; transition-delay: var(--skel-delay); }
 .search .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
 .search .qchip.sel { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 .search .qchip .k { color: var(--ink3); font-size: 11px; }

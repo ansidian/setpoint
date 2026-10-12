@@ -3,7 +3,7 @@
 // (Skeletons.tsx), appearing only after a short delay so a quick answer never flashes one, then
 // breathing quietly until the rows replace it with a short fade. A load that fails says so in place,
 // with Try again (#173). Setpoint starting shows its mark (#174).
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {refresh} from '../../api/client.ts';
 import {useOfflineSince} from '../../api/live.ts';
@@ -41,8 +41,8 @@ export function carrySkeletons() {
  * A skeleton: its bars breathe together. `kind` names it for the checks; it's hidden from the
  * accessibility tree, which has nothing to read in it.
  */
-export function Sk({kind, className, style, children}: {kind: string; className?: string; style?: CSSProperties; children: ReactNode}) {
-  const [carried] = useState(() => carrying || Date.now() < carryUntil);
+export function Sk({kind, className, style, immediate = false, children}: {kind: string; className?: string; style?: CSSProperties; immediate?: boolean; children: ReactNode}) {
+  const [carried] = useState(() => immediate || carrying || Date.now() < carryUntil);
   const classes = ['sk', carried && 'carried', className].filter(Boolean).join(' ');
   return <div className={classes} data-skeleton={kind} aria-hidden="true" style={style}>{children}</div>;
 }
@@ -58,6 +58,25 @@ export function useArrival(loaded: boolean, key: unknown = null): boolean {
   else if (!loaded && !current.waited) current = {...current, waited: true};
   if (current !== seen) setSeen(current);
   return loaded && current.waited;
+}
+
+/**
+ * Whether `on` has held for `ms` (a search's first answer still on its way after a moment); each
+ * time it turns on, it waits again.
+ */
+export function useAfter(on: boolean, ms: number): boolean {
+  const [episode, setEpisode] = useState({on, count: 0});
+  let current = episode;
+  if (current.on !== on) current = {on, count: on ? current.count + 1 : current.count};
+  if (current !== episode) setEpisode(current);
+  const [waited, setWaited] = useState(-1);
+  const count = current.count;
+  useEffect(() => {
+    if (!on) return;
+    const timer = window.setTimeout(() => setWaited(count), ms);
+    return () => window.clearTimeout(timer);
+  }, [on, count, ms]);
+  return on && waited === count;
 }
 
 /** One of a page's loads: its path, and what useResource answered for it. */

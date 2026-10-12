@@ -32,6 +32,8 @@ export interface SearchFieldState<C, O, R> {
   out: O | null;
   results: R[];
   error: string | null;
+  // A search is on its way (search-03): the field's glyph turns once it has taken a moment.
+  pending: boolean;
   setText: (text: string) => void;
   /** Takes the chips the server found now (Enter); resolves with the first result, if any. */
   settle: () => Promise<R | null>;
@@ -63,6 +65,9 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   const [error, setError] = useState<string | null>(null);
   // The latest request, so an older answer never replaces a newer one, and the field as it is now.
   const latest = useRef(0);
+  // The latest request asked, and the latest answered (or refused): a search is pending between them.
+  const [asked, setAsked] = useState(0);
+  const [answered, setAnswered] = useState(0);
   const field = useRef({chips, text});
   useEffect(() => {
     field.current = {chips, text};
@@ -75,10 +80,12 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   function run(nextChips: C[], nextText: string, settle: boolean): Promise<R | null> {
     window.clearTimeout(timer.current);
     const id = ++latest.current;
+    setAsked(id);
     if (!isSearching(nextChips, nextText)) {
       setOut(null);
       setResults([]);
       setError(null);
+      setAnswered(id);
       return Promise.resolve(null);
     }
     // Words finished before the one still being typed: their chips first, then the whole search
@@ -105,6 +112,7 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
       setOut(answer);
       setResults(answer.results);
       setError(null);
+      setAnswered(id);
       // The field takes the server's chips only if it still holds what was sent.
       const now = field.current;
       if (!plain && (settle || /\s$/.test(nextText)) && now.text === nextText && now.chips === nextChips) {
@@ -113,7 +121,10 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
       }
       return answer.results[0] ?? null;
     }, (failure: Error) => {
-      if (id === latest.current) setError(failure.message);
+      if (id === latest.current) {
+        setError(failure.message);
+        setAnswered(id);
+      }
       return null;
     });
   }
@@ -121,7 +132,7 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return {
-    chips, text, active, out, results, error,
+    chips, text, active, out, results, error, pending: active && asked !== answered,
     setText(next) {
       setTextState(next);
       window.clearTimeout(timer.current);

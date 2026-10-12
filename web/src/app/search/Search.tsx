@@ -30,7 +30,7 @@ export function Account({account}: {account: AccountOut | undefined}) {
   return <><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></>;
 }
 
-type FieldSearch<R> = Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, R>, 'chips' | 'text' | 'active' | 'setText' | 'settle' | 'removeChip' | 'clear'>;
+type FieldSearch<R> = Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, R>, 'chips' | 'text' | 'active' | 'setText' | 'settle' | 'removeChip' | 'clear'> & {pending?: boolean};
 
 interface SearchFieldProps<R> {
   search: FieldSearch<R>;
@@ -120,8 +120,12 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     }
   };
   return (
-    <label ref={field} className={search.active ? 'search active' : 'search'} htmlFor={inputId}>
-      <Icon name="search" size={16} />
+    <label ref={field} className={['search', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
+      {/* While a search is on its way, once it's taken a moment, its glyph turns (search-03, #180). */}
+      <span className="glass">
+        {search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
+        <Icon name="search" size={16} />
+      </span>
       {search.chips.map((chip, index) => (
         <span className={whole ? 'qchip sel' : 'qchip'} key={chipKey(chip)}>
           <span className="k">{negated(chip) ? `Not ${CHIP_KEYS[chip.kind]}` : CHIP_KEYS[chip.kind]}</span>{chip.label}
@@ -203,8 +207,10 @@ export function SearchResults(props: ResultsProps) {
   const indexing = out ? indexingLine(out.indexing) : null;
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
+  // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
+  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #180).
   return (
-    <section className="list search-list" aria-label="Search results">
+    <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
       {out && !card && (

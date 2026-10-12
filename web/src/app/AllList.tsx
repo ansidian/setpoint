@@ -35,7 +35,7 @@ const RULES: FoldRules<Part> = {
 // A row's run, for staggering rows that fold together: its day's lane, or its day's Noise.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
-export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, loading, arrived, more, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin}: {
+export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, loading, arrived, more, dimmed = false, onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin}: {
   days: DayView[];
   // The Pinned shelf's rows, newest pin first.
   shelf: MessageRowOut[];
@@ -49,6 +49,8 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
   loading: ReactNode;
   arrived: boolean;
   more: boolean;
+  // A search's first answer on its way: the list stays, dimmed, until it comes (#180).
+  dimmed?: boolean;
   onPoint: (key: string) => void;
   onOpen: (id: number, key: string) => void;
   onToggleNoise: (date: string) => void;
@@ -82,7 +84,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
   // A row Trash took beats first; rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   return (
-    <section className={arrived ? 'list all sk-arrive' : 'list all'} aria-label="All mail" onScroll={onScroll}>
+    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="All mail" onScroll={onScroll}>
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key));
         const leaving = fold === 'out';

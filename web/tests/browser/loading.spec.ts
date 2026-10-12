@@ -532,3 +532,46 @@ test('on the phone, a signed-in browser starts on its header, tabs and the page\
     await setpoint.stop();
   }
 });
+
+test('a search on its way keeps the list, dimmed, then shows the results\' skeleton, and the field\'s glyph turns; the results fade in (search-03)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    let release = await hold(page, /^\/api\/search$/);
+    await page.keyboard.press('/');
+    await page.keyboard.type('northwind');
+    // At once: the Inbox stays, at .55, not a blank page.
+    const inbox = page.locator('section.list[aria-label="Inbox"]');
+    await until('the Inbox dimmed', () => inbox.evaluate(list => [list.className.includes('search-wait'), getComputedStyle(list).opacity]), ([waiting]) => waiting === true);
+    assert.equal(await inbox.evaluate(list => getComputedStyle(list).transitionDuration), '0.12s');
+    // Once it's taken a moment: the results' skeleton, six rows shaped as results, and the spinner in the field.
+    const sk = page.locator('[data-skeleton="search"]');
+    await sk.waitFor();
+    assert.equal(await inbox.count(), 0);
+    assert.equal(await sk.locator('.sk-result').count(), 6);
+    const field = page.locator('.hd .search');
+    assert.match((await field.getAttribute('class'))!, /\bpending\b/);
+    await until('the glass gives way to the spinner', () => field.evaluate(label => [getComputedStyle(label.querySelector('.glass > .spin')!).visibility, getComputedStyle(label.querySelector('.glass > .icon')!).visibility]),
+      ([spin, glass]) => spin === 'visible' && glass === 'hidden');
+    assert.equal(await field.locator('.glass > .spin').evaluate(spin => getComputedStyle(spin).animationDelay), `${skeleton.delayMs / 1000}s`);
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-search', 'main');
+    await release();
+    const results = page.locator('section.search-list');
+    await results.locator('.arow.result').first().waitFor();
+    assert.equal(await results.evaluate(list => getComputedStyle(list).animationName), 'sk-arrive');
+    await until('the field\'s glass back', () => field.getAttribute('class'), classes => !classes!.includes('pending'));
+
+    // A refinement on its way: the results stay, dimmed once it's taken a moment.
+    release = await hold(page, /^\/api\/search$/);
+    await page.keyboard.type(' rejection');
+    await until('the old results dimmed', () => results.locator('.arow.result').first().evaluate(row => getComputedStyle(row).opacity), opacity => opacity === '0.55');
+    await release();
+    await until('the new results', () => results.locator('.arow.result').first().evaluate(row => getComputedStyle(row).opacity), opacity => opacity === '1');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

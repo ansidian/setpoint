@@ -398,6 +398,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   after it in `ink3` (#136).
 - No results: "No emails match" and each chip as the field draws it, removable by its × (#211),
   after a 20 px `search_off` (#165).
+- **On its way** (#180): until the first answer the list stays at .55, then the results' skeleton;
+  the field's glyph turns while a search is on its way; a refinement dims the results it replaces.
 
 ### Alfred's Answer card
 
@@ -2420,3 +2422,11 @@ it changes what's on screen.
     shell's without fading in again. This browser keeps that shape (`setpoint.sidebar`) and that it
     was signed in (`setpoint.signedIn`) in its own storage, as it keeps the theme, and forgets both
     on Sign out or when the session ends (Andy, 2026-10-11, polish audit shell-10, phone-12).
+180. **A search on its way never blanks the list:** from the first keystroke until its first
+    answer, the list on screen (the Inbox, or All) stays, at .55 over 120 ms; if the answer hasn't
+    come in 200 ms, six skeleton rows shaped as results take its place (a 150 px sender bar and a
+    70 px one at the right, a 46% subject, a 64% excerpt at .6; 12 16 13 12 padding, `hair`
+    between). While any search is on its way, once it's taken 200 ms, the field's `search` glyph
+    gives way to the 900 ms spinner, so a quick answer never blinks it. The first results fade in
+    over 120 ms; a refinement on its way dims the results it will replace to .55, after the same
+    200 ms (Andy, 2026-10-11, polish audit search-03).
