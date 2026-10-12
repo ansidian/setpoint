@@ -480,8 +480,16 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     await line.pressSequentially('Pay bills #hom');
     await page.locator('.nl .tok-j', {hasText: '#hom'}).waitFor();
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
-    // Each project in its own colour (SV-29): Home is the seed's orange.
-    assert.equal(await menu.getByRole('option', {name: 'Home'}).locator('.dot').evaluate(dot => getComputedStyle(dot).backgroundColor), 'rgb(199, 113, 0)');
+    // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#138).
+    const orange = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'oklch(from #c77100 clamp(var(--ringMin), l, var(--ringMax)) c h)';
+      document.body.append(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      return computed;
+    });
+    assert.equal(await menu.getByRole('option', {name: 'Home'}).locator('.dot').evaluate(dot => getComputedStyle(dot).backgroundColor), orange);
     await page.keyboard.press('Enter');
     await menu.waitFor({state: 'detached'});
     // The line reads the project's name, then a space (SV-29).

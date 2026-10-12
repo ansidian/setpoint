@@ -148,6 +148,12 @@ export const tintL = {night: 1, light: 0.43} as const;
 export const attTint = {night: 8, light: 6} as const;
 /** The HTML email frame's brightness (#134): Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
+/**
+ * Todoist's colours, which aren't theme-tuned, clamped to the calendar tokens' lightness band (#138):
+ * a task's ring (and its project's mark in the editor's line) keeps Todoist's hue and chroma at a
+ * lightness of at least `ringMin` and at most `ringMax`.
+ */
+export const ringL = {night: {min: 0.72, max: 1}, light: {min: 0, max: 0.55}} as const;
 
 /** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
 export const glyphColour = {
@@ -367,6 +373,8 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
   vars['--mailDim'] = String(light ? mailDim.light : mailDim.night);
+  vars['--ringMin'] = String((light ? ringL.light : ringL.night).min);
+  vars['--ringMax'] = String((light ? ringL.light : ringL.night).max);
   return vars;
 }
 

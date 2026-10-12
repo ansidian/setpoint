@@ -89,7 +89,7 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
                 event.stopPropagation();
                 onComplete(task);
               }}>
-              {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)} />}
+              {task.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(task.project)}><Icon name="check" size={11} /></span>}
             </button>
             <span className="grow title">{task.title}</span>
             {task.command?.state === 'pending' ? <Spinner /> : task.project && <span className="ink3 project">{task.project}</span>}

@@ -19,7 +19,7 @@ import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {DONE_MOMENT_MS, shownTasks, todayBlock, todayRange} from '../logic/today.ts';
 import type {TodayTask} from '../logic/today.ts';
-import {TaskGlyph} from '../ui/Icon.tsx';
+import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {useRingColour} from './calendar/Chip.tsx';
 import {DetailContent} from './calendar/detail/DetailContent.tsx';
@@ -160,7 +160,7 @@ export function TodayBlock() {
                 event.stopPropagation();
                 complete(item);
               }}>
-              {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
+              {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
             </button>
             <span className="ell title" title={title}>{title}</span>
             {label && <span className="in">{label}</span>}

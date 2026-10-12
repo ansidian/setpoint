@@ -66,7 +66,7 @@
 .ev.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 /* Tasks: the ring (12 px; its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
-.tk .ring { width: 12px; height: 12px; border-color: var(--ring, var(--ink2)); vertical-align: -2px; margin: 0 6px 0 0; }
+.tk .ring { --ring-base: var(--ring, var(--ink2)); width: 12px; height: 12px; vertical-align: -2px; margin: 0 6px 0 0; }
 .tk .task-glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .task-glyph.done { color: var(--good); }
 .tk.done { color: var(--ink3); text-decoration: line-through; text-decoration-color: var(--ink3); }
@@ -124,7 +124,7 @@
 .ag-item .in { font-size: 12px; }
 .ag-item .repeat { color: var(--ink3); }
 .ag-task { align-items: center; }
-.ag-task .ring { width: 15px; height: 15px; border-color: var(--ring, var(--ink2)); margin: 0 0 0 2px; }
+.ag-task .ring { --ring-base: var(--ring, var(--ink2)); width: 15px; height: 15px; margin: 0 0 0 2px; }
 .ag-task .task-glyph { margin-left: 2px; }
 .ag-task .title { color: var(--ink); font-weight: 400; }
 .ag-task.done .title { color: var(--ink3); text-decoration: line-through; }
@@ -157,7 +157,7 @@
 .mini > .vis { background: var(--sub); }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }
-.calrow .ring { width: 13px; height: 13px; border-color: var(--ink2); margin: 0; }
+.calrow .ring { --ring-base: var(--ink2); width: 13px; height: 13px; margin: 0; }
 .chk { width: 14px; height: 14px; border-radius: 4px; background: var(--c); display: grid; place-items: center; flex: none; }
 .chk::after { content: ""; width: 3px; height: 7px; border: solid var(--onAccent); border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); }
 .chk.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
@@ -284,5 +284,7 @@
 .ev:not(.ghost, .lift, .sel):active::after { background: color-mix(in oklch, var(--c, var(--cool)) 28%, transparent); }
 @media (hover: hover) {
   .ev:not(.ghost, .lift):hover::after { opacity: 1; }
-  .ag-task .check:enabled:hover .ring { border-color: var(--ink); }
+  /* A ring that completes keeps its colour, its fill rises to 24% and its check shows (#138). */
+  .ag-task .check:enabled:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
+  .ag-task .check:enabled:hover .ring > .icon { opacity: 1; }
 }

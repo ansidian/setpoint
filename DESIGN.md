@@ -110,7 +110,8 @@ Personal, which are account names). The UI says "Done", never "handled".
   tints it (#123).
 - **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`
   (Night 1, Light .43), keeping its hue and chroma (#122); the email frame's brightness `--mailDim`
-  (Night .95, Light 1) (#134).
+  (Night .95, Light 1) (#134); Todoist's colours clamp their lightness to `--ringMin`–`--ringMax`
+  (Night .72–1, Light 0–.55), keeping Todoist's hue and chroma (#138).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -177,8 +178,10 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, a Settings page its nav's glyph wherever it's named.
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
-  stroke (12 px, `ink2` on the grid); done is darma's filled disc with the check knocked out, in
-  **`good`**, title struck through in `ink3`.
+  stroke (12 px, `ink2` on the grid), or its project's colour clamped to the theme's band, with the
+  same colour at 14% inside, as a chip's tint; a ring that completes fills to 24% under the pointer
+  and shows an 11 px `check` centred on it (#138); done is darma's filled disc with the check knocked
+  out, in **`good`**, title struck through in `ink3`.
 - **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
   read Attention row not yet Done keeps a 6 px `caution` ring, #130); unread sender and subject are
   `ink` at 500, read are `ink2` at 400. A Noise row recedes: unread, `ink2` at 400 with an `ink3` dot;
@@ -1821,3 +1824,11 @@ it changes what's on screen.
     the month's and the week's day heads, the right pane and the phone's agenda; `sun` itself is
     unchanged. Temperatures read the high in `ink2` and the low in `ink3`, "78° / 61°" (Andy,
     2026-10-11, polish audit grids-13).
+138. **Todoist's colours are tuned per theme, and a ring is tinted like a chip:** a task's ring keeps
+    its project's hue and chroma at a lightness clamped to the calendar tokens' band, at least .72 in
+    Night and at most .55 in Light, so every swatch reads (4.2:1 or more in Light, 7.1:1 or more in
+    Night, where Todoist's raw sky blue was 2.9:1 and grape 2.7:1), and its project's mark in the
+    editor's line takes the same clamp. The ring holds the same colour at 14%, as a chip does. A ring
+    that completes keeps its colour under the pointer, its fill rising to 24% with an 11 px `check`
+    in it, centred on the whole ring (the 1.5 px stroke included) rather than on its inside, so it sits
+    true; the done glyph stays `good` (Andy, 2026-10-11, polish audit calpanes-07).

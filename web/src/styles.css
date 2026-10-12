@@ -78,6 +78,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .acct .reconnect + .cnt { margin-left: 0; }
 .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--c, var(--ink3)); }
 .dot.sm { width: 7px; height: 7px; }
+/* A Todoist project's dot, clamped to the theme's band as its tasks' rings are (#138). */
+.dot.todoist { background: oklch(from var(--c) clamp(var(--ringMin), l, var(--ringMax)) c h); }
 .sb-sec { margin-top: 18px; display: flex; flex-direction: column; gap: 2px; }
 .sb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding: 0 10px; height: 24px; display: flex; align-items: center; gap: 6px; }
 .sb-foot { margin-top: auto; }
@@ -91,7 +93,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row.on { background: var(--sub2); }
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
-@media (hover: hover) { .today-row .check:hover .ring { border-color: var(--ink); } }
+.today-row .check .ring { transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .today-row .check:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
+  .today-row .check:hover .ring > .icon { opacity: 1; }
+}
 /* A completed task's done check lands (TaskGlyph, `good`) with its title struck through, for
    DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then the line folds
    away (app/fold.ts). */
@@ -107,8 +113,14 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .fd.today-card .card-h { padding-top: 12px; }
 .fd.today-card.settled { transition: top var(--dur-medium) var(--ease); }
 @keyframes today-card-in { from { opacity: 0; transform: scale(.96); } }
-/* Todoist's open ring: 13 px, a 1.5 px `ink3` stroke (DESIGN.md › Glyphs), or a task's project colour (`--ring`, SV-25). */
-.ring { width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring, var(--ink3)); flex: none; display: inline-block; margin: 0 3px 0 1px; }
+/* Todoist's open ring: 13 px, a 1.5 px stroke in its project's colour (`--ring`, SV-25), else `ink3`
+   (DESIGN.md › Glyphs), its lightness clamped to the theme's band and Todoist's hue and chroma kept,
+   with the same colour at 14% inside, as a chip's tint (#138). A ring that completes shows its check,
+   11 px and centred on the whole ring, under the pointer. */
+.ring { --ring-base: var(--ring, var(--ink3)); --ring-shown: oklch(from var(--ring-base) clamp(var(--ringMin), l, var(--ringMax)) c h);
+  width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring-shown); background: color-mix(in oklch, var(--ring-shown) 14%, transparent);
+  flex: none; display: inline-block; margin: 0 3px 0 1px; position: relative; }
+.ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }

@@ -737,10 +737,13 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const ring = (selector: string, title: string) => page.locator(selector, {hasText: title}).locator('.ring').evaluate(el => getComputedStyle(el).borderTopColor);
+    // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band (#138).
+    const teal = await computed(page, 'color', 'oklch(from #148fad clamp(var(--ringMin), l, var(--ringMax)) c h)');
+    const sky = await computed(page, 'color', 'oklch(from #319dc0 clamp(var(--ringMin), l, var(--ringMax)) c h)');
     // A ring can still be easing its colour in (the agenda's does), so each is read once it's there.
-    await until('Pay rent rings teal on the grid', () => ring('.cell[data-date="2026-10-07"] .tk', 'Pay rent'), colour => colour === 'rgb(20, 143, 173)');
-    await until('and in the agenda', () => ring('.ag-task', 'Pay rent'), colour => colour === 'rgb(20, 143, 173)');
-    await until('CS 101 lab report rings sky blue', () => ring('.cell[data-date="2026-10-07"] .tk', 'CS 101 lab report'), colour => colour === 'rgb(49, 157, 192)');
+    await until('Pay rent rings teal on the grid', () => ring('.cell[data-date="2026-10-07"] .tk', 'Pay rent'), colour => colour === teal);
+    await until('and in the agenda', () => ring('.ag-task', 'Pay rent'), colour => colour === teal);
+    await until('CS 101 lab report rings sky blue', () => ring('.cell[data-date="2026-10-07"] .tk', 'CS 101 lab report'), colour => colour === sky);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

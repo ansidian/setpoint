@@ -476,3 +476,35 @@ test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high lea
     await setpoint.stop();
   }
 });
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: a task's ring keeps Todoist's hue at the theme's lightness, tinted at 14%; one that completes fills to 24% and shows its check, centred on the ring (#138)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await calendar(page, setpoint.base, theme);
+      // School's sky blue (#319dc0) on CS 101 lab report: L .63 raw, so Night lifts it to .72 and Light caps it at .55.
+      const shown = await colourOf(page, `oklch(from #319dc0 ${theme === 'light' ? 'min(l, .55)' : 'max(l, .72)'} c h)`);
+      const agenda = page.locator('.ag-task', {hasText: 'CS 101 lab report'});
+      const ring = agenda.locator('.ring');
+      await until('the ring\'s colour', () => style(ring, 'borderTopColor'), colour => colour === shown);
+      assert.equal(await style(ring, 'backgroundColor'), await backgroundOf(page, `color-mix(in oklch, ${shown} 14%, transparent)`));
+      assert.equal(await style(page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'}).locator('.ring'), 'borderTopColor'), shown, 'the grid\'s too');
+      const check = ring.locator('.icon');
+      assert.equal(await style(check, 'opacity'), '0', 'no check at rest');
+      await agenda.locator('.check').hover();
+      await until('the check shows', () => style(check, 'opacity'), opacity => opacity === '1');
+      const risen = await backgroundOf(page, `color-mix(in oklch, ${shown} 24%, transparent)`);
+      await until('the fill rises to 24%', () => style(ring, 'backgroundColor'), fill => fill === risen);
+      assert.equal(await style(check, 'color'), shown, 'the check in the ring\'s colour');
+      // Centred on the whole ring, stroke included: the same room on every side.
+      const [outer, inner] = [await ring.boundingBox(), await check.boundingBox()];
+      assert.deepEqual([inner!.width, inner!.height], [11, 11]);
+      assert.equal(inner!.x - outer!.x, outer!.x + outer!.width - (inner!.x + inner!.width), 'as much room left as right');
+      assert.equal(inner!.y - outer!.y, outer!.y + outer!.height - (inner!.y + inner!.height), 'as much above as below');
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}
