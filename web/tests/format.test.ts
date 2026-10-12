@@ -2,7 +2,7 @@
 // Pacific) so the brief's ages come out: 20m, 2h, 7h, Yesterday, Mon, Sep 30.
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, fullTimestamp, localDate, monthName, readerTime, startsIn} from '../src/logic/format.ts';
+import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, fullTimestamp, localDate, monthName, readerTime, startsIn, timeLeft} from '../src/logic/format.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -66,6 +66,17 @@ test.each([
   ['2026-10-07T16:00:00.000Z', 'now'],
 ])('startsIn %s → %s', (at, expected) => {
   expect(startsIn(at, now)).toBe(expected);
+});
+
+// What's left of an event under way (polish audit calpanes-01), whole minutes rounded up; `now` is 9:12 AM.
+test.each([
+  ['ends at 9:57 AM', '2026-10-07T16:57:00.000Z', '45m left'],
+  ['ends at 10:32 AM', '2026-10-07T17:32:00.000Z', '1h 20m left'],
+  ['ends at 11:12 AM', '2026-10-07T18:12:00.000Z', '2h left'],
+  ['ends 20 seconds from now', '2026-10-07T16:12:20.000Z', '1m left'],
+  ['ends now', '2026-10-07T16:12:00.000Z', '1m left'],
+])('timeLeft: %s → %s', (_name, end, expected) => {
+  expect(timeLeft(end, now)).toBe(expected);
 });
 
 test.each([

@@ -1,6 +1,6 @@
 // The right pane (DESIGN.md › Right pane; boards 11 and 11b): the selected day, its forecast
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
-// title, "7:00 – 8:00 AM · Personal", the place on its own line, #166, the recurring glyph, "in 5h" on the next, "Leave by 2:05 PM
+// title, "7:00 – 8:00 AM · Personal", the place on its own line, #166, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
 // · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
 // in `alert` today, and its tasks with their projects; the footer's keys. F6 adds the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
@@ -141,11 +141,13 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
   const {item} = event;
   const leave = leaveLine(item, timeZone, now);
   const line = movingTo ? `${timeRange(item, timeZone)} · Moving to ${dayTitle(movingTo)}` : event.line;
+  // The next event is lifted out of the list, and one under way fills its bar as it goes (polish audit calpanes-01).
+  const classes = ['ag-item', event.past && 'past', event.next && 'next', event.ongoing && 'ongoing', selected.has(item.key) && 'sel', item.command?.state === 'pending' && 'pending'].filter(Boolean).join(' ');
   return (
     <>
       {nowAt === index && nowLine}
-      <a className={`ag-item${event.past ? ' past' : ''}${selected.has(item.key) ? ' sel' : ''}${item.command?.state === 'pending' ? ' pending' : ''}`} href="#" data-key={item.key}
-        style={{'--c': colourVar(colour ?? 'cool')} as CSSProperties}
+      <a className={classes} href="#" data-key={item.key}
+        style={{'--c': colourVar(colour ?? 'cool'), ...(event.progress === null ? {} : {'--done': `${Math.round(event.progress * 1000) / 10}%`})} as CSSProperties}
         onClick={click => {
           click.preventDefault();
           onSelectItem(item);
@@ -160,7 +162,7 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
           {overlap && <span className="ink3 num overlap"><Icon name="layers" size={16} />{overlap}</span>}
         </span>
         {item.command?.state === 'pending' && <Spinner />}
-        {event.startsIn && <span className="ink3 num in">{event.startsIn}</span>}
+        {(event.left ?? event.startsIn) && <span className="ink3 num in">{event.left ?? event.startsIn}</span>}
         {item.recurring && <span className="repeat"><Icon name="repeat" size={16} /></span>}
       </a>
     </>

@@ -217,14 +217,27 @@ describe('the right pane', () => {
     expect(agenda('2026-10-07', [event('Standup', '2026-10-07', '10:00', '10:15', {place})], calendars, now, zone).events[0]!.place).toEqual(shown);
   });
 
+  // The next event is lifted (polish audit calpanes-01): "in 1h" before it, and under way it sits
+  // under the now-line with what's left and how far in it is.
   test.each([
-    ['before anything: the now-line first', Date.parse(at('2026-10-07', '06:00')), 0, 'in 1h'],
-    ['during Gym: after it, and Gym is "now"', Date.parse(at('2026-10-07', '07:30')), 1, 'now'],
+    ['before anything: the now-line first, Gym next', Date.parse(at('2026-10-07', '06:00')), 0, ['Gym', 'in 1h', false, null, null]],
+    ['during Gym: the now-line before it, Gym under way with 30m left, halfway', Date.parse(at('2026-10-07', '07:30')), 0, ['Gym', null, true, '30m left', 0.5]],
+    ['Gym\'s last seconds: still 1m left', Date.parse(at('2026-10-07', '07:59')) + 30_000, 0, ['Gym', null, true, '1m left', 59.5 / 60]],
+    ['between them: after Gym, Dentist next', Date.parse(at('2026-10-07', '09:12')), 1, ['Dentist', 'in 5h', false, null, null]],
+    ['during Dentist at 2:45 PM: under the line, 45m left', Date.parse(at('2026-10-07', '14:45')), 1, ['Dentist', null, true, '45m left', 0.25]],
     ['after everything: last, and no next', Date.parse(at('2026-10-07', '18:00')), 2, null],
-  ])('%s', (_name, when, nowAt, first) => {
+  ])('%s', (_name, when, nowAt, next) => {
     const day = agenda('2026-10-07', [gym, dentist], calendars, when, zone);
     expect(day.nowAt).toBe(nowAt);
-    expect(day.events.find(one => one.startsIn)?.startsIn ?? null).toBe(first);
+    const lifted = day.events.filter(one => one.next);
+    expect(lifted.length <= 1 && lifted[0] ? [lifted[0].item.title, lifted[0].startsIn, lifted[0].ongoing, lifted[0].left, lifted[0].progress] : null).toEqual(next);
+  });
+
+  test('an event under way since before an earlier-starting one ended: the line sits before the first not over', () => {
+    const fair = event('Career fair', '2026-10-07', '08:00', '12:00');
+    const call = event('Call', '2026-10-07', '09:00', '09:30');
+    const day = agenda('2026-10-07', [fair, call], calendars, Date.parse(at('2026-10-07', '10:00')), zone);
+    expect([day.nowAt, day.events.map(one => [one.item.title, one.ongoing, one.left])]).toEqual([0, [['Career fair', true, '2h left'], ['Call', false, null]]]);
   });
 
   test('another day: no now-line, no "in"', () => {

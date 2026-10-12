@@ -4,7 +4,7 @@
 // days are `YYYY-MM-DD` in the owner's zone; weeks start on Sunday (SV-29).
 import type {CalendarOut, ItemOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
 import {layout, monthPaging} from '../tokens.ts';
-import {addDays, clockTime, daysBetween, localDate, startsIn} from './format.ts';
+import {addDays, clockTime, daysBetween, localDate, startsIn, timeLeft} from './format.ts';
 import {placeName} from './place.ts';
 
 // ---------- Weeks and months ----------
@@ -287,14 +287,20 @@ export interface AgendaEvent {
   line: string;
   place: AgendaPlace | null;
   past: boolean;
-  // "in 5h" on today's next event, "now" on one under way.
+  // Today's next event, lifted out of the list (polish audit calpanes-01): "in 5h" before it starts,
+  // and once under way `ongoing`, with what's left ("45m left") and how far in it is (0–1).
+  next: boolean;
   startsIn: string | null;
+  ongoing: boolean;
+  left: string | null;
+  progress: number | null;
 }
 
 export interface Agenda {
   events: AgendaEvent[];
   tasks: ItemOut[];
-  // Where the now-line goes among the events (before events[index]); null on other days.
+  // Where the now-line goes among the events (before events[index]): after what has ended, so an
+  // event under way sits under it; null on other days.
   nowAt: number | null;
 }
 
@@ -314,13 +320,17 @@ export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPla
 
 /**
  * The selected day's agenda (DESIGN.md › Right pane): its events with their times and lines, the
- * now-line after what has started (today only), "in 5h" on the next event today, then its tasks.
+ * now-line after what has ended (today only), so one under way sits under it, the next event today
+ * lifted with "in 5h" or, under way, "45m left" (polish audit calpanes-01), then its tasks.
  */
 export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, now: number, timeZone: string): Agenda {
   const names = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.name]));
   const today = localDate(now, timeZone) === day;
   const events = items.filter(item => item.kind === 'event');
-  const next = today ? events.find(item => !item.all_day && item.starts_at && item.ends_at && Date.parse(item.ends_at) > now) : undefined;
+  const timedAhead = (item: ItemOut) => !item.all_day && !!item.starts_at && !!item.ends_at && Date.parse(item.ends_at) > now;
+  const next = today ? events.find(timedAhead) : undefined;
+  const under = !!next && Date.parse(next.starts_at!) <= now;
+  const ahead = events.findIndex(timedAhead);
   return {
     events: events.map(item => ({
       item,
@@ -328,10 +338,14 @@ export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] |
       line: [timeRange(item, timeZone), names.get(item.calendar_id)].filter(Boolean).join(' · '),
       place: agendaPlace(item),
       past: isPast(item, now, timeZone),
-      startsIn: item === next ? startsIn(item.starts_at!, now) : null,
+      next: item === next,
+      startsIn: item === next && !under ? startsIn(item.starts_at!, now) : null,
+      ongoing: item === next && under,
+      left: item === next && under ? timeLeft(item.ends_at!, now) : null,
+      progress: item === next && under ? (now - Date.parse(item.starts_at!)) / (Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) : null,
     })),
     tasks: items.filter(item => item.kind === 'task'),
-    nowAt: today ? events.filter(item => item.all_day || (item.starts_at && Date.parse(item.starts_at) <= now)).length : null,
+    nowAt: today ? (ahead < 0 ? events.length : ahead) : null,
   };
 }
 

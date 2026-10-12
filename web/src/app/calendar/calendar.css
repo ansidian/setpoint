@@ -140,7 +140,9 @@
 .ag-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 20px; }
 .ag-item:hover { background: var(--sub); }
 .ag-item.sel { background: var(--sub2); }
-.ag-item.past { opacity: .5; }
+/* A past event turns grey, as on the grid (#124): its time and title `ink3`, its bar at 45%. */
+.ag-item.past .when, .ag-item.past .title { color: var(--ink3); }
+.ag-item.past .cbar { background: color-mix(in oklch, var(--c) 45%, transparent); }
 .ag-item .when { width: 64px; flex: none; color: var(--ink2); font-variant-numeric: tabular-nums; font-size: 12.5px; padding-top: 1px; }
 .ag-item .cbar { width: 3px; align-self: stretch; border-radius: 3px; background: var(--c); flex: none; }
 .ag-item .title { display: block; color: var(--ink); font-weight: 500; }
@@ -159,10 +161,21 @@
 .ag-task .title { color: var(--ink); font-weight: 400; }
 .ag-task.done .title { color: var(--ink3); text-decoration: line-through; }
 .ag-task .project { font-size: 12px; }
-/* The now-line, in `alert` with the time. */
-.nowline { display: flex; align-items: center; gap: 8px; padding: 6px 20px; }
+/* The next event, lifted out of the list (polish audit calpanes-01): a tint of its colour at 9% (14%
+   under the pointer, 16% selected), its time in `ink` and "in 5h" in its colour at 500; its content
+   keeps the rows' 20 px inset. Under way, its bar fills as it goes, the rest at 30%. */
+.ag-item.next { margin: 2px 8px; padding: 8px 12px; border-radius: 10px; background: color-mix(in oklch, var(--c) 9%, transparent); }
+.ag-item.next:hover { background: color-mix(in oklch, var(--c) 14%, transparent); }
+.ag-item.next.sel { background: color-mix(in oklch, var(--c) 16%, transparent); }
+.ag-item.next .when { color: var(--ink); }
+.ag-item.next .in { color: oklch(from var(--c) min(l, var(--tintL)) c h); font-weight: 500; font-size: 12.5px; }
+.ag-item.ongoing .cbar { background: linear-gradient(var(--c) 0 var(--done), color-mix(in oklch, var(--c) 30%, transparent) var(--done) 100%); }
+/* The now-line, in `alert` with the time, drawn as the week's (polish audit calpanes-04): 1.5 px with
+   an 8 px dot centred on the events' colour bars. */
+.nowline { display: flex; align-items: center; gap: 12px; padding: 6px 20px; }
 .nowline .t { width: 64px; color: var(--alert); font-size: 12px; font-weight: 500; }
-.nowline .line { height: 1px; flex: 1; background: var(--alert); opacity: .7; }
+.nowline .line { height: 1.5px; flex: 1; background: var(--alert); position: relative; }
+.nowline .line::before { content: ''; position: absolute; left: -2.5px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
 .ag-empty { padding: 18px 20px 8px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
 /* An empty day leads with its glyph (event_available, or visibility_off when calendars hide its items), 8 px before the words (#165). */
 .ag-empty > .icon { margin-right: 2px; }

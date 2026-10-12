@@ -110,6 +110,14 @@ export function startsIn(at: string, now: number): string {
   return `in ${Math.round(minutes / 60)}h`;
 }
 
+/** What's left of an event under way: "45m left", "1h 20m left", "2h left" (whole minutes, rounded up). */
+export function timeLeft(end: string, now: number): string {
+  const minutes = Math.max(1, Math.ceil((Date.parse(end) - now) / MINUTE));
+  if (minutes < 60) return `${minutes}m left`;
+  const hours = Math.floor(minutes / 60);
+  return minutes % 60 ? `${hours}h ${minutes % 60}m left` : `${hours}h left`;
+}
+
 /** A code row's countdown: "Expires in 11 min" (whole minutes, rounded up). */
 export function expiresIn(at: string, now: number): string {
   const minutes = Math.ceil((Date.parse(at) - now) / MINUTE);

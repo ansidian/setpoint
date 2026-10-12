@@ -438,10 +438,11 @@ mark. With every calendar off, a 16 px `ink3` `visibility_off` follows the heade
 Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61°"), **Events** (time,
 a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", always the calendar; the place on its own
 line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zoom.us", for a link,
-#166; recurring glyph; "in 5h" on the next; "Leave
+#166; recurring glyph; the next one today lifted on a tint of its colour with "in 5h" in it, and
+once under way under the now-line with "45m left" and its bar filling, #226; past ones grey, #226; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
-then gone, #112), the **now-line** in `alert` with the time, then **Tasks · due today** with their
-projects. A day whose items are only hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
+then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
+bars as the week's (#227), then **Tasks · due today** with their projects. A day whose items are only hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
 editor and calendar search results.
 
 ### The floating detail
@@ -519,7 +520,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   down to about 90 with titles cut). The **day heads** (48 px) and the **all-day row** stay put while
   the hours scroll under them. The right pane stays.
 - **Day head:** the weekday (11.5 uppercase `ink3`), the date (14 / 500 `ink` on a 24 px disc, today
-  the 24 px `alert` disc at 600, #128, #226), the weather icon, 7 px apart. A click selects the day; under
+  the 24 px `alert` disc at 600, #128, #225), the weather icon, 7 px apart. A click selects the day; under
   the pointer it takes a month day's wash (#223).
 - **All-day row:** all-day events as tinted bars spanning their days, then each day's tasks (a timed
   one prefixed "9:00 AM"), 20 px lines 2 px apart, at least two lines and at most three: a day with
@@ -1987,11 +1988,20 @@ it changes what's on screen.
     over 120 ms; over a block, off the hours, while dragging or on a press it goes, the press handing
     over to the dashed create ghost. Only with a pointer that hovers (Andy, 2026-10-11, polish audit
     grids-07).
-225. **Now is a horizon across the week:** when the week shown holds today, a 1 px line in `alert` at
-    55% runs across all seven days at now's height, under today's own 1.5 px line and dot, moving with
-    the clock, so the rest of the week reads as before and after now (Andy, 2026-10-11, polish audit
-    grids-08).
-226. **The week's dates are its columns' anchors:** a head's date is 14 / 500 in `ink` on a 24 px
-    disc (today's `alert` disc grows to 24 px, keeping 600), 7 px from its weekday, which stays 11.5
-    uppercase `ink3` (`ink2` on the selected day); the month's numbers are unchanged (Andy,
-    2026-10-11, polish audit grids-10).
+225. **The week reads by its dates and its now:** when the week shown holds today, a 1 px line in
+    `alert` at 55% runs across all seven days at now's height, under today's own 1.5 px line and dot,
+    moving with the clock, so the rest of the week reads as before and after now. A head's date is its
+    column's anchor, 14 / 500 in `ink` on a 24 px disc (today's `alert` disc grows to 24 px, keeping
+    600), 7 px from its weekday, which stays 11.5 uppercase `ink3` (`ink2` on the selected day); the
+    month's numbers are unchanged (Andy, 2026-10-11, polish audit grids-08, grids-10).
+226. **The next event stands out, and one under way stays under the now-line:** today's next event
+    is lifted out of the list: inset 8 px with radius 10, a tint of its colour at 9% (14% under the
+    pointer, 16% selected), its time in `ink` and "in 5h" in its colour (capped at `--tintL`) at 12.5 /
+    500, its content keeping the rows' 20 px inset. The now-line goes after what has ended, not what
+    has started, so an event under way sits under it, its "in" slot reading what's left ("45m left",
+    "1h 20m left") and its 3 px bar filling with the time gone, the rest at 30%, refreshed with the
+    clock. A past event turns grey as on the grid (#124): its time and title `ink3`, its bar at 45%,
+    rather than the whole row at .5 (Andy, 2026-10-11, polish audit calpanes-01).
+227. **One now-line in Calendar:** the right pane's now-line is drawn as the week's, 1.5 px `alert`
+    at full strength with an 8 px dot, 12 px from its time so the dot sits centred on the events' 3 px
+    colour bars (Andy, 2026-10-11, polish audit calpanes-04).

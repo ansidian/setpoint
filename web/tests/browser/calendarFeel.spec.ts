@@ -109,11 +109,12 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     assert.ok(near.every(value => value <= top('2026-10') + monthPaging.leadRows * ROW), `it sets out five rows short: ${JSON.stringify(near)}`);
     assert.ok(between(near, top('2026-10'), top('2026-10') + monthPaging.leadRows * ROW + 1).length >= 3 && monotonic(near, false), 'and glides up from there');
 
-    // The wheel stops a glide where it is: N, two frames, then a wheel over the grid.
+    // The wheel stops a glide where it is: N, the glide's first step, then a wheel over the grid.
     const stopped = await page.evaluate(async () => {
       const scroller = document.querySelector('.cal-scroll')!;
+      const from = scroller.scrollTop;
       document.dispatchEvent(new KeyboardEvent('keydown', {key: 'n', bubbles: true}));
-      await new Promise(next => requestAnimationFrame(() => requestAnimationFrame(next)));
+      for (let frame = 0; frame < 300 && scroller.scrollTop === from; frame += 1) await new Promise(next => requestAnimationFrame(next));
       scroller.dispatchEvent(new WheelEvent('wheel', {bubbles: true}));
       return scroller.scrollTop;
     });
@@ -380,6 +381,67 @@ test('the week reads by its dates and its now: the date 14 / 500 `ink` on a 24 p
     await page.keyboard.press('n');
     await until('the next week', () => page.locator('.hd-title').textContent(), text => text === 'Oct 11 – 17, 2026');
     assert.equal(await page.locator('.wk-nowx').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** A colour expression as `target` computes it (so its own `--c` applies), on a probe inside it. */
+const colourIn = (target: Locator, css: string) => target.evaluate((element, value) => {
+  const probe = document.createElement('span');
+  probe.style.color = value;
+  element.append(probe);
+  const computed = getComputedStyle(probe).color;
+  probe.remove();
+  return computed;
+}, css);
+
+test('the pane lifts the next event on a tint of its colour with "in 5h" in it; under way it sits under the now-line with what\'s left and its bar filling; past ones are grey; the now-line has the week\'s dot on the colour bars', async () => {
+  // The server's clock holds at 9:12 AM; the page's is the check's, moved on to 2:45 PM.
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/calendar`);
+    const dentist = page.locator('.rpane .ag-item', {hasText: 'Dentist'});
+    const gym = page.locator('.rpane .ag-item', {hasText: 'Gym'});
+    await dentist.waitFor();
+
+    // 9:12 AM: Dentist is next, lifted: inset 8 px, radius 10, its colour at 9%, its time `ink`, "in 5h" in its colour at 12.5 / 500.
+    assert.equal(await dentist.getAttribute('class'), 'ag-item next');
+    assert.deepEqual([await style(dentist, 'margin-left'), await style(dentist, 'padding-left'), await style(dentist, 'border-top-left-radius')], ['8px', '12px', '10px']);
+    assert.equal(await style(dentist, 'background-color'), await colourIn(dentist, 'color-mix(in oklch, var(--c) 9%, transparent)'));
+    assert.equal(await style(dentist.locator('.when'), 'color'), await colour(page, '--ink'));
+    const left = dentist.locator('.in');
+    assert.deepEqual([await left.textContent(), await style(left, 'font-size'), await style(left, 'font-weight')], ['in 5h', '12.5px', '500']);
+    assert.equal(await style(left, 'color'), await colourIn(dentist, 'oklch(from var(--c) min(l, var(--tintL)) c h)'));
+    // Its bar lines up with the others': the content keeps the rows' 20 px inset.
+    const [dentistBar, gymBar] = [(await dentist.locator('.cbar').boundingBox())!, (await gym.locator('.cbar').boundingBox())!];
+    assert.equal(dentistBar.x, gymBar.x);
+
+    // Gym is over: grey, not faded.
+    assert.deepEqual([await style(gym, 'opacity'), await style(gym.locator('.title'), 'color'), await style(gym.locator('.when'), 'color')], ['1', await colour(page, '--ink3'), await colour(page, '--ink3')]);
+    assert.equal(await style(gym.locator('.cbar'), 'background-color'), await colourIn(gym, 'color-mix(in oklch, var(--c) 45%, transparent)'));
+
+    // The now-line: 1.5 px `alert` at full strength, an 8 px dot centred on the colour bars.
+    const line = page.locator('.rpane .nowline .line');
+    assert.deepEqual([await style(line, 'height'), await style(line, 'opacity'), await style(line, 'width', '::before'), await style(line, 'height', '::before')], ['1.5px', '1', '8px', '8px']);
+    const dot = await line.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element, '::before');
+      return box.left + parseFloat(style.left) + parseFloat(style.width) / 2;
+    });
+    assert.equal(dot, gymBar.x + gymBar.width / 2, 'the dot sits on the bars');
+
+    // 2:45 PM: Dentist is under way, under the line, "45m left", its bar a quarter full.
+    await page.clock.fastForward((5 * 60 + 33) * 60_000);
+    await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
+    await until('Dentist under way', () => dentist.getAttribute('class'), classes => classes === 'ag-item next ongoing');
+    assert.equal(await left.textContent(), '45m left');
+    assert.equal(await style(dentist, '--done'), '25%');
+    const order = await page.locator('.rpane .rp-scroll > *').evaluateAll(rows => rows.map(row => (row.classList.contains('nowline') ? 'now' : row.querySelector('.title')?.textContent ?? row.textContent)));
+    assert.deepEqual(order.slice(0, 4), ['Events', 'Gym', 'now', 'Dentist'], 'under the now-line');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
