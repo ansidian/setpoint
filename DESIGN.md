@@ -176,8 +176,8 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
 **Loading** ([Decided while building](#decided-while-building) #170): a page whose data is on its
 way draws its rows' skeleton in their shapes, bars in `sub2` (`sub3` inside a `sub` group). It
 appears only after 200 ms, so a quick answer never shows one, fades in over 180 ms, then breathes,
-every bar in phase: opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`, the one loop beside
-the spinner's 900 ms turn. What replaces it fades in over 120 ms. Skeletons don't shimmer.
+every bar in phase: opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`, a loop for loading
+only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Skeletons don't shimmer.
 
 ## Glyphs, icons and the mark
 
@@ -2359,7 +2359,7 @@ it changes what's on screen.
     items and the calendars have come (a first open, or a day picked in a month not yet loaded),
     the right pane's line under the date is a 110 px bar, unless the forecast has come, and its
     agenda three skeleton rows (#170): a 52 px time bar, a 3 × 34 rail in `sub3`, a title over its
-    line; never "Nothing planned" or "No events · New event" on a day that holds Gym and the
+    line; never "Nothing planned" or the empty day's ghost rows (#234) on a day that holds Gym and the
     Dentist. Calendars in the sidebar are four 30 px rows of a 14 px box (radius 4) and a bar. The
     grid draws no stand-in chips, which would read as events; the phone's agenda draws two days of
     skeleton rows (Andy, 2026-10-11, polish audit calpanes-03, states-01).
