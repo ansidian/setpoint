@@ -109,14 +109,14 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
-  // the email stays unread.
-  useCommands(() => (message ? {
-    context: {label: message.subject, colour: accounts.get(message.account_id)?.colour ?? 'ink3'},
+  // the email stays unread; from the email's row too, as the tools are, so it's there at once.
+  useCommands(() => (listed ? {
+    context: {label: listed.subject, colour: accounts.get(listed.account_id)?.colour ?? 'ink3'},
     commands: [
       ...(doneable ? [{id: 'done', section: 'email' as const, label: 'Done', icon: 'check' as const, hint: 'H', run: actions.done}] : []),
       {id: 'trash', section: 'email', label: 'Trash', icon: 'delete', hint: 'E', run: actions.trash},
-      {id: 'pin', section: 'email', label: message.pinned ? 'Unpin' : 'Pin', icon: message.pinned ? 'keep_off' : 'keep', hint: 'P', run: actions.pin},
-      ...(message.open_url === null ? [] : [{id: 'gmail', section: 'email' as const, label: 'Open in Gmail', icon: 'open_in_new' as const, hint: 'O', run: actions.openInGmail}]),
+      {id: 'pin', section: 'email', label: pinned ? 'Unpin' : 'Pin', icon: pinned ? 'keep_off' : 'keep', hint: 'P', run: actions.pin},
+      ...(gmail ? [{id: 'gmail', section: 'email' as const, label: 'Open in Gmail', icon: 'open_in_new' as const, hint: 'O', run: actions.openInGmail}] : []),
       {id: 'event', section: 'email', label: 'Add to calendar', icon: 'event', run: () => cards.propose('event')},
       {id: 'task', section: 'email', label: 'Add as task', icon: 'task_alt', run: () => cards.propose('task')},
       {id: 'ask', section: 'email', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: cards.ask},

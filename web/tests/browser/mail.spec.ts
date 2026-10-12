@@ -337,6 +337,8 @@ test('the reader\'s tools come from the email\'s row before the email has loaded
     const recovery = short.locator('.arow', {hasText: 'Your recovery email was changed'});
     await recovery.click();
     await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
+    // Its body is in after its head, which the row draws at once.
+    await short.locator('.pane .mailtext').waitFor();
     assert.ok(await scroller.evaluate(element => element.scrollHeight > element.clientHeight + 40), 'the email is taller than the pane');
     await short.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     await short.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();

@@ -204,10 +204,6 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const open = route.open;
   // The way the user last stepped to an email (reader-03).
   const [travelled, setTravelled] = useState<{id: number; travel: Travel} | null>(null);
-  const subject = open && openMessageData?.id === open ? openMessageData.subject : null;
-  useEffect(() => {
-    document.title = tabTitle({page: 'inbox', attention: counts?.attention ?? 0, subject});
-  }, [counts?.attention, subject]);
 
   // The app opened at its bare address opens the Inbox as going to it does, once the counts have
   // come (D106); an address that names Unread or All keeps it.
@@ -278,6 +274,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // An email's row, from the open email or the list it's in (Unread, All or search).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
     ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...results].find(row => row.id === id);
+  // The open email's subject, from its row until the email itself is in (#176).
+  const subject = open !== null ? rowOf(open)?.subject ?? null : null;
+  useEffect(() => {
+    document.title = tabTitle({page: 'inbox', attention: counts?.attention ?? 0, subject});
+  }, [counts?.attention, subject]);
   // Done (H) only on Attention mail not yet Done (#93).
   const doneable = (id: number) => {
     const row = rowOf(id);

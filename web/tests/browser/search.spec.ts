@@ -89,7 +89,8 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await page.locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();
     const log = JSON.parse((await opened).postData()!) as {message_id: number; position: number};
     assert.deepEqual(log, {...log, message_id: await idOf(setpoint, 'Update on your application'), position: 0});
-    // The reader highlights the words the search matched.
+    // The reader highlights the words the search matched, once its body is in (the head is drawn from the row at once).
+    await page.locator('.mailtext mark.hl').first().waitFor();
     const marks = await page.locator('.mailtext mark.hl').allTextContents();
     assert.ok(marks.length > 0 && marks.every(text => text === 'Northwind'), `marks: ${JSON.stringify(marks)}`);
     // The reader's next steps through the results.
@@ -249,6 +250,8 @@ test('Alfred: ⌘Enter answers above the results with its source, a follow-up go
     await page.locator('.answer .src', {hasText: 'Lease renewal terms'}).click();
     await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
     await page.locator('.answer .src.open').waitFor();
+    // Its body is in after its head, which the row draws at once.
+    await page.locator('.mailtext mark.hl').first().waitFor();
     assert.deepEqual(await page.locator('.mailtext mark.hl').allTextContents(), ['Oct 31, 2026']);
     // A follow-up, below the first turn.
     await page.locator('.answer input').click();
