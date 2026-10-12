@@ -32,7 +32,9 @@ import {setReadingPaneWidth, useReadingPaneWidth} from './readingPane.ts';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {ProposalCard} from './search/ProposalCard.tsx';
 import {Marked} from './search/Search.tsx';
-import {LoadFailed} from './states/Loading.tsx';
+import {LoadFailed, useArrival, useLoadFailed} from './states/Loading.tsx';
+import type {Load} from './states/Loading.tsx';
+import {BodySkeleton, HeadSkeleton} from './states/Skeletons.tsx';
 import {useAlfred} from './search/state.ts';
 import {showToast, toastFailure} from './toast.ts';
 
@@ -79,9 +81,9 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // The More menu, open for this email; it shows only on Security and Noise mail, where it holds the
   // proposals (2026-10-08; SV-24).
   const [moreFor, setMoreFor] = useState<number | null>(null);
-  const moreItems = message && readerActions(message).proposals === 'more';
   // Done only on Attention mail not yet Done (#93).
   const listed = message ?? (row?.id === id ? row : undefined);
+  const moreItems = listed && readerActions(listed).proposals === 'more';
   const doneable = listed ? readerActions(listed).done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
@@ -165,8 +167,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
             going down the list, down from above going up, a fade for a click; the email the pane
             opened on arrives with the pane. The tools stay still. */}
         <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>
-          {message && <Message key={message.id} message={message} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />}
-        {!message && <div className="rd-body"><LoadFailed what="this email" loads={[messageLoad]} /></div>}
+          {/* The head from the email's row at once; only the body waits for the email (reader-01, #176). */}
+          <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />
         </div>
       </div>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
@@ -265,8 +267,16 @@ function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: 
   );
 }
 
-function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread}: {
-  message: MessageOut;
+/**
+ * The open email: its card, its head and its body. The head draws from the email's row (`listed`)
+ * until the email itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an
+ * attachment's card when it has one), or why it couldn't load (reader-01, phone-04, #176).
+ */
+function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread}: {
+  id: number;
+  listed: MessageRowOut | undefined;
+  message: MessageOut | undefined;
+  load: Load;
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
@@ -276,85 +286,113 @@ function Message({message, accounts, now, timeZone, marks, onOpen, cards, unread
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
 }) {
-  const account = accounts.get(message.account_id);
-  // "Show" loads this email's images this time; it lasts while it's open.
-  const [shown, setShown] = useState(false);
   const {panel, alfred} = cards;
-  const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
-  const colour = colourVar(account?.colour);
-  const who = message.organisation ?? message.from_name;
-  const line = senderLine(message);
-  const offers = readerActions(message);
-  const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), shown);
+  const failed = useLoadFailed([load]);
+  const arrived = useArrival(message !== undefined);
   return (
     <>
       {panel && panel.kind !== 'ask' && panel.proposal && (
         <ProposalCard key={panel.kind} proposal={panel.proposal} now={now} timeZone={timeZone} onClose={cards.close} />
       )}
       {panel?.kind === 'ask' && alfred.open && (
-        <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={message.id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
+        <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
       )}
-      <div className="rd-head">
-        {message.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
-        <h1 className={message.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" title="Unread" />}{message.subject}</h1>
-        <div className="rd-meta">
-          <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
-          <div className="who grow">
-            <div className="ell selectable" title={message.from_address}>
-              <span className="name">{message.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
-            </div>
-            <div className="to">to you</div>
-          </div>
-          <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
-          <span className="time" title={fullTimestamp(message.received_at, timeZone)}>{readerTime(message.received_at, now, timeZone)}</span>
-        </div>
-        {/* A verification code lifted out of the body, with Copy and its countdown (reader-04). */}
-        {message.code && <CodeCard code={message.code} />}
-        {message.security && (
-          <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
-            <dl className="facts">
-              {factRows(message.security, message.received_at, now, timeZone).map(row => (
-                <Fragment key={row.label}>
-                  <dt><Icon name={row.icon} size={16} />{row.label}</dt>
-                  <dd className={row.icon === 'schedule' ? 'num' : undefined}>{row.value}{row.note && <> <span className="unfamiliar">{row.note}</span></>}</dd>
-                </Fragment>
-              ))}
-            </dl>
-          </div>
-        )}
-        <div className="rd-acts">
-          {offers.proposals === 'buttons' && (
-            <>
-              <button className={held('event')} type="button" onClick={() => cards.propose('event')}><Icon name="event" size={17} />Add to calendar</button>
-              <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
-            </>
-          )}
-          <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
-        </div>
-      </div>
-      <div className="rd-body">
-        {images.bar && (
-          <div className="imgbar">
-            <Icon name="hide_image" size={16} />
-            <span>Images hidden</span>
-            <span className="sep">·</span>
-            <button type="button" className="lnk" onClick={() => setShown(true)}>Show</button>
-            <span className="sep">·</span>
-            <button type="button" className="lnk" onClick={() => void trustDomain(message.remote_content.trust_domain, message.id).catch(toastFailure(`Couldn't trust ${message.remote_content.trust_domain}`))}>
-              Always show from {message.remote_content.trust_domain}
-            </button>
-          </div>
-        )}
-        {message.body_html ? <MailFrame messageId={message.id} show={images.load} title={message.subject} /> : (
-          <div className="mailtext">
-            {paragraphs(message.body_text).map((lines, index) => (
-              <p key={index}>{lines.map((text, at) => <Fragment key={at}>{at > 0 && <br />}<Marked parts={segments(text, phraseRuns(text, marks))} /></Fragment>)}</p>
-            ))}
-          </div>
-        )}
-        <Attachments messageId={message.id} files={message.attachments} />
-      </div>
+      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} /> : <HeadSkeleton />}
+      {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
+        <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
+      )}
     </>
+  );
+}
+
+/** The head: from the row while the email loads, then from the email (its domain, its security facts). */
+function Head({listed, message, accounts, now, timeZone, cards, unread}: {
+  listed: MessageRowOut;
+  message: MessageOut | undefined;
+  accounts: Map<number, AccountOut>;
+  now: number;
+  timeZone: string;
+  cards: Cards;
+  // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
+  unread: boolean;
+}) {
+  const account = accounts.get(listed.account_id);
+  const {panel} = cards;
+  const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
+  const colour = colourVar(account?.colour);
+  const who = listed.organisation ?? listed.from_name;
+  const line = senderLine(message ?? listed);
+  const offers = readerActions(listed);
+  return (
+    <div className="rd-head">
+      {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
+      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" title="Unread" />}{listed.subject}</h1>
+      <div className="rd-meta">
+        <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
+        <div className="who grow">
+          <div className="ell selectable" title={listed.from_address}>
+            <span className="name">{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
+          </div>
+          <div className="to">to you</div>
+        </div>
+        <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
+        <span className="time" title={fullTimestamp(listed.received_at, timeZone)}>{readerTime(listed.received_at, now, timeZone)}</span>
+      </div>
+      {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
+      {listed.code && <CodeCard code={listed.code} />}
+      {message?.security && (
+        <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
+          <dl className="facts">
+            {factRows(message.security, message.received_at, now, timeZone).map(row => (
+              <Fragment key={row.label}>
+                <dt><Icon name={row.icon} size={16} />{row.label}</dt>
+                <dd className={row.icon === 'schedule' ? 'num' : undefined}>{row.value}{row.note && <> <span className="unfamiliar">{row.note}</span></>}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        </div>
+      )}
+      <div className="rd-acts">
+        {offers.proposals === 'buttons' && (
+          <>
+            <button className={held('event')} type="button" onClick={() => cards.propose('event')}><Icon name="event" size={17} />Add to calendar</button>
+            <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
+          </>
+        )}
+        <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
+      </div>
+    </div>
+  );
+}
+
+/** The body, once the email is in: plain text or its frame, the images-hidden bar and the attachments; it fades in after a wait. */
+function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; arrived: boolean}) {
+  // "Show" loads this email's images this time; it lasts while it's open.
+  const [shown, setShown] = useState(false);
+  const images = remoteImages(message.remote_content, hasRemoteContent(message.body_html), shown);
+  return (
+    <div className={arrived ? 'rd-body sk-arrive' : 'rd-body'}>
+      {images.bar && (
+        <div className="imgbar">
+          <Icon name="hide_image" size={16} />
+          <span>Images hidden</span>
+          <span className="sep">·</span>
+          <button type="button" className="lnk" onClick={() => setShown(true)}>Show</button>
+          <span className="sep">·</span>
+          <button type="button" className="lnk" onClick={() => void trustDomain(message.remote_content.trust_domain, message.id).catch(toastFailure(`Couldn't trust ${message.remote_content.trust_domain}`))}>
+            Always show from {message.remote_content.trust_domain}
+          </button>
+        </div>
+      )}
+      {message.body_html ? <MailFrame messageId={message.id} show={images.load} title={message.subject} /> : (
+        <div className="mailtext">
+          {paragraphs(message.body_text).map((lines, index) => (
+            <p key={index}>{lines.map((text, at) => <Fragment key={at}>{at > 0 && <br />}<Marked parts={segments(text, phraseRuns(text, marks))} /></Fragment>)}</p>
+          ))}
+        </div>
+      )}
+      <Attachments messageId={message.id} files={message.attachments} />
+    </div>
   );
 }
 

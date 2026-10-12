@@ -10,11 +10,15 @@ import {emailBodyPath} from '../api/mail.ts';
 
 /** No email is taller than this; a height past it is a fault, not an email. */
 const TALLEST = 200_000;
+/** What a frame holds before its page says its height. */
+const RESERVED = 240;
 
 export function MailFrame({messageId, show, title}: {messageId: number; show: boolean; title: string}) {
   const src = emailBodyPath(messageId, show);
   const frame = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(0);
+  // Null until the page has said how tall it is: until then the frame holds 240 px on `sub`, unseen,
+  // then fades in at its height (reader-01, #176).
+  const [height, setHeight] = useState<number | null>(null);
 
   useEffect(() => {
     const listen = (event: MessageEvent) => {
@@ -27,7 +31,9 @@ export function MailFrame({messageId, show, title}: {messageId: number; show: bo
   }, []);
 
   return (
-    <iframe key={src} ref={frame} className="mailframe" title={title} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer"
-      src={src} style={{height}} />
+    <div className={height === null ? 'mailframe-box measuring' : 'mailframe-box'}>
+      <iframe key={src} ref={frame} className="mailframe" title={title} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer"
+        src={src} style={{height: height ?? RESERVED}} />
+    </div>
   );
 }

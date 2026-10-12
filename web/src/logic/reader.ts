@@ -9,11 +9,12 @@ import {clockTime, daysBetween, localDate} from './format.ts';
  * The reader); when the organisation is the sender (Google, Contoso Coffee), the sender's domain in
  * `ink3`, as boards 02 and 03 draw it. The reader puts " · " before it (on the phone it has its own line).
  */
-export function senderLine(message: Pick<MessageOut, 'from_name' | 'organisation' | 'via' | 'remote_content'>): {text: string; tone: 'ink2' | 'ink3'} | null {
+export function senderLine(message: Pick<MessageOut, 'from_name' | 'organisation' | 'via'> & Partial<Pick<MessageOut, 'remote_content'>>): {text: string; tone: 'ink2' | 'ink3'} | null {
   const parts = [message.organisation && message.organisation !== message.from_name ? message.organisation : null, message.via ? `via ${message.via}` : null]
     .filter((part): part is string => Boolean(part));
   if (parts.length) return {text: parts.join(' · '), tone: 'ink2'};
-  return message.remote_content.domain ? {text: message.remote_content.domain, tone: 'ink3'} : null;
+  // Drawn from the email's row before the email is in (reader-01), the domain waits for it.
+  return message.remote_content?.domain ? {text: message.remote_content.domain, tone: 'ink3'} : null;
 }
 
 /**

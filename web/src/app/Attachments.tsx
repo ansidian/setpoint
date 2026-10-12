@@ -9,6 +9,7 @@ import {attachmentLabel, attachmentType, parseCsv, previewKind} from '../logic/r
 import type {AttachmentType, PreviewKind} from '../logic/reader.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {PreviewSkeleton} from './states/Skeletons.tsx';
 
 const CSV_ROWS = 500;
 
@@ -94,7 +95,7 @@ function Preview({messageId, file, kind, onClose}: {messageId: number; file: Att
         <button type="button" className="ibtn sm" aria-label="Close preview" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="preview-body">
-        {loaded.state === 'loading' && <div className="preview-line">Loading…</div>}
+        {loaded.state === 'loading' && <PreviewSkeleton />}
         {loaded.state === 'failed' && <div className="preview-line">Couldn’t load the preview, {loaded.message}</div>}
         {loaded.state === 'ready' && kind === 'pdf' && <iframe className="preview-pdf" title={file.filename} src={loaded.url} />}
         {loaded.state === 'ready' && kind === 'image' && <img className="preview-image" alt={file.filename} src={loaded.url} />}

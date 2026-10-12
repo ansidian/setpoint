@@ -118,6 +118,19 @@ export function TodaySkeleton({lines}: {lines: number}) {
   );
 }
 
+/** An email's head (.rd-head) when no row stands for it (a link to it): the subject and its sender's line. */
+export function HeadSkeleton() {
+  return (
+    <Sk kind="head" className="sk-head">
+      <span className="subj"><Bar w="56%" h={12} /></span>
+      <span className="meta"><span className="sk-dot sk-avatar" /><Bar w={140} /><Bar w={64} style={{marginLeft: 'auto'}} /></span>
+    </Sk>
+  );
+}
+
+/** An attachment's preview (.preview-body) while its file loads: a page's shape. */
+export const PreviewSkeleton = () => <Sk kind="preview" className="sk-preview"><span className="sk-img" /></Sk>;
+
 /**
  * An email's body (.rd-body) while it loads, the head already drawn from its row: lines at the
  * body's rhythm, a paragraph's break, and an attachment's card when it has one.

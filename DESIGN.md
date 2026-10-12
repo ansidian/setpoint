@@ -375,6 +375,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
   type's tile (#163), name and size, then the preview's eye and **Download** with its glyph; PDF,
   image and CSV open a preview.
+- **Opening:** the tools and the head draw from the email's row at once; only the body waits, a
+  skeleton meanwhile (#176).
 
 ### Search
 
@@ -2360,3 +2362,14 @@ it changes what's on screen.
     still coming. A refresh failing under data already shown keeps the data and says nothing; the
     next live event tries again. Offline, the pill already says so, and the skeleton waits (Andy,
     2026-10-11, polish audit states-06).
+176. **An email opens at once from its row; only its body waits:** a click, J or K, auto-advance,
+    a tap on the phone or a search result draws the reader's head from the email's row before
+    the email itself has come: the protected line, the subject, the avatar, the sender with its
+    organisation and platform (the sender's domain follows with the email), "to you", the account
+    and the time, and the actions, More too, so nothing above the body moves when it lands. The
+    body is a skeleton meanwhile (#170): 10 px lines 12 apart at the body's rhythm (100, 97, 90, 94
+    and 60%, a paragraph's break, 92, 86 and 40%), at most 600 px, and an attachment's 44 × 280
+    card when the email has one; then the body fades in over 120 ms. An email with no row to draw
+    from (a link) has a skeleton head too. An HTML email's frame holds 240 px on `sub`, unseen,
+    until its page says its height, then fades in over 120 ms. An attachment's preview loading is
+    a page's skeleton, not "Loading…" (Andy, 2026-10-11, polish audit reader-01, phone-04).

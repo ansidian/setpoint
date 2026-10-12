@@ -60,7 +60,13 @@
 .settings .sk-set .sk-tile { width: 30px; height: 30px; flex: none; border-radius: var(--r-row); background: var(--skel); }
 .settings .sk-label { display: flex; }
 
-/* ---------- The reader's body (.rd-body, .mailtext) and an attachment (.attach) ---------- */
+/* ---------- The reader: its head (.rd-head), body (.rd-body, .mailtext), an attachment (.attach), a preview ---------- */
+.sk-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 12px; flex: none; }
+.sk-head > .subj { height: 25px; display: flex; align-items: center; }
+.sk-head > .meta { height: 32px; display: flex; align-items: center; gap: 10px; }
+.sk-head .sk-avatar { width: 32px; height: 32px; }
+.sk-preview { flex: 1 1 auto; display: flex; padding: 16px; }
+.sk-preview .sk-img { flex: 1 1 auto; border-radius: var(--r-bar); background: var(--sk-fill); }
 .sk-body { display: flex; flex-direction: column; gap: 12px; max-width: 600px; padding-top: 6px; }
 .sk-body .sk-break { height: 10px; flex: none; }
 .sk-body .sk-attach { width: var(--attachment); height: 44px; margin-top: 16px; border-radius: var(--r-card); background: var(--sk-fill); flex: none; }

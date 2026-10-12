@@ -246,6 +246,8 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
     await failWhile(page, /^\/api\/(mail\/messages\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
     await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
     await page.locator('.pane .load-failed', {hasText: 'Couldn’t load this email, Something went wrong.'}).waitFor();
+    // Its head is drawn from its row all the same.
+    await page.locator('.pane .rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
 
     await page.keyboard.press('2');
     await page.locator('.rpane .load-failed', {hasText: 'Couldn’t load this day, Something went wrong.'}).waitFor();
@@ -258,6 +260,78 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
     await page.locator('.settings .set-nav').getByRole('button', {name: 'AI', exact: true}).click();
     await page.locator('.settings .load-failed', {hasText: 'Couldn’t load Settings › AI, Something went wrong.'}).waitFor();
     assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the reader draws the email\'s head from its row at once, and only its body waits, a skeleton; an HTML email holds its frame\'s place (reader-01)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['coffee-html'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    let release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    // At once, though the email itself is held: its subject, sender, account and time, and its actions.
+    const head = page.locator('.pane .rd-head');
+    await head.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
+    assert.equal(await head.locator('.name').textContent(), 'Google');
+    assert.equal(await head.locator('.account').textContent(), 'Personal');
+    assert.equal(await head.locator('.rd-acts .btn', {hasText: 'Ask about this email'}).count(), 1);
+    const body = await shown(page, 'body');
+    assert.equal(await page.locator('.pane .mailtext').count(), 0);
+    // Its lines at the body's rhythm: 10 px bars 12 apart, at most 600 px.
+    assert.deepEqual(await body.evaluate(element => [getComputedStyle(element).rowGap, element.getBoundingClientRect().width <= 600, element.querySelector('.sk-bar')!.getBoundingClientRect().height]), ['12px', true, 10]);
+    const subjectAt = (await head.locator('.rd-subj').boundingBox())!.y;
+    await page.mouse.move(700, 28);
+    await matchGolden(page, 'loading-reader', 'reader');
+    await release();
+    await page.locator('.pane .facts-card').waitFor();
+    assert.equal(await page.locator('.pane [data-skeleton]').count(), 0);
+    assert.equal((await head.locator('.rd-subj').boundingBox())!.y, subjectAt, 'the head stays where it was');
+    assert.equal(await page.locator('.pane .rd-body').getAttribute('class'), 'rd-body sk-arrive', 'the body fades in');
+
+    // An email with an attachment holds its card's place too.
+    release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
+    await page.locator('.pane .rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await (await shown(page, 'body')).locator('.sk-attach').waitFor();
+    await release();
+    await page.locator('.pane .attach').waitFor();
+
+    // An HTML email's frame holds 240 px on `sub`, unseen, until its page says its height; then it fades in.
+    release = await hold(page, /^\/api\/mail\/messages\/\d+\/body/);
+    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    const box = page.locator('.mailframe-box');
+    await box.waitFor();
+    assert.deepEqual(await box.evaluate(element => [element.className, element.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity]),
+      ['mailframe-box measuring', 240, await tokenColour(page, 'sub'), '0']);
+    await release();
+    await page.locator('.mailframe-box:not(.measuring)').waitFor();
+    await until('the frame takes the email\'s height', () => box.evaluate(element => element.getBoundingClientRect().height), height => height > 300);
+    assert.equal(await box.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone, a tapped email opens at once from its row, its body a skeleton until it comes (phone-04)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .arow').first().waitFor();
+    const release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
+    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.pane .rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await shown(page, 'body');
+    await matchGolden(page, 'loading-reader-phone');
+    await release();
+    await page.locator('.pane .mailtext').waitFor();
+    assert.equal(await page.locator('.pane [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

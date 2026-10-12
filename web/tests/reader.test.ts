@@ -22,7 +22,7 @@ describe('the reading pane\'s width', () => {
 });
 
 describe('senderLine', () => {
-  type Sender = Pick<MessageOut, 'from_name' | 'organisation' | 'via' | 'remote_content'>;
+  type Sender = Pick<MessageOut, 'from_name' | 'organisation' | 'via'> & Partial<Pick<MessageOut, 'remote_content'>>;
   test.each<[string, Sender, ReturnType<typeof senderLine>]>([
     ['the organisation and platform, in ink2', {from_name: 'Priya Raman', organisation: 'Northwind Talent', via: 'Greenhouse', remote_content: remote({domain: 'northwind.example'})},
       {text: 'Northwind Talent · via Greenhouse', tone: 'ink2'}],
@@ -34,6 +34,10 @@ describe('senderLine', () => {
       {text: 'example.com', tone: 'ink3'}],
     ['the platform alone', {from_name: 'Fabrikam', organisation: 'Fabrikam', via: 'Workday', remote_content: remote()},
       {text: 'via Workday', tone: 'ink2'}],
+    // From the email's row while the email itself loads (reader-01): the domain waits for it.
+    ['from its row: the organisation and platform', {from_name: 'Priya Raman', organisation: 'Northwind Talent', via: 'Greenhouse'},
+      {text: 'Northwind Talent · via Greenhouse', tone: 'ink2'}],
+    ['from its row, the organisation the sender: nothing until its domain is known', {from_name: 'Google', organisation: 'Google', via: null}, null],
   ])('%s', (_name, message, line) => {
     expect(senderLine(message)).toEqual(line);
   });
