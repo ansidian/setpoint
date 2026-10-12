@@ -42,6 +42,14 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await page.locator('.ag-item', {hasText: 'Dentist'}).locator('.leave').textContent(), 'Leave by 2:05 PM · 18 min');
     assert.equal(await page.locator('.ag-item .leave').count(), 1, 'only Dentist has one today');
+    // #166: the line names the calendar; the place has its own line, 16 px location_on in ink3, 4 px under it, as Leave by is.
+    const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
+    assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
+    assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
+    assert.deepEqual(await dentist.locator('.place').evaluate(line => {
+      const icon = line.querySelector('.icon')!;
+      return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(line).color, getComputedStyle(line).marginTop, getComputedStyle(line.nextElementSibling!).marginTop, getComputedStyle(line).fontSize];
+    }), [ICONS.location_on, '16', await tokenColour(page, 'ink3'), '4px', '4px', '12.5px']);
     await settle(page);
     assert.equal(await page.title(), 'October 2026 · Calendar');
     await matchGolden(page, '11-calendar-october-2026', 'main');
@@ -440,7 +448,8 @@ test('the Today block\'s card opens its item on Calendar, and an item\'s link la
     await until('the Career fair selected', () => page.locator('.ev.sel').textContent(), title => title === '10 AMCareer fair');
     // The grid selects it before the right pane has followed to its day.
     await until('the right pane on Thu, Oct 15', () => text(page, '.rp-date'), title => title === 'Thu, Oct 15');
-    assert.equal(await text(page, '.ag-item.sel .line'), '10:00 AM – 2:00 PM · University Student Union');
+    assert.equal(await text(page, '.ag-item.sel .line'), '10:00 AM – 2:00 PM · Jobs');
+    assert.equal(await text(page, '.ag-item.sel .place'), 'University Student Union');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

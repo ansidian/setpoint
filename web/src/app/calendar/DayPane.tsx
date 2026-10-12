@@ -1,6 +1,6 @@
 // The right pane (DESIGN.md › Right pane; boards 11 and 11b): the selected day, its forecast
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
-// title, "7:00 – 8:00 AM · Personal", the recurring glyph, "in 5h" on the next, "Leave by 2:05 PM
+// title, "7:00 – 8:00 AM · Personal", the place on its own line, #166, the recurring glyph, "in 5h" on the next, "Leave by 2:05 PM
 // · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
 // in `alert` today, and its tasks with their projects; the footer's keys. F6 adds the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
@@ -155,6 +155,7 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
         <span className="grow">
           <span className="title">{item.title}</span>
           <span className="ink3 num line">{line}</span>
+          {event.place && <span className="place"><Icon name={event.place.video ? 'videocam' : 'location_on'} size={16} /><span className="ell">{event.place.text}</span></span>}
           {leave && <span className={`leave${leave.state === 'due' ? ' due' : ''}`}><Icon name="directions_car" size={16} />{leave.text}</span>}
           {overlap && <span className="ink3 num overlap"><Icon name="layers" size={16} />{overlap}</span>}
         </span>

@@ -163,8 +163,18 @@ const num = (text: string): Patch => ({
   from: `<span class="ink3" style="font-size: 12.5px">${text}</span>`, to: `<span class="ink3 num" style="font-size: 12.5px">${text}</span>`,
 });
 
+/**
+ * #166 (override 29): an event's line names its calendar, and its place has a line of its own with
+ * `location_on` (the boards draw the place where the calendar goes).
+ */
+const placed = (time: string, calendar: string, place: string): Patch => ({
+  why: `#166 (override 29): the line names the calendar, the place on its own line: ${time} · ${calendar}, then ${place}`,
+  from: `<span class="ink3" style="font-size: 12.5px">${time} · ${place}</span>`,
+  to: `<span class="ink3 num" style="font-size: 12.5px">${time} · ${calendar}</span><span class="ink3" style="font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px"><span class="ms s16">location_on</span>${place}</span>`,
+});
+
 // Wed, Oct 7's agenda as boards 11 and 12a draw it, with Time to Leave from the time-to-leave fixture.
-const AGENDA_OCT_7_PATCHES: Patch[] = [num('7:00 – 8:00 AM · Personal'), num('2:30 – 3:30 PM · Smile Dental')];
+const AGENDA_OCT_7_PATCHES: Patch[] = [num('7:00 – 8:00 AM · Personal'), placed('2:30 – 3:30 PM', 'Personal', 'Smile Dental')];
 
 // Fri, Oct 9 as boards 12b and 12d draw it, Dinner with Sam selected and its card at rest beside it.
 const DINNER_PATCHES: Patch[] = [
@@ -175,7 +185,7 @@ const DINNER_PATCHES: Patch[] = [
   {why: 'F4\'s agenda draws every upcoming event\'s title at 500, as board 11 does (12b draws only the selected one so)',
     from: '<span style="display: block; color: var(--ink)">Gym</span>', to: '<span style="display: block; color: var(--ink); font-weight: 500">Gym</span>'},
   {why: '… and Study group\'s', from: '<span style="display: block; color: var(--ink)">Study group</span>', to: '<span style="display: block; color: var(--ink); font-weight: 500">Study group</span>'},
-  num('7:00 – 8:00 AM · Personal'), num('6:30 – 8:30 PM · Classes'), num('7:00 – 9:00 PM · Blue Door'),
+  num('7:00 – 8:00 AM · Personal'), num('6:30 – 8:30 PM · Classes'), placed('7:00 – 9:00 PM', 'Personal', 'Blue Door'),
   {why: 'DESIGN.md › The floating detail: Time to Leave comes before attendees (place, Time to Leave, attendees, reminder, calendar)',
     from: `        <div class="fact"><span class="ms">group</span><span>Sam Lee</span></div>
         <div class="fact"><span class="ms">directions_car</span><span class="num"><span class="v">Leave by 6:35 PM</span> · 21 min</span></div>`,
@@ -1065,7 +1075,7 @@ export const BOARDS: Board[] = [
       ...CALENDAR_SEED_PATCHES,
       ...GRID_RINGS,
       ...AGENDA_OCT_7_RINGS,
-      num('2:30 – 3:30 PM · Smile Dental'),
+      placed('2:30 – 3:30 PM', 'Personal', 'Smile Dental'),
       num('7:00 – 8:00 AM · Moving to Thu, Oct 8'),
       {why: 'Override 7: the drop prompt takes the side covering the fewest items, centred on the dropped chip; with Sunday first (SV-29) Thursday has too little room to its right, so it\'s left of it',
         from: 'aria-label="Move recurring event" style="position: absolute; left: 447px; top: 263px;', to: 'aria-label="Move recurring event" style="position: absolute; left: 286px; top: 115px;'},

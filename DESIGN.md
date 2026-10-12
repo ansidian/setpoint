@@ -345,7 +345,9 @@ mark. With every calendar off, a 16 px `ink3` `visibility_off` follows the heade
 ### Right pane
 
 Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61°"), **Events** (time,
-a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", recurring glyph; "in 5h" on the next; "Leave
+a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", always the calendar; the place on its own
+line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zoom.us", for a link,
+#166; recurring glyph; "in 5h" on the next; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), the **now-line** in `alert` with the time, then **Tasks · due today** with their
 projects. A day whose items are only hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
@@ -799,6 +801,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     2.4M tokens in · 49k out" and "18 calls · 112k tokens in · 8k out".
 28. **The first run's line takes a typographic apostrophe**, "what’s sorted so far", as search's
     indexing line does (29b draws "what's").
+29. **An agenda line names its calendar; the place has its own line** (#166): where boards 11, 12a,
+    12b, 12d, 15, 15b, 19b and 22b draw "2:30 – 3:30 PM · Smile Dental" or "7:00 – 9:00 PM · Blue
+    Door", the app reads "· Personal", then the place under it after `location_on`.
 
 ## Not designed yet
 
@@ -1445,3 +1450,11 @@ it changes what's on screen.
     `visibility_off`, now 8 px before its words. No new copy. The phone agenda's "No events" stays a
     bare label: it sits at the end of a day's header, beside the forecast's glyph, not alone on a
     line (Andy, 2026-10-11, polish audit motion-13).
+166. **A place has its own line, and the time's line always names the calendar:** an event's second
+    line in the right pane is always "7:00 – 8:00 AM · Personal", where it had named the place
+    instead when there was one, so the line meant two things. The place follows on a line of its
+    own, as Leave by does: `ink3` 12.5 after a 16 px `location_on` (6 px gap, 4 px above), its name
+    or its address's street, or `videocam` and the link's host ("zoom.us") when the place is a
+    link. The stacked facts (place, Leave by, Overlaps) share one 4 px gap (Overlaps had 2). No
+    reminder glyph: it would sit on nearly every row. Boards 11 and the others draw the place in
+    the line (override 29) (Andy, 2026-10-11, polish audit calpanes-12).

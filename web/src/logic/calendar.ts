@@ -261,12 +261,20 @@ export function tasksHeading(date: string, today: string): string {
   return `Tasks · due ${new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', timeZone: 'UTC'})}`;
 }
 
+/** Where an event is, on its own line under the time's (#166): the place's name or street, or a call's host. */
+export interface AgendaPlace {
+  text: string;
+  // A link (a call): videocam and its host; otherwise location_on.
+  video: boolean;
+}
+
 export interface AgendaEvent {
   item: ItemOut;
   // "7:00 AM", or "All day".
   when: string;
-  // "7:00 – 8:00 AM · Personal": the place when there is one, else the calendar.
+  // "7:00 – 8:00 AM · Personal": the time and always the calendar (#166).
   line: string;
+  place: AgendaPlace | null;
   past: boolean;
   // "in 5h" on today's next event, "now" on one under way.
   startsIn: string | null;
@@ -277,6 +285,20 @@ export interface Agenda {
   tasks: ItemOut[];
   // Where the now-line goes among the events (before events[index]); null on other days.
   nowAt: number | null;
+}
+
+const LINK = /^(?:https?:\/\/|www\.)\S+$/i;
+
+/** An event's place line (#166): a link's host ("zoom.us"), else the place's name or the street of its address. */
+export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPlace | null {
+  const name = placeName(item);
+  if (!name) return null;
+  if (!LINK.test(name)) return {text: name, video: false};
+  try {
+    return {text: new URL(/^www\./i.test(name) ? `https://${name}` : name).hostname.replace(/^www\./, ''), video: true};
+  } catch {
+    return {text: name, video: false};
+  }
 }
 
 /**
@@ -292,7 +314,8 @@ export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] |
     events: events.map(item => ({
       item,
       when: item.all_day || !item.starts_at ? 'All day' : clockTime(item.starts_at, timeZone),
-      line: [timeRange(item, timeZone), placeName(item) ?? names.get(item.calendar_id)].filter(Boolean).join(' · '),
+      line: [timeRange(item, timeZone), names.get(item.calendar_id)].filter(Boolean).join(' · '),
+      place: agendaPlace(item),
       past: isPast(item, now, timeZone),
       startsIn: item === next ? startsIn(item.starts_at!, now) : null,
     })),

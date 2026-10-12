@@ -180,17 +180,28 @@ describe('the right pane', () => {
 
   test('board 11, Wed Oct 7 at 9:12 AM: Gym past, the now-line, Dentist in 5h, two tasks', () => {
     const day = agenda('2026-10-07', [gym, dentist, ...tasks], calendars, now, zone);
-    expect(day.events.map(one => [one.when, one.item.title, one.line, one.past, one.startsIn])).toEqual([
-      ['7:00 AM', 'Gym', '7:00 – 8:00 AM · Personal', true, null],
-      ['2:30 PM', 'Dentist', '2:30 – 3:30 PM · Smile Dental', false, 'in 5h'],
+    expect(day.events.map(one => [one.when, one.item.title, one.line, one.place, one.past, one.startsIn])).toEqual([
+      ['7:00 AM', 'Gym', '7:00 – 8:00 AM · Personal', null, true, null],
+      // The line always names the calendar; the place has its own line (#166).
+      ['2:30 PM', 'Dentist', '2:30 – 3:30 PM · Personal', {text: 'Smile Dental', video: false}, false, 'in 5h'],
     ]);
     expect(day.nowAt).toBe(1);
     expect(day.tasks.map(one => one.title)).toEqual(['CS 101 lab report', 'Pay rent']);
   });
 
-  test('an event at a street address: its street, not its calendar', () => {
+  test('an event at a street address: its calendar in the line, its street on the place\'s', () => {
     const lunch = event('Lunch', '2026-10-07', '12:00', '13:00', {address: '1420 Elm St, Los Angeles, CA 90026'});
-    expect(agenda('2026-10-07', [lunch], calendars, now, zone).events.map(one => one.line)).toEqual(['12:00 – 1:00 PM · 1420 Elm St']);
+    expect(agenda('2026-10-07', [lunch], calendars, now, zone).events.map(one => [one.line, one.place])).toEqual([['12:00 – 1:00 PM · Personal', {text: '1420 Elm St', video: false}]]);
+  });
+
+  // A place that's a link is a call: videocam and its host (#166).
+  test.each([
+    ['a Zoom link', 'https://zoom.us/j/81234567890?pwd=abc', {text: 'zoom.us', video: true}],
+    ['a Meet link', 'https://meet.google.com/abc-defg-hij', {text: 'meet.google.com', video: true}],
+    ['a link typed without its scheme', 'www.example.com/standup', {text: 'example.com', video: true}],
+    ['a place named with a dot in it', 'St. Mary\'s Hall', {text: 'St. Mary\'s Hall', video: false}],
+  ])('%s', (_name, place, shown) => {
+    expect(agenda('2026-10-07', [event('Standup', '2026-10-07', '10:00', '10:15', {place})], calendars, now, zone).events[0]!.place).toEqual(shown);
   });
 
   test.each([

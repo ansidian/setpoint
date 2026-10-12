@@ -93,6 +93,8 @@
 .ag-item .title { display: block; color: var(--ink); font-weight: 500; }
 .ag-item.past .title { font-weight: 400; }
 .ag-item .line { font-size: 12.5px; }
+/* Where the event is, on its own line (#166): location_on, or videocam and the host for a call. */
+.ag-item .place { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink3); min-width: 0; }
 .ag-item .leave { font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--ink2); transition: color var(--dur-fast) var(--ease); }
 /* SV-56: from 15 minutes before leaving until the event starts, Leave by and its car are `caution`. */
 .ag-item .leave.due { color: var(--caution); }
@@ -199,7 +201,8 @@
 .failed-acts { display: flex; gap: 8px; padding-top: 2px; }
 
 /* The agenda's F6 lines. */
-.ag-item .overlap { font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+/* The stacked facts share one 4 px gap (#166). */
+.ag-item .overlap { font-size: 12px; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .ag-item.pending { opacity: .5; }
 .ag-task .check { display: grid; place-items: center; flex: none; }
 .ag-item .spin { margin-left: 0; vertical-align: 0; }
