@@ -391,7 +391,25 @@ test('the first backfill: search says what it has indexed so far', async () => {
     await page.locator('.arow').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('lease');
-    await page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'}).waitFor();
+    const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'});
+    await line.waitFor();
+    // It turns as News's first run does, and its progress runs along its foot: a 2 px sub2 track, 62% of
+    // it in ink3, easing over 260 ms (the polish audit's states-15, search-12).
+    assert.deepEqual(await line.locator('.spin .icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).animationDuration, getComputedStyle(icon.closest('.spin')!).color]),
+      [ICONS.progress_activity, '16', '0.9s', await colourOf(page, 'var(--ink3)')]);
+    const foot = await line.evaluate(element => {
+      const [track, fill] = [getComputedStyle(element, '::before'), getComputedStyle(element, '::after')];
+      return {width: element.getBoundingClientRect().width, track: [track.height, track.backgroundColor, track.bottom], fill: [parseFloat(fill.width), fill.backgroundColor, fill.transitionDuration]};
+    });
+    assert.deepEqual(foot.track, ['2px', await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('i'));
+      probe.style.background = 'var(--sub2)';
+      const fill = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return fill;
+    }), '-1px']);
+    assert.ok(Math.abs(foot.fill[0] as number - foot.width * 0.62) < 1, `62% of the line (${foot.fill[0]} of ${foot.width})`);
+    assert.deepEqual(foot.fill.slice(1), [await colourOf(page, 'var(--ink3)'), '0.26s']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

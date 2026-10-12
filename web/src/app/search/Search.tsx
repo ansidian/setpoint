@@ -4,7 +4,7 @@
 // chip removable. Kept thin: the rules are logic/search.ts's, and the state is state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useRef, useState} from 'react';
-import type {KeyboardEvent, ReactNode} from 'react';
+import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
@@ -201,6 +201,7 @@ export function SearchResults(props: ResultsProps) {
     return () => observer.disconnect();
   });
   const indexing = out ? indexingLine(out.indexing) : null;
+  const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
   return (
     <section className="list search-list" aria-label="Search results">
@@ -213,7 +214,13 @@ export function SearchResults(props: ResultsProps) {
           <span className="kbd">⌘Enter</span>
         </button>
       )}
-      {indexing && <div className="bar muted">{indexing}</div>}
+      {/* The first backfill: the shared spinner, the words, and its progress along the line's foot (states-15, search-12). */}
+      {indexing && (
+        <div className="bar muted progress indexing" style={{'--done': indexed} as CSSProperties}>
+          <span className="spin"><Icon name="progress_activity" size={16} /></span>
+          <span className="num">{indexing}</span>
+        </div>
+      )}
       {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
       {out && out.total > 0 && (
         <div className={card ? 'bar muted after-card' : 'bar muted'}>

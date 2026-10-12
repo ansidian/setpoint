@@ -64,8 +64,8 @@ export function rowMeta(row: StoryRowOut, now: number, timeZone: string, section
   };
 }
 
-/** "12 more in Local". */
-export const moreLine = (count: number, section: NewsSection) => `${count} more in ${SECTION_LABELS[section]}`;
+/** "12 more in Local"; "2 in Tech" when its block shows none of them (news-13), so it doesn't read as more than nothing. */
+export const moreLine = (count: number, section: NewsSection, none = false) => `${count} ${none ? '' : 'more '}in ${SECTION_LABELS[section]}`;
 
 /** The Missed strip's count: "14 stories", "1 story". */
 export const storiesCount = (count: number) => `${count} ${count === 1 ? 'story' : 'stories'}`;
@@ -343,6 +343,9 @@ export function unsortedLine(status: Pick<NewsStatusOut, 'unsorted' | 'down'>, n
   }[down.cause];
   return {text: `${count(status.unsorted, 'article', 'articles')} not sorted yet, ${why}${down.retrying ? ', retrying' : ''}`, settings: why.endsWith('Settings › AI')};
 }
+
+/** How far the first run has come, 0 to 1, for its line's foot (news-13). */
+export const firstRunShare = (run: {sorted: number; total: number}) => (run.total > 0 ? Math.min(1, run.sorted / run.total) : 0);
 
 /** The first run's line (29b): "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so far". */
 export function firstRunLine(status: Pick<NewsStatusOut, 'first_run'>): string | null {

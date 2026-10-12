@@ -24,13 +24,13 @@ import type {
 } from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {RefObject} from 'react';
+import type {CSSProperties, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, hazardGlyph, keyStory, landed, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
+  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, keyStory, landed, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
   pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
   unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -277,6 +277,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const firstRun = Boolean(status?.first_run);
   const unsorted = status ? unsortedLine(status, now, zone) : null;
   const sorting = status ? firstRunLine(status) : null;
+  // How far the first run has come, for its line's foot (news-13).
+  const sorted = status?.first_run ? `${firstRunShare(status.first_run) * 100}%` : null;
   const [headlines, setHeadlines] = useState(false);
   const showHeadlines = headlines && unsorted !== null && !searching;
   const {data: waitingOut} = useResource<NewsUnsortedOut>(showHeadlines ? UNSORTED_PATH : null);
@@ -313,7 +315,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             </div>
           )}
           {!searching && sorting && (
-            <div className="nw-state muted">
+            <div className="nw-state muted progress" style={{'--done': sorted} as CSSProperties}>
               <span className="spin"><Icon name="progress_activity" size={16} /></span>
               <span className="grow num ell" title={sorting}>{sorting}</span>
             </div>
@@ -386,12 +388,13 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   {view === 'missed' && <div className={header}><Icon name="history" size={14} />{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
                   {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" title={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
-                  {empty && <div className="nw-empty"><Icon name="newspaper" size={16} />{empty}</div>}
+                  {/* Still sorting, its section's line turns as the first run's does (news-13); once sorted, a quiet section is a paper. */}
+                  {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={view === 'missed' ? named[row.id] ?? row.sections[0]! : null} {...rowProps} />
                   ))}
                   {section && shelf.more > 0 && (
-                    <button className="nw-more" type="button" onClick={() => switchTo(section)}>{moreLine(shelf.more, section)}<Icon name="chevron_right" size={16} /></button>
+                    <button className="nw-more" type="button" onClick={() => switchTo(section)}>{moreLine(shelf.more, section, shelfRows.length === 0)}<Icon name="chevron_right" size={16} /></button>
                   )}
                 </Fragment>
               );

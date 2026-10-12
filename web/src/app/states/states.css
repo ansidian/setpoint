@@ -1,4 +1,20 @@
 /* Health and states (design-export/styles/setpoint.css › .bar, .offline-pill; board 19a). */
+
+/* The one spinner (DESIGN.md #54; the polish audit's states-15): `progress_activity` turning every
+   900 ms, `ink2` by default, 6 px after what it follows. `spin-later` holds it back a second where a
+   wait is usually shorter (calendar.css). */
+.spin { display: inline-flex; color: var(--ink2); margin-left: 6px; vertical-align: -3px; }
+.spin .icon { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin-later { from { visibility: hidden; } }
+
+/* A line with progress along its foot (states-15, search-12, news-13): search's first backfill and
+   News's first run. A 2 px `sub2` track over the line's hairline, and in it the share done (`--done`)
+   in `ink3`, neutral as a usage meter is (#252), easing over 260 ms as it grows. */
+.progress { position: relative; }
+.progress::before, .progress::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; pointer-events: none; }
+.progress::before { right: 0; background: var(--sub2); }
+.progress::after { width: var(--done, 0%); background: var(--ink3); border-radius: 0 2px 2px 0; transition: width var(--dur-slow) var(--ease); }
 .list > .hbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; font-size: 13px; }
 .list > .hbar.caution { min-height: 40px; color: var(--caution); background: color-mix(in oklch, var(--caution) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--caution) 22%, transparent); }
 .list > .hbar.caution .act { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -10px; }

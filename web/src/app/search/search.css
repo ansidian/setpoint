@@ -26,6 +26,9 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
+/* The first backfill's line (states-15, search-12): the shared spinner before its words, in the line's ink3,
+   and its progress along its foot (states.css › .progress). */
+.search-list .bar .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .arow.result .l1 .pin { color: var(--ink3); display: grid; }
 /* A Done result stays, quieter, with its tag (UX #9). */
 .arow.result.done .from, .arow.result.done .l2, .arow.result.done .l3 { color: var(--ink3); }
@@ -56,9 +59,6 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .answer .field input::placeholder, .prop .field input::placeholder { color: var(--ink3); opacity: 1; }
 .failed-line { display: flex; align-items: center; gap: 8px; color: var(--alert); font-size: 12.5px; }
 .failed-line .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.spin { display: inline-grid; }
-.spin .icon { animation: spin 900ms linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* The Answer card (board 07): above the results, or at the top of the reading pane. */
 .answer { margin: 14px 16px 12px 24px; }

@@ -748,9 +748,10 @@ Board 28 replaces All's list.
   When things break).
 - **First run** (29b):
   - The muted line "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so
-    far".
+    far", its progress along its foot (#191).
   - No Missed strip.
-  - A section with nothing yet says "Nothing sorted in AI yet".
+  - A section with nothing yet says "Nothing sorted in AI yet", turning as the first run's line does
+    (#191).
 - **Offline:** as everywhere, the pill and the dimmed page.
 
 ### News in Settings
@@ -833,7 +834,7 @@ section's label stays under the title (#250).
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
 | **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
 | **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
-| **First backfill** | search's status: "Indexing · 62% · showing what's indexed so far" |
+| **First backfill** | search's status: the shared spinner, "Indexing · 62% · showing what's indexed so far", and its progress along the line's foot (#192) |
 
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
@@ -2290,3 +2291,20 @@ it changes what's on screen.
     (the reader's tools and actions, a task's check, Mark all as read, Unpin, Copy, Check now and
     Reconnect) sit at .4 and take no pointer. Back online, the dim lifts over 180 ms and the pill fades (#189) (Andy,
     2026-10-11, polish audit states-05).
+191. **News's waiting and quiet lines say which they are:** the first run's line keeps its spinner and
+    gains its progress along its foot (#192's track: 2 px `sub2`, the share sorted in `ink3`,
+    easing over 260 ms as the counts come); "Nothing sorted in AI yet" turns with the same 16 px
+    spinner instead of the paper; a stale section's line leads with `history` (#186). A quiet
+    section ("Nothing new in Tech since Mon") keeps the 16 px `newspaper` every News empty line has
+    (#165), not the finding's `done_all`, which no longer marks anything else. A section whose block
+    shows none of its stories, its others shown elsewhere, links "2 in Tech" rather than "2 more in
+    Tech" (Andy, 2026-10-11, polish audit news-13).
+192. **Progress looks the same wherever it runs:** one spinner, `progress_activity` turning every
+    900 ms (states.css; it was defined twice), and one progress line: search's first backfill leads
+    "Indexing · 62% · showing what's indexed so far" with the 16 px spinner in the line's `ink3` and
+    draws the 62% along the line's foot, a 2 px `sub2` track over its hairline with the share in
+    `ink3` (radius 0 2 2 0), its width easing over 260 ms, as News's first run does. The fill is
+    neutral, as a usage meter's is (#252), where search-12 drew it in `cool`, which is Personal's and
+    "you are here"'s colour, and where states-15 drew a 48 × 3 meter inline; one foot serves both
+    findings and News. A search on its way turns the field's glyph (polish audit search-03) (Andy,
+    2026-10-11, polish audit states-15, search-12).

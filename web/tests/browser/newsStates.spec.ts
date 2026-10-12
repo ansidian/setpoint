@@ -165,6 +165,12 @@ test('board 29b: the first run, sorting the last 48 hours; no Missed strip; noth
     assert.equal(await page.locator('.nw-state.failing').count(), 0, 'articles waiting while sorting runs are no Unsorted line');
     const ai = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
     assert.deepEqual(await ai.evaluate(element => [element.className, element.textContent]), ['nw-empty', 'Nothing sorted in AI yet']);
+    // Still being sorted, it turns as the first run's line does (news-13).
+    assert.equal(await ai.locator('.spin .icon path').getAttribute('d'), ICONS.progress_activity);
+    // The first run's progress along its line's foot: 186 of 312 in ink3 on a sub2 track.
+    const foot = await line.evaluate(element => [element.getBoundingClientRect().width, parseFloat(getComputedStyle(element, '::after').width), getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::before').height]);
+    assert.ok(Math.abs((foot[1] as number) - (foot[0] as number) * 186 / 312) < 1, `186 of 312 (${foot[1]} of ${foot[0]})`);
+    assert.deepEqual(foot.slice(2), [await colourOf(page, 'var(--ink3)'), '2px']);
     assert.equal(await page.locator('.nw-list [data-story]:not(.new)').count(), 0, 'everything starts new');
     await settle(page);
     await matchGolden(page, '29b-states-first-run', 'news');

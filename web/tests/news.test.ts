@@ -8,7 +8,7 @@ import {describe, expect, test} from 'vitest';
 import {
   articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, landed, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
   rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
-  capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
+  capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
 import type {Layout} from '../src/logic/news.ts';
 import {news} from '../src/tokens.ts';
@@ -82,6 +82,8 @@ describe('meta copy', () => {
   test('a day of Missed, "more" and the pane\'s meta', () => {
     expect(missedDay('2026-10-06')).toEqual({day: 'Tuesday', date: 'Oct 6'});
     expect(moreLine(12, 'local')).toBe('12 more in Local');
+    // A block showing none of its section's stories (news-13): not "more" than nothing.
+    expect(moreLine(2, 'tech', true)).toBe('2 in Tech');
     expect(storyMeta({outlets: 5, first_reported_at: '2026-10-05T13:12:00.000Z', last_new_fact_at: '2026-10-07T15:40:00.000Z'}, now, zone))
       .toEqual(['5 outlets', 'first reported Mon 6:12 AM', 'updated 8:40 AM']);
     expect(storyMeta({outlets: 1, first_reported_at: '2026-10-07T13:12:00.000Z', last_new_fact_at: '2026-10-07T13:12:00.000Z'}, now, zone))
@@ -327,6 +329,8 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
     expect(firstRunLine({first_run: {sorted: 186, total: 312}})).toBe('Sorting the last 48 hours · 186 of 312 articles · showing what’s sorted so far');
     expect(firstRunLine({first_run: {sorted: 0, total: 1}})).toBe('Sorting the last 48 hours · 0 of 1 article · showing what’s sorted so far');
     expect(firstRunLine({first_run: null})).toBeNull();
+    // How far it has come, for the line's foot (news-13).
+    expect([firstRunShare({sorted: 186, total: 312}), firstRunShare({sorted: 0, total: 0}), firstRunShare({sorted: 5, total: 4})]).toEqual([186 / 312, 0, 1]);
   });
 
   test.each([

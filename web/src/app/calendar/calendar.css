@@ -303,12 +303,8 @@
 .ev .icon, .tk .icon { display: inline-block; vertical-align: -2px; }
 .ev.failed .icon, .tk.failed .icon { margin-right: 4px; }
 .tk.failed { color: var(--alert); box-shadow: inset 0 0 0 1px var(--alert); }
-/* Waiting shows at .5 at once, the spinner only after a second (DESIGN.md #54); its place is kept so the title doesn't shift. */
-.spin { display: inline-flex; color: var(--ink2); margin-left: 6px; vertical-align: -3px; }
-.spin .icon { animation: spin 900ms linear infinite; }
+/* Waiting shows at .5 at once, the shared spinner (states.css) only after a second (DESIGN.md #54); its place is kept so the title doesn't shift. */
 .ev .spin, .tk .spin, .ag-item .spin, .cal-row .spin { animation: spin-later 0s 1s both; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes spin-later { from { visibility: hidden; } }
 .ev .spin { color: inherit; }
 
 /* Which occurrences (boards 14 and 15b): `.ropt` rows with a radio. */
