@@ -247,8 +247,10 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
   doesn't drag.
 - **Calendar:** the grid, month or week, takes the width. The right pane lies over its right side (400
   px, `page`, an `edgeOn` left edge and the popover shadow, in 24 px over 180 ms) while it holds the
-  editor or search; the day's pane isn't drawn, and its sources' health lines sit atop the grid. The
-  floating detail floats over the pane.
+  editor or search; the day's pane comes over it only from a 30 px `right_panel_open` button before
+  search (lit `sub2` while open; it again or Esc closes it; closed on every load; under 720 px New is
+  its + alone so the header stays whole, #239), and its
+  sources' health lines sit atop the grid. The floating detail floats over the pane.
 - **Header:** gaps 10; the search field narrows first (from 380, 520 while searching), then a calendar
   title longer than its 128 px ends in "…".
 
@@ -2100,3 +2102,11 @@ it changes what's on screen.
     item is the solid chip; a recurring event's every occurrence matches with its series. Clearing the
     query or Esc brings the grid back over the same 180 ms. A search with more results still to load
     (past 50) dims nothing, so no match is ever dimmed (Andy, 2026-10-11, polish audit search-10).
+239. **From 640 to 1099 px a header button brings the selected day's pane over the grid** (D183, as
+    #258 gave the grid the width): a 30 px icon button with `right_panel_open`, before search and only
+    in that tier, lays the day's pane (weather, events with Time to Leave, tasks due) over the grid's
+    right side where the editor lies, with its motion; its sources' health stays atop the grid. Lit
+    `sub2` while open, it again or Esc closes it; picking another day while it's open shows that day;
+    the editor or search take its place, as they take each other's. Closed on every load, and no new
+    key; under 720 px, where the header has no room left, New is its + alone (titled "New event · C");
+    the desktop is unchanged (Andy left it to Claude, 2026-10-11, polish audit calpanes-14).

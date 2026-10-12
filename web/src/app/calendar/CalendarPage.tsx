@@ -224,6 +224,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const clipboard = useRef<ItemOut[]>([]);
   const [searching, setSearching] = useState(false);
   const search = useCalendarSearch();
+  // In the compact tier the day's pane is brought over the grid by its header button, closed on every
+  // load (D183, polish audit calpanes-14); the editor and search take its place as they take each other's.
+  const [dayPane, setDayPane] = useState(false);
 
   const {items, weather} = useMonths([addMonths(shown, -1), shown, addMonths(shown, 1), addMonths(shown, 2)]);
   const calendarsById = useMemo(() => new Map((calendars ?? []).map(calendar => [calendar.id, calendar])), [calendars]);
@@ -411,6 +414,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     }
     setPopover(null);
     setAsk(null);
+    setDayPane(false);
     editorSeq.current += 1;
     setEditor({...open, handed, seq: editorSeq.current, at});
     setEditorDirty(false);
@@ -442,6 +446,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else if (selection.length) setSelection([]);
     else if (editor) closeEditor();
     else if (searching) closeSearch();
+    else if (compact && dayPane) setDayPane(false);
     else if (route.item) selectDay(selectedDay);
     else if (failed) setDismissed(set => new Set(set).add(failed.command!.id));
     else return false;
@@ -708,6 +713,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       const find = (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'f';
       if (!searching && (find || (plainKey(event, '/') && !isTyping(event) && !event.defaultPrevented))) {
         event.preventDefault();
+        setDayPane(false);
         setSearching(true);
         return;
       }
@@ -806,10 +812,20 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           </span>
         )}
         <span className="grow" />
+        {compact && !searching && (
+          <button className="ibtn cal-daypane" aria-label="The day" aria-pressed={dayPane} title={dayPane ? 'Hide the day · Esc' : 'Show the day'}
+            onClick={() => {
+              if (!dayPane) setSearching(false);
+              setDayPane(!dayPane);
+            }}><Icon name="right_panel_open" /></button>
+        )}
         {searching
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
-          : <button className="ibtn" aria-label="Search calendar" title="Search · /" onClick={() => setSearching(true)}><Icon name="search" /></button>}
-        <button className="btn" data-hint="c" onClick={() => newItem('event')}><Icon name="add" size={17} />New<span className="kbd">C</span></button>
+          : <button className="ibtn" aria-label="Search calendar" title="Search · /" onClick={() => {
+            setDayPane(false);
+            setSearching(true);
+          }}><Icon name="search" /></button>}
+        <button className="btn cal-new" data-hint="c" title="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
       </header>
       <div className="content cal-content">
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
@@ -845,7 +861,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             onClose={closeEditor} onEscape={escape} onDirty={setEditorDirty} onKeep={keepDrafts} place={editor.place} />
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
-        ) : compact ? null : (
+        ) : compact && !dayPane ? null : (
           <DayPane date={selectedDay} today={today} items={paneItems} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
             selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
             onShowAll={() => showHidden(calendars ?? [])} />

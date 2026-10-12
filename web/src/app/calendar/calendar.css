@@ -370,6 +370,15 @@
   .cal-content > .rpane:not(.handed) { animation: rpane-over var(--dur-medium) var(--ease); }
   .cal-content .fd { z-index: 5; }
   @keyframes rpane-over { from { transform: translateX(24px); opacity: 0; } }
+  /* The day's pane, brought over by its header button (D183, polish audit calpanes-14), lies where the
+     editor does; its sources' health already sits atop the grid. The button is lit `sub2` while it's open. */
+  .cal-content > .rpane > .rp-health { display: none; }
+  .ibtn.cal-daypane[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
+}
+/* Under 720 px, with the day's button beside search, New is its + alone, so the header stays whole (D183). */
+@media (min-width: 640px) and (max-width: 719px) {
+  .hd .btn.cal-new { width: 30px; padding: 0; justify-content: center; }
+  .hd .btn.cal-new > .cal-new-label, .hd .btn.cal-new > .kbd { display: none; }
 }
 
 /* SV-23: calendar search in the right pane (DESIGN.md › Decided while building #24), on search's own

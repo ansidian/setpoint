@@ -3,7 +3,8 @@
 // their tooltips, the attention pill a badge on Inbox), an email or a story covering the list with
 // Back, Esc, J and K, the header whole, nothing scrolling sideways; Calendar's grid taking the width
 // with the editor and search over it and its sources' health atop it; ⌘K keeping the rail's lost
-// filters; and the tier's approved screenshots. At 1100 the full sidebar and the panes beside return.
+// filters; the day's pane brought over the grid by its header button (D183); and the tier's approved
+// screenshots. At 1100 the full sidebar and the panes beside return.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
@@ -185,7 +186,70 @@ test('⌘K filters the Inbox by account and shows or hides each calendar, as the
   }
 });
 
-test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 820 in Night, Calendar\'s editor over the grid at 820 in Light', async () => {
+test('the day\'s pane comes over the grid from its header button, lit while open: another day picked shows there, Esc closes it, the editor takes its place; closed on every load; none on the desktop (D183)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 820, height: HEIGHT});
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.cal-month .cell').first().waitFor();
+    const button = page.getByRole('button', {name: 'The day'});
+    assert.deepEqual([await button.getAttribute('aria-pressed'), await page.locator('.rpane').count()], ['false', 0], 'closed on load');
+    // Before search.
+    assert.equal(await page.locator('.hd .cal-daypane + .ibtn[aria-label="Search calendar"]').count(), 1);
+    await button.click();
+    const pane = page.locator('.rpane');
+    await pane.locator('.rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
+    await until('it has come in', () => pane.evaluate(element => element.getAnimations().length), running => running === 0);
+    const box = (await pane.boundingBox())!;
+    assert.deepEqual([box.x, box.width, box.y], [820 - layout.rightPane, layout.rightPane, layout.header], 'where the editor lies');
+    assert.deepEqual([await pane.locator('.ag-item', {hasText: 'Dentist'}).count(), await pane.locator('.rp-health').evaluateAll(lines => lines.filter(line => getComputedStyle(line).display !== 'none').length)], [1, 0]);
+    assert.equal(await button.getAttribute('aria-pressed'), 'true');
+    const sub2 = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.color = 'var(--sub2)';
+      document.body.append(probe);
+      const computed = getComputedStyle(probe).color;
+      probe.remove();
+      return computed;
+    });
+    await until('lit while open', () => button.evaluate(element => getComputedStyle(element).backgroundColor), fill => fill === sub2);
+    // Another day picked shows there.
+    await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 40, y: 150}});
+    await pane.locator('.rp-date', {hasText: 'Mon, Oct 5'}).waitFor();
+    // Esc closes it.
+    await page.keyboard.press('Escape');
+    await until('Esc closes it', () => page.locator('.rpane').count(), count => count === 0);
+    assert.equal(await button.getAttribute('aria-pressed'), 'false');
+    // The editor takes its place, and with the editor gone it stays closed.
+    await button.click();
+    await pane.waitFor();
+    await page.keyboard.press('c');
+    await page.locator('.rpane.editor').waitFor();
+    assert.equal(await page.locator('.rpane').count(), 1);
+    await page.keyboard.press('Escape');
+    await until('closed with the editor', () => page.locator('.rpane').count(), count => count === 0);
+    // The button again closes it, and a reload starts closed.
+    await button.click();
+    await pane.waitFor();
+    await button.click();
+    await until('the button closes it', () => page.locator('.rpane').count(), count => count === 0);
+    await button.click();
+    await pane.waitFor();
+    await page.reload();
+    await page.locator('.cal-month .cell').first().waitFor();
+    assert.equal(await page.locator('.rpane').count(), 0, 'closed on every load');
+    // The desktop has its pane beside the grid and no button.
+    const desktop = await setpoint.page('target');
+    await desktop.goto(`${setpoint.base}/calendar`);
+    await desktop.locator('.rpane .rp-date').waitFor();
+    assert.equal(await desktop.getByRole('button', {name: 'The day'}).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 820 in Night, Calendar\'s editor over the grid at 820 in Light, and the day\'s pane over it at 820 in Night', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const narrow = await setpoint.page({width: 640, height: HEIGHT});
@@ -209,6 +273,15 @@ test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 
     await light.locator('.rpane.editor .nl-input').waitFor();
     await light.mouse.move(300, 28);
     await matchGolden(light, 'compact-820-calendar-editor');
+
+    // The day's pane over the grid at 820 in Night (D183).
+    const day = await setpoint.page({width: 820, height: HEIGHT});
+    await day.goto(`${setpoint.base}/calendar`);
+    await day.locator('.cal-month .cell').first().waitFor();
+    await day.getByRole('button', {name: 'The day'}).click();
+    await day.locator('.rpane .rp-date').waitFor();
+    await day.mouse.move(300, 28);
+    await matchGolden(day, 'compact-820-calendar-day');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
