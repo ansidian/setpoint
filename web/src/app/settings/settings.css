@@ -2,6 +2,19 @@
    .switch, and the boards' own rules, all scoped to the modal. */
 .settings-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; }
 .settings { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px); display: flex; background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31; }
+/* It rises 8 px and settles over 260 ms as its scrim fades in, and fades out over 120 ms to .98, taking
+   no clicks, as the floating detail closes (DESIGN.md › Motion). It rises without scaling: once a big
+   panel has scaled in, Chromium keeps drawing its text half a pixel off where it rests. A page switch
+   fades its content up 4 px over 120 ms: each page mounts its own section. */
+.settings { animation: set-in var(--dur-slow) var(--ease); }
+.settings-scrim { animation: scrim-in var(--dur-slow) var(--ease); }
+.settings.closing { animation: set-out var(--dur-fast) var(--ease) forwards; }
+.settings-scrim.closing { animation: scrim-out var(--dur-fast) var(--ease) forwards; }
+.settings.closing, .settings-scrim.closing { pointer-events: none; }
+@keyframes set-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } }
+@keyframes set-out { to { opacity: 0; transform: translate(-50%, -50%) scale(.98); } }
+.settings .set-main > :not(.set-x) { animation: set-page-in var(--dur-fast) var(--ease); }
+@keyframes set-page-in { from { opacity: 0; transform: translateY(4px); } }
 
 .settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
@@ -66,8 +79,11 @@
 .settings .anchor { position: relative; display: inline-flex; flex: none; }
 .settings .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; min-width: 180px; padding: 6px; display: flex; flex-direction: column; background: var(--modal); border-radius: var(--r-card); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pop); }
 .settings .menu.left { right: auto; left: 0; }
-/* No room below in the page: it opens upward (ui/popover.ts). */
+/* No room below in the page: it opens upward (ui/popover.ts). It grows from its button's corner, as
+   every popover does (styles.css › Overlays arrive). */
 .settings .menu[data-up] { top: auto; bottom: calc(100% + 6px); }
+.settings .menu:not(.left) { transform-origin: top right; }
+.settings .menu[data-up]:not(.left) { transform-origin: bottom right; }
 .settings .menu .mi { height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; white-space: nowrap; }
 .settings .menu .mi:hover, .settings .menu .mi:focus-visible { background: var(--sub2); color: var(--ink); }
 .settings .menu .mi .icon { color: var(--ink3); }

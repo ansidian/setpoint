@@ -138,6 +138,13 @@ mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **2
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
 paint doesn't fade.
 
+Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
+menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
+"+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
+180 ms and Settings 8 px over 260 ms, their scrims fading in; a pane's content, and the editor however
+it's opened, slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
+fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms; menus close at once.
+
 ## Glyphs, icons and the mark
 
 - **Icons:** Material Symbols Rounded, weight 300, FILL 0 (the `-fill` files are FILL 1 uses), as SVG
@@ -1577,3 +1584,19 @@ it changes what's on screen.
     line has no glyph. A line with an action shows its time draining as a 2 px hairline (`ink3` at
     45%) along its foot, and both wait while the pointer rests on it (Andy, 2026-10-11, polish audit
     shell-03, shell-04, shell-12, motion-03, states-07).
+141. **Overlays arrive with the motion Tokens names:** every menu and popover (the reader's More,
+    Settings' selects and row menus, the editor's menus, pickers and Places, the proposal's menus,
+    News's Upcoming, the attachment preview) grows in over 180 ms from 4 px and .97 at its anchor's
+    corner, upward from below when it opens upward; the "+N" popover grows from its "+N"; the
+    recurring-drop prompt and the failed card open as the floating detail does, .96 to 1 from their
+    item's side. ⌘K rises 6 px over 180 ms and Settings 8 px over 260 ms, each scrim fading in with
+    it (rising, not scaling: a big panel scaled in keeps its text drawn half a pixel off in
+    Chromium), and a Settings page switch fades its content up 4 px over 120 ms. ⌘K,
+    Settings and the "+N" popover fade out over 120 ms (Settings to .98), as the floating detail
+    closes, taking no keys or clicks while they fade, with focus already back where it was; menus
+    close at once. The reading pane's content, News's story pane and the editor opened by C, D or New
+    slide in 12 px over 180 ms, as the editor does after E; J, K and another row swap what the pane
+    shows without it. Alfred's Answer card and a proposal slide down 6 px over 180 ms, each new answer
+    fading up 4 px, and closed (×, Esc, Cancel, Create) they fold away as a row does, so the email
+    slides back up (Andy, 2026-10-11, polish audit motion-01, calflows-03, settings-02, shell-07,
+    calpanes-10, reader-12, search-08, motion-08).

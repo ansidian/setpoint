@@ -16,6 +16,7 @@ import type {Rect} from '../../logic/calendar.ts';
 import {canMove, dropLabel, edgeScroll} from '../../logic/manipulate.ts';
 import type {Point} from '../../logic/placement.ts';
 import {drag as dragTokens, layout} from '../../tokens.ts';
+import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {Chip, useRingColour} from './Chip.tsx';
@@ -69,6 +70,8 @@ interface Drag {
 
 export function MonthGrid(props: MonthGridProps) {
   const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, detail, overlays} = props;
+  // The "+N" popover fades out once closed (ui/exit.ts).
+  const {shown: shownPopover, closing: popoverClosing} = useExit(popover);
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState(() => rowsInView(monthTopRow(monthOf(selectedDay)) * ROW, 1000));
@@ -229,7 +232,7 @@ export function MonthGrid(props: MonthGridProps) {
     }
   }
 
-  const popoverItems = popover ? byDay.get(popover) ?? [] : [];
+  const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
   const liftedColour = drag ? colourVar(drag.item.colour ?? calendars.get(drag.item.calendar_id)?.colour ?? 'cool') : undefined;
   return (
     <section className="cal-month" aria-label="Month" ref={section} data-cal-section>
@@ -239,10 +242,10 @@ export function MonthGrid(props: MonthGridProps) {
           <div className="cal-grid" style={{top: rows.first * ROW}} data-cal-grid>{cells}</div>
         </div>
       </div>
-      {popover && popoverItems.length > 0 && (
-        <DayPopover date={popover} items={popoverItems} section={section} {...{selected, calendars, now, timeZone}}
-          onSelectItem={(item, chip, additive) => onSelectItem(item, popover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
-          onPress={(item, event) => onPress(item, popover, event)} />
+      {shownPopover && popoverItems.length > 0 && (
+        <DayPopover key={shownPopover} date={shownPopover} items={popoverItems} section={section} closing={popoverClosing} {...{selected, calendars, now, timeZone}}
+          onSelectItem={(item, chip, additive) => onSelectItem(item, shownPopover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
+          onPress={(item, event) => onPress(item, shownPopover, event)} />
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}

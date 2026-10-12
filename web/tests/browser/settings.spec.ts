@@ -16,7 +16,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, ROOT, startSetpoint, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, ROOT, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -169,7 +169,8 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
-    // The meter: 160 × 6, filled to $18.40 of $40.
+    // The meter: 160 × 6, filled to $18.40 of $40, measured once Settings has settled into place.
+    await still(page);
     const meter = news.locator('.meter');
     assert.deepEqual(await meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10]), [160, 6, 73.6]);
     assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), await computed(page, 'background', 'var(--ink2)'));
@@ -207,6 +208,8 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
     const line = month.locator('.s .caution');
     assert.equal(await line.textContent(), 'Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
     assert.equal(await line.evaluate(element => getComputedStyle(element).color), await computed(page, 'color', 'var(--caution)'));
+    // Measured once Settings has settled into place.
+    await still(page);
     assert.deepEqual(await month.locator('.meter > span').evaluate(fill => [fill.getBoundingClientRect().width, getComputedStyle(fill).backgroundColor]), [160, await computed(page, 'background', 'var(--caution)')]);
     await choose(page, 'Monthly cap', '$50');
     await month.locator('.amount', {hasText: '$40.40 of $50'}).waitFor();
@@ -824,7 +827,10 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
     const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a}, expected ${b}`);
 
+    // Each measured where it rests, once it has risen into place.
     await page.keyboard.press('Meta+k');
+    await page.locator('.palette').waitFor();
+    await still(page);
     const palette = await box('.palette');
     near(palette.width, 640 * 1.25, 'the palette\'s width');
     near(palette.x + palette.width / 2, 1200, 'the palette is centred');
@@ -832,6 +838,8 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     await page.keyboard.press('Escape');
 
     await page.keyboard.press('Meta+,');
+    await page.locator('.settings').waitFor();
+    await still(page);
     const modal = await box('.settings');
     near(modal.width, 1040 * 1.25, 'Settings\' width');
     near(modal.height, 720 * 1.25, 'Settings\' height');

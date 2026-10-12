@@ -9,7 +9,7 @@ import type {Locator, Page} from 'playwright-core';
 import {hangFrom} from '../../src/logic/calendar.ts';
 import type {Rect} from '../../src/logic/calendar.ts';
 import {placeBeside} from '../../src/logic/placement.ts';
-import {cleanUp, startSetpoint, until} from './harness.ts';
+import {cleanUp, startSetpoint, still, until} from './harness.ts';
 
 const WIDE = {width: 2400, height: 1300};
 const GAP = 8;
@@ -140,6 +140,8 @@ test('at 2400 × 1300 the "+3" popover hangs from its "+3"', async () => {
     await more.click();
     const popover = page.getByRole('dialog', {name: 'Sat, Oct 17'});
     await popover.waitFor();
+    // Measured where it rests, once it has grown in.
+    await still(page);
     const box = await rectOf(page, popover);
     const anchor = await rectOf(page, more);
     const section = await rectOf(page, page.locator('.cal-month'));

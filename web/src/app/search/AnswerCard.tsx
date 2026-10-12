@@ -13,6 +13,7 @@ import {AI_PATH} from '../../api/settings.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {alfredStepLine, answerSegments, searchedLine, shownSources, showsQuestion} from '../../logic/search.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {foldAway} from '../fold.ts';
 import {openSettings} from '../settings/store.ts';
 import {ProposalCard} from './ProposalCard.tsx';
 import {Account} from './Search.tsx';
@@ -32,6 +33,12 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   // The turns whose every source shows.
   const [allSources, setAllSources] = useState<ReadonlySet<number>>(new Set());
   const field = useRef<HTMLInputElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  // Closed (× or Esc), it folds away (app/fold.ts).
+  const close = () => {
+    foldAway(card.current);
+    alfred.close();
+  };
   const {turns, waiting, error, failed} = alfred;
   const {data: ai} = useResource<AiOut>(AI_PATH);
   // The field takes the keys when the card opens and after each answer.
@@ -48,12 +55,12 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
   const noKey = ai && !ai.keys.anthropic && !ai.keys.openai ? 'Alfred needs an Anthropic or OpenAI key in Settings › AI.' : null;
   const failure = error ?? (turns.length || asking ? null : noKey);
   return (
-    <div className="card answer" aria-label="Alfred's answer">
+    <div ref={card} className="card answer" aria-label="Alfred's answer">
       <div className="card-h">
         <Icon name="auto_awesome" size={16} />
         <span className="card-title">Alfred</span>
         <span className="grow" />
-        <button className="ibtn sm" type="button" aria-label="Close answer" onClick={alfred.close}><Icon name="close" size={16} /></button>
+        <button className="ibtn sm" type="button" aria-label="Close answer" onClick={close}><Icon name="close" size={16} /></button>
       </div>
       <div className="card-b">
         {turns.map((turn, index) => (
@@ -104,7 +111,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
             onKeyDown={event => {
               if (event.key === 'Escape') {
                 event.stopPropagation();
-                alfred.close();
+                close();
               } else if (event.key === 'Enter' && !asking && draft.trim()) {
                 event.preventDefault();
                 alfred.ask(draft);

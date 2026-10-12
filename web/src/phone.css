@@ -115,6 +115,8 @@
      (#257): a view transition (InboxPage's slide), the root saying which way. 260 ms, the modal
      timing, as the reader takes the whole screen. Taps go to the page beneath while it runs. */
   .pane { view-transition-name: ph-reader; }
+  /* The whole reader slides, so its content doesn't slide in again inside it (styles.css › pane-in). */
+  .pane > :not(.pane-edge) { animation: none; }
   .content > .list { view-transition-name: ph-list; }
   ::view-transition { pointer-events: none; }
   ::view-transition-group(ph-reader), ::view-transition-group(ph-list) { animation-duration: var(--dur-slow); }

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until} from './harness.ts';
+import {cleanUp, point, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -309,6 +309,8 @@ test('menus: on a short window the last source\'s opens upward, whole; the edito
     await openSettings(short, setpoint.base, 'accounts');
     const weatherRow = short.locator('.settings [data-source="weather"]');
     await weatherRow.waitFor();
+    // Settings risen into place, so the menu measures its room as it rests.
+    await still(short);
     // Weather's row at the bottom of what Settings' page shows.
     await weatherRow.evaluate(row => row.scrollIntoView({block: 'end'}));
     await short.getByRole('button', {name: 'Weather options'}).click();
@@ -322,6 +324,8 @@ test('menus: on a short window the last source\'s opens upward, whole; the edito
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').fill('Dinner fri 7-9pm');
+    // The editor slid into place, so each menu measures its room as it rests.
+    await still(page);
     for (const opener of ['Add reminder', 'Repeat']) {
       await page.getByRole('button', {name: opener, exact: true}).click();
       assert.deepEqual(await unclipped(page.locator('.editor .menu')), [], `${opener}'s menu`);

@@ -388,6 +388,19 @@ export async function point(row: Locator): Promise<void> {
 }
 
 /**
+ * Resolves once nothing on the page is moving: every entrance, exit, fold and fade (a finite
+ * animation or transition under 2 s; the toast's Undo clock and spinners aside) has run its course,
+ * and the page has drawn twice since, so what a check measures or screenshots is where it rests
+ * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own).
+ */
+export async function still(page: Page): Promise<void> {
+  await until('nothing moving', () => page.evaluate(() => document.getAnimations()
+    .filter(animation => animation.playState === 'running' && (animation.effect?.getComputedTiming().endTime as number) < 2000)
+    .map(animation => (animation as CSSAnimation).animationName ?? animation.constructor.name)), moving => moving.length === 0);
+  await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+}
+
+/**
  * Records each value `attribute` takes on `target` from now on, for a state too short-lived to read
  * after the action that starts it (a card's 120 ms close, the 180 ms theme fade): a busy machine can
  * take longer than that between the action and the read. Resolves to a reader of what it has seen.
@@ -567,6 +580,8 @@ export async function matchGolden(page: Page, name: string, region?: Region): Pr
   await page.evaluate(() => document.fonts.ready);
   // Lets the last hover or scroll settle before the screenshot.
   await page.waitForTimeout(250);
+  // And whatever arrived lately: it rests where the screenshot expects it, drawn as at rest.
+  await still(page);
   const options = {animations: 'disabled', caret: 'hide', style: MARK_CHECKED.has(name) ? undefined : WITHOUT_MARK} as const;
   // The region's box out to whole pixels, so the board audit crops its board exactly the same.
   const clip = region ? await page.locator(REGIONS[region]).evaluate(element => {

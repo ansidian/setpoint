@@ -25,7 +25,11 @@ function room(element: HTMLElement): {top: number; bottom: number; right: number
  */
 export function placeMenu(menu: HTMLElement | null) {
   if (!menu?.parentElement) return;
+  // Measured as it will rest, not as its entrance starts it (smaller and higher); the entrance then
+  // starts from the side it opens to.
+  menu.style.animation = 'none';
   const rect = menu.getBoundingClientRect();
+  menu.style.removeProperty('animation');
   const {top, bottom, right} = room(menu);
   const anchor = menu.parentElement.getBoundingClientRect();
   if (rect.right > right) menu.dataset.right = '';

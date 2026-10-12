@@ -36,6 +36,26 @@ export function foldOut(element: HTMLElement | null) {
   element?.animate([{height: `${element.offsetHeight}px`}, closed], {...timing, fill: 'forwards'});
 }
 
+/**
+ * A card closed on purpose (Alfred's Answer card, a proposal: ×, Esc, Cancel, Create) folds away as a
+ * leaving row does, so what's under it slides back up rather than jumping. The page drops the card at
+ * once; a copy of it, taking nothing, stays in its place for the fold, then goes.
+ */
+export function foldAway(element: Element | null) {
+  if (!(element instanceof HTMLElement) || !element.isConnected || element.dataset.folded !== undefined) return;
+  element.dataset.folded = '';
+  const ghost = element.cloneNode(true) as HTMLElement;
+  ghost.inert = true;
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+  ghost.style.overflow = 'hidden';
+  ghost.style.pointerEvents = 'none';
+  element.after(ghost);
+  // The copy arrives as a new element: its own entrance doesn't play again.
+  ghost.getAnimations({subtree: true}).forEach(animation => animation.cancel());
+  ghost.animate([{height: `${element.offsetHeight}px`}, closed], timing).onfinish = () => ghost.remove();
+}
+
 /** An arriving row's ref: it opens from nothing to its height (and back from a fold out not finished). */
 export function foldIn(element: HTMLElement | null) {
   if (!element) return;

@@ -11,7 +11,7 @@ import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, point, readSecurity, startSetpoint, until} from './harness.ts';
+import {cleanUp, collapseGroups, point, readSecurity, startSetpoint, still, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -627,6 +627,8 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     // Hidden, the frame is as wide as the reading pane's body (the images bar's width), wider than
     // the 622 px the email was built at, and exactly as tall as the email.
     await until('the hidden newsletter fits its frame', () => fit(page), fits);
+    // Measured where the pane rests, once its content has slid in.
+    await still(page);
     const width = (await page.locator('.imgbar').boundingBox())!.width;
     assert.ok(width > 622, `the images bar is ${width} px wide`);
     assert.equal((await element.boundingBox())!.width, width);

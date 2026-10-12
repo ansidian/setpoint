@@ -37,6 +37,7 @@ import {isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
+import {foldAway} from './fold.ts';
 import {MailList} from './MailList.tsx';
 import {usePhone} from './Phone.tsx';
 import {Reader} from './Reader.tsx';
@@ -400,7 +401,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, '1') && (searching || phone)) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (open !== null) run(close);
-        else if (alfred.open) run(alfred.close);
+        else if (alfred.open) run(() => {
+          // The Answer card folds away, as its own Esc does (app/fold.ts).
+          foldAway(document.querySelector('.search-list > .answer'));
+          alfred.close();
+        });
         else if (searching) run(() => search.clear());
         else if (cursor !== null) run(() => setCursor(null));
       }

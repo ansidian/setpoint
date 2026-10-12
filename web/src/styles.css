@@ -401,3 +401,35 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .pane > .pane-edge { display: none; }
   .rd-tools .rd-back { display: inline-grid; }
 }
+
+/* ---------- Overlays arrive (DESIGN.md › Motion: 180 ms popovers and panes, 260 ms modals) ---------- */
+/* Every menu and popover grows in from where it hangs: 4 px and .97 to its place over 180 ms, from its
+   anchor's corner (ui/popover.ts marks one that opens upward or lines up on the right before it's
+   drawn). Menus close at once, as a pick or Esc should. */
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+@keyframes pop-in-up { from { opacity: 0; transform: translateY(4px) scale(.97); } }
+.pop { animation: pop-in var(--dur-medium) var(--ease); transform-origin: top left; }
+.pop:is([data-right], .right, .more-menu) { transform-origin: top right; }
+.pop[data-up] { animation-name: pop-in-up; transform-origin: bottom left; }
+.pop[data-up]:is([data-right], .right, .more-menu) { transform-origin: bottom right; }
+/* The attachment preview covers the pane, so it grows from the pane's top. */
+.pop.attach-preview { transform-origin: center top; }
+/* A card anchored to a calendar item opens as the floating detail does, .96 to 1 from the item's side. */
+@keyframes anchored-in { from { opacity: 0; transform: scale(.96); } }
+.scope-card, .failed-card { animation: anchored-in var(--dur-medium) var(--ease); transform-origin: left center; }
+.scope-card[data-side="left"], .failed-card[data-side="left"] { transform-origin: right center; }
+.scope-card[data-side="above"], .failed-card[data-side="above"] { transform-origin: center bottom; }
+.scope-card[data-side="below"], .failed-card[data-side="below"] { transform-origin: center top; }
+/* A scrim fades in under what it's behind, and out with it. */
+@keyframes scrim-in { from { opacity: 0; } }
+@keyframes scrim-out { to { opacity: 0; } }
+/* A pane's content arrives beside the list, 12 px, as the editor does after E; swapping what it shows
+   (J, K, another row) keeps the pane, so that stays instant. */
+@keyframes pane-in { from { opacity: 0; transform: translateX(12px); } }
+.pane > :not(.pane-edge) { animation: pane-in var(--dur-medium) var(--ease); }
+/* Alfred's Answer card and a proposal slide into place (and fold away, app/fold.ts › foldAway); each
+   answer, and the question waiting for it, fades up. */
+@keyframes card-in { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes turn-in { from { opacity: 0; transform: translateY(4px); } }
+.answer, .prop { animation: card-in var(--dur-medium) var(--ease); }
+.answer .card-b > :is(.ans, .ans-none, .srcs, .waiting, .q:has(+ .waiting), .prop) { animation: turn-in var(--dur-medium) var(--ease); }

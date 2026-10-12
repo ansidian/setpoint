@@ -111,9 +111,13 @@
 /* ⌘Enter on a recurring event: the chooser takes the footer's place, and its Save is the only Save. */
 .editor .scope-pop { margin: auto 16px 16px; padding: 6px; flex: none; }
 
-/* Edit hands the item over from the floating detail (F5): the editor slides in 12 px. */
+/* Edit hands the item over from the floating detail (F5): the editor slides in 12 px. Opened any other
+   way (C, D, New), it slides in the same 12 px over a pane's 180 ms (styles.css › Overlays arrive). */
 @keyframes ed-in { from { opacity: 0; transform: translateX(var(--detail-editor-slide)); } }
 .editor.handed { animation: ed-in var(--detail-edit) var(--ease); }
+.editor:not(.handed) { animation: pane-in var(--dur-medium) var(--ease); }
+/* The scope chooser takes the footer's place, so it rises from there. */
+.editor .scope-pop { animation-name: pop-in-up; transform-origin: bottom left; }
 
 /* F6b: "from the email" marks (the proposal card's, board 08) on the fields an email gave, and its
    legend in the footer; the labels row's empty line. */

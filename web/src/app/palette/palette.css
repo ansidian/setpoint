@@ -15,5 +15,15 @@
 .palette .item .kbd, .palette .item .tick { margin-left: auto; }
 .palette .item .tick .icon { color: inherit; }
 .palette .none { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--ink3); }
+/* It rises 6 px into place over 180 ms with its scrim fading in (typing works at once), and fades out
+   over 120 ms to .98, taking no clicks, as the floating detail closes (DESIGN.md › Motion). It rises
+   without scaling, as Settings does (settings.css). */
+.palette { animation: pal-in var(--dur-medium) var(--ease); transform-origin: 50% 0; }
+.palette-scrim { animation: scrim-in var(--dur-medium) var(--ease); }
+.palette.closing { animation: pal-out var(--dur-fast) var(--ease) forwards; }
+.palette-scrim.closing { animation: scrim-out var(--dur-fast) var(--ease) forwards; }
+.palette.closing, .palette-scrim.closing { pointer-events: none; }
+@keyframes pal-in { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } }
+@keyframes pal-out { to { opacity: 0; transform: translateX(-50%) scale(.98); } }
 /* The pointer takes the cursor (a `sub2` fill), over 120 ms (DESIGN.md › Decided while building #12). */
 .palette .item { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }

@@ -2,7 +2,7 @@
 // behind; on an open email it lists This email (the reader's, commands.ts), then Go to and
 // Appearance with the current theme ticked. Typing finds every command, the ones that only have a
 // key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
-// goes back where it was.
+// goes back where it was. It rises in over 180 ms and fades out over 120 ms (DESIGN.md › Motion).
 import type {AccountOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react';
@@ -10,6 +10,7 @@ import {markAllRead} from '../../api/mail.ts';
 import {paletteList, SECTION_LABELS, stepCursor} from '../../logic/palette.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
+import {useExit, useFocusReturn} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle, useAccounts} from '../accounts.ts';
 import type {SettingsPage} from '../../logic/route.ts';
@@ -67,23 +68,28 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: Account
   ];
 }
 
+// Each opening, so one opened while the last fades out starts afresh.
+let opened = 0;
+
 export function Palette() {
-  const [offer, setOffer] = useState<Offer | null>(null);
+  const [open, setOpen] = useState<{offer: Offer; n: number} | null>(null);
+  // It rises in over 180 ms and fades out over 120 ms, taking no keys or clicks meanwhile (palette.css).
+  const {shown, closing} = useExit(open);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'k') return;
       event.preventDefault();
-      setOffer(current => (current ? null : offered()));
+      setOpen(current => (current ? null : {offer: offered(), n: ++opened}));
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  return offer && <Open offer={offer} onClose={() => setOffer(null)} />;
+  return shown && <Open key={shown.n} offer={shown.offer} closing={closing} onClose={() => setOpen(null)} />;
 }
 
-function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
+function Open({offer, closing, onClose}: {offer: Offer; closing: boolean; onClose: () => void}) {
   const theme = useThemeChoice();
   const {list: accounts} = useAccounts();
   const [query, setQuery] = useState('');
@@ -94,11 +100,10 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   const items = groups.flatMap(group => group.items);
   const at = Math.min(cursor, Math.max(0, items.length - 1));
 
-  // Focus goes back where it was when it closes.
+  // Focus goes back where it was as it starts to close, so a command acts on the page.
+  useFocusReturn(closing);
   useEffect(() => {
-    const before = document.activeElement as HTMLElement | null;
     input.current?.focus();
-    return () => before?.focus?.();
   }, []);
 
   useEffect(() => {
@@ -133,8 +138,8 @@ function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   let index = 0;
   return (
     <>
-      <div className="palette-scrim" onPointerDown={onClose} />
-      <div className="palette" role="dialog" aria-label="Command palette" onKeyDown={onKeyDown}>
+      <div className={closing ? 'palette-scrim closing' : 'palette-scrim'} onPointerDown={onClose} />
+      <div className={closing ? 'palette closing' : 'palette'} role="dialog" aria-label="Command palette" inert={closing} onKeyDown={onKeyDown}>
         {offer.context && (
           <div className="ctx"><span className="tag"><span className="dot sm" style={dotStyle(offer.context.colour)} /><span className="ell">{offer.context.label}</span></span></div>
         )}

@@ -255,9 +255,9 @@ test('Alfred: ⌘Enter answers above the results with its source, a follow-up go
     await until('the second answer', () => page.locator('.answer .ans').count(), count => count === 2);
     assert.equal(await page.locator('.answer .ans').nth(1).innerHTML(), '<b>$2,140</b> a month, up from $2,060.');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Ask a follow-up');
-    // Esc in the follow-up closes the card; the results stay.
+    // Esc in the follow-up closes the card (a copy that takes nothing folds away in its place); the results stay.
     await page.keyboard.press('Escape');
-    assert.equal(await page.locator('.answer').count(), 0);
+    assert.equal(await page.locator('.answer:not([aria-hidden])').count(), 0);
     await page.locator('.ask').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -380,7 +380,7 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
     await page.locator('.pane .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
     // The button closes it again.
     await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
-    assert.equal(await page.locator('.pane .answer').count(), 0);
+    assert.equal(await page.locator('.pane .answer:not([aria-hidden])').count(), 0);
     // With no key, the card says so as it opens, before anything is asked.
     await setpoint.api('DELETE', '/secrets/anthropic_api_key');
     await page.reload();
@@ -446,7 +446,8 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     const page = await load(setpoint);
     await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
-    const card = page.locator('.pane .prop');
+    // The card itself, not the copy that folds away in its place once it closes (app/fold.ts).
+    const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Title"]').inputValue(), 'CS 101 final exam');
     assert.deepEqual(await card.locator('.prow .field input').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)), ['Wed, Dec 9', '7:00 PM', '9:00 PM']);
@@ -703,7 +704,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
     const page = await load(setpoint);
     await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
-    const card = page.locator('.pane .prop');
+    const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Place"]').count(), 0);
     const field = card.locator('input[aria-label="Project"]');

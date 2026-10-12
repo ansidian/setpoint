@@ -6,7 +6,7 @@
 // and times take typing as the editor's do, blank when the email gave no day (SV-24); the conflict
 // line is the email's time's, so it goes once they change (the editor's preview follows them).
 import type {CalendarOut, CommandOut, ProposalField, ProposalItemOut, ProposalOut, Settings, TodoistProjectOut} from '@setpoint/shared';
-import {useMemo, useState} from 'react';
+import {useMemo, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import {refresh, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
@@ -22,6 +22,7 @@ import {useRingColour} from '../calendar/Chip.tsx';
 import {handProposal} from '../calendar/Editor.tsx';
 import {DateField, ProjectField, TimeField} from '../calendar/Pickers.tsx';
 import {navigate} from '../router.ts';
+import {foldAway} from '../fold.ts';
 import {showToast} from '../toast.ts';
 
 // A time added to an all-day proposal starts here, as the editor's do.
@@ -57,8 +58,14 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [closed, setClosed] = useState(false);
+  const form = useRef<HTMLFormElement>(null);
   if (closed) return null;
-  const close = onClose ?? (() => setClosed(true));
+  // Closed (Cancel, Esc, Create), it folds away (app/fold.ts).
+  const close = () => {
+    foldAway(form.current);
+    if (onClose) onClose();
+    else setClosed(true);
+  };
 
   const choices = (calendars ?? []).filter(calendar => calendar.provider === (kind === 'event' ? 'google' : 'todoist'));
   const calendar = calendars?.find(one => one.id === calendarId);
@@ -110,7 +117,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   };
 
   return (
-    <form className={['card', 'prop', pending && 'pending', inAnswer && 'in-answer'].filter(Boolean).join(' ')} aria-label={kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task'}
+    <form ref={form} className={['card', 'prop', pending && 'pending', inAnswer && 'in-answer'].filter(Boolean).join(' ')} aria-label={kind === 'event' ? 'Proposal: add to calendar' : 'Proposal: add as task'}
       onSubmit={event => void create(event)}
       onKeyDown={event => {
         if (event.key !== 'Escape') return;

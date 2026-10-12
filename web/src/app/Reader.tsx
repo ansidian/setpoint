@@ -23,6 +23,7 @@ import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
+import {foldAway} from './fold.ts';
 import {MailFrame} from './MailFrame.tsx';
 import {useCommands} from './palette/commands.ts';
 import {usePhone} from './Phone.tsx';
@@ -185,10 +186,15 @@ function useCards(id: number) {
   const show = (next: Panel) => setState({id, panel: next});
   const settle = (change: (panel: Panel) => Panel) => setState(current => (current.id === id ? {id, panel: change(current.panel)} : current));
   const alfred = useAlfred(id);
+  // Its button again closes the card: it folds away as its own × does (app/fold.ts).
+  const foldCard = () => foldAway(document.querySelector('.pane .rd-scroll > .card'));
   return {
     panel, alfred,
     propose(kind: ItemKind) {
-      if (panel?.kind === kind) return show(null);
+      if (panel?.kind === kind) {
+        foldCard();
+        return show(null);
+      }
       show({kind, proposal: null});
       proposeFromMessage(id, kind).then(
         proposal => settle(current => (current?.kind === kind ? {kind, proposal} : current)),
@@ -200,6 +206,7 @@ function useCards(id: number) {
     },
     ask() {
       if (panel?.kind === 'ask') {
+        foldCard();
         alfred.close();
         return show(null);
       }

@@ -116,7 +116,7 @@ export function Menu({button, label, align = 'right', className, children}: {but
       }
     }}>
       <span onClick={event => setOpen(open ? false : event.detail === 0 ? 'keys' : 'pointer')} aria-label={label} aria-expanded={!!open} role="presentation">{button}</span>
-      {open && <div ref={placeMenu} className={['menu', align === 'left' && 'left', className].filter(Boolean).join(' ')} role="menu" aria-label={label}>{children(close)}</div>}
+      {open && <div ref={placeMenu} className={['pop menu', align === 'left' && 'left', className].filter(Boolean).join(' ')} role="menu" aria-label={label}>{children(close)}</div>}
     </span>
   );
 }

@@ -11,7 +11,7 @@ import {after, test} from 'node:test';
 import type {MissedOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, startSetpoint, still, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -266,6 +266,8 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await fire.click();
     const pane = page.locator('section.pane');
     await pane.locator('.src-row').first().waitFor();
+    // Measured where the pane rests, once its content has slid in.
+    await still(page);
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
     assert.deepEqual(await glyphs(pane.locator('.st-secs .tag .icon')), [['location_on', '14', await colourOf(page, 'var(--ink3)')]], 'the section\'s tag leads with its glyph (#161)');
