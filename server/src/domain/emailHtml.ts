@@ -4,7 +4,9 @@
 // this also strips what an email must never do there: scripts, frames, plugins, base and meta tags
 // (a meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event
 // handlers and javascript: links. While remote content is hidden, images become board 02's hatched
-// placeholders with their alt text, tracking pixels go, and remote backgrounds go. Links open in a
+// placeholders with their alt text (or the hidden-image glyph), as tall as their picture would be when
+// they say so and holding the email's shape when they don't; tracking pixels go, and remote
+// backgrounds go. Links open in a
 // new tab. The page ends with the reader's measuring script, the one script its policy lets run.
 // Pure: a string in, a page out.
 import {createHash} from 'node:crypto';
@@ -29,6 +31,30 @@ const unsafeUrl = (value: string) => /^(javascript|vbscript|data:text\/html)/i.t
 const pixels = (value: string | undefined) => (value && /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : null);
 const elements = (root: Document | ChildNode[], test: (element: Element) => boolean) => findAll(test, Array.isArray(root) ? root : root.children);
 
+// design-export/glyphs/icons.json's hide_image (Material Symbols Rounded 300), the reader's own glyph
+// for hidden images, drawn in the frame's grey on a placeholder with no alt text to say "picture".
+const HIDE_IMAGE = "M820 -747.69V-316.15Q820 -301.15 810.58 -293.65Q801.15 -286.15 790 -286.15Q778.85 -286.15 769.42 -293.96Q760 -301.77 760 -316.77V-747.69Q760 -752.31 756.15 -756.15Q752.31 -760 747.69 -760H315.77Q300.77 -760 293.27 -769.42Q285.77 -778.85 285.77 -790Q285.77 -801.15 293.27 -810.58Q300.77 -820 315.77 -820H747.69Q778 -820 799 -799Q820 -778 820 -747.69ZM212.31 -140Q182 -140 161 -161Q140 -182 140 -212.31V-735.69L90.92 -784.77Q82.62 -793.08 82.42 -805.65Q82.23 -818.23 90.92 -826.92Q99.62 -835.62 112 -835.62Q124.38 -835.62 133.08 -826.92L826.92 -133.08Q835.23 -124.77 835.42 -112.19Q835.62 -99.62 826.92 -90.92Q818.23 -82.23 805.85 -82.23Q793.46 -82.23 784.77 -90.92L735.69 -140ZM585.08 -290H306.16Q295.31 -290 290.08 -299.85Q284.85 -309.69 292.08 -318.92L355.15 -402.84Q360.77 -410.08 369.42 -410.08Q378.08 -410.08 383.69 -403.23L449.23 -319.23L496.08 -379L200 -675.08V-212.31Q200 -207.69 203.85 -203.85Q207.69 -200 212.31 -200H675.08ZM537 -537Q537 -537 537 -537Q537 -537 537 -537ZM437.85 -437.85Q437.85 -437.85 437.85 -437.85Q437.85 -437.85 437.85 -437.85Z";
+const GLYPH_GREY = '#a3a6ab';
+
+/**
+ * A placeholder's height when the image gives none (polish audit reader-10): a quarter of its width,
+ * 56 to 160, so a mailing service's 602-wide picture keeps 150 px of the newsletter's shape (a small one
+ * stays square); with no size at all and no words, a 56 px band the width of its line.
+ */
+function heldHeight(width: number | null, alt: string): number | null {
+  if (width !== null) return Math.min(160, Math.max(Math.min(width, 56), Math.floor(width / 4)));
+  return alt ? null : 56;
+}
+
+/** The hide_image glyph, 20 px, centred on a placeholder. */
+function hiddenGlyph(): Element {
+  const glyph = new Element('svg', {width: '20', height: '20', viewBox: '0 -960 960 960', fill: GLYPH_GREY, 'aria-hidden': 'true'});
+  const shape = new Element('path', {d: HIDE_IMAGE});
+  shape.parent = glyph;
+  glyph.children = [shape];
+  return glyph;
+}
+
 /** A hidden image's placeholder, or null for a tracking pixel. */
 function placeholder(image: Element): Element | null {
   const width = pixels(image.attribs.width);
@@ -36,15 +62,15 @@ function placeholder(image: Element): Element | null {
   if (width !== null && height !== null && width <= 2 && height <= 2) return null;
   const style = image.attribs.style ?? '';
   const block = /display\s*:\s*(block|flex|grid|table)\b/i.test(style);
-  const parts = [PLACEHOLDER, width !== null ? `width: ${width}px;` : '', height !== null ? `height: ${height}px;` : '',
-    style.trim() ? `${style.trim().replace(/;?$/, ';')}` : '', `display: ${block ? 'grid' : 'inline-grid'};`];
-  const span = new Element('span', {style: parts.filter(Boolean).join(' '), 'data-hidden-image': ''});
   const alt = image.attribs.alt ?? '';
-  if (alt) {
-    const text = new Text(alt);
-    text.parent = span;
-    span.children = [text];
-  }
+  // Its own style's height wins unless it's `auto`, which a placeholder can't take from a picture it hasn't loaded.
+  const held = height === null && !/(^|;)\s*height\s*:(?!\s*auto\b)/i.test(style) ? heldHeight(width, alt) : null;
+  const parts = [PLACEHOLDER, width !== null ? `width: ${width}px;` : held !== null ? 'width: 100%;' : '', height !== null ? `height: ${height}px;` : '',
+    style.trim() ? `${style.trim().replace(/;?$/, ';')}` : '', held !== null ? `height: ${held}px;` : '', `display: ${block ? 'grid' : 'inline-grid'};`];
+  const span = new Element('span', {style: parts.filter(Boolean).join(' '), 'data-hidden-image': ''});
+  const inside = alt ? new Text(alt) : hiddenGlyph();
+  inside.parent = span;
+  span.children = [inside];
   return span;
 }
 

@@ -538,3 +538,18 @@ test('reader-03, -04, -09: each email swaps in from the way the user stepped; a 
     await setpoint.stop();
   }
 });
+
+test('reader-10: a newsletter whose images give only their width keeps its shape while they\'re hidden', async () => {
+  const setpoint = await startSetpoint({fixtures: ['newsletter-html']});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
+    // Three 602-wide pictures at 150 each, their padding and the footer: never the ~100 px band it was.
+    await until('the frame holds the newsletter', () => page.locator('.mailframe').evaluate(frame => frame.getBoundingClientRect().height), height => height > 450);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

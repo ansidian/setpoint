@@ -353,7 +353,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   1 px `mailEdge` hairline in Light (#134). The body starts 12 px under the actions (#133).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
   **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
-  contosocoffee.example" (trust per domain).
+  contosocoffee.example" (trust per domain); each hidden image keeps its place as a hatched
+  placeholder (#209).
 - **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
   type's tile (#163), name and size, then the preview's eye and **Download** with its glyph; PDF,
   image and CSV open a preview.
@@ -2191,3 +2192,9 @@ it changes what's on screen.
     `ink2`) fades in over 120 ms at the pointer's height; dragging, the line is `ink3` and the grip
     stays; a double-click puts the pane back to 680. News's story pane shares it (Andy, 2026-10-11,
     polish audit reader-09).
+209. **Hidden images keep the email's shape:** a hidden image that gives its width but no height
+    holds a quarter of its width, 56 to 160 px (a small one stays square), so a mailing service's
+    newsletter keeps its pictures' places rather than collapsing to a band; one with no size and no
+    words is a 56 px band its line's width; and a placeholder with no alt text shows the 20 px
+    `hide_image` glyph at its centre in the frame's grey, so it still says "picture" (Andy,
+    2026-10-11, polish audit reader-10).

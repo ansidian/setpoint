@@ -38,7 +38,16 @@ describe('remote content', () => {
     ['an image becomes its placeholder, with its alt text and size', '<img src="https://cdn.example/hero.jpg" alt="Hero image" width="600" height="130" style="display: block">',
       /^<span style="background: repeating-linear-gradient\(135deg, #eceef0 0 3px, #f6f7f8 3px 8px\);.* width: 600px; height: 130px; display: block; display: grid;" data-hidden-image>Hero image<\/span>$/],
     ['an inline image keeps flowing inline', '<img src="https://cdn.example/a.png" alt="A">', /display: inline-grid;" data-hidden-image>A<\/span>$/],
-    ['an image with no alt is an empty placeholder', '<img src="https://cdn.example/a.png" width="20" height="20">', /data-hidden-image><\/span>$/],
+    // reader-10: a blank hatch still says "picture", with the hide_image glyph at its centre.
+    ['an image with no alt shows the hidden-image glyph', '<img src="https://cdn.example/a.png" width="40" height="40">',
+      /width: 40px; height: 40px; display: inline-grid;" data-hidden-image><svg width="20" height="20" viewBox="0 -960 960 960" fill="#a3a6ab" aria-hidden="true"><path d="M820 -747\.69[^"]*"\/><\/svg><\/span>$/],
+    // A mailing service's image gives only its width: a quarter of it as its height, 56 to 160, over its
+    // own `height: auto`, so the newsletter keeps its shape.
+    ['a width and no height: a quarter of the width, at most 160', '<img src="https://cdn.example/masthead.png" width="602" alt="" style="display: block; height: auto; max-width: 100%">',
+      /width: 602px; display: block; height: auto; max-width: 100%; height: 150px; display: grid;" data-hidden-image><svg /],
+    ['a width and no height: at least 56', '<img src="https://cdn.example/strip.png" width="200" alt="Strip">', /width: 200px; height: 56px; display: inline-grid;" data-hidden-image>Strip<\/span>$/],
+    ['a small one stays square', '<img src="https://cdn.example/social.png" width="32" alt="Social" style="display: inline-block">', /width: 32px; display: inline-block; height: 32px; display: inline-grid;" data-hidden-image>Social<\/span>$/],
+    ['no size and no alt: the line\'s width, 56 tall, with its glyph', '<img src="https://cdn.example/a.png">', /width: 100%; height: 56px; display: inline-grid;" data-hidden-image><svg /],
     ['a tracking pixel goes entirely', '<p>Hi</p><img src="https://cdn.example/open.gif?m=1" width="1" height="1" alt="">', /^<p>Hi<\/p>$/],
     ['remote backgrounds go', '<td background="https://cdn.example/bg.png" style="color: red; background: url(\'https://cdn.example/bg.png\') no-repeat">x</td>',
       /^<td style="color: red; background: none no-repeat">x<\/td>$/],
