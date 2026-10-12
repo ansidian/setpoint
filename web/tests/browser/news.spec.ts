@@ -371,8 +371,10 @@ test('New since you looked shows the newest four facts, then "6 more"; a click o
     assert.deepEqual(await visible(), ['Grew from 150 to 400 acres overnight; evacuation warnings widened', 'Two schools in the warning area are closed for the day', 'Fact 8 since the last look', 'Fact 7 since the last look']);
     assert.equal(await card.locator('.st-fold').textContent(), '6 more');
     assert.deepEqual(await glyphs(card.locator('.st-fold .icon')), [['expand_more', '16', await colourOf(page, 'var(--ink3)')]]);
-    // The fold sits level with the facts' text, in ink2 12.5, 20 px high.
-    const textLeft = await card.locator('.it').first().locator('span').last().evaluate(text => text.getBoundingClientRect().left);
+    // The fold sits level with the facts' text, in ink2 12.5, 20 px high: measured once the pane's
+    // content has slid its 12 px into place, as the two are read one after the other.
+    await still(page);
+    const textLeft =await card.locator('.it').first().locator('span').last().evaluate(text => text.getBoundingClientRect().left);
     assert.deepEqual(await card.locator('.st-fold').evaluate(fold => {
       const range = document.createRange();
       range.selectNodeContents(fold.firstChild!);

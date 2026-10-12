@@ -336,7 +336,10 @@ test('a long page keeps its title and × in place while it scrolls, a hairline u
     // News's sources: scrolled 100 px into its longest section, that section's label stays under the title.
     await openAt(page, setpoint.base, 'news');
     await page.locator('.settings .news-src').first().waitFor();
-    const longest = await page.locator('.settings .set-main').evaluate(scroller => {
+    // Measured once the page rests: its sections mount with their answer, after the head, so while
+    // they fade up their 4 px a label sits that far off the head's foot.
+    await still(page);
+    const longest =await page.locator('.settings .set-main').evaluate(scroller => {
       const sections = [...scroller.querySelectorAll<HTMLElement>('.set-sec')];
       const section = sections.reduce((a, b) => (b.offsetHeight > a.offsetHeight ? b : a));
       scroller.scrollTo({top: section.offsetTop + 100});
