@@ -62,6 +62,9 @@ export interface MonthGridProps {
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   // Overlays anchored to items (the drop prompt, the failed card), drawn in the month section.
   overlays?: ReactNode;
+  // Arriving from Week: it settles out around this height in the section, the selected week's row (polish audit grids-09).
+  enter?: number | null;
+  onEntered?: () => void;
 }
 
 interface Drag {
@@ -75,7 +78,7 @@ interface Drag {
 }
 
 export function MonthGrid(props: MonthGridProps) {
-  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, detail, overlays} = props;
+  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, detail, overlays, enter = null, onEntered} = props;
   // The "+N" popover fades out once closed (ui/exit.ts).
   const {shown: shownPopover, closing: popoverClosing} = useExit(popover);
   const section = useRef<HTMLElement>(null);
@@ -287,7 +290,9 @@ export function MonthGrid(props: MonthGridProps) {
   const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
   const liftedColour = drag ? colourVar(drag.item.colour ?? calendars.get(drag.item.calendar_id)?.colour ?? 'cool') : undefined;
   return (
-    <section className="cal-month" aria-label="Month" ref={section} data-cal-section>
+    <section className="cal-month" aria-label="Month" ref={section} data-cal-section data-enter={enter === null ? undefined : 'out'}
+      style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
+      onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
       <div className="cal-dow">{WEEKDAYS.map(name => <span key={name}>{name}</span>)}</div>
       <div className="cal-scroll" ref={scroller} onScroll={onScroll} onWheel={stopGlide} onTouchStart={stopGlide} onPointerDown={stopGlide} data-cal-scroll>
         <div className="cal-track" style={{height: WEEK_COUNT * ROW}}>

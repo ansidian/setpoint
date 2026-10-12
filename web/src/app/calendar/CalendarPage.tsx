@@ -21,7 +21,7 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, setCalendarVisible, updateItem} from '../../api/items.ts';
-import {addMonths, dayTitle, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, timeRange} from '../../logic/calendar.ts';
+import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
 import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating} from '../../logic/manipulate.ts';
@@ -32,8 +32,9 @@ import type {CalendarMode, Route} from '../../logic/route.ts';
 import {DEFAULT_SCOPE, moveLine, scopeChoices} from '../../logic/scope.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {movedLine, resizedLine, visibleItems, weekMonth, weekStart, weekTitle} from '../../logic/week.ts';
-import {glide} from '../../tokens.ts';
+import {glide, layout} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
@@ -85,6 +86,20 @@ function useSolidKey(selectedKey: string | null): string | null {
 }
 
 const EMPTY_ITEMS: ItemOut[] = [];
+
+/**
+ * Where the zoom between Month and Week centres (polish audit grids-09): the middle of the selected
+ * week's row in the month's section, as the month shows it (leaving) or will (arriving, its month's
+ * first row at the top), or the section's middle when that row is out of view.
+ */
+function zoomRow(selectedDay: string, to: CalendarMode): number {
+  const section = document.querySelector<HTMLElement>('[data-cal-section]');
+  const height = section?.clientHeight ?? 0;
+  const rows = weekIndex(selectedDay) - FIRST_WEEK;
+  const scrolled = to === 'week' ? document.querySelector<HTMLElement>('.cal-scroll')?.scrollTop ?? 0 : monthTopRow(monthOf(selectedDay)) * layout.monthRow;
+  const y = rows * layout.monthRow - scrolled + layout.weekdayRow + layout.monthRow / 2;
+  return y > layout.weekdayRow && y < height ? y : height / 2;
+}
 
 /** The items of a few months around the one shown, each month its own cached resource. */
 function useMonths(months: string[]): {items: ItemOut[]; weather: Map<string, WeatherDayOut>} {
@@ -359,10 +374,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       requestAnimationFrame(() => requestAnimationFrame(pulseToday));
     } else scrollToMonth(monthOf(today), 'today');
   };
+  // Week is Month zoomed in on the selected week (polish audit grids-09): it scales up into place from
+  // that week's row, and Month settles back out around it.
+  const [zoom, setZoom] = useState<{to: CalendarMode; y: number} | null>(null);
   /** Month | Week, M and W: Week opens on the selected day's week, Month on its month. */
   const switchMode = (next: CalendarMode) => {
     if (next === mode) return;
     setPopover(null);
+    setZoom({to: next, y: zoomRow(selectedDay, next)});
     if (next === 'week') showWeek(weekStart(selectedDay), 'jump');
     else scrollToMonth(monthOf(selectedDay));
     navigate({...route, view: next});
@@ -746,7 +765,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         </span>
         {/* Search hides Month | Week, as mail's hides Unread | All (D48); the grid still pages. */}
         {!searching && (
-          <span className="seg" style={{marginLeft: 8}}>
+          <span className="seg" ref={segThumb} style={{marginLeft: 8}}>
             <button type="button" className={mode === 'month' ? 'on' : undefined} aria-pressed={mode === 'month'} title="Month · M" onClick={() => switchMode('month')}>Month</button>
             <button type="button" className={mode === 'week' ? 'on' : undefined} aria-pressed={mode === 'week'} title="Week · W" onClick={() => switchMode('week')}>Week</button>
           </span>
@@ -762,11 +781,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             sit atop the grid instead, so a failing one still shows (#258). */}
         {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
         {mode === 'week' ? (
-          <WeekGrid week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
+          <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
             calendars={calendarsById} now={now} timeZone={zone} scroll={view.scroll} popover={popover} onSelectDay={clickDay} onSelectItem={selectItem} onPopover={setPopover}
             onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} detail={detailProps} overlays={overlays} />
         ) : (
-          <MonthGrid shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
+          <MonthGrid enter={zoom?.to === 'month' ? zoom.y : null} onEntered={() => setZoom(null)} shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
             now={now} timeZone={zone} scroll={view.scroll} popover={popover} onShownMonth={setShownMonth} onSelectDay={clickDay}
             onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} detail={detailProps} overlays={overlays} />
         )}

@@ -22,6 +22,9 @@
 
 /* ---------- The month ---------- */
 .cal-month { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+/* Back from Week, the month settles out around the selected week's row (polish audit grids-09). */
+.cal-month[data-enter="out"] { animation: cal-zoom-out var(--dur-medium) var(--ease); transform-origin: 50% var(--zoom-y); }
+@keyframes cal-zoom-out { from { opacity: 0; transform: scale(1.015); } }
 .cal-dow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); height: var(--weekdayRow); align-items: center; border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
 .cal-dow > span { padding-left: 12px; }
 /* Infinite vertical scroll through months, with no scrollbar taking a column's width. */

@@ -33,6 +33,7 @@ import {phoneGroups} from '../logic/phone.ts';
 import type {MailView, Route} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
+import {segThumb} from '../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
@@ -435,7 +436,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" title="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
         {!searching && !phone && (
-          <span className="seg">
+          <span className="seg" ref={segThumb}>
             {/* U's hint sits on the one it switches to (#105). */}
             <button type="button" className={viewOf('unread')} data-hint={all ? 'u' : undefined} onClick={() => go({view: 'unread', open: null})}>Unread{all && <span className="kbd">U</span>}</button>
             <button type="button" className={viewOf('all')} data-hint={all ? undefined : 'u'} onClick={() => go({view: 'all', open: null})}>All{!all && <span className="kbd">U</span>}</button>

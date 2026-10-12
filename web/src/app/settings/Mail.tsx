@@ -12,6 +12,7 @@ import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRule
 import {localDate} from '../../logic/format.ts';
 import {expiryLabel, laneTag, matchesThisMonth, moved, ruleWords, senderMatch, splitRules} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {segThumb} from '../../ui/seg.ts';
 import {useNow} from '../clock.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
@@ -66,7 +67,7 @@ export function MailPage() {
         <div className="set-group">
           <div className="set-row">
             <div className="lines grow"><span className="t">Code expiry</span><span className="s">Verification codes leave the Inbox after</span></div>
-            <span className="seg" role="radiogroup" aria-label="Code expiry">
+            <span className="seg" ref={segThumb} role="radiogroup" aria-label="Code expiry">
               {CODE_EXPIRY_PRESETS.map(minutes => (
                 <button key={minutes} type="button" role="radio" aria-checked={settings?.mail.code_expiry_minutes === minutes}
                   className={settings?.mail.code_expiry_minutes === minutes ? 'on' : undefined}

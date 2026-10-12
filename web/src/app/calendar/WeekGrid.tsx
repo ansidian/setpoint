@@ -65,6 +65,9 @@ export interface WeekGridProps {
   onChange: (item: ItemOut, changes: ItemChanges, from: string, to: string, kind: 'move' | 'resize') => void;
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   overlays?: ReactNode;
+  // Arriving from Month: it zooms in from this height in the section, the selected week's row there (polish audit grids-09).
+  enter?: number | null;
+  onEntered?: () => void;
 }
 
 type Area = 'hours' | 'all';
@@ -90,7 +93,7 @@ interface Drag {
 const resizable = (item: ItemOut) => item.kind === 'event' && canMove(item) && item.id > 0;
 
 export function WeekGrid(props: WeekGridProps) {
-  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays} = props;
+  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays, enter = null, onEntered} = props;
   // The "+N" popover fades out once closed (ui/exit.ts).
   const {shown: shownPopover, closing: popoverClosing} = useExit(popover);
   const section = useRef<HTMLElement>(null);
@@ -393,7 +396,9 @@ export function WeekGrid(props: WeekGridProps) {
   const calendarName = (item: ItemOut) => calendars.get(item.calendar_id)?.name;
 
   return (
-    <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section>
+    <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section data-enter={enter === null ? undefined : 'in'}
+      style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
+      onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
       <div className="wk-scroll" ref={scroller} onWheel={onWheel} data-cal-scroll>
         <div className="wk-grid" data-cal-grid>
           <div className="wk-top" ref={top}>

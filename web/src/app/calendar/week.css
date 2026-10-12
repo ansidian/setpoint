@@ -3,6 +3,9 @@
    all-day row are calendar.css's chips; the hours' blocks are `.wb`. */
 
 .cal-week { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+/* From Month, the week zooms in from its row there (polish audit grids-09). */
+.cal-week[data-enter="in"] { animation: cal-zoom-in var(--dur-medium) var(--ease); transform-origin: 50% var(--zoom-y); }
+@keyframes cal-zoom-in { from { opacity: 0; transform: scale(.985); } }
 .wk-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; position: relative; overscroll-behavior-x: none; }
 .wk-scroll::-webkit-scrollbar { display: none; }
 .wk-grid { position: relative; }

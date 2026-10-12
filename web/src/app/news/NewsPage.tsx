@@ -40,6 +40,7 @@ import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {news as newsTiming} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
 import {useNow} from '../clock.ts';
@@ -294,7 +295,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
       <header className="hd">
         <span className="hd-title">{searching ? 'Search' : 'News'}</span>
         {!searching && (
-          <span className="seg">
+          <span className="seg" ref={segThumb}>
             <button type="button" className={segOn('all')} onClick={() => switchTo('all')}>All</button>
             {NEWS_SECTIONS.map(section => <button key={section} type="button" className={segOn(section)} onClick={() => switchTo(section)}>{SECTION_LABELS[section]}</button>)}
           </span>

@@ -6,11 +6,23 @@ import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {layout, monthPaging} from '../../src/tokens.ts';
-import {cleanUp, startSetpoint, until} from './harness.ts';
+import {cleanUp, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
 const ROW = layout.monthRow;
+
+/** A colour as the page computes it: a token (`--sub3`) or any colour expression, on a probe. */
+async function colour(page: Page, value: string): Promise<string> {
+  return page.evaluate(css => {
+    const probe = document.createElement('div');
+    probe.style.color = css.startsWith('--') ? `var(${css})` : css;
+    document.body.append(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return computed;
+  }, value);
+}
 const top = (month: string) => monthTopRow(month) * ROW;
 const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => element.scrollTop);
 const style = (target: Locator, property: string, pseudo?: string) => target.evaluate((element, [name, after]) => getComputedStyle(element, after ?? null).getPropertyValue(name!).trim(), [property, pseudo] as const);
@@ -188,6 +200,79 @@ test('T always answers: today\'s disc on the grid and in the mini-month swells o
     pulses = await recordPulses(page);
     await page.keyboard.press('t');
     await until('the week\'s disc pulses', async () => (await pulses()).map(pulse => pulse.where).join(), where => where.includes('week'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** Records how each Month or Week section put on the page from now on arrives: its data-enter, entrance and the y it scales from. */
+async function recordEntrances(page: Page): Promise<() => Promise<{section: string; enter: string | null; animation: string; originY: number}[]>> {
+  await page.evaluate(() => {
+    const seen: {section: string; enter: string | null; animation: string; originY: number}[] = [];
+    (window as unknown as {entrances: typeof seen}).entrances = seen;
+    new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+      if (!(node instanceof HTMLElement) || !node.matches('[data-cal-section]')) return;
+      const style = getComputedStyle(node);
+      seen.push({section: node.className.split(' ')[0]!, enter: node.dataset.enter ?? null, animation: `${style.animationName} ${style.animationDuration}`, originY: parseFloat(style.transformOrigin.split(' ')[1]!)});
+    }))).observe(document.querySelector('.cal-content')!, {childList: true});
+  });
+  return () => page.evaluate(() => [...(window as unknown as {entrances: {section: string; enter: string | null; animation: string; originY: number}[]}).entrances]);
+}
+
+/** A segmented control's thumb: where it sits and how wide, and the `on` segment's box. */
+const thumb = (seg: Locator) => seg.evaluate(element => {
+  const on = element.querySelector<HTMLElement>(':scope > .on')!;
+  const style = getComputedStyle(element, '::before');
+  return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
+});
+
+test('Week zooms in from the selected week\'s row in Month and Month settles back out around it, over 180 ms; a segmented control\'s thumb slides to the segment that\'s on', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    // Wed Oct 7's week is October's second row: its middle is a row, the weekday row and half a row down.
+    const row = layout.monthRow + layout.weekdayRow + layout.monthRow / 2;
+    const seg = page.locator('.hd .seg');
+    // At rest Month draws its own `sub3` fill, the thumb hidden under it.
+    const first = await thumb(seg);
+    assert.deepEqual([first.x, first.width], first.on, 'the thumb waits under Month');
+    assert.deepEqual([first.onFill, await style(seg, 'visibility', '::before')], [await colour(page, '--sub3'), 'hidden']);
+    assert.deepEqual([await style(seg, 'transition-property', '::before'), await style(seg, 'transition-duration', '::before')], ['transform, width', '0.18s, 0.18s']);
+    const sliding = await watch(seg, 'data-sliding');
+
+    let entrances = await recordEntrances(page);
+    await page.keyboard.press('w');
+    const week = page.locator('.cal-week');
+    await week.waitFor();
+    assert.deepEqual(await entrances(), [{section: 'cal-week', enter: 'in', animation: 'cal-zoom-in 0.18s', originY: row}], 'it zooms in from the selected week\'s row');
+    await until('the zoom lets go once it has played', () => week.getAttribute('data-enter'), value => value === null);
+    await until('the thumb slides under Week, then hands the fill back', sliding, seen => seen.join() === ',');
+    const after = await thumb(seg);
+    assert.deepEqual([after.x, after.width, after.onFill], [...after.on, await colour(page, '--sub3')]);
+
+    entrances = await recordEntrances(page);
+    await page.keyboard.press('m');
+    const month = page.locator('.cal-month');
+    await month.waitFor();
+    assert.deepEqual(await entrances(), [{section: 'cal-month', enter: 'out', animation: 'cal-zoom-out 0.18s', originY: row}], 'Month settles out around the same row');
+    await until('the zoom lets go', () => month.getAttribute('data-enter'), value => value === null);
+    // Paging doesn't zoom.
+    await page.keyboard.press('n');
+    await until('November', () => page.locator('.hd-title').textContent(), text => text === 'November 2026');
+    assert.equal(await month.getAttribute('data-enter'), null);
+
+    // Unread | All slides its thumb too.
+    await page.goto(`${setpoint.base}/inbox`);
+    const inbox = page.locator('.hd .seg');
+    await inbox.locator('button', {hasText: 'Unread'}).waitFor();
+    const inboxSliding = await watch(inbox, 'data-sliding');
+    await inbox.locator('button', {hasText: 'All'}).click();
+    await until('the thumb slides under All and hands it its fill', inboxSliding, seen => seen.join() === ',');
+    const all = await thumb(inbox);
+    assert.ok(all.on[0] > 2 && all.x === all.on[0] && all.width === all.on[1], 'under All');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

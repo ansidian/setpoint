@@ -159,9 +159,9 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
-paint doesn't fade. A press goes in over **80 ms** and lets go over 120 ms (#143). The stories `N`
-brings onto News's list settle in from `sub2` over 900 ms (#249): the one longer motion, kept for
-arrivals.
+paint doesn't fade. A segmented control's fill slides to the segment turned on over 180 ms (#222). A
+press goes in over **80 ms** and lets go over 120 ms (#143). The stories `N` brings onto News's list
+settle in from `sub2` over 900 ms (#249): the one longer motion, kept for arrivals.
 
 Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
@@ -508,7 +508,8 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 
 - **Header:** "Oct 4 – 10, 2026" (min 128 px; "Sep 27 – Oct 3, 2026" across months, "Dec 27,
   2026 – Jan 2, 2027" across years), ‹ Today › paging a week, Month | Week. Tab "Oct 4 – 10, 2026 ·
-  Calendar". `M` and `W` switch; Week opens on the selected day's week, Month on its month. The view
+  Calendar". `M` and `W` switch; Week opens on the selected day's week, Month on its month, Week zooming in from
+  that week's row in Month and Month settling back out around it, over 180 ms (#222). The view
   rides in the address (`?view=week`) and the last one used is remembered, so Calendar, `2` and links
   open in it.
 - **Layout:** a 56 px gutter, then seven columns filling the width (139 px at the design target,
@@ -1957,3 +1958,10 @@ it changes what's on screen.
 221. **T always answers:** as Today lands (once the month's glide is there, at once when nothing had
     to move), today's disc on the grid, in the week's heads and in the mini-month swells to 1.18 and
     back over 260 ms, once (Andy, 2026-10-11, polish audit grids-11).
+222. **Month and Week are one space:** switching to Week zooms it in from the selected week's row in
+    Month (scale .985 to 1 and a fade, 180 ms, its origin the middle of that row, or of the grid when
+    the row is out of view), and switching back settles Month out around the same row (1.015 to 1),
+    so Week reads as Month zoomed in on your week. A segmented control (Month | Week, Unread | All,
+    Event | Task, News's sections, Code expiry) no longer jumps its fill: when another segment turns
+    on, a `sub3` thumb slides from the last one to it over 180 ms, then hands it back its own fill
+    (Andy, 2026-10-11, polish audit grids-09).
