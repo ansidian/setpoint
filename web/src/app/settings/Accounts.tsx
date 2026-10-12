@@ -11,9 +11,8 @@ import {refresh, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {authorizeGmail, checkSource, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
-import {dayTitle} from '../../logic/calendar.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
-import {mergeSources, moved, precisionText, sparkHeights} from '../../logic/settings.ts';
+import {mergeSources, moved, precisionText, sparkPath, sparkTitle} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -85,18 +84,37 @@ export function AccountsPage() {
       )}
       <Section style={{marginTop: 18}}>
         <div className="set-group precision">
-          <div className="grow" style={{display: 'flex', flexDirection: 'column', gap: 3}}>
-            <div><span className="t">Attention precision</span><span className="s" style={{fontSize: 13}}> · </span><span className="num t" style={{fontWeight: 500}}>{shownPrecision.value}</span></div>
-            <div className="s">{shownPrecision.line}</div>
+          <span className="big num">{shownPrecision.value}</span>
+          <div className="lines grow">
+            <span className="t">Attention precision</span>
+            <span className="s">{shownPrecision.line}</span>
           </div>
-          {precision && (
-            <div className="spark" aria-label="Attention precision, last 30 days">
-              {sparkHeights(precision.days).map((height, index) => <span key={precision.days[index]!.date} style={{height}} title={dayTitle(precision.days[index]!.date)} />)}
-            </div>
-          )}
+          {precision?.precision != null && <Sparkline days={precision.days} />}
         </div>
       </Section>
     </Page>
+  );
+}
+
+const SPARK = {width: 180, height: 32, low: 0.5};
+
+/**
+ * The 30 days as a line in `good` on a fixed 50–100% scale, the area under it at 14%, the latest
+ * day's point ringed in the modal's colour, and a dashed reference at 80%; a day with nothing Done
+ * breaks the line. Each day's column names it on hover: "Tue, Oct 6 · 9 of 11 opened first".
+ */
+function Sparkline({days}: {days: PrecisionOut['days']}) {
+  const spark = sparkPath(days, SPARK);
+  return (
+    <svg className="spark" width={SPARK.width} height={SPARK.height} viewBox={`0 0 ${SPARK.width} ${SPARK.height}`} role="img" aria-label="Attention precision, last 30 days">
+      <line className="ref" x1={0} x2={SPARK.width} y1={spark.reference} y2={spark.reference} />
+      {spark.area && <path className="area" d={spark.area} />}
+      {spark.line && <path className="line" d={spark.line} />}
+      {spark.end && <circle className="end" cx={spark.end.x} cy={spark.end.y} r={3} />}
+      {days.map((day, index) => (
+        <rect key={day.date} className="day" x={spark.columns[index]!.x} y={0} width={spark.columns[index]!.width} height={SPARK.height}><title>{sparkTitle(day)}</title></rect>
+      ))}
+    </svg>
   );
 }
 

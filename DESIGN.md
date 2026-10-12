@@ -754,7 +754,8 @@ section's label stays under the title (#250).
   its state: "Checked 9:11 AM" when healthy, "Checks stopped, as of 9:14 PM" muted when stale, "Needs
   sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
   Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way; then **Attention
-  precision**, 82%, the share of attention mail opened before Done, with a 30-day sparkline.
+  precision**, 82%, the share of attention mail opened before Done, led by the figure (24 / 500), with
+  the 30 days as a line on a 50–100% scale (#251).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved by any rule.
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", Send test, Server, Token
@@ -1636,6 +1637,17 @@ it changes what's on screen.
     page has scrolled (a scroll-driven animation over the first 24 px, CSS alone), and the × is
     fixed to the modal at its 24 / 20 px. A section's label stays under the head while its rows
     pass, so News says "TECH 14" over Tech's sources (Andy, 2026-10-11, polish audit settings-04).
+251. **Attention precision leads with its figure and draws its month as a line:** the figure was 13
+    px, as every row, and the 30 days were `sub3` bars scaled 0–100% (1.48:1 on the Night group), so
+    a month between 70 and 100% read as a flat barcode. Now "82%" leads at 24 / 500 / −.02em in
+    `ink` (64 px wide, tabular), then the title over its line (#76's copy), padding 14 20 14 16, 20
+    apart; the 30 days are a 180 × 32 drawing: a 1.5 px `good` line with round joins on a fixed
+    50–100% scale (a day under 50% on the floor), the area under it `good` at 14%, the latest day's
+    point a 3 px `good` dot ringed 1.5 px in `modal`, and a dashed `hair` reference at 80%. A day
+    with nothing Done breaks the line rather than dipping, and with nothing Done in 30 days there is
+    no chart, only "—" and its line. Each day's column names it on hover as the app writes dates:
+    "Tue, Oct 6 · 9 of 11 opened first", or "· nothing Done". Board 17 draws 30 bars and the figure
+    inline (Andy, 2026-10-11, polish audit settings-08).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

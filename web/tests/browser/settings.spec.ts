@@ -49,11 +49,19 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     await page.locator('.settings [data-source="todoist"]', {hasText: 'Inbox · 3 projects'}).waitFor();
     await page.locator('.settings .precision', {hasText: '82%'}).waitFor();
     await page.locator('.hbar.caution').waitFor();
-    // Each day's bar names its day as the app writes dates, "Tue, Oct 6", not "2026-10-06".
+    // Attention precision leads with its figure, 24 / 500 in ink, then the 30 days as a 1.5 px line in
+    // good on a 180 × 32 drawing (the polish audit's settings-08).
+    const precision = page.locator('.settings .precision');
+    assert.deepEqual(await precision.locator('.big').evaluate(big => [big.textContent, getComputedStyle(big).fontSize, getComputedStyle(big).fontWeight, getComputedStyle(big).color]),
+      ['82%', '24px', '500', await computed(page, 'color', 'var(--ink)')]);
+    assert.deepEqual(await precision.locator('svg.spark').evaluate(svg => [svg.getBoundingClientRect().width, svg.getBoundingClientRect().height]), [180, 32]);
+    assert.deepEqual(await precision.locator('.spark .line').evaluate(line => [getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth]), [await computed(page, 'color', 'var(--good)'), '1.5px']);
+    // Each day's column names it as the app writes dates, "Tue, Oct 6 · 9 of 11 opened first", not "2026-10-06".
     const {days} = await setpoint.api<PrecisionOut>('GET', '/mail/precision');
-    assert.deepEqual(await page.locator('.settings .spark span').evaluateAll(bars => bars.map(bar => bar.getAttribute('title'))),
-      days.map(day => new Date(`${day.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})));
-    assert.match((await page.locator('.settings .spark span').last().getAttribute('title'))!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}$/);
+    const titles = await page.locator('.settings .spark .day title').allTextContents();
+    assert.deepEqual(titles, days.map(day => `${new Date(`${day.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})} · ${
+      day.done ? `${day.opened_before_done} of ${day.done} opened first` : 'nothing Done'}`));
+    assert.match(titles.at(-1)!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · /);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
     // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#164).

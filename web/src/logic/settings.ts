@@ -1,6 +1,7 @@
 // Settings' words and small rules (DESIGN.md › Settings; boards 17, 18a, 18b), tested as tables.
 import type {HealthOut, HealthState, Kind, Lane, MessageType, PrecisionOut, RuleMatch, RuleOut, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
+import {dayTitle} from './calendar.ts';
 import type {SettingsPage} from './route.ts';
 
 /** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#164). */
@@ -37,9 +38,52 @@ export function precisionText(precision: Pick<PrecisionOut, 'precision' | 'done'
   return {value: `${opened}%`, line: `${opened}% of attention mail was opened before Done · last 30 days`};
 }
 
-/** The sparkline's bars: each day's share opened before Done, as a height up to 28 px (2 px on a day with none). */
-export const sparkHeights = (days: PrecisionOut['days'], max = 28) =>
-  days.map(day => (day.done ? Math.max(2, Math.round(max * day.opened_before_done / day.done)) : 2));
+/** The sparkline's drawing in its box: the line, the area under it, the latest day's point, and the reference line's height. */
+export interface Spark {
+  line: string;
+  area: string;
+  end: {x: number; y: number} | null;
+  reference: number;
+  // Each day's column, for its hover title: where it starts and how wide it is.
+  columns: {x: number; width: number}[];
+}
+
+const at = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * Attention precision's 30 days as a line (the polish audit's settings-08): each day's share opened
+ * before Done on a fixed scale from `low` to 100%, so a month between 70 and 100% shows its change
+ * without being exaggerated; a share under `low` sits on the floor. A day with nothing Done breaks
+ * the line rather than dipping. `inset` keeps the end point's dot and the stroke inside the box.
+ */
+export function sparkPath(days: PrecisionOut['days'], {width, height, low, inset = 4.5, reference = 0.8}: {width: number; height: number; low: number; inset?: number; reference?: number}): Spark {
+  const step = days.length > 1 ? (width - 2 * inset) / (days.length - 1) : 0;
+  const xs = days.map((_, index) => inset + index * step);
+  const y = (share: number) => at(height - inset - (height - 2 * inset) * (Math.min(1, Math.max(low, share)) - low) / (1 - low));
+  const runs: {x: number; y: number}[][] = [];
+  let open = false;
+  days.forEach((day, index) => {
+    if (!day.done) {
+      open = false;
+      return;
+    }
+    if (!open) runs.push([]);
+    open = true;
+    runs.at(-1)!.push({x: at(xs[index]!), y: y(day.opened_before_done / day.done)});
+  });
+  const floor = at(height - inset);
+  const line = runs.map(points => points.map((point, index) => `${index ? 'L' : 'M'}${point.x} ${point.y}`).join(' ') + (points.length === 1 ? ' h0' : '')).join(' ');
+  const area = runs.filter(points => points.length > 1)
+    .map(points => `M${points[0]!.x} ${floor} ${points.map(point => `L${point.x} ${point.y}`).join(' ')} L${points.at(-1)!.x} ${floor} Z`).join(' ');
+  // Each day's column runs from halfway to the day before to halfway to the day after; the first and last reach the box's edges.
+  const edges = [0, ...xs.slice(1).map((x, index) => (xs[index]! + x) / 2), width];
+  const columns = days.map((_, index) => ({x: at(edges[index]!), width: at(edges[index + 1]! - edges[index]!)}));
+  return {line, area, end: runs.at(-1)?.at(-1) ?? null, reference: y(reference), columns};
+}
+
+/** A day's hover title on the sparkline, its date as the app writes dates: "Tue, Oct 6 · 9 of 11 opened first". */
+export const sparkTitle = (day: PrecisionOut['days'][number]) =>
+  `${dayTitle(day.date)} · ${day.done ? `${day.opened_before_done} of ${day.done} opened first` : 'nothing Done'}`;
 
 const TYPE_PLURALS: Record<MessageType, string> = {
   confirmation: 'confirmations', rejection: 'rejections', receipt: 'receipts', shipping: 'shipping updates', deadline: 'deadlines', reminder: 'reminders',
