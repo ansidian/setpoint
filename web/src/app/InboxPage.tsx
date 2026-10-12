@@ -99,7 +99,7 @@ const undos: (() => void)[] = [];
 let slides = 0;
 
 /**
- * The phone's push and back (#257): the reader slides in over the list, which moves a little under it,
+ * The phone's push and back (#139): the reader slides in over the list, which moves a little under it,
  * and slides back off it, as one 260 ms view transition (phone.css draws it, by the direction on the
  * root). Only the app's own opens and closes slide: the browser's Back (popstate) doesn't, as Safari's
  * edge swipe animates it already. Without the API it's the cut it was.
@@ -145,7 +145,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const alfred = useAlfred();
   const searching = search.active || alfred.open;
   // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
-  // skeleton once it's taken a moment (search-03, #180).
+  // skeleton once it's taken a moment (search-03, #235).
   const firstWait = search.active && search.out === null && search.error === null && !alfred.open;
   const waitedLong = useAfter(firstWait, skeleton.delayMs);
 
@@ -279,7 +279,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // An email's row, from the open email or the list it's in (Unread, All or search).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
     ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...results].find(row => row.id === id);
-  // The open email's subject, from its row until the email itself is in (#176).
+  // The open email's subject, from its row until the email itself is in (#229).
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
     document.title = tabTitle({page: 'inbox', attention: counts?.attention ?? 0, subject});
@@ -478,7 +478,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   ]}));
 
   const allCaughtUp = groups ? caughtUp(groups, held) : false;
-  // Until the list's first answer: its skeleton, or why it didn't come (DESIGN.md #170, #173).
+  // Until the list's first answer: its skeleton, or why it didn't come (DESIGN.md #225, #228).
   const allLoad = {path: all ? allPath(route.account) : null, data: allPages[0], error: allError};
   const listFailed = useLoadFailed([all ? allLoad : inboxLoad]);
   const listArrived = useArrival(all ? allPages[0] !== undefined : inbox !== undefined, route.view);
@@ -513,7 +513,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
                 {accountList.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}
               </select>
             </label>
-            {/* Not while searching: it would read the hidden Inbox's mail, not the results (#259). */}
+            {/* Not while searching: it would read the hidden Inbox's mail, not the results (#141). */}
             {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
           </>
         )}

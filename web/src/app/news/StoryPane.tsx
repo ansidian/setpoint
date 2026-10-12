@@ -35,7 +35,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   onOriginal: () => void;
   onArticle: (id: number) => void;
   onBack: () => void;
-  // Closes the pane: the compact tier's Back, where the pane covers the list (#258).
+  // Closes the pane: the compact tier's Back, where the pane covers the list (#140).
   onClose: () => void;
 }) {
   const width = useReadingPaneWidth();
@@ -59,7 +59,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         </div>
         <div className="rd-scroll">
           {article ? <Article key={article.id} article={article} story={story} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} /> : (
-            // Its head from the story's own line for it while the article loads (news-05, #179).
+            // Its head from the story's own line for it while the article loads (news-05, #232).
             <ArticleLoading key={articleId} source={story?.sources.find(source => source.article_id === articleId)} load={articleLoad} now={now} timeZone={timeZone} />
           )}
         </div>
@@ -82,7 +82,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         <button className="ibtn" type="button" aria-label="Next story" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>
       </div>
       <div className="rd-scroll">
-        {/* The head from the story's row at once; its summary and sources wait for the story (news-05, #179). */}
+        {/* The head from the story's row at once; its summary and sources wait for the story (news-05, #232). */}
         {shown && (
           <div className="st-swap" key={storyId}>
             <div className="st-head">

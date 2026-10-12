@@ -1,5 +1,5 @@
 // The top: until GET /api/me answers, the shell as it last stood when this browser was signed in
-// (ShellFrame, #175), else Setpoint's mark once the start takes a moment (Boot, #174); then the app
+// (ShellFrame, #234), else Setpoint's mark once the start takes a moment (Boot, #233); then the app
 // with live updates while the user is signed in, or the sign-in card, which fade in after the mark.
 // A 401 later swaps the app for the card and keeps the address, and forgets what this browser kept
 // of the session. Setpoint unreachable at launch shows the mark and the offline pill, and asks again

@@ -180,7 +180,7 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed .icon').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .tk.pending .spin').waitFor();
     assert.equal(await card.getAttribute('data-side'), 'below');
-    // The card's × is 16 px in a 26 px button, as every card's (#164).
+    // The card's × is 16 px in a 26 px button, as every card's (#123).
     assert.deepEqual(await card.getByRole('button', {name: 'Close'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     const failed = (await chip(page, '2026-10-10', 'Dinner with Sam').boundingBox())!;
     assert.equal(Math.round((await card.boundingBox())!.y - (failed.y + failed.height)), GAP);

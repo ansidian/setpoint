@@ -6,7 +6,7 @@
 // question waits the card shows Alfred's trail: each step done (the search it ran, the email it
 // read) above what it's doing now, which shimmers, and the answer's place held by two bars, the
 // follow-up field dimmed until the answer is in, when the trail folds away and the answer fades up
-// (search-04, #181). A long list of sources shows its first five and Show all. Proposals in an answer show as the
+// (search-04, #236). A long list of sources shows its first five and Show all. Proposals in an answer show as the
 // proposal card.
 import type {AccountOut, AiOut} from '@setpoint/shared';
 import {Fragment, useEffect, useRef, useState} from 'react';

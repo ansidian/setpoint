@@ -11,7 +11,7 @@ import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harn
 
 after(cleanUp);
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
@@ -177,12 +177,12 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
       const glyph = await page.locator('.palette .item .icon path').getAttribute('d');
       await page.keyboard.press('Enter');
       await page.locator('.settings .set-title', {hasText: section}).waitFor();
-      // The command carries its page's own glyph from Settings' nav, not a generic gear (#164).
+      // The command carries its page's own glyph from Settings' nav, not a generic gear (#123).
       assert.equal(await page.locator('.settings .set-nav .nav.on .icon path').first().getAttribute('d'), glyph, `Settings › ${section}'s glyph`);
       await page.keyboard.press('Escape');
       await page.locator('.settings').waitFor({state: 'detached'});
     }
-    // Nothing found leads with search_off, 16 px in ink3, 8 px before its words (#165).
+    // Nothing found leads with search_off, 16 px in ink3, 8 px before its words (#124).
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('zebra');
     const none = page.locator('.palette .none', {hasText: 'No command matches'});

@@ -39,7 +39,7 @@
 .editor .tok-p { background: color-mix(in oklch, var(--comf) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--comf) 60%, transparent); }
 .editor .tok-j { --c: var(--ink2); } /* a project's own colour comes inline (SV-56) */
 .editor .tok-c, .editor .tok-j { background: color-mix(in oklch, var(--c) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c) 60%, transparent); }
-/* A project's Todoist colour is clamped to the theme's band, as its task's ring is (#138). */
+/* A project's Todoist colour is clamped to the theme's band, as its task's ring is (#175). */
 .editor .tok-j { --c-shown: oklch(from var(--c) clamp(var(--ringMin), l, var(--ringMax)) c h);
   background: color-mix(in oklch, var(--c-shown) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--c-shown) 60%, transparent); }
 

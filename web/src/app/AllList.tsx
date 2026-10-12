@@ -49,7 +49,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
   loading: ReactNode;
   arrived: boolean;
   more: boolean;
-  // A search's first answer on its way: the list stays, dimmed, until it comes (#180).
+  // A search's first answer on its way: the list stays, dimmed, until it comes (#235).
   dimmed?: boolean;
   onPoint: (key: string) => void;
   onOpen: (id: number, key: string) => void;

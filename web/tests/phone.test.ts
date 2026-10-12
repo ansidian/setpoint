@@ -118,7 +118,7 @@ describe('the agenda (board 21)', () => {
   });
 });
 
-// Today's now-line (#256), the seed's 9:12 AM: before the first timed event not over, else after the
+// Today's now-line (#138), the seed's 9:12 AM: before the first timed event not over, else after the
 // last timed one; all-day events and tasks never place it, and a day with no timed event has none.
 test.each([
   ['the seed: after the past Gym, before the Dentist', [event('Gym', '2026-10-07', '07:00', '08:00'), event('Dentist', '2026-10-07', '14:30', '15:30'), task('Pay rent', '2026-10-07')], 1],

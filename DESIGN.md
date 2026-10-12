@@ -70,7 +70,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the attention pill and on solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
-| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed (#143) |
+| `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed (#150) |
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
 | `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | attention pill and count, needs-reconnect bar, failing lines |
@@ -92,7 +92,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 
-- **Roles** (#126): each colour has one job, so a screen has two or three anchors. **`accent`**
+- **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
   it). **`good`** says done or healthy. **`caution`** says "needs you": the attention pill and count,
   Attention's band and dots, and health warnings, nothing else. **`alert`** says danger and now: protected
@@ -101,19 +101,19 @@ Personal, which are account names). The UI says "Done", never "handled".
   tints and bars, never as control fills, and the AI has no hue of its own.
 - **Accounts** (`--a-*`): Business `warm`, Personal `cool`, Work `comf`, Jobs `violet`, iCloud `ink2`.
   **Calendars** (`--c-*`): Personal `cool`, Classes `cyan`, Jobs `violet`. Both pick from nine of
-  darma's 11 swatches in Settings, not `caution` or `alert` (#126); one picked before still shows.
+  darma's 11 swatches in Settings, not `caution` or `alert` (#163); one picked before still shows.
 - **Mixes** of a hue are `color-mix(in oklch, <colour> N%, transparent)` unless a base is named: tags
   (`alert` 10% on `chip` with a 40% edge; `caution` 12% with a 35% edge), the needs-reconnect bar
   (`caution` 9% on `page`, 22% bottom edge), calendar tint `--evtint` (Night 16%, Light 14%),
   deepening under the pointer by `--evhover` (Night 18%, Light 14%) laid over it in the chip's own
-  colour, and by 28% while pressed (#145); as a change lands it starts at `--evland` (Night 34%, Light
-  26%) and settles back (#235); Attention's band (`caution` 8% on `panel` in srgb, Light
+  colour, and by 28% while pressed (#152); as a change lands it starts at `--evland` (Night 34%, Light
+  26%) and settles back (#192); Attention's band (`caution` 8% on `panel` in srgb, Light
   6%). A neutral (an ink or a surface) mixes in `srgb` or is an alpha token, never in oklch, which
-  tints it (#123).
+  tints it (#160).
 - **Theme numbers:** on the calendar, coloured text on its own tint caps its lightness at `--tintL`
-  (Night 1, Light .43), keeping its hue and chroma (#122); the email frame's brightness `--mailDim`
-  (Night .95, Light 1) (#134); Todoist's colours clamp their lightness to `--ringMin`–`--ringMax`
-  (Night .72–1, Light 0–.55), keeping Todoist's hue and chroma (#138).
+  (Night 1, Light .43), keeping its hue and chroma (#159); the email frame's brightness `--mailDim`
+  (Night .95, Light 1) (#171); Todoist's colours clamp their lightness to `--ringMin`–`--ringMax`
+  (Night .72–1, Light 0–.55), keeping Todoist's hue and chroma (#175).
 - **Shadows:** popovers and the floating detail `0 18px 50px rgba(0,0,0,.4)` (Light
   `rgba(15,20,28,.14)`); modals `0 30px 80px rgba(0,0,0,.35)` (Light `.18`); pills and toasts
   `0 10px 30px rgba(0,0,0,.3)` (Light `.14`). Shadows only on overlays.
@@ -140,7 +140,7 @@ Mono for codes, ntfy topics and identifiers. Bundled, never loaded from the netw
 
 On the phone the list reads a step up, as the reader's body (15) does: rows 15; ages, counts and
 account labels 13; summaries in Attention 13.5; group headers 12; search's rows the same
-([Decided while building](#decided-while-building) #262).
+([Decided while building](#decided-while-building) #144).
 
 ### Shape
 
@@ -161,19 +161,19 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
 calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
-paint doesn't fade. A segmented control's fill slides to the segment turned on over 180 ms (#222). A
-press goes in over **80 ms** and lets go over 120 ms (#143). The stories `N` brings onto News's list
-settle in from `sub2` over 900 ms (#249): the longer motions are kept for arrivals, as are a
-calendar change's landing (420 ms, #235) and an editor field another's change moved (600 ms, #230).
+paint doesn't fade. A segmented control's fill slides to the segment turned on over 180 ms (#179). A
+press goes in over **80 ms** and lets go over 120 ms (#150). The stories `N` brings onto News's list
+settle in from `sub2` over 900 ms (#131): the longer motions are kept for arrivals, as are a
+calendar change's landing (420 ms, #192) and an editor field another's change moved (600 ms, #187).
 
-Overlays arrive on these timings ([Decided while building](#decided-while-building) #141): every
+Overlays arrive on these timings ([Decided while building](#decided-while-building) #148): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
 "+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
 180 ms and Settings 8 px over 260 ms, their scrims fading in; a pane's content, and the editor however
 it's opened, slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
 fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms; menus close at once.
 
-**Loading** ([Decided while building](#decided-while-building) #170): a page whose data is on its
+**Loading** ([Decided while building](#decided-while-building) #225): a page whose data is on its
 way draws its rows' skeleton in their shapes, bars in `sub2` (`sub3` inside a `sub` group). It
 appears only after 200 ms, so a quick answer never shows one, fades in over 180 ms, then breathes,
 every bar in phase: opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`, a loop for loading
@@ -182,37 +182,37 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 ## Glyphs, icons and the mark
 
 - **Icons:** Material Symbols Rounded, weight 300, FILL 0 (the `-fill` files are FILL 1 uses), as SVG
-  masks from `glyphs/icons.json`. One size per role (#164): 18 in the sidebar, rows, the reader's and
+  masks from `glyphs/icons.json`. One size per role (#123): 18 in the sidebar, rows, the reader's and
   the story pane's tools and 30 px icon buttons; 17 beside a label in a button (Add, More options,
   the reader's actions) and in facts; 16 in small buttons, menus and inline links; 14 in chips and
   tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
   header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (sidebar, Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, a Settings page its nav's glyph wherever it's named.
-- **Tones** (#186): `caution` and `alert` are close in hue, so a state's shape says how serious it is
+- **Tones** (#218): `caution` and `alert` are close in hue, so a state's shape says how serious it is
   before its words do. **Caution**, something Setpoint depends on struggling (a source failing or
   retrying, triage down, News's AI down, a feed failing, ntfy failing, a search that couldn't
   answer): `warning`, the outlined triangle, in `caution`. **Alert**, something of the user's that
   failed (a change, the failure toast, Alfred's failure, a Send test) or offline: `error`, the
   circle, in `alert`; offline keeps `cloud_off`. **Stale**, checks stopped: `history` in `ink3`.
-  **Healthy** shows only in Settings: a 7 px `good` dot (#187). Account trouble keeps `sync_problem`
+  **Healthy** shows only in Settings: a 7 px `good` dot (#219). Account trouble keeps `sync_problem`
   everywhere, the Inbox's needs-reconnect bar included. 16 px in lines and in rows.
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
   stroke (12 px, `ink2` on the grid), or its project's colour clamped to the theme's band, with the
   same colour at 14% inside, as a chip's tint; a ring that completes fills to 24% under the pointer
-  and shows an 11 px `check` centred on it (#138); done is darma's filled disc with the check knocked
+  and shows an 11 px `check` centred on it (#175); done is darma's filled disc with the check knocked
   out, in **`good`**, title struck through in `ink3`.
 - **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
-  read Attention row not yet Done keeps a 6 px `caution` ring, #130); unread sender and subject are
+  read Attention row not yet Done keeps a 6 px `caution` ring, #167); unread sender and subject are
   `ink` at 500, read are `ink2` at 400. A Noise row recedes: unread, `ink2` at 400 with an `ink3` dot;
-  read, `ink3` (#131).
+  read, `ink3` (#168).
 - **The mark** is **Day stack** (decision 44, #87): three calendar chips stacked, `cool` on top,
   `caution` lifted and tilted −6° in the middle, a shorter `violet` below. A bare 18 px glyph before
   the name, no tile, in the theme's tokens; they are the brand's and stay put when an account or
   calendar is recoloured. Never show it beside the pending spinner.
 - **Alfred's mark** is `auto_awesome` filled with a gradient from `cool` to `violet` (bottom left to
   top right), two of Day stack's colours, wherever Alfred shows: Ask Alfred, the Answer card's header,
-  and Ask about this email in the reader and ⌘K (#136). Nothing else about the AI takes a hue.
+  and Ask about this email in the reader and ⌘K (#173). Nothing else about the AI takes a hue.
 - **Favicon:** `favicon.svg` (the mark on darma's 32 px `card` tile, radius 7, with an `edgeOn`
   border, in Night's colours), 16 and 32 px PNGs (the 16 px one redrawn on its pixel grid: the middle
   chip level, set apart by the wider gap above it) and a 180 px square `apple-touch-icon`; no web
@@ -226,14 +226,14 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   - the mark and **Setpoint** (36 px row, 8 px below). No search button: search lives in each
     page's header.
   - **Inbox** (32 px nav item, radius 10, `sub` hover; current, a raised `navOn` chip with an inset
-    `navOnEdge` hairline and its icon in `accent`, #129): the **attention pill** (18 px,
+    `navOnEdge` hairline and its icon in `accent`, #166): the **attention pill** (18 px,
     `caution` fill, `onInk` 11.5 / 600 text; not-Done attention, read or not) then the unread count
     (`ink3` 12).
-  - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #199): colour dot
+  - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #201): colour dot
     (8 px), label, unread count. A click filters the Inbox to that account (its row the `navOn`
     chip, Inbox its parent in `ink` without a fill); a needs-reconnect account adds a `sync_problem`
     glyph in `caution` before its count, keeping the count. Until they come, the ones this browser
-    last showed, with their counts, or on a first visit three skeleton rows (#175).
+    last showed, with their counts, or on a first visit three skeleton rows (#234).
   - **Calendar**.
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
     mini-month and **Calendars** on Calendar.
@@ -245,17 +245,17 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 - **Content** under the header; the list or grid scrolls, the shell never does.
 - **Panes** sit under the header with a `hair` left border: the **reading pane** 680 px, Calendar's
   **right pane** 400 px. The reading pane collapses when nothing is open (decision 43); its left edge
-  resizes it, and shows so under the pointer (#208).
+  resizes it, and shows so under the pointer (#210).
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
 ### Compact (640 to 1099 px)
 
 An iPad or a half-width window keeps the shell's parts and stops squeezing them
-([Decided while building](#decided-while-building) #258):
+([Decided while building](#decided-while-building) #140):
 
 - **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News and Settings as 40 × 40
-  icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#129;
+  icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166;
   Inbox stays current while an account filters it, as the rail has no accounts). Inbox's attention pill is a 16 px badge on its icon (2 px from its
   top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
   mini-month and Calendars give way; ⌘K filters the Inbox by account ("Inbox · Jobs") and shows or
@@ -267,7 +267,7 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
   px, `page`, an `edgeOn` left edge and the popover shadow, in 24 px over 180 ms) while it holds the
   editor or search; the day's pane comes over it only from a 30 px `right_panel_open` button before
   search (lit `sub2` while open; it again or Esc closes it; closed on every load; under 720 px New is
-  its + alone so the header stays whole, #239), and its
+  its + alone so the header stays whole, #196), and its
   sources' health lines sit atop the grid. The floating detail floats over the pane.
 - **Header:** gaps 10; the search field narrows first (from 380, 520 while searching), then a calendar
   title longer than its 128 px ends in "…".
@@ -276,7 +276,7 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 
 28 px rows: the next event ("2:30 PM  Dentist", time in `ink`, 58 px wide, "in 5h" right in `ink3`,
 `caution` from 15 minutes before and `alert` once under way), led by its calendar's 3 × 14 bar where
-tasks have their rings (#197), then each open task due today and tomorrow by name, today's first, behind its ring in its project's
+tasks have their rings (#199), then each open task due today and tomorrow by name, today's first, behind its ring in its project's
 colour, with "Tomorrow" right in `ink3` on tomorrow's. More than three tasks show the first two and
 "3 more due tomorrow" (`ink3`), which shows the rest. Confirmed data only; nothing shows for an empty
 line.
@@ -285,7 +285,7 @@ A line opens the floating detail's card (without its grip) 8 px right of the sid
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
 Calendar's editor on the item; a task's ring, or Complete on its card, completes it in place with
 "Completed Pay rent · Undo": its done check lands and its title is struck through, fading to `ink3`
-(#198), for 360 ms, then the line folds away over 180 ms, and Undo folds it back
+(#200), for 360 ms, then the line folds away over 180 ms, and Undo folds it back
 ([Decided while building](#decided-while-building) #106); an item that isn't a repeating event
 deletes; **Open in Calendar** shows it there with its card. Clone, Copy and Colour stay on Calendar.
 Esc, × or a click elsewhere closes it; another line moves it there (#78).
@@ -297,12 +297,12 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Group header** 30 px, `panel`, `hair` above and below (none above the first), its group's 14 px
   glyph in `ink3` 8 px before the label (Pinned `keep`, Attention `flag` in `caution`, Unsorted
   `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career `work`, People
-  `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #160), 11.5 uppercase
+  `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #119), 11.5 uppercase
   .08em `ink3`, count in `ink2`. Attention's band is the loudest: `caution` 8% into its `panel`
-  (Light 6%), label and count in `caution`, a `caution` 20% line under it (#130). A collapsed group
+  (Light 6%), label and count in `caution`, a `caution` 20% line under it (#167). A collapsed group
   adds the first three organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge
   Video") and a chevron; under the pointer it lays `sub` over its band, and the keyboard cursor
-  `sub2`, as a row does over the page (#121). Every group
+  `sub2`, as a row does over the page (#158). Every group
   starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
 - **Order:** Pinned (only with pins), Attention, Unsorted (only when triage is down), Security,
   Deliveries, Money, Career, People, Updates, Other, Noise. Empty groups are left out. Collapsed,
@@ -310,13 +310,13 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 - **Row** 38 px, padding 0 16 0 12: unread gutter (12), sender or organisation (172, ellipsis),
   subject then " · " and the summary in `ink3` (ellipsis), the **account** (dot and label in `ink3`
   12, 76 px, on every row, decision 41, dropped only while the list is filtered to one account,
-  #205), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
-  edge, and a press `sub3` at once (#127). Other chips drop while the reading pane is open; the
+  #207), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
+  edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
   account never does.
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
   (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
   line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
-  12.5). Read-but-not-Done rows keep a `caution` ring in place of the dot and stay (#130).
+  12.5). Read-but-not-Done rows keep a `caution` ring in place of the dot and stay (#167).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
   MacBook Pro · Los Angeles"). A **code** row shows the code (Geist Mono, two groups of three), a
   **Copy** button and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival
@@ -324,11 +324,11 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   ([Decided while building](#decided-while-building) #109).
 - **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
   email's line is its subject and summary. Its row in its group keeps a 14 px `keep-fill` before its
-  account (#202).
-- **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#164).
-- **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#201); the
+  account (#204).
+- **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#123).
+- **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#203); the
   reading pane collapses.
-- **Loading:** until the list's first answer, its skeleton (#170): Attention's three-line rows and
+- **Loading:** until the list's first answer, its skeleton (#225): Attention's three-line rows and
   the groups' rows under their headers, never All caught up; All's day under its heading below the
   Pinned shelf, and three more rows at the foot while its next page loads.
 
@@ -337,7 +337,7 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 The header's **All**. Every email, Noise included, newest first, under day headings ("TODAY Wed,
 Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39). Each day
 groups its rows by lane, and the kind shows once, in a left column, where an FYI run starts, after
-its group's glyph at 13 px (#160); each
+its group's glyph at 13 px (#119); each
 day's Noise folds to one line ([Decided while building](#decided-while-building) #48). Pinned
 email sits on Unread's Pinned shelf above the first day, with ages and Unpin under the pointer, and
 leaves its day until it's unpinned (#101).
@@ -351,14 +351,14 @@ anything waits there and All when Unread would say "All caught up" (#102).
   `P`, Open in Gmail `O` (each a 30 px pill with its key hint), then previous and next and More. Reply has a reserved place after Open in
   Gmail, empty until reply exists. In a pane under 600 px the key hints drop and the labels stay
   ([Decided while building](#decided-while-building) #107). Done's check is `good` and its label
-  `ink`, the others `ink2` (#126); Trash turns `alert` under the pointer and presses in `alert` (#132).
+  `ink`, the others `ink2` (#163); Trash turns `alert` under the pointer and presses in `alert` (#169).
 - **Head** (padding 20 28 16): the subject (20 / 500), then a 32 px avatar, the sender's name, " ·
   organisation · via platform" in `ink2`, "to you", and on the right the account (dot and label) and
   the clock time, with the date before it on older mail
   ([Decided while building](#decided-while-building) #88). A verification code follows in its
-  **code card**, with Copy and its countdown (#207). Each email swaps in from the side the user
-  stepped from (#206).
-- **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #133):
+  **code card**, with Copy and its countdown (#209). Each email swaps in from the side the user
+  stepped from (#208).
+- **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #170):
   **Add to calendar**, **Add as task**, **Ask about this email**.
   Security mail has no Add to calendar; it shows the **facts card** instead (board 03: what happened,
   when, device, location, "not a place you use" in `alert`), and protected mail says "Protected ·
@@ -368,21 +368,21 @@ anything waits there and All when Unread would say "All caught up" (#102).
 - **Body:** plain text at 14 / 1.55, max 600 px; HTML in a sandboxed frame as wide as the reading
   pane and as tall as the email, with radius 14 on white
   ([Decided while building](#decided-while-building) #77), dimmed to 95% in Night and ringed with a
-  1 px `mailEdge` hairline in Light (#134). The body starts 12 px under the actions (#133).
+  1 px `mailEdge` hairline in Light (#171). The body starts 12 px under the actions (#170).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
   **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
   contosocoffee.example" (trust per domain); each hidden image keeps its place as a hatched
-  placeholder (#209).
+  placeholder (#211).
 - **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
-  type's tile (#163), name and size, then the preview's eye and **Download** with its glyph; PDF,
+  type's tile (#122), name and size, then the preview's eye and **Download** with its glyph; PDF,
   image and CSV open a preview.
 - **Opening:** the tools and the head draw from the email's row at once; only the body waits, a
-  skeleton meanwhile (#176).
+  skeleton meanwhile (#229).
 
 ### Search
 
 - `/` or ⌘F focuses the header field (focused: `edgeFocus` border, `cardOn` fill, its hint `Esc`;
-  #135). Results replace the
+  #172). Results replace the
   list; the reading pane and `J` / `K` work the same.
 - Recognised words become **chips** in the field (22 px, `sub2`), each with a small label in `ink3`
   and an ×: "Org Northwind ×", "Type Rejection ×", "Date Mar 2026 ×", plus account and kind. One
@@ -391,14 +391,14 @@ anything waits there and All when Unread would say "All caught up" (#102).
   ("Not Type Confirmation ×"); one that doesn't stays in the field as typed ("!proseware") and leaves
   out the mail that has it.
 - A results line: "2 results · newest first". Each result shows why it matched ("Type Rejection",
-  `ink3` 12) where its lines don't already show it (#210), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
-  yellow in Light, #135).
+  `ink3` 12) where its lines don't already show it (#212), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
+  yellow in Light, #172).
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
-  after it in `ink3` (#136).
-- No results: "No emails match" and each chip as the field draws it, removable by its × (#211),
-  after a 20 px `search_off` (#165).
-- **On its way** (#180): until the first answer the list stays at .55, then the results' skeleton;
+  after it in `ink3` (#173).
+- No results: "No emails match" and each chip as the field draws it, removable by its × (#213),
+  after a 20 px `search_off` (#124).
+- **On its way** (#235): until the first answer the list stays at .55, then the results' skeleton;
   the field's glyph turns while a search is on its way; a refinement dims the results it replaces.
 
 ### Alfred's Answer card
@@ -407,7 +407,7 @@ A `card` above the results (board 07): Alfred's one or two lines, the **sources*
 in the reading pane), each follow-up turn below the last, and a follow-up field at the bottom. From
 the reader, **Ask about this email** opens the same card scoped to that email. "Couldn't find that
 in your mail" says what it searched. While Alfred works, its trail says what it has done and what
-it's doing (#181, amending #80); more than five sources show the first five and **Show all**
+it's doing (#236, amending #80); more than five sources show the first five and **Show all**
 ([Decided while building](#decided-while-building) #80). About one email, its first line is "Reading this email…", and the follow-up field waits at
 half strength until the answer is in (#108).
 
@@ -433,23 +433,23 @@ offered for protected mail.
 
 - **Weekday row** 30 px, 11.5 uppercase. **Columns** 147 px at the design target, **rows** 176. Cells
   have `hair` right and bottom lines; weekends take `dayOff`, days outside the month `dayOut` (an
-  outside weekend too), the selected day `sub` (#123) with its number on a `sub3` disc (#233). A day under the pointer takes `sub` at 55% over
+  outside weekend too), the selected day `sub` (#160) with its number on a `sub3` disc (#190). A day under the pointer takes `sub` at 55% over
   its tints (120 ms), and a 20 px + after its number (`add` 14 in `ink3`, `sub2` and `ink` under the
   pointer, "New event · C") makes an event on that day, selecting it; a click on the day still only
-  selects it (#223).
-- **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#124); today a 22 px
-  `alert` disc with `onAlert` 600 (#128); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
-  sun `sunGlyph`, cloud `ink2`, rain `cool`), after the high in `ink2` and the low in `ink3` (#137).
+  selects it (#180).
+- **Day head** 22 px: the number (12.5, `ink2`, `ink3` once the day is over (#161); today a 22 px
+  `alert` disc with `onAlert` 600 (#165); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
+  sun `sunGlyph`, cloud `ink2`, rain `cool`), after the high in `ink2` and the low in `ink3` (#174).
 - **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text, its
-  lightness capped at `--tintL` (#122) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
+  lightness capped at `--tintL` (#159) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
   the colour at `--evtint` as fill. The **selected item turns solid** (colour fill, `onInk` text, no
   bar) and is the only selection mark: no outline ring. **Past** items turn grey: `ink3` text and time,
-  the colour's bar at 45% and its fill at half `--evtint` (#124). Titles end in "…".
+  the colour's bar at 45% and its fill at half `--evtint` (#161). Titles end in "…".
 - **Tasks:** the ring or done glyph and the title in `ink` 12; hover and selected `sub2`.
 - **Overflow:** what doesn't fit folds into "+3" (`ink3` 12) on a chip's footprint (20 px, radius 6,
   the count lined up with the chips' titles, `sub` and `ink2` under the pointer), then up to three
   6 px dots 3 px apart for the first items it folds: an event's filled in its colour, a task's a
-  1.5 px ring in its project's (#146). Its popover lists the day's every item (board 11b) and closes
+  1.5 px ring in its project's (#153). Its popover lists the day's every item (board 11b) and closes
   with Esc.
 - Infinite vertical scroll through months.
 - **Paging:** ← → or `P` `N` a month and `T` today glide the grid there over 260 ms; a month more
@@ -458,43 +458,43 @@ offered for protected mail.
   it; the mini-month, links and Month from Week jump. The header's title swaps over 120 ms, rising 6 px
   for a later month and falling for an earlier one, a week's sliding 6 px with its days; as Today
   lands, today's disc (here, in the week's heads and in the mini-month) swells to 1.18 and back over
-  260 ms (#220, #221).
+  260 ms (#177, #178).
 
 ### Sidebar on Calendar
 
-The **mini-month** (26 px discs, six rows always; today an `alert` disc (#128); the selected day a
-`sub3` disc, the pointer `sub2`; in Week the shown week one `sub2` band; no other marks, #231) with
+The **mini-month** (26 px discs, six rows always; today an `alert` disc (#165); the selected day a
+`sub3` disc, the pointer `sub2`; in Week the shown week one `sub2` band; no other marks, #188) with
 ‹ › stepping, the days sliding in from the side they come from. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
 on the left (off: an outline, and the name `ink3`), the name; **Todoist** reads as the others, its
 checkbox and name with no mark of its own. Toggled, a calendar's items fade out over 120 ms before they
-go, or fade back in over 180 ms (#228). With every calendar off, a 16 px `ink3` `visibility_off`
+go, or fade back in over 180 ms (#185). With every calendar off, a 16 px `ink3` `visibility_off`
 follows the header's title (#113).
-Until the calendars have come, four skeleton rows: a 14 px box (radius 4) and a bar (#172).
+Until the calendars have come, four skeleton rows: a 14 px box (radius 4) and a bar (#227).
 
 ### Right pane
 
 Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61°"), **Events** (time,
 a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", always the calendar; the place on its own
 line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zoom.us", for a link,
-#166; recurring glyph; the next one today lifted on a tint of its colour with "in 5h" in it, and
-once under way under the now-line with "45m left" and its bar filling, #226; past ones grey, #226; "Leave
+#125; recurring glyph; the next one today lifted on a tint of its colour with "in 5h" in it, and
+once under way under the now-line with "45m left" and its bar filling, #183; past ones grey, #183; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
-bars as the week's (#227), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#233).
-An empty day offers New event C and New task D as dashed ghost rows (#234); one whose items are only
+bars as the week's (#184), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#190).
+An empty day offers New event C and New task D as dashed ghost rows (#191); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
-editor and calendar search results; while those show, the grid dims what they don't match (#238). Until the day's items and the calendars have come, its line is
-a 110 px bar and its agenda three skeleton rows (#172), never "Nothing planned" or the empty day.
+editor and calendar search results; while those show, the grid dims what they don't match (#195). Until the day's items and the calendars have come, its line is
+a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" or the empty day.
 
 ### The floating detail
 
 - **Card:** 280 px wide (decision 46), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
   at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
-  Fri", #167), reminder, calendar (its glyph in the item's colour, #167); then **Edit E** and icon
+  Fri", #126), reminder, calendar (its glyph in the item's colour, #126); then **Edit E** and icon
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
-  its project as a 9 px dot in it, has no Colour, and is struck through once done (#229). Delete stands apart after a `hair` divider and turns
-  `alert` under the pointer, a task's Complete `good` (#132).
+  its project as a 9 px dot in it, has no Colour, and is struck through once done (#186). Delete stands apart after a `hair` divider and turns
+  `alert` under the pointer, a task's Complete `good` (#169).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt.
@@ -533,8 +533,8 @@ suggestions under the place, the calendar picker, recurrence, reminders (default
 Notifications) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
 1h 30m"). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
-menus tick their current choice (#232). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
-only dashed until it's picked and lands, and a field another's change moved flashes (#230). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
+menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
+only dashed until it's picked and lands, and a field another's change moved flashes (#187). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
 editor with project, labels and due date.
 
 ### Recurring events
@@ -549,7 +549,7 @@ drop waits, the origin shows as a dashed ghost and the agenda says "Moving to Th
 A dragged chip lifts (tilt −1.5°, scale 1.04, popover shadow, easing in over 120 ms), its origin
 becomes a dashed ghost in its colour, and a tooltip names the target day and time (board 15). The day
 under it takes the item's colour and shows a dashed slot where it would land; dropped, the chip settles
-from the lift into its place (#237). Tasks move by whole day.
+from the lift into its place (#194). Tasks move by whole day.
 
 ### Week view
 
@@ -559,15 +559,15 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Header:** "Oct 4 – 10, 2026" (min 128 px; "Sep 27 – Oct 3, 2026" across months, "Dec 27,
   2026 – Jan 2, 2027" across years), ‹ Today › paging a week, Month | Week. Tab "Oct 4 – 10, 2026 ·
   Calendar". `M` and `W` switch; Week opens on the selected day's week, Month on its month, Week zooming in from
-  that week's row in Month and Month settling back out around it, over 180 ms (#222). The view
+  that week's row in Month and Month settling back out around it, over 180 ms (#179). The view
   rides in the address (`?view=week`) and the last one used is remembered, so Calendar, `2` and links
   open in it.
 - **Layout:** a 56 px gutter, then seven columns filling the width (139 px at the design target,
   down to about 90 with titles cut). The **day heads** (48 px) and the **all-day row** stay put while
   the hours scroll under them. The right pane stays.
 - **Day head:** the weekday (11.5 uppercase `ink3`), the date (14 / 500 `ink` on a 24 px disc, today
-  the 24 px `alert` disc at 600, #128, #225), the weather icon, 7 px apart. A click selects the day; under
-  the pointer it takes a month day's wash (#223).
+  the 24 px `alert` disc at 600, #165, #182), the weather icon, 7 px apart. A click selects the day; under
+  the pointer it takes a month day's wash (#180).
 - **All-day row:** all-day events as tinted bars spanning their days, then each day's tasks (a timed
   one prefixed "9:00 AM"), 20 px lines 2 px apart, at least two lines and at most three: a day with
   more shows two and "+N", which opens the day's popover (board 11b). An event of 24 h or more is a
@@ -576,14 +576,14 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   `dayOff`, the **selected day's column `sub`** (today by default, so board 16 reads the same),
   and today's column the **now-line** (1.5 px `alert`, an 8 px dot at its start, the time in the
   gutter in `alert` 500), which runs on faintly through the other six days (1 px, `alert` at 55%, under
-  today's, #225).
+  today's, #182).
 - **Opening scroll:** this week puts the now-line about a third down; another week an hour before
   its first timed item, else 7 AM. Paging keeps the scroll.
 - **Blocks:** the month chip's tint, bar and colours (`.wb` in board 16): the title at 500, the time
   under it at 400 and .8; at least 20 px; under 50 minutes (no room for a second line) the time follows the title on one
   line ("Standup, 9:00 AM"), and the place shows under the time where a whole line is left for it; in a
   lane a block gives its start alone, as a month chip does ("7 PM"), and one with room for four
-  lines wraps its title to two; no line is drawn cut off; titles end in "…" (override 10). Selected solid, past grey as a chip (#124), pending .5 with
+  lines wraps its title to two; no line is drawn cut off; titles end in "…" (override 10). Selected solid, past grey as a chip (#161), pending .5 with
   the spinner, failed outlined in `alert`. An event crossing midnight draws in both days.
 - **Overlaps:** each run of overlapping events shares its column in up to three equal lanes; a
   fourth or more folds into "+N" at the run's top, opening the day's popover.
@@ -596,7 +596,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Where a press would start:** under the pointer, empty hours show a 30-minute slot (22 px, radius 6,
   `sub` with an `edge` inset) at the 15-minute step a press would start at, holding + and that time
   ("10:30 AM", 11 `ink3`), moving with the pointer over 120 ms and fading in and out; it goes over a
-  block, off the hours and on a press (#224).
+  block, off the hours and on a press (#181).
 - **Create:** press on an empty slot and drag: a dashed ghost in the default calendar's colour, "New
   event" and its range, in 15-minute steps; letting go opens the editor in the right pane with that
   day and range, the title focused. Dragging across days in the all-day row makes an all-day event
@@ -614,7 +614,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   resize, the failed card, multi-select, Clone, Copy, Paste (the copied time on the selected day),
   Colour, Delete, ⌘Z.
 - **States:** the grid, heads and hours draw at once and blocks fade in (120 ms) as they arrive; an
-  empty week draws nothing more (the agenda offers its ghost rows, #234); a failing source's line
+  empty week draws nothing more (the agenda offers its ghost rows, #191); a failing source's line
   sits atop the right pane (#62), and offline dims the grid.
 - **Labels:** each block reads "Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal" to assistive tech, the
   hours are a labelled region, the arrows "Previous week" and "Next week". No focus rings
@@ -643,7 +643,7 @@ navigation.
 
 - **Section header** (32 px): mail's group header without a count (`panel`, `hair` above and below,
   none above the first; 11.5 uppercase .08em), its label in `ink2` after the section's 14 px glyph
-  in `ink3` (Local `location_on`, Tech `computer`, AI `auto_awesome`, General `public`; #161).
+  in `ink3` (Local `location_on`, Tech `computer`, AI `auto_awesome`, General `public`; #120).
   - In All, the blocks come in a fixed order: Local, Tech, AI, General. A story in more than one
     section shows once, in its main section's block (#96).
   - Each block shows its **top 3–5 stories, biggest first**, then "12 more in Local". That's a 36 px
@@ -652,32 +652,32 @@ navigation.
   - Layout: a grid of 12 | 232 | text, 14 apart, padding 14 16 14 12, `hair` below.
   - Image: 232 × 130 px, radius 12.
   - Text: the headline 16 / 500 `ink` at 1.35, still `ink` once seen, at 400; the summary `ink3` 13 /
-    1.45, clamped to two lines; the meta line at the foot (#245).
+    1.45, clamped to two lines; the meta line at the foot (#127).
   - When the list is 1000 px or wider (nothing open at the design target), the lead grows: 12 | 320
     | text, 18 apart, padding 16 16 16 12; the image 320 × 180; the headline 19 at 1.3, −.01em, max
-    760; the summary 13.5 / 1.5, three lines, max 680 (#245).
+    760; the summary 13.5 / 1.5, three lines, max 680 (#127).
 - **Story row:**
   - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below.
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
   - Under it, the summary in `ink3` 12.5, one line, ellipsis. In a list under 480 px the headline
-    wraps to two 18 px lines instead and the summary goes; the row keeps its height (#246).
+    wraps to two 18 px lines instead and the summary goes; the row keeps its height (#128).
   - The meta, right-aligned on two lines: the leading outlet and "+N" in `ink2` 12, then the age in
     `ink3` 12, or "Updated 7:55 AM" in `cool`.
   - The thumbnail: 72 × 48, radius 8. A story without an image leaves the column empty, never a
     placeholder, except one led by a hazard source (NWS, USGS, Cal Fire, AirNow): its hazard's 22 px
-    glyph in `caution` on a 72 × 48 tile, radius 8, `caution` at 10% with a 22% inset ring (#162).
+    glyph in `caution` on a 72 × 48 tile, radius 8, `caution` at 10% with a 22% inset ring (#121).
   - A lead without an image led by a hazard source puts its hazard's 18 px glyph in `caution` before
-    the headline, rather than a large empty tile (#162).
+    the headline, rather than a large empty tile (#121).
 - **The dot** (6 px in the 12 px gutter): `ink` for **new**, as unread mail; `cool` for
   **updated**; none once seen, from the next visit (#95), an opened story's shrinking out in its
-  colour over 180 ms (#249). Hover is `sub`; the keyboard cursor and the open story are `sub2`.
+  colour over 180 ms (#131). Hover is `sub`; the keyboard cursor and the open story are `sub2`.
 - **Meta copy:** "KTLA +4 · 1h · Updated 8:40 AM". Ages follow [Copy](#copy). Missed rows lead with
   the section, the story's main one (#96): "General · NPR +9 · Tue".
 - **Images:** Setpoint's own resized copy, cropped to fill (`object-fit: cover`). The boards draw
   tinted placeholders instead. While one loads its box breathes in a skeleton's fill, then it
-  fades in over 180 ms; every news image has a 1 px `edge` hairline inside its edge (#177).
+  fades in over 180 ms; every news image has a 1 px `edge` hairline inside its edge (#230).
 - **Loading:** until the list's first answer, its skeleton: a section header, a lead and three
-  rows per block in All, a lead and six rows in a section (#178).
+  rows per block in All, a lead and six rows in a section (#231).
 - **Upcoming** (Tech, under its header): a 46 px row with:
   - a 26 px `event` tile, `violet` on `violet` at 16%, radius 8
   - the label "UPCOMING" (11.5 uppercase `ink3`)
@@ -700,7 +700,7 @@ navigation.
   - A click or `N` re-sorts the list and scrolls it to the top. The stories it brings onto the list
     settle in from `sub2` over 900 ms.
   - It drops 8 px into place as it fades in over 180 ms; under the pointer its ring turns `edgeHover`
-    and its arrow `ink` (#249).
+    and its arrow `ink` (#131).
 - **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon", only
   when its own list is empty too. A block whose stories all show in other blocks (#96) has just its
   "2 more in Tech" link (#116).
@@ -709,11 +709,11 @@ navigation.
 
 - **Tools** (48 px): **Open at KTLA** `O` (the leading outlet's article), then a spacer, previous,
   next and More.
-- **Opening** (#179): the head and the image draw from the story's row at once; the summary and
+- **Opening** (#232): the head and the image draw from the story's row at once; the summary and
   Sources are a skeleton until the story comes; each story or article eases in as it's opened or
   stepped to.
 - **Head** (padding 18 28 14):
-  - its sections as tags, each with its section's 14 px glyph in `ink3` (#161), plus "Updated" as a
+  - its sections as tags, each with its section's 14 px glyph in `ink3` (#120), plus "Updated" as a
     `cool` tag when it changed since Andy last looked
   - the headline (20 / 500)
   - the meta in `ink3` 12.5: "5 outlets · first reported 6:12 AM · updated 8:40 AM"
@@ -724,7 +724,7 @@ navigation.
     `cool` at 8% over `card`, `cool` 24% ring). It has the label "New since you looked · Mon 10:40
     PM" (11.5 uppercase `cool`) and one line per new fact: its time (60 px, `ink2` 12.5), then the
     fact in `ink`. With six facts or more, the newest four show, then "6 more" folds the rest away
-    (#248).
+    (#130).
   - The summary (14 / 1.6, `ink`, max 600), in the body's one 600 px column (#98).
   - The **Sources** label with its count, then the outlets in a `sub` group, radius 14. Each row is
     at least 52 px:
@@ -739,7 +739,7 @@ navigation.
   - Head: a 22 px outlet badge, the outlet, the time and the byline; then the outlet's headline (20
     / 500).
   - The image (240 tall), then the extracted text at 16 / 1.65, −.003em, paragraphs 16 apart, max
-    600 (about 79 characters a line), in Night `ink` mixed 10% toward `ink2` (#247): its paragraphs
+    600 (about 79 characters a line), in Night `ink` mixed 10% toward `ink2` (#129): its paragraphs
     and list items, without the outlet's membership appeals (#114).
 - **An article that can't be read in-app** (board 26b):
   - A note (radius 12, `sub`, `info`): "KTLA's page can't be read here, so this is its feed
@@ -751,7 +751,7 @@ navigation.
 Board 28 replaces All's list.
 - **Back row** (44 px): the back arrow (back to All), "Missed since Mon 10:40 PM" (14 / 500), and
   the count in `ink3` on the right.
-- **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right), on `history` (#161).
+- **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right), on `history` (#120).
 - Under each day, up to 5 stories per section, biggest first, the first as a lead. Each row names
   its section in the meta. A lead's image is its story's large copy, kept while the story is in
   Missed, never its thumbnail stretched (#115).
@@ -762,18 +762,18 @@ Board 28 replaces All's list.
 ### States
 
 - **AI down** (29a): a failing line at the top of the list (32 px, `caution` 12.5, led by `warning`,
-  #186): "12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying". A ghost small **Show headlines**
+  #218): "12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying". A ghost small **Show headlines**
   lists the raw headlines with their links.
 - **A stale section:** the muted line under its header, "AI, as of 7:02 AM", led by `history`
-  (#186). Its stories stay.
+  (#218). Its stories stay.
 - **A failing feed** shows only in Settings › News, unless its whole section is affected (BRIEF ›
   When things break).
 - **First run** (29b):
   - The muted line "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so
-    far", its progress along its foot (#191).
+    far", its progress along its foot (#223).
   - No Missed strip.
   - A section with nothing yet says "Nothing sorted in AI yet", turning as the first run's line does
-    (#191).
+    (#223).
 - **Offline:** as everywhere, the pill and the dimmed page.
 
 ### News in Settings
@@ -790,9 +790,9 @@ Board 28 replaces All's list.
   - **Articles and grouping** (Claude Haiku 5.5) and **Stories and ranking** (Claude Sonnet 5.5)
   - **Monthly cap** ($40)
   - **This month**: a 160 × 6 meter, `ink3` on a `sub2` track, `caution` from 90% of the cap, then
-    "$18.40 of $40" in `ink` (#252)
+    "$18.40 of $40" in `ink` (#134)
   - **Usage this month** lists Triage, Alfred and News, with News broken into articles, grouping,
-    stories and ranking, each cost in `ink` 500; its label carries the month's total (#252).
+    stories and ranking, each cost in `ink` 500; its label carries the month's total (#134).
 
 ### Keys and behaviour
 
@@ -816,59 +816,59 @@ key (New event, New task, Mark all as read).
 
 A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the address bar, with a
 **220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16; switches are 34 ×
-20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3` (#139), the knob
-stretching toward its travel as it's pressed (#144). A reconnect link opens it at Accounts. While a
+20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3` (#176), the knob
+stretching toward its travel as it's pressed (#151). A reconnect link opens it at Accounts. While a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
-section's label stays under the title (#250).
+section's label stays under the title (#132).
 
 - **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
   drag handle, icon, label, address, how it syncs ("Gmail · Push", "iCloud · IMAP every 2 min") and
-  its state, led by its glyph (#187): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
+  its state, led by its glyph (#219): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
   stopped, as of 9:14 PM" muted after `history` when stale, the reason in `caution` after `warning`
   on a `caution` 7% row when failing, "Needs sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
   Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way; then **Attention
   precision**, 82%, the share of attention mail opened before Done, led by the figure (24 / 500), with
-  the 30 days as a line on a 50–100% scale (#251).
+  the 30 days as a line on a 50–100% scale (#133).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved by any rule.
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
-  `caution` dot; Send test, which turns while it sends and says under the group how it went, #185;
+  `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
   `setpoint-mail`: Attention mail · Off for now), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
   buffer; on for the events given it, #86) and **Alerts** (Reconnect alerts, once per source), every
-  group labelled (#253).
+  group labelled (#135).
 - **Calendar, Todoist, AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
   Settings](BRIEF.md#settings)).
 - Sign out isn't drawn; it follows darma (the foot of the nav, and ⌘K).
-- **Loading** (#171): opening Settings loads every page's answers, so a page switched to shows at
-  once; until a group's answers come, it draws skeleton rows (#170) in `sub3`, never what it says
+- **Loading** (#226): opening Settings loads every page's answers, so a page switched to shows at
+  once; until a group's answers come, it draws skeleton rows (#225) in `sub3`, never what it says
   for nothing ("Not connected", "Not set", "No rules yet", "None yet").
 
 ## Health and states
 
 | State | Treatment |
 | --- | --- |
-| **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#187) |
-| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#186, #188) |
-| **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#186, #188) |
-| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#188); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
-| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#164), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#190) |
-| **Starting** | a browser signed in before: the shell as it last stood, its sidebar's accounts and counts and the page's skeleton (#175); a new one: the mark at 36 px where the card's top sits, after 200 ms, its chips settling in turn, then breathing; what follows fades in over 180 ms (#174) |
+| **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#219) |
+| **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#218, #220) |
+| **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#218, #220) |
+| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#220); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
+| **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#123), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#222) |
+| **Starting** | a browser signed in before: the shell as it last stood, its sidebar's accounts and counts and the page's skeleton (#234); a new one: the mark at 36 px where the card's top sits, after 200 ms, its chips settling in turn, then breathing; what follows fades in over 180 ms (#233) |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
-| **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#186) |
-| **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#235). |
-| **First backfill** | search's status: the shared spinner, "Indexing · 62% · showing what's indexed so far", and its progress along the line's foot (#192) |
-| **A load failed** | in place of what didn't load, the failing line's look: `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." in the server's words, then · **Try again** with `refresh`; data already shown stays and says nothing (#173) |
+| **Triage down** | the **Unsorted** group under Attention, with "Triage is down, as of 9:09 AM" led by `warning` (#218) |
+| **A change failed** | in place (board 19b): the chip outlined in `alert` with an error glyph, and a card anchored to it: "Couldn't move Dinner with Sam", where it was going and from ("Sat, Oct 10 · 7:00 – 9:00 PM · From Fri, Oct 9"), the provider and its own words ("Google Calendar", then "The requested event was modified by another client. (409 Conflict)"), **Try again** and **Move back**. A change waiting for its provider shows at .5 opacity with a spinner, an event's bar dashed (marching from a second on), and arrives with a brighter tint that settles (#192). |
+| **First backfill** | search's status: the shared spinner, "Indexing · 62% · showing what's indexed so far", and its progress along the line's foot (#224) |
+| **A load failed** | in place of what didn't load, the failing line's look: `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." in the server's words, then · **Try again** with `refresh`; data already shown stays and says nothing (#228) |
 
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
 
 The Inbox's bar and lines and the calendar pane's lines fold in as they come and out as they go, as
 rows do; a line whose source is healthy again shows a `good` check for 1.2 s first. The offline pill
-comes in from above and fades out (#189).
+comes in from above and fades out (#221).
 
 ## Phone
 
@@ -882,20 +882,20 @@ sign in. Dates never wrap.
 It feels like an installed app (each line's [Decided while building](#decided-while-building) entry has its values):
 
 - **The reader's actions** share its bottom bar evenly, Done first, its check `good` and its label
-  `ink` 500 (#255).
-- **Marked unread**, an email shows the unread dot before its subject (#263).
+  `ink` 500 (#137).
+- **Marked unread**, an email shows the unread dot before its subject (#145).
 - **Search** has a clear button where the desktop's Esc hint is, no Mark all as read meanwhile, and
-  Back reads "Search" from a result (#259).
+  Back reads "Search" from a result (#141).
 - **Motion:** the reader slides in over the list and back off it; an agenda item's detail rises in;
-  the toast rises from the tab bar (#257).
+  the toast rises from the tab bar (#139).
 - **The tab bar** fills the current tab's glyph, badges Inbox with the attention count while another
-  page shows, and a tap on the current tab takes its list back to the top (#260).
+  page shows, and a tap on the current tab takes its list back to the top (#142).
 - **The edges:** the page reaches the screen's edges, kept clear of the status bar and the home
-  indicator by their insets, and Safari's bars take the drawn theme's `page` (#261).
-- **The list** reads a step up ([Type](#type), #262).
+  indicator by their insets, and Safari's bars take the drawn theme's `page` (#143).
+- **The list** reads a step up ([Type](#type), #144).
 - **The agenda** reads "Today" in `ink` 500, puts the now-line among today's items, draws events as
-  their calendar's chips, and keeps each day's head in view (#256).
-- **Signing in**, the card sits 18% from the top (#264).
+  their calendar's chips, and keeps each day's head in view (#138).
+- **Signing in**, the card sits 18% from the top (#146).
 
 ## mantel's mail chip
 
@@ -921,7 +921,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 - **Done** (`H`) leaves Attention; whether the email was opened first is recorded for triage, never
   asked. Only Attention mail not yet Done offers it (#93). **Trash** (`E`) offers Undo for 6 seconds, as v1 does, in the export's `.toast` (a 40 px pill
   at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
-  six seconds drain as a hairline and wait while the pointer rests on the toast (#140).
+  six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (Unread or All, #105) ⇧I ⇧U ⌘Enter;
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
@@ -929,7 +929,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
   in place with the provider's message otherwise. Nothing quietly reverts. A calendar item deleted
-  fades and folds away, and Undo or ⌘Z folds it back and lands it (#236).
+  fades and folds away, and Undo or ⌘Z folds it back and lands it (#193).
 - **Overlays** anchored to calendar items follow the placement rule; Esc closes the topmost.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 
@@ -938,10 +938,10 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 Sentence case; " · " separates parts, " – " ranges, "…" is one character; times "2:30 PM"; ages
 "now", "4m", "2h", "Yesterday", "Mon", "Oct 1" in the Inbox and search, clock times under All's day
 headings; full timestamps in tooltips. Empty states are one line and an action: "All caught up · Open
-All" (stacked under the mark, #201); the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#234); a
+All" (stacked under the mark, #203); the day pane's empty day is two dashed ghost rows instead, New event C and New task D (#191); a
 day whose items are only hidden, "4 hidden · Show all" (#113). Each
 leads with its glyph in `ink3`, 20 px and 12 px before the words, or 16 px and 8 px in a row 44 px or
-shorter (#165). The UI says "Done".
+shorter (#124). The UI says "Done".
 
 ## Overrides to the export
 
@@ -1003,21 +1003,21 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     2.4M tokens in · 49k out" and "18 calls · 112k tokens in · 8k out".
 28. **The first run's line takes a typographic apostrophe**, "what’s sorted so far", as search's
     indexing line does (29b draws "what's").
-29. **An agenda line names its calendar; the place has its own line** (#166): where boards 11, 12a,
+29. **An agenda line names its calendar; the place has its own line** (#125): where boards 11, 12a,
     12b, 12d, 15, 15b, 19b and 22b draw "2:30 – 3:30 PM · Smile Dental" or "7:00 – 9:00 PM · Blue
     Door", the app reads "· Personal", then the place under it after `location_on`.
 30. **The glide's contents crossfade**: old content fades out 0–120 ms and new content in 70–220 ms
-    (#149), overlapping by 50 ms, where `motion/glide.json` has 0–90 and 90–220 and the card travels
+    (#156), overlapping by 50 ms, where `motion/glide.json` has 0–90 and 90–220 and the card travels
     blank between them.
 
-**The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #120–#139).
+**The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #157–#176).
 
 31. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
     `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
     its values; the board audit draws every board with these.
-32. **Alfred's mark is `auto_awesome` in its gradient** (#136): boards 06 and 07 draw it in `ink`, and
+32. **Alfred's mark is `auto_awesome` in its gradient** (#173): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
 
 ## Not designed yet
@@ -1610,21 +1610,21 @@ it changes what's on screen.
     was opened at. Signed in, the same restart keeps the app under the offline pill instead of
     swapping it for the card. The card's own "Can't reach Setpoint" stays for a sign-in attempt
     that fails (Andy, 2026-10-11, polish audit states-02).
-160. **Each lane carries its glyph:** every Unread group header leads with a 14 px glyph in `ink3`, 8
+119. **Each lane carries its glyph:** every Unread group header leads with a 14 px glyph in `ink3`, 8
     px before its label: Pinned `keep` (was 16), Attention `flag` (in `caution`, as its count),
     Unsorted `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career
     `work`, People `person`, Updates `notifications`, Other `mail`, Noise `campaign`. All's kind
     column draws the same glyph at 13 px before the kind word, the column 100 px wide to hold it.
     Shape alone, no colour per kind: the account colours already mean accounts (Andy, 2026-10-11,
     polish audit inbox-04).
-161. **Each News section carries its glyph wherever it's named:** a section header leads with its
+120. **Each News section carries its glyph wherever it's named:** a section header leads with its
     14 px glyph in `ink3`, its optical edge on the list's 24 px line (Local `location_on`, Tech
     `computer`, AI `auto_awesome`, as Settings › AI, General `public`), and its label lifts from
     `ink3` to `ink2`, so the faintest text in the list becomes a landmark; mail's group headers keep
     `ink3`. The story pane's section tags take the same glyph, Missed's day headers `history` and
     Show headlines' Unsorted header `pending`, as mail's Unsorted. No colour per section: the
     account colours already mean accounts (Andy, 2026-10-11, polish audit news-07).
-162. **An official warning without a photo shows its hazard, not a hole:** a story whose leading article
+121. **An official warning without a photo shows its hazard, not a hole:** a story whose leading article
     comes from a hazard source (NWS `thunderstorm`, USGS `earthquake`, Cal Fire
     `local_fire_department`, AirNow `air`, the glyphs Settings › News gives those sources) and that
     has no image draws its glyph at 22 px in `caution` on a 72 × 48 tile (radius 8, `caution` at 10%,
@@ -1632,7 +1632,7 @@ it changes what's on screen.
     before the headline instead. An outlet's story without an image still leaves the column empty,
     never a placeholder. The story's lead names its hazard source (`hazard` in the API) (Andy,
     2026-10-11, polish audit news-08).
-163. **An attachment's tile says what it is:** each card leads with a 30 px tile, radius 8, concentric
+122. **An attachment's tile says what it is:** each card leads with a 30 px tile, radius 8, concentric
     in the card (padding 0 8 0 7, 12 px before the name), the type's colour at 14% with its glyph
     in that colour: PDF `alert` `picture_as_pdf`, image `violet` `image`, spreadsheet (CSV, Excel,
     Numbers) `comf` `table_chart`, document (Word, Pages, RTF, text) `cool` `description`, archive
@@ -1641,7 +1641,7 @@ it changes what's on screen.
     a 16 px `download` (gap 6, padding 0 10 0 8). Under the pointer the ring stays `edgeHover`, the
     tile deepens to 22%, the eye turns `ink`, and in Night the card fills `cardOn` (Light stays
     white) (Andy, 2026-10-11, polish audit reader-07).
-164. **A glyph means one thing, at one size per role:** account trouble is `sync_problem` everywhere
+123. **A glyph means one thing, at one size per role:** account trouble is `sync_problem` everywhere
     (the sidebar, Settings › Accounts' nav and rows, the Inbox's reconnect bar, which had shown
     `warning` and `warning-fill`), while a failing News feed keeps `warning` (override 24); either
     mark in Settings' nav is `caution`, the current page's too (it had taken the nav's `ink3` and
@@ -1656,7 +1656,7 @@ it changes what's on screen.
     Mark all as read carries `mark_email_read`, as ⌘K's does. Stale and failing lines keep their
     glyphs here; their tone rule is settled with the health states (Andy, 2026-10-11, polish audit
     motion-10).
-165. **Every one-line empty state leads with its glyph, as All caught up does:** in `ink3`, 20 px and 12
+124. **Every one-line empty state leads with its glyph, as All caught up does:** in `ink3`, 20 px and 12
     px before the words, or 16 px and 8 px in a row 44 px or shorter. Calendar's empty day
     `event_available` ("No events · New event", 16), search's and ⌘K's nothing found `search_off`
     ("No emails match …", "No events or tasks match …", "No stories match …" at 20; "No command
@@ -1665,7 +1665,7 @@ it changes what's on screen.
     `visibility_off`, now 8 px before its words. No new copy. The phone agenda's "No events" stays a
     bare label: it sits at the end of a day's header, beside the forecast's glyph, not alone on a
     line (Andy, 2026-10-11, polish audit motion-13).
-166. **A place has its own line, and the time's line always names the calendar:** an event's second
+125. **A place has its own line, and the time's line always names the calendar:** an event's second
     line in the right pane is always "7:00 – 8:00 AM · Personal", where it had named the place
     instead when there was one, so the line meant two things. The place follows on a line of its
     own, as Leave by does: `ink3` 12.5 after a 16 px `location_on` (6 px gap, 4 px above), its name
@@ -1673,14 +1673,14 @@ it changes what's on screen.
     link. The stacked facts (place, Leave by, Overlaps) share one 4 px gap (Overlaps had 2). No
     reminder glyph: it would sit on nearly every row. Boards 11 and the others draw the place in
     the line (override 29) (Andy, 2026-10-11, polish audit calpanes-12).
-167. **A recurring event's card says it's a series, and its calendar fact takes its colour:** the
+126. **A recurring event's card says it's a series, and its calendar fact takes its colour:** the
     floating detail adds a `repeat` fact after the attendees for an event with a recurrence, worded
     as the editor's repeat field words it ("Weekly on Mon, Wed, Fri", #53 and #64), so Gym's card no
     longer reads only "10 min before · Personal" until a drop asks This, Following or All. A
     repeating task keeps its own line. The calendar fact's `calendar_today` takes the item's colour
     (its own, else its calendar's), as the failed card's does, its name staying `ink2`. The date
     stays the title's subtitle, without a glyph (Andy, 2026-10-11, polish audit calflows-05).
-245. **A block's lead is unmistakably the lead:** the boards were drawn with the pane open, a list
+127. **A block's lead is unmistakably the lead:** the boards were drawn with the pane open, a list
     about 750 px wide; with nothing open it's 1,429 px at the design target, and the lead's 232 ×
     130 image filled 16% of its row while its one-line headline ran past 1,000 px. From a list 1000
     px wide the lead grows: 12 | 320 | text, 18 apart, padding 16 16 16 12, the image 320 × 180, the
@@ -1689,24 +1689,24 @@ it changes what's on screen.
     at 400 rather than dropping to `ink2`, so on a second visit the day's top stories still outrank
     Upcoming's names and the rows; new and seen leads differ by weight and the dot. Rows keep `ink2`
     once seen. Board 25 draws a seen lead in `ink2` (Andy, 2026-10-11, polish audit news-04).
-246. **A narrow News list wraps its rows' headlines:** with a story open at 1280 the list is 420 px
+128. **A narrow News list wraps its rows' headlines:** with a story open at 1280 the list is 420 px
     (#99), and the meta and thumbnail left each headline about 220 px, so every one was cut at 25–30
     characters and its summary too. Under 480 px of list a row's headline wraps to two lines (18 px,
     clamped with an ellipsis) and the summary goes; the thumbnail, meta and dot stay, and the row
     keeps its 66 px. Extends #99 (Andy, 2026-10-11, polish audit news-10).
-247. **An article in the pane reads at a reader app's size:** the extracted text is 16 / 1.65 at
+129. **An article in the pane reads at a reader app's size:** the extracted text is 16 / 1.65 at
     −.003em with paragraphs 16 apart, about 79 characters a line in the 600 px column (#98), where
     14.5 / 1.6 gave about 87. In Night it's `ink` mixed 10% toward `ink2`, so a long article doesn't
     glare at 17:1 on the near-black page; Light keeps `ink`. The story's summary stays 14 / 1.6, as it's
     short (Andy, 2026-10-11, polish audit news-11).
-248. **New since you looked folds past four facts:** an updated story with ten new facts drew about
+130. **New since you looked folds past four facts:** an updated story with ten new facts drew about
     420 px of card, pushing its own summary below the fold and its Sources off screen. With six facts
     or more the card shows the newest four, then a 20 px line "6 more" in `ink2` 12.5 with a 16 px
     `expand_more` in `ink3`, level with the facts' text (72 px in), as the list's "12 more in Local"
     reads. A click opens the rest, the card growing over 180 ms, and the line reads "Show fewer" with
     `expand_less`. Five or fewer all show, as folding one away saves nothing (Andy, 2026-10-11,
     polish audit news-12).
-249. **News answers the pointer and shows what N brought:** the new-stories pill, the one element
+131. **News answers the pointer and shows what N brought:** the new-stories pill, the one element
     whose job is to draw the eye, was the quietest on the page (`cardOn`, 1.02:1 on Light's page),
     appeared in one frame and had no hover; N re-sorted the list in one frame, the arrivals looking
     like every other row; and an opened story's dot vanished. Now the pill drops 8 px into place as
@@ -1716,7 +1716,7 @@ it changes what's on screen.
     arrivals (`news.landedMs`); an opened story's dot shrinks out in its colour over 180 ms; and a
     headline turning from new's `ink` to seen's `ink2` eases over 120 ms. The rows' own 120 ms hover
     and every press state are the motion pass's (Andy, 2026-10-11, polish audit news-06).
-250. **Settings keeps its title and × in view:** the page's head and × scrolled away with the page,
+132. **Settings keeps its title and × in view:** the page's head and × scrolled away with the page,
     so after 260 px of AI the modal's top showed only a group label, and News's 2,700 px of sources
     gave no sign of the page or the way out. The head is now sticky over the modal's colour
     (reaching up through the page's padding to 1 px short of the modal's ring, so it sits where it
@@ -1724,7 +1724,7 @@ it changes what's on screen.
     page has scrolled (a scroll-driven animation over the first 24 px, CSS alone), and the × is
     fixed to the modal at its 24 / 20 px. A section's label stays under the head while its rows
     pass, so News says "TECH 14" over Tech's sources (Andy, 2026-10-11, polish audit settings-04).
-251. **Attention precision leads with its figure and draws its month as a line:** the figure was 13
+133. **Attention precision leads with its figure and draws its month as a line:** the figure was 13
     px, as every row, and the 30 days were `sub3` bars scaled 0–100% (1.48:1 on the Night group), so
     a month between 70 and 100% read as a flat barcode. Now "82%" leads at 24 / 500 / −.02em in
     `ink` (64 px wide, tabular), then the title over its line (#76's copy), padding 14 20 14 16, 20
@@ -1735,22 +1735,22 @@ it changes what's on screen.
     no chart, only "—" and its line. Each day's column names it on hover as the app writes dates:
     "Tue, Oct 6 · 9 of 11 opened first", or "· nothing Done". Board 17 draws 30 bars and the figure
     inline (Andy, 2026-10-11, polish audit settings-08).
-252. **Settings › AI puts the money first:** each cost in Usage this month is `ink` 500 (was `ink2`
+134. **Settings › AI puts the money first:** each cost in Usage this month is `ink` 500 (was `ink2`
     400), its label carries the month's total ("$21.35", `ink2`, Triage, Alfred and News together)
     so This month's News-only "$18.40 of $40" no longer reads as the whole, the amount is `ink`, and
     the meter turns `caution` from 90% of the cap rather than only at it; its fill eases to a new
     width over 260 ms. The meter stays neutral, `ink3` on a `sub2` track (was `ink2` on `sub3`;
-    3.4:1 in Night, 4.1:1 in Light): the finding drew it `cool`, but #126 gives `cool` to identity
+    3.4:1 in Night, 4.1:1 in Light): the finding drew it `cool`, but #163 gives `cool` to identity
     and `accent` to "you are here", and a usage meter is neither (Claude decided, Andy left small
     gaps to Claude). At the cap it's full in `caution`, as before (Andy, 2026-10-11, polish audit
     settings-10).
-253. **Every Settings group has its label, and an empty one says so as Mail does:** Notifications'
+135. **Every Settings group has its label, and an empty one says so as Mail does:** Notifications'
     last two groups take the labels "Time to Leave" and "Alerts" (Reconnect alerts), spaced as every
     other group, as #69 gave Calendar's last group a label. Security's empty Passkeys group is the
-    one-line empty state, "None yet · Add passkey" after a 20 px `passkey` in `ink3` (#165), not a
+    one-line empty state, "None yet · Add passkey" after a 20 px `passkey` in `ink3` (#124), not a
     row titled "None yet" that read as a passkey's name; the recovery row is titled "Recovery codes"
     with "8 left" as its value (Andy, 2026-10-11, polish audit settings-11).
-254. **The sign-in card answers and carries a little more of the brand:** a refused password, code
+136. **The sign-in card answers and carries a little more of the brand:** a refused password, code
     or token shakes the card once (0 → −6 → 5 → −3 → 0 px over 260 ms, `--ease`, the modal's timing)
     and selects what was typed, so typing replaces it; the border and the line stay as they were.
     With passkeys registered and nothing typed, **Use a passkey** is the solid button and Sign in
@@ -1761,14 +1761,14 @@ it changes what's on screen.
     it. In Night the card's shadow is `0 30px 80px rgba(0,0,0,.6)`, depth rather than the faint box
     the modal shadow drew on the near-black page; Light keeps the modal's (Andy, 2026-10-11, polish
     audit states-14).
-255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
+137. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has
     its label in `ink` 500 and its check in `good`; the rest keep `ink` icons over `ink2` labels. The
     bar fills once the email's row or the email is known, with Open in Gmail decided by its account
     (Gmail's mail always has the link), so nothing moves in or along when the email arrives; until
     then it's empty (Andy, 2026-10-11, polish audit phone-02).
-256. **The phone's agenda marks today and now, and draws events as chips:** today's head reads
+138. **The phone's agenda marks today and now, and draws events as chips:** today's head reads
     "Today" in `ink` 500 before its date in `ink3`; a 16 px now-line (the right pane's: the time in
     `alert` 12 / 500 in the time column, a 7 px `alert` dot, a 1 px `alert` line at .7) sits before
     today's first timed event not yet over, or after its last, and only on a day with a timed event.
@@ -1776,14 +1776,14 @@ it changes what's on screen.
     the title level with the tasks' titles, past ones at .55), where a 3 × 20 px bar was; tasks keep
     their ring. Each day's head stays at the top while its items scroll under it (Andy, 2026-10-11,
     polish audit phone-03).
-257. **The phone's reader slides over the list:** opening an email slides the reader in from the
+139. **The phone's reader slides over the list:** opening an email slides the reader in from the
     right over 260 ms (`--ease`, the modal timing, as it takes the whole screen) while the list moves
     a fifth left and dims to .55 under it; Back, Done and Trash run it the other way, the row folding
     away as the list comes back. It's a view transition, so taps reach the page meanwhile; the
     browser's own Back (Safari's edge swipe) doesn't slide, as it animates itself, and without the API
     it's the cut it was. The agenda's detail rises 24 px into place as its scrim fades in, over
     180 ms, and the toast rises 8 px from the tab bar (Andy, 2026-10-11, polish audit phone-05).
-258. **From 640 to 1099 px the sidebar is a rail and panes cover what they'd squeeze** (Layout ›
+140. **From 640 to 1099 px the sidebar is a rail and panes cover what they'd squeeze** (Layout ›
     Compact): an iPad or a half-width window had the reading pane 1 px wide at 640 and 152 at 820,
     and the month grid 252 px at 900. The sidebar is a 56 px rail of icons with Inbox's attention
     badge; an open email or story covers the list under the header, with Back leading its tools;
@@ -1791,35 +1791,35 @@ it changes what's on screen.
     the editor or search, the day's pane not drawn and its health lines atop the grid; the header's
     search narrows first. ⌘K keeps the rail's lost filters: "Inbox · Jobs", and Show or Hide each
     calendar (Andy, 2026-10-11, polish audit phone-06).
-259. **Phone search has a way out, and acts only on what it shows:** while searching, a 32 px round
+141. **Phone search has a way out, and acts only on what it shows:** while searching, a 32 px round
     clear button (an 18 px `close` in `ink3`; `sub2` and `ink` while pressed) stands where the
     desktop's Esc hint is, and a tap empties the field and lets go of it. Mark all as read leaves the
     header meanwhile, as it would read the hidden Inbox's mail, and an email opened from the results
     reads "‹ Search", going back to them (Andy, 2026-10-11, polish audit phone-07).
-260. **The phone's tab bar says where you are and what waits:** the current tab draws its filled glyph
+142. **The phone's tab bar says where you are and what waits:** the current tab draws its filled glyph
     (`inbox-fill`, `calendar_today-fill`); while Attention waits and the Inbox isn't showing, the Inbox
     tab carries the header's pill shrunk to 16 px (`caution`, `onInk` 10.5 / 600 figures, 8 px from
     the top and 6 px right of the tab's middle, a 2 px `panel` ring); a tap on the current tab
     smooth-scrolls its list back to the top, the agenda back to today (Andy, 2026-10-11, polish audit
     phone-09).
-261. **The phone reaches the screen's edges in its own colour:** the page is laid out to the edges
+143. **The phone reaches the screen's edges in its own colour:** the page is laid out to the edges
     (`viewport-fit=cover`) and keeps clear of the status bar and the home indicator by their insets:
     the tab bar is 54 px with at least 6 px under its labels, the reader's bar 58, each taking the
     home indicator's inset when there is one, rather than a fixed 18 and 22 px. One `theme-color`
     follows the drawn theme's `page` (Night #050506, Light #f6f6f4), so Safari tints its bars to the
     theme picked in the app, not the system's (Andy, 2026-10-11, polish audit phone-10).
-262. **The phone's list reads a step up** (Type): rows 15, ages and account labels 13, Attention's
+144. **The phone's list reads a step up** (Type): rows 15, ages and account labels 13, Attention's
     summaries 13.5, group headers 12 at 30 px, rows at least 62 px, a code's Copy 30 px; search's rows
     the same. The colours stay: the size makes `ink3` legible (Andy, 2026-10-11, polish audit
     phone-11).
-263. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
+145. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
     and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
     before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No
     toast (Andy, 2026-10-11, polish audit phone-13).
-264. **On the phone the sign-in card sits 18% from the top** rather than near the middle, so the
+146. **On the phone the sign-in card sits 18% from the top** rather than near the middle, so the
     keyboard never covers Sign in; the mark shown while Setpoint can't be reached (#118) stands there
     too. The desktop is unchanged (Andy, 2026-10-11, polish audit phone-08; darma D145).
-140. **The one toast says what happened** (amending #13 and #32): it drops in over 180 ms (from 8 px
+147. **The one toast says what happened** (amending #13 and #32): it drops in over 180 ms (from 8 px
     above at .96, from below on the phone), and again when a new one replaces the last, so two Trashes
     read as two; going, it fades over 120 ms. It leads with a 16 px glyph by what it says: `check` in
     `good` for a thing done ("Marked Done", "Marked 14 as read", "Completed Pay rent"), `delete` in
@@ -1829,7 +1829,7 @@ it changes what's on screen.
     line has no glyph. A line with an action shows its time draining as a 2 px hairline (`ink3` at
     45%) along its foot, and both wait while the pointer rests on it (Andy, 2026-10-11, polish audit
     shell-03, shell-04, shell-12, motion-03, states-07).
-141. **Overlays arrive with the motion Tokens names:** every menu and popover (the reader's More,
+148. **Overlays arrive with the motion Tokens names:** every menu and popover (the reader's More,
     Settings' selects and row menus, the editor's menus, pickers and Places, the proposal's menus,
     News's Upcoming, the attachment preview) grows in over 180 ms from 4 px and .97 at its anchor's
     corner, upward from below when it opens upward; the "+N" popover grows from its "+N"; the
@@ -1845,7 +1845,7 @@ it changes what's on screen.
     fading up 4 px, and closed (×, Esc, Cancel, Create) they fold away as a row does, so the email
     slides back up (Andy, 2026-10-11, polish audit motion-01, calflows-03, settings-02, shell-07,
     calpanes-10, reader-12, search-08, motion-08).
-142. **Every menu is one component, and its button stays lit while it's open:** Settings', the
+149. **Every menu is one component, and its button stays lit while it's open:** Settings', the
     reader's More, the editor's, the proposal's, ⌘K's items and News's Upcoming story share one look:
     a popover of radius 18 with 6 px inside, items 32 px high (Places' two lines 44) 2 px apart, radius
     10, 10 px in, `ink2` with a 16 px `ink3` glyph; the pointer and the keyboard's cursor both fill an
@@ -1854,7 +1854,7 @@ it changes what's on screen.
     items, and Settings' radius 14, give way to it. While its menu is open, the button that opened it
     keeps a fill: an icon button, a reader tool or a quiet button `sub2` and `ink`, a ghost button
     `sub3`, a field its focused ring (Andy, 2026-10-11, polish audit motion-06, motion-05, reader-12).
-143. **Every press registers before its result** (extending Motion and #12): a press goes in over 80
+150. **Every press registers before its result** (extending Motion and #12): a press goes in over 80
     ms and lets go over 120. A pill (a button, a reader tool, a segment, Unpin, Copy, the list's and
     the images bar's links, Download, Retry now, Reconnect) gives to .97 and a round icon button to
     .92, each taking a fill one step past its hover: the primary button `ink` at 78% on `page`, a ghost
@@ -1867,7 +1867,7 @@ it changes what's on screen.
     lets go over 180 ms, the bar's and the tabs' glyphs giving to .88; hover fills answer only a pointer
     that hovers, so nothing stays lit after a tap, and the browser's own tap box is gone (Andy,
     2026-10-11, polish audit motion-02, shell-09, phone-01).
-144. **The same kind of thing answers the same way on every page** (extending #12): News's rows,
+151. **The same kind of thing answers the same way on every page** (extending #12): News's rows,
     leads, Upcoming and its story, Show headlines' lines, More and the story pane's sources fade their
     hover over 120 ms as the mail list does, and so do calendar task chips, whose hover is `sub` so a
     hovered task no longer looks selected (`sub2`). Controls show the arrow, as darma's do: a link
@@ -1876,30 +1876,30 @@ it changes what's on screen.
     own cursors. A calendar's checkbox fills or empties over 120 ms, its check growing in from .6 or
     shrinking away, and a Settings switch's knob stretches to 20 px toward where it's going while
     pressed (Andy, 2026-10-11, polish audit motion-09, motion-11, motion-14).
-145. **A calendar chip answers in its own colour** (amending #12, where `sub` lay over chips):
+152. **A calendar chip answers in its own colour** (amending #12, where `sub` lay over chips):
     under the pointer a month chip or a week block lays its own colour at `--evhover` (Night 18%,
     Light 14%) over its tint, so it deepens rather than greying, over 120 ms; pressed, it gives to .97
     and deepens to 28% until a drag's lift takes over. A selected, solid chip keeps its `sub` (Andy,
     2026-10-11, polish audit grids-05).
-146. **"+N" looks like a door into the day:** the month's "+3" takes a chip's footprint (20 px,
+153. **"+N" looks like a door into the day:** the month's "+3" takes a chip's footprint (20 px,
     radius 6, its count where the chips' titles start) and a `sub` hover, its open state staying
     `sub2` and `ink`, and after the count up to three 6 px dots show what it folds: an event's in its
     colour, a task's as a ring in its project's (Andy, 2026-10-11, polish audit grids-12).
-147. **A search chip answers as a whole:** with its × under the pointer the whole chip takes `sub3`
+154. **A search chip answers as a whole:** with its × under the pointer the whole chip takes `sub3`
     and an `edgeHover` ring, so it's clear which one goes; a word that becomes a chip pops in from .92
     over 120 ms, and a removed chip collapses away over 120 ms as the rest close up. Mail's,
     Calendar's and News's fields alike (Andy, 2026-10-11, polish audit search-09).
-148. **Settings marks a choice as the nav marks its page:** in a colour picker the current colour is
+155. **Settings marks a choice as the nav marks its page:** in a colour picker the current colour is
     ringed in itself (1.5 px, 4.5 px clear of its dot) rather than sitting on a `sub2` disc, and a
     dot swells to 1.25 under the pointer over 120 ms, so the choice and the pointer never look alike;
     an account's icons sit under a hairline after its options. In Appearance the chosen theme's row
     is filled `sub2`, its icon tile `ink` with an `onInk` glyph, its check `good` (Andy, 2026-10-11,
     polish audit settings-09, settings-12).
-149. **The glide carries its content across** (amending The glide, override 30): the old content
+156. **The glide carries its content across** (amending The glide, override 30): the old content
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
     (Andy, 2026-10-11, polish audit calflows-12).
-120. **The ink ladder is re-spaced, and Night's panel lifts a step:** Night `ink3` is `#7d7f84`
+157. **The ink ladder is re-spaced, and Night's panel lifts a step:** Night `ink3` is `#7d7f84`
     (5.1:1 on the page, 4.3:1 on a cursor row, 3.8:1 for key hints in the search field), so ages,
     account labels, counts, summaries and key hints read at a glance while `ink2` stays 1.6× it.
     Light `ink2` is `#4b4d52` (7.8:1), the same step over `ink3`, so read mail and seen headlines no
@@ -1907,7 +1907,7 @@ it changes what's on screen.
     Light's step), so the sidebar, group bands and Settings' nav read as layers. `CALENDAR_HEX`
     writes the new `ink3` to Google and still reads the old one back (Andy, 2026-10-11, polish audit
     color-04, color-07, news-14).
-121. **Light's raised surfaces are white, and a band has its own hover and cursor:** Light `cardOn` is
+158. **Light's raised surfaces are white, and a band has its own hover and cursor:** Light `cardOn` is
     `#ffffff`, so the toast, the drag tip, News's pill, a focused field, and Alfred's Answer and
     proposal cards lift off the page as Light's other cards do; Night keeps `#131417` for them, its
     one deliberate lift. A collapsed group header (and one that collapses on a click) lays `sub`
@@ -1915,31 +1915,31 @@ it changes what's on screen.
     and All's folded Noise line takes a row's `sub` and `sub2`; `cardOn` sank below the band in Light,
     so J landing on a folded group showed nothing. News's image placeholder is `sub2` (Andy,
     2026-10-11, polish audit color-03, inbox-02, shell-05, search-07).
-122. **Coloured text on its own tint is capped at lightness .43 in Light:** chips, week blocks and
+159. **Coloured text on its own tint is capped at lightness .43 in Light:** chips, week blocks and
     the editor's timeline draw their calendar's colour as `oklch(from <colour> min(l, var(--tintL)) c h)`,
     `--tintL` Night 1 and Light .43, keeping hue and chroma, and Light's `--evtint` is 14%. Light's
     hues are tuned for text on the page and read 3.8–4.3:1 on their own tint; capped, titles read
     5.8–6.8:1 and Light's month as crisply as Night's, which is unchanged. The selected chip keeps
     `onInk`, a failed one `alert`, and bars and fills the colour itself (Andy, 2026-10-11, polish
     audit color-02, grids-01).
-123. **Weekends and the days outside the month show, and neutral mixes stay grey:** weekends take
+160. **Weekends and the days outside the month show, and neutral mixes stay grey:** weekends take
     `dayOff` (Night `rgba(255,255,255,.02)`, Light `rgba(29,30,33,.028)`) and days outside the shown
     month `dayOut` (`.035`, `.048`), an outside weekend as an outside day, the selected day `sub` over
     both; the week's weekend columns take `dayOff`. `panel` at 40% and 60% measured 1.01:1 on the
     page, and its oklch mix with transparent turned faintly pink. A cell eases its shading over
     180 ms as the scroll moves the shown month. Every neutral mix (an ink or a surface) is now `srgb`
     or an alpha token; oklch is for hues (Andy, 2026-10-11, polish audit color-06, grids-02).
-124. **Past items turn grey instead of fading:** a past chip or week block draws its title and time
+161. **Past items turn grey instead of fading:** a past chip or week block draws its title and time
     in `ink3` at full strength, its bar at 45% of its colour and its fill at half `--evtint`, so
     colour means "still ahead" and a past Gym reads 3.8–4.3:1 rather than 2:1. A day that's over keeps
     its number in `ink3` ("Oct 1" keeps its weight and ink) (Andy, 2026-10-11, polish audit
     grids-01).
-125. **Classes' cyan moves away from Personal's cool:** `cyan` is Night `oklch(0.86 0.11 182)` and
+162. **Classes' cyan moves away from Personal's cool:** `cyan` is Night `oklch(0.86 0.11 182)` and
     Light `oklch(0.58 0.1 182)`, lighter and greener, so the two calendars that fill the month are
     told apart: 1.26:1 against `cool` in Night and 1.21:1 in Light, up from 1.03 and 1.02, and 53° of
     hue. Setpoint writes `#74e9d6` to Google for it and still reads `#57d4d4` back as cyan, and
     Google's Peacock still lands on it by hue (Andy, 2026-10-11, polish audit color-05).
-126. **Colour has fixed roles, and `accent` says "you are here":** a token `accent` (`cool`'s values,
+163. **Colour has fixed roles, and `accent` says "you are here":** a token `accent` (`cool`'s values,
     named for its job) marks the open email's bar, the current page's icon (the sidebar's and
     Settings'), today's month boundary, a date range's band, search's selected chips, the parse
     field's selection, and News's updated dots, pill, Updated tag, New since you looked, Missed bar
@@ -1950,47 +1950,47 @@ it changes what's on screen.
     Flamingo still read as `alert` for an event. `alert` is danger and now, `ink` the primary action,
     the identity swatches dots, tints and bars, and the AI has no hue (Andy, 2026-10-11, polish
     audit color-01).
-127. **The open email has its own state:** `sub3` with a 2 px `accent` bar at its left edge, fading
+164. **The open email has its own state:** `sub3` with a 2 px `accent` bar at its left edge, fading
     in with the row's 120 ms box-shadow, while the keyboard cursor (and so the pointer's row) stays
     `sub2` and hover `sub`; with an email open, the row under the pointer no longer looks like the one
     in the reader. A press on a row is `sub3` at once, before the email opens. Unread, All and search
     results alike (Andy, 2026-10-11, polish audit inbox-01, reader-06, color-01).
-128. **Today is a disc in the now-line's `alert`:** in the month, the week's day heads and the
+165. **Today is a disc in the now-line's `alert`:** in the month, the week's day heads and the
     mini-month (the date pickers' too), with `onAlert` 600 (7.3:1 in Night, 5.7:1 in Light), so today
     and now are one red thread across the grid and the right pane's now-line (Andy, 2026-10-11,
     polish audit grids-03).
-129. **The current page is a raised chip:** the sidebar's current page and filtering account, and
+166. **The current page is a raised chip:** the sidebar's current page and filtering account, and
     Settings' current page, take `navOn` (Night `rgba(255,255,255,.10)`, Light white) with a 1 px inset
     `navOnEdge` hairline, a raised tab rather than a shadow, while hover stays a flat `sub`; the two
     measured 1.06–1.09:1 apart as `sub2` and `sub`, so pointing at Calendar from the Inbox drew two
     near-identical pills. List rows keep `sub2`. While an account filters the Inbox, Inbox reads as
     its parent, label and icon in `ink`, no fill (Andy, 2026-10-11, polish audit shell-02).
-130. **Attention is the loudest block:** its header band takes `caution` into its `panel` (8% in srgb,
+167. **Attention is the loudest block:** its header band takes `caution` into its `panel` (8% in srgb,
     6% in Light, where 8% reads salmon), its label and count in `caution` over a `caution` 20% line;
     its unread dots are `caution`, matching the sidebar's pill, and a row read but not Done keeps a
     6 px `caution` ring where the dot was, since the pill still counts it. All's Attention lane
     label is `caution` too (Andy, 2026-10-11, polish audit inbox-03).
-131. **Noise recedes:** an unread Noise row's sender and subject are `ink2` at 400 with an `ink3` dot,
+168. **Noise recedes:** an unread Noise row's sender and subject are `ink2` at 400 with an `ink3` dot,
     a read one's `ink3`; height, columns, cursor and actions don't change. In Unread nearly every row
     is unread, so the bold no longer ranked anything and the list's foot weighed as much as its top
     (Andy, 2026-10-11, polish audit inbox-07).
-132. **Destructive actions warn under the pointer, affirming ones reward it, and a press lands:**
+169. **Destructive actions warn under the pointer, affirming ones reward it, and a press lands:**
     the reader's Trash turns `alert` with a 12% `alert` fill (its key hint 16%), the floating
     detail's and the Today card's Delete and the editor's More › Delete `alert` on 14%, and a task's
     Complete `good` on 16%; all are neutral at rest, as Delete is undoable (#76). The card's Delete
     sits 9 px further right after a 1 × 14 px `hair` divider. Every reader tool presses as pills do
-    (#143), Trash on 20% `alert` in `alert`, and the phone's Trash turns `alert` as
+    (#150), Trash on 20% `alert` in `alert`, and the phone's Trash turns `alert` as
     it's pressed (Andy, 2026-10-11, polish audit reader-02, calflows-04).
-133. **The reader's actions step back:** Add to calendar, Add as task and Ask about this email draw
+170. **The reader's actions step back:** Add to calendar, Add as task and Ask about this email draw
     their labels in `ink2` and icons in `ink3`, `ink` under the pointer; ring, hover fill and the
     held state don't change. The body starts 12 px under them (was 4), so the eye runs subject,
     sender, then words (Andy, 2026-10-11, polish audit reader-11).
-134. **The HTML email frame loses its glare in Night and gains an edge in Light:** in Night it's dimmed
+171. **The HTML email frame loses its glare in Night and gains an edge in Light:** in Night it's dimmed
     to 95% brightness (`--mailDim`, white becomes `#f2f2f2`; 90% looked dirty), and in Light it takes
     a 1 px `mailEdge` ring (`rgba(29,30,33,.1)`), a hairline rather than a shadow, so its boundary
     reads stronger than the email's own borders. `color-scheme` stays light (Andy, 2026-10-11, polish
     audit reader-08).
-135. **Search in Light highlights like a highlighter, and a focused field wakes up:** a token `hl`
+172. **Search in Light highlights like a highlighter, and a focused field wakes up:** a token `hl`
     keeps Night's 26% `sun` mix and gives Light its own solid `oklch(0.92 0.12 96)`, ink on it 13:1;
     Light's mustard `sun` at 26% rendered khaki, 1.3:1 on the row, so matches read as smudges. A
     focused field takes `edgeFocus` (Night `rgba(255,255,255,.2)`, Light `rgba(29,30,33,.3)`), at
@@ -1998,18 +1998,18 @@ it changes what's on screen.
     Answer and proposal cards' fields, the editor's, Settings' and sign-in's. While the header field
     has focus its hint reads `Esc`, as / then types a slash (Andy, 2026-10-11, polish audit
     search-02, search-06).
-136. **Alfred has one recognisable mark:** `auto_awesome` filled with a gradient from `cool` to
+173. **Alfred has one recognisable mark:** `auto_awesome` filled with a gradient from `cool` to
     `violet` (two of Day stack's own colours, so no new hue), drawn once as an unseen SVG gradient
     that every Alfred icon fills from: Ask Alfred, the Answer card's header, and Ask about this email
     in the reader and ⌘K, which leave `forum`. Ask Alfred reads in `ink`, its query in `ink3`. No
     wash on the card and no tinted hover: the AI has no hue of its own, so it never outshouts mail
     (Andy, 2026-10-11, polish audit search-05, color-01).
-137. **Light's forecast sun is deeper, and the high leads:** a token `sunGlyph` keeps Night's `sun`
+174. **Light's forecast sun is deeper, and the high leads:** a token `sunGlyph` keeps Night's `sun`
     and gives Light `oklch(0.58 0.14 78)` (4:1 on the page, was a pale olive 3.2:1), for the sun on
     the month's and the week's day heads, the right pane and the phone's agenda; `sun` itself is
     unchanged. Temperatures read the high in `ink2` and the low in `ink3`, "78° / 61°" (Andy,
     2026-10-11, polish audit grids-13).
-138. **Todoist's colours are tuned per theme, and a ring is tinted like a chip:** a task's ring keeps
+175. **Todoist's colours are tuned per theme, and a ring is tinted like a chip:** a task's ring keeps
     its project's hue and chroma at a lightness clamped to the calendar tokens' band, at least .72 in
     Night and at most .55 in Light, so every swatch reads (4.2:1 or more in Light, 7.1:1 or more in
     Night, where Todoist's raw sky blue was 2.9:1 and grape 2.7:1), and its project's mark in the
@@ -2017,13 +2017,13 @@ it changes what's on screen.
     that completes keeps its colour under the pointer, its fill rising to 24% with an 11 px `check`
     in it, centred on the whole ring (the 1.5 px stroke included) rather than on its inside, so it sits
     true; the done glyph stays `good` (Andy, 2026-10-11, polish audit calpanes-07).
-139. **A switch that's on is `good`, and off recedes:** on is a `switchOn` track (Night `good` 58%
+176. **A switch that's on is `good`, and off recedes:** on is a `switchOn` track (Night `good` 58%
     into `modal`, Light `good`) with a `switchKnobOn` knob (Night `ink`, Light white), so a column of
     switches no longer reads as a column of primary buttons and on ties to the healthy dots; under the
     pointer the track takes 86% of itself into `modal`. Off is an `ink3` knob on `sub3` in both
-    themes (Light's `ink2` knob was nearly as heavy as on). Its press stretch is #144's; a disabled
+    themes (Light's `ink2` knob was nearly as heavy as on). Its press stretch is #151's; a disabled
     switch stays at .5 (Andy, 2026-10-11, polish audit settings-06).
-220. **Month paging glides, so P, N and T say which way you went** (as Week's paging slides): the
+177. **Month paging glides, so P, N and T say which way you went** (as Week's paging slides): the
     grid's scroll eases to the month over 260 ms (`cubic-bezier(.2,0,0,1)`), through the rows between,
     so next month comes up from below and last month drops in from above. Today from further than 10
     rows jumps to 5 rows short on the side it comes from first, so a year away still lands with its
@@ -2032,64 +2032,64 @@ it changes what's on screen.
     stay jumps. The header's title swaps over 120 ms, rising 6 px into place for a later month,
     falling for an earlier one, and sliding 6 px sideways for a week (Andy, 2026-10-11, polish audit
     grids-04, motion-12).
-221. **T always answers:** as Today lands (once the month's glide is there, at once when nothing had
+178. **T always answers:** as Today lands (once the month's glide is there, at once when nothing had
     to move), today's disc on the grid, in the week's heads and in the mini-month swells to 1.18 and
     back over 260 ms, once (Andy, 2026-10-11, polish audit grids-11).
-222. **Month and Week are one space:** switching to Week zooms it in from the selected week's row in
+179. **Month and Week are one space:** switching to Week zooms it in from the selected week's row in
     Month (scale .985 to 1 and a fade, 180 ms, its origin the middle of that row, or of the grid when
     the row is out of view), and switching back settles Month out around the same row (1.015 to 1),
     so Week reads as Month zoomed in on your week. A segmented control (Month | Week, Unread | All,
     Event | Task, News's sections, Code expiry) no longer jumps its fill: when another segment turns
     on, a `sub3` thumb slides from the last one to it over 180 ms, then hands it back its own fill
     (Andy, 2026-10-11, polish audit grids-09).
-223. **A day answers the pointer, and + makes an event on it** (amending Week view's "a click never
+180. **A day answers the pointer, and + makes an event on it** (amending Week view's "a click never
     creates on its own" only by adding a control: a click on a day still only selects it): a month day
     under the pointer lays `sub` at 55% over its weekend or outside tint, fading over 120 ms (not on
     the selected day, nor a drop target), and shows a 20 px round + after its number, `add` at 14 in
     `ink3`, taking `sub2` and `ink` under the pointer and giving to .92 when pressed, titled "New event
     · C". It selects the day and opens New event on it, as C would there. A week's day head takes the
     same wash. Only with a pointer that hovers (Andy, 2026-10-11, polish audit grids-06).
-224. **The week's empty hours show where a press would start:** a 30-minute slot (left 4, right 5,
+181. **The week's empty hours show where a press would start:** a 30-minute slot (left 4, right 5,
     22 px, radius 6, `sub` with an `edge` inset) at the 15-minute step under the pointer, holding `add`
     at 12 and the step's time in 11 `ink3`, moves with the pointer over 120 ms and fades in and out
     over 120 ms; over a block, off the hours, while dragging or on a press it goes, the press handing
     over to the dashed create ghost. Only with a pointer that hovers (Andy, 2026-10-11, polish audit
     grids-07).
-225. **The week reads by its dates and its now:** when the week shown holds today, a 1 px line in
+182. **The week reads by its dates and its now:** when the week shown holds today, a 1 px line in
     `alert` at 55% runs across all seven days at now's height, under today's own 1.5 px line and dot,
     moving with the clock, so the rest of the week reads as before and after now. A head's date is its
     column's anchor, 14 / 500 in `ink` on a 24 px disc (today's `alert` disc grows to 24 px, keeping
     600), 7 px from its weekday, which stays 11.5 uppercase `ink3` (`ink2` on the selected day); the
     month's numbers are unchanged (Andy, 2026-10-11, polish audit grids-08, grids-10).
-226. **The next event stands out, and one under way stays under the now-line:** today's next event
+183. **The next event stands out, and one under way stays under the now-line:** today's next event
     is lifted out of the list: inset 8 px with radius 10, a tint of its colour at 9% (14% under the
     pointer, 16% selected), its time in `ink` and "in 5h" in its colour (capped at `--tintL`) at 12.5 /
     500, its content keeping the rows' 20 px inset. The now-line goes after what has ended, not what
     has started, so an event under way sits under it, its "in" slot reading what's left ("45m left",
     "1h 20m left") and its 3 px bar filling with the time gone, the rest at 30%, refreshed with the
-    clock. A past event turns grey as on the grid (#124): its time and title `ink3`, its bar at 45%,
+    clock. A past event turns grey as on the grid (#161): its time and title `ink3`, its bar at 45%,
     rather than the whole row at .5 (Andy, 2026-10-11, polish audit calpanes-01).
-227. **One now-line in Calendar:** the right pane's now-line is drawn as the week's, 1.5 px `alert`
+184. **One now-line in Calendar:** the right pane's now-line is drawn as the week's, 1.5 px `alert`
     at full strength with an 8 px dot, 12 px from its time so the dot sits centred on the events' 3 px
     colour bars (Andy, 2026-10-11, polish audit calpanes-04).
-228. **Toggling a calendar visibly lifts its events off the page and brings them back, and Todoist is
+185. **Toggling a calendar visibly lifts its events off the page and brings them back, and Todoist is
     a calendar like the others:** hidden, a calendar's chips, blocks and agenda rows fade to nothing over
     120 ms, then it's hidden (here, and then at the server, as before); shown, they fade in over 180 ms,
     from the sidebar, ⌘K and Show all alike. Its checkbox fills or empties and its check grows in from
-    .6 over 120 ms (#144), and while it's off its name is `ink3`, so on and off rows read apart. Todoist's
+    .6 over 120 ms (#151), and while it's off its name is `ink3`, so on and off rows read apart. Todoist's
     row loses its ring at the right end, which beside a ticked box read as a second, unchecked control:
     it's just "Todoist" with its checkbox (amending Sidebar on Calendar's "its ring glyph as its mark"
     and board 11) (Andy, 2026-10-11, polish audit calpanes-11, calpanes-13).
-229. **Ticking a task off is one moment wherever it's done:** as in the Today block (#106), its done
+186. **Ticking a task off is one moment wherever it's done:** as in the Today block (#106), its done
     check lands from .6 and .4 over 120 ms (the shared `ring-done`), in the right pane and on its card
     alike. In the pane its strike is drawn under the title, left to right over 180 ms, in `ink3`, and
     while Todoist hasn't confirmed, the spinner sits before the project, which stays, rather than
-    taking its place. A task's card is the task on the grid: its ring in its project's colour (as #138
+    taking its place. A task's card is the task on the grid: its ring in its project's colour (as #175
     clamps it), its project fact a 9 px dot in that colour rather than `work`, no Colour (a task has
     none), its title struck through in `ink3` once done, and its mark at .5 with the spinner after a
     second while it waits. Reopening plays nothing (Andy, 2026-10-11, polish audit calpanes-08,
     calflows-10, shell-15).
-230. **Each word typed lands in its field:** a row the editor's line filled takes the mark's colour on
+187. **Each word typed lands in its field:** a row the editor's line filled takes the mark's colour on
     its glyph, over 120 ms: the clock `cool` for a date or time, the pin `comf` for a place, the
     calendar glyph its calendar's colour, the project glyph its project's (clamped as its ring); set
     by hand, the glyph is `ink3` again. The mark still being typed, its Places or # menu open, is only a
@@ -2098,33 +2098,33 @@ it changes what's on screen.
     moved flashes `cardOn` back to its own fill over 600 ms: the Date when the End runs into the next
     day, the address a picked place fills in, and an End on a later day says "+1" after it (11.5,
     `ink3`, raised) (Andy, 2026-10-11, polish audit calflows-06).
-231. **The mini-month is crisp:** its days are true 26 px discs, not 31 × 26 lozenges; the selected
+188. **The mini-month is crisp:** its days are true 26 px discs, not 31 × 26 lozenges; the selected
     day is a `sub3` disc with its number `ink` at 500 and the pointer only `sub2`, so what's picked and
     what's pointed at never look alike; in Week the shown week is one `sub2` band across its cells, its
     ends round, today's `alert` disc on it (amending "the visible week or selected day `sub`"). It
     always draws six weeks, the next month's days after its own, so stepping into a six-week month never
     moves Calendars under it, and ‹ › slide the days in 8 px from the side they come from with a fade
     over 180 ms. The editor's date picker shares it (Andy, 2026-10-11, polish audit calpanes-05).
-232. **A choice is the strongest mark in its picker:** inside the date picker only (the sidebar keeps
+189. **A choice is the strongest mark in its picker:** inside the date picker only (the sidebar keeps
     its disc), the chosen day (a task's due day, an event's one day) is the `accent` 50% disc at 600,
     #104's colour, and today steps back to a 1.5 px `alert` ring around an `ink` number; a chosen today
     takes both; the pointer stays `sub2` under them. The editor's Calendar, Repeat, Project and a task's
     Repeat menus mark the current choice as Settings' do, a 16 px `check` in `ink` at its row's end
-    (#142), leaving the `sub2` fill to the pointer and the keyboard's cursor (Andy, 2026-10-11, polish
+    (#149), leaving the `sub2` fill to the pointer and the keyboard's cursor (Andy, 2026-10-11, polish
     audit calflows-08).
-233. **Picking a day answers in all three places:** the grid's selected day keeps its `sub` and its
+190. **Picking a day answers in all three places:** the grid's selected day keeps its `sub` and its
     number takes a `sub3` disc with `ink` at 500 (today keeps its `alert` disc), echoing the mini-month's
-    selected disc (#231); the pane's content slides in 6 px over 120 ms from the side the new day lies
+    selected disc (#188); the pane's content slides in 6 px over 120 ms from the side the new day lies
     on, later from the right, earlier from the left, and its date heading fades in over the same 120 ms.
     Nothing plays on the way out, or when the same day is picked again or an item changes (Andy,
     2026-10-11, polish audit calpanes-06).
-234. **An empty day is room to plan:** the right pane's empty day, past or to come, shows two 36 px
+191. **An empty day is room to plan:** the right pane's empty day, past or to come, shows two 36 px
     ghost rows 6 px apart, radius 10, in the grid's draft language (a 1.5 px dashed `edgeOn` outline):
     `add` 16 in `ink3` "New event" with its `C`, and an open ring "New task" with its `D`, `ink2`; under
     the pointer `sub`, `ink` and an `edgeHover` outline over 120 ms. The line under the date stays the
     one line ("Nothing planned", or the forecast). Replacing Copy's "No events · New event" there (Andy,
     2026-10-11, polish audit calpanes-09).
-235. **Changes look on their way, then visibly arrive:** an event waiting for its provider (a create,
+192. **Changes look on their way, then visibly arrive:** an event waiting for its provider (a create,
     Save, a drop, Clone, Paste, Colour, Try again) keeps .5 but its 3 px bar is dashed (3 px on, 3 off)
     rather than solid: still for the first second, so a quick confirmation stays quiet (#54), then
     marching downward with the spinner, every 900 ms. When it arrives (its change done, or a create's
@@ -2132,154 +2132,154 @@ it changes what's on screen.
     to `--evtint` over 420 ms, and the .5 eases back over 120 ms rather than snapping. The month's
     chips and the week's blocks alike; a task keeps .5 and the spinner, with the ease (Andy,
     2026-10-11, polish audit calflows-02).
-236. **Deleting and undoing feel physical and reversible:** a chip deleted (the card, Del or
+193. **Deleting and undoing feel physical and reversible:** a chip deleted (the card, Del or
     Backspace, a recurring delete once it's answered) fades and shrinks out (to .96) over 120 ms, then
     folds up over 180 ms, so the chips under it slide up the 23 px into its place, as mail's rows fold
     (#13), and the cell's "+N" recounts as it goes; a week block fades and shrinks out. Undo or ⌘Z
     brings it back in reverse, unfolding and fading in from .96 over 180 ms, then its tint lands
-    (#235) (Andy, 2026-10-11, polish audit calflows-11).
-237. **A drag lands where it shows it will:** picked up, a chip eases into its tilt, scale and shadow
+    (#192) (Andy, 2026-10-11, polish audit calflows-11).
+194. **A drag lands where it shows it will:** picked up, a chip eases into its tilt, scale and shadow
     over 120 ms (a week block its shadow). The day under it takes the item's own colour rather than
     the selected day's `sub` (its fill at 9% and a 1.5 px inset ring at 55%, Light 7% and 50%; a task's
     `ink3`), over 120 ms, so the target reads as inviting and apart from the selection; in the month it
     also shows a 20 px dashed slot (its colour at 70% over 10%, no text) where the item would sort in
     among the day's items. Dropped, the chip settles from where the lift was into its slot over 180 ms
-    on the glide's curve, its tilt, scale and shadow easing out, then shows as on its way (#235); a
+    on the glide's curve, its tilt, scale and shadow easing out, then shows as on its way (#192); a
     recurring event's drop, which asks which occurrences first, waits where it landed. The week's
     column under a move takes the same colour (Andy, 2026-10-11, polish audit calflows-09,
     motion-15).
-238. **A calendar search lights up its matches on the grid:** while the search shows its results, the
+195. **A calendar search lights up its matches on the grid:** while the search shows its results, the
     month's chips and the week's blocks it doesn't match dim to .3 over 180 ms (a filter, so a match's
     own .5 while waiting stays), and matches keep their full strength with no ring, since a selected
     item is the solid chip; a recurring event's every occurrence matches with its series. Clearing the
     query or Esc brings the grid back over the same 180 ms. A search with more results still to load
     (past 50) dims nothing, so no match is ever dimmed (Andy, 2026-10-11, polish audit search-10).
-239. **From 640 to 1099 px a header button brings the selected day's pane over the grid** (D183, as
-    #258 gave the grid the width): a 30 px icon button with `right_panel_open`, before search and only
+196. **From 640 to 1099 px a header button brings the selected day's pane over the grid** (D183, as
+    #140 gave the grid the width): a 30 px icon button with `right_panel_open`, before search and only
     in that tier, lays the day's pane (weather, events with Time to Leave, tasks due) over the grid's
     right side where the editor lies, with its motion; its sources' health stays atop the grid. Lit
     `sub2` while open, it again or Esc closes it; picking another day while it's open shows that day;
     the editor or search take its place, as they take each other's. Closed on every load, and no new
     key; under 720 px, where the header has no room left, New is its + alone (titled "New event · C");
     the desktop is unchanged (Andy left it to Claude, 2026-10-11, polish audit calpanes-14).
-195. **A row leaving shows why, then folds text first** (amending #13): Done tints the row `good`
+197. **A row leaving shows why, then folds text first** (amending #13): Done tints the row `good`
     (14%, Light 12%) and swaps its dot for a 14 px `check` in `good`, growing in from .6; Trash tints it
     `alert` 8% with a 14 px `delete` in `alert`. That 120 ms beat comes before the fold, which then
     takes its text away by 72 ms and closes its height over the rest of the 180 ms; an arriving row is
     the mirror, its height first and its text over the last 72 ms, so a folding row never shows a
     squashed slice of its lines (a closed card folds the same way). The cursor and the next email move
-    at once; the toast's glyph is #140's (Andy, 2026-10-11, polish audit inbox-05, inbox-06).
-196. **A group opens and closes like a drawer:** collapsing it folds its rows out and expanding it
+    at once; the toast's glyph is #147's (Andy, 2026-10-11, polish audit inbox-05, inbox-06).
+198. **A group opens and closes like a drawer:** collapsing it folds its rows out and expanding it
     folds them in, as other rows fold, each 12 ms after the one above it up to 60; its one chevron
     turns to point right over 120 ms while it's collapsed, and its preview fades in over 120 ms. A
     group opened at the foot of the list comes into view (#70) once its rows are in. All's Noise
     opens and closes the same way (Andy, 2026-10-11, polish audit inbox-14).
-197. **The Today block's event leads with its calendar's bar and warms as it nears:** a 3 × 14 bar,
+199. **The Today block's event leads with its calendar's bar and warms as it nears:** a 3 × 14 bar,
     radius 2, in its calendar's colour (or its own, once recoloured) sits in the 19 px column where
     tasks have their rings, so the event reads as an appointment and its time lines up with the task
     titles; its "in 12m" turns `caution` at 500 from 15 minutes before and `alert` at 500, the
     now-line's, once it's under way (Andy, 2026-10-11, polish audit shell-06).
-198. **Completing a Today task is the one completion moment:** its done check lands from .6 and .4
-    over 120 ms, the `ring-done` the calendar's pane and card share (#229), and its title, struck
+200. **Completing a Today task is the one completion moment:** its done check lands from .6 and .4
+    over 120 ms, the `ring-done` the calendar's pane and card share (#186), and its title, struck
     through, fades from `ink` to `ink3` over 180 ms rather than at once; the line still folds away
     after #106's 360 ms. Only the user's own completion plays it (Andy, 2026-10-11, polish audit
     motion-04).
-199. **The sidebar reshapes for each page instead of jumping:** on Calendar the account rows fold away
+201. **The sidebar reshapes for each page instead of jumping:** on Calendar the account rows fold away
     over 180 ms, as a mail row folds, and come back the same way, so Calendar and News slide to their
     places rather than jumping from under the pointer that clicked them; the page's section (Today, or
     the mini-month and Calendars) fades in over 120 ms. The content still switches at once (Andy,
     2026-10-11, polish audit shell-08).
-200. **Counts roll, and a rise in Attention registers:** the attention pill, Inbox's and each account's
+202. **Counts roll, and a rise in Attention registers:** the attention pill, Inbox's and each account's
     unread count, a group header's and All's lane counts roll when they change, for 180 ms, the old
     number leaving 6 px one way as the new comes in from 6 px the other: down for a fall, up for a rise.
     When the attention count rises (never on a fall, the first paint or a page switch) the pill swells
     to 1.22 at 40% over 260 ms; from none it scales in from .6 over 180 ms, and at none it scales out
     over 120 ms before it goes. The user's own Done only rolls (Andy, 2026-10-11, polish audit
     shell-11, motion-07).
-201. **All caught up is a small finish** (amending #165 for it): three rows 14 px apart, centred as
+203. **All caught up is a small finish** (amending #124 for it): three rows 14 px apart, centred as
     before: the mark at 44 px, its chips settling into place once (each from 6 px above, fading in over
     260 ms, 70 ms apart, then at rest), "All caught up" at 15 / 500 in `ink`, and Open All with its U
     hint, the line and the button fading in over 180 ms after 60 ms. No new words; the mark keeps its
     own colours in both themes (Andy, 2026-10-11, polish audit states-10, inbox-08).
-202. **A pinned email shows its pin where it is:** its row in its group keeps a 14 px `keep-fill` in
+204. **A pinned email shows its pin where it is:** its row in its group keeps a 14 px `keep-fill` in
     `ink3` just before its account, growing in from .6 over 120 ms when it's pinned there; the row
     folding onto the shelf holds `sub3` after its fold and lets it go over 260 ms; and a pin made while
     the shelf is out of sight says "Pinned" in the toast, led by `keep` in `ink3`, with Undo (amending
-    #140's tones) (Andy, 2026-10-11, polish audit inbox-09).
-203. **Headers stay with their rows:** Unread's group headers and All's day headings stick to the top
+    #147's tones) (Andy, 2026-10-11, polish audit inbox-09).
+205. **Headers stay with their rows:** Unread's group headers and All's day headings stick to the top
     of the list while their rows scroll under them, each next one sliding over the last, and J and K
     keep a row clear of them; in All a day's name is `ink2` and its date `ink3`, above the lanes'
     `ink3` (Andy, 2026-10-11, polish audit inbox-10).
-204. **A code's last minute counts down, and Copied is green:** Copied takes a 14% `good` fill with
+206. **A code's last minute counts down, and Copied is green:** Copied takes a 14% `good` fill with
     its words and check in `good` for its 1.5 s, under the pointer too; in a code's last minute its
     countdown reads "Expires in 42 sec" in `caution`, a second at a time, and the row folds away at
     expiry as before (Andy, 2026-10-11, polish audit inbox-11).
-205. **A list filtered to one account drops the account** (amending decision 41): while an account in
+207. **A list filtered to one account drops the account** (amending decision 41): while an account in
     the sidebar filters the Inbox (Unread, All and its search), rows and Attention rows leave out the
     account they'd all repeat; the age keeps its column and the subject runs wider. Unfiltered every
     row keeps it, and the phone's rows keep theirs (Andy, 2026-10-11, polish audit inbox-12).
-206. **An email swaps in from where the user stepped** (amending #141, where J and K swapped what the
+208. **An email swaps in from where the user stepped** (amending #148, where J and K swapped what the
     pane shows without motion): the email the pane opens on arrives with the pane's slide; after it,
     going down the list (J, ↓, Done or Trash moving on) the next email rises 8 px from below over
     180 ms, going up (K, ↑) it comes down 8 px from above, and one opened by a click fades in over
     120 ms, as the week pages. The tools never move (Andy, 2026-10-11, polish audit reader-03).
-207. **A verification code is lifted into the reader:** after the sender, a 56 px card in the facts
+209. **A verification code is lifted into the reader:** after the sender, a 56 px card in the facts
     card's look (`card`, radius 14, an `edgeOn` ring; padding 0 12 0 18, 14 px between its parts) holds
-    the code in Geist Mono 22 / 500 / .12em in two groups, Copy (Copied in `good`, #204), and at its
+    the code in Geist Mono 22 / 500 / .12em in two groups, Copy (Copied in `good`, #206), and at its
     right the countdown on the clock rather than the email's own words, "Expires in 11 min" in `ink3`
     12.5, by the second and in `caution` through its last minute; expired, it reads "Expired" and the
     code turns `ink3` (Andy, 2026-10-11, polish audit reader-04).
-208. **The reading pane's edge shows it resizes:** its hit area is 10 px straddling the border. Under
+210. **The reading pane's edge shows it resizes:** its hit area is 10 px straddling the border. Under
     the pointer, after 80 ms so a pass doesn't flash, a 2 px line in `ink` at 26% lies along the border
     and a grip (14 × 28, radius 999, `cardOn` with an `edgeOn` ring, a 14 px `drag_indicator` in
     `ink2`) fades in over 120 ms at the pointer's height; dragging, the line is `ink3` and the grip
     stays; a double-click puts the pane back to 680. News's story pane shares it (Andy, 2026-10-11,
     polish audit reader-09).
-209. **Hidden images keep the email's shape:** a hidden image that gives its width but no height
+211. **Hidden images keep the email's shape:** a hidden image that gives its width but no height
     holds a quarter of its width, 56 to 160 px (a small one stays square), so a mailing service's
     newsletter keeps its pictures' places rather than collapsing to a band; one with no size and no
     words is a 56 px band its line's width; and a placeholder with no alt text shows the 20 px
     `hide_image` glyph at its centre in the frame's grey, so it still says "picture" (Andy,
     2026-10-11, polish audit reader-10).
-210. **A result's why line says only what the row doesn't** (amending Search's "each result shows
+212. **A result's why line says only what the row doesn't** (amending Search's "each result shows
     why it matched" and #24): a sender's, organisation's, subject's or body's reason goes when its
     words are highlighted in the row's lines, and a date's always, as the row's own day is its age (or
     its day column); a type, kind, account or place, and a body match the excerpt doesn't hold, stay.
     With none left the row has no why line and is three lines high. Calendar results the same: a
     highlighted title and the date go (Andy, 2026-10-11, polish audit search-11).
-211. **No results reads as the field's chips:** "No emails match", then each chip and the words drawn
+213. **No results reads as the field's chips:** "No emails match", then each chip and the words drawn
     as the field draws them (22 px, `sub2`, `ink` at 400, padding 0 4 0 9, its × and the whole chip
-    answering, #147), 8 px apart with no dots between; a Not chip keeps its "Not" in `ink3`. Calendar's
+    answering, #154), 8 px apart with no dots between; a Not chip keeps its "Not" in `ink3`. Calendar's
     and News's the same (Andy, 2026-10-11, polish audit search-13).
-212. **Starting a search makes room rather than cutting:** the mail header's field grows leftward from
+214. **Starting a search makes room rather than cutting:** the mail header's field grows leftward from
     380 to 520 px over 180 ms (the compact tier's too), and Unread | All fades out over 120 ms as the
     title becomes Search (Andy, 2026-10-11, polish audit search-14).
-213. **The answer's key fact points at its evidence:** Alfred's bold runs are underlined, 2 px thick and
+215. **The answer's key fact points at its evidence:** Alfred's bold runs are underlined, 2 px thick and
     3 px under, in Night's `sun` at 70% and Light's `hl`, the yellow the email marks the same words
     with, without filling the card (Andy, 2026-10-11, polish audit search-15).
-214. **⌘K marks what was typed:** in each result's label the start of each word a typed word matched
+216. **⌘K marks what was typed:** in each result's label the start of each word a typed word matched
     is drawn `ink` at 600 with no fill, so rows off the cursor show it against their `ink2` and the
     cursor's row by weight; a match in a command's keywords alone marks nothing (Andy, 2026-10-11,
     polish audit shell-13).
-185. **Send test answers clearly:** while it sends, the shared spinner (`progress_activity`, 900 ms)
+217. **Send test answers clearly:** while it sends, the shared spinner (`progress_activity`, 900 ms)
     takes its `send` glyph's 17 px place, so the button keeps its width. Anything but sent is a
     failure: the line under the group is `alert`, led by a 16 px `error`, in words ("Not sent, Can’t
     reach ntfy.example.net", "Not sent, ntfy.example.net didn’t answer in time", "Not sent, ntfy
     answered 401, unauthorized" with ntfy's own words), never the network library's "fetch failed".
     A test that went reads "Sent to setpoint-reminders" in `ink3` after a 16 px `check` in `good`, and
     the button's glyph is that check for 2 s. The header's failing dot is `caution`, as every failing
-    source is (#186). The Server field, saved, shows a 16 px `check` in `good` 9 px inside its right
+    source is (#218). The Server field, saved, shows a 16 px `check` in `good` 9 px inside its right
     end, in over 120 ms and out over 180 ms after 1.5 s (Andy, 2026-10-11, polish audit states-11,
     settings-07).
-186. **Each tone has one glyph, so seriousness reads from shape** (Glyphs › Tones): `caution` is the
+218. **Each tone has one glyph, so seriousness reads from shape** (Glyphs › Tones): `caution` is the
     `warning` triangle (a source failing or retrying on the Inbox's and the calendar pane's lines,
     triage down on the Unsorted group, News's AI down and a failing section, a search that couldn't
     answer, ntfy failing as a `caution` dot), `alert` is the `error` circle (a change failed, the
     failure toast, Alfred's failure, a Send test), and stale is `history` in `ink3`, the Inbox moving
     off `schedule` and News's stale section line gaining it. Account trouble keeps `sync_problem`, the
     Inbox's needs-reconnect bar too. Glyphs are 16 px in lines and rows (the finding's 15 in rows
-    isn't a role size, #164), the lines' gaps unchanged (Andy, 2026-10-11, polish audit states-04).
-187. **Every source's state in Settings leads with its glyph:** in Accounts (Mail and Sources), News
+    isn't a role size, #123), the lines' gaps unchanged (Andy, 2026-10-11, polish audit states-04).
+219. **Every source's state in Settings leads with its glyph:** in Accounts (Mail and Sources), News
     and Todoist's Connection row, a 7 px `good` dot before "Checked 9:11 AM", `history` in `ink3`
     before "Checks stopped, as of 9:14 PM" (the words a step up, `ink2`, still muted), `warning` in
     `caution` before a failing source's reason with its row at `caution` 7%, as News's failing rows
@@ -2287,7 +2287,7 @@ it changes what's on screen.
     gap stays 8 px, and a source not checked yet has no glyph (amending Health and states' "Healthy:
     nothing" for Settings, and board 17's bare healthy text) (Andy, 2026-10-11, polish audit
     settings-01, states-04).
-188. **The fix is on the line:** each stale or failing line on the Inbox and atop the calendar's pane
+220. **The fix is on the line:** each stale or failing line on the Inbox and atop the calendar's pane
     (Google Calendar, Todoist, Weather; above the grid in the compact tier) ends " · Check now", the
     dot `ink3` and the button the bar's Reconnect look in `ink2` (12.5, 24 px tall, padding 0 9, `sub`
     and `ink` under the pointer); it checks that account's or source's own (Google Calendar's worst
@@ -2297,7 +2297,7 @@ it changes what's on screen.
     as its row in Settings does; for iCloud, or several accounts, it opens Settings › Accounts (amending
     Health and states, where only Needs reconnect had an action) (Andy, 2026-10-11, polish audit
     states-08).
-189. **State lines arrive gently and resolve visibly:** the Inbox's needs-reconnect bar and stale and
+221. **State lines arrive gently and resolve visibly:** the Inbox's needs-reconnect bar and stale and
     failing lines, and the calendar pane's lines (above the grid in the compact tier too), fold in
     and out as rows do (#13, app/fold.ts): the height opens over 180 ms with the words coming in over
     its last 40%, and closes the same way, so a 40 px bar arriving no longer shoves the list down in
@@ -2307,7 +2307,7 @@ it changes what's on screen.
     clears by signing in, just folds out. The offline pill comes in from 8 px above over 180 ms and
     fades out over 120 ms. Nothing loops; a line on screen at the first paint shows as it is (Andy,
     2026-10-11, polish audit states-13).
-190. **Offline is read-only for now, not a locked screen, and a blip never cries wolf** (amending
+222. **Offline is read-only for now, not a locked screen, and a blip never cries wolf** (amending
     Health and states' "everything under it dimmed, changes disabled", which the build had read as
     nothing to press): changes are refused from the moment the live stream drops, as before
     (client.ts's refusal; the keys that change something, H E P C D Delete Backspace ⇧I ⇧U ⌘Z, and the
@@ -2316,26 +2316,26 @@ it changes what's on screen.
     180 ms (Night's `ink2` still 3.6:1, Light's 2.8:1) and takes the pointer: the list scrolls, J, K,
     the arrows, Enter and Esc work, and an email or story opens; the controls that change something
     (the reader's tools and actions, a task's check, Mark all as read, Unpin, Copy, Check now and
-    Reconnect) sit at .4 and take no pointer. Back online, the dim lifts over 180 ms and the pill fades (#189) (Andy,
+    Reconnect) sit at .4 and take no pointer. Back online, the dim lifts over 180 ms and the pill fades (#221) (Andy,
     2026-10-11, polish audit states-05).
-191. **News's waiting and quiet lines say which they are:** the first run's line keeps its spinner and
-    gains its progress along its foot (#192's track: 2 px `sub2`, the share sorted in `ink3`,
+223. **News's waiting and quiet lines say which they are:** the first run's line keeps its spinner and
+    gains its progress along its foot (#224's track: 2 px `sub2`, the share sorted in `ink3`,
     easing over 260 ms as the counts come); "Nothing sorted in AI yet" turns with the same 16 px
-    spinner instead of the paper; a stale section's line leads with `history` (#186). A quiet
+    spinner instead of the paper; a stale section's line leads with `history` (#218). A quiet
     section ("Nothing new in Tech since Mon") keeps the 16 px `newspaper` every News empty line has
-    (#165), not the finding's `done_all`, which no longer marks anything else. A section whose block
+    (#124), not the finding's `done_all`, which no longer marks anything else. A section whose block
     shows none of its stories, its others shown elsewhere, links "2 in Tech" rather than "2 more in
     Tech" (Andy, 2026-10-11, polish audit news-13).
-192. **Progress looks the same wherever it runs:** one spinner, `progress_activity` turning every
+224. **Progress looks the same wherever it runs:** one spinner, `progress_activity` turning every
     900 ms (states.css; it was defined twice), and one progress line: search's first backfill leads
     "Indexing · 62% · showing what's indexed so far" with the 16 px spinner in the line's `ink3` and
     draws the 62% along the line's foot, a 2 px `sub2` track over its hairline with the share in
     `ink3` (radius 0 2 2 0), its width easing over 260 ms, as News's first run does. The fill is
-    neutral, as a usage meter's is (#252), where search-12 drew it in `cool`, which is Personal's and
+    neutral, as a usage meter's is (#134), where search-12 drew it in `cool`, which is Personal's and
     "you are here"'s colour, and where states-15 drew a 48 × 3 meter inline; one foot serves both
     findings and News. A search on its way turns the field's glyph (polish audit search-03) (Andy,
     2026-10-11, polish audit states-15, search-12).
-170. **A page that's loading says so, in its rows' shapes:** until its data's first answer, a page
+225. **A page that's loading says so, in its rows' shapes:** until its data's first answer, a page
     draws a skeleton where its rows will be, built to their geometry (the Inbox's header 30 px,
     Attention's three-line rows, the other rows 38 px), so the rows replace it where it stood. Its
     bars are `sub2`, `sub3` inside a `sub` group, rounded, 9 px for a line of text, 11 for a title;
@@ -2346,8 +2346,8 @@ it changes what's on screen.
     house style. What replaces it fades in over 120 ms. A page shows no empty state ("All caught
     up", "No events", "Not connected") until it knows (Andy, 2026-10-11, polish audit states-03,
     inbox-13).
-171. **Settings says only what it knows:** each page's groups draw skeleton rows until their answers
-    come (#170): a title bar over its line (one bar and a shorter one for a one-line row: rules,
+226. **Settings says only what it knows:** each page's groups draw skeleton rows until their answers
+    come (#225): a title bar over its line (one bar and a shorter one for a one-line row: rules,
     domains, calendars, projects), the control's place an 84 px bar at the end, the icon tile first
     on Accounts and News, in `sub3` on the group's `sub`. So Todoist never reads "Not connected"
     with Connect Todoist while it's connected, Calendar "Home · Not set", Mail "No rules yet",
@@ -2355,15 +2355,15 @@ it changes what's on screen.
     precision that nothing was Done. Opening Settings loads every page's answers a moment after
     its own, so the next page shows at once (Andy, 2026-10-11, polish audit states-01,
     settings-05).
-172. **Calendar's pane says what's planned only once it knows:** until the selected day's month of
+227. **Calendar's pane says what's planned only once it knows:** until the selected day's month of
     items and the calendars have come (a first open, or a day picked in a month not yet loaded),
     the right pane's line under the date is a 110 px bar, unless the forecast has come, and its
-    agenda three skeleton rows (#170): a 52 px time bar, a 3 × 34 rail in `sub3`, a title over its
-    line; never "Nothing planned" or the empty day's ghost rows (#234) on a day that holds Gym and the
+    agenda three skeleton rows (#225): a 52 px time bar, a 3 × 34 rail in `sub3`, a title over its
+    line; never "Nothing planned" or the empty day's ghost rows (#191) on a day that holds Gym and the
     Dentist. Calendars in the sidebar are four 30 px rows of a 14 px box (radius 4) and a bar. The
     grid draws no stand-in chips, which would read as events; the phone's agenda draws two days of
     skeleton rows (Andy, 2026-10-11, polish audit calpanes-03, states-01).
-173. **A page that couldn't load says so where it would be:** when a page's first answer fails (a
+228. **A page that couldn't load says so where it would be:** when a page's first answer fails (a
     500, a timeout) while Setpoint is reachable, the list, the reader's body, the right pane's day,
     News's list or the Settings page shows one 32 px line in its place, the failing line's look:
     a 16 px `warning` in `caution`, "Couldn’t load the Inbox, Something went wrong." (the server's
@@ -2372,31 +2372,31 @@ it changes what's on screen.
     still coming. A refresh failing under data already shown keeps the data and says nothing; the
     next live event tries again. Offline, the pill already says so, and the skeleton waits (Andy,
     2026-10-11, polish audit states-06).
-176. **An email opens at once from its row; only its body waits:** a click, J or K, auto-advance,
+229. **An email opens at once from its row; only its body waits:** a click, J or K, auto-advance,
     a tap on the phone or a search result draws the reader's head from the email's row before
     the email itself has come: the protected line, the subject, the avatar, the sender with its
     organisation and platform (the sender's domain follows with the email), "to you", the account
     and the time, and the actions, More too, so nothing above the body moves when it lands. The
-    body is a skeleton meanwhile (#170): 10 px lines 12 apart at the body's rhythm (100, 97, 90, 94
+    body is a skeleton meanwhile (#225): 10 px lines 12 apart at the body's rhythm (100, 97, 90, 94
     and 60%, a paragraph's break, 92, 86 and 40%), at most 600 px, and an attachment's 44 × 280
     card when the email has one; then the body fades in over 120 ms. An email with no row to draw
     from (a link) has a skeleton head too. An HTML email's frame holds 240 px on `sub`, unseen,
     until its page says its height, then fades in over 120 ms. An attachment's preview loading is
     a page's skeleton, not "Loading…" (Andy, 2026-10-11, polish audit reader-01, phone-04).
-177. **A news image waits in its own box and fades in:** each list thumbnail, lead, story-pane
+230. **A news image waits in its own box and fades in:** each list thumbnail, lead, story-pane
     and article image holds its box from the start, filled as a skeleton is (`sub2`; Light `sub3`,
     which shows on the page where `cardOn` didn't) and breathing with it after 200 ms, then fades
     in over 180 ms once loaded, the fill gone under it. Every news image carries a 1 px `edge`
     outline inside its edge, which shows only where an image is white (a product shot on the
-    Light page). No shimmer sweep: the image's wait breathes as every skeleton does (#170) (Andy,
+    Light page). No shimmer sweep: the image's wait breathes as every skeleton does (#225) (Andy,
     2026-10-11, polish audit news-02).
-178. **News opens into its own shape:** until its first answer, the list draws its skeleton, built
-    to its rows (#170): in All, two blocks of a 32 px section header with a 46 px bar, a lead (a
+231. **News opens into its own shape:** until its first answer, the list draws its skeleton, built
+    to its rows (#225): in All, two blocks of a 32 px section header with a 46 px bar, a lead (a
     232 × 130 image radius 12, two 12 px title bars, a summary bar and a 90 px meta bar at its
     foot) and three rows (title over summary, a 56 and a 28 px meta bar, a 72 × 48 thumbnail
     radius 8); in a section or Missed, a lead and six rows. The stories replace it where it stood,
     fading in over 120 ms (Andy, 2026-10-11, polish audit news-03).
-179. **A story opens at once from its row:** opening a story (a click, Enter, J or K) draws its
+232. **A story opens at once from its row:** opening a story (a click, Enter, J or K) draws its
     sections as tags, the headline and its meta ("5 outlets · first reported … · updated …", from
     the row) and its image at once; the image is the large copy, over the row's thumbnail blurred
     6 px until the large one is in. The summary is four 11 px skeleton lines and Sources three
@@ -2404,14 +2404,14 @@ it changes what's on screen.
     eases in as it's opened or stepped to: opacity from 0 and 4 px up, over 180 ms. An article
     opening draws its outlet, time and headline from the story's sources and its text's skeleton
     (Andy, 2026-10-11, polish audit news-05).
-174. **Setpoint starting shows its mark, not a black page:** while it asks whether this browser is
+233. **Setpoint starting shows its mark, not a black page:** while it asks whether this browser is
     signed in, a browser it hasn't seen signed in shows the Day stack mark at 36 px where the
     sign-in card's top sits (and Unreachable's mark, #118), only once the start has taken 200 ms.
-    Its chips settle in turn as All caught up's do (#201), each from 6 px above and transparent over
+    Its chips settle in turn as All caught up's do (#203), each from 6 px above and transparent over
     260 ms `--ease`, 70 ms apart, then the mark breathes as a skeleton does. The sign-in card or the app then fades in over
     180 ms; a quick start shows neither the mark nor the fade (Andy, 2026-10-11, polish audit
     states-09).
-175. **The app opens already itself:** a browser that was signed in starts on its shell as it last
+234. **The app opens already itself:** a browser that was signed in starts on its shell as it last
     stood while Setpoint answers: the sidebar with the accounts, their colours and counts and the
     Inbox's pill and count as this browser last showed them, Today's place (as many skeleton lines
     as it showed today, else three), the page's header and its skeleton; on the phone the mark,
@@ -2422,7 +2422,7 @@ it changes what's on screen.
     shell's without fading in again. This browser keeps that shape (`setpoint.sidebar`) and that it
     was signed in (`setpoint.signedIn`) in its own storage, as it keeps the theme, and forgets both
     on Sign out or when the session ends (Andy, 2026-10-11, polish audit shell-10, phone-12).
-180. **A search on its way never blanks the list:** from the first keystroke until its first
+235. **A search on its way never blanks the list:** from the first keystroke until its first
     answer, the list on screen (the Inbox, or All) stays, at .55 over 120 ms; if the answer hasn't
     come in 200 ms, six skeleton rows shaped as results take its place (a 150 px sender bar and a
     70 px one at the right, a 46% subject, a 64% excerpt at .6; 12 16 13 12 padding, `hair`
@@ -2430,7 +2430,7 @@ it changes what's on screen.
     gives way to the 900 ms spinner, so a quick answer never blinks it. The first results fade in
     over 120 ms; a refinement on its way dims the results it will replace to .55, after the same
     200 ms (Andy, 2026-10-11, polish audit search-03).
-181. **Alfred shows its work as a trail** (amending #80, whose one line said only the step now):
+236. **Alfred shows its work as a trail** (amending #80, whose one line said only the step now):
     while Alfred answers, each step it has finished stays as a 20 px row in `ink3` 12.5 after its
     tool's 14 px glyph, in the past tense: `search` "Searched “lease renewal”", `mail` "Read
     Parkside Apartments’s email", `calendar_today` "Checked your calendar", `event` "Prepared the

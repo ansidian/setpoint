@@ -17,7 +17,7 @@ export function MailFrame({messageId, show, title}: {messageId: number; show: bo
   const src = emailBodyPath(messageId, show);
   const frame = useRef<HTMLIFrameElement>(null);
   // Null until the page has said how tall it is: until then the frame holds 240 px on `sub`, unseen,
-  // then fades in at its height (reader-01, #176).
+  // then fades in at its height (reader-01, #229).
   const [height, setHeight] = useState<number | null>(null);
 
   useEffect(() => {

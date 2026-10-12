@@ -55,7 +55,7 @@ const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
 /**
  * The block, or its lines' skeleton until today's items come: as many as it showed today in this
- * browser, else three (#175). `frame`: drawn while Setpoint starts, asking for nothing.
+ * browser, else three (#234). `frame`: drawn while Setpoint starts, asking for nothing.
  */
 export function TodayBlock({frame = false}: {frame?: boolean}) {
   const now = useNow();

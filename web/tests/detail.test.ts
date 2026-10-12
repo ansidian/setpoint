@@ -73,7 +73,7 @@ describe('reminders', () => {
   ])('%j → %s', (minutes, line) => expect(remindersLine(minutes)).toBe(line));
 });
 
-// A recurring event's card says it's a series, as the repeat field words it (#167).
+// A recurring event's card says it's a series, as the repeat field words it (#126).
 describe('repeat', () => {
   test.each<[string, Partial<ItemOut>, string | null]>([
     ['Gym, weekly on three days', {recurring: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', starts_at: at('2026-10-07', '07:00')}, 'Weekly on Mon, Wed, Fri'],

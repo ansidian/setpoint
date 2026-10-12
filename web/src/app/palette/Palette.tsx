@@ -26,7 +26,7 @@ import './palette.css';
 
 const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'} as const;
 
-// Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#164).
+// Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#123).
 const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'accounts', keywords: 'gmail google icloud reconnect connect'},
   {page: 'calendar', keywords: 'calendars home weather forecast maps places'},
@@ -41,7 +41,7 @@ const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
 
 /**
  * The palette's own commands: Go to, Appearance, and the ones with a key that typing finds, with the
- * Inbox filtered to each account, which the compact tier's rail has no rows for (#258).
+ * Inbox filtered to each account, which the compact tier's rail has no rows for (#140).
  */
 function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: AccountOut[]): Command[] {
   const route = currentRoute();
@@ -161,7 +161,7 @@ function Open({offer, closing, onClose}: {offer: Offer; closing: boolean; onClos
                 return (
                   <button key={command.id} type="button" role="option" aria-selected={mine === at} className={mine === at ? 'item cur' : 'item'}
                     onMouseMove={() => mine !== at && setCursor(mine)} onClick={() => run(command)}>
-                    {/* Alfred's sparkle is drawn in his ink wherever it shows (#136). */}
+                    {/* Alfred's sparkle is drawn in his ink wherever it shows (#173). */}
                     <Icon name={command.icon} alfred={command.icon === 'auto_awesome'} />
                     <span><Matched label={command.label} query={query} /></span>
                     {command.hint && <span className="kbd">{command.hint}</span>}

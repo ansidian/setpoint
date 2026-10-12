@@ -117,7 +117,7 @@ const TYPE_MIMES: [Exclude<AttachmentType, 'other'>, RegExp][] = [
 ];
 
 /**
- * What an attachment is, for its card's type tile (#163): by its name's extension, else its MIME
+ * What an attachment is, for its card's type tile (#122): by its name's extension, else its MIME
  * type. PDF, image, spreadsheet (CSV, Excel, Numbers), document (Word, Pages, RTF, text), archive
  * (ZIP, gzip, RAR, 7z), invitation (ICS), or anything else.
  */

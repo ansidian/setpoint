@@ -1,7 +1,7 @@
 // What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
 // colour dot and title, the date and time, the place and its address, Time to Leave (in `caution`
 // once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
-// recurring event's repeat (#167), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
+// recurring event's repeat (#126), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it

@@ -1,5 +1,5 @@
 // Mail feels finished (the polish audit's mail slice, darma SV-63; DESIGN.md › Decided while building
-// #195–#219): rows fold text first, Done and Trash beat before the fold, groups open and close like
+// #197–#219): rows fold text first, Done and Trash beat before the fold, groups open and close like
 // drawers; the Today block's bar and its warming time, and the completion moment; the sidebar's
 // folding accounts and rolling counts; All caught up; the rows' pin, sticky headers, code countdown
 // and filtered account column; the reader's swap, code card and edge; search's reasons, chips and

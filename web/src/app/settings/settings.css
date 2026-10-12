@@ -19,10 +19,10 @@
 .settings .set-nav { width: var(--settingsNav); flex: none; border-right: 1px solid var(--hair); padding: 16px 10px; display: flex; flex-direction: column; gap: 2px; background: var(--panel); }
 .settings .set-navtitle { height: 36px; display: flex; align-items: center; padding: 0 10px; margin-bottom: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .settings .set-nav .nav { width: 100%; text-align: left; }
-/* A page under keyboard focus takes hover's `sub`; the current one keeps its raised chip (#129). */
+/* A page under keyboard focus takes hover's `sub`; the current one keeps its raised chip (#166). */
 .settings .set-nav .nav:not(.on):focus-visible { background: var(--sub); }
 .settings .set-nav .nav .warn { color: var(--caution); }
-/* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution (#164). */
+/* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution (#123). */
 .settings .set-nav .nav .warn .icon { color: inherit; }
 .settings .set-nav .foot { margin-top: auto; }
 
@@ -30,7 +30,7 @@
 .settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 19px 28px 23px 32px; border-block: 1px solid transparent; position: relative; overflow-y: auto; scroll-timeline: --setmain y; }
 /* The page's title stays at the top while the page scrolls, over the page's own colour, with a
    hairline under it once the page has scrolled (a scroll-driven animation over the first 24 px), and
-   the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal (#250). The
+   the × stays where it was: `.settings` has a transform, so `fixed` places it on the modal (#132). The
    head stops 1 px short of the modal's right edge, its corner concentric with the modal's, so it never
    covers the modal's ring. */
 .settings .set-head { position: sticky; top: -19px; z-index: 3; height: 59px; display: flex; align-items: center; gap: 8px; margin: -19px -27px 14px -32px; padding: 19px 67px 0 32px; flex: none; background: var(--modal);
@@ -69,13 +69,13 @@
 .settings .note { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 4px; color: var(--ink3); font-size: 12.5px; flex: none; }
 
 /* A switch: 34 × 20. On is a `switchOn` track (`good`) with a `switchKnobOn` knob, off recedes to an
-   `ink3` knob on `sub3`, and a press stretches the knob 4 px toward its travel (#139). */
+   `ink3` knob on `sub3`, and a press stretches the knob 4 px toward its travel (#176). */
 .settings .switch { width: 34px; height: 20px; border-radius: 999px; background: var(--sub3); position: relative; flex: none; transition: background-color var(--dur-fast) var(--ease); }
 .settings .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: var(--ink3);
   transition: left var(--dur-fast) var(--ease), width var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
 .settings .switch.on { background: var(--switchOn); }
 .settings .switch.on::after { left: 16px; background: var(--switchKnobOn); }
-/* Pressed, its knob stretches toward where it's going (DESIGN.md › Decided while building #144). */
+/* Pressed, its knob stretches toward where it's going (DESIGN.md › Decided while building #151). */
 .settings .switch:enabled:active::after { width: 20px; }
 .settings .switch.on:enabled:active::after { left: 12px; }
 .settings .switch:disabled { opacity: .5; }
@@ -101,7 +101,7 @@
 .settings .spin.hg { margin: 0; vertical-align: 0; color: var(--ink3); }
 /* Todoist's Connection row: the glyph before "Connected". */
 .settings .health-t { display: inline-flex; align-items: center; gap: 8px; }
-/* Attention precision leads with its figure, then the 30 days as a line on a 50–100% scale (#251). */
+/* Attention precision leads with its figure, then the 30 days as a line on a 50–100% scale (#133). */
 .settings .precision { display: flex; align-items: center; gap: 20px; padding: 14px 20px 14px 16px; }
 .settings .precision .big { min-width: 64px; font-size: 24px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); }
 .settings .spark { display: block; flex: none; }
@@ -129,7 +129,7 @@
 .settings .swatches { display: grid; grid-template-columns: repeat(6, 24px); gap: 4px; padding: 4px; min-width: 0; }
 /* In a picker, the current colour is ringed in itself, 4.5 px clear of its dot, and a dot swells to 1.25
    under the pointer, so the choice and the pointer never look alike (DESIGN.md › Decided while
-   building #148). */
+   building #155). */
 .settings .swatches .sw.on { background: none; box-shadow: inset 0 0 0 1.5px var(--c); }
 .settings .swatches .sw::before { transition: transform var(--dur-fast) var(--ease); }
 @media (hover: hover) {
@@ -160,7 +160,7 @@
 /* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
    Inbox's centred All caught up, which would stack it in a tall box. */
 .settings .set-empty button { color: var(--ink2); }
-/* An empty group's line leads with its glyph, 20 px in ink3, the row's 12 px before the words (#165). */
+/* An empty group's line leads with its glyph, 20 px in ink3, the row's 12 px before the words (#124). */
 .settings .set-empty-icon { display: grid; color: var(--ink3); }
 .settings .set-empty button:focus-visible { color: var(--ink); }
 .settings .when { width: 120px; flex: none; text-align: right; color: var(--ink3); font-size: 12.5px; }
@@ -223,7 +223,7 @@
 }
 
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and
-   its check `good` (DESIGN.md › Decided while building #148). */
+   its check `good` (DESIGN.md › Decided while building #155). */
 .settings [role="radiogroup"] .set-row[aria-checked="true"] { background: var(--sub2); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] .aico { background: var(--ink); color: var(--onInk); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] > .icon { color: var(--good); }
@@ -237,7 +237,7 @@
 /* AI's News group (board 30b): a model in use, this month's 160 × 6 meter and its amount. The money reads
    first: the amount and each cost in ink, the costs at 500. The meter is neutral, `ink3` on a `sub2` track
    (3.4:1 in Night, 4.1:1 in Light), as a usage meter is neither "you are here" nor an identity, and turns
-   `caution` from 90% of the cap, before it's reached (#252). */
+   `caution` from 90% of the cap, before it's reached (#134). */
 .settings .val { color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; }
 .settings .meter { width: 160px; height: 6px; border-radius: 999px; background: var(--sub2); overflow: hidden; flex: none; }
 .settings .meter > span { display: block; height: 100%; border-radius: 999px; background: var(--ink3); transition: width var(--dur-slow) var(--ease), background-color var(--dur-fast) var(--ease); }

@@ -43,7 +43,7 @@ export const COLOURS = ['ink2', 'ink3', 'cool', 'warm', 'caution', 'comf', 'good
 export type Colour = (typeof COLOURS)[number];
 
 /**
- * The swatches Settings offers an account or a calendar (DESIGN.md › Colour, #126): every one but
+ * The swatches Settings offers an account or a calendar (DESIGN.md › Colour, #163): every one but
  * `caution` and `alert`, whose jobs are "needs you" and "danger and now". One picked before still
  * shows, so COLOURS keeps them.
  */

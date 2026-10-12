@@ -12,7 +12,7 @@ import {closeSettings} from './store.ts';
 
 /**
  * A Settings page: its head, then its sections, or, when one of its `loads` failed with nothing to
- * show, why, with Try again (states-06, #173).
+ * show, why, with Try again (states-06, #228).
  */
 export function Page({title, actions, loads = [], children}: {title: string; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
   const failed = useLoadFailed(loads);

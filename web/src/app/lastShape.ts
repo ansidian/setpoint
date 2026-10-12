@@ -1,5 +1,5 @@
 // What this browser remembers between opens to paint Setpoint at once (DESIGN.md › Decided while
-// building #174, #175): whether it was signed in, so a start draws the shell rather than the mark,
+// building #233, #234): whether it was signed in, so a start draws the shell rather than the mark,
 // and the sidebar's last-known shape (logic/shape.ts), so the accounts, the counts and Today's place
 // show before their answers. Per browser, as the theme is (theme.ts); a browser that refuses
 // storage just starts as if new. Signing out, or a session ending, forgets both.

@@ -71,7 +71,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
       </header>
       <div className="content">
         <section className="ph-agenda" aria-label="Agenda">
-          {/* Until the days' items come, their skeleton (#172). */}
+          {/* Until the days' items come, their skeleton (#227). */}
           {!items && <PhoneAgendaSkeleton />}
           {items && sections.map((section, index) => {
             const days = section.kind === 'day' ? section.date : daysOf(section.from, section.to).join(' ');
@@ -79,7 +79,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
             const wx = day && (section.kind === 'day' || section.from === section.to) ? weatherOf(day) : null;
             return (
               <div key={days} className="ph-day" data-days={days}>
-                {/* Today reads "Today" in `ink` 500 before its date (#256). */}
+                {/* Today reads "Today" in `ink` 500 before its date (#138). */}
                 <div className={['pday', index === 0 && 'first', section.today && 'today'].filter(Boolean).join(' ')}>
                   {section.today ? <span><span className="pd-today">Today</span> · {dayTitle(section.kind === 'day' ? section.date : section.from)}</span> : section.title}
                   {section.kind === 'empty' && <span className="none">No events</span>}
@@ -88,7 +88,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
                 {section.kind === 'day' && section.lines.map(({item, when, past}, at) => {
                   const calendar = colours.get(item.calendar_id);
                   const to: CalendarRoute = {page: 'calendar', date: null, item: item.id, at: item.occurrence_start};
-                  // Events are their calendar's chip, as on the grids; tasks keep their ring (#256).
+                  // Events are their calendar's chip, as on the grids; tasks keep their ring (#138).
                   const chip = item.kind === 'event';
                   return (
                     <Fragment key={item.key}>
@@ -129,7 +129,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
   );
 }
 
-/** Today's now-line, as the right pane's: the time in `alert` in the time column, a dot, then the line (#256). */
+/** Today's now-line, as the right pane's: the time in `alert` in the time column, a dot, then the line (#138). */
 function NowLine({now, timeZone}: {now: number; timeZone: string}) {
   return (
     <div className="ph-now" aria-label={`Now, ${clockTime(now, timeZone)}`}>

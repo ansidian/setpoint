@@ -4,7 +4,7 @@ import type {CSSProperties} from 'react';
 import {ICON_VIEWBOX, ICONS, type IconName, TASK_GLYPHS} from './glyphs.ts';
 
 /**
- * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #136);
+ * An icon in currentColor; `alfred` draws it in Alfred's cool-to-violet ink (AlfredInk, DESIGN.md #173);
  * `className` and `style` add to its own (the editor's rows echoing the line's marks, polish audit calflows-06).
  */
 export function Icon({name, size = 18, alfred = false, className, style}: {name: IconName; size?: number; alfred?: boolean; className?: string; style?: CSSProperties}) {
@@ -16,7 +16,7 @@ export function Icon({name, size = 18, alfred = false, className, style}: {name:
 }
 
 /**
- * Alfred's one mark (#136): auto_awesome in a gradient from `cool` to `violet`, two of Day stack's
+ * Alfred's one mark (#173): auto_awesome in a gradient from `cool` to `violet`, two of Day stack's
  * own colours, bottom left to top right. Drawn once, out of sight, for every `alfred` icon to fill from.
  */
 export function AlfredInk() {

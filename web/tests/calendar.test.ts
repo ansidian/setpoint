@@ -195,7 +195,7 @@ describe('the right pane', () => {
     const day = agenda('2026-10-07', [gym, dentist, ...tasks], calendars, now, zone);
     expect(day.events.map(one => [one.when, one.item.title, one.line, one.place, one.past, one.startsIn])).toEqual([
       ['7:00 AM', 'Gym', '7:00 – 8:00 AM · Personal', null, true, null],
-      // The line always names the calendar; the place has its own line (#166).
+      // The line always names the calendar; the place has its own line (#125).
       ['2:30 PM', 'Dentist', '2:30 – 3:30 PM · Personal', {text: 'Smile Dental', video: false}, false, 'in 5h'],
     ]);
     expect(day.nowAt).toBe(1);
@@ -207,7 +207,7 @@ describe('the right pane', () => {
     expect(agenda('2026-10-07', [lunch], calendars, now, zone).events.map(one => [one.line, one.place])).toEqual([['12:00 – 1:00 PM · Personal', {text: '1420 Elm St', video: false}]]);
   });
 
-  // A place that's a link is a call: videocam and its host (#166).
+  // A place that's a link is a call: videocam and its host (#125).
   test.each([
     ['a Zoom link', 'https://zoom.us/j/81234567890?pwd=abc', {text: 'zoom.us', video: true}],
     ['a Meet link', 'https://meet.google.com/abc-defg-hij', {text: 'meet.google.com', video: true}],
@@ -263,7 +263,7 @@ describe('the right pane', () => {
     [{date: '2026-10-14', condition: 'partly_cloudy', high_f: 70, low_f: 58}, 'partly_cloudy_day', 'cloud', 'Partly cloudy · 70° / 58°'],
   ] as const)('%o', (day, icon, tone, line) => {
     const temps = line.split(' · ')[1]!;
-    // The high and the low apart, so the grid can lead with the high (#137).
+    // The high and the low apart, so the grid can lead with the high (#174).
     expect(weatherOf(day)).toEqual({icon, tone, temps, high: temps.split(' / ')[0], low: temps.split(' / ')[1], line});
   });
 

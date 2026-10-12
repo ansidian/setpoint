@@ -134,7 +134,7 @@ describe('attachments', () => {
     expect(previewKind(file)).toBe(kind);
   });
 
-  // Each card's type tile (#163): its colour and glyph say what the file is before its name does.
+  // Each card's type tile (#122): its colour and glyph say what the file is before its name does.
   test.each([
     ['a PDF', 'Renewal agreement.pdf', 'application/pdf', 'pdf'],
     ['a PDF by its MIME type alone', 'statement', 'application/pdf', 'pdf'],

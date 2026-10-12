@@ -3,7 +3,7 @@
 // source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
 // topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
 // focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
-// at once; until a group's answers come it draws skeleton rows, never a default as a fact (#171).
+// at once; until a group's answers come it draws skeleton rows, never a default as a fact (#226).
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {JSX, KeyboardEvent} from 'react';

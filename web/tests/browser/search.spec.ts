@@ -17,7 +17,7 @@ import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
@@ -116,7 +116,7 @@ test('search: words become chips, results replace the list, J / K / Enter open t
       probe.remove();
       return colour;
     });
-    assert.deepEqual(await leadGlyph(page.locator('.no-results')), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#165)');
+    assert.deepEqual(await leadGlyph(page.locator('.no-results')), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#124)');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await page.locator('.arow.result').first().waitFor();
     // Typing over the selected query replaces it, chips and words; ⌘F selects the words again.
@@ -508,7 +508,7 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Project"]').inputValue(), 'School');
-    // A labelled button's glyph is 17, open_in_new as Add's (#164).
+    // A labelled button's glyph is 17, open_in_new as Add's (#123).
     assert.equal(await card.getByRole('button', {name: 'More options'}).locator('.icon').getAttribute('width'), '17');
     // S4: the card's fields as left go with it; those changed lose the email's mark.
     await card.locator('input[aria-label="Title"]').fill('Study for the final');

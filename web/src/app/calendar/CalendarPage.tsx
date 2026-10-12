@@ -158,10 +158,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
   const calendars = calendarsLoad.data;
   // The compact tier: the grid takes the width, and the right pane lies over it while it holds the
-  // editor or search; the day's pane isn't drawn (#258).
+  // editor or search; the day's pane isn't drawn (#140).
   const compact = useCompact();
   // ⌘K shows or hides each calendar, as the sidebar's Calendars do, so the rail (which has none) keeps
-  // the filter (#258).
+  // the filter (#140).
   useCommands(() => ({commands: (calendars ?? []).map(calendar => ({
     id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
     keywords: 'calendar calendars filter toggle',
@@ -263,7 +263,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // The pane reads the selected day's month itself, so a day far from the grid's still shows.
   const dayMonthLoad = {path: monthItemsPath(monthOf(selectedDay)), ...useResource<ItemsOut>(monthItemsPath(monthOf(selectedDay)))};
   const dayMonth = dayMonthLoad.data;
-  // The day's items or the calendars couldn't load: the pane says so where its agenda would be (#173).
+  // The day's items or the calendars couldn't load: the pane says so where its agenda would be (#228).
   const dayFailed = useLoadFailed([dayMonthLoad, calendarsLoad]);
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
   const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, calendars, zone, selectedDay]);
@@ -834,7 +834,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       </header>
       <div className="content cal-content">
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
-            sit atop the grid instead, so a failing one still shows (#258). */}
+            sit atop the grid instead, so a failing one still shows (#140). */}
         {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
         {mode === 'week' ? (
           <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}

@@ -41,23 +41,23 @@ export const colour = {
   sun: 'oklch(0.86 0.16 92)',
   violet: 'oklch(0.8 0.11 300)',
   cyan: 'oklch(0.86 0.11 182)',
-  // "You are here" (#126): cool's values, named for its job so recolouring Personal never moves it.
+  // "You are here" (#163): cool's values, named for its job so recolouring Personal never moves it.
   accent: 'oklch(0.8 0.11 235)',
-  // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub` (#129).
+  // The current page in a nav, a raised chip with an inset hairline, never mistaken for hover's `sub` (#166).
   navOn: 'rgba(255,255,255,.10)',
   navOnEdge: 'rgba(255,255,255,.07)',
-  // The HTML email frame's ring (#134): none in Night, a hairline in Light, where white meets the page.
+  // The HTML email frame's ring (#171): none in Night, a hairline in Light, where white meets the page.
   mailEdge: 'transparent',
-  // Search's match highlight (#135): Night's 26% `sun` mix; Light's own, a real highlighter.
+  // Search's match highlight (#172): Night's 26% `sun` mix; Light's own, a real highlighter.
   hl: 'color-mix(in oklch, var(--sun) 26%, transparent)',
-  // A focused field's border, at least as strong as hover's `edgeHover` (#135).
+  // A focused field's border, at least as strong as hover's `edgeHover` (#172).
   edgeFocus: 'rgba(255,255,255,.2)',
-  // The forecast's sun on the grids and in the right pane (#137): Night's `sun`, Light's a deeper amber.
+  // The forecast's sun on the grids and in the right pane (#174): Night's `sun`, Light's a deeper amber.
   sunGlyph: 'var(--sun)',
-  // A switch that's on (#139): a `good` track and its knob, so on reads as healthy, never as a button.
+  // A switch that's on (#176): a `good` track and its knob, so on reads as healthy, never as a button.
   switchOn: 'color-mix(in oklch, var(--good) 58%, var(--modal))',
   switchKnobOn: 'var(--ink)',
-  // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
+  // The month's weekends and the days outside the shown month, and the week's weekend columns (#160).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
 } as const;
@@ -147,16 +147,16 @@ export const evhover = {night: 18, light: 14} as const;
 export const evland = {night: 34, light: 26} as const;
 /**
  * Coloured text on its own tint (calendar chips, week blocks, the editor's timeline) caps its
- * lightness at `--tintL` (#122): Light's hues are tuned for text on the page and wash out on a tint;
+ * lightness at `--tintL` (#159): Light's hues are tuned for text on the page and wash out on a tint;
  * Night's aren't capped.
  */
 export const tintL = {night: 1, light: 0.43} as const;
-/** Attention's band: `caution` mixed into its `panel` at this share (#130); 8% reads salmon in Light. */
+/** Attention's band: `caution` mixed into its `panel` at this share (#167); 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
-/** The HTML email frame's brightness (#134): Night takes the glare off its white, Light leaves it. */
+/** The HTML email frame's brightness (#171): Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
 /**
- * Todoist's colours, which aren't theme-tuned, clamped to the calendar tokens' lightness band (#138):
+ * Todoist's colours, which aren't theme-tuned, clamped to the calendar tokens' lightness band (#175):
  * a task's ring (and its project's mark in the editor's line) keeps Todoist's hue and chroma at a
  * lightness of at least `ringMin` and at most `ringMax`.
  */
@@ -209,7 +209,7 @@ export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row
 export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04, themeFade: 180} as const;
 
 /**
- * Loading (DESIGN.md › Motion, Decided while building #170): a skeleton's bars are `sub2` on the
+ * Loading (DESIGN.md › Motion, Decided while building #225): a skeleton's bars are `sub2` on the
  * page and `sub3` inside a `sub` group (Settings, cards); a skeleton appears only after `delayMs`,
  * so a fast answer never flashes one, fades in over motion.medium, then breathes, every bar in
  * phase, its opacity down to `breatheLow` and back over `breatheMs`. What replaces it fades in over
@@ -306,7 +306,7 @@ export const monthPaging = {glideMs: motion.slow, farRows: 10, leadRows: 5, titl
 
 /**
  * News (DESIGN.md › News › Keys and behaviour): how long a row stays fully on screen before its story
- * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion, #249).
+ * is seen; and how long a story N brings onto the list takes to settle in (DESIGN.md › Motion, #131).
  */
 export const news = {seenAfterMs: 1000, landedMs: 900} as const;
 

@@ -1,5 +1,5 @@
 // Setpoint's shell while it starts, in a browser that was signed in (DESIGN.md › Decided while
-// building #175): the sidebar as it last stood (the mark, the pages, the accounts and their counts,
+// building #234): the sidebar as it last stood (the mark, the pages, the accounts and their counts,
 // Today's place) and the page's header and skeleton, before Setpoint has said whether the session
 // still holds, so the app opens already itself. It asks for nothing; the app replaces it in place.
 // On the phone, the header with the mark, the page's skeleton and the tabs; an email's address its

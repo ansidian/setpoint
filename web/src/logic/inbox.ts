@@ -16,7 +16,7 @@ export const GROUP_LABELS: Record<InboxGroup, string> = {
 /**
  * Each group's glyph, before its header's label and before All's kind word, so a lane reads at a
  * glance without its word. Shape alone, in the header's `ink3`; only Attention's flag is `caution`, as its
- * count is (Decided while building #160).
+ * count is (Decided while building #119).
  */
 export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
   pinned: 'keep', attention: 'flag', unsorted: 'pending', security: 'lock', deliveries: 'local_shipping', money: 'payments',

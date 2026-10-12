@@ -20,7 +20,7 @@ import type {HealthKind} from './health.ts';
 
 export const SECTION_LABELS: Record<NewsSection, string> = {local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'};
 
-/** Each section's glyph wherever it's named, its header and the story pane's tags (#161): shape alone, in `ink3`. */
+/** Each section's glyph wherever it's named, its header and the story pane's tags (#120): shape alone, in `ink3`. */
 export const SECTION_GLYPHS: Record<NewsSection, IconName> = {local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'};
 
 const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});
@@ -392,7 +392,7 @@ const ADAPTER_TILES = {
 
 /**
  * A story led by a hazard source and without a photo: its hazard's glyph where the photo would go
- * (#162), the same as the source's tile in Settings › News. An outlet's story has none, its photo's
+ * (#121), the same as the source's tile in Settings › News. An outlet's story has none, its photo's
  * column left empty.
  */
 export const hazardGlyph = (row: Pick<StoryRowOut, 'image'> & {lead: Pick<StoryRowOut['lead'], 'hazard'>}): IconName | null =>

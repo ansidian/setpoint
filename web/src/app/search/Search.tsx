@@ -80,7 +80,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const [whole, setWhole] = useState(false);
   // The phone has no Esc: a search there is left by its clear button, where the hint would be.
   const phone = usePhone();
-  // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc (#135).
+  // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc (#172).
   const [focused, setFocused] = useState(false);
   useEffect(() => {
     const select = () => {
@@ -121,7 +121,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   };
   return (
     <label ref={field} className={['search', search.active && 'active', search.pending && 'pending'].filter(Boolean).join(' ')} htmlFor={inputId}>
-      {/* While a search is on its way, once it's taken a moment, its glyph turns (search-03, #180). */}
+      {/* While a search is on its way, once it's taken a moment, its glyph turns (search-03, #235). */}
       <span className="glass">
         {search.pending && <span className="spin"><Icon name="progress_activity" size={16} /></span>}
         <Icon name="search" size={16} />
@@ -208,7 +208,7 @@ export function SearchResults(props: ResultsProps) {
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
   // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
-  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #180).
+  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235).
   return (
     <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}

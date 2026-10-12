@@ -4,7 +4,7 @@ import type {IconName} from '../ui/glyphs.ts';
 import {dayTitle} from './calendar.ts';
 import type {SettingsPage} from './route.ts';
 
-/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#164). */
+/** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#123). */
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
   accounts: {label: 'Accounts', icon: 'alternate_email'},
   calendar: {label: 'Calendar', icon: 'calendar_month'},

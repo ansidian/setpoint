@@ -8,7 +8,7 @@
 .palette .cmdk-in input::placeholder { color: var(--ink3); opacity: 1; }
 .palette .cmdk-list { padding: 4px 8px 8px; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
 .palette .cmdk-label { height: 30px; display: flex; align-items: flex-end; padding: 0 12px 6px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
-/* Its items take the app's one menu item's 32 px and 10 px (styles.css, DESIGN.md › Decided while building #142). */
+/* Its items take the app's one menu item's 32 px and 10 px (styles.css, DESIGN.md › Decided while building #149). */
 .palette .item { width: 100%; height: 32px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--r-row); color: var(--ink2); text-align: left; }
 .palette .item .icon { color: var(--ink3); }
 .palette .item.cur { background: var(--sub2); color: var(--ink); }

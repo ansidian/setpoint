@@ -43,7 +43,7 @@ export type AgendaSection =
   | {kind: 'empty'; from: string; to: string; title: string; today: boolean};
 
 /**
- * Where today's now-line goes among its lines (#256): before the first timed event not yet over,
+ * Where today's now-line goes among its lines (#138): before the first timed event not yet over,
  * else after the last timed event, before the tasks. All-day events lead the day and tasks end it,
  * so neither places it; a day without a timed event has none.
  */

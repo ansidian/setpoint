@@ -34,7 +34,7 @@
 .fd .fact { display: flex; align-items: flex-start; gap: 10px; color: var(--ink2); }
 .fd .fact .icon { color: var(--ink3); margin-top: 1px; }
 .fd .v { color: var(--ink); }
-/* The calendar fact's glyph in the item's colour, as the failed card's (#167). */
+/* The calendar fact's glyph in the item's colour, as the failed card's (#126). */
 .fd .fact.cal .icon { color: var(--c); }
 /* SV-56: Time to Leave once it's time to go, glyph and words, as the day agenda's line. */
 .fd .fact.due, .fd .fact.due .icon, .fd .fact.due .v { color: var(--caution); }
@@ -43,7 +43,7 @@
 .fd-title, .fd-place, .fd-address, .fd-when { user-select: text; -webkit-user-select: text; }
 .fd .card-acts { display: flex; align-items: center; gap: 2px; padding: 8px 10px 10px 12px; border-top: 1px solid var(--hair); }
 .fd .card-acts .ibtn[aria-disabled="true"]:hover { background: none; color: var(--ink2); }
-/* Delete stands apart: 9 px further, after a 1 × 14 px `hair` divider (#132). */
+/* Delete stands apart: 9 px further, after a 1 × 14 px `hair` divider (#169). */
 .fd .card-acts .ibtn.danger { position: relative; margin-left: 9px; }
 .fd .card-acts .ibtn.danger::before { content: ""; position: absolute; left: -6px; top: 6px; width: 1px; height: 14px; background: var(--hair); }
 .fd .card-acts .btn.ghost[aria-disabled="true"]:hover { background: var(--sub2); }

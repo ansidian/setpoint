@@ -1,4 +1,4 @@
-// The sidebar's last-known shape (DESIGN.md › Decided while building #175): the accounts under
+// The sidebar's last-known shape (DESIGN.md › Decided while building #234): the accounts under
 // Inbox with their counts, and how many lines Today showed on which day, kept by this browser so
 // the next open paints them at once and the answers then settle them in place. Pure: app/lastShape.ts
 // keeps it in localStorage.

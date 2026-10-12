@@ -5,7 +5,7 @@
 // Settings pinned to the bottom.
 // Counts left out at 0, as board 04 draws them.
 //
-// From 640 to 1099 px (the compact tier, #258) it's a 56 px rail: the mark, then Inbox, Calendar, News
+// From 640 to 1099 px (the compact tier, #140) it's a 56 px rail: the mark, then Inbox, Calendar, News
 // and Settings as icons, each named in its tooltip, with the attention pill as a badge on Inbox. The
 // accounts and the page's section give way; ⌘K still filters by account and toggles calendars.
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
@@ -70,7 +70,7 @@ function AttentionPill({value}: {value: number}) {
 
 /**
  * The sidebar. Its accounts and counts are this browser's last-known ones until their answers come,
- * which then settle them in place, or a skeleton on a first visit, so nothing under them moves (#175).
+ * which then settle them in place, or a skeleton on a first visit, so nothing under them moves (#234).
  * `frame`: drawn while Setpoint starts, before it may ask for anything (ShellFrame.tsx).
  */
 export function Sidebar({route, frame = false}: {route: Route; frame?: boolean}) {
@@ -96,7 +96,7 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
         <Mark />
         {!rail && <span className="sb-name">Setpoint</span>}
       </div>
-      {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#129); the rail has no
+      {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#166); the rail has no
           accounts, so there Inbox stays the current page. */}
       <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}>
         <Icon name="inbox" />
@@ -106,7 +106,7 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
       </Link>
       {/* On Calendar the accounts fold away to the page's section (board 11), over 180 ms rather than
           in one frame, so Calendar slides up under the pointer that clicked it (shell-08). Until they
-          come, the ones this browser last showed, or a skeleton on a first visit (#175). */}
+          come, the ones this browser last showed, or a skeleton on a first visit (#234). */}
       {!rail && (
         <div className={route.page === 'calendar' ? 'sb-accts folded' : 'sb-accts'} inert={route.page === 'calendar'}>
           <div>

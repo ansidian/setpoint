@@ -1,4 +1,4 @@
-// The phone feeling native (darma SV-66; DESIGN.md › Phone and Decided while building #255–#264), at
+// The phone feeling native (darma SV-66; DESIGN.md › Phone and Decided while building #137–#146), at
 // 390 × 844 with touch: the reader's actions sharing the bar, the unread dot on an email marked
 // unread, the slide over the list and back, search's way out, the tab bar, the safe-area insets and
 // the theme colour, the list's type a step up, the agenda's today, now and chips, and the sign-in

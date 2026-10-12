@@ -1,4 +1,4 @@
-// The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; Decided while building #258): an
+// The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; Decided while building #140): an
 // iPad or a half-width window. At 640, 820, 900 and 1099: the sidebar a 56 px rail (icons named in
 // their tooltips, the attention pill a badge on Inbox), an email or a story covering the list with
 // Back, Esc, J and K, the header whole, nothing scrolling sideways; Calendar's grid taking the width

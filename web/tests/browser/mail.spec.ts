@@ -406,7 +406,7 @@ test('Mark all as read from the footer: everything outside Attention and Securit
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    // Its glyph is ⌘K's for the same command, 16 px before the label (#164).
+    // Its glyph is ⌘K's for the same command, 16 px before the label (#123).
     assert.deepEqual((await glyphs(page.locator('.listfoot .lnk .icon')))[0]!.slice(0, 2), ['mark_email_read', '16']);
     await page.locator('.listfoot .lnk', {hasText: 'Mark all as read'}).click();
     await until('only Attention\'s two unread and Security\'s three remain', () => unreadCount(page), text => text === '5', 5000);
@@ -779,7 +779,7 @@ test('every attachment downloads: its card\'s Download, the preview\'s, and a ca
     await other.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     const zip = other.locator('a.attach', {hasText: 'Renewal agreement.zip'});
     assert.equal(await zip.locator('.dl').textContent(), 'Download');
-    // An archive's tile is warm, with folder_zip (#163).
+    // An archive's tile is warm, with folder_zip (#122).
     assert.deepEqual(await glyphs(zip.locator('.type .icon')), [['folder_zip', '18', await tokenColour(other, 'warm')]]);
     download = other.waitForEvent('download');
     await zip.click();
@@ -801,7 +801,7 @@ const backgroundOf = (page: Page, background: string) => page.evaluate(value => 
   return computed;
 }, background);
 
-test('#163: an attachment\'s type tile says what it is in its colour and glyph, Download carries its glyph, and the pointer lifts the card', async () => {
+test('#122: an attachment\'s type tile says what it is in its colour and glyph, Download carries its glyph, and the pointer lifts the card', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -916,7 +916,7 @@ test('All: every email by day with clock times, grouped by lane, Noise folded pe
   }
 });
 
-test('#160: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
+test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);

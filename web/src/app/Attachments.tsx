@@ -1,5 +1,5 @@
 // An email's attachments (DESIGN.md › The reader): 44 px cards, radius 14, 280 wide, with the type's
-// tile (its colour and glyph, #163), the name and "PDF · 184 KB". PDF, image and CSV open a preview
+// tile (its colour and glyph, #122), the name and "PDF · 184 KB". PDF, image and CSV open a preview
 // over the reading pane, which Esc or × closes. Every card and the preview's head offer Download; a
 // card with no preview is one Download link (SV-25).
 import type {AttachmentOut} from '@setpoint/shared';

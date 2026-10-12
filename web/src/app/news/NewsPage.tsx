@@ -158,7 +158,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const pending = held && latest ? waiting(held.layout, latest.layout, latest.rows) : null;
   const pill = pending ? pillParts(pending) : null;
   const list = useRef<HTMLDivElement>(null);
-  // The rows N brought onto the list, settling in from `sub2` for a moment (#249).
+  // The rows N brought onto the list, settling in from `sub2` for a moment (#131).
   const [arrived, setArrived] = useState<ReadonlySet<number>>(() => new Set());
   const takeNew = () => {
     if (!latest) return;
@@ -356,7 +356,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             </div>
           ) : (
           <div className={listArrived ? 'list sk-arrive' : 'list'} ref={list}>
-            {/* Until its first answer, the list's skeleton in its rows' shapes (news-03, #178), or why it didn't come (#173). */}
+            {/* Until its first answer, the list's skeleton in its rows' shapes (news-03, #231), or why it didn't come (#228). */}
             {!latest && (listFailed ? <LoadFailed what="News" loads={[listLoad]} /> : <NewsSkeleton blocks={view === 'all'} />)}
             {showHeadlines && (
               <>
@@ -442,7 +442,7 @@ const STATE_CLASS = {new: 'new', updated: 'upd', seen: 'seen'} as const;
 function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zone, onPoint, onOpen}: RowProps) {
   const meta = rowMeta(row, now, zone, section);
   const image = lead ? row.image?.large ?? row.image?.thumb : row.image?.thumb;
-  // A hazard source's story without a photo shows its hazard's glyph instead (#162).
+  // A hazard source's story without a photo shows its hazard's glyph instead (#121).
   const hazard = hazardGlyph(row);
   const classes = [lead ? 'nw-lead' : 'nw-row', STATE_CLASS[row.state], lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open', arrived.has(row.id) && 'landed'].filter(Boolean).join(' ');
   const attributes = {className: classes, 'data-key': rowKey, 'data-story': row.id, onMouseMove: () => onPoint(rowKey), onClick: () => onOpen(rowKey)};

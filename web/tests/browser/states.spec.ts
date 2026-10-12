@@ -44,7 +44,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.today-row').first().waitFor();
     await collapseGroups(page);
     assert.equal(await page.locator('.acct', {hasText: 'Business'}).locator('.reconnect').count(), 1, 'the sidebar marks Business');
-    // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#164).
+    // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#123).
     assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
     assert.deepEqual(await glyph(page.locator('.acct', {hasText: 'Business'}).locator('.reconnect .icon')), [ICONS.sync_problem, '16']);
     // Each tone has one glyph (states-04): stale is `history` in `ink3`, triage down the `warning` triangle in `caution`.
@@ -52,7 +52,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     assert.deepEqual(await toneGlyph(page.locator('.gh-note')), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
-    // Retry now carries refresh, as every Try again does (#164).
+    // Retry now carries refresh, as every Try again does (#123).
     assert.deepEqual(await glyph(page.locator('.offline-pill .retry .icon')), [ICONS.refresh, '16']);
     await page.mouse.move(700, 28);
     await matchGolden(page, '19a-states-reconnect-offline-unsorted', 'main');

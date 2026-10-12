@@ -27,11 +27,11 @@ function story(fields: Partial<StoryRowOut> = {}): StoryRowOut {
 }
 const lead = (outlet_short: string, more: number, published_at = '2026-10-07T15:02:00.000Z') => ({...story().lead, outlet_short, more, published_at});
 
-test('each section\'s glyph (#161): Local location_on, Tech computer, AI auto_awesome, General public', () => {
+test('each section\'s glyph (#120): Local location_on, Tech computer, AI auto_awesome, General public', () => {
   expect(SECTION_GLYPHS).toEqual({local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'});
 });
 
-describe('a hazard\'s glyph where the photo would go (#162)', () => {
+describe('a hazard\'s glyph where the photo would go (#121)', () => {
   const image = {thumb: {id: 1, url: '/api/news/images/1', width: 144, height: 96}, large: null, outlet: 'KTLA'};
   test.each([
     ['NWS without a photo', 'nws', null, 'thunderstorm'],

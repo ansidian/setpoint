@@ -7,7 +7,7 @@ import {timeRange, dayTitle} from './calendar.ts';
 import {describeRule} from './compose.ts';
 import {addDays, clockTime, localDate} from './format.ts';
 
-/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri" (#167); null for any other item. */
+/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri" (#126); null for any other item. */
 export function repeatLine(item: Pick<ItemOut, 'kind' | 'recurrence' | 'all_day' | 'starts_at' | 'start_date'>, timeZone: string): string | null {
   if (item.kind !== 'event' || !item.recurrence) return null;
   const day = item.all_day ? item.start_date : item.starts_at && localDate(item.starts_at, timeZone);

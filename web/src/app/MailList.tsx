@@ -170,7 +170,7 @@ interface RowProps extends ListProps {
   row: MessageRowOut;
   rowKey: string;
   pinnedShelf?: boolean;
-  // A Noise row recedes (DESIGN.md #131).
+  // A Noise row recedes (DESIGN.md #168).
   noise?: boolean;
   leaving: boolean;
   // Leaving by Done or Trash: its beat before it folds (inbox-05).

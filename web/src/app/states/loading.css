@@ -1,4 +1,4 @@
-/* Loading (DESIGN.md › Motion, Decided while building #170): a skeleton shows after --skel-delay
+/* Loading (DESIGN.md › Motion, Decided while building #225): a skeleton shows after --skel-delay
    (none on a quick answer), fades in over 180 ms, then breathes, every bar in phase: its opacity to
    --skel-low and back over --skel-breathe. Bars are `sub2` on the page, `sub3` inside a `sub` group.
    What replaces it fades in over 120 ms (.sk-arrive). */
@@ -124,7 +124,7 @@
 .sk-result > .r1 { grid-column: 3; }
 .sk-result > .l2, .sk-result > .l3 { grid-column: 2 / 4; }
 
-/* ---------- A failed load (#173): the failing health line's look, in place of what didn't load ---------- */
+/* ---------- A failed load (#228): the failing health line's look, in place of what didn't load ---------- */
 .load-failed { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; color: var(--caution); font-size: 12.5px; min-width: 0; }
 .load-failed .act { color: var(--ink); height: 26px; padding: 0 10px 0 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; margin-left: -10px; flex: none; transition: background-color var(--dur-fast) var(--ease); }
 .load-failed .act .icon { color: var(--ink2); }
@@ -135,8 +135,8 @@
 .rpane .load-failed { margin-top: 10px; padding: 0 16px 0 20px; }
 .settings .load-failed { padding: 0 4px; }
 
-/* ---------- Setpoint starting (#174): the mark where Unreachable's sits (states.css .boot) ---------- */
-/* Its chips settle in turn as All caught up's do (styles.css › mark-settle, #201), once the start has
+/* ---------- Setpoint starting (#233): the mark where Unreachable's sits (states.css .boot) ---------- */
+/* Its chips settle in turn as All caught up's do (styles.css › mark-settle, #203), once the start has
    taken a moment, then it breathes as a skeleton does. */
 .boot.starting .mark { animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + 140ms + var(--dur-slow)) infinite; }
 .boot.starting .mark > g { animation: mark-settle var(--dur-slow) var(--ease) var(--skel-delay) both; }

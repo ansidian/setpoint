@@ -20,7 +20,7 @@ import {choose, cleanUp, matchGolden, ROOT, startSetpoint, still, until} from '.
 
 after(cleanUp);
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
@@ -64,7 +64,7 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     assert.match(titles.at(-1)!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · /);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
-    // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#164).
+    // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#123).
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon path').getAttribute('d'), ICONS.sync_problem);
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'), 'in caution on the current page too');
     assert.equal(await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).locator('.state > .icon path').getAttribute('d'), ICONS.sync_problem);
@@ -365,7 +365,7 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.keyboard.press('Meta+,');
     await page.locator('.settings').waitFor();
     assert.equal(new URL(page.url()).pathname, '/calendar', 'the page under it keeps the address');
-    // The current page keeps its raised `navOn` chip (#129) with the keys in the nav, opened with ⌘,
+    // The current page keeps its raised `navOn` chip (#166) with the keys in the nav, opened with ⌘,
     // or after ↓; the keyboard's own fill is `sub`, on any other page it reaches.
     const raised = await page.evaluate(() => {
       const probe = document.body.appendChild(document.createElement('i'));
@@ -474,7 +474,7 @@ test('Mail: a rule added, a learned rule undone, a domain untrusted, the code ex
     await page.getByRole('button', {name: 'Add', exact: true}).click();
     await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.kind === 'security'));
     await page.locator('.settings .rule', {hasText: 'alerts.contoso.example'}).waitFor();
-    // A rule's menu turns it off with toggle_off and back on with toggle_on (#164).
+    // A rule's menu turns it off with toggle_off and back on with toggle_on (#123).
     const added = page.locator('.settings .set-row', {hasText: 'alerts.contoso.example'});
     await added.getByRole('button', {name: 'Rule options'}).click();
     const turnOff = page.getByRole('menuitem', {name: 'Turn off'});
@@ -594,7 +594,7 @@ test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, rea
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
-    assert.deepEqual(await leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'})), [ICONS.rule, '20', await computed(page, 'color', 'var(--ink3)'), 12], 'it leads with rule (#165)');
+    assert.deepEqual(await leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'})), [ICONS.rule, '20', await computed(page, 'color', 'var(--ink3)'), 12], 'it leads with rule (#124)');
     const empty = page.locator('.settings .set-row', {hasText: 'No rules yet'}).getByRole('button', {name: 'Add rule'});
     const colour = () => empty.evaluate(button => getComputedStyle(button).color);
     const resting = await colour();
@@ -632,7 +632,7 @@ test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox
     assert.ok(Math.abs(shape.wordsTop - shape.buttonTop) <= 2, 'Add rule sits on the words\' line');
     assert.ok(shape.row <= 46, `a 46px row, not ${shape.row}px`);
     assert.equal(shape.group, shape.row, 'the group holds just the row');
-    assert.ok(shape.leadLeft <= 17, 'its glyph starts at the row\'s inset, as the domains\' None yet does (#165)');
+    assert.ok(shape.leadLeft <= 17, 'its glyph starts at the row\'s inset, as the domains\' None yet does (#124)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -874,7 +874,7 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     assert.equal(await page.locator('.settings [data-calendar]', {hasText: 'Todoist'}).locator('.sw').count(), 0);
 
     await personal.getByRole('button', {name: 'Personal colour'}).click();
-    // Nine of darma's swatches: caution and alert keep their jobs (#126).
+    // Nine of darma's swatches: caution and alert keep their jobs (#163).
     assert.deepEqual(await page.locator('.settings .swatches .sw').evaluateAll(swatches => swatches.map(swatch => swatch.getAttribute('aria-label'))),
       ['ink2', 'ink3', 'cool', 'warm', 'comf', 'good', 'sun', 'violet', 'cyan']);
     await page.locator('.settings .swatches .sw[aria-label="violet"]').click();
@@ -951,7 +951,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const ring = (selector: string, title: string) => page.locator(selector, {hasText: title}).locator('.ring').evaluate(el => getComputedStyle(el).borderTopColor);
-    // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band (#138).
+    // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band (#175).
     const teal = await computed(page, 'color', 'oklch(from #148fad clamp(var(--ringMin), l, var(--ringMax)) c h)');
     const sky = await computed(page, 'color', 'oklch(from #319dc0 clamp(var(--ringMin), l, var(--ringMax)) c h)');
     // A ring can still be easing its colour in (the agenda's does), so each is read once it's there.

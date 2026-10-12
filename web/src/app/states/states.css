@@ -10,7 +10,7 @@
 
 /* A line with progress along its foot (states-15, search-12, news-13): search's first backfill and
    News's first run. A 2 px `sub2` track over the line's hairline, and in it the share done (`--done`)
-   in `ink3`, neutral as a usage meter is (#252), easing over 260 ms as it grows. */
+   in `ink3`, neutral as a usage meter is (#134), easing over 260 ms as it grows. */
 .progress { position: relative; }
 .progress::before, .progress::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; pointer-events: none; }
 .progress::before { right: 0; background: var(--sub2); }

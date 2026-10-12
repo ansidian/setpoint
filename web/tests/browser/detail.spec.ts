@@ -87,7 +87,7 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
       ['Smile Dental1420 Elm St', 'Leave by 2:05 PM · 18 min', '30 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-when').textContent(), 'Wed, Oct 7 · 2:30 – 3:30 PM');
     assert.equal(await page.locator('.ag-item.sel .leave').textContent(), 'Leave by 2:05 PM · 18 min');
-    // The calendar fact's glyph takes the item's colour, as the failed card's does (#167): Personal's cool.
+    // The calendar fact's glyph takes the item's colour, as the failed card's does (#126): Personal's cool.
     const tint = (colour: string) => page.evaluate(value => {
       const probe = document.createElement('span');
       probe.style.color = value;
@@ -100,7 +100,7 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     assert.equal(await card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color), await tint('var(--ink2)'), 'its name stays ink2');
     await settle(page);
     await matchGolden(page, '12a-floating-detail-dentist', 'grid');
-    // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#167).
+    // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
     await glideTo(page, chip(page, '2026-10-07', 'Gym'));
     assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(), ['Weekly on Mon, Wed, Fri', '10 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-layer.in .fact', {hasText: 'Weekly'}).locator('.icon').getAttribute('width'), '17');

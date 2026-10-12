@@ -15,7 +15,7 @@ import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
@@ -98,7 +98,7 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await tech.textContent(), 'Nothing new in Tech since Mon');
     assert.deepEqual(await tech.evaluate(line => [line.className, line.getBoundingClientRect().height]), ['nw-empty', 44]);
     assert.equal(await tech.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--ink3)'));
-    assert.deepEqual(await leadGlyph(tech), [ICONS.newspaper, '16', await colourOf(page, 'var(--ink3)'), 8], 'it leads with newspaper (#165)');
+    assert.deepEqual(await leadGlyph(tech), [ICONS.newspaper, '16', await colourOf(page, 'var(--ink3)'), 8], 'it leads with newspaper (#124)');
     assert.equal(await page.locator('.nw-up').count(), 0);
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '4 more in AI', '9 more in General']);
     await settle(page);

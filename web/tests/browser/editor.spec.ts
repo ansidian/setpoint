@@ -76,7 +76,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('End');
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
-    // The head's × is a 30 px header button with an 18 px glyph, as Settings' (#164); Add another's add is 17 beside its label.
+    // The head's × is a 30 px header button with an 18 px glyph, as Settings' (#123); Add another's add is 17 beside its label.
     assert.deepEqual(await page.getByRole('button', {name: 'Close editor'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [30, '18']);
     assert.equal(await page.getByRole('button', {name: 'Add another'}).locator('.icon').getAttribute('width'), '17');
     await page.mouse.move(700, 28);
@@ -480,7 +480,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     await line.pressSequentially('Pay bills #hom');
     await page.locator('.nl .tok-j', {hasText: '#hom'}).waitFor();
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
-    // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#138).
+    // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#175).
     const orange = await page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'oklch(from #c77100 clamp(var(--ringMin), l, var(--ringMax)) c h)';

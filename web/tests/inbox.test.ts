@@ -46,7 +46,7 @@ const inbox: InboxOut = {account_id: null, groups, counts, next_change_at: null}
 // Deliveries and Noise as the user collapsed them, as the boards show them.
 const asBoards: Collapse = {deliveries: true, noise: true};
 
-// Each lane's glyph, one per group and no two alike (#160): its header and All's kind column draw it.
+// Each lane's glyph, one per group and no two alike (#119): its header and All's kind column draw it.
 test.each([
   ['pinned', 'keep'], ['attention', 'flag'], ['unsorted', 'pending'], ['security', 'lock'], ['deliveries', 'local_shipping'], ['money', 'payments'],
   ['career', 'work'], ['people', 'person'], ['updates', 'notifications'], ['other', 'mail'], ['noise', 'campaign'],

@@ -1,4 +1,4 @@
-// The sidebar's last-known shape (logic/shape.ts; DESIGN.md #175): what's kept, and what's read back.
+// The sidebar's last-known shape (logic/shape.ts; DESIGN.md #234): what's kept, and what's read back.
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {parseShape, shapeOf, todayLines} from '../src/logic/shape.ts';

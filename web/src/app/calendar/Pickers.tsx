@@ -22,7 +22,7 @@ export interface ProjectOption {
   colour?: TodoistColour | null;
 }
 
-/** A project's dot in its own colour (SV-29), as a calendar's in the Calendar menu, clamped per theme as its tasks' rings (#138). */
+/** A project's dot in its own colour (SV-29), as a calendar's in the Calendar menu, clamped per theme as its tasks' rings (#175). */
 export const ProjectDot = ({colour}: {colour: TodoistColour | null | undefined}) =>
   <span className="dot sm todoist" style={{'--c': colour ? TODOIST_COLOURS[colour] : 'var(--ink3)'} as CSSProperties} />;
 

@@ -173,11 +173,11 @@ const num = (text: string): Patch => ({
 });
 
 /**
- * #166 (override 29): an event's line names its calendar, and its place has a line of its own with
+ * #125 (override 29): an event's line names its calendar, and its place has a line of its own with
  * `location_on` (the boards draw the place where the calendar goes).
  */
 const placed = (time: string, calendar: string, place: string): Patch => ({
-  why: `#166 (override 29): the line names the calendar, the place on its own line: ${time} · ${calendar}, then ${place}`,
+  why: `#125 (override 29): the line names the calendar, the place on its own line: ${time} · ${calendar}, then ${place}`,
   from: `<span class="ink3" style="font-size: 12.5px">${time} · ${place}</span>`,
   to: `<span class="ink3 num" style="font-size: 12.5px">${time} · ${calendar}</span><span class="ink3" style="font-size: 12.5px; display: flex; align-items: center; gap: 6px; margin-top: 4px"><span class="ms s16">location_on</span>${place}</span>`,
 });
@@ -442,7 +442,7 @@ const dayTemps = (tone: string, glyph: string, temps: string): Patch => ({
 });
 const BOARD_21_PATCHES: Patch[] = [
   {why: 'The phone\'s frame and rounded corners are the device\'s, not the page\'s', from: 'border-radius: 44px; border: 1px solid var(--edgeOn);', to: 'border-radius: 0; border: 0;'},
-  {why: '… and so is the status bar: the page keeps clear of it by its inset (#261), none in a browser', from: '.sp .safe { height: 40px; flex: none; }', to: '.sp .safe { display: none; }'},
+  {why: '… and so is the status bar: the page keeps clear of it by its inset (#143), none in a browser', from: '.sp .safe { height: 40px; flex: none; }', to: '.sp .safe { display: none; }'},
   {why: 'F8: the phone takes taps only, so no row is swiped; Mark read and Done are the reader\'s',
     from: `      <div class="swipe">
         <div class="swipe-acts">

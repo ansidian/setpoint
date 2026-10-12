@@ -25,7 +25,7 @@ import {OfflinePill} from './states/States.tsx';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, holdToast, showToast, useToast} from './toast.ts';
 
-/** `arrive`: it follows Setpoint's mark at the start, and fades in (#174). */
+/** `arrive`: it follows Setpoint's mark at the start, and fades in (#233). */
 export function App({arrive = false}: {arrive?: boolean}) {
   const route = useRoute();
   const offline = useOfflineSince() !== null;

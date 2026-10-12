@@ -136,7 +136,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         </div>
       )}
       <div className="rd-tools">
-        {/* Only in the compact tier, where the reader covers the list (#258). */}
+        {/* Only in the compact tier, where the reader covers the list (#140). */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
@@ -167,7 +167,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
             going down the list, down from above going up, a fade for a click; the email the pane
             opened on arrives with the pane. The tools stay still. */}
         <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>
-          {/* The head from the email's row at once; only the body waits for the email (reader-01, #176). */}
+          {/* The head from the email's row at once; only the body waits for the email (reader-01, #229). */}
           <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />
         </div>
       </div>
@@ -270,7 +270,7 @@ function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: 
 /**
  * The open email: its card, its head and its body. The head draws from the email's row (`listed`)
  * until the email itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an
- * attachment's card when it has one), or why it couldn't load (reader-01, phone-04, #176).
+ * attachment's card when it has one), or why it couldn't load (reader-01, phone-04, #229).
  */
 function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread}: {
   id: number;

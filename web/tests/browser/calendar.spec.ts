@@ -10,7 +10,7 @@ import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#165). */
+/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
@@ -42,7 +42,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await page.locator('.ag-item', {hasText: 'Dentist'}).locator('.leave').textContent(), 'Leave by 2:05 PM · 18 min');
     assert.equal(await page.locator('.ag-item .leave').count(), 1, 'only Dentist has one today');
-    // #166: the line names the calendar; the place has its own line, 16 px location_on in ink3, 4 px under it, as Leave by is.
+    // #125: the line names the calendar; the place has its own line, 16 px location_on in ink3, 4 px under it, as Leave by is.
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
@@ -75,7 +75,7 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
     assert.deepEqual(await popover.locator(':is(.ev, .tk)').allTextContents(),
       ['9 AMFarmers market', '11 AMHaircut', '12:30 PMLunch with Jo', '2 PMVolunteer shift', '5 PMCall Mom', '8 PMMovie night', 'Grocery run', 'Laundry']);
     assert.equal(await text(page, '.rp-date'), 'Sat, Oct 17');
-    // A popover's × is 16 px in a 26 px button, as every card's (#164); its laid-out width, whatever its entrance.
+    // A popover's × is 16 px in a 26 px button, as every card's (#123); its laid-out width, whatever its entrance.
     assert.deepEqual(await popover.getByRole('button', {name: 'Close'}).evaluate(button => [(button as HTMLElement).offsetWidth, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     await page.locator('.ag-item', {hasText: 'Movie night'}).waitFor();
     await settle(page);
@@ -118,7 +118,7 @@ for (const size of ['target', 'large'] as SizeName[]) {
       assert.equal((await box('.cell[data-date="2026-10-07"] .ev')).height, 20);
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
       assert.deepEqual(scroll, [0, 0]);
-      // Past items turn grey at full strength (#124), future ones keep their colour; the selected day is `sub`; today is the disc.
+      // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.
       const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
       assert.deepEqual(await look('Gym'), ['1', 'rgb(125, 127, 132)'], 'past: ink3');
       const [opacity, colour] = await look('Dentist');
@@ -274,7 +274,7 @@ test('SV-56: a day outside the month takes the outside tint, a weekend among the
     // Selected, Sun Sep 27 is `sub` like any selected day.
     await cell('2026-09-27').click({position: {x: 100, y: 150}});
     await until('Sun Sep 27 selected', () => cell('2026-09-27').getAttribute('class'), cls => !!cls?.split(' ').includes('sel'));
-    // A cell eases its fill over 180 ms (#123); it's read once it has.
+    // A cell eases its fill over 180 ms (#160); it's read once it has.
     const sub = await tokenColour(page, 'sub');
     await until('Sun Sep 27 is sub', () => fill('2026-09-27'), value => value === sub);
     assert.deepEqual(setpoint.pageErrors, []);

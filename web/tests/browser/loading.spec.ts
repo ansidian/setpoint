@@ -1,5 +1,5 @@
 // Loading in the browser (the polish audit's loading slice, SV-61; DESIGN.md › Motion › Loading and
-// Decided while building #170–#181): each page's skeleton while its data is held at the server's
+// Decided while building #225–#236): each page's skeleton while its data is held at the server's
 // door, in its rows' shapes and the quiet breathing, never a false empty; a load that fails says so
 // in place with Try again; Setpoint starting shows its mark, or the shell when this browser was
 // signed in; the reader and the story pane draw their heads from their rows at once; search keeps
@@ -437,7 +437,7 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
     await mark.waitFor();
     const box = (await mark.boundingBox())!;
     assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
-    // Each chip settles as All caught up's do (#201), once the start has taken 200 ms, 70 ms after the one before.
+    // Each chip settles as All caught up's do (#203), once the start has taken 200 ms, 70 ms after the one before.
     assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => [getComputedStyle(chip).animationName, getComputedStyle(chip).animationDuration, getComputedStyle(chip).animationDelay])),
       [['mark-settle', '0.26s', '0.2s'], ['mark-settle', '0.26s', '0.27s'], ['mark-settle', '0.26s', '0.34s']]);
     await until('the chips settled', () => mark.locator('g').evaluateAll(chips => chips.map(chip => chip.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));

@@ -70,8 +70,8 @@
 .wk-now { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--alert); z-index: 3; pointer-events: none; }
 .wk-now::before { content: ''; position: absolute; left: -4px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
 
-/* Blocks: the chip's tint, bar and colours (its text capped at --tintL, #122); the title at 500, its
-   times under it at 400 and .8; past, grey with a faint bar and fill (#124). */
+/* Blocks: the chip's tint, bar and colours (its text capped at --tintL, #159); the title at 500, its
+   times under it at 400 and .8; past, grey with a faint bar and fill (#161). */
 .wb { position: absolute; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h); background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent);
   box-shadow: inset 3px 0 0 var(--c, var(--cool)); padding: 3px 7px 3px 9px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; z-index: 1;
   animation: wk-fade var(--weekFade) var(--ease); }
@@ -150,7 +150,7 @@
 @keyframes wk-in-prev { from { transform: translateX(calc(-1 * var(--weekSlide))); opacity: 0; } }
 @keyframes wk-fade { from { opacity: 0; } }
 
-/* As a chip's (calendar.css, DESIGN.md #145): the pointer lays the block's own colour at `--evhover`
+/* As a chip's (calendar.css, DESIGN.md #152): the pointer lays the block's own colour at `--evhover`
    over its fill (a selected block `sub`), and a press gives it to .97 and 28%. */
 .wb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: color-mix(in oklch, var(--c, var(--cool)) var(--evhover), transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease); }
 .wb.sel::after { background: var(--sub); }

@@ -1,6 +1,6 @@
 // The right pane (DESIGN.md › Right pane; boards 11 and 11b): the selected day, its forecast
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
-// title, "7:00 – 8:00 AM · Personal", the place on its own line, #166, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
+// title, "7:00 – 8:00 AM · Personal", the place on its own line, #125, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
 // · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
 // in `alert` today, and its tasks with their projects; the footer's keys. F6 adds the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
@@ -9,7 +9,7 @@
 // failing lines at the top (board 19b). A day whose items are only hidden says so, "4 hidden · Show
 // all", rather than "No events" (SV-56). The editor (Editor.tsx) takes the pane's place. Until the
 // day's items and the calendars have come, its line and agenda are a skeleton, never "Nothing
-// planned" (#172).
+// planned" (#227).
 import type {CalendarOut, ItemOut, SourceOut, WeatherDayOut} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
@@ -35,7 +35,7 @@ import {useCalendarFade} from './view.ts';
 interface DayPaneProps {
   date: string;
   // The day's items or the calendars haven't come yet: its line and agenda are a skeleton, never
-  // "Nothing planned" (calpanes-03, #172); `failed` says why they didn't come instead.
+  // "Nothing planned" (calpanes-03, #227); `failed` says why they didn't come instead.
   loading: boolean;
   failed?: ReactNode;
   today: string;

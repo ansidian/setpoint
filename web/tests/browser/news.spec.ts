@@ -122,7 +122,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
     // The blocks in their fixed order, each with its "N more".
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
-    // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#161).
+    // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#120).
     const ink3 = await colourOf(page, 'var(--ink3)');
     assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
     assert.equal(await page.locator('.nw-sec').first().evaluate(header => getComputedStyle(header).color), await colourOf(page, 'var(--ink2)'));
@@ -135,7 +135,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('.side .nw-meta').allTextContents(), ['LAist +3', 'Yesterday']);
 
     // The single values: the lead's image, a row's grid and thumbnail, and the dots. With nothing open
-    // the list is 1,429 px wide, and its leads grow: 320 × 180, the headline 19 (#245).
+    // the list is 1,429 px wide, and its leads grow: 320 × 180, the headline 19 (#127).
     const lead = row(page, 'Brush fire near the 210');
     const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]);
     const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' '));
@@ -176,7 +176,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     await page.locator('.pane .src-row').first().waitFor();
     assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
     // With the pane open the list is under 1000 px, and the lead is the boards' 232 × 130 again; opened,
-    // it's seen, and stays ink, at 400 (#245).
+    // it's seen, and stays ink, at 400 (#127).
     assert.deepEqual(await leadImage(), [232, 130, 'cover', '12px']);
     assert.equal(await leadColumns(), '12px 232px');
     assert.deepEqual(await leadHeadline(), ['16px', '21.6px', '400']);
@@ -212,7 +212,7 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     assert.equal(await colourOf(page, 'var(--ink)'), 'rgb(29, 30, 33)', 'Light\'s ink');
     assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
     assert.equal(await style('.nw-sec', 'backgroundColor'), await backgroundOf(page, 'var(--panel)'));
-    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink2)'), 'the section\'s name in ink2 (#161)');
+    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink2)'), 'the section\'s name in ink2 (#120)');
     assert.equal(await style('.nw-sec > .icon', 'color'), await colourOf(page, 'var(--ink3)'), 'its glyph in ink3');
     assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 9%, var(--page))'));
     assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--accent)'));
@@ -223,7 +223,7 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     assert.equal(await style('.nw-row.new .hl', 'color'), await colourOf(page, 'var(--ink)'));
     assert.equal(await style('.nw-row .sm', 'color'), await colourOf(page, 'var(--ink3)'));
     assert.equal(await style('.nw-meta .upd', 'color'), await colourOf(page, 'var(--accent)'));
-    // Upcoming's tile is the accent, not Jobs' violet (#126).
+    // Upcoming's tile is the accent, not Jobs' violet (#163).
     assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--accent)'));
 
     await lead.click();
@@ -242,7 +242,7 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
   }
 });
 
-test('#162: a hazard source\'s story without a photo shows its hazard\'s glyph in a caution tile; as a lead, before its headline', async () => {
+test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph in a caution tile; as a lead, before its headline', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -284,7 +284,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await still(page);
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
-    assert.deepEqual(await glyphs(pane.locator('.st-secs .tag .icon')), [['location_on', '14', await colourOf(page, 'var(--ink3)')]], 'the section\'s tag leads with its glyph (#161)');
+    assert.deepEqual(await glyphs(pane.locator('.st-secs .tag .icon')), [['location_on', '14', await colourOf(page, 'var(--ink3)')]], 'the section\'s tag leads with its glyph (#120)');
     assert.equal(await pane.locator('.st-meta').textContent(), '5 outlets·first reported Mon 6:12 AM·updated 8:40 AM');
     assert.equal(await pane.locator('.st-img .cap').textContent(), 'KTLA');
     assert.deepEqual(await pane.locator('.st-img').evaluate(box => [box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).marginLeft]), [220, '14px', '28px']);
@@ -320,7 +320,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.equal(await pane.locator('.ar-out').textContent(), 'NBCNBC Los Angeles·7:10 AM·Staff report');
     assert.equal(await pane.locator('.ar-title').textContent(), 'Fire burns 400 acres in the foothills; evacuation warnings issued');
     assert.equal(await pane.locator('.ar-text p').count(), 5);
-    // At a reading size: 16 / 1.65, paragraphs 16 apart, and in Night ink softened 10% toward ink2 (#247).
+    // At a reading size: 16 / 1.65, paragraphs 16 apart, and in Night ink softened 10% toward ink2 (#129).
     assert.deepEqual(await pane.locator('.ar-text').evaluate(text => [getComputedStyle(text).fontSize, getComputedStyle(text).lineHeight, getComputedStyle(text).color]),
       ['16px', '26.4px', await colourOf(page, 'color-mix(in oklch, var(--ink) 90%, var(--ink2))')]);
     assert.equal(await pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom), '16px');
@@ -436,7 +436,7 @@ test('Missed (28): Catch up lists the stories that left unseen, by day, each row
     await page.locator('.nw-back .t', {hasText: 'Missed since Mon 10:40 PM'}).waitFor();
     assert.equal(await page.locator('.nw-back .n').textContent(), '14 stories');
     assert.equal(await page.locator('.nw-sec').textContent(), 'TuesdayOct 6');
-    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['history', '14', await colourOf(page, 'var(--ink3)')]], 'a day of Missed leads with history (#161)');
+    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['history', '14', await colourOf(page, 'var(--ink3)')]], 'a day of Missed leads with history (#120)');
     assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
     const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
     assert.match(await tornado.getAttribute('class') ?? '', /^nw-lead/);
@@ -533,7 +533,7 @@ test('seen: about a second fully on screen, or opened; flicking past doesn\'t co
     await row(page, 'Red Flag Warning').waitFor();
     assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bseen\b/);
     assert.match(await row(page, 'Hurricane Teresa').getAttribute('class') ?? '', /\bseen\b/);
-    // A seen lead keeps its ink, at 400, so it never ranks below a row; a seen row is ink2 (#245).
+    // A seen lead keeps its ink, at 400, so it never ranks below a row; a seen row is ink2 (#127).
     const ink = (headline: string) => row(page, headline).locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
     assert.match(await row(page, 'Brush fire near the 210').getAttribute('class') ?? '', /^nw-lead seen\b/);
     assert.deepEqual(await ink('Brush fire near the 210'), [await colourOf(page, 'var(--ink)'), '400']);
@@ -748,7 +748,7 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
 
     assert.deepEqual(await fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height]), [160, 90]);
     assert.equal(await fire.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 160px');
-    // Under 480 px a row's headline wraps to two 18 px lines and its summary goes; the row keeps its height, 66 px and its hairline (#246).
+    // Under 480 px a row's headline wraps to two 18 px lines and its summary goes; the row keeps its height, 66 px and its hairline (#128).
     const carWash = row(page, 'Federal agents detain 9 at a car wash');
     assert.deepEqual(await carWash.locator('.hl').evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).webkitLineClamp, getComputedStyle(element).lineHeight, element.getBoundingClientRect().height]),
       ['normal', '2', '18px', 36]);

@@ -1,4 +1,4 @@
-// Each page's skeleton (DESIGN.md › Decided while building #170): the rows it will show, in their
+// Each page's skeleton (DESIGN.md › Decided while building #225): the rows it will show, in their
 // real geometry (loading.css mirrors each row's own rule, its class named beside it), so what loads
 // replaces them where they stand. Their own classes, never the rows': nothing that looks for a row
 // finds a skeleton. Widths follow a fixed rhythm, so a skeleton looks the same every time.

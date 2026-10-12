@@ -1,5 +1,5 @@
 // Colour's roles and Light (the polish audit, darma SV-58; DESIGN.md › Tokens › Colour and Decided while
-// building #120–#139): each single value stated once, in the theme it's about, and the states the
+// building #157–#176): each single value stated once, in the theme it's about, and the states the
 // audit found invisible in Light (the cursor on a folded group) read from the screen itself.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
@@ -76,7 +76,7 @@ async function inbox(page: Page, base: string, theme: 'night' | 'light') {
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: J onto a folded group lays the cursor's sub2 over its band, which shows (#121)`, async () => {
+  test(`${theme}: J onto a folded group lays the cursor's sub2 over its band, which shows (#158)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -101,7 +101,7 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light ink2 #4b4d52, and its toast on white (#120, #121)', async () => {
+test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light ink2 #4b4d52, and its toast on white (#157, #158)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -143,7 +143,7 @@ async function inCell(page: Page, date: string): Promise<[number, number, number
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: weekends sit back and the days outside the month further, an outside weekend as an outside day; past items and days turn grey; Light's chip text is capped at .43 (#122–#124)`, async () => {
+  test(`${theme}: weekends sit back and the days outside the month further, an outside weekend as an outside day; past items and days turn grey; Light's chip text is capped at .43 (#159–#161)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -166,7 +166,7 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await style(chip('Gym'), 'color'), ink3, 'a past item is ink3');
       assert.equal(await style(chip('Gym'), 'opacity'), '1', 'at full strength');
       assert.equal(await style(chip('Dentist'), 'color'), ahead);
-      // Classes' cyan sits at 182°, lighter than Personal's cool (#125).
+      // Classes' cyan sits at 182°, lighter than Personal's cool (#162).
       assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .ev', {hasText: 'CS 101 lecture'}), 'color'),
         await colourOf(page, theme === 'light' ? 'oklch(0.43 0.1 182)' : 'oklch(0.86 0.11 182)'));
       assert.equal(await style(page.locator('.cell[data-date="2026-10-06"] .dn'), 'color'), ink3, 'a day that\'s over');
@@ -188,7 +188,7 @@ for (const theme of ['night', 'light'] as const) {
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: the open email is sub3 with a 2 px accent bar, the pointer's row the cursor's sub2; a press lands at once; the current page's icon is the accent; Done's check is good (#126, #127)`, async () => {
+  test(`${theme}: the open email is sub3 with a 2 px accent bar, the pointer's row the cursor's sub2; a press lands at once; the current page's icon is the accent; Done's check is good (#163, #164)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -231,7 +231,7 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('today is the now-line\'s alert disc in the month, the week\'s heads and the mini-month, in both themes (#128)', async () => {
+test('today is the now-line\'s alert disc in the month, the week\'s heads and the mini-month, in both themes (#165)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -253,7 +253,7 @@ test('today is the now-line\'s alert disc in the month, the week\'s heads and th
 });
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: the current page is a raised navOn chip that hover's flat sub never matches; an account's filter makes Inbox its parent (#129)`, async () => {
+  test(`${theme}: the current page is a raised navOn chip that hover's flat sub never matches; an account's filter makes Inbox its parent (#166)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -284,7 +284,7 @@ for (const theme of ['night', 'light'] as const) {
       await current.waitFor();
       await until('Settings\' current page focused', () => current.evaluate(element => element === document.activeElement), focused => focused);
       await until('Settings\' current page raised', () => style(current, 'backgroundColor'), fill => fill === raised[0]);
-      // Its glyph is the accent; a warning glyph in the nav stays caution, current or not (#126).
+      // Its glyph is the accent; a warning glyph in the nav stays caution, current or not (#163).
       assert.equal(await style(current.locator('> .icon'), 'color'), await colourOf(page, 'var(--accent)'));
       const caution = await colourOf(page, 'var(--caution)');
       const warnings = await page.locator('.settings .set-nav .nav .warn .icon').evaluateAll(all => all.map(icon => getComputedStyle(icon).color));
@@ -296,7 +296,7 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 
-  test(`${theme}: Attention's band, label and dots are caution, a read row not yet Done keeps a caution ring; Noise recedes (#130, #131)`, async () => {
+  test(`${theme}: Attention's band, label and dots are caution, a read row not yet Done keeps a caution ring; Noise recedes (#167, #168)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -324,7 +324,7 @@ for (const theme of ['night', 'light'] as const) {
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: Trash and Delete turn alert under the pointer and Complete good, neutral at rest; a reader tool presses in; Delete stands apart (#132)`, async () => {
+  test(`${theme}: Trash and Delete turn alert under the pointer and Complete good, neutral at rest; a reader tool presses in; Delete stands apart (#169)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -380,7 +380,7 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the pointer) and the body starts 12 px under them; the email frame dims to 95% in Night and takes an edge in Light (#133, #134)', async () => {
+test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the pointer) and the body starts 12 px under them; the email frame dims to 95% in Night and takes an edge in Light (#170, #171)', async () => {
   const setpoint = await startSetpoint({fixtures: ['recovery-html'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -407,7 +407,7 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
 });
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: a focused search field takes edgeFocus on cardOn and its hint reads Esc; matches take hl, Light's a highlighter yellow (#135)`, async () => {
+  test(`${theme}: a focused search field takes edgeFocus on cardOn and its hint reads Esc; matches take hl, Light's a highlighter yellow (#172)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -439,7 +439,7 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred, the Answer card, the reader\'s and ⌘K\'s Ask about this email; Ask Alfred reads in ink (#136)', async () => {
+test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred, the Answer card, the reader\'s and ⌘K\'s Ask about this email; Ask Alfred reads in ink (#173)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -471,7 +471,7 @@ test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred,
   }
 });
 
-test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high leads the low in ink2 (#137)', async () => {
+test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high leads the low in ink2 (#174)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -492,7 +492,7 @@ test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high lea
 });
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: a task's ring keeps Todoist's hue at the theme's lightness, tinted at 14%; one that completes fills to 24% and shows its check, centred on the ring (#138)`, async () => {
+  test(`${theme}: a task's ring keeps Todoist's hue at the theme's lightness, tinted at 14%; one that completes fills to 24% and shows its check, centred on the ring (#175)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -524,7 +524,7 @@ for (const theme of ['night', 'light'] as const) {
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: a switch that's on is a good track with its knob, off an ink3 knob on sub3; a press stretches the knob toward its travel (#139)`, async () => {
+  test(`${theme}: a switch that's on is a good track with its knob, off an ink3 knob on sub3; a press stretches the knob toward its travel (#176)`, async () => {
     // Board 18b's ntfy: reminders on, mail off.
     const setpoint = await startSetpoint({fixtures: ['ntfy'], clock: 'frozen'});
     try {
@@ -559,7 +559,7 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('the compact rail carries the roles: the current page is the navOn chip with its icon in accent, Inbox staying current while an account filters it (#129)', async () => {
+test('the compact rail carries the roles: the current page is the navOn chip with its icon in accent, Inbox staying current while an account filters it (#166)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 820, height: 1050});
