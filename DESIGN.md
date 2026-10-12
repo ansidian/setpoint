@@ -726,6 +726,8 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
 - **Marked unread**, an email shows the unread dot before its subject (#263).
 - **Search** has a clear button where the desktop's Esc hint is, no Mark all as read meanwhile, and
   Back reads "Search" from a result (#259).
+- **Motion:** the reader slides in over the list and back off it; an agenda item's detail rises in;
+  the toast rises from the tab bar (#257).
 
 ## mantel's mail chip
 
@@ -1501,6 +1503,13 @@ it changes what's on screen.
     bar fills once the email's row or the email is known, with Open in Gmail decided by its account
     (Gmail's mail always has the link), so nothing moves in or along when the email arrives; until
     then it's empty (Andy, 2026-10-11, polish audit phone-02).
+257. **The phone's reader slides over the list:** opening an email slides the reader in from the
+    right over 260 ms (`--ease`, the modal timing, as it takes the whole screen) while the list moves
+    a fifth left and dims to .55 under it; Back, Done and Trash run it the other way, the row folding
+    away as the list comes back. It's a view transition, so taps reach the page meanwhile; the
+    browser's own Back (Safari's edge swipe) doesn't slide, as it animates itself, and without the API
+    it's the cut it was. The agenda's detail rises 24 px into place as its scrim fades in, over
+    180 ms, and the toast rises 8 px from the tab bar (Andy, 2026-10-11, polish audit phone-05).
 258. **From 640 to 1099 px the sidebar is a rail and panes cover what they'd squeeze** (Layout ›
     Compact): an iPad or a half-width window had the reading pane 1 px wide at 640 and 152 at 820,
     and the month grid 252 px at 900. The sidebar is a 56 px rail of icons with Inbox's attention

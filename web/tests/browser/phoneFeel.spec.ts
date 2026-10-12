@@ -143,6 +143,131 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
 });
 
 
+interface Slide {
+  direction: string;
+  animations: string[];
+  taps: string;
+}
+
+/**
+ * Records each view transition the page starts from now on: the direction on the root as it starts,
+ * and, once its pseudo-elements are built, each of the slide's animations with the pseudo-element it
+ * runs on, its duration and direction, and whether the overlay lets taps through.
+ */
+const recordSlides = (page: Page) => page.evaluate(() => {
+  const scope = window as unknown as {slides: Slide[]};
+  scope.slides = [];
+  const start = document.startViewTransition.bind(document);
+  document.startViewTransition = ((update: ViewTransitionUpdateCallback) => {
+    const slide: Slide = {direction: document.documentElement.dataset.slide ?? '', animations: [], taps: ''};
+    scope.slides.push(slide);
+    const transition = start(update);
+    void transition.ready.then(() => {
+      slide.taps = getComputedStyle(document.documentElement, '::view-transition').pointerEvents;
+      slide.animations = document.getAnimations().flatMap(animation => {
+        const effect = animation.effect as KeyframeEffect;
+        const name = (animation as CSSAnimation).animationName;
+        if (!effect.pseudoElement?.startsWith('::view-transition-') || !name?.startsWith('ph-')) return [];
+        return [`${effect.pseudoElement} ${name} ${String(effect.getTiming().duration)} ${effect.getTiming().direction ?? ''}`];
+      }).sort();
+    });
+    return transition;
+  }) as typeof document.startViewTransition;
+});
+const slides = (page: Page) => page.evaluate(() => (window as unknown as {slides: Slide[]}).slides);
+
+test('the reader slides in over the list and back off it, Done too; the browser\'s Back doesn\'t, nor the desktop\'s reader', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await recordSlides(page);
+    assert.deepEqual(await styles(page, '.content > .list', ['view-transition-name']), ['ph-list']);
+    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    assert.deepEqual(await styles(page, '.pane', ['view-transition-name']), ['ph-reader']);
+    // In: the reader from the right over 260 ms, the list a fifth left and dimmed under it, taps
+    // going through to the page meanwhile.
+    const opened = await until('the slide in has started', () => slides(page), seen => seen.length === 1 && seen[0]!.animations.length > 0);
+    assert.deepEqual(opened, [{direction: 'in', taps: 'none', animations: [
+      '::view-transition-new(ph-reader) ph-in 260 normal', '::view-transition-old(ph-list) ph-under 260 normal',
+    ]}]);
+    // Back: the reader off to the right, the list back from the left.
+    await page.locator('.ph-back').tap();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    const back = await until('the slide back has started', () => slides(page), seen => seen.length === 2 && seen[1]!.animations.length > 0);
+    assert.deepEqual(back[1], {direction: 'back', taps: 'none', animations: [
+      '::view-transition-new(ph-list) ph-under 260 reverse', '::view-transition-old(ph-reader) ph-in 260 reverse',
+    ]});
+    await until('the slide is over', () => page.evaluate(() => document.documentElement.dataset.slide ?? null), direction => direction === null);
+    // Done goes back the same way, to the list where its row folds away.
+    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.ph-acts .ph-done').tap();
+    await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
+    await until('a third and fourth slide', () => slides(page), seen => seen.length === 4 && seen[3]!.animations.length > 0);
+    assert.deepEqual((await slides(page)).map(slide => slide.direction), ['in', 'back', 'in', 'back']);
+    // The browser's Back (Safari's edge swipe) animates itself: no slide.
+    await page.locator('.arow', {hasText: 'Northwind Talent'}).tap();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await until('the fifth slide', () => slides(page), seen => seen.length === 5);
+    await page.goBack();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    // Nothing more happens to wait for: a slide would have started with the close.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.equal((await slides(page)).length, 5);
+
+    // The desktop's reader sits beside the list: no slide.
+    const desk = await setpoint.page('target');
+    await desk.goto(`${setpoint.base}/inbox`);
+    await desk.locator('.arow').first().waitFor();
+    await recordSlides(desk);
+    await desk.locator('.arow', {hasText: 'Your recovery email'}).click();
+    await desk.locator('.rd-subj', {hasText: 'Your recovery email'}).waitFor();
+    await desk.keyboard.press('Escape');
+    await until('the reader closes', () => desk.locator('.pane').count(), count => count === 0);
+    assert.deepEqual(await slides(desk), []);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the agenda\'s detail rises into place over its fading scrim, and the toast rises from the tab bar', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.pitem', {hasText: 'Dentist'}).tap();
+    await page.locator('.ph-detail .fd-title', {hasText: 'Dentist'}).waitFor();
+    // Each entrance: its animation, timing, and where its first keyframe starts.
+    const entrance = (selector: string) => page.locator(selector).evaluate(element => {
+      const style = getComputedStyle(element);
+      const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]);
+      const find = (list: CSSRule[]): CSSKeyframesRule | undefined => {
+        for (const rule of list) {
+          if (rule instanceof CSSKeyframesRule && rule.name === style.animationName) return rule;
+          if (rule instanceof CSSMediaRule && window.matchMedia(rule.conditionText).matches) {
+            const inner = find([...rule.cssRules]);
+            if (inner) return inner;
+          }
+        }
+        return undefined;
+      };
+      const from = find(rules)?.findRule('from') ?? find(rules)?.findRule('0%');
+      return [style.animationName, style.animationDuration, style.animationTimingFunction, from ? [from.style.transform, from.style.opacity] : null];
+    });
+    assert.deepEqual(await entrance('.fd.ph-detail'), ['ph-rise', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translateY(24px)', '0']]);
+    assert.deepEqual(await entrance('.ph-scrim'), ['ph-fade', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['', '0']]);
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.hd button[aria-label="Mark all as read"]').tap();
+    await page.locator('.toast').waitFor();
+    assert.deepEqual(await entrance('.toast'), ['ph-toast-in', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translate(-50%, 8px)', '0']]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('phone search: a clear button where the hint was, no Mark all as read meanwhile, and Back to Search from a result', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

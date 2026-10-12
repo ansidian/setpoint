@@ -9,8 +9,10 @@
   .ph-tabs { height: 72px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: 1fr 1fr; padding-bottom: 18px; }
   .ph-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
   .ph-tab.on { color: var(--ink); }
-  /* The toast stays at the bottom here (#92): the phone's Done is in the reader's bottom bar. */
-  .toast { top: auto; bottom: 24px; }
+  /* The toast stays at the bottom here (#92): the phone's Done is in the reader's bottom bar. It
+     rises 8 px from the tab bar as it comes (#257). */
+  .toast { top: auto; bottom: 24px; animation: ph-toast-in var(--dur-medium) var(--ease); }
+  @keyframes ph-toast-in { from { transform: translate(-50%, 8px); opacity: 0; } }
 
   /* The top: the mark, the page's name and what's on the right, 48 px; on the Inbox the search under it. */
   .hd { height: auto; min-height: 48px; flex-wrap: wrap; column-gap: 10px; row-gap: 0; padding: 0 12px 0 20px; border-bottom: 0; }
@@ -93,6 +95,22 @@
   @keyframes ph-pop { from { transform: scale(.4); } }
   .attach { width: 100%; }
 
+  /* The reader slides in over the list, which moves a fifth left and dims under it, and back off it
+     (#257): a view transition (InboxPage's slide), the root saying which way. 260 ms, the modal
+     timing, as the reader takes the whole screen. Taps go to the page beneath while it runs. */
+  .pane { view-transition-name: ph-reader; }
+  .content > .list { view-transition-name: ph-list; }
+  ::view-transition { pointer-events: none; }
+  ::view-transition-group(ph-reader), ::view-transition-group(ph-list) { animation-duration: var(--dur-slow); }
+  :root[data-slide="in"]::view-transition-new(ph-reader) { animation: ph-in var(--dur-slow) var(--ease); }
+  :root[data-slide="in"]::view-transition-old(ph-list) { animation: ph-under var(--dur-slow) var(--ease) forwards; }
+  :root[data-slide="in"]::view-transition-new(ph-list) { animation: none; opacity: 0; }
+  :root[data-slide="back"]::view-transition-old(ph-reader) { animation: ph-in var(--dur-slow) var(--ease) reverse forwards; }
+  :root[data-slide="back"]::view-transition-new(ph-list) { animation: ph-under var(--dur-slow) var(--ease) reverse; }
+  :root[data-slide="back"]::view-transition-old(ph-list) { animation: none; opacity: 0; }
+  @keyframes ph-in { from { transform: translateX(100%); } }
+  @keyframes ph-under { to { transform: translateX(-22%); opacity: .55; } }
+
   /* ---------- The agenda ---------- */
   .ph-agenda { flex: 1 1 auto; min-width: 0; overflow-y: auto; display: flex; flex-direction: column; }
   .ph-agenda .pday { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); white-space: nowrap; }
@@ -117,8 +135,11 @@
   .ph-agenda .pitem.past .cbar { opacity: .45; }
   .ph-agenda .pitem.done .ell { color: var(--ink3); text-decoration: line-through; }
   /* An item's detail, read-only, over the agenda above the tab bar. */
-  .ph-scrim { position: fixed; inset: 0; z-index: 5; background: var(--scrim); }
-  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: 84px; width: auto; z-index: 6; will-change: auto; }
+  /* It rises 24 px into place as its scrim fades in, over 180 ms (#257). */
+  .ph-scrim { position: fixed; inset: 0; z-index: 5; background: var(--scrim); animation: ph-fade var(--dur-medium) var(--ease); }
+  @keyframes ph-fade { from { opacity: 0; } }
+  @keyframes ph-rise { from { transform: translateY(24px); opacity: 0; } }
+  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: 84px; width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
   .ph-detail .card-h { min-height: 48px; padding-top: 6px; }
   .ph-detail .card-acts { display: none; }
 

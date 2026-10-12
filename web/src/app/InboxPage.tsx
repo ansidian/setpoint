@@ -16,6 +16,7 @@
 // Attention leads, then the Pinned shelf.
 import type {AllOut, InboxGroupOut, InboxOut, MailCountsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
+import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
@@ -61,6 +62,25 @@ let atLaunch = window.location.pathname === '/';
 
 // ⌘Z: what undoes each Done and Trash made here, newest last; the toast's Undo runs the same one.
 const undos: (() => void)[] = [];
+
+// The slide under way, so one that a newer one cut short doesn't take the newer one's direction away.
+let slides = 0;
+
+/**
+ * The phone's push and back (#257): the reader slides in over the list, which moves a little under it,
+ * and slides back off it, as one 260 ms view transition (phone.css draws it, by the direction on the
+ * root). Only the app's own opens and closes slide: the browser's Back (popstate) doesn't, as Safari's
+ * edge swipe animates it already. Without the API it's the cut it was.
+ */
+function slide(direction: 'in' | 'back', update: () => void) {
+  if (!('startViewTransition' in document)) return update();
+  const root = document.documentElement;
+  const token = ++slides;
+  root.dataset.slide = direction;
+  void document.startViewTransition(() => flushSync(update)).finished.finally(() => {
+    if (token === slides) delete root.dataset.slide;
+  });
+}
 
 /** A visit's held rows, the server's list they were last worked out against, and what was taken out here. */
 interface Kept {
@@ -188,7 +208,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
       search.opened(id);
       search.mark(id, {unread: false});
     }
-    go({open: id});
+    // On the phone the reader slides in over the list; the desktop's sits beside it.
+    if (phone && open === null) slide('in', () => go({open: id}));
+    else go({open: id});
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
   }
 
@@ -200,11 +222,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   /** Back to an email Undo brought back, as it was. */
   function reopen(id: number) {
     lastOpened = id;
-    navigate({...route, open: id});
+    if (phone) slide('in', () => navigate({...route, open: id}));
+    else navigate({...route, open: id});
   }
 
+  /** Closes the reader: on the phone it slides back off the list (Back, Done, Trash). */
   function close() {
-    go({open: null});
+    if (phone && open !== null) slide('back', () => go({open: null}));
+    else go({open: null});
   }
 
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
