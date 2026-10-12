@@ -6,6 +6,7 @@ import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
 import {placeName} from './place.ts';
+import type {IconName} from '../ui/glyphs.ts';
 
 export interface Run {
   start: number;
@@ -151,6 +152,21 @@ export function alfredStepLine(step: AskStep | null, scoped = false): string {
   if (step.tool === 'get_email') return `Reading ${step.from}’s email…`;
   if (step.tool === 'list_items') return 'Checking your calendar…';
   return `Preparing the ${step.kind}…`;
+}
+
+/** A step Alfred has finished, in its trail (search-04): its tool's glyph and what it did, in the past tense. */
+export function alfredStepDone(step: AskStep): {icon: IconName; text: string} {
+  if (step.tool === 'search_mail') return {icon: 'search', text: `Searched “${step.query}”`};
+  if (step.tool === 'get_email') return {icon: 'mail', text: `Read ${step.from}’s email`};
+  if (step.tool === 'list_items') return {icon: 'calendar_today', text: 'Checked your calendar'};
+  return {icon: 'event', text: `Prepared the ${step.kind}`};
+}
+
+/** The trail with the step Alfred is on now: added when it differs from the last, so a step asked about twice shows once. */
+export function withStep(trail: readonly AskStep[], step: AskStep | null): AskStep[] {
+  if (!step) return [...trail];
+  const last = trail.at(-1);
+  return last && JSON.stringify(last) === JSON.stringify(step) ? [...trail] : [...trail, step];
 }
 
 const SOURCES_SHOWN = 5;

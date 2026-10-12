@@ -332,7 +332,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
   }
 });
 
-test('Alfred: the card says what Alfred is doing as it works; a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
+test('Alfred: the card says what Alfred is doing as it works, the steps it took above it (search-04); a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
   const fake = await fakeAlfred(listAlfred, {delayMs: 1500});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
@@ -349,7 +349,20 @@ test('Alfred: the card says what Alfred is doing as it works; a long list shows 
     await until('Alfred\'s first line', () => waiting.textContent(), text => text === 'Looking through your mail…');
     await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…', 6000);
     await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')), 6000);
+    // Its trail (search-04): the search it ran stays above, in the past tense after its 14 px glyph;
+    // what it's doing now shimmers; two bars hold the answer's place; the header's glyph twinkles.
+    const trail = page.locator('.answer .trail .done-step');
+    assert.deepEqual(await trail.allTextContents(), ['Searched “the”']);
+    assert.deepEqual(await trail.locator('.icon').evaluateAll(icons => icons.map(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width')])), [[ICONS.search, '14']]);
+    assert.equal(await trail.first().evaluate(row => row.getBoundingClientRect().height), 20);
+    assert.deepEqual(await waiting.locator('.now').evaluate(now => [getComputedStyle(now).animationName, getComputedStyle(now).animationDuration, getComputedStyle(now).backgroundClip]), ['alfred-shimmer', '1.6s', 'text']);
+    assert.equal(await page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), 2);
+    assert.deepEqual(await page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection]), ['twinkle', '1.2s', 'alternate']);
     await page.locator('.answer .ans').waitFor({timeout: 10_000});
+    // The answer fades up where its place was held; the trail folds away.
+    assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'ans-in');
+    await page.locator('.answer .trail').waitFor({state: 'detached'});
+    assert.equal(await page.locator('.answer [data-skeleton]').count(), 0);
     const total = Number((await page.locator('.answer .ans').textContent())!.split(' ')[0]);
     assert.ok(total > 5, `${total} sources`);
     // The first five, and Show all; then every one, and Show fewer.

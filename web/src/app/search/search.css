@@ -101,6 +101,21 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .turn-sep { height: 1px; background: var(--hair); margin: 4px 0 2px; flex: none; }
 .q { align-self: flex-end; max-width: 70%; padding: 6px 12px; border-radius: var(--r-card); background: var(--sub2); color: var(--ink); user-select: text; -webkit-user-select: text; }
 .waiting { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; height: 22px; }
+/* Alfred's trail while it works (#181): each step done a 20 px row, its tool's 14 px glyph, in ink3;
+   what it's doing now shimmers, ink sweeping through ink3; two bars hold the answer's place. Once
+   answered the trail folds away over 180 ms and the answer fades up. The header's glyph twinkles. */
+.answer .trail { display: grid; grid-template-rows: 1fr; }
+.answer .trail-in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
+.answer .done-step { height: 20px; display: flex; align-items: center; gap: 9px; padding-left: 1px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.answer .waiting .now { background: linear-gradient(90deg, var(--ink3) 35%, var(--ink) 50%, var(--ink3) 65%) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: alfred-shimmer 1.6s linear infinite; }
+@keyframes alfred-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.answer .trail.folding { animation: trail-fold var(--dur-medium) var(--ease) forwards; }
+@keyframes trail-fold { to { grid-template-rows: 0fr; opacity: 0; } }
+.answer .sk-answer { display: flex; flex-direction: column; gap: 10px; max-width: 620px; padding: 4px 0 2px; }
+.answer .arrive { animation: ans-in var(--dur-medium) var(--ease); }
+@keyframes ans-in { from { opacity: 0; transform: translateY(4px); } }
+.answer.asking .card-h > .icon { animation: twinkle 1.2s ease-in-out infinite alternate; }
+@keyframes twinkle { from { opacity: .55; } }
 .answer .card-b > .field { margin-top: 4px; transition: opacity var(--dur-fast) var(--ease); }
 /* While Alfred answers, the follow-up field waits at half strength. */
 .answer .card-b > .field.asking { opacity: .5; }

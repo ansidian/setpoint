@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  alfredQuestion, alfredStepLine, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  alfredQuestion, alfredStepDone, alfredStepLine, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -319,6 +319,27 @@ describe('the Answer card while Alfred works, and its sources', () => {
     ['then the tool it runs, as anywhere', {tool: 'get_email', from: 'Parkside Apartments'}, 'Reading Parkside Apartments’s email…'],
   ])('alfredStepLine, scoped to one email: %s', (_name, step, line) => {
     expect(alfredStepLine(step, true)).toBe(line);
+  });
+
+  test.each<[string, Parameters<typeof alfredStepDone>[0], ReturnType<typeof alfredStepDone>]>([
+    ['a search, in its words', {tool: 'search_mail', query: 'lease renewal'}, {icon: 'search', text: 'Searched “lease renewal”'}],
+    ['an email, by its sender', {tool: 'get_email', from: 'Parkside Apartments'}, {icon: 'mail', text: 'Read Parkside Apartments’s email'}],
+    ['the calendar', {tool: 'list_items'}, {icon: 'calendar_today', text: 'Checked your calendar'}],
+    ['an event', {tool: 'propose_item', kind: 'event'}, {icon: 'event', text: 'Prepared the event'}],
+  ])('alfredStepDone, the trail\'s past tense: %s', (_name, step, done) => {
+    expect(alfredStepDone(step)).toEqual(done);
+  });
+
+  const search = {tool: 'search_mail', query: 'lease'} as const;
+  const read = {tool: 'get_email', from: 'Parkside Apartments'} as const;
+  test.each<[string, Parameters<typeof withStep>[0], Parameters<typeof withStep>[1], ReturnType<typeof withStep>]>([
+    ['the first step', [], search, [search]],
+    ['nothing yet', [], null, []],
+    ['the same step polled again: once', [search], {...search}, [search]],
+    ['a new step after it', [search], read, [search, read]],
+    ['a search again after reading: twice', [search, read], search, [search, read, search]],
+  ])('withStep: %s', (_name, trail, step, next) => {
+    expect(withStep(trail, step)).toEqual(next);
   });
 
   const ids = (count: number) => Array.from({length: count}, (_, index) => index + 1);

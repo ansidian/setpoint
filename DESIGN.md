@@ -177,7 +177,7 @@ fold away when closed. ⌘K, Settings and the "+N" popover fade out over 120 ms;
 way draws its rows' skeleton in their shapes, bars in `sub2` (`sub3` inside a `sub` group). It
 appears only after 200 ms, so a quick answer never shows one, fades in over 180 ms, then breathes,
 every bar in phase: opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`, the one loop beside
-the spinner's 900 ms turn. What replaces it fades in over 120 ms. No shimmer sweeps.
+the spinner's 900 ms turn. What replaces it fades in over 120 ms. Skeletons don't shimmer.
 
 ## Glyphs, icons and the mark
 
@@ -406,9 +406,9 @@ anything waits there and All when Unread would say "All caught up" (#102).
 A `card` above the results (board 07): Alfred's one or two lines, the **sources** (rows that open
 in the reading pane), each follow-up turn below the last, and a follow-up field at the bottom. From
 the reader, **Ask about this email** opens the same card scoped to that email. "Couldn't find that
-in your mail" says what it searched. While Alfred works, its line says what it's doing; more than
-five sources show the first five and **Show all** ([Decided while building](#decided-while-building)
-#80). About one email, its first line is "Reading this email…", and the follow-up field waits at
+in your mail" says what it searched. While Alfred works, its trail says what it has done and what
+it's doing (#181, amending #80); more than five sources show the first five and **Show all**
+([Decided while building](#decided-while-building) #80). About one email, its first line is "Reading this email…", and the follow-up field waits at
 half strength until the answer is in (#108).
 
 ### Proposal
@@ -2342,7 +2342,7 @@ it changes what's on screen.
     dots 8 px (7 for an account's), images radius 12, thumbnails 72 × 48 radius 8. It shows only
     after 200 ms, so a quick answer never flashes one, fades in over 180 ms, then breathes, every
     bar together, opacity 1 → .45 → 1 over 1600 ms `cubic-bezier(.4,0,.6,1)`: a new loop, for
-    loading only, beside the spinner's turn. No shimmer sweeps, which would be louder than the
+    loading only, beside the spinner's turn. Skeletons don't shimmer, which would be louder than the
     house style. What replaces it fades in over 120 ms. A page shows no empty state ("All caught
     up", "No events", "Not connected") until it knows (Andy, 2026-10-11, polish audit states-03,
     inbox-13).
@@ -2430,3 +2430,13 @@ it changes what's on screen.
     gives way to the 900 ms spinner, so a quick answer never blinks it. The first results fade in
     over 120 ms; a refinement on its way dims the results it will replace to .55, after the same
     200 ms (Andy, 2026-10-11, polish audit search-03).
+181. **Alfred shows its work as a trail** (amending #80, whose one line said only the step now):
+    while Alfred answers, each step it has finished stays as a 20 px row in `ink3` 12.5 after its
+    tool's 14 px glyph, in the past tense: `search` "Searched “lease renewal”", `mail` "Read
+    Parkside Apartments’s email", `calendar_today` "Checked your calendar", `event` "Prepared the
+    event". The step it's on keeps the spinner, its words shimmering, `ink` sweeping through `ink3`
+    over 1.6 s, the one shimmer in the app, for work under way; two skeleton bars (10 px, 72% and
+    46%, at most 620 px) hold the answer's place, and the header's glyph twinkles (.55 to 1 over
+    1.2 s, back and forth). When the answer lands, the trail folds away over 180 ms and the answer
+    and its sources fade up 4 px over 180 ms. About one email, the first step reads "Reading this
+    email…" (#108) (Andy, 2026-10-11, polish audit search-04).

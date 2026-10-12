@@ -11,7 +11,7 @@ import {useEffect, useRef, useState} from 'react';
 import {ApiFailure} from '../../api/client.ts';
 import {searchNews} from '../../api/news.ts';
 import {alfredStep, askAlfred, searchCalendar, searchMail, searchOpened} from '../../api/search.ts';
-import {alfredQuestion, finishedWords, isSearching} from '../../logic/search.ts';
+import {alfredQuestion, finishedWords, isSearching, withStep} from '../../logic/search.ts';
 
 const TYPING_MS = 120;
 const STEP_POLL_MS = 400;
@@ -210,6 +210,8 @@ export interface Alfred {
   // The question on its way (answers aren't streamed), and what Alfred is doing for it.
   waiting: string | null;
   step: AskStep | null;
+  // Every step Alfred has taken for the last question, in turn, the last its current one (search-04).
+  trail: AskStep[];
   // The server's words for the last question that failed, and that question, for the field again.
   error: string | null;
   failed: string | null;
@@ -229,6 +231,8 @@ export function useAlfred(scope: number | null = null): Alfred {
   const [asking, setAsking] = useState<string | null>(null);
   const [stepOf, setStepOf] = useState<{ask: string; step: AskStep | null} | null>(null);
   const step = asking && stepOf?.ask === asking ? stepOf.step : null;
+  // The last question's steps, kept after its answer so the card can fold them away.
+  const [trailOf, setTrailOf] = useState<{ask: string; steps: AskStep[]}>({ask: '', steps: []});
   const conversation = useRef<number | null>(null);
   // Bumped when the card closes or starts over, so an answer to an earlier thread is dropped.
   const thread = useRef(0);
@@ -238,7 +242,11 @@ export function useAlfred(scope: number | null = null): Alfred {
     if (!asking) return;
     let live = true;
     const timer = window.setInterval(() => {
-      alfredStep(asking).then(out => live && setStepOf({ask: asking, step: out.step}), () => {});
+      alfredStep(asking).then(out => {
+        if (!live) return;
+        setStepOf({ask: asking, step: out.step});
+        setTrailOf(current => ({ask: asking, steps: withStep(current.ask === asking ? current.steps : [], out.step)}));
+      }, () => {});
     }, STEP_POLL_MS);
     return () => {
       live = false;
@@ -273,7 +281,7 @@ export function useAlfred(scope: number | null = null): Alfred {
   }
 
   return {
-    open, turns, waiting, step, error, failed,
+    open, turns, waiting, step, error, failed, trail: !asking || trailOf.ask === asking ? trailOf.steps : [],
     start(question) {
       thread.current += 1;
       conversation.current = null;
