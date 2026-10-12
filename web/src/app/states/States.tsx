@@ -3,7 +3,7 @@
 // everything under it dimmed and changes disabled (App.tsx dims; client.ts refuses changes). The
 // same pill says when Setpoint can't be reached at launch, under the mark (Root.tsx).
 import type {AccountOut, TriageStatusOut} from '@setpoint/shared';
-import {useEffect} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {checkSession, timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {retryNow, useOfflineSince} from '../../api/live.ts';
@@ -12,36 +12,88 @@ import {authorizeGmail} from '../../api/settings.ts';
 import {clockTime} from '../../logic/format.ts';
 import {inboxHealthLines, reconnectLine, reconnectTarget, triageNote} from '../../logic/health.ts';
 import type {SourceLine} from '../../logic/health.ts';
+import {CLEARED_MS, lineMovesOn, nextLines} from '../../logic/stateLines.ts';
+import type {LinePhase, ShownLine} from '../../logic/stateLines.ts';
+import {motion} from '../../tokens.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
 import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
+import {foldRef, leaveCopy} from '../fold.ts';
 import {openSettings} from '../settings/store.ts';
 import {toastFailure} from '../toast.ts';
 import {useCheckNow} from './checkNow.ts';
 import './states.css';
 
+/** The Inbox's bars: the needs-reconnect bar, or a stale or failing account's line. */
+type Bar = {kind: 'reconnect'; text: string} | ({kind: 'line'} & SourceLine);
+
 /**
  * "Business needs sign-in · Reconnect", then "Personal, as of 9:14 PM · Check now" for each stale or
- * failing account; null while every account is healthy.
+ * failing account, folding in as they come and out as they go (states-13); null while there are none.
  */
 export function useHealthBars() {
   const {list} = useAccounts();
   const now = useNow();
   const reconnect = reconnectLine(list);
-  const lines = inboxHealthLines(list, now, timeZone());
-  if (!reconnect && !lines.length) return null;
+  const bars: {key: string; line: Bar}[] = [
+    ...(reconnect ? [{key: 'reconnect', line: {kind: 'reconnect' as const, text: reconnect}}] : []),
+    ...inboxHealthLines(list, now, timeZone()).map(line => ({key: `line:${line.key}`, line: {kind: 'line' as const, ...line}})),
+  ];
+  // A line clears when its account is healthy again; the bar goes once signed in.
+  const {shown, moveOn} = useShownLines(bars, bar => bar.kind === 'line');
+  if (!shown.length) return null;
   return (
     <>
-      {reconnect && (
-        <div className="hbar caution" role="alert">
-          <Icon name="sync_problem" size={16} />
-          <span>{reconnect}</span>
-          <span>·</span>
-          <button className="act" type="button" onClick={() => reconnectFrom(list)}>Reconnect</button>
-        </div>
-      )}
-      {lines.map(line => <HealthBar key={line.key} line={line} />)}
+      {shown.map(({key, line, phase}) => (line.kind === 'reconnect'
+        ? <ReconnectBar key={key} text={line.text} accounts={list} phase={phase} onMoveOn={from => moveOn(key, from)} />
+        : <HealthBar key={key} line={line} phase={phase} onMoveOn={from => moveOn(key, from)} />))}
     </>
+  );
+}
+
+/**
+ * The lines as they show while they change (states-13; logic/stateLines.ts): one that arrives folds
+ * in, one whose source is healthy again shows its check for 1.2 s, then folds out. The first paint
+ * shows them as they are.
+ */
+export function useShownLines<T>(next: {key: string; line: T}[], clears: (line: T) => boolean) {
+  const signature = JSON.stringify(next);
+  const [state, setState] = useState(() => ({signature, shown: next.map((entry): ShownLine<T> => ({...entry, phase: 'here'}))}));
+  let {shown} = state;
+  if (state.signature !== signature) {
+    shown = nextLines(state.shown, next, clears);
+    setState({signature, shown});
+  }
+  const moveOn = useCallback((key: string, from: 'cleared' | 'out') => setState(last => ({...last, shown: lineMovesOn(last.shown, key, from)})), []);
+  return {shown, moveOn};
+}
+
+/**
+ * A line's motion by its phase: the ref that folds it in or out (app/fold.ts, as rows fold), and its
+ * time: cleared, it folds out after 1.2 s; folded out, it goes.
+ */
+export function useLinePhase(phase: LinePhase, onMoveOn: (from: 'cleared' | 'out') => void) {
+  const moveOn = useRef(onMoveOn);
+  useEffect(() => {
+    moveOn.current = onMoveOn;
+  });
+  useEffect(() => {
+    if (phase !== 'cleared' && phase !== 'out') return;
+    const timer = window.setTimeout(() => moveOn.current(phase), phase === 'cleared' ? CLEARED_MS : motion.medium);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+  return foldRef(phase === 'in' ? 'in' : phase === 'out' ? 'out' : null);
+}
+
+function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts: AccountOut[]; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+  const ref = useLinePhase(phase, onMoveOn);
+  return (
+    <div ref={ref} className="hbar caution" role="alert">
+      <Icon name="sync_problem" size={16} />
+      <span>{text}</span>
+      <span>·</span>
+      <button className="act" type="button" onClick={() => reconnectFrom(accounts)}>Reconnect</button>
+    </div>
   );
 }
 
@@ -56,14 +108,20 @@ function reconnectFrom(accounts: AccountOut[]) {
   authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Couldn't reconnect ${label}`));
 }
 
-/** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands (states-08). */
-function HealthBar({line}: {line: SourceLine}) {
+/**
+ * A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands
+ * (states-08). Once its account is healthy again its glyph turns to `check` in `good` and its words
+ * go quiet, then it folds out (states-13).
+ */
+function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+  const ref = useLinePhase(phase, onMoveOn);
   const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, ACCOUNTS_PATH);
+  const cleared = phase === 'cleared' || phase === 'out';
   return (
-    <div className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
-      <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
+    <div ref={ref} className={`hbar ${cleared ? 'muted cleared' : line.state === 'failing' ? 'failing' : 'muted'}`}>
+      {cleared ? <Icon name="check" size={16} className="ok" /> : <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />}
       <span className="num ell" title={line.text}>{line.text}</span>
-      {line.source !== null && <CheckNow check={check} />}
+      {line.source !== null && !cleared && <CheckNow check={check} />}
     </div>
   );
 }
@@ -88,9 +146,9 @@ export function TriageNote() {
 }
 
 /** The offline pill: `cloud_off`, what's wrong and that it's retrying, and Retry now. */
-function Pill({text, onRetry}: {text: string; onRetry: () => void}) {
+function Pill({text, onRetry, leaves = false}: {text: string; onRetry: () => void; leaves?: boolean}) {
   return (
-    <div className="offline-pill" role="status">
+    <div ref={leaves ? fadeWhenGone : undefined} className="offline-pill" role="status">
       <Icon name="cloud_off" size={16} />
       <span className="num">{text}</span>
       <button className="retry" type="button" onClick={onRetry}><Icon name="refresh" size={16} />Retry now</button>
@@ -114,8 +172,17 @@ export function OfflinePill() {
     return () => window.removeEventListener('keydown', block, true);
   }, [offline]);
   if (since === null) return null;
-  return <Pill text={`Offline, as of ${clockTime(since, timeZone())}, retrying`} onRetry={retryNow} />;
+  return <Pill text={`Offline, as of ${clockTime(since, timeZone())}, retrying`} onRetry={retryNow} leaves />;
 }
+
+/**
+ * Back online, the pill fades out over 120 ms where it was rather than vanishing (states-13); it came
+ * in from 8 px above over 180 ms (states.css).
+ */
+const fadeWhenGone = (pill: HTMLDivElement | null) => {
+  if (!pill) return;
+  return () => leaveCopy(pill, () => [{opacity: 1}, {opacity: 0}], {duration: motion.fast, easing: motion.ease});
+};
 
 /**
  * Setpoint unreachable at launch (a deploy, a restart): the mark, dimmed, where the sign-in card's

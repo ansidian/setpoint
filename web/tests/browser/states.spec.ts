@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, collapseGroups, matchGolden, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -260,6 +260,61 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.arow').first().waitFor();
     assert.equal(await page.locator('.hbar').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/**
+ * Records, from the page's start, each `selector` element added to the page: the first height its
+ * animations start from ('0px' for a fold in), and whether it's a leaving copy (inert).
+ */
+const recordArrivals = (page: Page, selector: string) => page.addInitScript(watched => {
+  const seen: string[] = [];
+  (window as unknown as {arrivals: string[]}).arrivals = seen;
+  new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+    if (!(node instanceof HTMLElement) || !node.matches(watched)) return;
+    const from = node.getAnimations().map(animation => String((animation.effect as KeyframeEffect).getKeyframes()[0]?.height ?? '')).find(Boolean) ?? 'none';
+    seen.push(node.inert ? 'leaving copy' : from);
+  }))).observe(document, {childList: true, subtree: true});
+}, selector);
+const arrivals = (page: Page) => page.evaluate(() => (window as unknown as {arrivals: string[]}).arrivals);
+
+test('state lines fold in as they come, a line whose source is healthy again shows a good check, then folds out, and the offline pill comes in from above and fades out (the polish audit\'s states-13)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['stale-todoist', 'failing-work'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    // The calendar's lines come with its sources, after the pane: each folds in from nothing, as a row does.
+    await recordArrivals(page, '.rpane > .rp-health');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.rpane > .rp-health').waitFor();
+    await until('the line arrived', () => arrivals(page), seen => seen.length === 1);
+    assert.deepEqual(await arrivals(page), ['0px']);
+
+    // The Inbox: Work's failing line, checked now and healthy again, turns its glyph to a good check
+    // for 1.2 s, then folds out.
+    await page.goto(`${setpoint.base}/inbox`);
+    const line = page.locator('.hbar', {hasText: 'Work, as of'});
+    await line.getByRole('button', {name: 'Check now'}).click();
+    await line.locator('.icon.ok').waitFor();
+    assert.deepEqual(await toneGlyph(line), [ICONS.check, '16', await colourOf(page, 'var(--good)')]);
+    assert.deepEqual(await line.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('.check-now') === null]), ['hbar muted cleared', await colourOf(page, 'var(--ink3)'), true]);
+    const folds = await watch(line, 'data-fold');
+    await line.waitFor({state: 'detached'});
+    assert.deepEqual(await folds(), ['out'], 'it folded out');
+
+    // Offline, the pill comes in from 8 px above over 180 ms; back, a copy of it fades out where it was.
+    await recordArrivals(page, '.main > .offline-pill');
+    await page.reload();
+    await page.locator('.arow').first().waitFor();
+    await network(page, false);
+    const pill = page.locator('.main > .offline-pill');
+    await pill.waitFor();
+    assert.deepEqual(await pill.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['pill-in', '0.18s']);
+    await network(page, true);
+    await until('the pill gone', () => pill.count(), count => count === 0);
+    assert.deepEqual(await arrivals(page), ['none', 'leaving copy']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

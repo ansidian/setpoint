@@ -1076,6 +1076,9 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     await page.keyboard.press('Escape');
 
     await page.context().setOffline(true);
+    // It comes in from 8 px above (states-13): measured where it rests.
+    await page.locator('.offline-pill').waitFor();
+    await still(page);
     const pill = await box('.offline-pill');
     const main = await box('.main');
     near(pill.height, 36 * 1.25, 'the pill\'s height');

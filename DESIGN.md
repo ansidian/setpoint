@@ -838,6 +838,10 @@ section's label stays under the title (#250).
 Health means **the last check succeeded**, not that data changed; thresholds come from each source's
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
 
+The Inbox's bar and lines and the calendar pane's lines fold in as they come and out as they go, as
+rows do; a line whose source is healthy again shows a `good` check for 1.2 s first. The offline pill
+comes in from above and fades out (#189).
+
 ## Phone
 
 Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the Inbox (Attention,
@@ -2265,3 +2269,13 @@ it changes what's on screen.
     as its row in Settings does; for iCloud, or several accounts, it opens Settings › Accounts (amending
     Health and states, where only Needs reconnect had an action) (Andy, 2026-10-11, polish audit
     states-08).
+189. **State lines arrive gently and resolve visibly:** the Inbox's needs-reconnect bar and stale and
+    failing lines, and the calendar pane's lines (above the grid in the compact tier too), fold in
+    and out as rows do (#13, app/fold.ts): the height opens over 180 ms with the words coming in over
+    its last 40%, and closes the same way, so a 40 px bar arriving no longer shoves the list down in
+    one frame. A stale or failing line whose source is healthy again keeps its place for 1.2 s with
+    its glyph turned to a 16 px `check` in `good` (scaling in from .6 over 120 ms) and its words
+    quiet in `ink3`, then folds out, the one success flourish the health system has; the bar, which
+    clears by signing in, just folds out. The offline pill comes in from 8 px above over 180 ms and
+    fades out over 120 ms. Nothing loops; a line on screen at the first paint shows as it is (Andy,
+    2026-10-11, polish audit states-13).

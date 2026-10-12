@@ -360,6 +360,8 @@
 /* Check now on the line (states-08), kept whole after the words; on a failing line that wraps, beside its first line. */
 .rp-health > .rp-act { flex: none; display: inline-flex; align-items: center; gap: 8px; }
 .rp-health.failing > .rp-act { align-self: flex-start; margin-top: -3px; }
+/* Its source healthy again, the line's words go quiet under the `good` check (states.css) before it folds out (states-13). */
+.rpane > .rp-health.cleared, .cal-health > .rp-health.cleared { color: var(--ink3); }
 .cal-health { flex: none; display: flex; flex-direction: column; }
 
 /* The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact, #258): beside the 400 px pane the
