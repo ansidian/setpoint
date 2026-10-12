@@ -98,8 +98,10 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     const chained = (await seen()).filter(value => value >= top('2026-10'));
     assert.ok(monotonic(chained, true), `one glide on, never back: ${JSON.stringify(chained)}`);
 
-    // Today from a year on: it jumps to five rows below October, then glides up those five.
+    // Today from a year on: it jumps to five rows below October, then glides up those five. (A wheel
+    // first, so the last frames of the glide to January can't follow the scroll there.)
     await page.locator('.cal-scroll').evaluate((element, to) => {
+      element.dispatchEvent(new WheelEvent('wheel', {bubbles: true}));
       element.scrollTop = to;
     }, top('2027-10'));
     await until('October 2027 shows', () => title.textContent(), text => text === 'October 2027');
