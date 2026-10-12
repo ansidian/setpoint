@@ -834,3 +834,52 @@ test('a change on its way dashes its chip\'s bar, marching from a second on, and
     await setpoint.stop();
   }
 });
+
+test('a deleted chip fades and folds away so the ones under it slide up, and ⌘Z folds it back and lands it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const fair = page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'Career fair'});
+    const lecture = page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'CS 101 lecture'});
+    const below = (await lecture.boundingBox())!.y;
+
+    // Delete: it fades out over 120 ms, then folds up over 180, and the lecture slides up 23 px into its place.
+    await fair.click();
+    await page.locator('.fd').waitFor();
+    const classes = await watch(fair, 'class');
+    await page.keyboard.press('Delete');
+    await fair.waitFor({state: 'detached'});
+    assert.ok((await classes()).some(value => value?.split(' ').includes('removing')), 'it folded away first');
+    await until('the lecture takes its place', async () => (await lecture.boundingBox())!.y, y => y === below - layout.calendarChip - 3);
+    assert.equal(await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.className = 'ev removing';
+      document.querySelector('.cal-grid .cell')!.append(probe);
+      const {animationName, animationDuration, animationDelay} = getComputedStyle(probe);
+      probe.remove();
+      return `${animationName} ${animationDuration} ${animationDelay}`;
+    }), 'chip-out, chip-fold 0.12s, 0.18s 0s, 0.12s');
+
+    // ⌘Z: it unfolds back in reverse over 180 ms, then its tint lands.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as {back: string[]}).back = seen;
+      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (node instanceof HTMLElement && node.matches('.ev')) seen.push(`${node.textContent} ${node.className} ${getComputedStyle(node).animationName}`);
+      }))).observe(document.querySelector('.cal-grid')!, {subtree: true, childList: true});
+    });
+    await page.keyboard.press('Meta+z');
+    await fair.waitFor();
+    const back = await page.evaluate(() => (window as unknown as {back: string[]}).back);
+    assert.ok(back.includes('10 AMCareer fair ev restoring chip-unfold, landed'), JSON.stringify(back));
+    await until('the lecture back under it', async () => (await lecture.boundingBox())!.y, y => y === below);
+    await setpoint.idle();
+    const listed = await setpoint.api<{items: {title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
+    assert.equal(listed.items.filter(item => item.title === 'Career fair').length, 1, 'nothing was deleted');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

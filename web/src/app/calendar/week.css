@@ -92,6 +92,11 @@
 .wb.pending { opacity: .5; box-shadow: none; background-image: repeating-linear-gradient(to bottom, var(--c, var(--cool)) 0 3px, transparent 3px 6px); background-size: 3px 100%; background-repeat: no-repeat;
   animation: sending 900ms linear 1s infinite; }
 .wb.landed:not(.sel) { animation: landed 420ms var(--ease); }
+/* Deleted, a block fades and shrinks out; Undo brings it back in reverse, then it lands (calendar.css, polish audit calflows-11). */
+.wb.removing { animation: chip-out var(--dur-fast) var(--ease) forwards; pointer-events: none; }
+.wb.restoring { animation: chip-in var(--dur-medium) var(--ease); }
+.wb.restoring:not(.sel) { animation: chip-in var(--dur-medium) var(--ease), landed 420ms var(--ease) var(--dur-medium); }
+@keyframes chip-in { from { opacity: 0; transform: scale(.96); } }
 .wb { transition: transform var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 .wb.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 .wb.ghost { background: color-mix(in oklch, var(--c, var(--cool)) 14%, transparent); box-shadow: var(--shadow-pill); outline: 1.5px dashed var(--c, var(--cool)); outline-offset: -1.5px; }

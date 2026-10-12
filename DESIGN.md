@@ -872,7 +872,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   `J` `K` Enter `O` `N` Esc. Key hints read "Esc",
   "⌘K", "⇧I".
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
-  in place with the provider's message otherwise. Nothing quietly reverts.
+  in place with the provider's message otherwise. Nothing quietly reverts. A calendar item deleted
+  fades and folds away, and Undo or ⌘Z folds it back and lands it (#236).
 - **Overlays** anchored to calendar items follow the placement rule; Esc closes the topmost.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
 
@@ -2075,3 +2076,9 @@ it changes what's on screen.
     to `--evtint` over 420 ms, and the .5 eases back over 120 ms rather than snapping. The month's
     chips and the week's blocks alike; a task keeps .5 and the spinner, with the ease (Andy,
     2026-10-11, polish audit calflows-02).
+236. **Deleting and undoing feel physical and reversible:** a chip deleted (the card, Del or
+    Backspace, a recurring delete once it's answered) fades and shrinks out (to .96) over 120 ms, then
+    folds up over 180 ms, so the chips under it slide up the 23 px into its place, as mail's rows fold
+    (#13), and the cell's "+N" recounts as it goes; a week block fades and shrinks out. Undo or ⌘Z
+    brings it back in reverse, unfolding and fading in from .96 over 180 ms, then its tint lands
+    (#235) (Andy, 2026-10-11, polish audit calflows-11).

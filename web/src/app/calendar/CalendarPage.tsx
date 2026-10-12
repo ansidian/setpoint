@@ -32,7 +32,7 @@ import type {CalendarMode, Route} from '../../logic/route.ts';
 import {DEFAULT_SCOPE, moveLine, scopeChoices} from '../../logic/scope.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {movedLine, resizedLine, visibleItems, weekMonth, weekStart, weekTitle} from '../../logic/week.ts';
-import {glide, layout} from '../../tokens.ts';
+import {glide, layout, motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
@@ -87,6 +87,10 @@ function useSolidKey(selectedKey: string | null): string | null {
 }
 
 const EMPTY_ITEMS: ItemOut[] = [];
+
+/** A deleted chip fades out (120 ms) and folds up (180 ms); one Undo restores unfolds (180 ms), then lands (420 ms). */
+const FOLD_MS = motion.fast + motion.medium;
+const RESTORE_MS = motion.medium + 420;
 
 /**
  * Where the zoom between Month and Week centres (polish audit grids-09): the middle of the selected
@@ -203,6 +207,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // Deletes asked for here, off the grid until the provider confirms (or back, failed, if it refuses);
   // `sent` once the server has it, when the item's own pending delete keeps it off.
   const [deleting, setDeleting] = useState<(Deleting & {sent: boolean})[]>([]);
+  // Items folding away as they're deleted here, and coming back as Undo restores them (polish audit calflows-11).
+  const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
+  const [restoring, setRestoring] = useState<ReadonlySet<string>>(new Set());
+  const forAWhile = (set: typeof setRemoving, keys: string[], ms: number) => {
+    set(current => new Set([...current, ...keys]));
+    window.setTimeout(() => set(current => new Set([...current].filter(key => !keys.includes(key)))), ms);
+  };
   const newIds = useRef(0);
   // Failed changes Try again was asked of, with when each had failed: pending until the server lists them otherwise.
   const [retried, setRetried] = useState<ReadonlyMap<number, string | null>>(new Map());
@@ -221,9 +232,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const present = useCallback((list: ItemOut[]) => list.flatMap(item => {
     const shown = asRetried(sendingNow.get(item.key) ?? item, retried);
     const waiting = shown.command?.kind === 'item_delete' && shown.command.state === 'pending';
-    if ([...heldDeletes.keys()].some(entry => deletes(entry, shown))) return [];
+    // Deleted here, it folds away first.
+    if ([...heldDeletes.keys()].some(entry => deletes(entry, shown))) return removing.has(shown.key) ? [shown] : [];
     return deleting.some(entry => deletes(entry, shown) && (!entry.sent || waiting)) ? [] : [shown];
-  }), [sendingNow, deleting, retried]);
+  }), [sendingNow, deleting, retried, removing]);
 
   // What the grid draws: the items as they show, new items on their way, a drop waiting on its scope
   // at its new day (its origin a faded ghost), and the editor's drafts as ghosts.
@@ -236,8 +248,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const looks = useMemo(() => {
     const map = new Map<string, ChipLook>(previews.items.map(item => [item.key, 'ghost']));
     if (ask?.kind === 'move' || ask?.kind === 'resize') map.set(ask.item.key, 'faded');
+    for (const key of removing) map.set(key, 'removing');
+    for (const key of restoring) map.set(key, 'restoring');
     return map;
-  }, [previews.items, ask]);
+  }, [previews.items, ask, removing, restoring]);
 
   // The editor's active draft's day is the selected day while it's open (board 13).
   const paneDay = (editor && addressOf(route) === editor.at && previews.day) || selectedDay;
@@ -573,6 +587,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       if (at >= 0) undos.current.splice(at, 1);
       sendDeletes(entries, list.map(({item}) => item.title), keepalive);
     };
+    const keys = list.map(({item}) => item.key);
     const undo = () => {
       if (!entries.some(entry => heldDeletes.has(entry))) return;
       window.clearTimeout(timer);
@@ -580,12 +595,15 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       const at = undos.current.indexOf(undo);
       if (at >= 0) undos.current.splice(at, 1);
       dismissToast();
+      // Back as it went, then its tint lands.
+      forAWhile(setRestoring, keys, RESTORE_MS);
       setDeleting(current => [...current]);
     };
     entries.forEach(entry => heldDeletes.set(entry, send));
     timer = window.setTimeout(send, UNDO_MS);
     undos.current.push(undo);
-    // Off the grid now: the held entries are read by `present`.
+    // Off the grid now, folding away first: the held entries are read by `present`.
+    forAWhile(setRemoving, keys, FOLD_MS);
     setDeleting(current => [...current]);
     showToast(list.length === 1 ? `Deleted ${list[0]!.item.title}` : `Deleted ${list.length} items`, {label: 'Undo', run: undo});
   };

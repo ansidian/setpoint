@@ -23,7 +23,7 @@ import {drag as dragTokens, week as tokens} from '../../tokens.ts';
 import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
-import {Chip} from './Chip.tsx';
+import {Chip, ghostly} from './Chip.tsx';
 import type {ChipLook} from './Chip.tsx';
 import {DayPopover} from './DayPopover.tsx';
 import {FloatingDetail} from './detail/FloatingDetail.tsx';
@@ -589,8 +589,9 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
   const lines = blockLines(box.height, narrow);
   const fade = useCalendarFade()(item.calendar_id);
   const landing = useLanding<HTMLDivElement>(item);
-  const classes = ['wb', fade, short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !look && 'sel', isPast(item, now, timeZone) && !look && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
-    look && 'ghost', look === 'faded' && 'faded', lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
+  const ghost = ghostly(look);
+  const classes = ['wb', fade, short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !ghost && 'sel', isPast(item, now, timeZone) && !ghost && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
+    ghost && 'ghost', look === 'faded' && 'faded', !ghost && look, lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
   const edges = resizable(item) && !look && !lifted;
   return (
     <div ref={landing} className={classes} role="button" data-key={item.key} title={`${item.title} · ${time}`} aria-label={blockLabel(item, block.date, calendar?.name, timeZone)}

@@ -17,8 +17,14 @@ import {colourVar} from '../accounts.ts';
 import {useLanding} from './landing.ts';
 import {useCalendarFade} from './view.ts';
 
-/** How the grid draws an item besides its own state. */
-export type ChipLook = 'ghost' | 'faded';
+/**
+ * How the grid draws an item besides its own state: a ghost (a draft, a drag's origin), faded (a drop
+ * waiting on its scope), or folding away as it's deleted and back as Undo restores it (polish audit calflows-11).
+ */
+export type ChipLook = 'ghost' | 'faded' | 'removing' | 'restoring';
+
+/** A look that draws the item as a dashed ghost. */
+export const ghostly = (look: ChipLook | undefined) => look === 'ghost' || look === 'faded';
 
 export interface ChipProps {
   item: ItemOut;
@@ -59,7 +65,8 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const pending = item.command?.state === 'pending';
   const failed = item.command?.state === 'failed';
   const state = `${pending ? ' pending' : failed ? ' failed' : ''}${fade ? ` ${fade}` : ''}`;
-  const ghost = look ? ` ghost${look === 'faded' ? ' faded' : ''}` : '';
+  const ghost = ghostly(look) ? ` ghost${look === 'faded' ? ' faded' : ''}` : look ? ` ${look}` : '';
+  const plain = !ghostly(look);
   if (item.kind === 'task') {
     return (
       <div className={`tk${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
@@ -72,7 +79,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   }
   const time = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
   return (
-    <div ref={landing} className={`ev${selected && !look ? ' sel' : ''}${isPast(item, now, timeZone) && !look && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label}
+    <div ref={landing} className={`ev${selected && plain ? ' sel' : ''}${isPast(item, now, timeZone) && plain && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label}
       style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties} onClick={onClick} onPointerDown={onPointerDown}>
       {failed && <Icon name="error" size={14} />}
       {time && <span className="t">{time}</span>}

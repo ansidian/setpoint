@@ -102,6 +102,15 @@
 @keyframes sending { to { background-position: 0 6px; } }
 .ev.landed:not(.sel) { animation: landed 420ms var(--ease); }
 @keyframes landed { 0% { background-color: color-mix(in oklch, var(--c, var(--cool)) var(--evland), transparent); } }
+/* Deleted (polish audit calflows-11): a chip fades and shrinks out over 120 ms, then folds up over 180,
+   so the chips under it slide up into its place, as a mail row folds; Undo or ⌘Z unfolds it back in
+   reverse over 180 ms, then its tint lands. */
+.ev.removing, .tk.removing { animation: chip-out var(--dur-fast) var(--ease) forwards, chip-fold var(--dur-medium) var(--ease) var(--dur-fast) forwards; pointer-events: none; }
+.ev.restoring, .tk.restoring { animation: chip-unfold var(--dur-medium) var(--ease); }
+.ev.restoring:not(.sel) { animation: chip-unfold var(--dur-medium) var(--ease), landed 420ms var(--ease) var(--dur-medium); }
+@keyframes chip-out { to { opacity: 0; transform: scale(.96); } }
+@keyframes chip-fold { to { height: 0; margin-bottom: -3px; } }
+@keyframes chip-unfold { from { height: 0; margin-bottom: -3px; opacity: 0; transform: scale(.96); } }
 .ev.failed { background: transparent; box-shadow: inset 0 0 0 1px var(--alert); color: var(--alert); }
 /* Tasks: the ring (12 px; its project's colour, else ink2, on the grid) or the done glyph in `good`, the title in ink 12. */
 .tk { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 4px; border-radius: 6px; color: var(--ink); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }

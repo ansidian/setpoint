@@ -412,7 +412,8 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Backspace');
     await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
-    assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
+    // It folds away first (polish audit calflows-11).
+    await until('off the grid', () => chip(page, '2026-10-07', 'Dentist').count(), count => count === 0);
     assert.doesNotMatch(new URL(page.url()).pathname, /\/item\//);
     // Undo brings it back, and the server never hears of it.
     await page.locator('.toast').getByRole('button', {name: 'Undo'}).click();
