@@ -357,8 +357,9 @@ editor and calendar search results.
 
 - **Card:** 280 px wide (decision 46), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
   at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
-  Leave (as the right pane's, #112), attendees, reminder, calendar; then **Edit E** and icon actions
-  (duplicate, copy, colour, delete).
+  Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
+  Fri", #167), reminder, calendar (its glyph in the item's colour, #167); then **Edit E** and icon
+  actions (duplicate, copy, colour, delete).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt.
@@ -1458,3 +1459,10 @@ it changes what's on screen.
     link. The stacked facts (place, Leave by, Overlaps) share one 4 px gap (Overlaps had 2). No
     reminder glyph: it would sit on nearly every row. Boards 11 and the others draw the place in
     the line (override 29) (Andy, 2026-10-11, polish audit calpanes-12).
+167. **A recurring event's card says it's a series, and its calendar fact takes its colour:** the
+    floating detail adds a `repeat` fact after the attendees for an event with a recurrence, worded
+    as the editor's repeat field words it ("Weekly on Mon, Wed, Fri", #53 and #64), so Gym's card no
+    longer reads only "10 min before · Personal" until a drop asks This, Following or All. A
+    repeating task keeps its own line. The calendar fact's `calendar_today` takes the item's colour
+    (its own, else its calendar's), as the failed card's does, its name staying `ink2`. The date
+    stays the title's subtitle, without a glyph (Andy, 2026-10-11, polish audit calflows-05).

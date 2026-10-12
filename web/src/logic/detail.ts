@@ -4,7 +4,15 @@
 // time to go and is gone once the event has started (SV-56).
 import type {ItemOut} from '@setpoint/shared';
 import {timeRange, dayTitle} from './calendar.ts';
+import {describeRule} from './compose.ts';
 import {addDays, clockTime, localDate} from './format.ts';
+
+/** A recurring event's repeat, as the editor's repeat field words it: "Weekly on Mon, Wed, Fri" (#167); null for any other item. */
+export function repeatLine(item: Pick<ItemOut, 'kind' | 'recurrence' | 'all_day' | 'starts_at' | 'start_date'>, timeZone: string): string | null {
+  if (item.kind !== 'event' || !item.recurrence) return null;
+  const day = item.all_day ? item.start_date : item.starts_at && localDate(item.starts_at, timeZone);
+  return day ? describeRule(item.recurrence, day) : null;
+}
 
 /** "Wed, Oct 7 · 2:30 – 3:30 PM"; "Sat, Oct 17 · All day"; a task "Wed, Oct 7" or "Wed, Oct 7 · 5:00 PM". */
 export function detailWhen(item: ItemOut, timeZone: string): string {

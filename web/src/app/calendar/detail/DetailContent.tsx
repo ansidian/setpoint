@@ -1,7 +1,7 @@
 // What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
 // colour dot and title, the date and time, the place and its address, Time to Leave (in `caution`
-// once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees,
-// reminders and the calendar; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
+// once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
+// recurring event's repeat (#167), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
@@ -11,7 +11,7 @@ import {EVENT_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {describeTaskRepeat} from '../../../logic/compose.ts';
-import {attendeesLine, detailWhen, leaveBy, remindersLine} from '../../../logic/detail.ts';
+import {attendeesLine, detailWhen, leaveBy, remindersLine, repeatLine} from '../../../logic/detail.ts';
 import {placeLines} from '../../../logic/place.ts';
 import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
@@ -38,8 +38,8 @@ interface DetailContentProps {
   onEdit: () => void;
 }
 
-function Fact({icon, className, children}: {icon: IconName; className?: string; children: ReactNode}) {
-  return <div className={className ? `fact ${className}` : 'fact'}><Icon name={icon} size={17} />{children}</div>;
+function Fact({icon, className, style, children}: {icon: IconName; className?: string; style?: CSSProperties; children: ReactNode}) {
+  return <div className={className ? `fact ${className}` : 'fact'} style={style}><Icon name={icon} size={17} />{children}</div>;
 }
 
 export function DetailContent({target, timeZone, actions, onClose, onEdit}: DetailContentProps) {
@@ -55,6 +55,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const attendees = attendeesLine(item.attendees);
   const reminders = remindersLine(item.reminders);
   const place = placeLines(item.place, item.address);
+  const repeat = repeatLine(item, timeZone);
   return (
     <>
       <div className="card-h">
@@ -73,10 +74,11 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         )}
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}
         {attendees && <Fact icon="group"><span>{attendees}</span></Fact>}
+        {repeat && <Fact icon="repeat"><span>{repeat}</span></Fact>}
         {item.kind === 'task' && item.project && <Fact icon="work"><span>{item.project}</span></Fact>}
         {item.due_string && item.recurring && <Fact icon="repeat"><span>{describeTaskRepeat(item.due_string)}</span></Fact>}
         {reminders && <Fact icon="notifications"><span>{reminders}</span></Fact>}
-        <Fact icon="calendar_today"><span>{calendar?.name ?? 'Calendar'}</span></Fact>
+        <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
       </div>
       <div className="card-acts">
         <button className="btn ghost sm" aria-disabled={item.read_only || undefined} title={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}

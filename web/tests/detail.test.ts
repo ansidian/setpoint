@@ -3,7 +3,7 @@
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {attendeesLine, detailWhen, leaveLine, leaveState, remindersLine, travelTime} from '../src/logic/detail.ts';
+import {attendeesLine, detailWhen, leaveLine, leaveState, remindersLine, repeatLine, travelTime} from '../src/logic/detail.ts';
 
 const zone = SEED_TIME_ZONE;
 const at = (date: string, time: string) => new Date(Date.parse(`${date}T${time}:00-07:00`)).toISOString();
@@ -71,6 +71,18 @@ describe('reminders', () => {
     [[0, 10], 'At the start, 10 min before'],
     [[], null],
   ])('%j → %s', (minutes, line) => expect(remindersLine(minutes)).toBe(line));
+});
+
+// A recurring event's card says it's a series, as the repeat field words it (#167).
+describe('repeat', () => {
+  test.each<[string, Partial<ItemOut>, string | null]>([
+    ['Gym, weekly on three days', {recurring: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', starts_at: at('2026-10-07', '07:00')}, 'Weekly on Mon, Wed, Fri'],
+    ['weekly on its own day, from the occurrence', {recurring: true, recurrence: 'RRULE:FREQ=WEEKLY', starts_at: at('2026-10-08', '18:00')}, 'Weekly on Thursday'],
+    ['an all-day one, from its first day', {recurring: true, recurrence: 'RRULE:FREQ=MONTHLY', all_day: true, start_date: '2026-10-15', end_date: '2026-10-16'}, 'Monthly on day 15'],
+    ['every weekday', {recurring: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', starts_at: at('2026-10-07', '09:00')}, 'Every weekday'],
+    ['a one-off event', {starts_at: at('2026-10-07', '14:30')}, null],
+    ['a repeating task: its own line, not this one', {kind: 'task', recurring: true, recurrence: null, due_string: 'every mon', due_date: '2026-10-12'}, null],
+  ])('%s', (_name, fields, line) => expect(repeatLine(item(fields), zone)).toBe(line));
 });
 
 describe('attendees', () => {
