@@ -433,7 +433,7 @@ const dayTemps = (tone: string, glyph: string, temps: string): Patch => ({
 });
 const BOARD_21_PATCHES: Patch[] = [
   {why: 'The phone\'s frame and rounded corners are the device\'s, not the page\'s', from: 'border-radius: 44px; border: 1px solid var(--edgeOn);', to: 'border-radius: 0; border: 0;'},
-  {why: '… and so is the status bar: the page starts under it (no viewport-fit=cover)', from: '.sp .safe { height: 40px; flex: none; }', to: '.sp .safe { display: none; }'},
+  {why: '… and so is the status bar: the page keeps clear of it by its inset (#261), none in a browser', from: '.sp .safe { height: 40px; flex: none; }', to: '.sp .safe { display: none; }'},
   {why: 'F8: the phone takes taps only, so no row is swiped; Mark read and Done are the reader\'s',
     from: `      <div class="swipe">
         <div class="swipe-acts">

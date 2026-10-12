@@ -4,7 +4,7 @@
 import {useSyncExternalStore} from 'react';
 import {parseThemeChoice, resolveTheme} from '../logic/theme.ts';
 import type {ThemeChoice} from '../logic/theme.ts';
-import {applyTheme, motion} from '../tokens.ts';
+import {applyTheme, colour, lightColour, motion} from '../tokens.ts';
 
 const KEY = 'setpoint.theme';
 const listeners = new Set<() => void>();
@@ -32,6 +32,14 @@ function draw(fade: boolean) {
     fadeTimer = window.setTimeout(() => root?.classList.remove('theme-fade'), motion.themeFade);
   }
   applyTheme(root, theme);
+  // Safari tints its own bars to the page: the drawn theme's, which may not be the system's.
+  let tint = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!tint) {
+    tint = document.createElement('meta');
+    tint.name = 'theme-color';
+    document.head.append(tint);
+  }
+  tint.content = (theme === 'light' ? lightColour : colour).page;
 }
 
 /** Draws the page in this browser's theme now, without a fade, and follows changes from then on. */

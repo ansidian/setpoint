@@ -728,6 +728,10 @@ It feels like an installed app (each line's [Decided while building](#decided-wh
   Back reads "Search" from a result (#259).
 - **Motion:** the reader slides in over the list and back off it; an agenda item's detail rises in;
   the toast rises from the tab bar (#257).
+- **The tab bar** fills the current tab's glyph, badges Inbox with the attention count while another
+  page shows, and a tap on the current tab takes its list back to the top (#260).
+- **The edges:** the page reaches the screen's edges, kept clear of the status bar and the home
+  indicator by their insets, and Safari's bars take the drawn theme's `page` (#261).
 
 ## mantel's mail chip
 
@@ -1523,6 +1527,18 @@ it changes what's on screen.
     desktop's Esc hint is, and a tap empties the field and lets go of it. Mark all as read leaves the
     header meanwhile, as it would read the hidden Inbox's mail, and an email opened from the results
     reads "‹ Search", going back to them (Andy, 2026-10-11, polish audit phone-07).
+260. **The phone's tab bar says where you are and what waits:** the current tab draws its filled glyph
+    (`inbox-fill`, `calendar_today-fill`); while Attention waits and the Inbox isn't showing, the Inbox
+    tab carries the header's pill shrunk to 16 px (`caution`, `onInk` 10.5 / 600 figures, 8 px from
+    the top and 6 px right of the tab's middle, a 2 px `panel` ring); a tap on the current tab
+    smooth-scrolls its list back to the top, the agenda back to today (Andy, 2026-10-11, polish audit
+    phone-09).
+261. **The phone reaches the screen's edges in its own colour:** the page is laid out to the edges
+    (`viewport-fit=cover`) and keeps clear of the status bar and the home indicator by their insets:
+    the tab bar is 54 px with at least 6 px under its labels, the reader's bar 58, each taking the
+    home indicator's inset when there is one, rather than a fixed 18 and 22 px. One `theme-color`
+    follows the drawn theme's `page` (Night #050506, Light #f6f6f4), so Safari tints its bars to the
+    theme picked in the app, not the system's (Andy, 2026-10-11, polish audit phone-10).
 263. **An email marked unread on the phone shows it:** Mark unread keeps the email open (by design),
     and now the list's unread dot (6 px `ink`, 10 px before the subject, on its line's middle) stands
     before the subject until Mark read; the dot and the swapped icon scale in from .4 over 120 ms. No

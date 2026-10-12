@@ -8,6 +8,7 @@ import {after, test} from 'node:test';
 import type {InboxOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -306,6 +307,83 @@ test('phone search: a clear button where the hint was, no Mark all as read meanw
     assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'BODY');
     assert.equal(await clear.count(), 0);
     await markAll.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the tab bar: the current tab filled, Inbox badged while Attention waits on another page, and a tap on the current tab back to the top', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const glyph = (label: string) => page.locator('.ph-tab', {hasText: label}).locator('svg path').getAttribute('d');
+    const badge = page.locator('.ph-tab', {hasText: 'Inbox'}).locator('.ph-badge');
+    assert.deepEqual([await glyph('Inbox'), await glyph('Agenda')], [ICONS['inbox-fill'], ICONS.calendar_today]);
+    // The Inbox's header has the pill: no badge there.
+    assert.equal(await badge.count(), 0);
+    // A tap on the current tab scrolls its list back to the top, smoothly (in more than one step).
+    const list = page.locator('.content > .list');
+    await list.evaluate(element => element.scrollTo(0, 900));
+    await until('scrolled down', () => list.evaluate(element => element.scrollTop), top => top > 500);
+    await list.evaluate(element => {
+      const scope = window as unknown as {steps: number};
+      scope.steps = 0;
+      element.addEventListener('scroll', () => (scope.steps += 1));
+    });
+    await page.locator('.ph-tab', {hasText: 'Inbox'}).tap();
+    await until('back at the top', () => list.evaluate(element => element.scrollTop), top => top === 0);
+    assert.ok(await page.evaluate(() => (window as unknown as {steps: number}).steps) > 1, 'it scrolls smoothly, not in one jump');
+
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await page.locator('.ph-agenda .pitem').first().waitFor();
+    assert.deepEqual([await glyph('Inbox'), await glyph('Agenda')], [ICONS.inbox, ICONS['calendar_today-fill']]);
+    // The header's pill, shrunk: the attention count, a 16 px `caution` pill with `onInk` 10.5 / 600
+    // figures, 8 px from the top and 6 px right of the tab's middle, in a 2 px `panel` ring.
+    assert.equal(await badge.textContent(), '3');
+    const [tab, pill] = [await page.locator('.ph-tab', {hasText: 'Inbox'}).boundingBox(), await badge.boundingBox()];
+    assert.deepEqual([pill!.height, pill!.y - tab!.y, pill!.x - (tab!.x + tab!.width / 2)], [16, 8, 6]);
+    assert.deepEqual(await styles(page, '.ph-badge', ['background-color', 'color', 'font-size', 'font-weight', 'font-variant-numeric', 'box-shadow']),
+      [await tokenColour(page, 'caution'), await tokenColour(page, 'onInk'), '10.5px', '600', 'tabular-nums', `${await tokenColour(page, 'panel')} 0px 0px 0px 2px`]);
+    // It follows the count.
+    await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Final exam')}/done`, {done: true});
+    await until('the badge follows', () => badge.textContent(), text => text === '2');
+    // A later week's agenda: its tab goes back to today's.
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-20'})}`);
+    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await until('today\'s agenda', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 7 – 14');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars take the drawn theme\'s page colour', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    assert.match((await page.locator('meta[name="viewport"]').getAttribute('content'))!, /viewport-fit=cover/);
+    const tint = page.locator('meta[name="theme-color"]');
+    assert.deepEqual([await tint.count(), await tint.getAttribute('content')], [1, '#050506']);
+    // In a browser tab there's no inset: 6 px under the labels, the bars 54 and 58 px.
+    const bars = async () => [await styles(page, '.app', ['padding-top']), await styles(page, '.ph-tabs', ['min-height', 'padding-bottom', 'height'])];
+    assert.deepEqual(await bars(), [['0px'], ['54px', '6px', '54px']]);
+    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.rd-subj').waitFor();
+    assert.deepEqual(await styles(page, '.ph-acts', ['min-height', 'padding-bottom', 'height']), ['58px', '6px', '58px']);
+    // As a Home Screen app on an iPhone: 47 px for the status bar, 34 for the home indicator.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', {insets: {top: 47, bottom: 34}});
+    await until('the reader keeps clear of both', () => Promise.all([styles(page, '.pane', ['padding-top']), styles(page, '.ph-acts', ['padding-bottom'])]),
+      value => JSON.stringify(value) === '[["47px"],["34px"]]');
+    await page.locator('.ph-back').tap();
+    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    assert.deepEqual((await bars()).map(values => values.slice(0, 2)), [['47px'], ['54px', '34px']]);
+    // The theme drawn, not the system's: Light's page once the browser prefers light (System).
+    await page.emulateMedia({colorScheme: 'light'});
+    await until('Light\'s page colour', () => tint.getAttribute('content'), value => value === '#f6f6f4');
+    assert.equal(await tint.count(), 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -4,11 +4,17 @@
    reader's bars) only render there. */
 @media (max-width: 639px) {
   /* ---------- The shell: one column, the tab bar at the bottom ---------- */
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  /* The page reaches the screen's edges (viewport-fit=cover) and keeps clear of the status bar and
+     the home indicator by their insets (#261). */
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; padding-top: env(safe-area-inset-top); }
   .main { grid-template-rows: auto minmax(0, 1fr); }
-  .ph-tabs { height: 72px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: 1fr 1fr; padding-bottom: 18px; }
-  .ph-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
+  /* The tab bar ends at the home indicator's inset, not a guess at it (#261). */
+  .ph-tabs { min-height: 54px; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-template-columns: 1fr 1fr; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11.5px; color: var(--ink3); }
   .ph-tab.on { color: var(--ink); }
+  /* The header's attention pill, shrunk onto the Inbox tab while another page shows (#260). */
+  .ph-badge { position: absolute; top: 8px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--caution); color: var(--onInk);
+    box-shadow: 0 0 0 2px var(--panel); font-size: 10.5px; font-weight: 600; line-height: 16px; text-align: center; }
   /* The toast stays at the bottom here (#92): the phone's Done is in the reader's bottom bar. It
      rises 8 px from the tab bar as it comes (#257). */
   .toast { top: auto; bottom: 24px; animation: ph-toast-in var(--dur-medium) var(--ease); }
@@ -64,7 +70,7 @@
   .row.shelf:hover .age { display: block; }
 
   /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
-  .pane { position: fixed; inset: 0; width: auto; max-width: none; border-left: 0; background: var(--page); z-index: 6; }
+  .pane { position: fixed; inset: 0; width: auto; max-width: none; border-left: 0; background: var(--page); z-index: 6; padding-top: env(safe-area-inset-top); }
   .pane > .rd-tools { display: none; }
   .ph-top { height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 6px; }
   .btn.ph-back { height: 40px; padding: 0 10px 0 6px; color: var(--ink); }
@@ -83,7 +89,7 @@
   .mailtext { font-size: 15px; }
   /* The actions share the width, 2, 3 or 4 of them (#255); Done leads, its label `ink` 500 and its
      check `good`, the done glyph's own colour. */
-  .ph-acts { height: 80px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px 22px; }
+  .ph-acts { min-height: 58px; flex: none; border-top: 1px solid var(--hair); background: var(--panel); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); padding: 6px 8px max(6px, env(safe-area-inset-bottom)); }
   .ph-acts > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 14px; color: var(--ink2); font-size: 11.5px; }
   .ph-acts .icon { color: var(--ink); }
   .ph-acts > .ph-done { color: var(--ink); font-weight: 500; }
@@ -139,7 +145,8 @@
   .ph-scrim { position: fixed; inset: 0; z-index: 5; background: var(--scrim); animation: ph-fade var(--dur-medium) var(--ease); }
   @keyframes ph-fade { from { opacity: 0; } }
   @keyframes ph-rise { from { transform: translateY(24px); opacity: 0; } }
-  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: 84px; width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
+  /* 12 px above the tab bar, whatever its inset. */
+  .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(66px + max(6px, env(safe-area-inset-bottom))); width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
   .ph-detail .card-h { min-height: 48px; padding-top: 6px; }
   .ph-detail .card-acts { display: none; }
 
