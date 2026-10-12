@@ -20,7 +20,7 @@ import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, Item
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, setCalendarVisible, updateItem} from '../../api/items.ts';
+import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
@@ -44,7 +44,7 @@ import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
 import {dismissToast, showToast, toastFailure, UNDO_MS} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
-import {showHidden} from './CalendarSidebar.tsx';
+import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
 import {DayPane, HealthLines} from './DayPane.tsx';
@@ -158,7 +158,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   useCommands(() => ({commands: (calendars ?? []).map(calendar => ({
     id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
     keywords: 'calendar calendars filter toggle',
-    run: () => void setCalendarVisible(calendar.id, !calendar.visible).catch(toastFailure(`Couldn't ${calendar.visible ? 'hide' : 'show'} ${calendar.name}`)),
+    run: () => void setVisible(calendar, !calendar.visible),
   }))}));
   const selectedKey = route.item ? itemKey(route.item, route.at) : null;
   // A single event or a task's address has only its id: its day comes from the grid, else from it.

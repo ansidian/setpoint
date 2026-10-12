@@ -200,7 +200,8 @@
 .mini > .vis { background: var(--sub); }
 .calrow { height: var(--calendarRow); width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; text-align: left; }
 .calrow:hover { background: var(--sub); }
-.calrow .ring { --ring-base: var(--ink2); width: 13px; height: 13px; margin: 0; }
+/* Off, a calendar's name recedes with its box (polish audit calpanes-11); Todoist has no mark of its own (calpanes-13). */
+.calrow[aria-pressed="false"] { color: var(--ink3); }
 .chk { width: 14px; height: 14px; border-radius: 4px; background: var(--c); display: grid; place-items: center; flex: none; }
 .chk::after { content: ""; width: 3px; height: 7px; border: solid var(--onAccent); border-width: 0 1.6px 1.6px 0; transform: translateY(-1px) rotate(45deg); }
 .chk.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
@@ -208,6 +209,13 @@
 /* Toggled, it fills or empties and its check grows in or shrinks away over 120 ms. */
 .chk { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .chk::after { transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+
+/* A calendar toggled (polish audit calpanes-11): hidden, its items fade out over 120 ms before they go;
+   shown, they fade in over 180 ms. */
+.ev.leaving, .tk.leaving, .wb.leaving, .ag-item.leaving { animation: ev-out var(--dur-fast) var(--ease) forwards; pointer-events: none; }
+.ev.entering, .tk.entering, .wb.entering, .ag-item.entering { animation: ev-in var(--dur-medium) var(--ease); }
+@keyframes ev-out { to { opacity: 0; } }
+@keyframes ev-in { from { opacity: 0; } }
 
 /* ---------- F6: direct manipulation and changes in place ---------- */
 /* A draft, a drag's origin, or a drop waiting on its scope: a dashed ghost in the item's colour

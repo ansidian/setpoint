@@ -430,8 +430,10 @@ offered for protected mail.
 
 The **mini-month** (26 px day cells; today an `alert` disc (#128); the visible week or selected day `sub`; no
 other marks) with ‹ › stepping. **Calendars:** 30 px rows, a 14 px checkbox in the calendar's colour
-on the left (off: an outline), the name; **Todoist** has the same checkbox with its ring glyph as its
-mark. With every calendar off, a 16 px `ink3` `visibility_off` follows the header's title (#113).
+on the left (off: an outline, and the name `ink3`), the name; **Todoist** reads as the others, its
+checkbox and name with no mark of its own. Toggled, a calendar's items fade out over 120 ms before they
+go, or fade back in over 180 ms (#228). With every calendar off, a 16 px `ink3` `visibility_off`
+follows the header's title (#113).
 
 ### Right pane
 
@@ -2005,3 +2007,11 @@ it changes what's on screen.
 227. **One now-line in Calendar:** the right pane's now-line is drawn as the week's, 1.5 px `alert`
     at full strength with an 8 px dot, 12 px from its time so the dot sits centred on the events' 3 px
     colour bars (Andy, 2026-10-11, polish audit calpanes-04).
+228. **Toggling a calendar visibly lifts its events off the page and brings them back, and Todoist is
+    a calendar like the others:** hidden, a calendar's chips, blocks and agenda rows fade to nothing over
+    120 ms, then it's hidden (here, and then at the server, as before); shown, they fade in over 180 ms,
+    from the sidebar, ⌘K and Show all alike. Its checkbox fills or empties and its check grows in from
+    .6 over 120 ms (#144), and while it's off its name is `ink3`, so on and off rows read apart. Todoist's
+    row loses its ring at the right end, which beside a ticked box read as a second, unchecked control:
+    it's just "Todoist" with its checkbox (amending Sidebar on Calendar's "its ring glyph as its mark"
+    and board 11) (Andy, 2026-10-11, polish audit calpanes-11, calpanes-13).

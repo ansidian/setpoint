@@ -26,9 +26,17 @@ export interface CalendarView {
   weekJump: number;
   // The month the grid is gliding to, so paging again goes on from there (N N N), not from the month passing by.
   gliding: string | null;
+  // Calendars just toggled (polish audit calpanes-11): their items fading out before they're hidden, or in as they're shown.
+  fade: CalendarFade;
 }
 
-let view: CalendarView = {shown: null, mini: null, selected: null, scroll: null, anchor: null, week: null, weekJump: 0, gliding: null};
+export interface CalendarFade {
+  leaving: ReadonlySet<number>;
+  entering: ReadonlySet<number>;
+}
+
+const STILL: CalendarFade = {leaving: new Set(), entering: new Set()};
+let view: CalendarView = {shown: null, mini: null, selected: null, scroll: null, anchor: null, week: null, weekJump: 0, gliding: null, fade: STILL};
 let seq = 0;
 const listeners = new Set<() => void>();
 const set = (next: Partial<CalendarView>) => {
@@ -41,6 +49,21 @@ const subscribe = (listener: () => void) => {
 };
 
 export const useCalendarView = () => useSyncExternalStore(subscribe, () => view);
+
+/** How an item of a calendar just toggled draws: fading out before it's hidden, or in as it's shown (polish audit calpanes-11). */
+export function useCalendarFade(): (calendarId: number) => 'leaving' | 'entering' | null {
+  const fade = useSyncExternalStore(subscribe, () => view.fade);
+  return calendarId => (fade.leaving.has(calendarId) ? 'leaving' : fade.entering.has(calendarId) ? 'entering' : null);
+}
+
+const without = (ids: ReadonlySet<number>, id: number) => new Set([...ids].filter(one => one !== id));
+
+/** A calendar's items fade out (`leaving`), fade in (`entering`) or neither (null). */
+export function fadeCalendar(id: number, how: 'leaving' | 'entering' | null) {
+  const leaving = how === 'leaving' ? new Set([...view.fade.leaving, id]) : without(view.fade.leaving, id);
+  const entering = how === 'entering' ? new Set([...view.fade.entering, id]) : without(view.fade.entering, id);
+  set({fade: leaving.size || entering.size ? {leaving, entering} : STILL});
+}
 
 /** The grid scrolled into another month; the mini-month follows it. */
 export function setShownMonth(month: string) {

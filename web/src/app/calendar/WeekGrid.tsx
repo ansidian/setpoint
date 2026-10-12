@@ -30,6 +30,7 @@ import {FloatingDetail} from './detail/FloatingDetail.tsx';
 import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
 import type {Slot} from './Editor.tsx';
 import {pointIn, rectIn, zoomOf} from './geometry.ts';
+import {useCalendarFade} from './view.ts';
 import type {ScrollRequest} from './view.ts';
 import './week.css';
 
@@ -585,7 +586,8 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
   // Sharing its column, it gives its start alone and its title may take two lines; nothing is drawn half cut.
   const narrow = block.lanes > 1;
   const lines = blockLines(box.height, narrow);
-  const classes = ['wb', short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !look && 'sel', isPast(item, now, timeZone) && !look && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
+  const fade = useCalendarFade()(item.calendar_id);
+  const classes = ['wb', fade, short && 'short', narrow && 'narrow', lines.title === 2 && 'two', selected && !look && 'sel', isPast(item, now, timeZone) && !look && !selected && !lifted && 'past', pending && 'pending', failed && 'failed',
     look && 'ghost', look === 'faded' && 'faded', lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
   const edges = resizable(item) && !look && !lifted;
   return (

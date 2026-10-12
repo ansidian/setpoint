@@ -447,3 +447,48 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     await setpoint.stop();
   }
 });
+
+test('a calendar toggled off fades its chips and rows out over 120 ms before they go, and back in over 180 ms; off, its name is `ink3`; Todoist has no ring', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const rows = page.locator('.calrow');
+    assert.equal(await page.locator('.calrow', {hasText: 'Todoist'}).locator('.ring').count(), 0, 'Todoist reads as the others');
+    assert.equal(await page.locator('.calrow .ring').count(), 0);
+    const personal = rows.filter({hasText: 'Personal'});
+    assert.equal(await style(personal, 'color'), await colour(page, '--ink2'));
+
+    // Off: Wednesday's Gym chip and its agenda row fade out first, then go.
+    const gym = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'});
+    const row = page.locator('.rpane .ag-item', {hasText: 'Gym'});
+    const [gymClass, rowClass] = [await watch(gym, 'class'), await watch(row, 'class')];
+    await personal.click();
+    await gym.waitFor({state: 'detached'});
+    await row.waitFor({state: 'detached'});
+    assert.ok((await gymClass()).some(value => value?.split(' ').includes('leaving')), 'the chip faded out first');
+    assert.ok((await rowClass()).some(value => value?.split(' ').includes('leaving')), 'and its row');
+    const ink3 = await colour(page, '--ink3');
+    await until('the name recedes', () => style(personal, 'color'), value => value === ink3);
+
+    // On: they come back fading in over 180 ms.
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as {arrived: string[]}).arrived = seen;
+      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (node instanceof HTMLElement) node.querySelectorAll<HTMLElement>('.ev, .ag-item').forEach(one => seen.push(`${one.className} ${getComputedStyle(one).animationName} ${getComputedStyle(one).animationDuration}`));
+        if (node instanceof HTMLElement && node.matches('.ev, .ag-item')) seen.push(`${node.className} ${getComputedStyle(node).animationName} ${getComputedStyle(node).animationDuration}`);
+      }))).observe(document.querySelector('.cal-content')!, {subtree: true, childList: true});
+    });
+    await personal.click();
+    await gym.waitFor();
+    const arrived = await page.evaluate(() => (window as unknown as {arrived: string[]}).arrived);
+    assert.ok(arrived.some(line => /^ev .*entering ev-in 0\.18s$/.test(line)), `the chip fades in: ${JSON.stringify(arrived.slice(0, 4))}`);
+    assert.ok(arrived.some(line => /^ag-item .*entering ev-in 0\.18s$/.test(line)), 'and its row');
+    await until('it lets go of the fade', () => gym.getAttribute('class'), classes => !classes?.includes('entering'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -20,6 +20,7 @@ import {calendarHealthLines} from '../../logic/health.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {useRingColour} from './Chip.tsx';
+import {useCalendarFade} from './view.ts';
 
 interface DayPaneProps {
   date: string;
@@ -45,6 +46,8 @@ const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="pro
 
 export function DayPane({date, today, items, hidden, forecast, calendars, selected, now, timeZone, movingTo, onSelectItem, onNew, onComplete, onShowAll}: DayPaneProps) {
   const ring = useRingColour();
+  // A calendar just toggled fades its rows out or in, as its chips do (polish audit calpanes-11).
+  const fade = useCalendarFade();
   const title = dayTitle(date);
   const colours = new Map((calendars ?? []).map(calendar => [calendar.id, calendar.colour]));
   const day = agenda(date, items, calendars, now, timeZone);
@@ -72,13 +75,13 @@ export function DayPane({date, today, items, hidden, forecast, calendars, select
       <div className="rp-scroll">
         {day.events.length > 0 && <div className="ag-day">Events</div>}
         {day.events.map((event, index) => (
-          <AgendaRow key={event.item.key} {...{event, index, nowAt: day.nowAt, nowLine, selected, now, timeZone, onSelectItem}} colour={event.item.colour ?? colours.get(event.item.calendar_id) ?? null}
+          <AgendaRow key={event.item.key} {...{event, index, nowAt: day.nowAt, nowLine, selected, now, timeZone, onSelectItem}} fade={fade(event.item.calendar_id)} colour={event.item.colour ?? colours.get(event.item.calendar_id) ?? null}
             overlap={agendaOverlap(event.item, items, timeZone)} movingTo={movingTo.get(event.item.key) ?? null} />
         ))}
         {day.events.length > 0 && day.nowAt === day.events.length && nowLine}
         {day.tasks.length > 0 && <div className="ag-day">{tasksHeading(date, today)}</div>}
         {day.tasks.map(task => (
-          <a key={task.key} className={`ag-item ag-task${task.done ? ' done' : ''}${selected.has(task.key) ? ' sel' : ''}${task.command?.state === 'pending' ? ' pending' : ''}`} href="#" data-key={task.key}
+          <a key={task.key} className={['ag-item ag-task', task.done && 'done', selected.has(task.key) && 'sel', task.command?.state === 'pending' && 'pending', fade(task.calendar_id)].filter(Boolean).join(' ')} href="#" data-key={task.key}
             onClick={event => {
               event.preventDefault();
               onSelectItem(task);
@@ -134,15 +137,16 @@ interface AgendaRowProps {
   timeZone: string;
   overlap: string | null;
   movingTo: string | null;
+  fade: 'leaving' | 'entering' | null;
   onSelectItem: (item: ItemOut) => void;
 }
 
-function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZone, overlap, movingTo, onSelectItem}: AgendaRowProps) {
+function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZone, overlap, movingTo, fade, onSelectItem}: AgendaRowProps) {
   const {item} = event;
   const leave = leaveLine(item, timeZone, now);
   const line = movingTo ? `${timeRange(item, timeZone)} · Moving to ${dayTitle(movingTo)}` : event.line;
   // The next event is lifted out of the list, and one under way fills its bar as it goes (polish audit calpanes-01).
-  const classes = ['ag-item', event.past && 'past', event.next && 'next', event.ongoing && 'ongoing', selected.has(item.key) && 'sel', item.command?.state === 'pending' && 'pending'].filter(Boolean).join(' ');
+  const classes = ['ag-item', event.past && 'past', event.next && 'next', event.ongoing && 'ongoing', selected.has(item.key) && 'sel', item.command?.state === 'pending' && 'pending', fade].filter(Boolean).join(' ');
   return (
     <>
       {nowAt === index && nowLine}

@@ -14,6 +14,7 @@ import {TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {chipTime, isPast} from '../../logic/calendar.ts';
 import {Icon, TaskGlyph} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
+import {useCalendarFade} from './view.ts';
 
 /** How the grid draws an item besides its own state. */
 export type ChipLook = 'ghost' | 'faded';
@@ -45,6 +46,8 @@ const Spinner = () => <span className="spin" aria-label="Saving"><Icon name="pro
 
 export function Chip({item, calendar, selected, look, now, timeZone, onSelect, onPress, time: shownTime, label}: ChipProps) {
   const ring = useRingColour();
+  // A calendar just toggled fades its items out or in (polish audit calpanes-11).
+  const fade = useCalendarFade()(item.calendar_id);
   const onClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     onSelect(item, event.currentTarget, event.metaKey || event.ctrlKey || event.shiftKey);
@@ -52,7 +55,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const onPointerDown = onPress ? (event: PointerEvent<HTMLElement>) => onPress(item, event) : undefined;
   const pending = item.command?.state === 'pending';
   const failed = item.command?.state === 'failed';
-  const state = pending ? ' pending' : failed ? ' failed' : '';
+  const state = `${pending ? ' pending' : failed ? ' failed' : ''}${fade ? ` ${fade}` : ''}`;
   const ghost = look ? ` ghost${look === 'faded' ? ' faded' : ''}` : '';
   if (item.kind === 'task') {
     return (
