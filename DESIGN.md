@@ -661,8 +661,9 @@ navigation.
   - Tools: **Back to story** `Esc`, then a spacer and **Open at NBC Los Angeles** `O`.
   - Head: a 22 px outlet badge, the outlet, the time and the byline; then the outlet's headline (20
     / 500).
-  - The image (240 tall), then the extracted text at 14.5 / 1.6, max 600: its paragraphs and list
-    items, without the outlet's membership appeals (#114).
+  - The image (240 tall), then the extracted text at 16 / 1.65, −.003em, paragraphs 16 apart, max
+    600 (about 79 characters a line), in Night `ink` mixed 10% toward `ink2` (#247): its paragraphs
+    and list items, without the outlet's membership appeals (#114).
 - **An article that can't be read in-app** (board 26b):
   - A note (radius 12, `sub`, `info`): "KTLA's page can't be read here, so this is its feed
     summary", with a solid small **Read at KTLA**.
@@ -1591,6 +1592,11 @@ it changes what's on screen.
     at 400 rather than dropping to `ink2`, so on a second visit the day's top stories still outrank
     Upcoming's names and the rows; new and seen leads differ by weight and the dot. Rows keep `ink2`
     once seen. Board 25 draws a seen lead in `ink2` (Andy, 2026-10-11, polish audit news-04).
+247. **An article in the pane reads at a reader app's size:** the extracted text is 16 / 1.65 at
+    −.003em with paragraphs 16 apart, about 79 characters a line in the 600 px column (#98), where
+    14.5 / 1.6 gave about 87. In Night it's `ink` mixed 10% toward `ink2`, so a long article doesn't
+    glare at 17:1 on the near-black page; Light keeps `ink`. The story's summary stays 14 / 1.6, as it's
+    short (Andy, 2026-10-11, polish audit news-11).
 255. **The phone reader's actions share the bar, Done leads, and none arrives late:** two, three or
     four actions take equal shares of the bottom bar, so an FYI email's Trash · Mark unread · Open in
     Gmail fill it rather than three quarters of it. Done, the phone's main job on Attention mail, has

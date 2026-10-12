@@ -311,6 +311,10 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.equal(await pane.locator('.ar-out').textContent(), 'NBCNBC Los Angeles·7:10 AM·Staff report');
     assert.equal(await pane.locator('.ar-title').textContent(), 'Fire burns 400 acres in the foothills; evacuation warnings issued');
     assert.equal(await pane.locator('.ar-text p').count(), 5);
+    // At a reading size: 16 / 1.65, paragraphs 16 apart, and in Night ink softened 10% toward ink2 (#247).
+    assert.deepEqual(await pane.locator('.ar-text').evaluate(text => [getComputedStyle(text).fontSize, getComputedStyle(text).lineHeight, getComputedStyle(text).color]),
+      ['16px', '26.4px', await colourOf(page, 'color-mix(in oklch, var(--ink) 90%, var(--ink2))')]);
+    assert.equal(await pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom), '16px');
     assert.equal(await pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height), 240);
     assert.deepEqual(await Promise.all(['.st-img.article', '.ar-text'].map(column)), [[28, 600], [28, 600]]);
     await page.locator('.st-img.article img').evaluate((image: HTMLImageElement) => image.decode());

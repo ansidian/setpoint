@@ -159,8 +159,11 @@
 .ar-title { font-size: 20px; line-height: 1.3; font-weight: 500; margin: 0; letter-spacing: -.01em; user-select: text; -webkit-user-select: text; }
 .ar-body { padding: 4px 28px 28px; display: flex; flex-direction: column; gap: 16px; }
 .st-img + .ar-body { padding-top: 20px; }
-.ar-text { color: var(--ink); font-size: 14.5px; line-height: 1.6; max-width: 600px; user-select: text; -webkit-user-select: text; }
-.ar-text p { margin: 0 0 14px; }
+/* An article reads at a reader app's size, about 79 characters a line in the 600 px column, and in Night a
+   touch softer than ink, so a long read doesn't glare (#247). */
+.ar-text { color: var(--ink); font-size: 16px; line-height: 1.65; letter-spacing: -.003em; max-width: 600px; user-select: text; -webkit-user-select: text; }
+:root[data-theme="night"] .ar-text { color: color-mix(in oklch, var(--ink) 90%, var(--ink2)); }
+.ar-text p { margin: 0 0 16px; }
 .ar-note { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--sub); color: var(--ink2); font-size: 12.5px; max-width: 600px; box-sizing: border-box; }
 .ar-note > .icon { color: var(--ink3); }
 .ar-body .st-label { margin-top: 8px; }
