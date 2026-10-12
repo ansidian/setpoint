@@ -15,7 +15,8 @@
 .search .qchip { transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); animation: qchip-in var(--dur-fast) var(--ease); }
 @keyframes qchip-in { from { opacity: 0; transform: scale(.92); } }
 @media (hover: hover) { .search .qchip:has(.x:hover) { background: var(--sub3); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
-mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: var(--ink); border-radius: 3px; padding: 0 1px; }
+/* The match highlight: Night's `sun` at 26%, Light's own highlighter yellow (`hl`, #135). */
+mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 
 /* ---------- Results ---------- */
 .search-list .bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; }
@@ -43,7 +44,7 @@ mark.hl { background: color-mix(in oklch, var(--sun) 26%, transparent); color: v
 .card-title { font-size: 12.5px; font-weight: 500; }
 .card-sub { font-size: 12.5px; color: var(--ink3); }
 .answer .field, .prop .field { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); min-width: 0; }
-.answer .field:focus-within, .prop .field:focus-within { box-shadow: inset 0 0 0 1px var(--edgeOn); background: var(--cardOn); }
+.answer .field:focus-within, .prop .field:focus-within { box-shadow: inset 0 0 0 1px var(--edgeFocus); background: var(--cardOn); }
 .answer .field input, .prop .field input { min-width: 0; }
 .answer .field input::placeholder, .prop .field input::placeholder { color: var(--ink3); opacity: 1; }
 .failed-line { display: flex; align-items: center; gap: 8px; color: var(--alert); font-size: 12.5px; }

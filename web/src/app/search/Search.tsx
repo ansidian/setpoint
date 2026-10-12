@@ -80,6 +80,8 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
   const [whole, setWhole] = useState(false);
   // The phone has no Esc: a search there is left by its clear button, where the hint would be.
   const phone = usePhone();
+  // While the field has focus, / types a slash and Esc is the way out, so the hint says Esc (#135).
+  const [focused, setFocused] = useState(false);
   useEffect(() => {
     const select = () => {
       input.current?.focus();
@@ -131,7 +133,11 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
         </span>
       ))}
       <input ref={input} id={inputId} className="grow" placeholder={search.chips.length ? '' : label} aria-label={label} value={search.text} autoFocus={autoFocus}
-        onChange={event => search.setText(event.target.value)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onBlur={() => setWhole(false)} />
+        onChange={event => search.setText(event.target.value)} onKeyDown={onKeyDown} onMouseDown={() => setWhole(false)} onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setWhole(false);
+          setFocused(false);
+        }} />
       {phone && search.active ? (
         // Its own tap stays its own: the label would send it on to the words.
         <button className="search-clear" type="button" aria-label="Clear search" onClick={event => {
@@ -139,7 +145,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
           search.clear();
           input.current?.blur();
         }}><Icon name="close" size={18} /></button>
-      ) : <span className="kbd">{search.active ? 'Esc' : '/'}</span>}
+      ) : <span className="kbd">{search.active || focused ? 'Esc' : '/'}</span>}
     </label>
   );
 }

@@ -80,10 +80,12 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `accent` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | "you are here": the open email's bar, the current page's icon, today's month boundary, a date range, selected search chips, News's updates |
 | `comf` | `oklch(0.8 0.11 165)` | `oklch(0.54 0.1 165)` | Work |
 | `good` | `oklch(0.8 0.13 150)` | `oklch(0.53 0.13 150)` | done or healthy: the done glyph, the reader's Done check |
-| `sun` | `oklch(0.86 0.16 92)` | `oklch(0.63 0.125 92)` | sun, search highlight (26% mix) |
+| `sun` | `oklch(0.86 0.16 92)` | `oklch(0.63 0.125 92)` | sun, Night's search highlight (26% mix) |
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
+| `hl` | `color-mix(in oklch, var(--sun) 26%, transparent)` | `oklch(0.92 0.12 96)` | search's match highlight |
+| `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(29,30,33,.3)` | a focused field's border |
 | `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
@@ -336,7 +338,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
 
 ### Search
 
-- `/` or ⌘F focuses the header field (focused: `edgeOn` border, `cardOn` fill). Results replace the
+- `/` or ⌘F focuses the header field (focused: `edgeFocus` border, `cardOn` fill, its hint `Esc`;
+  #135). Results replace the
   list; the reading pane and `J` / `K` work the same.
 - Recognised words become **chips** in the field (22 px, `sub2`), each with a small label in `ink3`
   and an ×: "Org Northwind ×", "Type Rejection ×", "Date Mar 2026 ×", plus account and kind. One
@@ -345,7 +348,8 @@ anything waits there and All when Unread would say "All caught up" (#102).
   ("Not Type Confirmation ×"); one that doesn't stays in the field as typed ("!proseware") and leaves
   out the mail that has it.
 - A results line: "2 results · newest first". Each result shows why it matched ("Org Northwind ·
-  Type Rejection", `ink3` 12) and highlights matches (`sun` at 26%).
+  Type Rejection", `ink3` 12) and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
+  yellow in Light, #135).
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80).
 - No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable, after a 20
@@ -1791,3 +1795,11 @@ it changes what's on screen.
     a 1 px `mailEdge` ring (`rgba(29,30,33,.1)`), a hairline rather than a shadow, so its boundary
     reads stronger than the email's own borders. `color-scheme` stays light (Andy, 2026-10-11, polish
     audit reader-08).
+135. **Search in Light highlights like a highlighter, and a focused field wakes up:** a token `hl`
+    keeps Night's 26% `sun` mix and gives Light its own solid `oklch(0.92 0.12 96)`, ink on it 13:1;
+    Light's mustard `sun` at 26% rendered khaki, 1.3:1 on the row, so matches read as smudges. A
+    focused field takes `edgeFocus` (Night `rgba(255,255,255,.2)`, Light `rgba(29,30,33,.3)`), at
+    least as strong as hover's `edgeHover`, on `cardOn` (white in Light): the header search, the
+    Answer and proposal cards' fields, the editor's, Settings' and sign-in's. While the header field
+    has focus its hint reads `Esc`, as / then types a slash (Andy, 2026-10-11, polish audit
+    search-02, search-06).

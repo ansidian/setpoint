@@ -391,3 +391,36 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
     await setpoint.stop();
   }
 });
+
+for (const theme of ['night', 'light'] as const) {
+  test(`${theme}: a focused search field takes edgeFocus on cardOn and its hint reads Esc; matches take hl, Light's a highlighter yellow (#135)`, async () => {
+    const setpoint = await startSetpoint({clock: 'frozen'});
+    try {
+      const page = await setpoint.page('target');
+      await inbox(page, setpoint.base, theme);
+      const field = page.locator('label.search');
+      await page.mouse.move(700, 300);
+      assert.equal(await field.locator('.kbd').textContent(), '/');
+      await page.keyboard.press('/');
+      // Focused and still empty: Esc is the way out.
+      await until('the hint reads Esc', () => field.locator('.kbd').textContent(), text => text === 'Esc');
+      const focus = await colourOf(page, 'var(--edgeFocus)');
+      assert.equal(focus, theme === 'light' ? 'rgba(29, 30, 33, 0.3)' : 'rgba(255, 255, 255, 0.2)');
+      await until('the focused border', () => style(field, 'borderTopColor'), colour => colour === focus);
+      assert.equal(await style(field, 'backgroundColor'), await colourOf(page, 'var(--cardOn)'));
+      if (theme === 'light') assert.equal(await style(field, 'backgroundColor'), 'rgb(255, 255, 255)', 'white in Light');
+      await page.keyboard.type('northwind');
+      await page.keyboard.press('Enter');
+      const mark = page.locator('.arow.result').first().locator('mark.hl').first();
+      await mark.waitFor();
+      assert.equal(await style(mark, 'backgroundColor'), await backgroundOf(page, theme === 'light' ? 'oklch(0.92 0.12 96)' : 'color-mix(in oklch, var(--sun) 26%, transparent)'));
+      // Blurred, with a query: still Esc; cleared, the slash again.
+      await page.keyboard.press('Escape');
+      await page.locator('.list .arow:not(.result)').first().waitFor();
+      await until('the hint back to /', () => field.locator('.kbd').textContent(), text => text === '/');
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}

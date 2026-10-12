@@ -48,6 +48,10 @@ export const colour = {
   navOnEdge: 'rgba(255,255,255,.07)',
   // The HTML email frame's ring (#134): none in Night, a hairline in Light, where white meets the page.
   mailEdge: 'transparent',
+  // Search's match highlight (#135): Night's 26% `sun` mix; Light's own, a real highlighter.
+  hl: 'color-mix(in oklch, var(--sun) 26%, transparent)',
+  // A focused field's border, at least as strong as hover's `edgeHover` (#135).
+  edgeFocus: 'rgba(255,255,255,.2)',
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#123).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
@@ -95,6 +99,8 @@ export const lightColour: Record<ColourToken, string> = {
   navOn: '#ffffff',
   navOnEdge: 'rgba(29,30,33,.10)',
   mailEdge: 'rgba(29,30,33,.1)',
+  hl: 'oklch(0.92 0.12 96)',
+  edgeFocus: 'rgba(29,30,33,.3)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
 };
