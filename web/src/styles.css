@@ -408,6 +408,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .nfold.cur { background: var(--sub2); }
 .list.all .row .kd { width: 100px; margin-left: 12px; margin-right: -10px; flex: none; display: flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
 .list.all .row .from { width: 200px; }
+/* Beside the reading pane the list is narrow, so the sender takes a quarter of its row (between 112 px
+   and its own width) and the summary keeps room (#240). Under 1100 px the pane covers the list. */
+.content:has(> .pane) .row .from { width: clamp(112px, 24%, 172px); }
+.content:has(> .pane) .list.all .row .from { width: clamp(112px, 24%, 200px); }
 .list.all .row .age { width: 72px; }
 .list.all .row.shelf .hact { width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }

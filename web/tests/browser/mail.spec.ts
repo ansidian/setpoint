@@ -950,6 +950,37 @@ test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, 
   }
 });
 
+test('#240: with the reader open the sender column takes 24% of its row, between 112 px and its own width, so the summary keeps room', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, '/inbox/all');
+    await page.setViewportSize({width: 1440, height: 900});
+    const widths = (row: Locator) => row.evaluate((node): [number, number] => {
+      // The row's width inside its padding, which a percentage is of.
+      const style = getComputedStyle(node);
+      return [node.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), node.querySelector('.from')!.getBoundingClientRect().width];
+    });
+    for (const [path, rows, wide] of [['/inbox/all', '.list.all .row:not(.shelf)', 200], ['/inbox', '.list .row:not(.shelf)', 172]] as const) {
+      await page.goto(`${setpoint.base}${path}`);
+      const row = page.locator(rows).first();
+      await row.waitFor();
+      // Closed, the column keeps its width.
+      assert.equal((await widths(row))[1], wide);
+      await row.click();
+      await page.locator('.pane .rd-subj').waitFor();
+      const [width, from] = await widths(row);
+      assert.equal(Math.round(from), Math.round(Math.min(wide, Math.max(112, width * .24))), path);
+      assert.ok(from < wide, `${path}: narrower with the reader open (${from}px of a ${width}px row)`);
+      await page.keyboard.press('Escape');
+      await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+      assert.equal((await widths(row))[1], wide);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('#238: the reader shows the email\'s summary under its subject, and none when triage wrote none', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -312,7 +312,7 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
   12, 76 px, on every row, decision 41, dropped only while the list is filtered to one account,
   #207), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
-  account never does, and All's kind becomes a subheading (#237).
+  account never does, and All's kind becomes a subheading (#237); the sender narrows to a quarter of the row (#240).
 - **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
   (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
   line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
@@ -2454,3 +2454,9 @@ it changes what's on screen.
 239. **On the phone a row's summary wraps to a second line** (amending #66): a row's line under the
     sender, and an Attention row's summary, take up to two lines, ending in "…" past them, rather
     than being cut at about 45 characters (Andy, 2026-10-12; darma SV-67).
+240. **Beside the reading pane the sender narrows:** with the pane open (at 1100 px and up, where it
+    sits beside the list), the sender or organisation takes 24% of its row's width inside its
+    padding, between 112 px and its own width (172 in Unread, 200 in All), so the summary keeps
+    room: at 1440 px with the pane at 680, All's summary goes from 73 to about 150 px. A long sender
+    ends in "…"; the reader names it whole. Unread at 1677 px is unchanged (Andy, 2026-10-12; darma
+    SV-67).
