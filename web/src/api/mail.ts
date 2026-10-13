@@ -124,7 +124,9 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
     for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterDone(inbox, id));
     updateCached<MailCountsOut>(COUNTS_PATH, counts => countsAfterDone(counts, found.row, found.attention));
   }
-  const mark = edit(id);
+  // All keeps Done mail, so its row and the reader show the change at once (SV-69).
+  updateAllRows(row => (row.id === id ? {...row, done} : row));
+  const mark = updateMessage(id, {done});
   return change(async () => {
     const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/done`, {done});
     answered(id, mark, message);

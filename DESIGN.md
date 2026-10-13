@@ -2460,3 +2460,9 @@ it changes what's on screen.
     room: at 1440 px with the pane at 680, All's summary goes from 73 to about 150 px. A long sender
     ends in "…"; the reader names it whole. Unread at 1677 px is unchanged (Andy, 2026-10-12; darma
     SV-67).
+241. **Done in All shows it** (amending #93, which keeps Done mail in All): the row stays, ticking in
+    place as Done's beat does (the check landing in the gutter in `good` over the row's `good` 14%
+    tint, both letting go over 260 ms), then settles `ink3` at 400, unread or not, with no dot or ring
+    and a ✓ Done tag before the account, as search's Done results read. Attention lanes count only
+    mail not yet Done, and one whose mail is all Done shows no count. Mail already Done shows "✓ Done"
+    in the reader's tools where the button was, not as a button (Andy, 2026-10-13; darma SV-69 D263).

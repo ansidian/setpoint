@@ -183,6 +183,50 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
   }
 });
 
+test('SV-69: Done in All ticks its row in place, then it stays quiet with a Done tag; the lane counts what\'s left and the reader says Done', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox/all`);
+    const lane = page.locator('.list.all .lh.att').first();
+    await until('Today\'s Attention lane', () => lane.textContent(), text => text === 'Attention 2');
+    const northwind = page.locator('.list.all .row[data-id="5"]');
+    await northwind.click();
+    await page.locator('.rd-tools .tool.done').waitFor();
+    await page.keyboard.press('h');
+
+    // The row stays where it was: its dot gives way to Done's check in `good`, its row tinting as Done's
+    // beat does, then its text settles in `ink3` beside a Done tag. The reader moves on to the next.
+    await until('Northwind ticked', () => northwind.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('ticked')));
+    assert.ok((await northwind.getAttribute('class'))!.split(' ').includes('done'));
+    assert.deepEqual(await northwind.locator('.ud > .icon').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).animationName.split(', ')[0]]),
+      [await colourOf(page, '--good'), 'beat-in']);
+    assert.equal(await northwind.evaluate(element => getComputedStyle(element).animationName), 'tick-settle');
+    assert.equal(await northwind.locator('.tag').textContent(), 'Done');
+    const ink3 = await colourOf(page, '--ink3');
+    await until('Northwind quiet', () => northwind.locator('.from').evaluate(element => getComputedStyle(element).color), colour => colour === ink3);
+    assert.equal(await lane.textContent(), 'Attention 1');
+    await until('the next email open', () => page.locator('.rd-subj').textContent(), text => !/Interview availability/.test(text ?? ''));
+
+    // Back on it, the reader says it's Done where the button was.
+    await northwind.click();
+    const status = page.locator('.rd-tools .rd-done');
+    await until('the reader\'s Done', () => status.textContent(), text => text === 'Done');
+    assert.equal(await page.locator('.rd-tools .tool.done').count(), 0);
+    assert.equal(await status.locator('.icon').evaluate(element => getComputedStyle(element).color), await colourOf(page, '--good'));
+
+    // Undo puts it back as it was: no tag, Attention 2, and Done offered again.
+    await page.locator('.toast button', {hasText: 'Undo'}).click();
+    await until('Northwind not Done', () => northwind.getAttribute('class'), classes => !classes?.split(' ').includes('done'));
+    assert.equal(await northwind.locator('.tag').count(), 0);
+    await until('Attention 2 again', () => lane.textContent(), text => text === 'Attention 2');
+    await page.locator('.rd-tools .tool.done').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('shell-06, motion-04: the Today event leads with its calendar\'s bar and warms as it nears; completing a task lands its check as every task\'s does and fades its title', async () => {
   // The server's clock holds at the seed's 9:12 AM; the page's is the check's, moved on to Dentist.
   const setpoint = await startSetpoint({clock: 'frozen'});

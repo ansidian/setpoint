@@ -85,6 +85,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const listed = message ?? (row?.id === id ? row : undefined);
   const moreItems = listed && readerActions(listed).proposals === 'more';
   const doneable = listed ? readerActions(listed).done : false;
+  // Attention mail already Done says so in its place (SV-69).
+  const isDone = listed ? listed.lane === 'attention' && listed.done : false;
   // The tools draw from the email's row until the email itself is in, so they're right at once:
   // Unpin on pinned mail, and Open in Gmail on Gmail's mail only (an email has its Gmail link exactly
   // when its account is Gmail's), its place held while that's unknown.
@@ -139,6 +141,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {/* Only in the compact tier, where the reader covers the list (#140). */}
         <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
+        {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
         <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
         <button className={pinned ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={pinned} onClick={actions.pin}>
           <Icon name={pinned ? 'keep-fill' : 'keep'} />{pinned ? 'Unpin' : 'Pin'}<span className="kbd">P</span>

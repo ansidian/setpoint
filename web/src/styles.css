@@ -258,6 +258,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .beat-done .ud > .icon { color: var(--good); }
 .beat-trash .ud > .icon { color: var(--alert); }
 @keyframes beat-in { from { opacity: 0; transform: scale(.6); } }
+/* Done in All, where its row stays (SV-69): it ticks in place, as Done's beat (the check landing, the
+   `good` tint), and the tint and check let go over 260 ms; meanwhile its text settles in `ink3` beside a
+   Done tag, unread or not, as search's Done results read. */
+.list.all .row.ticked { animation: tick-settle calc(var(--dur-fast) + var(--dur-slow)) var(--ease); }
+.list.all .row.ticked .ud > .icon { color: var(--good); animation: beat-in var(--dur-fast) var(--ease), tick-out var(--dur-slow) var(--ease) var(--dur-fast) forwards; }
+.list.all .row.done .ud::before { background: transparent; box-shadow: none; }
+.list.all .row.done :is(.from, .subj b, .subj .alertsubj) { color: var(--ink3); font-weight: 400; transition: color var(--dur-medium) var(--ease); }
+.list.all .row .tag { margin-right: 10px; animation: beat-in var(--dur-fast) var(--ease); }
+@keyframes tick-settle { from, 32% { background: color-mix(in oklch, var(--good) 14%, transparent); } }
+@keyframes tick-out { to { opacity: 0; } }
 .row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj .sum { color: var(--ink3); }
@@ -330,6 +340,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    in `alert` and presses in it (#169); every tool presses as pills do (below). */
 .rd-tools .tool.done { color: var(--ink); }
 .rd-tools .tool.done .icon { color: var(--good); }
+/* Mail already Done says so where Done was, without being a button (SV-69). */
+.rd-tools .rd-done { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; color: var(--ink2); font-size: 12.5px; flex: none; }
+.rd-tools .rd-done .icon { color: var(--good); }
 .rd-tools .tool.trash:hover { color: var(--alert); background: color-mix(in oklch, var(--alert) 12%, transparent); }
 .rd-tools .tool.trash:hover .kbd { color: var(--alert); background: color-mix(in oklch, var(--alert) 16%, transparent); }
 /* Reply's place, after Open in Gmail, empty until reply exists. */

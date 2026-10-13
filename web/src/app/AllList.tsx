@@ -4,9 +4,10 @@
 // line that opens in place (#48). Pinned email sits on Unread's
 // Pinned shelf above the days, with ages and Unpin under the pointer, and leaves its day meanwhile (D105).
 // Pages load as the list nears its end. What shows comes from logic/all.ts; actions are the page's.
-// A trashed row folds out and Undo folds it back in, as in Unread (app/fold.ts).
+// A trashed row folds out and Undo folds it back in, as in Unread (app/fold.ts). A row Done takes stays,
+// as All keeps Done mail: it ticks in place, then settles quiet with a Done tag (SV-69).
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
-import {useLayoutEffect, useMemo, useRef} from 'react';
+import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, RefObject, UIEvent} from 'react';
 import {allRowLine, dayHeading, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
@@ -72,7 +73,9 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
     ...days.flatMap((day): Entry<Part>[] => [
     {key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}},
     ...day.lanes.flatMap(lane => [
-      {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', lane: lane.lane, label: lane.label, count: lane.rows.length}} satisfies Entry<Part>,
+      // Attention counts what still needs the user, as the sidebar's pill does (SV-69).
+      {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', lane: lane.lane, label: lane.label,
+        count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length}} satisfies Entry<Part>,
       ...lane.rows.flatMap(({row, kind}) => [
         ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
         rowEntry(row, kind),
@@ -86,6 +89,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
   ], [days, shelf]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
   const [list, keep] = useKeptRow(openId);
+  const ticked = useTicked(days);
   // A row Trash took beats first; rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   return (
@@ -109,7 +113,12 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
           return <div key={key} ref={ref} className={['gh', 'day', index === 0 && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{heading.label} <span className="date">{heading.date}</span></div>;
         }
         if (item.kind === 'lane') {
-          return <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{item.label} <span className="n"><Count value={item.count} /></span></div>;
+          // An Attention lane whose mail is all Done drops its count rather than reading 0.
+          return (
+            <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+              {item.label}{item.count > 0 && <> <span className="n"><Count value={item.count} /></span></>}
+            </div>
+          );
         }
         if (item.kind === 'kh') {
           return (
@@ -133,7 +142,8 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
         const {row} = item;
         const line = allRowLine(row);
         const account = accounts.get(row.account_id);
-        const classes = ['row', item.shelf && 'shelf', row.unread && 'unread', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
+        const tick = ticked.has(row.id);
+        const classes = ['row', item.shelf && 'shelf', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
           .filter(Boolean).join(' ');
         const unpin = (event: MouseEvent) => {
           event.stopPropagation();
@@ -143,7 +153,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
           <div key={key} ref={ref} className={classes} title={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onClick={leaving ? undefined : () => onOpen(row.id, key)}>
             <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
-            <Gutter beat={beat} />
+            <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
             <span className="subj">
               <b className={line.alert ? 'alertsubj' : undefined}>
@@ -151,6 +161,7 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
               </b>
               {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
             </span>
+            {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
             <span className="age" title={fullTimestamp(row.received_at, timeZone)}>{item.shelf ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>
             {/* On the Pinned shelf, Unpin takes the age's place under the pointer, as in Unread (board 10). */}
@@ -164,6 +175,23 @@ export function AllList({days, shelf, cursor, openId, accounts, now, timeZone, l
     </section>
   );
 }
+
+/**
+ * The rows that turned Done while the list showed them, so each ticks once, in place; a row already
+ * Done when it first showed doesn't, and Undo takes the tick away with the Done.
+ */
+function useTicked(days: DayView[]): ReadonlySet<number> {
+  const [state, setState] = useState(() => ({days, seen: doneOf(days), ticked: new Set<number>()}));
+  if (state.days === days) return state.ticked;
+  const seen = doneOf(days);
+  const ticked = new Set([...state.ticked].filter(id => seen.get(id)));
+  for (const [id, done] of seen) if (done && state.seen.get(id) === false) ticked.add(id);
+  setState({days, seen: new Map([...state.seen, ...seen]), ticked});
+  return ticked;
+}
+
+/** Whether each row the days show is Done. */
+const doneOf = (days: DayView[]) => new Map(days.flatMap(day => day.lanes.flatMap(lane => lane.rows.map(({row}): [number, boolean] => [row.id, row.done]))));
 
 /**
  * The reading pane opening or closing shows or hides the kinds' subheadings (#237), which would move
