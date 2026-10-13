@@ -59,6 +59,10 @@ const STRONG_MARKER_SOURCE = [
 ].join('|');
 const STRONG_MARKER = new RegExp(`\\b(?:${STRONG_MARKER_SOURCE})\\b`, 'i');
 const STRONG_MARKER_EXACT = new RegExp(`^(?:${STRONG_MARKER_SOURCE})$`, 'i');
+// "Confirmation code" also heads payment receipts and offers ("Confirmation Code: 8359001"), so it
+// counts in an email only when the subject says it's a code email (SV-68; Android dropped
+// "confirmation" for the same reason).
+const CONFIRMATION_MARKER = /^confirmation\s/i;
 
 const CANDIDATE_RE = /(?<![A-Za-z0-9])(?:[A-Za-z0-9]{3,4}(?:-[A-Za-z0-9]{3,4}){1,3}|[A-Za-z0-9]{4,12})(?![A-Za-z0-9])/g;
 // What may sit between a marker and the code after it ("code: 482913", "code is below 482913").
@@ -112,8 +116,9 @@ function validInstant(value: unknown): Date | null {
 }
 
 /**
- * Blanks out what looks like a code but isn't, keeping positions: links, addresses, UUIDs, prices,
- * dates, clock times, phone numbers, ZIP codes after a state, dial-in passcodes ending "#", and
+ * Blanks out what looks like a code but isn't, keeping positions: links, addresses, UUIDs, IPv6
+ * addresses, prices, dates, clock times, phone numbers, ZIP and postal codes, dial-in passcodes
+ * ending "#", promotion codes (promo, coupon, discount, offer, voucher, gift, referral), and
  * order/tracking/claim/ticket/invoice numbers.
  */
 function maskRejected(text: string): string {
@@ -122,12 +127,15 @@ function maskRejected(text: string): string {
     .replace(/https?:\/\/\S+/gi, mask)
     .replace(/\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b/g, mask)
     .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, mask)
+    .replace(/\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b/gi, mask)
     .replace(/[$€£]\s*\d[\d,.]*/g, mask)
     .replace(/\b\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\b/g, mask)
     .replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]m)?\b/gi, mask)
     .replace(/(?:\+?\d[\s().-]*){10,}/g, mask)
     .replace(/,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/g, mask)
     .replace(/\b\d{4,}#/g, mask)
+    .replace(/\b(?:postal(?:\s+code)?|zip(?:\s+code)?|post\s*code)\s*[:#-]?\s*[A-Za-z0-9]{3,10}(?:[\s-][A-Za-z0-9]{3,4})?\b/gi, mask)
+    .replace(/\b(?:promo(?:tion(?:al)?)?|coupon|discount|offer|voucher|gift|referral)\s+(?:code\s*)?[:#-]?\s*[A-Za-z0-9-]{4,}\b/gi, mask)
     .replace(/\b(?:order|tracking|claim|ticket|invoice)\s*(?:(?:number|no\.?|id)\s*)?[:#-]?\s*[A-Za-z0-9-]{4,}\b/gi, mask);
 }
 
@@ -157,10 +165,11 @@ function candidatesIn(text: string): Candidate[] {
  * plus up to 20 for closeness, plus 30 when nothing but "is", "below", punctuation and the like
  * stands between them ("direct"). Only direct candidates count.
  */
-function scoreField(text: string, fieldBase: number, allowBareCode: boolean): Scored[] {
+function scoreField(text: string, fieldBase: number, allowBareCode: boolean, codeEmail: boolean): Scored[] {
   const candidates = candidatesIn(text);
   if (!candidates.length) return [];
-  const markers = [...text.matchAll(new RegExp(`\\b(?:${STRONG_MARKER_SOURCE})\\b${allowBareCode ? '|\\bcode\\b' : ''}`, 'gi'))];
+  const markers = [...text.matchAll(new RegExp(`\\b(?:${STRONG_MARKER_SOURCE})\\b${allowBareCode ? '|\\bcode\\b' : ''}`, 'gi'))]
+    .filter(marker => codeEmail || !CONFIRMATION_MARKER.test(marker[0]));
   const scored: Scored[] = [];
   for (const candidate of candidates) {
     let best = -1;
@@ -266,14 +275,13 @@ export function detectVerificationCode(input: CodeInput): DetectedCode | null {
   const bodyText = normalizeCodeText(stripTags(String(input.bodyText ?? '')));
   const html = htmlText(input.bodyHtml);
   const subjectHasStrongMarker = STRONG_MARKER.test(subject);
+  const codeEmail = subjectHasStrongMarker || CODE_SUBJECT.test(subject);
   const winner = onlyBest([
-    ...scoreField(subject, 100, false),
-    ...scoreField(snippet, 70, subjectHasStrongMarker),
-    ...scoreField(bodyText, 60, subjectHasStrongMarker),
-    ...scoreField(html, 60, subjectHasStrongMarker),
-  ]) ?? (subjectHasStrongMarker || CODE_SUBJECT.test(subject)
-    ? onlyBest([subject, snippet, bodyText, html].flatMap(contextCodes))
-    : null);
+    ...scoreField(subject, 100, false, codeEmail),
+    ...scoreField(snippet, 70, subjectHasStrongMarker, codeEmail),
+    ...scoreField(bodyText, 60, subjectHasStrongMarker, codeEmail),
+    ...scoreField(html, 60, subjectHasStrongMarker, codeEmail),
+  ]) ?? (codeEmail ? onlyBest([subject, snippet, bodyText, html].flatMap(contextCodes)) : null);
   if (!winner) return null;
   return {code: winner.code, kind: winner.kind, expiresAt: new Date(received.getTime() + input.expiryMinutes * 60_000).toISOString()};
 }

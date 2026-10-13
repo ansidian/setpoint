@@ -90,6 +90,8 @@ describe('detectVerificationCode reads code emails the strict pass misses (SV-68
     ['text run together: the HTML\'s standalone code wins over "418265Please"', 'One-time code to access your Contoso account.',
       'Enter the below six digits where you requested the One-time code.418265Please do not share this with anyone.',
       '<p>Enter the below six digits where you requested the One-time code.</p><p style="font-size: 48px;"><b>418265</b></p><p>Please do not share this with anyone.</p>', '418265'],
+    ['an IPv6 address before the code is not a second candidate', 'Contoso Verification Code',
+      'IP Address: 2001:0db8:f642:4500:58bb:ab78:6922:1431 Enter this 6 digit code on the sign in page to confirm your identity: 517390 If you sign in often, turn this off.', null, '517390'],
   ])('%s', (_, subject, body, html, code) => {
     expect(read(subject, body, html)).toBe(code);
   });
@@ -104,8 +106,19 @@ describe('detectVerificationCode reads code emails the strict pass misses (SV-68
     ['a promotion code when the subject isn\'t a code email', 'Your weekend code inside', 'Use code SAVE20 at checkout to take 20% off.'],
     ['a colour in a raw style attribute is not a second code', 'Verify your email', 'Use this code to finish:<span style="color:#ff0000;">nothing here</span> to verify.'],
     ['a ZIP code near "verify"', 'Verify your address', 'Please verify your address: 100 Main St, Springfield, CA 90012.'],
+    ['a postal code in an email about verifying details', 'Reminder to verify the accuracy of your Whois data',
+      'City: Springfield State/Province: California Country: US Postal Code: 91730 Email: owner@example.com'],
+    ['a promo code in an email whose subject says verification', 'Verification complete. Welcome to Contoso.',
+      'Log into your account and use promo code WELCOME20 at checkout to redeem your offer.'],
+    ['an offer\'s "Confirmation code" when the subject isn\'t a code email', 'Your $500 is waiting for you!',
+      'Offer expires April 9, 2026 Confirmation code: QXR0195544 Running a business means long hours.'],
   ])('%s', (_, subject, body) => {
     expect(read(subject, body)).toBeNull();
+  });
+
+  test('a payment receipt\'s "Confirmation Code", only in its HTML, is no code when the subject isn\'t a code email', () => {
+    expect(read('Contoso Insurance Online Payment Confirmation', '',
+      '<table><tr><td>Transaction Time: 09/22/2026 08:51:56 PM PT</td></tr><tr><td>Confirmation Code: 7351902</td></tr><tr><td>Payment Amount: $120.00</td></tr></table>')).toBeNull();
   });
 });
 
