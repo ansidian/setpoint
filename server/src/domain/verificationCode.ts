@@ -59,7 +59,7 @@ const STRONG_MARKER_SOURCE = [
 ].join('|');
 const STRONG_MARKER = new RegExp(`\\b(?:${STRONG_MARKER_SOURCE})\\b`, 'i');
 const STRONG_MARKER_EXACT = new RegExp(`^(?:${STRONG_MARKER_SOURCE})$`, 'i');
-// "Confirmation code" also heads payment receipts and offers ("Confirmation Code: 8359001"), so it
+// "Confirmation code" also heads payment receipts and offers ("Confirmation Code: 7351902"), so it
 // counts in an email only when the subject says it's a code email (SV-68; Android dropped
 // "confirmation" for the same reason).
 const CONFIRMATION_MARKER = /^confirmation\s/i;
