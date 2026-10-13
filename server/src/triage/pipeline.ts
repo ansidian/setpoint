@@ -22,6 +22,8 @@ import {detectVerificationCode} from '../domain/verificationCode.ts';
 export type Tier = 'cheap' | 'strong';
 
 export interface TriageEmail extends RuleEmail {
+  // Read only for its verification code (SV-68): some senders put the code only in the HTML.
+  bodyHtml: string | null;
   receivedAt: string;
   accountLabel: string | null;
 }
@@ -58,7 +60,7 @@ function decidingRule(context: PipelineContext, email: TriageEmail, reading: Rea
 }
 
 export async function triageEmail(context: PipelineContext, email: TriageEmail, incomplete = false): Promise<Outcome> {
-  const code = detectVerificationCode({subject: email.subject, snippet: email.snippet, bodyText: email.bodyText, receivedAt: email.receivedAt, expiryMinutes: context.codeExpiryMinutes});
+  const code = detectVerificationCode({subject: email.subject, snippet: email.snippet, bodyText: email.bodyText, bodyHtml: email.bodyHtml, receivedAt: email.receivedAt, expiryMinutes: context.codeExpiryMinutes});
   const textProtected = protectedFromText(email.subject, email.bodyText);
   const hardRisk = hasHardRisk(email);
   // Rules that need nothing read: can one decide before any model?
@@ -123,7 +125,7 @@ export async function triageEmail(context: PipelineContext, email: TriageEmail, 
  * reading guessed, without touching the lane.
  */
 export function triageHistory(context: Pick<PipelineContext, 'rules' | 'codeExpiryMinutes'>, email: TriageEmail): Outcome {
-  const code = detectVerificationCode({subject: email.subject, snippet: email.snippet, bodyText: email.bodyText, receivedAt: email.receivedAt, expiryMinutes: context.codeExpiryMinutes});
+  const code = detectVerificationCode({subject: email.subject, snippet: email.snippet, bodyText: email.bodyText, bodyHtml: email.bodyHtml, receivedAt: email.receivedAt, expiryMinutes: context.codeExpiryMinutes});
   const reading = historyReading(email);
   const rule = decidingRule({...context, ask: null}, email, reading, hasHardRisk(email));
   return {

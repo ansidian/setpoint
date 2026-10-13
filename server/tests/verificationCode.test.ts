@@ -65,6 +65,50 @@ describe('detectVerificationCode refuses look-alikes', () => {
   });
 });
 
+describe('detectVerificationCode reads code emails the strict pass misses (SV-68)', () => {
+  // Modelled on code emails the strict pass missed in production, wording invented. The second pass
+  // is Android's rule (AOSP NotificationOtpDetectionHelper): a context word within 50 characters, in
+  // the code's sentence or the one before; it runs only when the subject says it's a code email.
+  const read = (subject: string, body: string, html: string | null = null) =>
+    detectVerificationCode({subject, snippet: body.slice(0, 120), bodyText: body, bodyHtml: html, receivedAt: RECEIVED, expiryMinutes: 15})?.code ?? null;
+
+  test.each<[string, string, string, string | null, string]>([
+    // name, subject, body, html, code
+    ['words between the code and what it confirms, with raw tags in the text part', 'Your Fabrikam Bank confirmation code',
+      'Use this code to confirm your email address:610482<br /><span style="font-size:11px; color:#ff0000;">DO NOT share this code with ANYONE.</span>', null, '610482'],
+    ['the code before its context word, with words between', 'Your requested Contoso email verification code',
+      'Hi, 584203 is your Contoso email verification code. If you did not make this request, ignore it.', null, '584203'],
+    ['the context word after the code, in the same sentence', 'E-mail verification', '7316 Dear customer, please enter the following code to finish.', null, '7316'],
+    ['the code a sentence after its context word', 'Verify your email address',
+      'We need to verify your email address before you can sign in. Enter the code below in your open browser window. 904417 This code expires in 10 minutes.', null, '904417'],
+    ['a code only in the HTML, on its own line after a colon', 'Your loan one-time passcode', '',
+      '<p>To complete your sign in, enter the code below. This one-time code is only valid for 15 minutes:<br><br>730158<br><br>If you did not request this code, call 1-800-555-0134.</p>', '730158'],
+    ['a code only in the HTML, in bold after its marker', 'Contoso: Your sign-in Code for Claim Portal', '',
+      '<style>.x{color:#123456}</style><p>Here is your requested security code: <b style="font-size: 20px">502917</b>. Please enter the code into the box.</p>', '502917'],
+    ['an access PIN in its own block after two sentences about it', 'Access PIN for Contoso claim documents', '',
+      '<p>To securely access the documents, please use the access PIN below.</p><p>This access PIN is specific and unique to you.</p><div>8261</div><p>Please note: this address cannot accept email.</p>', '8261'],
+    ['text run together: the HTML\'s standalone code wins over "418265Please"', 'One-time code to access your Contoso account.',
+      'Enter the below six digits where you requested the One-time code.418265Please do not share this with anyone.',
+      '<p>Enter the below six digits where you requested the One-time code.</p><p style="font-size: 48px;"><b>418265</b></p><p>Please do not share this with anyone.</p>', '418265'],
+  ])('%s', (_, subject, body, html, code) => {
+    expect(read(subject, body, html)).toBe(code);
+  });
+
+  test.each<[string, string, string]>([
+    // name, subject, body
+    ['text run together with no HTML is no code, not "418265Please"', 'One-time code to access your Contoso account.',
+      'Enter the below six digits where you requested the One-time code.418265Please do not share this with anyone.'],
+    ['a dial-in passcode ending "#"', 'Join the public hearing', 'Phone Number: 1-800-555-0100 Passcode: 5093316# Please note: comments are public.'],
+    ['a year near a context word', 'Verify your account', 'Please verify your account before August 6, 2026 to keep access.'],
+    ['an account number near "log in" when the subject isn\'t a code email', 'Your statement is ready', 'Log in to view the statement for your account ending 4821.'],
+    ['a promotion code when the subject isn\'t a code email', 'Your weekend code inside', 'Use code SAVE20 at checkout to take 20% off.'],
+    ['a colour in a raw style attribute is not a second code', 'Verify your email', 'Use this code to finish:<span style="color:#ff0000;">nothing here</span> to verify.'],
+    ['a ZIP code near "verify"', 'Verify your address', 'Please verify your address: 100 Main St, Springfield, CA 90012.'],
+  ])('%s', (_, subject, body) => {
+    expect(read(subject, body)).toBeNull();
+  });
+});
+
 test('normalizeCodeText decodes entities, drops invisible formatting and collapses whitespace', () => {
   expect(normalizeCodeText('a&amp;b&#x41;&#66;\u200C\uFEFF  c\n\td &unknown;')).toBe('a&bAB c d &unknown;');
   expect(normalizeCodeText(null)).toBe('');

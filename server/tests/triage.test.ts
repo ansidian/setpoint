@@ -121,6 +121,18 @@ describe('once per email, history, the ledger', () => {
     expect(fake.requests).toHaveLength(1);
   });
 
+  test('a code only in the HTML part is found, for new mail and history alike (SV-68)', async () => {
+    const {fake, world, deliver} = await setup();
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    fake.answer(() => decision({kind: 'security', type: 'verification_code', organisation: 'Contoso'}));
+    const passcode = {subject: 'Your loan one-time passcode', bodyText: '', bodyHtml: '<p>This one-time code is only valid for 15 minutes:<br><br>730158</p>'};
+    const fresh = deliver(passcode);
+    const old = deliver({...passcode, receivedAt: '2026-04-02T16:00:00.000Z'}, 'Jobs', true);
+    await world.drain();
+    expect(world.message(fresh)).toMatchObject({code: '730158', codeExpiresAt: '2026-10-07T16:15:00.000Z'});
+    expect(world.message(old).code).toBe('730158');
+  });
+
   test('backfilled history is sorted at once by the rules-only pass, with no model call; protected history keeps its flag but not Attention', async () => {
     const {fake, world, deliver} = await setup();
     setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);

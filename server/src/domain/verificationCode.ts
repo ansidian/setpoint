@@ -3,8 +3,12 @@
 // (SV-4's harvest note): conservative and context-bound, because v1's production sampling found
 // that matching "code" broadly catches programming and news mail, order numbers, phone numbers and
 // prices. A code is returned only when exactly one candidate scores highest; anything ambiguous is
-// no code. The row leaves the Inbox after Settings › Mail's code expiry (15 minutes by default),
-// counted from the email's arrival; v1 used a fixed 30.
+// no code. When that strict pass finds none and the subject says it's a code email, a second pass
+// applies Android's rule (SV-68, from AOSP's NotificationOtpDetectionHelper, Apache-2.0): a context
+// word within 50 characters of the code, in its sentence or the one before, with any words between;
+// again exactly one code or none. Both read the HTML part's text as well as the text part, since
+// some senders put the code only in the HTML. The row leaves the Inbox after Settings › Mail's code
+// expiry (15 minutes by default), counted from the email's arrival; v1 used a fixed 30.
 //
 // Pure: no I/O, and nothing here logs a code or its surroundings.
 
@@ -23,6 +27,7 @@ export interface CodeInput {
   subject: string | null | undefined;
   snippet: string | null | undefined;
   bodyText: string | null | undefined;
+  bodyHtml?: string | null | undefined;
   // When the email arrived (ISO 8601 UTC); without a valid one, freshness can't be known.
   receivedAt: string | null | undefined;
   expiryMinutes: number;
@@ -83,6 +88,21 @@ export function normalizeCodeText(value: unknown): string {
     .trim();
 }
 
+/** Text with any markup in it (a text part can carry raw tags) read as spaces. */
+function stripTags(value: string): string {
+  return value.replace(/<\/?[A-Za-z][^<>]*>/g, ' ');
+}
+
+// Enough of the HTML part's text to hold a code, however long the email.
+const HTML_TEXT_LIMIT = 20_000;
+
+/** The HTML part's visible text: head, styles, scripts and comments dropped, every tag a space. */
+function htmlText(html: string | null | undefined): string {
+  if (!html) return '';
+  const body = html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(head|style|script)\b[\s\S]*?<\/\1\s*>/gi, ' ');
+  return normalizeCodeText(stripTags(body)).slice(0, HTML_TEXT_LIMIT);
+}
+
 /** A strict ISO 8601 UTC instant that round-trips (v1 refused anything else rather than guess). */
 function validInstant(value: unknown): Date | null {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) return null;
@@ -93,7 +113,8 @@ function validInstant(value: unknown): Date | null {
 
 /**
  * Blanks out what looks like a code but isn't, keeping positions: links, addresses, UUIDs, prices,
- * dates, clock times, phone numbers and order/tracking/claim/ticket/invoice numbers.
+ * dates, clock times, phone numbers, ZIP codes after a state, dial-in passcodes ending "#", and
+ * order/tracking/claim/ticket/invoice numbers.
  */
 function maskRejected(text: string): string {
   const mask = (value: string) => ' '.repeat(value.length);
@@ -105,13 +126,17 @@ function maskRejected(text: string): string {
     .replace(/\b\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\b/g, mask)
     .replace(/\b\d{1,2}:\d{2}(?::\d{2})?(?:\s*[ap]m)?\b/gi, mask)
     .replace(/(?:\+?\d[\s().-]*){10,}/g, mask)
+    .replace(/,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/g, mask)
+    .replace(/\b\d{4,}#/g, mask)
     .replace(/\b(?:order|tracking|claim|ticket|invoice)\s*(?:(?:number|no\.?|id)\s*)?[:#-]?\s*[A-Za-z0-9-]{4,}\b/gi, mask);
 }
 
 /** 4–8 digits; 4–12 letters and digits with at least one of each; or 2–4 hyphenated groups of 3–4. */
 function classify(code: string): Pick<Candidate, 'kind' | 'alphabeticHyphenated'> | null {
   if (/^\d{4,8}$/.test(code)) return {kind: 'numeric', alphabeticHyphenated: false};
-  if (/^[A-Za-z0-9]{4,12}$/.test(code) && /[A-Za-z]/.test(code) && /\d/.test(code)) return {kind: 'alphanumeric', alphabeticHyphenated: false};
+  // Three lowercase letters in a row are a word run into digits ("418265Please"); Android found no
+  // code that has them.
+  if (/^[A-Za-z0-9]{4,12}$/.test(code) && /[A-Za-z]/.test(code) && /\d/.test(code) && !/[a-z]{3}/.test(code)) return {kind: 'alphanumeric', alphabeticHyphenated: false};
   if (/^[A-Za-z0-9]{3,4}(?:-[A-Za-z0-9]{3,4}){1,3}$/.test(code)) return {kind: 'hyphenated', alphabeticHyphenated: !/\d/.test(code)};
   // Ordinary words ("hello", "SIGNIN") are never codes.
   return null;
@@ -183,19 +208,42 @@ function scoreField(text: string, fieldBase: number, allowBareCode: boolean): Sc
   return scored;
 }
 
-/** The email's one verification code and when its row expires, or null. */
-export function detectVerificationCode(input: CodeInput): DetectedCode | null {
-  const received = validInstant(input.receivedAt);
-  if (!received) return null;
-  const subject = normalizeCodeText(input.subject);
-  const snippet = normalizeCodeText(input.snippet);
-  const bodyText = normalizeCodeText(input.bodyText);
-  const subjectHasStrongMarker = STRONG_MARKER.test(subject);
-  const matches = [
-    ...scoreField(subject, 100, false),
-    ...scoreField(snippet, 70, subjectHasStrongMarker),
-    ...scoreField(bodyText, 60, subjectHasStrongMarker),
-  ];
+// Android's context words, less "TAN" (a German bank's transaction number, and an English word).
+const CONTEXT_RE = new RegExp(String.raw`\b(?:pin|pass[-\s]?(?:code|word)|otp|2fa|(?:two|2)[-\s]?factor|log[-\s]?in|auth(?:enticat(?:e|ion))?|code|secret|verif(?:y|ication)|one[-\s]?time|access|validat(?:e|ion))\b`, 'gi');
+// A subject that says it's a code email, which the second pass needs: without it, "log in" near an
+// account number or "code" near a promotion would read as a code.
+const CODE_SUBJECT = /\b(?:verif(?:y|ication)|one[-\s]?time|2fa|two[-\s]?factor|authenticat(?:e|ion))\b/i;
+const CONTEXT_REACH = 50;
+
+/**
+ * The second pass (Android's rule): candidates with a context word within 50 characters, in their
+ * sentence or the one before (the word first), or in their sentence (the word after). Years are
+ * dates, and letters-only hyphenated groups are words, so neither counts here.
+ */
+function contextCodes(text: string): Scored[] {
+  const contexts = [...text.matchAll(CONTEXT_RE)].map(match => ({start: match.index!, end: match.index! + match[0].length}));
+  if (!contexts.length) return [];
+  const found: Scored[] = [];
+  for (const candidate of candidatesIn(text)) {
+    if (candidate.alphabeticHyphenated || /^(?:19|20)\d\d$/.test(candidate.code)) continue;
+    const near = contexts.some(context => {
+      if (context.end <= candidate.start) {
+        const gap = text.slice(context.end, candidate.start);
+        return gap.length <= CONTEXT_REACH && (gap.match(/[.?!]/g)?.length ?? 0) <= 1;
+      }
+      if (candidate.end <= context.start) {
+        const gap = text.slice(candidate.end, context.start);
+        return gap.length <= CONTEXT_REACH && !/[.?!]/.test(gap);
+      }
+      return false;
+    });
+    if (near) found.push({code: candidate.code, kind: candidate.kind, score: 0});
+  }
+  return found;
+}
+
+/** The one code with the top score, or null when there's none or two tie. */
+function onlyBest(matches: Scored[]): Scored | null {
   if (!matches.length) return null;
   // The same code seen in several fields counts once, at its best.
   const bestByCode = new Map<string, Scored>();
@@ -206,7 +254,26 @@ export function detectVerificationCode(input: CodeInput): DetectedCode | null {
   const top = Math.max(...[...bestByCode.values()].map(match => match.score));
   const winners = [...bestByCode.values()].filter(match => match.score === top);
   // Two different codes equally likely: no code.
-  if (winners.length !== 1) return null;
-  const winner = winners[0]!;
+  return winners.length === 1 ? winners[0]! : null;
+}
+
+/** The email's one verification code and when its row expires, or null. */
+export function detectVerificationCode(input: CodeInput): DetectedCode | null {
+  const received = validInstant(input.receivedAt);
+  if (!received) return null;
+  const subject = normalizeCodeText(stripTags(String(input.subject ?? '')));
+  const snippet = normalizeCodeText(stripTags(String(input.snippet ?? '')));
+  const bodyText = normalizeCodeText(stripTags(String(input.bodyText ?? '')));
+  const html = htmlText(input.bodyHtml);
+  const subjectHasStrongMarker = STRONG_MARKER.test(subject);
+  const winner = onlyBest([
+    ...scoreField(subject, 100, false),
+    ...scoreField(snippet, 70, subjectHasStrongMarker),
+    ...scoreField(bodyText, 60, subjectHasStrongMarker),
+    ...scoreField(html, 60, subjectHasStrongMarker),
+  ]) ?? (subjectHasStrongMarker || CODE_SUBJECT.test(subject)
+    ? onlyBest([subject, snippet, bodyText, html].flatMap(contextCodes))
+    : null);
+  if (!winner) return null;
   return {code: winner.code, kind: winner.kind, expiresAt: new Date(received.getTime() + input.expiryMinutes * 60_000).toISOString()};
 }

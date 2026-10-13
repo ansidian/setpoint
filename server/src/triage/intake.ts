@@ -23,7 +23,7 @@ export function triageEmailOf(store: Store, message: MessageRow): TriageEmail {
   const account = store.db.select({label: t.accounts.label}).from(t.accounts).where(eq(t.accounts.id, message.accountId)).get();
   return {
     fromName: message.fromName, fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText,
-    receivedAt: message.receivedAt, accountLabel: account?.label ?? null,
+    bodyHtml: message.bodyHtml, receivedAt: message.receivedAt, accountLabel: account?.label ?? null,
   };
 }
 
