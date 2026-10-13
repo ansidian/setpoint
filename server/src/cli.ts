@@ -9,6 +9,9 @@
 //                                            trusted senders and pins (src/importV1.ts has the format)
 //   npm run cli -- import-v1-triage <file>   only v1's triage rules and lane corrections
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
+//   npm run cli -- codes            which sorted emails' verification codes reading again would change,
+//                                   and the code emails still without one (SV-68)
+//   npm run cli -- codes --apply    write those changes
 //
 // It uses the same SETPOINT_DATA_DIR as the server (data/dev by default).
 import fs from 'node:fs';
@@ -22,6 +25,8 @@ import {importV1} from './importV1.ts';
 import {sourceList} from './queries/sources.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import type {Store} from './store.ts';
+import {rereadCodes} from './triage/codes.ts';
+import type {CodeEmail} from './triage/codes.ts';
 import {startHistoryExtraction} from './triage/history.ts';
 import {importV1Triage} from './triage/importV1.ts';
 
@@ -32,11 +37,14 @@ const USAGE = `Usage:
   ha-token --revoke   revoke Home Assistant's token
   import-v1 <file>          import v1's export file (src/importV1.ts has the format); safe to run again
   import-v1-triage <file>   import only v1's triage rules and lane corrections (src/triage/importV1.ts)
-  triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)`;
+  triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
+  codes           list sorted emails whose verification code reading again would change, and code emails with none
+  codes --apply   write those changes`;
 
 function main(argv: string[]): number {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
+    || (command === 'codes' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
@@ -70,6 +78,18 @@ function main(argv: string[]): number {
       console.log(state === 'waiting_for_key'
         ? `Started, but there's no AI key yet: add one in Settings › AI and the server reads ${total - done} emails.`
         : `${done} of ${total} backfilled emails read; ${queued} more queued for the server to read.`);
+      return 0;
+    }
+    if (command === 'codes') {
+      const apply = rest[0] === '--apply';
+      const {changes, missing} = rereadCodes(store, {apply});
+      const line = (email: CodeEmail) => `  #${email.id}\t${email.fromAddress.split('@')[1] ?? email.fromAddress}\t${email.subject}`;
+      console.log(changes.length
+        ? `${changes.length} ${changes.length === 1 ? 'email\'s code' : 'emails\' codes'} ${apply ? 'changed' : 'would change (run codes --apply to write them)'}:`
+        : 'No code changes.');
+      for (const change of changes) console.log(`${line(change)}\t${change.before ?? 'none'} → ${change.after ?? 'none'}`);
+      console.log(missing.length ? `\n${missing.length} code ${missing.length === 1 ? 'email has' : 'emails have'} no code:` : '\nEvery code email has a code.');
+      for (const email of missing) console.log(line(email));
       return 0;
     }
     // npm runs this in server/; a relative path is from where npm was started.
