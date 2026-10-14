@@ -482,7 +482,8 @@ test('SV-72: a new task\'s ghost takes its default project\'s colour before one 
     // The same ring as Renew car registration's, a task already in Home.
     const ringColour = (locator: typeof ring) => locator.evaluate(element => getComputedStyle(element).borderTopColor);
     const home = await ringColour(page.locator('.cell[data-date="2026-10-08"] .tk:not(.ghost)', {hasText: 'Renew car registration'}).locator('.ring'));
-    assert.equal(await ringColour(ring), home);
+    // The ghost knows the default project once Settings and the projects have answered.
+    await until('the ghost takes Home\'s colour', () => ringColour(ring), colour => colour === home);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
