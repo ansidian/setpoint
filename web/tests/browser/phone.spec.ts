@@ -90,6 +90,27 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
   }
 });
 
+test('SV-73: on the phone a Done row\'s tag sits on its sender line, between the sender and the account, clear of the summary', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Interview availability')}/done`, {done: true});
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/inbox/all`);
+    const row = page.locator('.list.all .row.done', {hasText: 'Northwind'});
+    await row.locator('.tag').waitFor();
+    const boxOf = async (selector: string) => (await row.locator(selector).boundingBox())!;
+    const [from, tag, account, line] = await Promise.all([boxOf('.from'), boxOf('.tag'), boxOf('.ac'), boxOf('.subj')]);
+    // On the sender's line, vertically centred with it, and wholly above the summary.
+    assert.ok(Math.abs((tag.y + tag.height / 2) - (from.y + from.height / 2)) <= 1, `tag centre ${tag.y + tag.height / 2}, sender centre ${from.y + from.height / 2}`);
+    assert.ok(tag.y + tag.height <= line.y, `tag bottom ${tag.y + tag.height}, summary top ${line.y}`);
+    // After the sender and before the account, overlapping neither.
+    assert.ok(from.x + from.width <= tag.x && tag.x + tag.width <= account.x, `sender ${from.x}–${from.x + from.width}, tag ${tag.x}–${tag.x + tag.width}, account ${account.x}`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoom the page; placeholders stay 13.5 px', async () => {
   const setpoint = await startSetpoint({claim: false});
   try {
