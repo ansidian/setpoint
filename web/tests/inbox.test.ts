@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -247,6 +247,19 @@ test.each([
   ['nothing unread', [group('pinned', [parkside]), group('attention', [exams])], []],
 ])('markAllReadIds: %s', (_name, list, expected) => {
   expect(markAllReadIds(list)).toEqual(expected);
+});
+
+// All's rows take it at once too, so a Security row in its day keeps its dot (#243).
+test.each([
+  ['an unread delivery', ups, null, true],
+  ['a Security alert stays unread (UX #4)', signIn, null, false],
+  ['unread Attention waits on Done', northwind, null, false],
+  ['Attention mail Done is read', {...northwind, done: true}, null, true],
+  ['already read', {...ups, unread: false}, null, false],
+  ['for its own account', ups, 2, true],
+  ['for another account', ups, 1, false],
+] as const)('markAllReads: %s', (_name, one, account, expected) => {
+  expect(markAllReads(one, account)).toBe(expected);
 });
 
 test.each([

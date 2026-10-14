@@ -261,12 +261,18 @@ export function inboxAfterMarkAllRead(inbox: InboxOut, account: number | null): 
 }
 
 /**
- * The emails Mark all as read reads, as the server picks them: unread, outside Attention unless Done,
- * and outside Security (UX #4); each once, though the Pinned shelf shows it twice. Its toast counts
- * them, and Undo marks them unread again.
+ * Whether Mark all as read (for one account, or all) reads the email, as the server picks them:
+ * unread, outside Attention unless Done, and outside Security (UX #4).
+ */
+export const markAllReads = (row: MessageRowOut, account: number | null = null): boolean =>
+  row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row) && (account === null || row.account_id === account);
+
+/**
+ * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice. Its toast
+ * counts them, and Undo marks them unread again.
  */
 export const markAllReadIds = (groups: InboxGroupOut[]): number[] =>
-  [...new Set(groups.flatMap(group => group.rows.filter(row => row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row)).map(row => row.id)))];
+  [...new Set(groups.flatMap(group => group.rows.filter(row => markAllReads(row)).map(row => row.id)))];
 
 /** Mark unread (⌘K): its dot comes back where it shows, and it counts as unread again. */
 export function inboxAfterUnread(inbox: InboxOut, id: number): InboxOut {

@@ -240,6 +240,29 @@ for (const size of sizes) {
   });
 }
 
+test('Mark all as read leaves Security unread in its day at once, before All\'s next answer (UX #4, #243)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, 'target');
+    // All's answers after Mark all as read wait, so the days show what the browser made of it.
+    const gate = Promise.withResolvers<void>();
+    let marked = false;
+    await page.route(/\/api\/mail\/all(\?|$)/, async route => {
+      if (marked) await gate.promise;
+      await route.continue();
+    });
+    marked = true;
+    await page.keyboard.press('Shift+I');
+    await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0);
+    // Security's codes and sign-in alerts, in their day, keep their dots.
+    assert.equal(await page.locator('.list .row.unread:not(.done):not([data-key^="attention:"]):not([data-key^="pinned:"])').count(), 3);
+    gate.resolve();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('mail read and Done elsewhere keeps its rows in New until the user leaves; then the list starts at the shelf (SV-25, #243)', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -3,7 +3,7 @@
 // opening, Done, Pin, Mark read or unread and Mark all as read here; Trash in the Inbox page. Read
 // state, Trash and Mark all as read are commands the provider confirms, by the live stream.
 import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
-import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread} from '../logic/inbox.ts';
+import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {afterPending, ApiFailure, cachedPaths, getCached, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
@@ -228,6 +228,6 @@ export async function attachmentBlob(messageId: number, attachmentId: number): P
 export function markAllRead(account: number | null): Promise<MarkAllReadOut> {
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterMarkAllRead(inbox, account));
   followInboxCounts();
-  updateAllRows(row => (row.unread && !(row.lane === 'attention' && !row.done) && (account === null || row.account_id === account) ? {...row, unread: false} : row));
+  updateAllRows(row => (markAllReads(row, account) ? {...row, unread: false} : row));
   return change(() => sendJson<MarkAllReadOut>('POST', '/mail/mark-all-read', account ? {account_id: account} : {}));
 }
