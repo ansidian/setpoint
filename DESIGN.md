@@ -2466,3 +2466,12 @@ it changes what's on screen.
     and a ✓ Done tag before the account, as search's Done results read. Attention lanes count only
     mail not yet Done, and one whose mail is all Done shows no count. Mail already Done shows "✓ Done"
     in the reader's tools where the button was, not as a button (Andy, 2026-10-13; darma SV-69 D263).
+242. **A lone `#` or `@` shows its choices before anything is typed,** as darma's `#` does: a `#`
+    ending the editor's line opens Project's menu with every project (a task) or Calendar's with
+    every Google calendar (an event), and a space closes it. An `@` ending the line, with at most one
+    letter after it (Places searches from two), opens Place's list with the places events have used:
+    the most used first, then the latest, six at most, each with its address, narrowed by that
+    letter. The Place field offers the same list once focused with less than two letters in it, in
+    the editor and on the proposal card (where it floats under the field as a menu). Picking one
+    fills the place and its address without asking Google. Tab through an empty Place goes on
+    without picking (Andy, 2026-10-14; darma SV-71).

@@ -623,6 +623,76 @@ test('SV-56: a line longer than the field shows its typed end and marks, faded w
   }
 });
 
+test('SV-71: a task\'s lone # shows every project before anything is typed; a pick goes into the line and the field', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const names = (menu: ReturnType<typeof page.getByRole>) => menu.getByRole('option').evaluateAll(options => options.map(option => option.textContent!.replace('↵', '')));
+
+    // A task's "#": every project, in Todoist's order; Enter takes the first into the line and the field.
+    await page.keyboard.press('d');
+    const task = page.getByLabel('Describe the task');
+    await task.waitFor();
+    await task.pressSequentially('Water plants #');
+    const projects = page.getByRole('listbox', {name: 'Projects'});
+    await until('every project', () => names(projects), list => list.join() === 'Inbox,School,Home');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await until('School picked', () => task.inputValue(), text => text === 'Water plants #School ');
+    assert.equal(await page.getByLabel('Project', {exact: true}).inputValue(), 'School');
+    assert.equal(await projects.count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-71: an event\'s lone # shows every calendar, and a lone @ or an empty Place the places events have used', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const names = (menu: ReturnType<typeof page.getByRole>) => menu.getByRole('option').evaluateAll(options => options.map(option => option.textContent!.replace('↵', '')));
+
+    // An event's "#": every calendar of Google's.
+    await page.keyboard.press('c');
+    const event = page.getByLabel('Describe the event');
+    await event.waitFor();
+    await event.pressSequentially('Lab review #');
+    const calendars = page.getByRole('listbox', {name: 'Calendars'});
+    await until('every calendar', () => names(calendars), list => list.join() === 'Personal,Classes,Jobs');
+    // A space ends it.
+    await page.keyboard.press('Space');
+    await until('the menu closes', () => calendars.count(), count => count === 0);
+
+    // "@": the places events have used, the latest first; a letter narrows them, Enter takes one with its address.
+    await event.fill('');
+    await event.pressSequentially('Lunch @');
+    const places = page.getByRole('listbox', {name: 'Places'});
+    await until('the recent places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'University Student Union,Blue Door,Smile Dental');
+    await page.keyboard.type('b');
+    await until('narrowed to Blue Door', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Blue Door');
+    await page.keyboard.press('Enter');
+    await until('Blue Door in the line', () => event.inputValue(), text => text === 'Lunch @Blue Door ');
+    assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), 'Blue Door');
+    await page.locator('.editor .place-address', {hasText: '2118 Sunset Blvd'}).waitFor();
+    assert.equal(await places.count(), 0);
+
+    // The Place field, emptied and focused, offers them too; Tab through it goes on without picking.
+    await page.getByRole('button', {name: 'Clear place'}).click();
+    await event.fill('Lunch');
+    await page.getByLabel('Place', {exact: true}).focus();
+    await until('the recent places under Place', () => places.locator('.place-name').count(), count => count === 3);
+    await page.keyboard.press('Tab');
+    await until('the list goes', () => places.count(), count => count === 0);
+    assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), '');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('D57: an event\'s #calendar in the line filters the Calendar menu; typing alone takes the first, a pick ends it, and #1 stays a title', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

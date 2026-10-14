@@ -459,6 +459,41 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
   }
 });
 
+test('SV-71: the proposal card\'s Place, emptied, offers the places events have used; a letter narrows them, Enter takes one, Esc closes only the list', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
+    const card = page.locator('.pane .prop:not([aria-hidden])');
+    const place = card.locator('input[aria-label="Place"]');
+    await place.waitFor();
+    // The field keeps its column's width, as Title's.
+    const width = (field: typeof place) => field.locator('xpath=..').evaluate(label => Math.round(label.getBoundingClientRect().width));
+    assert.equal(await width(place), await width(card.locator('input[aria-label="Title"]')));
+    // Its own place from the email offers nothing; emptied, the recent places show.
+    await place.focus();
+    const places = card.getByRole('listbox', {name: 'Places'});
+    assert.equal(await places.count(), 0);
+    await place.fill('');
+    await until('the recent places', () => places.locator('.place-name').allTextContents(), list => list.join() === 'University Student Union,Blue Door,Smile Dental');
+    // Esc closes the list, not the card.
+    await page.keyboard.press('Escape');
+    await until('the list goes', () => places.count(), count => count === 0);
+    assert.equal(await card.count(), 1);
+    await place.pressSequentially('s');
+    await until('narrowed by "s"', () => places.locator('.place-name').allTextContents(), list => list.join() === 'Smile Dental,University Student Union');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await until('University Student Union picked', () => place.inputValue(), value => value === 'University Student Union');
+    assert.equal(await places.count(), 0);
+    assert.equal(await card.count(), 1, 'Enter picked rather than created');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the proposal card: Add to calendar pre-fills from the email, Create waits for Google Calendar, More options opens the editor', async () => {
   const setpoint = await startSetpoint();
   try {

@@ -53,7 +53,7 @@ import {admitPush} from '../providers/gcal/push.ts';
 import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_PATH, TodoistOAuthError} from '../providers/todoist/oauth.ts';
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
-import {calendarList, itemDetail, itemsInRange, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
+import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
 import {allMail, inbox, indexing, mailCounts, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {recordOpened} from '../search/log.ts';
@@ -520,6 +520,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.post('/api/alfred/ask', async c => c.json(await askAlfred(store, parse(askInput, await body(c)), alfred)));
   app.get('/api/alfred/conversations/:id', c => c.json(conversation(store, id(c.req.param('id')))));
   app.get('/api/alfred/asks/:askId', c => c.json({step: alfredStep(store, c.req.param('askId'))}));
+  // SV-71: the places events have used, before anything is typed. Before /api/places/:place_id.
+  app.get('/api/places/recent', c => c.json(recentPlaceList(store)));
   app.get('/api/places', async c => {
     const input = parse(placesInput, c.req.query());
     const key = readSecret(store, 'places_api_key');

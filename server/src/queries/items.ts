@@ -1,6 +1,6 @@
 // The calendar's read queries (SV-2 decision D4): items in a range with recurring events expanded,
 // one item, the calendars and the weather. Events and Todoist tasks are one item model.
-import type {CalendarOut, CommandOut, ItemOut, ItemsOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
+import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
 import {isTodoistColour} from '@setpoint/shared';
 import {and, asc, eq, gte, isNotNull, lt} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
@@ -8,6 +8,7 @@ import * as t from '../db/schema.ts';
 import {occurrenceDates, parseRule} from '../domain/recurrence.ts';
 import {localDay, localTime, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
+import {recentPlaces} from '../domain/recentPlaces.ts';
 import {repeatOf} from '../providers/todoist/due.ts';
 import type {Store} from '../store.ts';
 
@@ -140,6 +141,13 @@ export function todoistProjects(store: Store): TodoistProjectOut[] {
   const commands = new Map(activeCommands(store, 'project').map(row => [row.targetId, presentCommand(row)]));
   return store.db.select().from(t.todoistProjects).orderBy(asc(t.todoistProjects.position)).all()
     .map(row => ({id: row.providerId, name: row.name, inbox: row.inbox, colour: isTodoistColour(row.colour) ? row.colour : null, command: commands.get(row.id) ?? null}));
+}
+
+/** The places events have used, for a bare "@" and an empty Place field (SV-71). */
+export function recentPlaceList(store: Store): RecentPlaceOut[] {
+  const rows = store.db.select({place: t.items.place, address: t.items.address, startsAt: t.items.startsAt, startDate: t.items.startDate}).from(t.items)
+    .where(and(eq(t.items.kind, 'event'), isNotNull(t.items.place), eq(t.items.cancelled, false))).all();
+  return recentPlaces(rows.map(row => ({place: row.place!, address: row.address, at: row.startsAt ?? row.startDate})));
 }
 
 /** Todoist's labels, for a task's labels picker (F6b). */

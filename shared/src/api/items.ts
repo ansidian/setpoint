@@ -10,6 +10,7 @@
 //   PATCH  /api/calendars/:id          CalendarUpdateInput   CalendarOut (a colour change is a command: `command` says how it went)
 //   GET    /api/weather?from=&to=                             WeatherDayOut[]
 //   GET    /api/places?query=&session_token=                  PlaceSuggestionOut[] (B5)
+//   GET    /api/places/recent                                 RecentPlaceOut[] (SV-71: what "@" offers before typing)
 //   GET    /api/places/:place_id?session_token=               PlaceOut (F7: Settings › Calendar's Home, with its coordinates)
 //   GET    /api/todoist/projects                              TodoistProjectOut[] (B5)
 //   PATCH  /api/todoist/projects/:id   TodoistProjectUpdateInput TodoistProjectOut (SV-25: a colour, a command to Todoist)
@@ -215,6 +216,12 @@ export interface PlaceSuggestionOut {
   place_id: string;
   name: string;
   address: string;
+}
+
+/** SV-71: a place the user's events have used, offered before anything is typed; its address when one had it. */
+export interface RecentPlaceOut {
+  name: string;
+  address: string | null;
 }
 
 /** F7: one place with where it is, for Home (Time to Leave's routes and the forecast need its coordinates). */

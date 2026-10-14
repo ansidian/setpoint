@@ -67,6 +67,8 @@ export async function settleCalendarColour(commandId: number, how: 'retry' | 'mo
 export const SETTINGS_PATH = '/settings';
 export const TODOIST_PROJECTS_PATH = '/todoist/projects';
 export const TODOIST_LABELS_PATH = '/todoist/labels';
+// SV-71: the places events have used, for a bare "@" and an empty Place field.
+export const RECENT_PLACES_PATH = '/places/recent';
 
 /** SV-25: a Todoist project's colour, written to Todoist as a calendar's is to Google. */
 export async function setProjectColour(id: string, colour: TodoistColour): Promise<void> {

@@ -145,6 +145,9 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .prop-foot .legend { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
 .prop .failed-line { padding-left: 30px; }
 .menu-anchor { position: relative; display: inline-flex; }
+/* Place keeps its column's width with the recent places' menu under it (SV-71). */
+.pgrid > .menu-anchor { display: flex; min-width: 0; }
+.pgrid > .menu-anchor > .field { flex: 1; min-width: 0; }
 .prop .pop.menu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 4; min-width: 100%; }
 .prop .pop.menu[data-up] { top: auto; bottom: calc(100% + 4px); }
 .prop .pop.menu[data-right] { left: auto; right: 0; }

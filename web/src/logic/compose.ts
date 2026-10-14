@@ -269,6 +269,19 @@ export function completeToken(text: string, start: number, end: number, name: st
   return {text: `${head}${rest}`, caret: head.length + /^[\s,]*/.exec(rest)![0].length};
 }
 
+/**
+ * A "#" or "@" just typed at the line's end, before the line reads it as a mark (SV-71): a lone "#",
+ * or "@" with at most one letter (Places searches from two). Its field's menu opens on it, showing
+ * every choice before anything is typed, as darma's does. `start` is the trigger's place; `query`
+ * is what follows it.
+ */
+export function bareToken(text: string, trigger: '#' | '@'): {start: number; query: string} | null {
+  const found = (trigger === '#' ? /(?:^|\s)#$/ : /(?:^|\s)@(\S?)$/).exec(text);
+  if (!found) return null;
+  const query = found[1] ?? '';
+  return {start: text.length - query.length - 1, query};
+}
+
 const TRAILING_CONNECTOR = /(?:\s+(?:on|at|from|to|for))+\s*$/i;
 
 /**

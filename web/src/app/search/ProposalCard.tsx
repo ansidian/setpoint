@@ -5,22 +5,22 @@
 // until the provider confirms, and a failure stays in the card with the provider's words. The day
 // and times take typing as the editor's do, blank when the email gave no day (SV-24); the conflict
 // line is the email's time's, so it goes once they change (the editor's preview follows them).
-import type {CalendarOut, CommandOut, ProposalField, ProposalItemOut, ProposalOut, Settings, TodoistProjectOut} from '@setpoint/shared';
+import type {CalendarOut, CommandOut, ProposalField, ProposalItemOut, ProposalOut, RecentPlaceOut, Settings, TodoistProjectOut} from '@setpoint/shared';
 import {useMemo, useRef, useState} from 'react';
-import type {FormEvent} from 'react';
+import type {FormEvent, KeyboardEvent as ReactKeyboardEvent} from 'react';
 import {refresh, useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
+import {CALENDARS_PATH, RECENT_PLACES_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {createItem, SETTINGS_PATH} from '../../api/search.ts';
 import {remindersLine} from '../../logic/detail.ts';
 import {parseClock, parseDay, parseEnd, timeChoices} from '../../logic/compose.ts';
 import {localDate} from '../../logic/format.ts';
-import {failedLine, projectChoice, proposalAt, proposalDay, proposalWhen, REMINDER_CHOICES} from '../../logic/search.ts';
+import {failedLine, projectChoice, proposalAt, proposalDay, proposalWhen, rankMatches, REMINDER_CHOICES} from '../../logic/search.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useMenuRef} from '../../ui/popover.ts';
 import {colourVar, dotStyle} from '../accounts.ts';
 import {useRingColour} from '../calendar/Chip.tsx';
-import {handProposal} from '../calendar/Editor.tsx';
-import {DateField, ProjectField, TimeField} from '../calendar/Pickers.tsx';
+import {handProposal, PlaceList} from '../calendar/Editor.tsx';
+import {DateField, ProjectField, stepCursor, TimeField} from '../calendar/Pickers.tsx';
 import {navigate} from '../router.ts';
 import {foldAway} from '../fold.ts';
 import {showToast} from '../toast.ts';
@@ -45,6 +45,10 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   const {item, kind} = proposal;
   const [title, setTitle] = useState(item.title);
   const [place, setPlace] = useState(item.place ?? '');
+  // SV-71: focused with less than two letters in it, Place offers the places events have used, as the
+  // editor's does; it closes on a pick, Esc or Tab. `cur` is its keyboard cursor.
+  const {data: recent} = useResource<RecentPlaceOut[]>(proposal.kind === 'event' ? RECENT_PLACES_PATH : null);
+  const [placeMenu, setPlaceMenu] = useState<{cur: number} | null>(null);
   const [project, setProject] = useState(item.project ?? '');
   // Set when the user picks New project for what's typed: only then is a project made (SV-24, D50).
   const [newProject, setNewProject] = useState(false);
@@ -65,6 +69,29 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
     foldAway(form.current);
     if (onClose) onClose();
     else setClosed(true);
+  };
+
+  const recentList = placeMenu && place.trim().length < 2
+    ? rankMatches(place.trim(), recent ?? [], one => one.name).map(one => ({place_id: '', name: one.name, address: one.address ?? ''})) : [];
+  const recentCur = Math.min(placeMenu?.cur ?? 0, recentList.length - 1);
+  const pickPlace = (name: string) => {
+    setPlace(name);
+    setPlaceMenu(null);
+  };
+  const onPlaceKey = (event: ReactKeyboardEvent) => {
+    if (!recentList.length) return;
+    const next = stepCursor(event.key, recentCur, recentList.length);
+    if (next !== null) setPlaceMenu({cur: next});
+    else if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) pickPlace(recentList[recentCur]!.name);
+    else if (event.key === 'Escape') setPlaceMenu(null);
+    else if (event.key === 'Tab' && !event.shiftKey) {
+      // Tab picks what's typed for, as the editor's; through an empty field it just goes on.
+      if (place.trim()) pickPlace(recentList[recentCur]!.name);
+      else setPlaceMenu(null);
+      return;
+    } else return;
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   const choices = (calendars ?? []).filter(calendar => calendar.provider === (kind === 'event' ? 'google' : 'todoist'));
@@ -169,7 +196,14 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
           {kind === 'event' && (
             <>
               <Icon name="location_on" size={17} />
-              <label className="field"><input className="grow" aria-label="Place" placeholder="Place" value={place} onChange={event => setPlace(event.target.value)} /></label>
+              <span className="menu-host menu-anchor">
+                <label className="field"><input className="grow" aria-label="Place" placeholder="Place" value={place} autoComplete="off" onKeyDown={onPlaceKey}
+                  onFocus={() => setPlaceMenu({cur: 0})} onChange={event => {
+                    setPlace(event.target.value);
+                    setPlaceMenu({cur: 0});
+                  }} /></label>
+                {recentList.length > 0 && <PlaceList places={recentList} cur={recentCur} query={place.trim()} floating onPick={one => pickPlace(one.name)} />}
+              </span>
               {fromEmail('place')}
             </>
           )}

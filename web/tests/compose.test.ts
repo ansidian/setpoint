@@ -2,7 +2,7 @@
 // `parseCalendarTitle.test.ts` cases carried over through the harvest gate (darma SV-15). Today is
 // the seed's Wed, Oct 7, 2026.
 import {describe, expect, test} from 'vitest';
-import {clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices} from '../src/logic/compose.ts';
+import {bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices} from '../src/logic/compose.ts';
 
 const TODAY = '2026-10-07';
 const CALENDARS = ['Personal', 'Classes', 'Jobs'];
@@ -325,6 +325,23 @@ describe('SV-29: a suggestion picked for the line completes its text, then a spa
   ])('%s', (_, text, token, name, line, caret) => {
     const [start, end] = at(text, token);
     expect(completeToken(text, start, end, name)).toEqual({text: line, caret});
+  });
+});
+
+describe('SV-71: a "#" or "@" just typed at the line\'s end opens its menu before anything is typed', () => {
+  test.each<[string, string, '#' | '@', {start: number; query: string} | null]>([
+    ['a lone # alone', '#', '#', {start: 0, query: ''}],
+    ['a lone # after words', 'Pay bills #', '#', {start: 10, query: ''}],
+    ['# with a letter is the line\'s mark', 'Pay bills #h', '#', null],
+    ['# with a space after has ended', 'Pay bills # ', '#', null],
+    ['# inside a word', 'C#', '#', null],
+    ['a lone @', 'Lunch @', '@', {start: 6, query: ''}],
+    ['@ with one letter', 'Lunch @b', '@', {start: 6, query: 'b'}],
+    ['@ with two letters is Places\'', 'Lunch @bl', '@', null],
+    ['@ inside an address', 'Mail me at a@', '@', null],
+    ['@ with a space after has ended', 'Lunch @ ', '@', null],
+  ])('%s', (_, text, trigger, expected) => {
+    expect(bareToken(text, trigger)).toEqual(expected);
   });
 });
 

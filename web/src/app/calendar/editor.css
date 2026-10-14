@@ -87,11 +87,11 @@
 .editor .menu[data-up] { top: auto; bottom: calc(100% + 4px); }
 .editor .menu[data-right] { left: auto; right: 0; }
 .editor .places { padding: 6px; margin-top: -2px; display: flex; flex-direction: column; gap: 2px; }
-.editor .places .menu-i { height: 44px; }
-.editor .place-text { display: flex; flex-direction: column; min-width: 0; }
-.editor .place-name { color: var(--ink); }
-.editor .place-name b { font-weight: 600; }
-.editor .place-address { font-size: 12px; }
+:is(.editor, .prop) .places .menu-i { height: 44px; }
+:is(.editor, .prop) .place-text { display: flex; flex-direction: column; min-width: 0; }
+:is(.editor, .prop) .place-name { color: var(--ink); }
+:is(.editor, .prop) .place-name b { font-weight: 600; }
+:is(.editor, .prop) .place-address { font-size: 12px; }
 /* A picked place's address, under the Place field (SV-27); why a project can't be sent (SV-25). */
 .editor .eg > .place-address, .editor .eg > .field-note { padding: 0 10px; margin-top: -4px; font-size: 12px; }
 
