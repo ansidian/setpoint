@@ -267,12 +267,16 @@ function changesOf(draft: Draft, original: Draft, timeZone: string): ItemChanges
   return changes;
 }
 
-/** A draft as the grid draws it (a dashed ghost on its day, board 13), "New event" until it has a title (SV-29). */
-export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: string, todoist: number | null): ItemOut | null {
+/**
+ * A draft as the grid draws it (a dashed ghost on its day, board 13), "New event" until it has a title (SV-29).
+ * A task with no project yet is drawn in `defaultProject`, where the server will put it (SV-72).
+ */
+export function draftPreview(draft: Draft & {reminders: number[]}, timeZone: string, todoist: number | null, defaultProject: string | null = null): ItemOut | null {
   const input = createInput({...draft, title: draft.title || draft.text || `New ${draft.kind}`}, timeZone, todoist);
   if (!input) return null;
   return {
-    ...input, key: `draft:${draft.id}`, id: -draft.id, recurring: false, occurrence_start: null, done: false, done_at: null, command: null,
+    ...input, ...(draft.kind === 'task' && !input.project ? {project: defaultProject} : {}),
+    key: `draft:${draft.id}`, id: -draft.id, recurring: false, occurrence_start: null, done: false, done_at: null, command: null,
     read_only: false, due_string: null, time_to_leave: null, reminders: draft.reminders, time_zone: input.time_zone,
   } as ItemOut;
 }
@@ -391,6 +395,8 @@ interface EditorProps {
 export function Editor({open, calendars, today, timeZone, dayItems, handed, onPreview, onCreate, onSave, onDelete, onClose, onEscape, onDirty, onKeep, place}: EditorProps) {
   const {data: settings} = useResource<Settings>(SETTINGS_PATH);
   const {data: projects} = useResource<TodoistProjectOut[]>(open.kind === 'task' ? TODOIST_PROJECTS_PATH : null);
+  // Where a task with no project goes, as the server picks it: Settings' default project, else Todoist's Inbox.
+  const defaultProject = projects?.find(one => one.name === settings?.todoist.default_project)?.name ?? projects?.find(one => one.inbox)?.name ?? null;
   const {data: todoistLabels} = useResource<TodoistLabelOut[]>(open.kind === 'task' ? TODOIST_LABELS_PATH : null);
   const google = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google'), [calendars]);
   const projectNames = useMemo(() => (projects ?? []).map(project => project.name), [projects]);
@@ -464,8 +470,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       onPreview([], null);
       return;
     }
-    onPreview(filled.map(one => draftPreview(one, timeZone, todoist)).filter((one): one is ItemOut => one !== null), draft.date);
-  }, [filled, draft.date, editing, timeZone, todoist, onPreview]);
+    onPreview(filled.map(one => draftPreview(one, timeZone, todoist, defaultProject)).filter((one): one is ItemOut => one !== null), draft.date);
+  }, [filled, draft.date, editing, timeZone, todoist, defaultProject, onPreview]);
   useEffect(() => () => onPreview([], null), [onPreview]);
 
   // Places for the place as it's typed (in the line or the field), until one is picked; a link has none.

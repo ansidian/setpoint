@@ -466,6 +466,29 @@ test('a Todoist task in the same editor: its due day from the line and its proje
   }
 });
 
+test('SV-72: a new task\'s ghost takes its default project\'s colour before one is picked, the same as a task already in it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // Home, as the seed's Inbox is Todoist's charcoal, too near the unset ring's gray to tell apart.
+    await setpoint.api('PATCH', '/settings', {todoist: {default_project: 'Home'}});
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('d');
+    const line = page.getByLabel('Describe the task');
+    await line.waitFor();
+    await line.pressSequentially('Water plants fri');
+    const ring = page.locator('.cell[data-date="2026-10-09"] .tk.ghost .ring');
+    await ring.waitFor();
+    // The same ring as Renew car registration's, a task already in Home.
+    const ringColour = (locator: typeof ring) => locator.evaluate(element => getComputedStyle(element).borderTopColor);
+    const home = await ringColour(page.locator('.cell[data-date="2026-10-08"] .tk:not(.ghost)', {hasText: 'Renew car registration'}).locator('.ring'));
+    assert.equal(await ringColour(ring), home);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-25: a task\'s #project in the line: suggestions under Project, a pick ends it, and New project is made with the task; a typed repeat is the task\'s', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
