@@ -1,7 +1,8 @@
 // Mail's details in the browser (BUILD-PLAN.md › F2), at the design target on a fresh seed each:
 // Done or Trash on the open email opens the next (2026-10-07), each with Undo in the toast;
 // pin and unpin; Mark all as read; copying a code, and a code leaving at its expiry; images hidden
-// and Show / Always show; an attachment's preview; the pattern prompt's answer; All's rows.
+// and Show / Always show; an attachment's preview; the pattern prompt's answer; the one list's parts
+// and days (SV-70).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -11,7 +12,7 @@ import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, point, readSecurity, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, point, readSecurity, startSetpoint, still, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -38,9 +39,15 @@ const unreadCount = (page: Page) => page.locator('.nav:has-text("Inbox") .cnt').
 async function load(setpoint: Setpoint, path = '/inbox'): Promise<Page> {
   const page = await setpoint.page('target');
   await page.goto(`${setpoint.base}${path}`);
-  await page.locator('.list .row, .list .arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
   return page;
 }
+
+/** An email's row in the list, by its text or its tooltip's (a subject a summary took the place of), not one folding away. */
+const rowOf = (page: Page, text: string) => page.locator('.list .row[data-key]', {hasText: text}).or(page.locator(`.list .row[data-key][title*="${text}"]`));
+
+/** Opens New's Noise line, folded until then (#48, #243). */
+const openNoise = (page: Page) => page.locator('.list .nfold.collapsed').first().click();
 
 async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
@@ -50,37 +57,39 @@ async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
 const inAll = async (setpoint: Setpoint, id: number) =>
   (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.some(day => day.rows.some(row => row.id === id));
 
-test('Done on the open email opens the next, which reads it; the pill drops for the Done', async () => {
+test('Done on the open email opens the next, which reads it; the pill drops for the Done, and the email goes to its day', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
     // Google (protected, unread) open: 18 unread. Done opens Northwind, the next row, and reads it.
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await rowOf(page, 'Your recovery email was changed').click();
     await until('Google read', () => unreadCount(page), text => text === '18');
     await page.keyboard.press('h');
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await until('the unread count drops by one and the pill by one', async () => [await pill(page), await unreadCount(page)], ([shownPill, unread]) => shownPill === '2' && unread === '17');
     // The server has them once the browser's Done and open land, after the counts show them.
     await until('the server has them', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '2,17');
-    // Done on Northwind opens Contoso University, the row that takes its place (read already: 17 stays).
+    // Done on Northwind opens Contoso Insurance's code, the row after it in New, and reads it.
     await page.keyboard.press('h');
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Your code is'}).waitFor();
     await until('the pill drops again', () => pill(page), text => text === '1');
-    assert.equal(await page.locator('.arow.open', {hasText: 'Contoso University'}).count(), 1);
-    // Northwind's row folds away over 180 ms (DESIGN.md › Decided while building #13).
-    await until('Northwind folds away', () => page.locator('.arow', {hasText: 'Northwind Talent'}).count(), count => count === 0);
-    await until('the server has it', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '1,17');
-    // The toast offers Undo: Northwind comes back to Attention and to the reader.
+    assert.equal(await page.locator('.list .row.open', {hasText: 'Contoso Insurance'}).count(), 1);
+    // Northwind's row folds out of New (DESIGN.md › Decided while building #13) and settles in its
+    // day, quiet, with a Done tag (#241, #243).
+    await until('Northwind in its day, Done', () => rowOf(page, 'Pick a 30-minute slot').evaluate(row => [row.classList.contains('done'), row.querySelector('.tag')?.textContent]), ([done, tag]) => done === true && tag === 'Done');
+    assert.equal(await page.locator('.list .gh.day').first().textContent(), 'Today Wed, Oct 7');
+    await until('the server has it', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '1,16');
+    // The toast offers Undo: Northwind comes back to New and to the reader.
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
-    await page.locator('.arow.open', {hasText: 'Northwind Talent'}).waitFor();
+    await page.locator('.list .row.open:not(.done)', {hasText: 'Northwind Talent'}).waitFor();
     await until('the pill comes back', () => pill(page), text => text === '2');
     // Undo takes the toast away: it fades out over 120 ms, then goes.
     await page.locator('.toast').waitFor({state: 'detached'});
     // FYI mail has no Done (#93): opening it already read it. Fabrikam, in Career, opens with Trash
     // first in the tools, and H leaves it where it is, with no toast.
-    await page.locator('.row', {hasText: 'Fabrikam'}).click();
+    await rowOf(page, 'Fabrikam').click();
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     assert.equal(await page.locator('.rd-tools .tool', {hasText: 'Done'}).count(), 0);
     assert.equal(await page.locator('.rd-tools .tool').first().textContent(), 'TrashE');
@@ -90,15 +99,12 @@ test('Done on the open email opens the next, which reads it; the pill drops for 
     await setpoint.idle();
     assert.equal(await page.locator('.rd-subj', {hasText: 'Application received'}).count(), 1, 'H does nothing on FYI mail');
     assert.equal(await page.locator('.toast').count(), 0);
-    // Done on the last row shown closes the reader. With every group below Attention collapsed it is
-    // the end of the list, so open Attention's last row: Contoso University.
-    await collapseGroups(page, ['Security', 'Deliveries', 'Money', 'Career', 'Noise']);
-    await page.locator('.arow', {hasText: 'Contoso University'}).click();
+    // Done on Contoso University, alone in the Attention band, opens the Pinned shelf's lease; the band goes.
+    await rowOf(page, 'Contoso University').first().click();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await page.keyboard.press('h');
-    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    // The keyboard cursor stays where Contoso University was, on what follows it (Security's header), so J and K go on from there.
-    await until('the cursor stays at the foot', () => page.locator('.list .cur').allTextContents(), shown => shown.length === 1 && shown[0]!.startsWith('Security'));
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await until('the Attention band goes', () => page.locator('.list .gh.attention').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -109,20 +115,20 @@ test('UX #2: with an email open, J and K open the next and previous email, so H,
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.arow', {hasText: 'Interview availability for Software Engineer I'}).click();
+    await rowOf(page, 'Interview availability for Software Engineer I').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await page.keyboard.press('j');
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Your code is'}).waitFor();
     // One row marked, the open one.
     assert.deepEqual(await page.locator('.list .cur, .list .open').allTextContents().then(rows => rows.length), 1);
     await page.keyboard.press('k');
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     // E trashes the email that's open and highlighted.
     await page.keyboard.press('j');
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-    const exam = await idOf(setpoint, 'Final exam schedule');
+    await page.locator('.rd-subj', {hasText: 'Your code is'}).waitFor();
+    const code = await idOf(setpoint, 'Your code is');
     await page.keyboard.press('e');
-    await until('the exam email is trashed', () => inAll(setpoint, exam), shown => !shown);
+    await until('the code email is trashed', () => inAll(setpoint, code), shown => !shown);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -227,22 +233,22 @@ test('Pin and Unpin: the reader\'s P, and Unpin on the shelf under the pointer',
     const page = await load(setpoint);
     const shelf = () => page.locator('.row.shelf').allTextContents();
     // A row's summary takes its subject's place, which moves to the tooltip; the platform stays
-    // after it, and Attention keeps both lines (SV-25).
+    // after it (SV-25), Attention's too since the Inbox is one list (#243).
     const parkside = page.locator('.row.shelf', {hasText: 'Parkside Apartments'});
     assert.equal(await parkside.locator('.subj').textContent(), 'Renewal offer for the lease ending Nov 30 · sign by Oct 31');
     assert.equal(await parkside.getAttribute('title'), 'Lease renewal terms');
     const fabrikam = page.locator('.row', {hasText: 'Fabrikam'});
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
     assert.equal(await fabrikam.getAttribute('title'), 'Application received');
-    const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
-    assert.deepEqual([await northwind.locator('.l2').textContent(), await northwind.locator('.l3').textContent()], ['Interview availability for Software Engineer I', 'Pick a 30-minute slot this week']);
+    const northwind = rowOf(page, 'Pick a 30-minute slot');
+    assert.deepEqual([await northwind.locator('.subj').textContent(), await northwind.getAttribute('title')], ['Pick a 30-minute slot this week · via Greenhouse', 'Interview availability for Software Engineer I']);
     assert.equal(await page.locator('.row', {hasText: 'New sign-in'}).getAttribute('title'), null, 'a security row keeps its fact');
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await northwind.click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('p');
     await until('Northwind joins the shelf', () => shelf(), rows => rows.length === 2 && rows.some(text => text.includes('Pick a 30-minute slot this week')));
     await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
-    await until('the shelf counts 2', () => page.locator('.gh.first').textContent(), text => /Pinned\s*2/i.test(text ?? ''));
+    await until('the shelf counts 2', () => page.locator('.list .gh.pinned').textContent(), text => /Pinned\s*2/i.test(text ?? ''));
     // P again unpins it.
     await page.keyboard.press('p');
     await until('it leaves the shelf', () => shelf(), rows => rows.length === 1);
@@ -251,7 +257,7 @@ test('Pin and Unpin: the reader\'s P, and Unpin on the shelf under the pointer',
     assert.equal(await parkside.locator('.unpin').isVisible(), false);
     await parkside.hover();
     await parkside.locator('.unpin').click();
-    await until('the shelf goes', () => page.locator('.gh', {hasText: 'Pinned'}).count(), count => count === 0);
+    await until('the shelf goes', () => page.locator('.list .gh.pinned').count(), count => count === 0);
     // The server has it once the browser's Unpin lands, after the shelf goes.
     await until('the server unpinned it', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), inbox => !inbox.groups.some(group => group.group === 'pinned'));
     assert.equal(await page.locator('.rd-subj', {hasText: 'Interview availability'}).count(), 1, 'unpinning from the shelf opens nothing');
@@ -278,7 +284,7 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
       await held;
       await route.fulfill({response});
     });
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await until('the server answered the open', async () => served, done => done);
     const pinned = page.waitForResponse(/\/pin$/);
@@ -302,7 +308,7 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
 test('the reader\'s tools come from the email\'s row before the email has loaded: Unpin on pinned mail, no Open in Gmail on iCloud mail; each email opens at its top', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
+    const page = await load(setpoint);
     // The email's own answers are held at the server's door until the tools have been read.
     let release = () => {};
     const hold = () => new Promise<void>(resolve => {
@@ -334,7 +340,7 @@ test('the reader\'s tools come from the email\'s row before the email has loaded
     const short = await setpoint.page({width: 1677, height: 480});
     await short.goto(`${setpoint.base}/inbox`);
     const scroller = short.locator('.rd-scroll');
-    const recovery = short.locator('.arow', {hasText: 'Your recovery email was changed'});
+    const recovery = short.locator('.list .row', {hasText: 'Your recovery email was changed'});
     await recovery.click();
     await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
     // Its body is in after its head, which the row draws at once.
@@ -357,7 +363,7 @@ test('a key pressed as soon as the hover has moved the cursor acts on the row un
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
+    const northwind = rowOf(page, 'Pick a 30-minute slot');
     // H goes in the same moment the row is drawn as the cursor, before anything after that render.
     await northwind.evaluate(row => {
       new MutationObserver((_, observer) => {
@@ -368,34 +374,7 @@ test('a key pressed as soon as the hover has moved the cursor acts on the row un
     });
     await northwind.hover();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
-    await until('Northwind leaves', () => northwind.count(), count => count === 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('opening a collapsed group at the foot of the list brings its rows into view', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page({width: 1677, height: 720});
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
-    await collapseGroups(page, ['Noise']);
-    // Scrolled to the end, Noise's header is the list's last line.
-    await page.locator('.list').evaluate(list => list.scrollTo({top: list.scrollHeight}));
-    await page.locator('.gh', {hasText: 'Noise'}).click();
-    await page.locator('.row', {hasText: 'Contoso Coffee'}).waitFor();
-    // The group's last row is inside the list (its header too, when the group is taller than the list).
-    const inView = () => page.evaluate(() => {
-      const list = document.querySelector('.list')!.getBoundingClientRect();
-      const header = [...document.querySelectorAll<HTMLElement>('.list .gh')].find(one => one.textContent!.startsWith('Noise'))!;
-      let last: Element = header;
-      for (let next = header.nextElementSibling; next && !next.classList.contains('gh'); next = next.nextElementSibling) if (next.classList.contains('row')) last = next;
-      const [top, bottom] = [header.getBoundingClientRect().top, last.getBoundingClientRect().bottom];
-      return top >= list.top - 1 && (bottom <= list.bottom + 1 || top <= list.top + 1);
-    });
-    await until('Noise\'s rows in view', inView, shown => shown);
+    await until('Northwind Done, in its day', () => northwind.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('done')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -412,8 +391,11 @@ test('Mark all as read from the footer: everything outside Attention and Securit
     await until('only Attention\'s two unread and Security\'s three remain', () => unreadCount(page), text => text === '5', 5000);
     // The screen shows it at once; the server follows.
     await until('the server agrees', () => counts(setpoint).then(value => [value.attention, value.unread, value.unread_fyi].join()), value => value === '3,5,3', 5000);
-    await until('Noise folds away', () => page.locator('.gh', {hasText: 'Noise'}).count(), count => count === 0);
-    assert.equal(await page.locator('.gh', {hasText: 'Security'}).count(), 1, 'Security stays');
+    // New empties: what it read goes to its day, and Security's codes and alerts with it, unread (#243).
+    await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0);
+    await until('Security stays unread, in its day', () => page.locator('.list .row.unread[data-key^="all:"]', {hasText: 'Contoso Insurance'}).count(), count => count === 1);
+    // Attention it left unread is in the Attention band.
+    assert.equal(await page.locator('.list .gh.attention').textContent(), 'Attention 3');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -434,8 +416,8 @@ test('Mark all as read says how many it read, with Undo; ⌘K\'s runs the same (
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await page.locator('.toast').waitFor({state: 'detached'});
     await until('unread again', () => counts(setpoint).then(value => value.unread), value => value === 19, 15000);
-    // Back in the list, not the header still folding away from before.
-    await page.locator('.gh:not(.leaving)', {hasText: 'Noise'}).waitFor({timeout: 5000});
+    // Back in New, not the band still folding away from before.
+    await page.locator('.list .gh.new:not(.leaving)').waitFor({timeout: 5000});
     // ⇧I says the same.
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
@@ -452,7 +434,7 @@ test('Mark all as read\'s Undo brings the 14 back at once, before the server\'s 
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
     await until('the server read them', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
-    await until('Noise folds away', () => page.locator('.gh', {hasText: 'Noise'}).count(), count => count === 0);
+    await until('New folds away', () => page.locator('.list .gh.new').count(), count => count === 0);
 
     // The server's list answers only once released.
     let release = () => {};
@@ -464,19 +446,19 @@ test('Mark all as read\'s Undo brings the 14 back at once, before the server\'s 
       await route.continue();
     });
     await page.locator('.toast button', {hasText: 'Undo'}).click();
-    await until('Noise is back at once', () => page.locator('.gh:not(.leaving)', {hasText: 'Noise'}).count(), count => count === 1);
+    await until('New is back at once', () => page.locator('.list .gh.new:not(.leaving)').count(), count => count === 1);
     // Once the server has them unread and their changes are with the provider, ⇧I reads the same 14.
     await until('the server has them unread', () => counts(setpoint).then(value => value.unread), value => value === 19, 5000);
     await until('their changes are in', () => setpoint.api<AllOut>('GET', '/mail/all?limit=500'),
       all => !all.days.some(day => day.rows.some(row => row.command?.state === 'pending')), 5000);
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
-    await until('Noise folds away again', () => page.locator('.gh', {hasText: 'Noise'}).count(), count => count === 0);
+    await until('New folds away again', () => page.locator('.list .gh.new').count(), count => count === 0);
 
     release();
     await until('the server read them again', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
     await page.unroute(/\/api\/mail\/inbox$/);
-    await until('the list agrees', () => page.locator('.gh', {hasText: 'Noise'}).count(), count => count === 0, 5000);
+    await until('the list agrees', () => page.locator('.list .gh.new').count(), count => count === 0, 5000);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -491,7 +473,7 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     const page = await setpoint.page('target');
     await page.clock.install();
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row, .list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     // The page took the seed's moment from the server before this, so the code expires no later
     // than 12 seconds from here (and the app's 15 s clock first ticks later than that).
     const loaded = await page.evaluate(() => Date.now());
@@ -499,7 +481,8 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     // little ahead of the time read: past what one round trip can take, well inside the 12 seconds.
     await page.clock.pauseAt(loaded + 2000);
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
-    const row = page.locator('.row', {hasText: 'Contoso Insurance'});
+    // New's code row; Contoso Insurance's other email is in a day.
+    const row = page.locator('.list .row', {has: page.locator('.code-line')});
     assert.equal(await row.locator('.code').textContent(), '482 913');
     await row.locator('button', {hasText: 'Copy'}).click();
     await row.locator('button', {hasText: 'Copied'}).waitFor();
@@ -538,7 +521,7 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
     await page.clock.runFor(loaded + 12_000 + 400 - await page.evaluate(() => Date.now()));
     // Its fold out has begun (its end waits on the paused clock).
-    await until('the code row leaves', () => page.locator('.row:not(.leaving)', {hasText: 'Contoso Insurance'}).count(), count => count === 0);
+    await until('the code row leaves', () => page.locator('.list .row:not(.leaving)', {has: page.locator('.code-line')}).count(), count => count === 0);
     await page.clock.resume();
     await until('the code row gone', () => row.count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -564,6 +547,8 @@ test('images hidden: Show loads them this time; Always show trusts the domain', 
     // Show swaps the frame for one with the images, so a look can catch the old one leaving.
     const loadedImages = () => frame.locator('img').evaluateAll(images => images.filter(image => (image as HTMLImageElement).naturalWidth > 0).length).catch(() => -1);
     const openCoffee = async () => {
+      // It's in New's Noise, folded until opened.
+      if (!await page.locator('.row', {hasText: 'Contoso Coffee'}).isVisible()) await openNoise(page);
       await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
       await page.locator('.rd-subj', {hasText: 'The Contoso Coffee Journal'}).waitFor();
       await frame.locator('table').waitFor();
@@ -591,12 +576,9 @@ test('images hidden: Show loads them this time; Always show trusts the domain', 
     assert.ok(elsewhere.length > 0 && elsewhere.every(url => url.startsWith('https://cdn.contosocoffee.example/')), 'only the images\' host');
     elsewhere.length = 0;
 
-    // Show was for this time: opened again (from All, now that it's read), they're hidden again.
+    // Show was for this time: opened again (still in New, read), they're hidden again.
     await page.keyboard.press('Escape');
     await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
-    await page.locator('.seg button', {hasText: 'All'}).click();
-    // Today's Noise is folded in All (#48): open it first.
-    await page.locator('.list.all .nfold').first().click();
     await page.locator('.list.all .row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
     await frame.locator('[data-hidden-image]').first().waitFor();
@@ -642,6 +624,7 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     const page = await load(setpoint);
     await fakePictures(page);
     const element = page.locator('iframe.mailframe');
+    await openNoise(page);
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
     // Hidden, the frame is as wide as the reading pane's body (the images bar's width), wider than
@@ -698,11 +681,11 @@ test('the facts card and protected line on security mail, and no Add to calendar
     assert.equal(await page.locator('.facts .unfamiliar').count(), 0);
     assert.equal(await page.locator('.protected-line').count(), 0);
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Ask about this email']);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await rowOf(page, 'Your recovery email was changed').click();
     await page.locator('.protected-line', {hasText: 'Protected · always stays in Attention'}).waitFor();
     assert.equal(await page.locator('.facts .unfamiliar').textContent(), '· not a place you use');
     // Others propose.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Add to calendar', 'Add as task', 'Ask about this email']);
     assert.equal(await page.locator('.facts').count(), 0);
@@ -836,7 +819,7 @@ test('#122: an attachment\'s type tile says what it is in its colour and glyph, 
   }
 });
 
-test('the pattern prompt sits at the end of Attention; No answers it and it goes', async () => {
+test('the pattern prompt sits at the end of New\'s Attention; No answers it and it goes', async () => {
   const setpoint = await startSetpoint({fixtures: ['new-digest']});
   try {
     const page = await setpoint.page('target');
@@ -849,11 +832,11 @@ test('the pattern prompt sits at the end of Attention; No answers it and it goes
     const prompt = page.locator('.prompt');
     await prompt.waitFor();
     assert.equal(await prompt.locator('.grow').textContent(), 'You\'ve cleared 4 Northwind Engineering newsletters without opening them. Send these to FYI from now on?');
-    // The last thing in Attention: after Contoso University, before Security.
-    const order = await page.locator('.list > *').evaluateAll(nodes => nodes.map(node => (node.classList.contains('prompt') ? 'prompt' : node.textContent!.trim().slice(0, 18))));
+    // The last thing in New's Attention: after its last row, before FYI.
+    const order = await page.locator('.list > *').evaluateAll(nodes => nodes.map(node => (node.classList.contains('prompt') ? 'prompt' : `${node.classList[0]}:${node.textContent!.trim().slice(0, 18)}`)));
     const at = order.indexOf('prompt');
-    assert.match(order[at - 1]!, /^Contoso University/);
-    assert.match(order[at + 1]!, /^Security/i);
+    assert.match(order[at - 1]!, /^row:/);
+    assert.match(order[at + 1]!, /^lh:FYI/);
     await prompt.locator('button', {hasText: 'No'}).click();
     await until('it goes', () => prompt.count(), count => count === 0);
     assert.deepEqual(answers, [{answer: 'no'}]);
@@ -865,43 +848,44 @@ test('the pattern prompt sits at the end of Attention; No answers it and it goes
   }
 });
 
-test('All: every email by day with clock times, grouped by lane, Noise folded per day; opening one reads it', async () => {
+test('the one list: New, Attention, the shelf, then the days with clock times; lanes, kinds and Noise folded; opening one reads it and it stays (#243)', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
-    // The Pinned shelf, then the days (D105).
-    assert.deepEqual((await page.locator('.list.all .gh').allTextContents()).slice(0, 4), ['Pinned 1', 'Today Wed, Oct 7', 'Yesterday Tue, Oct 6', 'Mon Oct 5']);
-    // Decided while building #48: today's lanes, the kind once where an FYI run starts.
-    assert.deepEqual((await page.locator('.list.all .lh').allTextContents()).slice(0, 2), ['Attention 2', 'FYI 8']);
+    const page = await load(setpoint);
+    // New, Attention, the Pinned shelf, then the days; today's mail is all above, so the days start yesterday.
+    assert.deepEqual((await page.locator('.list.all .gh').allTextContents()).slice(0, 5), ['New 19', 'Attention 1', 'Pinned 1', 'Yesterday Tue, Oct 6', 'Mon Oct 5']);
+    // New's lanes, the kind once where an FYI run starts (#48).
+    assert.deepEqual((await page.locator('.list.all .lh').allTextContents()).slice(0, 2), ['Attention 2', 'FYI 11']);
     assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').textContent(), 'Security');
     assert.equal(await page.locator('.list.all .row', {hasText: 'New sign-in'}).first().locator('.kd').textContent(), '');
-    // The summary takes the subject's place, as in the Inbox; the subject is the row's tooltip.
+    // The summary takes the subject's place; the subject is the row's tooltip.
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
     assert.equal(await fabrikam.getAttribute('title'), 'Application received');
-    // The pinned lease is on the shelf only, with its age.
+    // Above the days, ages; in them, clock times. The pinned lease is on the shelf only.
+    assert.equal(await fabrikam.locator('.age').textContent(), '7h');
+    assert.match((await page.locator('.list.all .row[title="Lab 5 posted"] .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
     assert.deepEqual(await page.locator('.list.all .row[title="Lease renewal terms"]').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
       [[true, 'Sep 30']]);
-    // Today's Noise is one line; J and K stop on it, and Enter opens it in place.
+    // New's Noise is one line; J and K stop on it after New's 13 rows, and Enter opens it in place.
     const coffee = page.locator('.list.all .row', {hasText: 'Contoso Coffee'});
     const noise = page.locator('.list.all .nfold').first();
-    assert.equal(await noise.textContent(), 'Noise 3Tailspin Toys · Contoso Coffee · Litware');
+    assert.equal(await noise.textContent(), 'Noise 6Tailspin Toys · Contoso Coffee · Litware');
     assert.equal(await coffee.count(), 0);
-    // J stops on the shelf's row first.
-    for (let press = 0; press < 12; press++) await page.keyboard.press('j');
+    for (let press = 0; press < 14; press++) await page.keyboard.press('j');
     await page.locator('.list.all .nfold.cur').waitFor();
     await page.keyboard.press('Enter');
-    await coffee.waitFor();
-    assert.equal(await coffee.locator('.age').textContent(), '6:05 AM');
-    await coffee.click();
+    await coffee.first().waitFor();
+    await coffee.first().click();
     await page.locator('.rd-subj', {hasText: 'The Contoso Coffee Journal'}).waitFor();
     await until('read', () => counts(setpoint), value => value.unread === 18);
-    // The server reads it first; the row follows when the list refreshes.
-    await until('the row reads as read', () => coffee.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
+    // Read, it stays where it was in New until the user leaves the Inbox, and New counts one less.
+    await until('the row reads as read', () => coffee.first().getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
+    assert.equal(await page.locator('.list.all .gh.new').textContent(), 'New 18');
     // The kind drops while the reading pane is open; the account never does.
     assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').isVisible(), false);
-    assert.equal(await coffee.locator('.ac').isVisible(), true);
-    // Trash folds the row out at once, as in Unread, and ⌘Z folds it back in.
+    assert.equal(await coffee.first().locator('.ac').isVisible(), true);
+    // Trash folds the row out at once, and ⌘Z folds it back in.
     await page.keyboard.press('Escape');
     const lease = page.locator('.list.all .row[title="Lease renewal terms"]');
     await point(lease);
@@ -916,10 +900,10 @@ test('All: every email by day with clock times, grouped by lane, Noise folded pe
   }
 });
 
-test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, and the row clicked stays where it was', async () => {
+test('#237: with the reader open, the kinds turn into subheadings under FYI, and the row clicked stays where it was', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
+    const page = await load(setpoint);
     const ink3 = await tokenColour(page, 'ink3');
     const subheads = page.locator('.list.all .kh');
     // Wide, the kinds sit in the left column and no subheading shows.
@@ -934,9 +918,9 @@ test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, 
     assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
     assert.deepEqual((await glyphs(subheads.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), false);
-    // Today's subheadings sit under FYI's header, each before its run's first row.
+    // New's subheadings sit under FYI's header, each before its run's first row.
     const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
-    assert.equal(order[order.indexOf('lh:FYI 8') + 1], 'kh:Security');
+    assert.equal(order[order.indexOf('lh:FYI 11') + 1], 'kh:Security');
     // The subheadings came in above the row, and the list scrolled by as much: it hasn't moved.
     assert.equal(Math.round((await fabrikam.boundingBox())!.y), Math.round(before));
     // Closed again, the column is back and the row is still where it was.
@@ -953,14 +937,14 @@ test('#237: with the reader open, All\'s kinds turn into subheadings under FYI, 
 test('#240: with the reader open the sender column takes 24% of its row, between 112 px and its own width, so the summary keeps room', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
+    const page = await load(setpoint);
     await page.setViewportSize({width: 1440, height: 900});
     const widths = (row: Locator) => row.evaluate((node): [number, number] => {
       // The row's width inside its padding, which a percentage is of.
       const style = getComputedStyle(node);
       return [node.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), node.querySelector('.from')!.getBoundingClientRect().width];
     });
-    for (const [path, rows, wide] of [['/inbox/all', '.list.all .row:not(.shelf)', 200], ['/inbox', '.list .row:not(.shelf)', 172]] as const) {
+    for (const [path, rows, wide] of [['/inbox', '.list.all .row:not(.shelf)', 200]] as const) {
       await page.goto(`${setpoint.base}${path}`);
       const row = page.locator(rows).first();
       await row.waitFor();
@@ -984,7 +968,7 @@ test('#240: with the reader open the sender column takes 24% of its row, between
 test('#238: the reader shows the email\'s summary under its subject, and none when triage wrote none', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
+    const page = await load(setpoint);
     await page.locator('.list.all .row', {hasText: 'Fabrikam'}).first().click();
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     const summary = page.locator('.rd-sum');
@@ -1004,18 +988,16 @@ test('#238: the reader shows the email\'s summary under its subject, and none wh
   }
 });
 
-test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; All\'s kind column draws it at 13 px', async () => {
+test('#119: each band leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; the kind column draws the kind\'s at 13 px', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
     const [ink3, caution] = [await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
-    const headers = page.locator('.list .gh');
+    const headers = page.locator('.list .gh:not(.day)');
     const labels = await headers.evaluateAll(all => all.map(header => header.querySelector('.gi')!.nextSibling!.textContent));
-    assert.deepEqual(labels, ['Pinned', 'Attention', 'Security', 'Deliveries', 'Money', 'Career', 'Noise']);
-    assert.deepEqual(await glyphs(headers.locator('.gi .icon')), [
-      ['keep', '14', ink3], ['flag', '14', caution], ['lock', '14', ink3], ['local_shipping', '14', ink3], ['payments', '14', ink3], ['work', '14', ink3], ['campaign', '14', ink3],
-    ]);
-    // The label starts 8 px after the glyph, as the header's other parts are spaced.
+    assert.deepEqual(labels, ['New', 'Attention', 'Pinned']);
+    assert.deepEqual(await glyphs(headers.locator('.gi .icon')), [['mark_email_unread', '14', ink3], ['flag', '14', caution], ['keep', '14', ink3]]);
+    // The label starts 8 px after the glyph, as the band's other parts are spaced.
     const gaps = await headers.evaluateAll(all => all.map(header => {
       const glyph = header.querySelector('.gi')!;
       const range = document.createRange();
@@ -1023,10 +1005,7 @@ test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px bef
       return Math.round(range.getBoundingClientRect().left - glyph.getBoundingClientRect().right);
     }));
     assert.deepEqual(new Set(gaps), new Set([8]));
-    // All: the Pinned shelf's header the same, and each kind word after its group's glyph at 13 px.
-    await page.goto(`${setpoint.base}/inbox/all`);
-    await page.locator('.list.all .row').first().waitFor();
-    assert.deepEqual(await glyphs(page.locator('.list.all .gh .gi .icon')), [['keep', '14', ink3]]);
+    // Each kind word after its group's glyph at 13 px.
     const kinds = page.locator('.list.all .row .kd:has(.icon)');
     assert.deepEqual((await kinds.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
     assert.deepEqual((await glyphs(kinds.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
@@ -1036,10 +1015,10 @@ test('#119: each lane\'s header leads with its glyph, 14 px in ink3 and 8 px bef
   }
 });
 
-test('All\'s Pinned shelf (D105): P on a day\'s row moves it to the shelf at once, and Unpin puts it back in its day', async () => {
+test('the Pinned shelf (D105): P on New\'s row moves it to the shelf at once, and Unpin puts it back where it was', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint, '/inbox/all');
+    const page = await load(setpoint);
     const shelf = () => page.locator('.list.all .row.shelf .from').allTextContents();
     const bank = page.locator('.list.all .row', {hasText: 'Checking ending in 1234'});
     assert.deepEqual(await shelf(), ['Parkside Apartments']);
@@ -1056,18 +1035,18 @@ test('All\'s Pinned shelf (D105): P on a day\'s row moves it to the shelf at onc
     });
     await page.keyboard.press('p');
     await until('Woodgrove Bank leads the shelf', () => shelf(), rows => rows.join() === 'Woodgrove Bank,Parkside Apartments');
-    assert.equal(await page.locator('.list.all .gh').first().textContent(), 'Pinned 2');
-    await until('it leaves its day', () => page.locator('.list.all .row:not(.shelf)', {hasText: 'Checking ending in 1234'}).count(), count => count === 0);
+    assert.equal(await page.locator('.list.all .gh.pinned').textContent(), 'Pinned 2');
+    await until('it leaves New', () => page.locator('.list.all .row:not(.shelf)', {hasText: 'Checking ending in 1234'}).count(), count => count === 0);
     release();
     const id = await idOf(setpoint, 'Statement ready');
     await until('the server pinned it', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.pinned);
-    // Unpin under the pointer, in the age's place, puts it back in its day.
+    // Unpin under the pointer, in the age's place, puts it back in New, unread as it still is.
     const pinned = page.locator('.list.all .row.shelf', {hasText: 'Checking ending in 1234'});
     assert.equal(await pinned.locator('.age').textContent(), '5h');
     await pinned.hover();
     await pinned.locator('.unpin').click();
     await until('it leaves the shelf', () => shelf(), rows => rows.join() === 'Parkside Apartments');
-    await until('back in its day', () => page.locator('.list.all .row:not(.shelf)', {hasText: 'Checking ending in 1234'}).count(), count => count === 1);
+    await until('back in New', () => page.locator('.list.all .row:not(.shelf)', {hasText: 'Checking ending in 1234'}).count(), count => count === 1);
     await until('the server unpinned it', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.pinned);
     assert.equal(await page.locator('.rd-subj').count(), 0, 'unpinning from the shelf opens nothing');
     await page.unroute('**/api/mail/messages/*/pin');
@@ -1077,80 +1056,76 @@ test('All\'s Pinned shelf (D105): P on a day\'s row moves it to the shelf at onc
   }
 });
 
-test('going to the Inbox opens All once nothing waits in Unread, from the sidebar, 1 and the bare address; Unread while anything does (D106)', async () => {
+test('the Inbox is one place: the sidebar, 1 and the bare address open it, with or without mail waiting, and All\'s old addresses land there (#243)', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     const path = () => Promise.resolve(new URL(page.url()).pathname);
-    // With mail waiting, the sidebar's Inbox from the Calendar opens Unread.
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cal-grid').waitFor();
     await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .gh.new').waitFor();
     assert.equal(await path(), '/inbox');
+    // No Unread | All to choose between.
+    assert.equal(await page.locator('.hd .seg').count(), 0);
     // Nothing waiting: Security read, Mark all as read, then Done on each Attention email.
     await readSecurity(setpoint);
     await setpoint.api('POST', '/mail/mark-all-read', {});
     await until('Mark all as read confirmed', () => counts(setpoint), value => value.unread === value.attention - 1 && value.unread_fyi === 0);
     const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
     for (const row of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.cal-grid').waitFor();
-    await until('the sidebar has the counts', () => page.locator('.nav:has-text("Inbox") .cnt').count(), count => count === 0);
-    await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
-    await page.locator('.list.all .row').first().waitFor();
-    assert.equal(await path(), '/inbox/all');
-    // Within the Inbox, Unread is still there to pick: "All caught up".
-    await page.locator('.hd .seg button', {hasText: 'Unread'}).click();
-    await page.locator('.empty-line', {hasText: 'All caught up'}).waitFor();
-    assert.equal(await path(), '/inbox');
-    // 1 from the Calendar.
     await page.keyboard.press('2');
     await page.locator('.cal-grid').waitFor();
     await page.keyboard.press('1');
-    await until('All', path, value => value === '/inbox/all');
-    // The bare address, once the counts have come.
-    await page.goto(`${setpoint.base}/`);
-    await until('All', path, value => value === '/inbox/all');
-    await page.locator('.list.all .row').first().waitFor();
-    // An address naming Unread keeps it.
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.empty-line', {hasText: 'All caught up'}).waitFor();
+    await page.locator('.list .gh.day').first().waitFor();
     assert.equal(await path(), '/inbox');
+    // No New, no Attention, and no All caught up: the shelf, then the days. The answers this
+    // browser had from before may show first; places settle once the fresh ones are in.
+    await until('the shelf leads', () => page.locator('.list .gh:not(.day)').allTextContents(), bands => bands.join() === 'Pinned 1');
+    assert.equal(await page.locator('.empty-line').count(), 0);
+    // The bare address, and All's old one with an email in it.
+    await page.goto(`${setpoint.base}/`);
+    await page.locator('.list .gh.day').first().waitFor();
+    assert.equal(await path(), '/');
+    const lease = await idOf(setpoint, 'Lease renewal terms');
+    await page.goto(`${setpoint.base}/inbox/all/${lease}`);
+    await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    await page.locator('.list .row.shelf.open').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('U on the Inbox switches Unread and All, its hint on the one it switches to; ⌘K offers it with its key; 1 goes to the Inbox from elsewhere and does nothing on it (#105)', async () => {
+test('U takes the cursor to New\'s first email, wherever the list is; ⌘K\'s Go to New does the same; 1 goes to the Inbox from elsewhere (#243)', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint);
-    assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['Unread', 'AllU']);
+    const page = await setpoint.page({width: 1677, height: 600});
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .gh.new').waitFor();
+    // Scrolled down to the days, the cursor on a day's row.
+    const lab = page.locator('.list .row[title="Lab 5 posted"]');
+    await lab.scrollIntoViewIfNeeded();
+    await point(lab);
     await page.keyboard.press('u');
-    await page.locator('.list.all .row').first().waitFor();
-    assert.equal(new URL(page.url()).pathname, '/inbox/all');
-    assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['UnreadU', 'All']);
-    await page.keyboard.press('1');
-    // Nothing happens to wait for: 1 no longer switches.
-    await page.waitForTimeout(200);
-    await setpoint.idle();
-    assert.equal(new URL(page.url()).pathname, '/inbox/all');
-    await page.keyboard.press('u');
-    await page.locator('.list .arow').first().waitFor();
-    assert.equal(new URL(page.url()).pathname, '/inbox');
+    await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    await until('New\'s first row in view', () => page.locator('.list .row.cur').evaluate(row => {
+      const list = row.closest('.list')!.getBoundingClientRect();
+      const box = row.getBoundingClientRect();
+      return box.top >= list.top && box.bottom <= list.bottom;
+    }), shown => shown);
+    // ⌘K names it with its key.
+    await point(lab);
     await page.keyboard.press('Meta+k');
-    await page.keyboard.type('show');
-    assert.deepEqual(await page.locator('.palette .item').allTextContents(), ['Show AllU']);
+    await page.keyboard.type('go to new');
+    assert.deepEqual(await page.locator('.palette .item').allTextContents(), ['Go to NewU']);
     await page.keyboard.press('Enter');
-    await page.locator('.list.all .row').first().waitFor();
-    assert.equal(new URL(page.url()).pathname, '/inbox/all');
-    // From the Calendar, 1 goes to the Inbox's Unread, as before.
+    await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    // From the Calendar, 1 goes to the Inbox.
     await page.keyboard.press('2');
     await page.locator('.cal-grid').waitFor();
     await page.keyboard.press('1');
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .gh.new').waitFor();
     assert.equal(new URL(page.url()).pathname, '/inbox');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -1194,7 +1169,7 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
     await page.locator('.pane-edge').focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await paneWidth(), 480);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await rowOf(page, 'Your recovery email was changed').click();
     await page.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
     const tools = page.locator('.rd-tools');
     const hints = () => tools.locator('.tool .kbd').evaluateAll(kbds => kbds.map(kbd => kbd.checkVisibility()));
@@ -1221,7 +1196,7 @@ test('S8 (SV-25, D54): a Pin or Mark all as read the server refuses says so in t
   try {
     const page = await load(setpoint);
     await page.route(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(rowOf(page, 'Pick a 30-minute slot'));
     await page.keyboard.press('p');
     await page.locator('.toast', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'}).waitFor();
     await page.keyboard.press('Shift+I');
@@ -1272,13 +1247,13 @@ test('Pin and Mark all as read show at once, before the server has them', async 
     const shelf = () => page.locator('.row.shelf').allTextContents();
 
     // P on Northwind's row: on the shelf at once.
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(rowOf(page, 'Pick a 30-minute slot'));
     await page.keyboard.press('p');
     await until('Northwind joins the shelf', () => shelf(), rows => rows.some(text => text.includes('Pick a 30-minute slot this week')));
 
-    // ⇧I: FYI and Noise read and fold away at once, and the sidebar's count drops.
+    // ⇧I: New empties at once, its FYI and Noise read, and the sidebar's count drops.
     await page.keyboard.press('Shift+I');
-    await until('the FYI groups go', () => page.locator('.gh', {hasText: 'Deliveries'}).count(), count => count === 0);
+    await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0);
     const pinned = (await setpoint.api<InboxOut>('GET', '/mail/inbox')).groups.find(group => group.group === 'pinned')!;
     assert.equal(pinned.rows.length, 1, 'the server doesn\'t have the pin yet');
 
@@ -1293,7 +1268,7 @@ test('Pin and Mark all as read show at once, before the server has them', async 
   }
 });
 
-test('after Mark all as read, a load answered before the provider confirms leaves FYI and Noise gone (SV-41)', async () => {
+test('after Mark all as read, a load answered before the provider confirms leaves New empty (SV-41)', async () => {
   // The dev provider holds every change while this file is there, so the check, not how fast the
   // load comes, makes sure the load is answered before the provider confirms.
   const holdDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-hold-'));
@@ -1302,20 +1277,20 @@ test('after Mark all as read, a load answered before the provider confirms leave
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_PROVIDER_HOLD: hold}});
   try {
     const page = await load(setpoint);
-    const noise = page.locator('.gh:not(.leaving)', {hasText: 'Noise'});
-    await noise.waitFor();
+    const fresh = page.locator('.list .gh.new:not(.leaving)');
+    await fresh.waitFor();
     const answered = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/api/mail/mark-all-read'));
     await page.keyboard.press('Shift+I');
     await answered;
-    await until('Noise folds away at once', () => noise.count(), count => count === 0);
+    await until('New folds away at once', () => fresh.count(), count => count === 0);
 
-    // From here on, note whether a Noise header shows again.
+    // From here on, note whether New shows again.
     await page.evaluate(() => {
-      const shows = () => [...document.querySelectorAll('.gh:not(.leaving)')].some(header => header.textContent?.includes('Noise'));
-      const state = window as unknown as {noiseBack: boolean};
-      state.noiseBack = shows();
+      const shows = () => document.querySelector('.list .gh.new:not(.leaving)') !== null;
+      const state = window as unknown as {newBack: boolean};
+      state.newBack = shows();
       new MutationObserver(() => {
-        state.noiseBack ||= shows();
+        state.newBack ||= shows();
       }).observe(document.body, {subtree: true, childList: true, attributes: true, characterData: true});
     });
     // A load while the provider is held: focus refreshes the Inbox.
@@ -1330,7 +1305,7 @@ test('after Mark all as read, a load answered before the provider confirms leave
     await until('the provider confirms', () => setpoint.api<{kind: string; state: string}[]>('GET', '/commands'), commands => !markAllPending(commands));
     await until('the server read them', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
     await until('the list has the server\'s answer', () => page.locator('.nav:has-text("Inbox") .cnt').textContent(), text => text === '5');
-    assert.equal(await page.evaluate(() => (window as unknown as {noiseBack: boolean}).noiseBack), false, 'Noise came back before the provider confirmed');
+    assert.equal(await page.evaluate(() => (window as unknown as {newBack: boolean}).newBack), false, 'New came back before the provider confirmed');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1342,14 +1317,15 @@ test('UX #11: ⇧U marks the open email unread and closes the reader; ⌘K names
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await rowOf(page, 'Your recovery email was changed').click();
     await until('Google read', () => unreadCount(page), text => text === '18');
     await page.keyboard.press('Shift+U');
     await page.locator('.pane').waitFor({state: 'detached'});
     await until('unread again', () => unreadCount(page), text => text === '19', 5000);
-    await page.locator('.arow.unread', {hasText: 'Your recovery email was changed'}).waitFor();
+    // Unread again where it was, in New.
+    await page.locator('.list .row.unread', {hasText: 'Your recovery email was changed'}).waitFor();
     // ⌘K's Mark unread shows the key.
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await rowOf(page, 'Your recovery email was changed').click();
     await page.locator('.rd-subj').waitFor();
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('mark unread');
@@ -1360,19 +1336,17 @@ test('UX #11: ⇧U marks the open email unread and closes the reader; ⌘K names
   }
 });
 
-test('UX #15: a filtered Inbox names its account in the header, and the sidebar\'s Inbox keeps Unread or All', async () => {
+test('UX #15: a filtered Inbox names its account in the header, and the sidebar\'s Inbox goes back to every account', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
     await page.locator('.sb .acct', {hasText: 'Business'}).click();
     await until('the header names it', () => page.locator('.hd-title').textContent(), text => text === 'Inbox · Business');
-    // All, then the sidebar's Inbox: every account, still All.
-    await page.keyboard.press('u');
-    await until('All', () => Promise.resolve(new URL(page.url()).pathname), path => path.includes('all'));
-    const all = new URL(page.url()).pathname;
+    // Its rows drop the account they'd all repeat (inbox-12).
+    await until('the account column goes', () => page.locator('.list .row .ac').first().isVisible(), shown => !shown);
     await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
     await until('every account', () => page.locator('.hd-title').textContent(), text => text === 'Inbox');
-    assert.match(new URL(page.url()).pathname, /all/, `still All after ${all}`);
+    assert.equal(new URL(page.url()).pathname, '/inbox');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1406,7 +1380,7 @@ test('a long account label: the account column fits the longest, every row\'s ac
   try {
     const business = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Business')!;
     await setpoint.api('PATCH', `/accounts/${business.id}`, {label: 'Business (Studio)'});
-    for (const path of ['/inbox', '/inbox/all']) {
+    for (const path of ['/inbox']) {
       const page = await load(setpoint, path);
       const rows = await page.locator('.list .row').evaluateAll(rows => rows.filter(row => row.querySelector('.ac .label')?.textContent).map(row => {
         const ac = row.querySelector('.ac')!.getBoundingClientRect();

@@ -1,7 +1,7 @@
 // The segmented control's thumb (DESIGN.md › Decided while building #179; polish audit grids-09):
 // when another segment turns on, a `sub3` pill slides from the last one to it over 180 ms rather
 // than the fill jumping. At rest the `on` segment draws its own fill, so it sits on its exact box. A
-// ref for any `.seg` (Month | Week, Unread | All, Event | Task…).
+// ref for any `.seg` (Month | Week, Event | Task…).
 import {motion} from '../tokens.ts';
 
 /** Keeps `--thumb-x` and `--thumb-w` on the `.seg` at its `on` segment, `data-sliding` while the thumb moves between two. */

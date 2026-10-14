@@ -33,7 +33,7 @@ async function openAt(page: Page, base: string, settingsPage: string) {
   await page.goto(`${base}/settings/${settingsPage}`);
   await page.locator('.settings').waitFor();
   await page.waitForURL(/\/inbox$/);
-  await page.locator('.arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
   await page.locator('.today-row').first().waitFor();
 }
 
@@ -1094,7 +1094,7 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
   try {
     const page = await setpoint.page({width: 2400, height: 1300});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
     const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a}, expected ${b}`);
 

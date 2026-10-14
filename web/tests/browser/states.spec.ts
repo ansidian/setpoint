@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, matchGolden, point, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, point, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -40,9 +40,8 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.hbar.caution', {hasText: 'Business needs sign-in'}).waitFor();
     await page.locator('.hbar.muted', {hasText: 'iCloud, as of 8:40 AM'}).waitFor();
-    await page.locator('.gh', {hasText: 'Unsorted'}).locator('.gh-note', {hasText: 'Triage is down, as of 9:09 AM'}).waitFor();
+    await page.locator('.lh', {hasText: 'Unsorted'}).locator('.gh-note', {hasText: 'Triage is down, as of 9:09 AM'}).waitFor();
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
     assert.equal(await page.locator('.acct', {hasText: 'Business'}).locator('.reconnect').count(), 1, 'the sidebar marks Business');
     // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#123).
     assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
@@ -68,14 +67,14 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     // Northwind's email read once already, so this browser has it when the network goes.
-    await page.locator('.arow', {hasText: 'Interview availability'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
     await page.locator('.pane').waitFor({state: 'detached'});
     await page.keyboard.press('k');
-    await page.locator('.arow.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
     // When the network went, and when the pill came, on the page's own clock.
     await page.evaluate(() => {
       const times = {offline: 0, pill: 0};
@@ -95,7 +94,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await pill.waitFor();
     const times = await page.evaluate(() => (window as unknown as {times: {offline: number; pill: number}}).times);
     assert.ok(times.pill - times.offline >= 1950, `the pill waited out the 2 s grace (${Math.round(times.pill - times.offline)} ms)`);
-    assert.equal(await page.locator('.arow', {hasText: 'Your recovery email was changed'}).count(), 1, 'the row stays');
+    assert.equal(await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).count(), 1, 'the row stays');
     assert.deepEqual(writes, [], 'nothing was sent');
     // Dimmed lighter, over 180 ms; the page still takes the pointer.
     const content = page.locator('.main.offline > .content');
@@ -109,9 +108,9 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.mouse.wheel(0, 300);
     await until('the list scrolled', () => list.evaluate(element => element.scrollTop), top => top > 0);
     await list.evaluate(element => element.scrollTo({top: 0}));
-    await point(page.locator('.arow', {hasText: 'Your recovery email was changed'}));
+    await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
-    await page.locator('.arow.cur', {hasText: 'Interview availability'}).waitFor();
+    await page.locator('.list .row.cur[title^="Interview availability"]').waitFor();
     await page.keyboard.press('Enter');
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
@@ -184,7 +183,7 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
 
     // Setpoint is back: the next ask opens the app at the address it was opened at, signed in.
     me = 'up';
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.match(page.url(), /\/inbox$/);
     assert.equal(await page.locator('.boot').count(), 0);
 
@@ -200,7 +199,7 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
     await setpoint.idle();
     assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
     assert.equal(await page.locator('.main > .offline-pill').count(), 1);
-    assert.equal(await page.locator('.arow').count() > 0, true);
+    assert.equal(await page.locator('.list .row').count() > 0, true);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -250,7 +249,7 @@ test('a failing account says why in caution, and a healthy Inbox shows no line',
   try {
     const page = await healthy.page('target');
     await page.goto(`${healthy.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await page.locator('.hbar').count(), 0);
     assert.equal(await page.locator('.gh').first().evaluate(header => header.classList.contains('first')), true);
   } finally {
@@ -292,7 +291,7 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     assert.equal(await lines.count(), 2);
     // The Inbox's lines are its accounts': none here.
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await page.locator('.hbar').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -341,7 +340,7 @@ test('state lines fold in as they come, a line whose source is healthy again sho
     // Offline, the pill comes in from 8 px above over 180 ms; back, a copy of it fades out where it was.
     await recordArrivals(page, '.main > .offline-pill');
     await page.reload();
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await network(page, false);
     const pill = page.locator('.main > .offline-pill');
     await pill.waitFor();
@@ -361,7 +360,7 @@ test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), ne
     const page = await setpoint.page('target');
     await recordArrivals(page, '.main > .offline-pill');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await network(page, false);
     // The blip: the network gone for half a second.
     await page.waitForTimeout(500);
@@ -371,10 +370,9 @@ test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), ne
     await setpoint.idle();
     assert.deepEqual(await arrivals(page), []);
     assert.equal(await page.locator('.main.offline').count(), 0);
-    // And changes work again.
+    // And changes work again: J to New's first row, Google's.
     await page.keyboard.press('j');
-    await page.keyboard.press('j');
-    await page.locator('.arow.cur', {hasText: 'Your recovery email was changed'}).waitFor();
+    await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
     await page.keyboard.press('h');
     await until('Done', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), value => value.attention === 2);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -388,7 +386,7 @@ test('the first backfill: search says what it has indexed so far', async () => {
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('lease');
     const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'});

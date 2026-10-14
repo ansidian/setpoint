@@ -294,57 +294,50 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 ### The list
 
-- **Group header** 30 px, `panel`, `hair` above and below (none above the first), its group's 14 px
-  glyph in `ink3` 8 px before the label (Pinned `keep`, Attention `flag` in `caution`, Unsorted
-  `pending`, Security `lock`, Deliveries `local_shipping`, Money `payments`, Career `work`, People
-  `person`, Updates `notifications`, Other `mail`, Noise `campaign`; #119), 11.5 uppercase
-  .08em `ink3`, count in `ink2`. Attention's band is the loudest: `caution` 8% into its `panel`
-  (Light 6%), label and count in `caution`, a `caution` 20% line under it (#167). A collapsed group
-  adds the first three organisations in `ink3` ("Wingtip Toys · Consolidated Messenger · Southridge
-  Video") and a chevron; under the pointer it lays `sub` over its band, and the keyboard cursor
-  `sub2`, as a row does over the page (#158). Every group
-  starts expanded in Unread, Noise too; one Andy collapses stays so for the session (#84).
-- **Order:** Pinned (only with pins), Attention, Unsorted (only when triage is down), Security,
-  Deliveries, Money, Career, People, Updates, Other, Noise. Empty groups are left out. Collapsed,
-  Noise is a count.
-- **Row** 38 px, padding 0 16 0 12: unread gutter (12), sender or organisation (172, ellipsis),
-  subject then " · " and the summary in `ink3` (ellipsis), the **account** (dot and label in `ink3`
-  12, 76 px, on every row, decision 41, dropped only while the list is filtered to one account,
-  #207), the age (64, right, `ink3` 12). Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
+The Inbox is **one list** (#243): **New**, **Attention**, the **Pinned** shelf, then every email by
+day. There is no Unread or All to choose between, and going to the Inbox always opens it.
+
+- **Bands** 30 px, `panel`, `hair` above and below (none above the first), a 14 px glyph in `ink3`
+  8 px before the label, 11.5 uppercase .08em `ink3`, count in `ink2`: **New** (`mark_email_unread`,
+  its unread count), **Attention** (`flag`; the loudest: `caution` 8% into its `panel`, Light 6%,
+  label, glyph and count in `caution`, a `caution` 20% line under it, #167), **Pinned** (`keep`),
+  then each day's heading ("TODAY Wed, Oct 7"). A part with nothing in it doesn't show.
+- **New** is every email that was unread when this visit to the Inbox first saw it, and it keeps
+  them, read or not, until the user leaves the Inbox, so J and K never move the list (#243). It's
+  drawn as a day is (see [The days](#the-days)), with ages rather than clock times: its Attention,
+  Unsorted (with triage's note while triage is down) and FYI lanes, the kind once where an FYI run
+  starts, its Noise folded to one line, the pattern prompt under its Attention, and **Mark all as
+  read ⇧I** under it all, after a 16 px `mark_email_read` (#123), while it has anything to read.
+- **Attention** holds every read Attention email not yet Done, with ages, until it's Done or
+  Trashed; unread Attention mail is in New first and comes here on the next visit (#243).
+- **Pinned** rows sit on their shelf, with ages, and Unpin takes the age's place under the pointer
+  (board 10); a pinned email's line is its subject and summary.
+- **Row** 38 px, padding 0 16 0 12: the kind column (100, as [The days](#the-days) say), the unread
+  gutter (12), sender or organisation (200, ellipsis), subject then " · " and the summary in `ink3`
+  (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, dropped
+  only while the list is filtered to one account, #207), the age or time (72, right, `ink3` 12).
+  Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
-  account never does, and All's kind becomes a subheading (#237); the sender narrows to a quarter of the row (#240).
-- **Attention row** (a three-line grid, padding 9 16 10 12, `hair` between rows): line 1 the sender
-  (with "via Greenhouse" in `ink3`, the **Protected** tag when protected), account and age at the end;
-  line 2 the subject (`ink` when unread; **`alert` 500 when protected**); line 3 the summary (`ink3`
-  12.5). Read-but-not-Done rows keep a `caution` ring in place of the dot and stay (#167).
+  account never does, the kind becomes a subheading (#237), and the sender narrows to a quarter of
+  the row (#240).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
-  MacBook Pro · Los Angeles"). A **code** row shows the code (Geist Mono, two groups of three), a
-  **Copy** button and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival
-  (Settings › Mail sets this). A copy the browser refuses says "Couldn't copy it"
-  ([Decided while building](#decided-while-building) #109).
-- **Pinned** rows sit on a shelf at the top, as rows at any count, with a `keep` glyph; a pinned
-  email's line is its subject and summary. Its row in its group keeps a 14 px `keep-fill` before its
-  account (#204).
-- **Footer:** "Mark all as read ⇧I" at the end of the list, after a 16 px `mark_email_read` (#123).
-- **Empty:** "All caught up" with "Open All" (board 04), as three rows under the mark (#203); the
-  reading pane collapses.
-- **Loading:** until the list's first answer, its skeleton (#225): Attention's three-line rows and
-  the groups' rows under their headers, never All caught up; All's day under its heading below the
-  Pinned shelf, and three more rows at the foot while its next page loads.
+  MacBook Pro · Los Angeles"); protected mail keeps its subject in `alert` 500. A **code** row in
+  New, Attention or on the shelf shows the code (Geist Mono, two groups of three), a **Copy** button
+  and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival (Settings › Mail
+  sets this). A copy the browser refuses says "Couldn't copy it" ([Decided while
+  building](#decided-while-building) #109). In a day the code is inside the subject.
+- **Loading:** until the list's first answers, its skeleton (#225): a day under its heading, and
+  three more rows at the foot while the next page loads.
 
-### All
+### The days
 
-The header's **All**. Every email, Noise included, newest first, under day headings ("TODAY Wed,
-Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39). Each day
-groups its rows by lane, and the kind shows once, in a left column, where an FYI run starts, after
-its group's glyph at 13 px (#119); with the reading pane open and on the phone, where the column has
-no room, it's a subheading over its run instead (#237); each
-day's Noise folds to one line ([Decided while building](#decided-while-building) #48). Pinned
-email sits on Unread's Pinned shelf above the first day, with ages and Unpin under the pointer, and
-leaves its day until it's unpinned (#101).
-
-Going to the Inbox from another page, or opening the app at its bare address, opens Unread while
-anything waits there and All when Unread would say "All caught up" (#102).
+Every email, Noise included, newest first, under day headings ("TODAY Wed, Oct 7", "YESTERDAY Tue,
+Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39), except what New, Attention and
+the shelf show, which leaves its day meanwhile (#101, #243). Each day groups its rows by lane, and
+the kind shows once, in a left column, where an FYI run starts, after its group's glyph at 13 px
+(#119); with the reading pane open and on the phone, where the column has no room, it's a
+subheading over its run instead (#237); each day's Noise folds to one line ([Decided while
+building](#decided-while-building) #48). Done mail stays in its day, quiet, with a ✓ Done tag (#241).
 
 ### The reader
 
@@ -873,8 +866,8 @@ comes in from above and fades out (#221).
 
 ## Phone
 
-Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the Inbox (Attention,
-Pinned, Security, the FYI groups, Noise), its rows with the account label; the reader full width with
+Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the Inbox's one list
+(New, Attention, Pinned, the days, #243), its rows with the account label; the reader full width with
 Back; a read-only agenda for today and the next 7 days, empty days collapsed. Actions: Done (on
 Attention mail, #93), Trash,
 Mark read, Mark unread, Mark all as read. Plain search; no calendar editing, no Alfred, Settings only to
@@ -915,7 +908,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 ## Interaction rules
 
 - **Read state:** an email becomes read only when opened (Enter or a click) or by Mark all as read.
-  Moving the cursor, scrolling and expanding a group never mark anything read. Counts follow at once
+  Moving the cursor, scrolling and opening a Noise line never mark anything read. Counts follow at once
   (opening an unread email drops the unread counts; the attention pill drops only on Done).
 - **Keyboard cursor:** `J` / `K` move it (a `sub2` fill); moving the pointer onto a row makes it the
   cursor, as in darma. Enter opens.
@@ -924,7 +917,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
   six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
-  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (Unread or All, #105) ⇧I ⇧U ⌘Enter;
+  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to New, #243) ⇧I ⇧U ⌘Enter;
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
   `J` `K` Enter `O` `N` Esc. Key hints read "Esc",
   "⌘K", "⇧I".
@@ -1020,6 +1013,13 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     its values; the board audit draws every board with these.
 32. **Alfred's mark is `auto_awesome` in its gradient** (#173): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
+
+**The one list** (darma SV-70, D264, D266; [Decided while building](#decided-while-building) #243).
+
+33. **The Inbox is one list:** boards 01–04, 09, 10, 17, 19a, 19b, 20, 21a and 22a draw Unread's
+    groups (and 04 All caught up, 05 All by itself); the app draws New as a day, Attention, the
+    Pinned shelf, then the days, so the audit compares them as they are and expects the list to
+    differ.
 
 ## Not designed yet
 
@@ -2475,3 +2475,17 @@ it changes what's on screen.
     the editor and on the proposal card (where it floats under the field as a menu). Picking one
     fills the place and its address without asking Google. Tab through an empty Place goes on
     without picking (Andy, 2026-10-14; darma SV-71).
+243. **The Inbox is one list** (amending #20, #34, #36, #70, #75, #84, #89, #101, #102, #105, #203, #204; Andy,
+    2026-10-14; darma SV-70 D264, D266): New, Attention, the Pinned shelf, then the days, and no
+    Unread | All. New is every email unread when this visit first saw it, kept there read or not
+    until the user leaves the Inbox, drawn as a day with ages: lanes, kinds, Noise folded, the
+    pattern prompt under its Attention, Mark all as read under it. Attention is every read Attention
+    email not yet Done; unread Attention mail is in New first and comes here on the next visit. An
+    email marked unread stays where it is for the visit. Mark all as read empties New: what it reads
+    goes to its day, Attention it leaves unread to Attention, and Security it leaves unread to its
+    day. Pinned mail is on the shelf only. A part with nothing in it doesn't show, and there's no
+    All caught up. `U` takes the cursor to New's first email; `1` and the sidebar always open the
+    same Inbox, and All's old addresses land there. The phone is the same list. Attention keeps its
+    `caution` dot and ring (#167) and Noise recedes (#168) on the list's rows. Board audit (override
+    33): 01 1.91% → 6.18%, 04 0.19% → 2.39%, 09 0.51% → 5.09%, 10 2.72% → 7.58%, 19a 0.97% → 3.35%,
+    22a 1.97% → 4.45%; 05 4.52% → 4.39%, 21a 10.35% → 10.24%; the rest within 0.1%.

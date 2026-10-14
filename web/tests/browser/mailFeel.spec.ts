@@ -1,14 +1,13 @@
 // Mail feels finished (the polish audit's mail slice, darma SV-63; DESIGN.md › Decided while building
-// #197–#219): rows fold text first, Done and Trash beat before the fold, groups open and close like
-// drawers; the Today block's bar and its warming time, and the completion moment; the sidebar's
-// folding accounts and rolling counts; All caught up; the rows' pin, sticky headers, code countdown
+// #197–#219): rows fold text first, Done and Trash beat before the fold, Noise opens and closes like
+// a drawer; the Today block's bar and its warming time, and the completion moment; the sidebar's
+// folding accounts and rolling counts; the rows' pin, sticky headers, code countdown
 // and filtered account column; the reader's swap, code card and edge; search's reasons, chips and
 // widening field; ⌘K's matches. Each single value stated once.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
-import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, readSecurity, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -89,18 +88,18 @@ const clearFolds = (page: Page) => page.evaluate(() => {
 const LEAVING = [[0, '1'], [0.4, '0'], [1, '0']];
 const ARRIVING = [[0, '0'], [0.6, '0'], [1, '1']];
 
-test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat for 120 ms before the fold; a group opens and closes like a drawer, its rows 12 ms apart', async () => {
+test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat for 120 ms before the fold; Noise opens and closes like a drawer, its rows 12 ms apart', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await watchFolds(page);
     const [good, alert] = [await colourOf(page, '--good'), await colourOf(page, '--alert')];
 
     // Done from the cursor: the row tints `good` 14% and its dot gives way to a 14 px check in `good`,
-    // then it folds after the beat, its text first.
-    const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
+    // then it folds out of New after the beat, its text first, and into its day.
+    const northwind = page.locator('.list .row[title="Interview availability for Software Engineer I"]');
     await point(northwind);
     await page.keyboard.press('h');
     await until('Northwind folded', () => folds(page), list => list.some(fold => fold.fold === 'out'));
@@ -110,13 +109,14 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     assert.deepEqual([done.delay, done.duration, done.frames, done.glyph], [120, 180, LEAVING, good]);
     assert.equal(await page.evaluate(() => {
       const probe = document.querySelector('.list')!.appendChild(document.createElement('div'));
-      probe.className = 'arow beat-done';
+      probe.className = 'row beat-done';
       probe.style.transition = 'none';
       const colour = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return colour;
     }), await backgroundOf(page, 'color-mix(in oklch, var(--good) 14%, transparent)'));
-    await until('Northwind gone', () => northwind.count(), count => count === 0);
+    await until('Northwind in its day', () => page.locator('.list .row.done[data-key^="all:"][title^="Interview availability"]').count(), count => count === 1);
+    await until('the fold is over', () => page.locator('.list .leaving').count(), count => count === 0);
 
     // Trash: `alert` 8% and a bin in `alert`.
     await clearFolds(page);
@@ -140,36 +140,31 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     await until('Woodgrove back', () => folds(page), list => list.some(fold => fold.fold === 'in' && /Woodgrove Bank/.test(fold.text)));
     const back = (await folds(page)).find(fold => fold.fold === 'in')!;
     assert.deepEqual([back.delay, back.duration, back.frames], [0, 180, ARRIVING]);
+    await until('the fold is over', () => page.locator('.list .leaving').count(), count => count === 0);
 
-    // Collapsing Deliveries folds its rows out, 12 ms apart up to 60 and no beat; the one chevron turns to point right.
+    // Opening New's Noise folds its six rows in, 12 ms apart up to 60 and no beat; the one chevron
+    // turns from pointing right to down. Closing folds them out the same way.
     await clearFolds(page);
-    const deliveries = page.locator('.list .gh', {hasText: 'Deliveries'});
-    const chevron = deliveries.locator('.chev .icon');
-    assert.equal(await deliveries.locator('.chev .icon').count(), 1);
+    const noise = page.locator('.list .nfold').first();
+    const chevron = noise.locator('.chev .icon');
+    assert.equal(await chevron.count(), 1);
     assert.equal(await chevron.evaluate(icon => getComputedStyle(icon).transitionDuration), '0.12s');
-    // Its rows: up to the next header.
-    const rows = await deliveries.evaluate(header => {
-      let count = 0;
-      for (let next = header.nextElementSibling; next && !next.classList.contains('gh'); next = next.nextElementSibling) count += 1;
-      return count;
-    });
-    const stagger = Array.from({length: rows}, (_, index) => Math.min(index * 12, 60));
-    assert.ok(rows > 1);
-    await deliveries.click();
-    await page.locator('.list .gh.collapsed', {hasText: 'Deliveries'}).waitFor();
-    await until('its rows folded', () => folds(page), list => list.filter(fold => fold.fold === 'out').length === rows);
-    assert.deepEqual((await folds(page)).map(fold => [fold.fold, fold.delay, fold.frames, fold.classes.includes('beat')]), stagger.map(delay => ['out', delay, LEAVING, false]));
+    assert.equal(turn(await chevron.evaluate(icon => getComputedStyle(icon).transform)), -90);
+    const stagger = Array.from({length: 6}, (_, index) => Math.min(index * 12, 60));
+    await noise.click();
+    await until('its rows folded in', () => folds(page), list => list.filter(fold => fold.fold === 'in').length === 6);
+    assert.deepEqual((await folds(page)).map(fold => [fold.fold, fold.delay, fold.frames, fold.classes.includes('beat')]), stagger.map(delay => ['in', delay, ARRIVING, false]));
+    await until('the chevron points down', async () => turn(await chevron.evaluate(icon => getComputedStyle(icon).transform)), degrees => degrees === 0);
+    // Its rows' folds in have played out before it closes.
+    await page.evaluate(() => Promise.all(document.querySelector('.list')!.getAnimations({subtree: true}).filter(one => one.effect?.getComputedTiming().iterations !== Infinity).map(one => one.finished.catch(() => null))));
+    await clearFolds(page);
+    await noise.click();
+    await until('its rows folded out', () => folds(page), list => list.filter(fold => fold.fold === 'out').length === 6);
+    assert.deepEqual((await folds(page)).map(fold => [fold.fold, fold.delay, fold.frames]), stagger.map(delay => ['out', delay, LEAVING]));
     await until('the chevron points right', async () => turn(await chevron.evaluate(icon => getComputedStyle(icon).transform)), degrees => degrees === -90);
     await until('they\'re gone', () => page.locator('.list .leaving').count(), count => count === 0);
-    // Opening it folds them back in the same way.
-    await clearFolds(page);
-    await deliveries.click();
-    await page.locator('.list .gh:not(.collapsed)', {hasText: 'Deliveries'}).waitFor();
-    await until('its rows folded in', () => folds(page), list => list.filter(fold => fold.fold === 'in').length === rows);
-    assert.deepEqual((await folds(page)).map(fold => [fold.fold, fold.delay, fold.frames]), stagger.map(delay => ['in', delay, ARRIVING]));
-    await until('the chevron points down', async () => turn(await chevron.evaluate(icon => getComputedStyle(icon).transform)), degrees => degrees === 0);
 
-    // Mark all as read: each group's rows fold 12 ms apart, up to 60.
+    // Mark all as read: New's rows fold out, each lane's 12 ms apart up to 60, and into their days.
     await clearFolds(page);
     await page.mouse.move(1, 1);
     await page.keyboard.press('Shift+I');
@@ -183,42 +178,44 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
   }
 });
 
-test('SV-69: Done in All ticks its row in place, then it stays quiet with a Done tag; the lane counts what\'s left and the reader says Done', async () => {
+test('SV-69, #243: Done moves an email out of New into its day, quiet with a Done tag; New\'s Attention counts what\'s left; the reader says Done; Undo puts it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox/all`);
+    await page.goto(`${setpoint.base}/inbox`);
     const lane = page.locator('.list.all .lh.att').first();
-    await until('Today\'s Attention lane', () => lane.textContent(), text => text === 'Attention 2');
-    const northwind = page.locator('.list.all .row[data-id="5"]');
-    await northwind.click();
+    await until('New\'s Attention lane', () => lane.textContent(), text => text === 'Attention 2');
+    const fresh = page.locator('.list.all .row[data-key="new:5"]');
+    const inDay = page.locator('.list.all .row[data-key="all:5"]');
+    await fresh.click();
     await page.locator('.rd-tools .tool.done').waitFor();
     await page.keyboard.press('h');
 
-    // The row stays where it was: its dot gives way to Done's check in `good`, its row tinting as Done's
-    // beat does, then its text settles in `ink3` beside a Done tag. The reader moves on to the next.
-    await until('Northwind ticked', () => northwind.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('ticked')));
-    assert.ok((await northwind.getAttribute('class'))!.split(' ').includes('done'));
-    assert.deepEqual(await northwind.locator('.ud > .icon').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).animationName.split(', ')[0]]),
-      [await colourOf(page, '--good'), 'beat-in']);
-    assert.equal(await northwind.evaluate(element => getComputedStyle(element).animationName), 'tick-settle');
-    assert.equal(await northwind.locator('.tag').textContent(), 'Done');
+    // It folds out of New and into today, where its text settles in `ink3` beside a Done tag. The
+    // reader moves on to the next.
+    await inDay.waitFor();
+    assert.ok((await inDay.getAttribute('class'))!.split(' ').includes('done'));
+    assert.equal(await inDay.locator('.tag').textContent(), 'Done');
     const ink3 = await colourOf(page, '--ink3');
-    await until('Northwind quiet', () => northwind.locator('.from').evaluate(element => getComputedStyle(element).color), colour => colour === ink3);
+    await until('Northwind quiet', () => inDay.locator('.from').evaluate(element => getComputedStyle(element).color), colour => colour === ink3);
+    await until('it leaves New', () => fresh.count(), count => count === 0);
     assert.equal(await lane.textContent(), 'Attention 1');
+    // Today's Attention lane, all of it Done, has no count.
+    assert.equal(await page.locator('.list.all .lh.att').nth(1).textContent(), 'Attention');
     await until('the next email open', () => page.locator('.rd-subj').textContent(), text => !/Interview availability/.test(text ?? ''));
 
     // Back on it, the reader says it's Done where the button was.
-    await northwind.click();
+    await inDay.click();
     const status = page.locator('.rd-tools .rd-done');
     await until('the reader\'s Done', () => status.textContent(), text => text === 'Done');
     assert.equal(await page.locator('.rd-tools .tool.done').count(), 0);
     assert.equal(await status.locator('.icon').evaluate(element => getComputedStyle(element).color), await colourOf(page, '--good'));
 
-    // Undo puts it back as it was: no tag, Attention 2, and Done offered again.
+    // Undo puts it back as it was: in New, no tag, Attention 2, and Done offered again.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
-    await until('Northwind not Done', () => northwind.getAttribute('class'), classes => !classes?.split(' ').includes('done'));
-    assert.equal(await northwind.locator('.tag').count(), 0);
+    await fresh.waitFor();
+    await until('it leaves its day', () => inDay.count(), count => count === 0);
+    assert.equal(await fresh.locator('.tag').count(), 0);
     await until('Attention 2 again', () => lane.textContent(), text => text === 'Attention 2');
     await page.locator('.rd-tools .tool.done').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
@@ -283,7 +280,7 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const nav = (name: string) => page.locator('.sb .nav', {hasText: name});
     const accounts = page.locator('.sb-accts');
 
@@ -305,14 +302,14 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
     const pill = page.locator('.sb .apill');
     const count = pill.locator('.count');
     const rolls = await watch(count, 'data-dir');
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(page.locator('.list .row[title="Interview availability for Software Engineer I"]'));
     await page.keyboard.press('h');
     await until('the pill reads 2', () => pill.textContent(), text => text === '2');
     await until('it rolled', rolls, seen => seen.includes(null));
     assert.deepEqual((await rolls()).filter(Boolean), ['down']);
     assert.equal(await pill.evaluate(element => element.getAnimations().filter(animation => !(animation instanceof CSSTransition)).length), 0, 'a fall doesn\'t swell it');
-    // The group's count rolls with it.
-    assert.equal(await page.locator('.list .gh.att .n').textContent(), '2');
+    // New's Attention lane counts with it.
+    assert.equal(await page.locator('.list .lh.att .n').first().textContent(), '1');
 
     // Undo is a rise: the count rolls up and the pill swells to 1.22 at 40% over 260 ms.
     const swells = await page.evaluate(() => {
@@ -359,54 +356,17 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
   }
 });
 
-test('states-10, inbox-08: All caught up is three rows: the mark settling in at 44 px, the line, then Open All with its U', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    await readSecurity(setpoint);
-    await setpoint.api('POST', '/mail/mark-all-read', {});
-    await until('Mark all as read confirmed', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), counts => counts.unread_fyi === 0);
-    const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
-    for (const row of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
-    const empty = page.locator('.empty-line');
-    await empty.waitFor();
-    const mark = empty.locator('svg.mark.settle');
-    const [box, line, button] = [(await mark.boundingBox())!, (await empty.locator('.t').boundingBox())!, (await empty.getByRole('button', {name: 'Open All'}).boundingBox())!];
-    assert.deepEqual([box.width, box.height], [44, 44]);
-    assert.equal(Math.round(line.y - (box.y + box.height)), 14);
-    assert.equal(Math.round(button.y - (line.y + line.height)), 14);
-    assert.ok(Math.abs((box.x + box.width / 2) - (button.x + button.width / 2)) < 1, 'centred, one above the other');
-    assert.deepEqual(await empty.locator('.t').evaluate(element => [element.textContent, getComputedStyle(element).fontSize, getComputedStyle(element).fontWeight, getComputedStyle(element).color]),
-      ['All caught up', '15px', '500', await colourOf(page, '--ink')]);
-    assert.equal(await empty.locator('.btn .kbd').textContent(), 'U');
-    // Each chip settles once, from 6 px above (3 of its 22 units), 70 ms apart; the line and the button fade in after 60 ms.
-    assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => {
-      const style = getComputedStyle(chip);
-      return [style.animationName, style.animationDuration, style.animationDelay, style.animationIterationCount];
-    })), [['mark-settle', '0.26s', '0s', '1'], ['mark-settle', '0.26s', '0.07s', '1'], ['mark-settle', '0.26s', '0.14s', '1']]);
-    assert.deepEqual(await empty.locator('.t').evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration, getComputedStyle(element).animationDelay]),
-      ['fade-in', '0.18s', '0.06s']);
-    // U opens All, as the button does.
-    await page.keyboard.press('u');
-    await page.waitForURL(/\/inbox\/all/);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the shelf\'s sight says so; headers stay at the top; a filtered list drops the account', async () => {
+test('inbox-09, -10, -12: a pin out of the shelf\'s sight says so and lands on the shelf; bands stay at the top; a filtered list drops the account', async () => {
   const setpoint = await startSetpoint();
   try {
     // A short window, so the list scrolls.
     const page = await setpoint.page({width: 1677, height: 560});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const list = page.locator('.content > .list');
     const ink3 = await colourOf(page, '--ink3');
 
-    // Headers stick to the top, each sliding over the last; J and K keep a row clear of them.
+    // Bands stick to the top, each sliding over the last; J and K keep a row clear of them.
     assert.deepEqual(await page.locator('.list .gh').first().evaluate(header => [getComputedStyle(header).position, getComputedStyle(header).top, getComputedStyle(header).zIndex]), ['sticky', '0px', '2']);
     assert.equal(await list.evaluate(element => getComputedStyle(element).scrollPaddingTop), '30px');
     await list.evaluate(element => element.scrollBy(0, 300));
@@ -417,10 +377,10 @@ test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the s
     });
     assert.ok(stuck && !/^Pinned/.test(stuck), `a later group's header is on top: ${stuck}`);
 
-    // P on Woodgrove Pay in Money, with the shelf scrolled away: its row keeps a 14 px keep-fill in
-    // ink3 before its account, growing in; the toast says Pinned with its keep glyph, and Undo.
-    const pay = page.locator('.row:not(.shelf)', {hasText: 'Woodgrove Pay'});
-    await pay.scrollIntoViewIfNeeded();
+    // P on Consolidated Messenger near New's top, with the shelf below, out of sight: the toast says
+    // Pinned with its keep glyph, and Undo; the row leaves New for the shelf (#243).
+    await list.evaluate(element => element.scrollTo(0, 0));
+    const pay = page.locator('.row:not(.shelf)', {hasText: 'Consolidated Messenger'});
     await point(pay);
     // What the row arriving on the shelf plays, as it arrives.
     await page.evaluate(() => {
@@ -441,33 +401,25 @@ test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the s
       }))).observe(document.querySelector('.content > .list')!, {childList: true});
     });
     await page.keyboard.press('p');
-    const mark = pay.locator('.pinmark');
-    await mark.waitFor();
-    assert.deepEqual(await mark.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('svg')!.getAttribute('width'), getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]),
-      ['pinmark new', ink3, '14', 'beat-in', '0.12s']);
-    // Just before the account, the row's 10 px gap between them (its place, not its growing box).
-    assert.equal(await pay.evaluate(row => {
-      const [glyph, account] = [row.querySelector<HTMLElement>('.pinmark')!, row.querySelector<HTMLElement>('.ac')!];
-      return account.offsetLeft - (glyph.offsetLeft + glyph.offsetWidth);
-    }), 10);
     const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
     await toast.waitFor();
     assert.equal(await toast.locator('.tone .icon').evaluate(icon => getComputedStyle(icon).color), ink3);
     // It landed on the shelf: it folded in, then holds `sub3` and lets it go over 260 ms.
-    await page.locator('.row.shelf', {hasText: 'Woodgrove Pay'}).waitFor();
+    await page.locator('.row.shelf', {hasText: 'Consolidated Messenger'}).waitFor();
+    await until('it left New', () => pay.count(), count => count === 0);
     const sub3 = await backgroundOf(page, 'var(--sub3)');
     assert.deepEqual(await page.evaluate(() => (window as unknown as {landings: string[][]}).landings), [['180 0 ', `260 180 ${sub3}`]]);
-    // Undo unpins it, and the toast goes.
+    // Undo unpins it, back in New, and the toast goes.
     await toast.getByRole('button', {name: 'Undo'}).click();
-    await until('unpinned', () => mark.count(), count => count === 0);
+    await until('back in New', () => pay.count(), count => count === 1);
     await until('the toast gone', () => page.locator('.toast').count(), count => count === 0);
 
-    // With the shelf in view, a pin needs no toast; an Attention row keeps its glyph before its account too.
-    await list.evaluate(element => element.scrollTo(0, 0));
-    const exams = page.locator('.arow', {hasText: 'Contoso University'});
+    // With the shelf in view, a pin needs no toast.
+    const exams = page.locator('.row:not(.shelf)', {hasText: 'Contoso University'}).first();
+    await page.locator('.row.shelf').first().scrollIntoViewIfNeeded();
     await point(exams);
     await page.keyboard.press('p');
-    await exams.locator('.r1 .pinmark + .dot').waitFor();
+    await page.locator('.row.shelf', {hasText: 'Contoso University'}).waitFor();
     await setpoint.idle();
     assert.equal(await page.locator('.toast', {hasText: 'Pinned'}).count(), 0);
 
@@ -476,12 +428,11 @@ test('inbox-09, -10, -12: a pinned row keeps a keep glyph and a pin out of the s
     await page.locator('.content.filtered').waitFor();
     await page.locator('.hd-title', {hasText: 'Inbox · Personal'}).waitFor();
     await page.locator('.content.filtered .list .row').first().waitFor();
-    assert.deepEqual(await page.locator('.list .row .ac, .list .arow .r1 .dot, .list .arow .r1 .label').evaluateAll(parts => [...new Set(parts.map(part => getComputedStyle(part).display))]), ['none']);
+    assert.deepEqual(await page.locator('.list .row .ac').evaluateAll(parts => [...new Set(parts.map(part => getComputedStyle(part).display))]), ['none']);
     assert.ok(await page.locator('.list .row .age').first().isVisible());
 
-    // All's day headings outrank its lanes: the day ink2, its date ink3.
+    // Day headings outrank lanes: the day ink2, its date ink3.
     await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
-    await page.keyboard.press('u');
     const day = page.locator('.list.all .gh.day').first();
     await day.waitFor();
     assert.deepEqual([await day.evaluate(element => getComputedStyle(element).color), await day.locator('.date').evaluate(element => getComputedStyle(element).color)], [await colourOf(page, '--ink2'), ink3]);
@@ -496,24 +447,24 @@ test('reader-03, -04, -09: each email swaps in from the way the user stepped; a 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const swap = page.locator('.pane .rd-swap');
     const swapped = () => swap.evaluate(element => [element.getAttribute('data-swap'), getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]);
 
     // The first email arrives with the pane (its slide), not as a swap.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title="Interview availability for Software Engineer I"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(await swapped(), [null, 'none', '0s']);
     const tools = page.locator('.pane > .rd-tools');
     await tools.evaluate(element => element.setAttribute('data-first', ''));
     // J: up 8 px from below, over 180 ms; K: down from above; a click fades over 120 ms. The tools stay.
     await page.keyboard.press('j');
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
     assert.deepEqual(await swapped(), ['next', 'rd-in-next', '0.18s']);
     await page.keyboard.press('k');
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(await swapped(), ['prev', 'rd-in-prev', '0.18s']);
-    await page.locator('.row', {hasText: 'Contoso Insurance'}).click();
+    await page.locator('.list .row', {has: page.locator('.code-line')}).click();
     await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
     assert.deepEqual(await swapped(), ['fade', 'fade-in', '0.12s']);
     assert.equal(await page.locator('.pane > .rd-tools[data-first]').count(), 1, 'the tools never swap');
@@ -588,6 +539,8 @@ test('reader-10: a newsletter whose images give only their width keeps its shape
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
+    // In New's Noise, folded until opened.
+    await page.locator('.list .nfold.collapsed').first().click();
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
     // Three 602-wide pictures at 150 each, their padding and the footer: never the ~100 px band it was.
@@ -598,29 +551,17 @@ test('reader-10: a newsletter whose images give only their width keeps its shape
   }
 });
 
-test('search-11, -13, -14, -15: a reason shows only when the row doesn\'t; no results are chips; the field widens with the panes; the answer\'s fact is underlined', async () => {
+test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results are chips; the field widens with the panes; the answer\'s fact is underlined', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
-    // The field widens over 180 ms, and Unread | All fades out over 120 ms as the first key goes in.
+    await page.locator('.list .row').first().waitFor();
+    // The field widens over 180 ms as the first key goes in.
     assert.match(await page.locator('.hd > .search').evaluate(field => getComputedStyle(field).transition), /width 0\.18s/);
-    await page.evaluate(() => {
-      const fades: string[] = [];
-      (window as unknown as {fades: string[]}).fades = fades;
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (!(node instanceof HTMLElement) || !node.classList.contains('seg')) return;
-        fades.push(node.getAnimations().map(animation => {
-          const frames = (animation.effect as KeyframeEffect).getKeyframes().map(frame => frame.opacity).join(' → ');
-          return `${frames} ${animation.effect!.getComputedTiming().duration}`;
-        }).join());
-      }))).observe(document.querySelector('.hd')!, {childList: true});
-    });
     await page.keyboard.press('/');
     await page.keyboard.type('north');
     await page.locator('.arow.result').first().waitFor();
-    assert.deepEqual(await page.evaluate(() => (window as unknown as {fades: string[]}).fades), ['1 → 0 120']);
     // Free text in the highlighted sender: no why line, three lines a row.
     assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').count(), 1);
     assert.equal(await page.locator('.arow.result .why').count(), 0);
@@ -664,7 +605,7 @@ test('shell-13: ⌘K marks what was typed', async () => {
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
 
     // ⌘K: "ne" marks News's Ne in ink at 600, no fill.
     await page.keyboard.press('Meta+k');

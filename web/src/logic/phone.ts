@@ -1,17 +1,8 @@
-// The phone's own rules (DESIGN.md › Phone; board 21): the Inbox's group order, and the read-only
-// agenda of today and the next 7 days with its empty days collapsed.
-import type {InboxGroup, ItemOut} from '@setpoint/shared';
+// The phone's own rules (DESIGN.md › Phone; board 21): the read-only agenda of today and the next 7
+// days with its empty days collapsed.
+import type {ItemOut} from '@setpoint/shared';
 import {dayTitle, isPast, timeRange} from './calendar.ts';
 import {addDays, clockTime, daysBetween} from './format.ts';
-
-/** The Inbox on the phone: Attention (and Unsorted under it) before the Pinned shelf, then the rest. */
-export function phoneGroups<T extends {group: InboxGroup}>(views: T[]): T[] {
-  const pinned = views.filter(view => view.group === 'pinned');
-  const rest = views.filter(view => view.group !== 'pinned');
-  const after = rest.findIndex(view => view.group !== 'attention' && view.group !== 'unsorted');
-  const at = after < 0 ? rest.length : after;
-  return [...rest.slice(0, at), ...pinned, ...rest.slice(at)];
-}
 
 /** Today and the next 7 days. */
 export const AGENDA_DAYS = 8;

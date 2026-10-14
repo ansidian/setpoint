@@ -622,7 +622,7 @@ test('keys: 3 opens News; J and K move; Enter opens; J opens the next with one o
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('3');
     await page.waitForURL(/\/news$/);
     await row(page, 'Brush fire near the 210').waitFor();

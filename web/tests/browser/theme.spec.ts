@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, collapseGroups, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -17,8 +17,7 @@ test('board 22a: the Inbox in Light (System, with the browser preferring light),
     await page.emulateMedia({colorScheme: 'light'});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
     assert.equal(await theme(page), 'light');
@@ -62,7 +61,7 @@ test('System follows the browser, the first paint doesn\'t fade, and a change do
       }).observe(document, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
     });
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await theme(page), 'night', 'System, with the browser preferring dark');
     assert.equal(await page.evaluate(() => (window as unknown as {fades: number}).fades), 0, 'the first paint doesn\'t fade');
     const classes = await watch(page.locator('html'), 'class');

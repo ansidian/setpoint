@@ -28,7 +28,7 @@ const leadGlyph = (line: Locator) => line.evaluate(element => {
 async function load(setpoint: Setpoint): Promise<Page> {
   const page = await setpoint.page('target');
   await page.goto(`${setpoint.base}/inbox`);
-  await page.locator('.list .arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
   return page;
 }
 
@@ -66,8 +66,6 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await until('the finished words chipped', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection');
     assert.equal(await page.locator('.search input').inputValue(), 'march');
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
-    // Unread | All goes (a copy of it fading out, search-14, aside).
-    assert.equal(await page.locator('.hd .seg:not([aria-hidden])').count(), 0);
     // Enter: the chips the server found, and the keys go to the results.
     await page.keyboard.press('Enter');
     await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection | DateMar 2026');
@@ -131,9 +129,9 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await page.keyboard.press('Escape');
     await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
     assert.equal(await page.locator('.qchip').count(), 0);
-    await page.locator('.gh', {hasText: 'Attention'}).waitFor();
+    await page.locator('.list .gh.new').waitFor();
     // ⌘F focuses the field too.
-    await page.locator('.gh', {hasText: 'Attention'}).click();
+    await page.locator('.list .gh.new').click();
     await page.keyboard.press('Meta+f');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search mail');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -463,7 +461,7 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     const place = card.locator('input[aria-label="Place"]');
@@ -498,7 +496,7 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     // The card itself, not the copy that folds away in its place once it closes (app/fold.ts).
     const card = page.locator('.pane .prop:not([aria-hidden])');
@@ -584,7 +582,7 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
     await page.locator('.pane .prop input[aria-label="Title"]').waitFor();
     assert.equal(await menu.count(), 0);
     // On other mail the buttons stay under the head, and More, holding nothing, doesn't show (SV-24).
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).waitFor();
     assert.equal(await page.locator('.rd-tools [aria-label="More"]').count(), 0);
     // The sign-in's proposal, left open, doesn't stop this email's (SV-24).
@@ -756,7 +754,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();

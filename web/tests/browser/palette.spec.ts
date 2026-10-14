@@ -7,7 +7,7 @@ import {after, test} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, collapseGroups, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -22,12 +22,10 @@ const leadGlyph = (line: Locator) => line.evaluate(element => {
 const items = (page: Page) => page.locator('.palette .item').allTextContents();
 const current = (page: Page) => page.locator('.palette .item.cur').textContent();
 
-async function openNorthwind(page: Page, base: string, collapse = false) {
+async function openNorthwind(page: Page, base: string) {
   await page.goto(`${base}/inbox`);
   await page.locator('.today-row').first().waitFor();
-  // As board 20 draws the list.
-  if (collapse) await collapseGroups(page);
-  await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+  await page.locator('.list .row[title^="Interview availability"]').click();
   await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
 }
 
@@ -37,7 +35,7 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     const page = await setpoint.page('target');
     // Night chosen in this browser, as board 20 ticks it.
     await page.addInitScript(() => localStorage.setItem('setpoint.theme', 'night'));
-    await openNorthwind(page, setpoint.base, true);
+    await openNorthwind(page, setpoint.base);
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
     await page.mouse.move(700, 28);
     await page.keyboard.press('Meta+k');
@@ -90,7 +88,7 @@ test('the open email\'s commands: Done, Add to calendar and Mark unread, and Esc
     await until('unread again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.unread);
 
     // Done, with the cursor moved down and back.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Meta+k');
     await page.keyboard.press('ArrowDown');
@@ -109,14 +107,16 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('Meta+k');
     // No email open: Go to and Appearance only. It runs commands, not search, and says so.
     assert.deepEqual(await page.locator('.palette .cmdk-label').allTextContents(), ['Go to', 'Appearance']);
     assert.equal(await page.locator('.palette input').getAttribute('placeholder'), 'Type a command…');
     await page.keyboard.type('new');
     // N5: Settings › News is found by its name too.
-    assert.deepEqual(await items(page), ['News3', 'New eventC', 'New taskD', 'Settings › News']);
+    // The Inbox's Go to New too, its key U (#243).
+    assert.deepEqual(await items(page), ['News3', 'Go to NewU', 'New eventC', 'New taskD', 'Settings › News']);
+    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
@@ -169,7 +169,7 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     for (const [typed, section] of [['rules', 'Mail'], ['ntfy', 'Notifications'], ['keys', 'AI'], ['passkeys', 'Security']] as const) {
       await page.keyboard.press('Meta+k');
       await page.keyboard.type(typed);
@@ -207,7 +207,7 @@ test('UX #21: Sign out from ⌘K asks once in the toast; nothing happens until i
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('sign out');
     await page.keyboard.press('Enter');

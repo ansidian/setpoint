@@ -134,7 +134,7 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
   });
 }
 
-/** Pin (`P`) puts it on the Pinned shelf, or takes it off, from Unread or All. */
+/** Pin (`P`) puts it on the Pinned shelf, or takes it off. */
 export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
   const fromAll = cachedAllRow(id);
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterPin(inbox, id, pinned, fromAll));

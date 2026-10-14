@@ -1,24 +1,13 @@
-// The phone's rules as tables (DESIGN.md › Phone; board 21): the Inbox's group order, where the
-// agenda starts, its range, and its days with empty runs collapsed.
-import type {InboxGroup, ItemOut} from '@setpoint/shared';
+// The phone's rules as tables (DESIGN.md › Phone; board 21): where the agenda starts, its range, and
+// its days with empty runs collapsed.
+import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {itemsByDay} from '../src/logic/calendar.ts';
-import {agendaNowAt, agendaRange, agendaStart, phoneAgenda, phoneGroups} from '../src/logic/phone.ts';
+import {agendaNowAt, agendaRange, agendaStart, phoneAgenda} from '../src/logic/phone.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
-
-test.each([
-  ['the seed: Attention before Pinned', ['pinned', 'attention', 'security', 'deliveries', 'noise'], ['attention', 'pinned', 'security', 'deliveries', 'noise']],
-  ['Unsorted stays under Attention', ['pinned', 'attention', 'unsorted', 'security'], ['attention', 'unsorted', 'pinned', 'security']],
-  ['no pins', ['attention', 'security'], ['attention', 'security']],
-  ['no Attention: Pinned leads', ['pinned', 'security', 'noise'], ['pinned', 'security', 'noise']],
-  ['only Attention and Pinned', ['pinned', 'attention'], ['attention', 'pinned']],
-  ['nothing', [], []],
-] as [string, InboxGroup[], InboxGroup[]][])('the phone\'s group order: %s', (_name, groups, expected) => {
-  expect(phoneGroups(groups.map(group => ({group}))).map(view => view.group)).toEqual(expected);
-});
 
 test.each([
   ['no link: today', null, '2026-10-07'],

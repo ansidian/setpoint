@@ -12,7 +12,6 @@
 import {ITEM_KINDS, NEWS_SECTIONS} from '@setpoint/shared';
 import type {ItemKind, NewsSection} from '@setpoint/shared';
 
-export type MailView = 'unread' | 'all';
 export const SETTINGS_PAGES = ['accounts', 'calendar', 'todoist', 'notifications', 'mail', 'news', 'ai', 'appearance', 'security'] as const;
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
@@ -23,7 +22,7 @@ export type NewsView = 'all' | 'missed' | NewsSection;
 export type CalendarMode = 'month' | 'week';
 
 export type Route =
-  | {page: 'inbox'; view: MailView; account: number | null; open: number | null}
+  | {page: 'inbox'; account: number | null; open: number | null}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
   | {page: 'settings'; section: SettingsPage}
   | {page: 'news'; view: NewsView; story: number | null; article: number | null};
@@ -56,16 +55,15 @@ export function parseRoute(pathname: string, search = ''): Route {
     return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
   }
   const account = positive(query.get('account'));
-  if (first === 'inbox' && second === 'all') return {page: 'inbox', view: 'all', account, open: positive(third)};
-  return {page: 'inbox', view: 'unread', account, open: first === 'inbox' ? positive(second) : null};
+  // All's old address (/inbox/all/12) from before the Inbox was one list (SV-70) lands there too.
+  if (first === 'inbox' && second === 'all') return {page: 'inbox', account, open: positive(third)};
+  return {page: 'inbox', account, open: first === 'inbox' ? positive(second) : null};
 }
 
 export function routePath(route: Route): string {
   switch (route.page) {
-    case 'inbox': {
-      const base = route.view === 'all' ? '/inbox/all' : '/inbox';
-      return `${base}${route.open ? `/${route.open}` : ''}${route.account ? `?account=${route.account}` : ''}`;
-    }
+    case 'inbox':
+      return `/inbox${route.open ? `/${route.open}` : ''}${route.account ? `?account=${route.account}` : ''}`;
     case 'calendar': {
       const week = route.view === 'week' ? 'view=week' : null;
       const query = (...parts: (string | null)[]) => (parts.some(Boolean) ? `?${parts.filter(Boolean).join('&')}` : '');

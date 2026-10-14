@@ -15,7 +15,7 @@ after(cleanUp);
 async function openSettings(page: Page, base: string, settingsPage: string) {
   await page.goto(`${base}/settings/${settingsPage}`);
   await page.locator('.settings').waitFor();
-  await page.locator('.arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
 }
 
 /** A style of `target` with the pointer away, then over `control` (itself unless given), once the 120 ms change is over. */
@@ -63,10 +63,9 @@ test('hover: the primary, quiet and outlined buttons, segmented controls, fields
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
-    // A row, the segmented control, the search field; an outlined button in the reader.
+    await page.locator('.list .row').first().waitFor();
+    // A row, the search field; an outlined button in the reader (the segmented control is the editor's, below).
     await answers(page, 'a row', page.locator('.row').first(), fill);
-    await answers(page, 'Unread | All', page.locator('.seg button', {hasText: 'All'}), fill);
     await answers(page, 'the search field', page.locator('label.search'), ring);
     // The list's first email open: Previous, disabled, doesn't answer.
     await page.locator('.list [data-id]').first().click();
@@ -74,7 +73,7 @@ test('hover: the primary, quiet and outlined buttons, segmented controls, fields
     assert.equal(await previous.isDisabled(), true);
     const [previousBefore, previousAfter] = await hovered(page, previous, element => `${getComputedStyle(element).backgroundColor} ${getComputedStyle(element).color}`);
     assert.equal(previousAfter, previousBefore, 'a disabled button doesn\'t answer');
-    await page.locator('.arow', {hasText: 'Contoso University'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     const addToCalendar = page.locator('.rd-acts .btn.out', {hasText: 'Add to calendar'});
     await answers(page, 'an outlined button', addToCalendar, ring);
     assert.match(await addToCalendar.evaluate(timing), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
@@ -150,16 +149,14 @@ test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const [sub3, sub4] = [await computed(page, 'var(--sub3)'), await computed(page, 'var(--sub4)')];
 
     // A row takes `sub3`, never scaling.
     assert.deepEqual(await pressed(page, page.locator('.row').first()), ['none', sub3, '0.08s']);
-    // The segmented control: .97 and `sub3`.
-    assert.deepEqual(await pressed(page, page.locator('.seg button', {hasText: 'All'})), [scale(0.97), sub3, '0.08s']);
 
     // The reader: a tool .97 and `sub3`; a round icon button .92 and `sub3`; Previous, disabled, gives nothing.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     assert.deepEqual(await pressed(page, page.locator('.rd-tools .tool', {hasText: 'Pin'})), [scale(0.97), sub3, '0.08s']);
     assert.deepEqual(await pressed(page, page.getByRole('button', {name: 'Next email'})), [scale(0.92), sub3, '0.08s']);
@@ -170,7 +167,7 @@ test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub
     const previous = page.getByRole('button', {name: 'Previous email'});
     assert.equal(await previous.isDisabled(), true);
     assert.equal((await pressed(page, previous))[0], 'none', 'a disabled button doesn\'t give');
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
 
     // P presses Pin, as its click would.
@@ -199,9 +196,9 @@ test('News rows and task chips fade over 120 ms and a hovered task isn\'t select
     const page = await setpoint.page('target');
     const cursor = (locator: Locator) => locator.first().evaluate(element => getComputedStyle(element).cursor);
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     // The arrow on controls, links included, and on rows.
-    assert.deepEqual([await cursor(page.locator('a.nav')), await cursor(page.locator('.acct')), await cursor(page.locator('.row')), await cursor(page.locator('.arow'))], ['default', 'default', 'default', 'default']);
+    assert.deepEqual([await cursor(page.locator('a.nav')), await cursor(page.locator('.acct')), await cursor(page.locator('.row')), await cursor(page.locator('.nfold'))], ['default', 'default', 'default', 'default']);
 
     await page.goto(`${setpoint.base}/news`);
     const story = page.locator('.nw-row').first();
@@ -289,7 +286,7 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('northwind rejection');
     await page.keyboard.press('Enter');
@@ -344,7 +341,7 @@ test('press on the phone: a tapped row fills `sub2` at once and nothing stays li
   try {
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox`);
-    const row = page.locator('.arow', {hasText: 'Northwind Talent'});
+    const row = page.locator('.list .row[title^="Interview availability"]');
     await row.waitFor();
     assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color')), 'rgba(0, 0, 0, 0)');
     assert.deepEqual(await pressed(page, row), ['none', await computed(page, 'var(--sub2)'), '0s']);
@@ -407,15 +404,16 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
       }).observe(document, {subtree: true, childList: true});
     });
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
-    assert.deepEqual(await page.evaluate(() => (window as unknown as {firstFolds: string[]}).firstFolds), [], 'the first paint doesn\'t fold');
+    const firstFolds = await page.evaluate(() => (window as unknown as {firstFolds: string[]}).firstFolds);
+    assert.deepEqual(firstFolds, [], `the first paint doesn't fold: ${JSON.stringify(firstFolds.map(text => text.slice(0, 60)))}`);
     await watchFolds(page);
 
-    // Done from the cursor on Northwind: it folds out; Contoso University, below it, slides up into its place.
-    const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
-    const exams = page.locator('.arow', {hasText: 'Contoso University'});
-    const place = (await northwind.boundingBox())!.y;
+    // Done from the cursor on Northwind: it folds out of New; the code below it slides up by its height.
+    const northwind = page.locator('.list .row[data-key^="new:"][title^="Interview availability"]');
+    const exams = page.locator('.list .row[data-key^="new:"]', {has: page.locator('.code-line')});
+    const [gap, place] = [(await northwind.boundingBox())!.height, (await exams.boundingBox())!.y];
     await point(northwind);
     await page.keyboard.press('h');
     await until('Northwind folded away', () => northwind.count(), count => count === 0);
@@ -423,7 +421,7 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
     assert.equal(out.length, 1);
     assert.match(out[0]!.text, /Northwind Talent/);
     assert.match(out[0]!.motion[0] ?? '', MOTION);
-    assert.equal((await exams.boundingBox())!.y, place, 'Contoso University took its place');
+    await until('the code moved up', async () => (await exams.boundingBox())!.y, y => y === place - gap);
 
     // Undo folds it back in.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -431,7 +429,7 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
     await until('Northwind folded back', () => folds(page), list => list.some(fold => fold.fold === 'in' && /Northwind Talent/.test(fold.text)));
     // Its row's own fold (the group's count rolling in beside it is Count's, motion-07).
     assert.match((await folds(page)).find(fold => fold.fold === 'in' && /Northwind Talent/.test(fold.text))!.motion[0]!, MOTION);
-    await until('Contoso University back below it', async () => (await exams.boundingBox())!.y, y => y > place);
+    await until('the code back where it was', async () => (await exams.boundingBox())!.y, y => y === place);
 
     // Pin folds a row onto the shelf (its header with it).
     const fabrikam = page.locator('.row', {hasText: 'Fabrikam'}).first();
@@ -444,7 +442,7 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
 
     // Opening an unread email fades its dot over 120 ms.
     // Its fill and, on Attention, the ring it leaves (#167).
-    assert.match(await page.locator('.arow.unread .ud').first().evaluate(dot => getComputedStyle(dot, '::before').transitionDuration), /^0\.12s(, 0\.12s)*$/);
+    assert.match(await page.locator('.list .row.att.unread .ud').first().evaluate(dot => getComputedStyle(dot, '::before').transitionDuration), /^0\.12s(, 0\.12s)*$/);
 
     // Mark all as read: the read FYI rows fold out together.
     const before = (await folds(page)).filter(fold => fold.fold === 'out').length;

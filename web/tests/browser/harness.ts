@@ -429,20 +429,6 @@ export async function readSecurity(setpoint: Setpoint): Promise<void> {
   }
 }
 
-/**
- * Collapses the Inbox's groups by their headers, as the user would: every group starts expanded (DESIGN.md
- * #84), and the boards draw Deliveries, Money and Noise collapsed.
- */
-export async function collapseGroups(page: Page, labels: string[] = ['Deliveries', 'Money', 'Noise']): Promise<void> {
-  for (const label of labels) {
-    const header = page.locator('.list .gh', {hasText: label});
-    await header.click();
-    await page.locator('.list .gh.collapsed', {hasText: label}).waitFor();
-  }
-  // Reaching a header lower down scrolled the list.
-  await page.locator('.list').evaluate(list => list.scrollTo(0, 0));
-}
-
 /** Pixels that differ between two same-sized PNGs, and a diff image (red where they differ). */
 export interface Comparison {
   width: number;

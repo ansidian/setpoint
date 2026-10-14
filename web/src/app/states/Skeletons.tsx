@@ -35,38 +35,7 @@ function Row({index, all = false}: {index: number; all?: boolean}) {
   );
 }
 
-/** Attention's three-line row (.arow). */
-function AttentionRow({index}: {index: number}) {
-  return (
-    <div className="sk-arow">
-      <span className="ud" />
-      <div className="l1"><Bar w={at(FROM, index + 2)} /></div>
-      <div className="r1"><Dot size={7} /><Bar w={44} /><Bar w={22} /></div>
-      <div className="l2"><Bar w={index % 2 ? '44%' : '38%'} /></div>
-      <div className="l3"><Bar w={index % 2 ? '58%' : '50%'} /></div>
-    </div>
-  );
-}
-
-// Unread's groups: Attention's two rows, then FYI groups, enough to fill the list.
-const UNREAD_GROUPS = [{attention: true, rows: 2}, {rows: 3}, {rows: 4}, {rows: 6}, {rows: 6}];
-
-/** Unread's list loading (states-03, inbox-13). */
-export function InboxSkeleton() {
-  const rows = numbered(UNREAD_GROUPS.map(group => group.rows));
-  return (
-    <Sk kind="inbox" className="sk-list">
-      {UNREAD_GROUPS.map((group, index) => (
-        <div className="sk-group" key={index}>
-          <Header index={index} first={index === 0} />
-          {rows[index]!.map(row => (group.attention ? <AttentionRow key={row} index={row} /> : <Row key={row} index={row} />))}
-        </div>
-      ))}
-    </Sk>
-  );
-}
-
-/** All's list loading: a day under its heading, its lanes' labels and rows; `more` is the next page's. */
+/** The Inbox's list loading: a day under its heading, its lanes' labels and rows; `more` is the next page's (states-03, inbox-13). */
 export function AllSkeleton({more = false, first = !more}: {more?: boolean; first?: boolean}) {
   const days = more ? [[3]] : [[2, 5], [6]];
   const rows = numbered(days.flat());

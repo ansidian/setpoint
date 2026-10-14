@@ -54,13 +54,13 @@ async function shown(page: Page, kind: string) {
 
 const heights = (page: Page, selector: string) => page.locator(selector).evaluateAll(all => all.map(element => element.getBoundingClientRect().height));
 
-test('Unread loading: a skeleton in the rows\' shapes after 200 ms, breathing, never All caught up; the rows replace it where it stood (states-03, inbox-13)', async () => {
+test('Inbox loading: a skeleton in the rows\' shapes after 200 ms, breathing, never an empty list; the rows replace it where it stood (states-03, inbox-13)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    const release = await hold(page, /^\/api\/mail\/inbox$/);
+    const release = await hold(page, /^\/api\/mail\/(inbox|all)/);
     await visit(page, `${setpoint.base}/inbox`);
-    const sk = await shown(page, 'inbox');
+    const sk = await shown(page, 'all');
     // Its motion: in after 200 ms over 180, then each bar breathes over 1600 ms, from the same moment, so in phase.
     const motion = (element: Element) => {
       const style = getComputedStyle(element);
@@ -72,21 +72,19 @@ test('Unread loading: a skeleton in the rows\' shapes after 200 ms, breathing, n
     // The headers' band stays still under them.
     assert.equal(await sk.locator('.sk-gh').first().evaluate(header => getComputedStyle(header).animationName), 'none');
     assert.equal(await page.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor), await tokenColour(page, 'sub2'));
-    // Nothing says the Inbox is empty, and no row is a skeleton's.
-    assert.equal(await page.locator('.empty').count(), 0, 'no All caught up');
-    assert.equal(await page.locator('.list .row, .list .arow, .list .gh').count(), 0);
-    const before = {gh: await heights(page, '.sk-gh'), arow: await heights(page, '.sk-arow'), row: await heights(page, '.sk-row')};
+    // No row is a skeleton's.
+    assert.equal(await page.locator('.list .row, .list .gh').count(), 0);
+    const before = {gh: await heights(page, '.sk-gh'), row: await heights(page, '.sk-row')};
     assert.deepEqual([before.gh[0], before.row[0]], [30, 38]);
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-inbox', 'list');
 
     await release();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await page.locator('[data-skeleton]').count(), 0);
-    assert.equal(await page.locator('section.list').getAttribute('class'), 'list sk-arrive', 'the rows fade in');
-    // The rows stand where the skeleton's did: a header, Attention's three-line rows, and the others.
+    assert.equal(await page.locator('section.list').getAttribute('class'), 'list all sk-arrive', 'the rows fade in');
+    // The rows stand where the skeleton's did: a band, then rows.
     assert.equal((await heights(page, '.list .gh'))[0], before.gh[0]);
-    assert.equal((await heights(page, '.list .arow'))[0], before.arow[0]);
     assert.equal((await heights(page, '.list .row'))[0], before.row[0]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -94,21 +92,19 @@ test('Unread loading: a skeleton in the rows\' shapes after 200 ms, breathing, n
   }
 });
 
-test('All loading: its skeleton under the Pinned shelf', async () => {
+test('the Inbox waits for both its answers: with the days\' held, its skeleton stays, never half a list (#243)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
     const release = await hold(page, /^\/api\/mail\/all/);
-    await page.locator('.seg button', {hasText: 'All'}).click();
-    const sk = await shown(page, 'all');
-    // The shelf, from Unread's list, stays above it.
-    assert.ok((await page.locator('.list.all .row.shelf').first().boundingBox())!.y < (await sk.boundingBox())!.y);
-    assert.equal(await page.locator('.list.all .row:not(.shelf)').count(), 0);
+    await visit(page, `${setpoint.base}/inbox`);
+    await shown(page, 'all');
+    await until('the Inbox\'s groups in', () => page.evaluate(() => performance.getEntriesByType('resource').some(entry => /\/api\/mail\/inbox$/.test(entry.name))), loaded => loaded);
+    assert.equal(await page.locator('.list .row, .list .gh').count(), 0);
     await release();
-    await page.locator('.list.all .row:not(.shelf)').first().waitFor();
-    assert.equal(await page.locator('[data-skeleton]').count(), 0);
+    await page.locator('.list .gh.new').waitFor();
+    // The list's skeleton is gone (the sidebar's may still wait on its own answers).
+    assert.equal(await page.locator('section.list [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -156,7 +152,7 @@ test('Settings opening loads every page\'s answers, so the next page shows at on
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const asked = ['/api/mail/rules', '/api/mail/trusted-domains', '/api/security', '/api/ai', '/api/news/sources']
       .map(path => page.waitForResponse(response => new URL(response.url()).pathname === path));
     await page.keyboard.press('Meta+,');
@@ -225,10 +221,10 @@ test('a load that fails says so in place, in caution with its warning, and Try a
     assert.equal(await line.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'caution'));
     assert.deepEqual(await line.locator('.icon').evaluateAll(icons => icons.map(icon => icon.getAttribute('width'))), ['16', '16']);
     assert.equal(await line.evaluate(element => element.getBoundingClientRect().height), 32);
-    assert.equal(await page.locator('[data-skeleton="inbox"]').count(), 0, 'no skeleton says it\'s still coming');
+    assert.equal(await page.locator('[data-skeleton="all"]').count(), 0, 'no skeleton says it\'s still coming');
     failing = false;
     await line.getByRole('button', {name: 'Try again'}).click();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await line.count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -241,10 +237,10 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     // Opening it would answer with the email too (POST …/open), so it fails as well.
     await failWhile(page, /^\/api\/(mail\/messages\/\d+(\/open)?|items\?.*|news|ai)$/, () => true);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
     await page.locator('.pane .load-failed', {hasText: 'Couldn’t load this email, Something went wrong.'}).waitFor();
     // Its head is drawn from its row all the same.
     await page.locator('.pane .rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
@@ -271,9 +267,9 @@ test('the reader draws the email\'s head from its row at once, and only its body
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     let release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
     // At once, though the email itself is held: its subject, sender, account and time, and its actions.
     const head = page.locator('.pane .rd-head');
     await head.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
@@ -303,6 +299,8 @@ test('the reader draws the email\'s head from its row at once, and only its body
 
     // An HTML email's frame holds 240 px on `sub`, unseen, until its page says its height; then it fades in.
     release = await hold(page, /^\/api\/mail\/messages\/\d+\/body/);
+    // The newsletter is in New's Noise, folded until opened.
+    await page.locator('.list .nfold.collapsed').first().click();
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     const box = page.locator('.mailframe-box');
     await box.waitFor();
@@ -323,9 +321,9 @@ test('on the phone, a tapped email opens at once from its row, its body a skelet
   try {
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.pane .rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await shown(page, 'body');
     await matchGolden(page, 'loading-reader-phone');
@@ -437,7 +435,7 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
     await mark.waitFor();
     const box = (await mark.boundingBox())!;
     assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
-    // Each chip settles as All caught up's do (#203), once the start has taken 200 ms, 70 ms after the one before.
+    // Each chip settles as the mark's settle has them (#203), once the start has taken 200 ms, 70 ms after the one before.
     assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => [getComputedStyle(chip).animationName, getComputedStyle(chip).animationDuration, getComputedStyle(chip).animationDelay])),
       [['mark-settle', '0.26s', '0.2s'], ['mark-settle', '0.26s', '0.27s'], ['mark-settle', '0.26s', '0.34s']]);
     await until('the chips settled', () => mark.locator('g').evaluateAll(chips => chips.map(chip => chip.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
@@ -466,7 +464,7 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
     const sidebar = () => page.locator('aside.sb').evaluate(aside => ({
       accounts: [...aside.querySelectorAll('.acct')].map(row => row.textContent),
@@ -482,7 +480,7 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
     await page.locator('.app[data-frame]').waitFor();
     assert.deepEqual(await sidebar(), loaded, 'the accounts and counts as they were, nothing moved');
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), todayLines, 'Today\'s place, its lines as many as it had');
-    await shown(page, 'inbox');
+    await shown(page, 'all');
     await page.mouse.move(700, 28);
     await matchGolden(page, 'starting-shell', 'sidebar');
 
@@ -492,9 +490,9 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
     await releaseMe();
     await page.locator('.app:not([data-frame])').waitFor();
     assert.deepEqual(await sidebar(), loaded);
-    assert.match((await page.locator('[data-skeleton="inbox"]').getAttribute('class'))!, /\bcarried\b/);
+    assert.match((await page.locator('[data-skeleton="all"]').getAttribute('class'))!, /\bcarried\b/);
     await release();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.deepEqual(await sidebar(), loaded);
 
     // Signed out, this browser forgets the session's shape.
@@ -514,13 +512,13 @@ test('on the phone, a signed-in browser starts on its header, tabs and the page\
   try {
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const releaseMe = await hold(page, /^\/api\/me$/);
     await visit(page, `${setpoint.base}/inbox`);
     await page.locator('.app[data-frame] .ph-tabs').waitFor();
     assert.equal(await page.locator('.hd .hd-title').textContent(), 'Inbox');
     assert.equal(await page.locator('.hd svg.mark').count(), 1);
-    await shown(page, 'inbox');
+    await shown(page, 'all');
     await matchGolden(page, 'starting-shell-phone');
     await visit(page, `${setpoint.base}/inbox/5`);
     await page.locator('.app[data-frame] .pane').waitFor();
@@ -538,7 +536,7 @@ test('a search on its way keeps the list, dimmed, then shows the results\' skele
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     let release = await hold(page, /^\/api\/search$/);
     await page.keyboard.press('/');
     await page.keyboard.type('northwind');

@@ -33,7 +33,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
 
     // The claim gave the password a moment ago, so Security asks for nothing more yet.
     await page.goto(`${local}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('Meta+,');
     await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
     await page.getByRole('button', {name: 'Add passkey'}).first().click();
@@ -52,7 +52,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.locator('.sign-in').waitFor();
     await page.locator('.sign-in input[type="password"]').fill(password);
     await page.keyboard.press('Enter');
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const security = await page.evaluate(() => fetch('/api/security').then(response => response.json() as Promise<SecurityOut>));
     assert.equal(security.auth_mode, 'password_plus_passkey');
     assert.ok(security.passkeys[0]!.last_used_at, 'the passkey was used');
@@ -65,7 +65,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
     await page.getByRole('button', {name: 'Use a passkey'}).click();
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const me = await page.evaluate(() => fetch('/api/me').then(response => response.json() as Promise<{method: string}>));
     assert.equal(me.method, 'passkey');
 

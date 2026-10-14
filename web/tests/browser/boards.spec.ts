@@ -1,12 +1,13 @@
 // Boards 01 to 10 against their approved screenshots (web/tests/browser/goldens/, SV-33), at the
 // design target, 1677 × 1050. The app runs on the seed with the seed's clock, so its ages and counts
-// are the brief's. `npm run audit:boards` sets each screenshot beside its board.
+// are the brief's. `npm run audit:boards` sets each screenshot beside its board. The Inbox is one list
+// since SV-70, so the boards drawing Unread's groups are taken in its place (DESIGN.md override 33).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
-import {cleanUp, collapseGroups, matchGolden, readSecurity, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, readSecurity, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -23,10 +24,9 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     // Opening it read it: Inbox (3) 18 and Jobs 1 (DESIGN.md override 2).
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
@@ -39,7 +39,7 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('board 04: all caught up', async () => {
+test('board 04: nothing new, the list starting at Attention, the shelf and the days', async () => {
   const setpoint = await startSetpoint();
   try {
     // The Security emails opened, Mark all as read, then Done on each attention email, through the API.
@@ -53,8 +53,10 @@ test('board 04: all caught up', async () => {
 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.empty-line', {hasText: 'All caught up'}).waitFor();
+    await page.locator('.list .gh.day').first().waitFor();
     await page.locator('.today-row').first().waitFor();
+    // Nothing unread and nothing waiting on Done: no New, no Attention, the shelf first.
+    assert.deepEqual(await page.locator('.list .gh:not(.day)').allTextContents(), ['Pinned 1']);
     await settle(page);
     assert.equal(await page.locator('.pane').count(), 0, 'the reading pane is collapsed');
     assert.equal(await page.title(), 'Inbox');
@@ -80,10 +82,11 @@ test('board 02: Money collapsed, the Contoso Coffee newsletter open with images 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page, ['Money']);
-    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    // New's Noise opens to show the newsletter.
+    await page.locator('.list .nfold', {hasText: 'Noise'}).first().click();
+    await page.locator('.list .row', {hasText: 'Contoso Coffee'}).first().click();
     await page.locator('.rd-subj', {hasText: 'The Contoso Coffee Journal · October'}).waitFor();
     await page.locator('.imgbar', {hasText: 'Always show from contosocoffee.example'}).waitFor();
     await frameDrawn(page);
@@ -104,8 +107,7 @@ test('board 03: the protected recovery-email alert open, with its facts card', a
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
     await page.locator('.facts', {hasText: 'not a place you use'}).waitFor();
     await frameDrawn(page);
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
@@ -117,14 +119,25 @@ test('board 03: the protected recovery-email alert open, with its facts card', a
   }
 });
 
-test('board 05: All, grouped by day, the cursor on the first row', async () => {
+test('board 05: the days, under the Pinned shelf, the cursor on the shelf\'s lease', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
+    // Every email read, as All's board draws them, so New and Attention leave the days whole.
+    await readSecurity(setpoint);
+    await setpoint.api('POST', '/mail/mark-all-read', {});
+    await until('Mark all as read confirmed', () => setpoint.api<MailCountsOut>('GET', '/mail/counts'), counts => counts.unread_fyi === 0);
+    const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
+    for (const row of inbox.groups.find(group => group.group === 'attention')!.rows) {
+      if (row.unread) await setpoint.api('POST', `/mail/messages/${row.id}/read`, {unread: false});
+    }
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox/all`);
+    await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list.all .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
-    // The first row is the Pinned shelf's lease (D105).
+    // The first row is Attention's, then the Pinned shelf's lease (D105).
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
     await page.keyboard.press('j');
     await page.locator('.list.all .row.shelf.cur', {hasText: 'Parkside Apartments'}).waitFor();
     await settle(page);
@@ -143,10 +156,10 @@ test('board 09: the pattern prompt in Attention, the cursor on the digest that j
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.prompt').waitFor();
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
-    await page.keyboard.press('j');
-    await page.keyboard.press('j');
-    await page.locator('.arow.cur', {hasText: 'Northwind Engineering Digest'}).waitFor();
+    // J down New to the digest.
+    const digest = page.locator('.list .row[title^="Northwind Engineering Digest"]').first();
+    for (let press = 0; press < 20 && !(await digest.evaluate(row => row.classList.contains('cur'))); press++) await page.keyboard.press('j');
+    await page.locator('.list .row.cur[title^="Northwind Engineering Digest"]').waitFor();
     await settle(page);
     await matchGolden(page, '09-pattern-prompt', 'list');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -161,7 +174,6 @@ test('board 10: two pins, the lease open, Unpin under the pointer on the DMV not
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     await page.locator('.attach', {hasText: 'Renewal agreement.pdf'}).waitFor();
     await page.evaluate(() => document.fonts.ready);
@@ -184,7 +196,7 @@ test('board 06: search with chips, the first result open', async () => {
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('northwind rejection march');
@@ -211,7 +223,7 @@ test('board 07: Alfred\'s Answer card with its source and one follow-up', async 
     await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.today-row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('When does my lease renewal need to be signed?');
@@ -238,8 +250,7 @@ test('board 08: the proposal card from Add to calendar on the Contoso University
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.today-row').first().waitFor();
-    await collapseGroups(page);
-    await page.locator('.arow', {hasText: 'Final exam schedule'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await page.locator('.prop .conflict', {hasText: 'Free that evening'}).waitFor();
     await page.locator('.prop .field.pick', {hasText: '10 min before'}).waitFor();

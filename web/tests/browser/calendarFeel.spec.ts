@@ -278,15 +278,6 @@ test('Week zooms in from the selected week\'s row in Month and Month settles bac
     await until('November', () => page.locator('.hd-title').textContent(), text => text === 'November 2026');
     assert.equal(await month.getAttribute('data-enter'), null);
 
-    // Unread | All slides its thumb too.
-    await page.goto(`${setpoint.base}/inbox`);
-    const inbox = page.locator('.hd .seg');
-    await inbox.locator('button', {hasText: 'Unread'}).waitFor();
-    const inboxSliding = await watch(inbox, 'data-sliding');
-    await inbox.locator('button', {hasText: 'All'}).click();
-    await until('the thumb slides under All and hands it its fill', inboxSliding, seen => seen.join() === ',');
-    const all = await thumb(inbox);
-    assert.ok(all.on[0] > 2 && all.x === all.on[0] && all.width === all.on[1], 'under All');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

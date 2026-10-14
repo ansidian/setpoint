@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, collapseGroups, point, startSetpoint, until} from './harness.ts';
+import {cleanUp, point, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -70,24 +70,23 @@ async function blank(target: Locator, fromRight = 80): Promise<[number, number]>
 async function inbox(page: Page, base: string, theme: 'night' | 'light') {
   await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
   await page.goto(`${base}/inbox`);
-  await page.locator('.arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
   await page.locator('.today-row').first().waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme);
 }
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: J onto a folded group lays the cursor's sub2 over its band, which shows (#158)`, async () => {
+  test(`${theme}: J onto a folded Noise line lays the cursor's sub2 over it, which shows (#158)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
       await inbox(page, setpoint.base, theme);
-      await collapseGroups(page, ['Deliveries']);
-      const deliveries = page.locator('.list .gh', {hasText: 'Deliveries'});
+      const deliveries = page.locator('.list .nfold').first();
       await page.mouse.move(1, 1);
       const [x, y] = await blank(deliveries, 240);
       const band = await pixel(page, x, y);
       for (let step = 0; step < 20 && !(await deliveries.evaluate(header => header.classList.contains('cur'))); step++) await page.keyboard.press('j');
-      await until('the cursor on Deliveries', () => deliveries.getAttribute('class'), names => Boolean(names?.split(' ').includes('cur')));
+      await until('the cursor on Noise', () => deliveries.getAttribute('class'), names => Boolean(names?.split(' ').includes('cur')));
       // The cursor's fill fades in over 120 ms; it's read once it has.
       const cursor = await until('the cursor drawn', () => pixel(page, x, y), shown => contrast(shown, band) > 1.1);
       // Night lightens the band and Light darkens it, as a cursor row does the page.
@@ -106,15 +105,14 @@ test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light 
   try {
     const page = await setpoint.page('target');
     await inbox(page, setpoint.base, 'night');
-    assert.equal(await style(page.locator('.arow .r1 .age').first(), 'color'), 'rgb(125, 127, 132)', 'Night ink3: an age');
+    assert.equal(await style(page.locator('.list .row .age').first(), 'color'), 'rgb(125, 127, 132)', 'Night ink3: an age');
     assert.equal(await style(page.locator('aside.sb'), 'backgroundColor'), 'rgb(11, 12, 14)', 'Night panel: the sidebar');
 
     await inbox(page, setpoint.base, 'light');
-    const read = page.locator('.arow:not(.unread)', {hasText: 'Contoso University'});
+    const read = page.locator('.list .row:not(.unread)[title^="Final exam schedule"]');
     assert.equal(await style(read.locator('.from'), 'color'), 'rgb(75, 77, 82)', 'Light ink2: a read sender');
-    assert.equal(await style(read.locator('.l3'), 'color'), await colourOf(page, 'var(--ink3)'), 'its summary stays ink3');
     // Done from the cursor: the toast floats on white above the page's header.
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(page.locator('.list .row[title^="Interview availability"]'));
     await page.keyboard.press('h');
     const toast = page.locator('.toast');
     await toast.waitFor();
@@ -197,8 +195,8 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(accent, await colourOf(page, theme === 'light' ? 'oklch(0.54 0.12 235)' : 'oklch(0.8 0.11 235)'));
       assert.equal(await style(page.locator('.nav.on .icon'), 'color'), accent, 'Inbox, the current page');
 
-      const northwind = page.locator('.arow', {hasText: 'Northwind Talent'});
-      const exams = page.locator('.arow', {hasText: 'Contoso University'});
+      const northwind = page.locator('.list .row[title^="Interview availability"]');
+      const exams = page.locator('.list .row[title^="Final exam schedule"]');
       await northwind.click();
       await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
       // The pointer rests on another row while reading: it's the cursor, Northwind still the open one.
@@ -296,7 +294,7 @@ for (const theme of ['night', 'light'] as const) {
     }
   });
 
-  test(`${theme}: Attention's band, label and dots are caution, a read row not yet Done keeps a caution ring; Noise recedes (#167, #168)`, async () => {
+  test(`${theme}: Attention's bands, labels and dots are caution, a read row not yet Done keeps a caution ring; Noise recedes (#167, #168)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -307,10 +305,13 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await style(band, 'backgroundColor'), await colourOf(page, `color-mix(in srgb, var(--caution) ${theme === 'light' ? 6 : 8}%, var(--panel))`));
       assert.equal(await style(band, 'color'), caution, 'its label');
       const dot = (row: Locator) => row.locator('.ud').evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::before').boxShadow]);
-      assert.deepEqual(await dot(page.locator('.arow.unread', {hasText: 'Northwind Talent'})), [caution, 'none'], 'an unread Attention row');
-      assert.deepEqual(await dot(page.locator('.arow:not(.unread)', {hasText: 'Contoso University'})), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
+      assert.equal(await style(page.locator('.list .lh.att').first(), 'color'), caution, 'New\'s Attention lane');
+      assert.deepEqual(await dot(page.locator('.list .row.unread[title^="Interview availability"]')), [caution, 'none'], 'an unread Attention row');
+      assert.deepEqual(await dot(page.locator('.list .row:not(.unread)[title^="Final exam schedule"]')), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
 
-      // Noise's rows at the list's foot: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
+      // Noise's rows, New's Noise opened: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
+      await page.locator('.list .nfold').first().click();
+      await page.mouse.move(700, 28);
       const noise = page.locator('.row.noise.unread', {hasText: 'Tailspin Toys'});
       assert.deepEqual(await noise.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink2)'), '400']);
       assert.equal((await dot(noise))[0], await colourOf(page, 'var(--ink3)'));
@@ -331,7 +332,7 @@ for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
       const alert = await colourOf(page, 'var(--alert)');
       const good = await colourOf(page, 'var(--good)');
-      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      await page.locator('.list .row[title^="Interview availability"]').click();
       const trash = page.locator('.rd-tools .tool.trash');
       await trash.waitFor();
       assert.equal(await style(trash, 'color'), await colourOf(page, 'var(--ink2)'), 'Trash at rest');
@@ -386,7 +387,7 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
     const page = await setpoint.page('target');
     for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
-      await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+      await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
       const frame = page.locator('iframe.mailframe');
       await page.frameLocator('iframe.mailframe').locator('body > *').first().waitFor();
       assert.equal(await style(frame, 'filter'), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
@@ -430,7 +431,7 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await style(mark, 'backgroundColor'), await backgroundOf(page, theme === 'light' ? 'oklch(0.92 0.12 96)' : 'color-mix(in oklch, var(--sun) 26%, transparent)'));
       // Blurred, with a query: still Esc; cleared, the slash again.
       await page.keyboard.press('Escape');
-      await page.locator('.list .arow:not(.result)').first().waitFor();
+      await page.locator('.list .row').first().waitFor();
       await until('the hint back to /', () => field.locator('.kbd').textContent(), text => text === '/');
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
@@ -449,7 +450,7 @@ test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred,
       const stops = await page.locator('linearGradient#alfred-ink stop').evaluateAll(all => all.map(stop => getComputedStyle(stop).stopColor));
       assert.deepEqual(stops, [await colourOf(page, 'var(--cool)'), await colourOf(page, 'var(--violet)')], `${theme}: cool to violet`);
       const inked = (icon: Locator) => icon.locator('path').evaluate(path => getComputedStyle(path).fill);
-      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      await page.locator('.list .row[title^="Interview availability"]').click();
       const ask = page.locator('.rd-acts .btn', {hasText: 'Ask about this email'});
       assert.equal(await inked(ask.locator('.icon')), 'url("#alfred-ink")', 'the reader\'s Ask about this email');
       await page.keyboard.press('Meta+k');
@@ -566,7 +567,7 @@ test('the compact rail carries the roles: the current page is the navOn chip wit
     for (const theme of ['night', 'light'] as const) {
       await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
       await page.goto(`${setpoint.base}/inbox?account=2`);
-      await page.locator('.arow').first().waitFor();
+      await page.locator('.list .row').first().waitFor();
       await page.mouse.move(700, 28);
       const inbox = page.locator('.sb .nav', {has: page.locator('.icon')}).first();
       assert.equal(await inbox.getAttribute('title'), 'Inbox');

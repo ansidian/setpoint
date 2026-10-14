@@ -34,7 +34,7 @@ button.check-now:hover { background: var(--sub); color: var(--ink); }
 .hbar.cleared > .icon.ok, .rp-health.cleared > .icon.ok { color: var(--good); animation: line-ok var(--dur-fast) var(--ease); }
 @keyframes line-ok { from { opacity: 0; transform: scale(.6); } }
 /* The Unsorted group's note: "Triage is down, as of 9:09 AM". */
-.gh .gh-note { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--caution); display: inline-flex; align-items: center; gap: 6px; }
+:is(.gh, .lh) .gh-note { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--caution); display: inline-flex; align-items: center; gap: 6px; }
 
 .offline-pill { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--alert); color: var(--onAlert); box-shadow: var(--shadow-pill); font-weight: 500; white-space: nowrap; }
 .main > .offline-pill { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 5; animation: pill-in var(--dur-medium) var(--ease); }

@@ -38,21 +38,21 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
 
     // The reading pane's content slides in 12 px over 180 ms; J keeps the pane, so it doesn't again.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     const tools = page.locator('.pane > .rd-tools');
     await tools.waitFor();
     assert.deepEqual(await entrance(tools), ['pane-in', '0.18s']);
     await tools.evaluate(element => element.setAttribute('data-first', ''));
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('j');
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Your code is'}).waitFor();
     assert.equal(await page.locator('.pane > .rd-tools[data-first]').count(), 1, 'J swaps the email in the same pane');
 
     // The reader's More grows from its top right corner.
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
     await page.getByRole('button', {name: 'More'}).click();
     const more = page.getByRole('menu');
     await more.waitFor();
@@ -60,7 +60,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.keyboard.press('Escape');
 
     // A proposal slides into place; Cancel folds it away (a copy that takes nothing, gone in 180 ms).
-    await page.locator('.arow', {hasText: 'Contoso University'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-acts .btn', {hasText: 'Add to calendar'}).click();
     const proposal = page.getByRole('form', {name: 'Proposal: add to calendar'});
     await proposal.waitFor();
@@ -149,11 +149,11 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const shape = {menu: ['18px', '6px'], item: ['32px', '10px', '10px', true]};
 
     // The reader's More: its button stays `sub2` with the pointer away while the menu is open.
-    await page.locator('.arow', {hasText: 'Your recovery email was changed'}).click();
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
     const moreButton = page.getByRole('button', {name: 'More'});
     await moreButton.click();
     const more = page.getByRole('menu');
@@ -214,10 +214,10 @@ test('the toast drops in over 180 ms and again when a new one replaces it, leads
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
 
     // Done on Northwind: "Marked Done · Undo", led by `check` in `good`, dropping in over 180 ms.
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(page.locator('.list .row[title^="Interview availability"]'));
     await page.keyboard.press('h');
     const toast = page.locator('.toast');
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
@@ -232,7 +232,7 @@ test('the toast drops in over 180 ms and again when a new one replaces it, leads
     // E on the next email replaces it with "Moved to Trash · Undo": a new toast, dropping in afresh,
     // led by `delete` in `ink3`.
     await toast.evaluate(element => element.setAttribute('data-first', ''));
-    await page.locator('.arow', {hasText: 'Contoso University'}).click();
+    await page.locator('.list .row[title^="Final exam schedule"]').click();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await page.keyboard.press('e');
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
@@ -263,7 +263,7 @@ test('a failure\'s toast leads with `error` in `alert`, wears an `alert` ring an
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     // A copy the clipboard refuses (#41, SV-55) is a failure, while its code is still in the Inbox.
     await page.evaluate(() => {
       navigator.clipboard.writeText = () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
@@ -272,7 +272,7 @@ test('a failure\'s toast leads with `error` in `alert`, wears an `alert` ring an
     await page.locator('.toast.failed', {hasText: 'Couldn\'t copy it'}).locator('.tone').waitFor();
 
     await page.route(/\/api\/mail\/messages\/\d+\/pin$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
-    await point(page.locator('.arow', {hasText: 'Northwind Talent'}));
+    await point(page.locator('.list .row[title^="Interview availability"]'));
     await page.keyboard.press('p');
     const toast = page.locator('.toast.failed', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'});
     await toast.waitFor();

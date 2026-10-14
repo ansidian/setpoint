@@ -10,7 +10,7 @@ import {PhoneTabs, usePhone} from './Phone.tsx';
 import {useRoute} from './router.ts';
 import {Sidebar} from './Sidebar.tsx';
 import {carrySkeletons} from './states/Loading.tsx';
-import {AllSkeleton, BodySkeleton, HeadSkeleton, InboxSkeleton, NewsSkeleton, PhoneAgendaSkeleton} from './states/Skeletons.tsx';
+import {AllSkeleton, BodySkeleton, HeadSkeleton, NewsSkeleton, PhoneAgendaSkeleton} from './states/Skeletons.tsx';
 
 export function ShellFrame() {
   const route = useRoute();
@@ -35,7 +35,7 @@ export function ShellFrame() {
                   <div className="ph-top"><span className="btn quiet ph-back"><Icon name="chevron_left" size={20} />Inbox</span></div>
                   <div className="rd-scroll"><HeadSkeleton /><div className="rd-body"><BodySkeleton /></div></div>
                 </section>
-              ) : <section className="list"><InboxSkeleton /></section>}
+              ) : <section className="list all"><AllSkeleton /></section>}
           </div>
         </main>
         <PhoneTabs route={route} />
@@ -50,8 +50,7 @@ export function ShellFrame() {
       <main className="main">
         <header className="hd"><span className="hd-title">{title}</span></header>
         <div className="content">
-          {route.page === 'inbox' && route.view === 'all' ? <section className="list all"><AllSkeleton /></section>
-            : route.page === 'inbox' || route.page === 'settings' ? <section className="list"><InboxSkeleton /></section>
+          {route.page === 'inbox' || route.page === 'settings' ? <section className="list all"><AllSkeleton /></section>
               : route.page === 'news' ? <section className="nw-list"><div className="nw-body"><div className="list"><NewsSkeleton blocks={route.view === 'all'} /></div></div></section>
                 : null}
         </div>

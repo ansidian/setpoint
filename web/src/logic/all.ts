@@ -1,10 +1,11 @@
-// All (DESIGN.md › All; BRIEF.md › The Inbox): every email, Noise included, newest first, under
-// day headings ("TODAY Wed, Oct 7", "YESTERDAY Tue, Oct 6", "MON Oct 5"), with clock times rather
-// than ages (decision 39). Days are the owner's, midnight to midnight Pacific, never the browser's.
-// Each day groups its rows by lane, with the kind once where an FYI run starts, and folds its Noise
-// to one line (#48, D58). A pinned email sits on the Pinned shelf above the days, and only there (D105).
+// The Inbox as one list (SV-70, D264, D266; DESIGN.md › All): New, Attention, the Pinned shelf, then
+// every email by day, Noise included, newest first, under day headings ("TODAY Wed, Oct 7",
+// "YESTERDAY Tue, Oct 6", "MON Oct 5"), with clock times rather than ages (decision 39). Days are the
+// owner's, midnight to midnight Pacific, never the browser's. Each day groups its rows by lane, with
+// the kind once where an FYI run starts, and folds its Noise to one line (#48, D58); New does the
+// same under its own band. An email in New, Attention or on the Pinned shelf leaves its day meanwhile (D105).
 import {INBOX_GROUPS} from '@setpoint/shared';
-import type {InboxGroup, MessageRowOut} from '@setpoint/shared';
+import type {InboxGroupOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {daysBetween, localDate} from './format.ts';
 import {codeGroups} from './format.ts';
 import {GROUP_LABELS, rowKey, sender} from './inbox.ts';
@@ -21,19 +22,65 @@ const newest = (a: MessageRowOut, b: MessageRowOut) => b.received_at.localeCompa
 /**
  * Rows by local day in `timeZone`, newest day first and newest first within it. Pages of All are
  * joined here, so a day split between two pages shows once. A pinned email leaves its day for the
- * Pinned shelf until it's unpinned (D105).
+ * Pinned shelf until it's unpinned (D105), and one New or Attention shows (`above`) leaves it too.
  */
-export function groupByDay(rows: MessageRowOut[], timeZone: string): Day[] {
+export function groupByDay(rows: MessageRowOut[], timeZone: string, above: ReadonlySet<number> = new Set()): Day[] {
   const days: Day[] = [];
   const seen = new Set<number>();
   for (const row of [...rows].sort(newest)) {
-    if (seen.has(row.id) || row.pinned) continue;
+    if (seen.has(row.id) || row.pinned || above.has(row.id)) continue;
     seen.add(row.id);
     const date = localDate(row.received_at, timeZone);
     if (days.at(-1)?.date !== date) days.push({date, rows: []});
     days.at(-1)!.rows.push(row);
   }
   return days;
+}
+
+/** Where an email sits this visit to the Inbox: New, Attention, or its day (D264). */
+export type Place = 'new' | 'attention' | 'day';
+
+// New is drawn as a day is, under its own band; this stands for its date in its keys ("noise:new").
+export const NEW = 'new';
+
+/** Where an email goes the first time this visit sees it: New while unread, Attention while it waits on Done, else its day. */
+const placeOf = (row: MessageRowOut): Place => (row.unread ? 'new' : row.lane === 'attention' && !row.done ? 'attention' : 'day');
+
+/**
+ * Each email's place this visit (D264): set the first time the list sees it, and kept until the
+ * visit ends, so reading an email in New leaves it there and the list never moves under J and K.
+ * Mail that arrives meanwhile comes in unread, so into New; one marked unread stays where it was.
+ * Returns `placed` itself when nothing is new to it.
+ */
+export function placeRows(placed: ReadonlyMap<number, Place>, rows: MessageRowOut[]): ReadonlyMap<number, Place> {
+  const added = rows.filter(row => !placed.has(row.id));
+  if (!added.length) return placed;
+  const next = new Map(placed);
+  for (const row of added) if (!next.has(row.id)) next.set(row.id, placeOf(row));
+  return next;
+}
+
+/**
+ * Mark all as read empties New (D264): what it reads goes to its day; Attention it leaves unread
+ * (BRIEF.md › The Inbox) goes to Attention, as Security it leaves unread goes to its day.
+ */
+export function clearNew(placed: ReadonlyMap<number, Place>, rows: MessageRowOut[]): ReadonlyMap<number, Place> {
+  const waiting = new Set(rows.filter(row => row.lane === 'attention' && !row.done).map(row => row.id));
+  return new Map([...placed].map(([id, place]): [number, Place] => [id, place === 'new' ? (waiting.has(id) ? 'attention' : 'day') : place]));
+}
+
+/**
+ * New's and Attention's emails, newest first, from the Inbox's groups (with this visit's held rows):
+ * New is what was unread when this visit first saw it; Attention, mail waiting on Done that wasn't.
+ * A pinned email is on the Pinned shelf, and only there, as in All (D105).
+ */
+export function splitInbox(groups: InboxGroupOut[], placed: ReadonlyMap<number, Place>): {fresh: MessageRowOut[]; attention: MessageRowOut[]} {
+  const rows = [...new Map(groups.filter(group => group.group !== 'pinned').flatMap(group => group.rows).filter(row => !row.pinned).map(row => [row.id, row])).values()].sort(newest);
+  const at = (row: MessageRowOut) => placed.get(row.id) ?? placeOf(row);
+  return {
+    fresh: rows.filter(row => at(row) === 'new'),
+    attention: rows.filter(row => at(row) === 'attention' && row.lane === 'attention' && !row.done),
+  };
 }
 
 export type AllLane = 'attention' | 'unsorted' | 'fyi';
@@ -57,8 +104,8 @@ const laneOf = (row: MessageRowOut) => row.lane ?? 'unsorted';
 const kindOrder = (row: MessageRowOut) => INBOX_GROUPS.indexOf(row.kind ?? 'other');
 
 /**
- * A day as All draws it: Attention, Unsorted and FYI in Unread's order, FYI's rows by kind in
- * Unread's order and newest first within one, then the day's Noise, folded unless `noiseOpen`.
+ * A day as the list draws it (New too): Attention, Unsorted and FYI in the groups' order, FYI's rows
+ * by kind in that order and newest first within one, then the day's Noise, folded unless `noiseOpen`.
  */
 export function dayView(day: Day, noiseOpen: boolean): DayView {
   const lanes = LANES.flatMap(([lane, label]): LaneView[] => {
@@ -76,15 +123,28 @@ export function dayView(day: Day, noiseOpen: boolean): DayView {
 }
 
 export const noiseKey = (date: string) => `noise:${date}`;
-const allStop = (row: MessageRowOut): Stop => ({key: `all:${row.id}`, kind: 'row', group: 'all', id: row.id});
 
-/** Where J and K stop in All: the Pinned shelf's rows, then each day's rows in the order shown, and a folded Noise line (Enter opens it). */
-export const dayStops = (views: DayView[], shelf: MessageRowOut[] = []): Stop[] => [
+/**
+ * A row's key in the list: its part's ("new:12" in New, "attention:12" in Attention) or "all:12" in its
+ * day, so an email moving between them folds out of one and into the other.
+ */
+export const listKey = (part: 'new' | 'attention' | 'all', id: number) => `${part}:${id}`;
+const stopOf = (part: 'new' | 'attention' | 'all') => (row: MessageRowOut): Stop => ({key: listKey(part, row.id), kind: 'row', group: 'all', id: row.id});
+
+const viewStops = (view: DayView, part: 'new' | 'all'): Stop[] => [
+  ...view.lanes.flatMap(lane => lane.rows.map(({row}) => stopOf(part)(row))),
+  ...(!view.noise ? [] : view.noise.open ? view.noise.rows.map(stopOf(part)) : [{key: noiseKey(view.date), kind: 'noise', date: view.date} satisfies Stop]),
+];
+
+/**
+ * Where J and K stop, in the list's order: New's rows as its lanes show them, Attention's, the Pinned
+ * shelf's, then each day's, with a folded Noise line in place of its rows (Enter opens it).
+ */
+export const dayStops = (views: DayView[], shelf: MessageRowOut[] = [], top: {fresh?: DayView | null; attention?: MessageRowOut[]} = {}): Stop[] => [
+  ...(top.fresh ? viewStops(top.fresh, 'new') : []),
+  ...(top.attention ?? []).map(stopOf('attention')),
   ...shelf.map((row): Stop => ({key: rowKey('pinned', row.id), kind: 'row', group: 'pinned', id: row.id})),
-  ...views.flatMap(view => [
-    ...view.lanes.flatMap(lane => lane.rows.map(({row}) => allStop(row))),
-    ...(!view.noise ? [] : view.noise.open ? view.noise.rows.map(allStop) : [{key: noiseKey(view.date), kind: 'noise', date: view.date} satisfies Stop]),
-  ]),
+  ...views.flatMap(view => viewStops(view, 'all')),
 ];
 
 const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});
@@ -103,7 +163,7 @@ export function dayHeading(date: string, today: string): {label: string; date: s
   return {label: weekday, date: onDay(date, sameYear ? {month: 'short', day: 'numeric'} : {month: 'short', day: 'numeric', year: 'numeric'})};
 }
 
-/** The kind All shows before the account, as Unread's group: the FYI kind, else Noise, or Unsorted while triage hasn't sorted it. */
+/** The kind the list shows before the account: the FYI kind, else Noise, or Unsorted while triage hasn't sorted it. */
 export function kindGroup(row: Pick<MessageRowOut, 'lane' | 'kind'>): InboxGroup {
   if (row.lane === null) return 'unsorted';
   if (row.lane === 'noise') return 'noise';

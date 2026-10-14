@@ -34,7 +34,7 @@ export const isPhone = () => PHONE.matches;
 export const useCompact = () => useSyncExternalStore(onCompact, () => COMPACT.matches);
 
 const TABS: {label: string; icon: 'inbox' | 'calendar_today'; page: Route['page']; to: Route; scroller: string}[] = [
-  {label: 'Inbox', icon: 'inbox', page: 'inbox', to: {page: 'inbox', view: 'unread', account: null, open: null}, scroller: '.content > .list'},
+  {label: 'Inbox', icon: 'inbox', page: 'inbox', to: {page: 'inbox', account: null, open: null}, scroller: '.content > .list'},
   {label: 'Agenda', icon: 'calendar_today', page: 'calendar', to: {page: 'calendar', date: null, item: null, at: null}, scroller: '.ph-agenda'},
 ];
 

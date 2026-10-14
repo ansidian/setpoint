@@ -83,7 +83,10 @@ interface Entry {
   again?: Promise<void>;
   // Bumped by setCached, so a load that began earlier doesn't overwrite what a write showed.
   version: number;
-  snapshot: {data?: unknown; error?: Error};
+  // When the load whose answer `data` is began (or the write that put it there was made), so a view
+  // can tell an answer asked for since it opened from one it found waiting.
+  askedAt?: number;
+  snapshot: {data?: unknown; error?: Error; askedAt?: number};
 }
 
 const cache = new Map<string, Entry>();
@@ -112,11 +115,13 @@ export function refresh(path: string): Promise<void> {
   }
   const version = current.version;
   const writesAtStart = writes;
+  const askedAt = Date.now();
   current.loading = getJson<unknown>(path).then(
     data => {
       if (current.version !== version) return;
       current.data = data;
       current.error = undefined;
+      current.askedAt = askedAt;
       // A write went out meanwhile, so this answer may be from before it: load again.
       if (writes !== writesAtStart) queueMicrotask(() => void refresh(path));
     },
@@ -125,7 +130,7 @@ export function refresh(path: string): Promise<void> {
     },
   ).finally(() => {
     current.loading = undefined;
-    current.snapshot = {data: current.data, error: current.error};
+    current.snapshot = {data: current.data, error: current.error, askedAt: current.askedAt};
     notify();
   });
   return current.loading;
@@ -170,7 +175,8 @@ export function setCached(path: string, data: unknown) {
   current.version += 1;
   current.data = data;
   current.error = undefined;
-  current.snapshot = {data};
+  current.askedAt = Date.now();
+  current.snapshot = {data, askedAt: current.askedAt};
   notify();
 }
 
@@ -201,12 +207,15 @@ function mountResource(path: string): () => void {
 
 const EMPTY = {};
 
-/** The latest answer for `path` (undefined until the first), refreshed while it's on screen. */
-export function useResource<T>(path: string | null): {data: T | undefined; error: Error | undefined} {
+/**
+ * The latest answer for `path` (undefined until the first), refreshed while it's on screen, and when
+ * the load it came from began (`askedAt`).
+ */
+export function useResource<T>(path: string | null): {data: T | undefined; error: Error | undefined; askedAt?: number} {
   const read = () => (path ? entry(path).snapshot : EMPTY);
   const snapshot = useSyncExternalStore(subscribe, read, read);
   useEffect(() => (path ? mountResource(path) : undefined), [path]);
-  return snapshot as {data: T | undefined; error: Error | undefined};
+  return snapshot as {data: T | undefined; error: Error | undefined; askedAt?: number};
 }
 
 // useResources' last answer per list of paths, so it hands React the same array until one changes.

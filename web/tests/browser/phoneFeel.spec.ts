@@ -23,7 +23,7 @@ async function email(setpoint: Setpoint, subject: string): Promise<number> {
 async function inbox(setpoint: Setpoint): Promise<Page> {
   const page = await setpoint.page('iphone');
   await page.goto(`${setpoint.base}/inbox`);
-  await page.locator('.arow').first().waitFor();
+  await page.locator('.list .row').first().waitFor();
   return page;
 }
 
@@ -59,7 +59,7 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
     const page = await inbox(setpoint);
     const colours = {ink: await tokenColour(page, 'ink'), ink2: await tokenColour(page, 'ink2'), good: await tokenColour(page, 'good')};
     // Attention mail: four, a quarter each of the bar's 374 px; Done's label `ink` 500 and its check `good`, the rest `ink2` under `ink` icons.
-    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     const four = await actionBar(page);
     assert.deepEqual(four.map(action => action.label), ['Done', 'Trash', 'Mark unread', 'Open in Gmail']);
@@ -91,7 +91,7 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
       });
       const going = page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id})}`);
       await page.locator('.pane .ph-acts').waitFor();
-      await page.locator('.list .arow').first().waitFor();
+      await page.locator('.list .row').first().waitFor();
       const before = (await actionBar(page)).map(action => action.label);
       assert.ok(before.length === 0 || JSON.stringify(before) === JSON.stringify(labels), `before the email: ${JSON.stringify(before)}`);
       release();
@@ -110,7 +110,7 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.equal(await page.locator('.rd-subj .rd-unread').count(), 0);
     // The first draw doesn't pop.
@@ -183,7 +183,7 @@ test('the reader slides in over the list and back off it, Done too; the browser\
     const page = await inbox(setpoint);
     await recordSlides(page);
     assert.deepEqual(await styles(page, '.content > .list', ['view-transition-name']), ['ph-list']);
-    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.deepEqual(await styles(page, '.pane', ['view-transition-name']), ['ph-reader']);
     // In: the reader from the right over 260 ms, the list a fifth left and dimmed under it, taps
@@ -201,13 +201,13 @@ test('the reader slides in over the list and back off it, Done too; the browser\
     ]});
     await until('the slide is over', () => page.evaluate(() => document.documentElement.dataset.slide ?? null), direction => direction === null);
     // Done goes back the same way, to the list where its row folds away.
-    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.ph-acts .ph-done').tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await until('a third and fourth slide', () => slides(page), seen => seen.length === 4 && seen[3]!.animations.length > 0);
     assert.deepEqual((await slides(page)).map(slide => slide.direction), ['in', 'back', 'in', 'back']);
     // The browser's Back (Safari's edge swipe) animates itself: no slide.
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).tap();
+    await page.locator('.list .row[title^="Interview availability"]').tap();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await until('the fifth slide', () => slides(page), seen => seen.length === 5);
     await page.goBack();
@@ -220,9 +220,9 @@ test('the reader slides in over the list and back off it, Done too; the browser\
     // The desktop's reader sits beside the list: no slide.
     const desk = await setpoint.page('target');
     await desk.goto(`${setpoint.base}/inbox`);
-    await desk.locator('.arow').first().waitFor();
+    await desk.locator('.list .row').first().waitFor();
     await recordSlides(desk);
-    await desk.locator('.arow', {hasText: 'Your recovery email'}).click();
+    await desk.locator('.list .row', {hasText: 'Your recovery email'}).click();
     await desk.locator('.rd-subj', {hasText: 'Your recovery email'}).waitFor();
     await desk.keyboard.press('Escape');
     await until('the reader closes', () => desk.locator('.pane').count(), count => count === 0);
@@ -274,7 +274,7 @@ test('phone search: a clear button where the hint was, no Mark all as read meanw
   try {
     const page = await inbox(setpoint);
     const markAll = page.locator('.hd button[aria-label="Mark all as read"]');
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).tap();
+    await page.locator('.list .row[title^="Interview availability"]').tap();
     assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
@@ -369,7 +369,7 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
     // In a browser tab there's no inset: 6 px under the labels, the bars 54 and 58 px.
     const bars = async () => [await styles(page, '.app', ['padding-top']), await styles(page, '.ph-tabs', ['min-height', 'padding-bottom', 'height'])];
     assert.deepEqual(await bars(), [['0px'], ['54px', '6px', '54px']]);
-    await page.locator('.arow', {hasText: 'Contoso University'}).tap();
+    await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj').waitFor();
     assert.deepEqual(await styles(page, '.ph-acts', ['min-height', 'padding-bottom', 'height']), ['58px', '6px', '58px']);
     // As a Home Screen app on an iPhone: 47 px for the status bar, 34 for the home indicator.
@@ -390,7 +390,7 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
   }
 });
 
-test('the phone\'s list reads a step up: rows 15, ages and accounts 13, summaries 13.5, group headers 12, search\'s rows too', async () => {
+test('the phone\'s list reads a step up: rows 15, ages and accounts 13, bands 12, search\'s rows too', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -399,14 +399,10 @@ test('the phone\'s list reads a step up: rows 15, ages and accounts 13, summarie
     assert.deepEqual(await styles(page, '.row', ['min-height', 'row-gap']), ['62px', '3px']);
     assert.deepEqual(await styles(page, '.row .age', ['font-size', 'color']), ['13px', ink3]);
     assert.deepEqual(await styles(page, '.row .ac', ['font-size', 'color']), ['13px', ink3]);
-    assert.deepEqual(await styles(page, '.arow .r1', ['font-size', 'height']), ['13px', '20px']);
-    assert.deepEqual(await styles(page, '.arow .l1', ['height']), ['20px']);
-    assert.deepEqual(await styles(page, '.arow .l2', ['font-size']), ['15px']);
-    assert.deepEqual(await styles(page, '.arow .l3', ['font-size', 'color']), ['13.5px', ink3]);
     assert.deepEqual(await styles(page, '.gh', ['font-size', 'height']), ['12px', '30px']);
     assert.deepEqual(await styles(page, '.code-line .copy', ['height', 'font-size', 'padding-left', 'padding-right']), ['30px', '13px', '10px', '10px']);
     // The unread dot stays level with the larger first line.
-    const [dot, from] = await page.locator('.arow.unread').first().evaluate(row => [row.querySelector('.ud')!, row.querySelector('.from')!].map(part => {
+    const [dot, from] = await page.locator('.list .row.unread').first().evaluate(row => [row.querySelector('.ud')!, row.querySelector('.from')!].map(part => {
       const box = part.getBoundingClientRect();
       return box.top + box.height / 2;
     }));

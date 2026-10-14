@@ -1,12 +1,11 @@
-// The Inbox as the list draws it (DESIGN.md › The list; BRIEF.md › The Inbox). The server sends the
-// groups in order with their rows and counts (src/domain/inbox.ts there); this decides what the list
-// shows of them: which groups the user collapsed (each starts expanded), each row's line, where the
-// keyboard cursor can stop, and the counts' at-once changes (DESIGN.md › Interaction rules).
+// The Inbox's rules (DESIGN.md › The list; BRIEF.md › The Inbox). The server sends the groups in
+// order with their rows and counts (src/domain/inbox.ts there); the list (logic/all.ts) draws New and
+// Attention from them. This holds what's common: each row's line, the rows a visit keeps, how the
+// keyboard cursor moves, and the counts' at-once changes (DESIGN.md › Interaction rules).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
 import {countdownChange} from './format.ts';
-import type {MailView} from './route.ts';
 
 export const GROUP_LABELS: Record<InboxGroup, string> = {
   pinned: 'Pinned', attention: 'Attention', unsorted: 'Unsorted', security: 'Security', deliveries: 'Deliveries', money: 'Money',
@@ -23,34 +22,16 @@ export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
   career: 'work', people: 'person', updates: 'notifications', other: 'mail', noise: 'campaign',
 };
 
-/** Pinned, Attention and Unsorted always show their rows; every other group has a chevron. */
-export const isCollapsible = (group: InboxGroup) => !['pinned', 'attention', 'unsorted'].includes(group);
-
 /**
- * An email that left the server's list during this visit to the view, where it was. Opening an FYI
- * email reads it, and read mail leaves the Inbox; in Unread it keeps its place until the user leaves the
- * view (All, Calendar, another account), so the list doesn't change under them (2026-10-09).
+ * An email that left the server's list during this visit to the Inbox, where it was. Opening an FYI
+ * email reads it, and read mail leaves the Inbox's groups; it keeps its place in New until the user
+ * leaves the Inbox (Calendar, another account), so the list doesn't change under them (2026-10-09).
  */
 export interface HeldRow {
   group: InboxGroup;
   index: number;
   row: MessageRowOut;
 }
-
-export interface GroupView {
-  group: InboxGroup;
-  label: string;
-  count: number;
-  collapsible: boolean;
-  collapsed: boolean;
-  // A collapsed group's first three organisations, "Wingtip Toys · Consolidated Messenger · Southridge Video"; none for Noise, which is a count.
-  preview: string | null;
-  // The rows shown: none while collapsed.
-  rows: MessageRowOut[];
-}
-
-/** Collapse as the user left it this session, by group; otherwise expanded. */
-export type Collapse = Partial<Record<InboxGroup, boolean>>;
 
 /** The server's groups with the visit's held rows back in their places, in the order they left. */
 export const withHeld = (groups: InboxGroupOut[], held: HeldRow[]): InboxGroupOut[] => held.reduce(withOneHeld, groups);
@@ -70,12 +51,6 @@ function withOneHeld(groups: InboxGroupOut[], held: HeldRow): InboxGroupOut[] {
     rows.splice(Math.min(held.index, rows.length), 0, held.row);
     return {...group, count: group.count + 1, rows};
   });
-}
-
-/** A collapsed group's first three senders, newest first. */
-function previewOf(group: InboxGroupOut): string | null {
-  const names = [...new Set(group.rows.map(sender))];
-  return names.length ? names.slice(0, 3).join(' · ') : null;
 }
 
 /**
@@ -109,33 +84,17 @@ export function withoutEmails(groups: InboxGroupOut[], ids: ReadonlySet<number>)
   });
 }
 
-export function groupViews(groups: InboxGroupOut[], collapse: Collapse, held: HeldRow[]): GroupView[] {
-  return withHeld(groups, held).map(group => {
-    const collapsible = isCollapsible(group.group);
-    const collapsed = collapsible && (collapse[group.group] ?? false);
-    return {
-      group: group.group, label: GROUP_LABELS[group.group], count: group.count, collapsible, collapsed,
-      preview: collapsed && group.group !== 'noise' ? previewOf(group) : null,
-      rows: collapsed ? [] : group.rows,
-    };
-  });
-}
-
-/** Where J and K stop: each row shown, and each collapsed group's header (Enter expands it). */
-// All's rows (logic/all.ts) are stops too, under the group 'all', and so is a day's folded Noise.
-export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'group'; group: InboxGroup} | {key: string; kind: 'noise'; date: string};
+/**
+ * Where J and K stop: each row shown (the list's under the group 'all', the shelf's under 'pinned'),
+ * and a folded Noise line (Enter opens it).
+ */
+export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'noise'; date: string};
 
 /** All's stops: every row, newest first, by its id. */
 export const allStops = (rows: MessageRowOut[]): Stop[] => rows.map(row => ({key: `all:${row.id}`, kind: 'row', group: 'all', id: row.id}));
 
 export const rowKey = (group: InboxGroup, id: number) => `${group}:${id}`;
 export const groupKey = (group: InboxGroup) => `group:${group}`;
-
-export function cursorStops(views: GroupView[]): Stop[] {
-  return views.flatMap((view): Stop[] => (view.collapsed
-    ? [{key: groupKey(view.group), kind: 'group', group: view.group}]
-    : view.rows.map(row => ({key: rowKey(view.group, row.id), kind: 'row', group: view.group, id: row.id}))));
-}
 
 /** J (+1) and K (−1) from `current`; with no cursor yet, either starts at the top. Stays at the ends. */
 export function moveCursor(stops: Stop[], current: string | null, delta: 1 | -1): string | null {
@@ -325,25 +284,6 @@ export function inboxAfterUnread(inbox: InboxOut, id: number): InboxOut {
       accounts: counts.accounts.map(one => (one.account_id === row.account_id ? {...one, unread: one.unread + 1} : one)),
     },
   };
-}
-
-/**
- * The view going to the Inbox opens (D106): Unread while anything waits there, an unread email or
- * Attention not yet Done, else All. An account's Inbox counts its own unread mail; the Attention
- * count is every account's, so it keeps Unread. Before the counts have come, Unread.
- */
-export function arrivalView(counts: MailCountsOut | undefined, account: number | null = null): MailView {
-  if (!counts) return 'unread';
-  const unread = account === null ? counts.unread : counts.accounts.find(one => one.account_id === account)?.unread ?? 0;
-  return unread > 0 || counts.attention > 0 ? 'unread' : 'all';
-}
-
-/**
- * Whether nothing waits: nothing in Attention, nothing unread and no read row Unread still holds
- * (DESIGN.md #20), so the list says "All caught up".
- */
-export function caughtUp(groups: InboxGroupOut[], held: HeldRow[]): boolean {
-  return withHeld(groups, held).every(group => group.group === 'pinned');
 }
 
 /**

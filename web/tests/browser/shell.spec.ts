@@ -43,7 +43,7 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
     assert.equal(await top(), before, 'the card grows down; it doesn\'t jump up');
     await page.getByLabel('Password').fill('a long enough password');
     await page.keyboard.press('Enter');
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -61,7 +61,7 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
       await route.fulfill({response, json: {...await response.json() as object, passkeys: true}});
     });
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
     await page.reload();
     const card = page.locator('.sign-in');
@@ -124,7 +124,7 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
       observer.observe(document.getElementById('root')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
     });
     await page.keyboard.press('Enter');
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await until('the card gone', () => page.locator('.sign-in').count(), count => count === 0);
     assert.deepEqual(await page.evaluate(() => (window as unknown as {leaving: string[][]}).leaving), [['sign-in-out', '0.18s'], ['sign-in-app', '0.18s']]);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -159,7 +159,7 @@ test('a recovery code signs in when the password is lost: a new password, then n
     await page.getByRole('button', {name: 'Claim Setpoint'}).click();
     const codes = (await page.locator('.recovery').textContent())!.trim().split('\n');
     await page.getByRole('button', {name: 'Continue'}).click();
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
 
     await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
     await page.reload();
@@ -175,7 +175,7 @@ test('a recovery code signs in when the password is lost: a new password, then n
     assert.equal(fresh.length, 8);
     assert.ok(!fresh.includes(codes[1]!), 'the old codes are replaced');
     await page.getByRole('button', {name: 'Continue'}).click();
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
 
     // The new password is the password now; Back returns to it from the code.
     await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
@@ -184,7 +184,7 @@ test('a recovery code signs in when the password is lost: a new password, then n
     await page.getByRole('button', {name: 'Use the password'}).click();
     await page.getByLabel('Password').fill('another long password');
     await page.keyboard.press('Enter');
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -198,17 +198,17 @@ for (const size of ['target', 'large'] as SizeName[]) {
       try {
         const page = await setpoint.page(size);
         await page.goto(`${setpoint.base}/inbox`);
-        await page.locator('.arow').first().waitFor();
+        await page.locator('.list .row').first().waitFor();
         assert.equal((await box(page, '.sb')).width, 248);
         assert.equal((await box(page, '.hd')).height, 56);
         assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
         assert.equal((await box(page, '.list')).width, SIZES[size].width - 248);
-        await page.locator('.arow', {hasText: 'Contoso University'}).click();
+        await page.locator('.list .row[title^="Final exam schedule"]').click();
         await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
         assert.equal((await box(page, '.pane')).width, 680);
         assert.equal((await box(page, '.list')).width, SIZES[size].width - 248 - 680);
         // Every row keeps its account while the pane is open (decision 41).
-        for (const label of await page.locator('.list .row .ac, .list .arow .r1').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
+        for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
         const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
         assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
         // Focus on a control draws no ring.
@@ -228,7 +228,7 @@ test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab ti
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(await page.title(), '(3) Inbox');
     await page.locator('.acct', {hasText: 'Jobs'}).click();
     await until('only Jobs mail', () => page.locator('.list .ac .label, .list .r1 .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
@@ -239,7 +239,7 @@ test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab ti
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
     assert.equal(await page.title(), 'October 2026 · Calendar');
     await page.keyboard.press('1');
-    await page.locator('.arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     assert.equal(new URL(page.url()).pathname, '/inbox');
     // The Today block's lines open their card over the page (#78), not Calendar.
     await page.locator('.today-row', {hasText: 'Dentist'}).click();
@@ -258,7 +258,7 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     // Reduce motion changes nothing (DESIGN.md › Principles): the card still opens with its motion.
     await page.emulateMedia({reducedMotion: 'reduce'});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
@@ -382,8 +382,8 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     await setpoint.api('POST', `/mail/messages/${signIn.id}/read`, {unread: false});
     await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .cnt').textContent(), text => text === '18');
     assert.equal((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread, 18);
-    // Unread keeps it in its place, read, until the user leaves the view (2026-10-09).
-    const signInRow = page.locator('.row', {hasText: 'New sign-in'});
+    // New keeps it in its place, read, until the user leaves the Inbox (2026-10-09, #243).
+    const signInRow = page.locator('.row[data-key^="new:"]', {hasText: 'New sign-in'});
     await until('the dot goes', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     await page.keyboard.press('2');
     await page.waitForURL(/\/calendar/);

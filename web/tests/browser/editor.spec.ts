@@ -247,7 +247,7 @@ test('UX #3: a started draft and an unsaved edit are still there after going to 
     await page.keyboard.press('c');
     await page.keyboard.type('Haircut fri 3pm');
     await page.locator('.sb').getByText('Inbox', {exact: true}).click();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.sb').getByText('Calendar', {exact: true}).click();
     await page.locator('.editor').waitFor();
     assert.equal(await page.locator('.editor .nl-input').inputValue(), 'Haircut fri 3pm');
@@ -255,7 +255,7 @@ test('UX #3: a started draft and an unsaved edit are still there after going to 
     // Cancel ends it for good.
     await page.locator('.editor').getByRole('button', {name: /Cancel/}).click();
     await page.locator('.sb').getByText('Inbox', {exact: true}).click();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.locator('.sb').getByText('Calendar', {exact: true}).click();
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     assert.equal(await page.locator('.editor').count(), 0);
@@ -265,7 +265,7 @@ test('UX #3: a started draft and an unsaved edit are still there after going to 
     await page.keyboard.press('e');
     await page.locator('.editor input[aria-label="Title"]').fill('Career fair (bring CV)');
     await page.locator('.sb').getByText('Inbox', {exact: true}).click();
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     await page.goBack();
     await page.locator('.editor').waitFor();
     assert.equal(await page.locator('.editor input[aria-label="Title"]').inputValue(), 'Career fair (bring CV)');

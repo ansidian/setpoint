@@ -809,7 +809,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           <button className="btn ghost sm" title="Today · T" data-hint="t" onClick={goToday}>Today</button>
           <button className="ibtn sm" aria-label={`Next ${mode}`} title={`Next ${mode} · →`} onClick={() => page(1)}><Icon name="chevron_right" /></button>
         </span>
-        {/* Search hides Month | Week, as mail's hides Unread | All (D48); the grid still pages. */}
+        {/* Search hides Month | Week (D48); the grid still pages. */}
         {!searching && (
           <span className="seg" ref={segThumb} style={{marginLeft: 8}}>
             <button type="button" className={mode === 'month' ? 'on' : undefined} aria-pressed={mode === 'month'} title="Month · M" onClick={() => switchMode('month')}>Month</button>

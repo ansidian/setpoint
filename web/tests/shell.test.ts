@@ -118,12 +118,11 @@ test.each([
 
 describe('routes', () => {
   test.each([
-    ['/', '', {page: 'inbox', view: 'unread', account: null, open: null}],
-    ['/inbox', '', {page: 'inbox', view: 'unread', account: null, open: null}],
-    ['/inbox/12', '', {page: 'inbox', view: 'unread', account: null, open: 12}],
-    ['/inbox/12', '?account=4', {page: 'inbox', view: 'unread', account: 4, open: 12}],
-    ['/inbox/all', '', {page: 'inbox', view: 'all', account: null, open: null}],
-    ['/inbox/nope', '?account=x', {page: 'inbox', view: 'unread', account: null, open: null}],
+    ['/', '', {page: 'inbox', account: null, open: null}],
+    ['/inbox', '', {page: 'inbox', account: null, open: null}],
+    ['/inbox/12', '', {page: 'inbox', account: null, open: 12}],
+    ['/inbox/12', '?account=4', {page: 'inbox', account: 4, open: 12}],
+    ['/inbox/nope', '?account=x', {page: 'inbox', account: null, open: null}],
     ['/calendar', '', {page: 'calendar', date: null, item: null, at: null}],
     ['/calendar/2026-10-07', '', {page: 'calendar', date: '2026-10-07', item: null, at: null}],
     ['/calendar/item/3', '?at=2026-10-07T21%3A30%3A00.000Z', {page: 'calendar', date: null, item: 3, at: '2026-10-07T21:30:00.000Z'}],
@@ -148,12 +147,20 @@ describe('routes', () => {
     ['/news/ai/story/28/article/40', '', {page: 'news', view: 'ai', story: 28, article: 40}],
     ['/news/sports/story/3', '', {page: 'news', view: 'all', story: null, article: null}],
     ['/news/story/nope/article/4', '', {page: 'news', view: 'all', story: null, article: null}],
-    ['/somewhere', '', {page: 'inbox', view: 'unread', account: null, open: null}],
+    ['/somewhere', '', {page: 'inbox', account: null, open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
     expect(route).toEqual(expected);
     const [pathname, query] = routePath(route).split('?');
     expect(parseRoute(pathname!, query ? `?${query}` : '')).toEqual(route);
+  });
+
+  // All was its own view until the Inbox became one list (SV-70): its addresses still land there.
+  test.each([
+    ['/inbox/all', '', {page: 'inbox', account: null, open: null}],
+    ['/inbox/all/12', '?account=4', {page: 'inbox', account: 4, open: 12}],
+  ] as const)('%s%s, All\'s old address, opens the Inbox', (path, search, expected) => {
+    expect(parseRoute(path, search)).toEqual(expected);
   });
 
   test.each([

@@ -1,13 +1,13 @@
-// The list's rules (DESIGN.md › The list, Interaction rules) as tables over a small Inbox shaped
-// like the seed's: which groups show rows, their previews, each row's line, the cursor's stops,
-// and the counts' at-once changes (opening drops unread; only Done drops the pill).
+// The Inbox's rules (DESIGN.md › The list, Interaction rules) as tables over a small Inbox shaped
+// like the seed's: held rows, each row's line, the cursor, and the counts' at-once changes (opening
+// drops unread; only Done drops the pill).
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, arrivalView, caughtUp, GROUP_GLYPHS, codeExpired, countsAfterOpen, cursorStops, groupViews, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
-import type {Collapse, PatternPrompt} from '../src/logic/inbox.ts';
+import type {PatternPrompt} from '../src/logic/inbox.ts';
 import type {Stop} from '../src/logic/inbox.ts';
 
 let nextId = 1;
@@ -43,8 +43,12 @@ const groups: InboxGroupOut[] = [
   group('noise', [tailspin]),
 ];
 const inbox: InboxOut = {account_id: null, groups, counts, next_change_at: null};
-// Deliveries and Noise as the user collapsed them, as the boards show them.
-const asBoards: Collapse = {deliveries: true, noise: true};
+// Where J and K stop in a list like the seed's: its rows, and a folded Noise line in place of Deliveries'.
+const rowStop = (name: InboxGroupOut['group'], id: number): Stop => ({key: `${name}:${id}`, kind: 'row', group: name, id});
+const stops: Stop[] = [
+  rowStop('pinned', 27), rowStop('attention', 2), rowStop('attention', 5), rowStop('attention', 22), rowStop('security', 1), rowStop('security', 3),
+  {key: 'noise:a', kind: 'noise', date: 'a'}, rowStop('career', 12), {key: 'noise:b', kind: 'noise', date: 'b'},
+];
 
 // Each lane's glyph, one per group and no two alike (#119): its header and All's kind column draw it.
 test.each([
@@ -53,56 +57,7 @@ test.each([
 ] as const)('%s\'s glyph is %s', (name, glyph) => expect(GROUP_GLYPHS[name]).toBe(glyph));
 test('no two groups share a glyph', () => expect(new Set(Object.values(GROUP_GLYPHS)).size).toBe(Object.keys(GROUP_GLYPHS).length));
 
-describe('groupViews', () => {
-  test('every group starts expanded: rows and chevrons', () => {
-    expect(groupViews(groups, {}, []).map(view => [view.label, view.count, view.collapsible, view.collapsed, view.preview, view.rows.map(item => item.id)])).toEqual([
-      ['Pinned', 1, false, false, null, [27]],
-      ['Attention', 3, false, false, null, [2, 5, 22]],
-      ['Security', 2, true, false, null, [1, 3]],
-      ['Deliveries', 2, true, false, null, [6, 11]],
-      ['Career', 1, true, false, null, [12]],
-      ['Noise', 1, true, false, null, [4]],
-    ]);
-  });
-
-  test('collapsed by the user: previews, and Noise a count with no organisations', () => {
-    expect(groupViews(groups, asBoards, []).map(view => [view.label, view.collapsed, view.preview, view.rows.map(item => item.id)]).slice(3)).toEqual([
-      ['Deliveries', true, 'Consolidated Messenger · Wingtip Toys', []],
-      ['Career', false, null, [12]],
-      ['Noise', true, null, []],
-    ]);
-  });
-
-  test.each([
-    ['expanding Deliveries shows its rows, without a preview', {...asBoards, deliveries: false}, 'deliveries', false, [6, 11], null],
-    ['collapsing Security shows its organisations', {security: true}, 'security', true, [], 'Contoso Insurance · Google'],
-    ['expanding Noise', {...asBoards, noise: false}, 'noise', false, [4], null],
-    ['Attention never collapses', {attention: true}, 'attention', false, [2, 5, 22], null],
-  ] as const)('%s', (_name, collapse, name, collapsed, ids, preview) => {
-    const view = groupViews(groups, collapse, []).find(item => item.group === name)!;
-    expect([view.collapsed, view.rows.map(item => item.id), view.preview]).toEqual([collapsed, ids, preview]);
-  });
-
-  test('the open email keeps its place after reading took it out of its group', () => {
-    const read = {...signIn, unread: false};
-    const after = groups.map(item => (item.group === 'security' ? group('security', [code]) : item));
-    const view = groupViews(after, {}, [{group: 'security', index: 1, row: read}]).find(item => item.group === 'security')!;
-    expect([view.count, view.rows.map(item => [item.id, item.unread])]).toEqual([2, [[1, true], [3, false]]]);
-  });
-
-  test('and its group stays when it was the only one', () => {
-    const after = groups.filter(item => item.group !== 'career');
-    const views = groupViews(after, {}, [{group: 'career', index: 0, row: {...fabrikam, unread: false}}]);
-    expect(views.map(view => view.group)).toEqual(['pinned', 'attention', 'security', 'deliveries', 'career', 'noise']);
-  });
-
-  test('a held email still in its group isn\'t added twice', () => {
-    const view = groupViews(groups, {}, [{group: 'attention', index: 1, row: northwind}]).find(item => item.group === 'attention')!;
-    expect(view.rows.map(item => item.id)).toEqual([2, 5, 22]);
-  });
-});
-
-describe('Unread keeps what it showed until the user leaves it', () => {
+describe('the Inbox keeps what it showed until the user leaves it', () => {
   const ids = (list: InboxGroupOut[], name: string) => list.find(item => item.group === name)?.rows.map(item => [item.id, item.unread]);
   const security = (rows: MessageRowOut[]) => groups.map(item => (item.group === 'security' ? group('security', rows) : item));
 
@@ -214,19 +169,13 @@ describe('rowLine', () => {
 });
 
 describe('the cursor', () => {
-  const stops = cursorStops(groupViews(groups, asBoards, []));
-
-  test('stops at each row shown and each collapsed group', () => {
-    expect(stops.map(stop => stop.key)).toEqual(['pinned:27', 'attention:2', 'attention:5', 'attention:22', 'security:1', 'security:3', 'group:deliveries', 'career:12', 'group:noise']);
-  });
-
   test.each([
     ['J with no cursor starts at the top', null, 1, 'pinned:27'],
     ['K with no cursor starts at the top too', null, -1, 'pinned:27'],
     ['J moves down', 'attention:2', 1, 'attention:5'],
     ['K moves up', 'attention:2', -1, 'pinned:27'],
-    ['onto a collapsed group', 'security:3', 1, 'group:deliveries'],
-    ['stays at the bottom', 'group:noise', 1, 'group:noise'],
+    ['onto a folded Noise line', 'security:3', 1, 'noise:a'],
+    ['stays at the bottom', 'noise:b', 1, 'noise:b'],
     ['stays at the top', 'pinned:27', -1, 'pinned:27'],
     ['a cursor that left starts again at the top', 'money:99', 1, 'pinned:27'],
   ] as const)('%s', (_name, current, delta, expected) => {
@@ -237,7 +186,7 @@ describe('the cursor', () => {
     expect(moveCursor([], null, 1)).toBeNull();
   });
 
-  const keys = (...names: string[]): Stop[] => names.map(key => ({key, kind: 'group', group: 'other'}));
+  const keys = (...names: string[]): Stop[] => names.map(key => ({key, kind: 'noise', date: key}));
   test.each([
     ['still there', keys('a', 'b', 'c'), keys('a', 'b', 'c'), 'b', 'b'],
     ['Done takes it: the next one', keys('a', 'b', 'c'), keys('a', 'c'), 'b', 'c'],
@@ -249,7 +198,7 @@ describe('the cursor', () => {
     expect(keepCursor(before, after, current)).toBe(expected);
   });
 
-  test('the reader\'s previous and next skip collapsed groups', () => {
+  test('the reader\'s previous and next skip folded Noise', () => {
     expect([neighbour(stops, 3, 1), neighbour(stops, 3, -1), neighbour(stops, 27, -1), neighbour(stops, 404, 1)]).toEqual([12, 1, null, null]);
   });
 });
@@ -301,18 +250,6 @@ test.each([
 });
 
 test.each([
-  ['the seed\'s morning', groups, [], false],
-  ['only the Pinned shelf left', [group('pinned', [parkside])], [], true],
-  ['nothing at all', [], [], true],
-  ['a read email in Attention is still waiting', [group('attention', [exams])], [], false],
-  // Unread keeps read rows until the user leaves (DESIGN.md #20): not caught up while it shows them.
-  ['a read row Unread still holds', [], [{group: 'career' as const, index: 0, row: {...fabrikam, unread: false}}], false],
-  ['a held row beside the Pinned shelf', [group('pinned', [parkside])], [{group: 'security' as const, index: 1, row: {...signIn, unread: false}}], false],
-])('caughtUp: %s', (_name, list, held, expected) => {
-  expect(caughtUp(list, held)).toBe(expected);
-});
-
-test.each([
   ['nothing waiting', null, false],
   ['opening it reads it quietly', {state: 'pending', kind: 'open'}, false],
   ['Trash waiting for Gmail', {state: 'pending', kind: 'trash'}, true],
@@ -323,11 +260,10 @@ test.each([
 });
 
 describe('Done or Trash on the open email opens the next', () => {
-  const stops = cursorStops(groupViews(groups, asBoards, []));
   test.each([
     ['Northwind: Contoso University takes its place', 'attention:5', 5, 22],
     ['the last in Attention: the next group\'s first row', 'attention:22', 22, 1],
-    ['a collapsed group is skipped', 'security:3', 3, 12],
+    ['a folded Noise line is skipped', 'security:3', 3, 12],
     ['the last row shown: none, the reader closes', 'career:12', 12, null],
     ['the pinned shelf\'s email: the next email, not itself again', 'pinned:27', 27, 2],
     ['no key: by its id', null, 2, 5],
@@ -339,7 +275,7 @@ describe('Done or Trash on the open email opens the next', () => {
 
   test('a pinned email shown again in its group is skipped', () => {
     const pinnedFabrikam = {...fabrikam, pinned: true};
-    const both = cursorStops(groupViews([group('pinned', [pinnedFabrikam]), group('career', [pinnedFabrikam, {...fabrikam, id: 77}])], {}, []));
+    const both = [rowStop('pinned', pinnedFabrikam.id), rowStop('career', pinnedFabrikam.id), rowStop('career', 77)];
     expect(nextAfterLeaving(both, 'pinned:12', 12)).toBe(77);
   });
 });
@@ -396,21 +332,6 @@ describe('the pattern prompt', () => {
     ['nothing cleared, nothing to ask', [prompt({id: 1, count: 0})], [], null],
   ])('visiblePrompt: %s', (_name, prompts, answered, id) => {
     expect(visiblePrompt(prompts, new Set(answered))?.id ?? null).toBe(id);
-  });
-});
-
-describe('going to the Inbox opens Unread while anything waits, else All (D106)', () => {
-  const none: MailCountsOut = {attention: 0, unread: 0, unread_fyi: 0, accounts: [{account_id: 1, unread: 0}, {account_id: 2, unread: 0}]};
-  test.each([
-    ['counts not yet come', undefined, null, 'unread'],
-    ['nothing waits', none, null, 'all'],
-    ['an unread email', {...none, unread: 1, accounts: [{account_id: 1, unread: 1}, {account_id: 2, unread: 0}]}, null, 'unread'],
-    ['Attention read but not Done', {...none, attention: 1}, null, 'unread'],
-    ['an account with its own unread', {...none, unread: 1, accounts: [{account_id: 1, unread: 1}, {account_id: 2, unread: 0}]}, 1, 'unread'],
-    ['an account whose unread are all another\'s', {...none, unread: 1, accounts: [{account_id: 1, unread: 1}, {account_id: 2, unread: 0}]}, 2, 'all'],
-    ['an account, with Attention anywhere', {...none, attention: 1}, 2, 'unread'],
-  ] satisfies [string, MailCountsOut | undefined, number | null, string][])('%s', (_name, given, account, view) => {
-    expect(arrivalView(given, account)).toBe(view);
   });
 });
 

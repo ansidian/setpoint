@@ -30,7 +30,7 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
     for (const width of WIDTHS) {
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/inbox`);
-      await page.locator('.list .arow').first().waitFor();
+      await page.locator('.list .row').first().waitFor();
       // The rail: the mark, then Inbox, Calendar, News and Settings, 40 × 40 icons named in their
       // tooltips; no accounts and no Today.
       const rail = (await page.locator('aside.sb').boundingBox())!;
@@ -50,22 +50,23 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
       assert.equal(await sideways(page), 0);
 
       // An email covers the list, under the header: Back leads its tools, and J, K and Esc work.
-      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      await page.locator('.list .row[title^="Interview availability"]').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
       assert.deepEqual(await page.locator('section.pane').boundingBox(), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
       assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('title')], [true, 'Back · Esc']);
+      // J: the next email (New's code at first; once Northwind is read, a later width's visit has it in Attention, and the shelf's lease follows).
       await page.keyboard.press('j');
-      await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+      await until('the next email', () => page.locator('.rd-subj').textContent(), text => Boolean(text) && !/Interview availability/.test(text!));
       await page.keyboard.press('k');
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
       await page.keyboard.press('Escape');
       await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
-      await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+      await page.locator('.list .row[title^="Interview availability"]').click();
       await backButton.click();
       await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
-      assert.ok(await page.locator('.arow', {hasText: 'Northwind Talent'}).isVisible());
+      assert.ok(await page.locator('.list .row[title^="Interview availability"]').isVisible());
 
       // News: its header whole, a story over the list with Back.
       await page.goto(`${setpoint.base}/news`);
@@ -88,10 +89,10 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
     // At 1100 the sidebar and the pane beside the list are back.
     const wide = await setpoint.page({width: 1100, height: HEIGHT});
     await wide.goto(`${setpoint.base}/inbox`);
-    await wide.locator('.list .arow').first().waitFor();
+    await wide.locator('.list .row').first().waitFor();
     assert.equal((await wide.locator('aside.sb').boundingBox())!.width, layout.sidebar);
     assert.ok(await wide.locator('.sb .acct').first().isVisible());
-    await wide.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await wide.locator('.list .row[title^="Interview availability"]').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const [list, pane] = [(await wide.locator('section.list').boundingBox())!, (await wide.locator('section.pane').boundingBox())!];
     assert.equal(pane.x, list.x + list.width, 'beside the list');
@@ -162,7 +163,7 @@ test('⌘K filters the Inbox by account and shows or hides each calendar, as the
     const jobs = accounts.find(account => account.label === 'Jobs')!;
     const page = await setpoint.page({width: 820, height: HEIGHT});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .arow').first().waitFor();
+    await page.locator('.list .row').first().waitFor();
     const run = async (typed: string, label: string) => {
       await page.keyboard.press('Meta+k');
       await page.locator('.palette input').fill(typed);
@@ -254,13 +255,13 @@ test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 
   try {
     const narrow = await setpoint.page({width: 640, height: HEIGHT});
     await narrow.goto(`${setpoint.base}/inbox`);
-    await narrow.locator('.list .arow').first().waitFor();
+    await narrow.locator('.list .row').first().waitFor();
     await narrow.mouse.move(320, 28);
     await matchGolden(narrow, 'compact-640-inbox');
 
     const page = await setpoint.page({width: 820, height: HEIGHT});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.arow', {hasText: 'Northwind Talent'}).click();
+    await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.mouse.move(600, 28);
     await matchGolden(page, 'compact-820-reader');

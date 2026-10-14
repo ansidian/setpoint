@@ -1,10 +1,13 @@
-// All's rules (DESIGN.md › All, Copy) as tables: days at midnight Pacific, their headings, clock
-// times, each day's lanes with the kind where an FYI run starts and its Noise folded (#48), pinned
-// email on the shelf rather than its day (D105), and each row's text (codes, security facts, protected mail).
+// The one list's rules (DESIGN.md › All, Copy) as tables: days at midnight Pacific, their headings,
+// clock times, each day's lanes with the kind where an FYI run starts and its Noise folded (#48),
+// pinned email on the shelf rather than its day (D105), New and Attention above the days (SV-70), and
+// each row's text (codes, security facts, protected mail).
 import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {allRowLine, dayHeading, dayStops, dayView, groupByDay, kindGroup, kindLabel} from '../src/logic/all.ts';
+import type {InboxGroupOut} from '@setpoint/shared';
+import {allRowLine, clearNew, dayHeading, dayStops, dayView, groupByDay, kindGroup, kindLabel, NEW, placeRows, splitInbox} from '../src/logic/all.ts';
+import type {Place} from '../src/logic/all.ts';
 import {clockTime} from '../src/logic/format.ts';
 
 let nextId = 100;
@@ -177,5 +180,62 @@ describe('allRowLine', () => {
       {from: 'Sam Lee', subject: 'Blue Door at 7?', code: null, summary: null, alert: false, title: 'Dinner Friday?'}],
   ])('%s', (_name, input, line) => {
     expect(allRowLine(input)).toEqual(line);
+  });
+});
+
+describe('SV-70: New, Attention and the days, one list', () => {
+  const interview = row({organisation: 'Northwind', lane: 'attention', kind: null, received_at: '2026-10-07T16:00:00.000Z'});
+  const recovery = row({organisation: 'Google', lane: 'attention', kind: null, unread: false, received_at: '2026-10-06T16:00:00.000Z'});
+  const handled = row({organisation: 'Fabrikam', lane: 'attention', kind: null, unread: false, done: true, received_at: '2026-10-05T16:00:00.000Z'});
+  const code = row({organisation: 'Contoso', kind: 'security', received_at: '2026-10-07T17:00:00.000Z'});
+  const parcel = row({organisation: 'Consolidated', kind: 'deliveries', received_at: '2026-10-07T15:00:00.000Z'});
+  const coffee = row({organisation: 'Contoso Coffee', lane: 'noise', kind: null, received_at: '2026-10-07T14:00:00.000Z'});
+  const statement = row({organisation: 'Proseware', kind: 'money', unread: false, received_at: '2026-10-06T15:00:00.000Z'});
+  const lease = row({organisation: 'Parkside', kind: 'other', pinned: true, received_at: '2026-09-30T15:00:00.000Z'});
+  const group = (name: InboxGroupOut['group'], rows: MessageRowOut[]): InboxGroupOut => ({group: name, count: rows.length, unread: rows.filter(one => one.unread).length, rows});
+  const groups = [group('pinned', [lease]), group('attention', [interview, recovery]), group('security', [code]), group('deliveries', [parcel]), group('noise', [coffee]), group('other', [lease])];
+  const places = (placed: ReadonlyMap<number, Place>) => [...placed].map(([id, place]) => `${id}:${place}`).sort();
+
+  test('the first sight places each: unread in New, Attention waiting on Done, the rest in its day', () => {
+    const placed = placeRows(new Map(), [interview, recovery, handled, code, statement]);
+    expect(places(placed)).toEqual([`${interview.id}:new`, `${recovery.id}:attention`, `${handled.id}:day`, `${code.id}:new`, `${statement.id}:day`].sort());
+  });
+
+  test('a place is kept for the visit: read in New stays in New; marked unread in its day stays there', () => {
+    const placed = placeRows(new Map(), [parcel, statement]);
+    expect(placeRows(placed, [{...parcel, unread: false}, {...statement, unread: true}])).toBe(placed);
+    expect(places(placeRows(placed, [code]))).toEqual([`${parcel.id}:new`, `${statement.id}:day`, `${code.id}:new`].sort());
+  });
+
+  test('Mark all as read empties New: Attention it leaves unread goes to Attention, the rest to their days', () => {
+    const placed = placeRows(new Map(), [interview, code, parcel, recovery]);
+    expect(places(clearNew(placed, [interview, code, parcel, recovery]))).toEqual([`${interview.id}:attention`, `${code.id}:day`, `${parcel.id}:day`, `${recovery.id}:attention`].sort());
+  });
+
+  test('splitInbox: New newest first, Attention newest first, a pinned email on the shelf only', () => {
+    const placed = placeRows(new Map(), groups.flatMap(one => one.rows));
+    const {fresh, attention} = splitInbox(groups, placed);
+    expect(fresh.map(one => one.organisation)).toEqual(['Contoso', 'Northwind', 'Consolidated', 'Contoso Coffee']);
+    expect(attention.map(one => one.organisation)).toEqual(['Google']);
+  });
+
+  test('splitInbox: an Attention email read during the visit stays in New; one Done leaves Attention', () => {
+    const placed = placeRows(new Map(), [interview, recovery]);
+    const later = [group('attention', [{...interview, unread: false}, {...recovery, done: true}])];
+    expect(splitInbox(later, placed)).toEqual({fresh: [{...interview, unread: false}], attention: []});
+  });
+
+  test('New draws as a day does under its band: lanes, kinds, Noise folded; J and K go New, Attention, shelf, days', () => {
+    const placed = placeRows(new Map(), groups.flatMap(one => one.rows));
+    const {fresh, attention} = splitInbox(groups, placed);
+    const freshView = dayView({date: NEW, rows: fresh}, false);
+    expect(freshView.lanes.map(lane => [lane.label, lane.rows.map(({row: one, kind}) => `${one.organisation}${kind ? ` (${kind})` : ''}`)])).toEqual([
+      ['Attention', ['Northwind']], ['FYI', ['Contoso (security)', 'Consolidated (deliveries)']],
+    ]);
+    const days = groupByDay([interview, recovery, code, parcel, statement, lease], zone, new Set([...fresh, ...attention].map(one => one.id)));
+    expect(days.map(day => [day.date, day.rows.map(one => one.organisation)])).toEqual([['2026-10-06', ['Proseware']]]);
+    expect(dayStops(days.map(day => dayView(day, false)), [lease], {fresh: freshView, attention}).map(stop => stop.key)).toEqual([
+      `new:${interview.id}`, `new:${code.id}`, `new:${parcel.id}`, 'noise:new', `attention:${recovery.id}`, `pinned:${lease.id}`, `all:${statement.id}`,
+    ]);
   });
 });
