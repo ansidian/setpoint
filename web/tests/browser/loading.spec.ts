@@ -538,19 +538,25 @@ test('a search on its way keeps the list, dimmed, then shows the results\' skele
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     let release = await hold(page, /^\/api\/search$/);
+    // At once: the Inbox stays, at .55, not a blank page. It's dimmed only until the skeleton comes,
+    // which a busy machine can spend typing, so the list is read as it dims, not after.
+    const inbox = page.locator('section.list[aria-label="Inbox"]');
+    await inbox.evaluate(list => new MutationObserver((_, observer) => {
+      if (!list.classList.contains('search-wait')) return;
+      (window as unknown as {dimmed?: string}).dimmed = getComputedStyle(list).transitionDuration;
+      observer.disconnect();
+    }).observe(list, {attributes: true, attributeFilter: ['class']}));
     await page.keyboard.press('/');
     await page.keyboard.type('northwind');
-    // At once: the Inbox stays, at .55, not a blank page.
-    const inbox = page.locator('section.list[aria-label="Inbox"]');
-    await until('the Inbox dimmed', () => inbox.evaluate(list => [list.className.includes('search-wait'), getComputedStyle(list).opacity]), ([waiting]) => waiting === true);
-    assert.equal(await inbox.evaluate(list => getComputedStyle(list).transitionDuration), '0.12s');
+    assert.equal(await until('the Inbox dimmed', () => page.evaluate(() => (window as unknown as {dimmed?: string}).dimmed), dimmed => dimmed !== undefined), '0.12s');
     // Once it's taken a moment: the results' skeleton, six rows shaped as results, and the spinner in the field.
     const sk = page.locator('[data-skeleton="search"]');
     await sk.waitFor();
     assert.equal(await inbox.count(), 0);
     assert.equal(await sk.locator('.sk-result').count(), 6);
     const field = page.locator('.hd .search');
-    assert.match((await field.getAttribute('class'))!, /\bpending\b/);
+    // The search is asked once typing pauses, which on a busy machine can come after the skeleton.
+    await until('the field pending', () => field.getAttribute('class'), classes => /\bpending\b/.test(classes!));
     await until('the glass gives way to the spinner', () => field.evaluate(label => [getComputedStyle(label.querySelector('.glass > .spin')!).visibility, getComputedStyle(label.querySelector('.glass > .icon')!).visibility]),
       ([spin, glass]) => spin === 'visible' && glass === 'hidden');
     assert.equal(await field.locator('.glass > .spin').evaluate(spin => getComputedStyle(spin).animationDelay), `${skeleton.delayMs / 1000}s`);
