@@ -5,7 +5,7 @@
 import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
-import {afterPending, ApiFailure, cachedPaths, getCached, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
+import {afterPending, ApiFailure, cachedPaths, getCached, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
 export const inboxPath = (account: number | null) => (account ? `/mail/inbox?account_id=${account}` : '/mail/inbox');
 export const COUNTS_PATH = '/mail/counts';
@@ -83,9 +83,16 @@ function answered(id: number, mark: number, message: MessageOut) {
   if (edits.get(id) === mark) setCached(messagePath(id), message);
 }
 
-/** Changes the email as the reader has it, at once, if it's loaded; a change, as `edit` marks it. */
+/**
+ * Changes the email as the reader has it, at once if it's loaded, else as its first load lands, since
+ * that load's answer may be from before the change (P before the email is in); a change, as `edit`
+ * marks it.
+ */
 function updateMessage(id: number, change: Partial<MessageOut>): number {
-  if (getCached<MessageOut>(messagePath(id))) updateCached<MessageOut>(messagePath(id), message => ({...message, ...change}));
+  const path = messagePath(id);
+  const apply = () => updateCached<MessageOut>(path, message => ({...message, ...change}));
+  if (getCached<MessageOut>(path)) apply();
+  else void loadingOf(path)?.then(apply);
   return edit(id);
 }
 

@@ -169,6 +169,9 @@ export function clearCache() {
 /** What `path` last answered, or what a write put there. */
 export const getCached = <T>(path: string) => cache.get(path)?.data as T | undefined;
 
+/** The load of `path` on its way, if one is; it resolves once its answer is in the cache. */
+export const loadingOf = (path: string): Promise<void> | undefined => cache.get(path)?.loading;
+
 /** Shows a write's answer or at-once effect now. */
 export function setCached(path: string, data: unknown) {
   const current = entry(path);

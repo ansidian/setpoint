@@ -305,6 +305,53 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
   }
 });
 
+test('P on an email still loading: its first answer, from before the pin, doesn\'t unpin it on screen', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    // The server answers the email's first load before the pin, but the browser has that answer only
+    // after the pin is made and before any other answer about the email: the open's, the pin's and
+    // the loads after the first wait until the end.
+    const first = Promise.withResolvers<void>();
+    const end = Promise.withResolvers<void>();
+    let loads = 0;
+    let served = false;
+    let pinServed = false;
+    await page.route(/\/api\/mail\/messages\/\d+$/, async route => {
+      const gate = loads++ ? end : first;
+      const response = await route.fetch();
+      served = true;
+      await gate.promise;
+      await route.fulfill({response});
+    });
+    await page.route(/\/api\/mail\/messages\/\d+\/(open|pin)$/, async route => {
+      if (pinServed) return route.continue();
+      const response = await route.fetch();
+      if (route.request().url().endsWith('/pin')) pinServed = true;
+      await end.promise;
+      await route.fulfill({response});
+    });
+    await rowOf(page, 'Pick a 30-minute slot').click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await until('the server answered the load', async () => served, done => done);
+    await page.keyboard.press('p');
+    await until('the server pinned it', async () => pinServed, done => done);
+    await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
+    const delivered = page.waitForResponse(/\/messages\/\d+$/);
+    first.resolve();
+    await delivered;
+    await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
+    assert.equal(await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).count(), 1, 'still pinned on screen');
+    // So P unpins it.
+    await page.keyboard.press('p');
+    await until('the server unpinned it', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), inbox => !inbox.groups.some(group => group.rows.some(row => row.pinned && row.subject.startsWith('Interview availability'))));
+    end.resolve();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the reader\'s tools come from the email\'s row before the email has loaded: Unpin on pinned mail, no Open in Gmail on iCloud mail; each email opens at its top', async () => {
   const setpoint = await startSetpoint();
   try {
