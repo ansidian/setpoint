@@ -272,6 +272,8 @@ test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 
     await light.locator('.cal-month .cell').first().waitFor();
     await light.keyboard.press('c');
     await light.locator('.rpane.editor .nl-input').waitFor();
+    // The draft takes Settings' reminder once Settings has answered.
+    await light.getByRole('button', {name: 'Remove reminder'}).waitFor();
     await light.mouse.move(300, 28);
     await matchGolden(light, 'compact-820-calendar-editor');
 
