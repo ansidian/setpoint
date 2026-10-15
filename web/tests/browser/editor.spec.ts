@@ -6,7 +6,7 @@
 // proposal at /calendar/new.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
-import type {ItemsOut} from '@setpoint/shared';
+import type {CommandOut, ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -460,6 +460,44 @@ test('a Todoist task in the same editor: its due day from the line and its proje
     await settled(setpoint, '2026-10-09');
     const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10');
     assert.deepEqual(items.filter(item => item.kind === 'task').map(item => [item.title, item.due_date, item.project]), [['Water plants', '2026-10-09', 'Home']]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-74: a new task\'s × takes its date off, its time and repeat with it; Todoist gets it with no date, and a refusal comes as a toast', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('d');
+    const line = page.getByLabel('Describe the task');
+    await line.waitFor();
+    await line.pressSequentially('Learn guitar 3pm');
+    const due = page.getByLabel('Due date', {exact: true});
+    assert.equal(await due.inputValue(), 'Wed, Oct 7');
+    await page.getByLabel('Start', {exact: true}).waitFor();
+    await page.getByRole('button', {name: 'Remove due date'}).click();
+    await page.getByRole('button', {name: 'Remove due date'}).waitFor({state: 'detached'});
+    assert.deepEqual([await due.inputValue(), await due.getAttribute('placeholder')], ['', 'No date']);
+    assert.deepEqual([await page.getByLabel('Start', {exact: true}).count(), await page.getByRole('button', {name: 'Add a time'}).count(), await page.getByRole('button', {name: 'Repeat'}).count()], [0, 0, 0]);
+    await page.getByRole('button', {name: 'Create task'}).click();
+    // No Undo: once Todoist has it, it isn't Setpoint's to take back (it's on no day).
+    await page.locator('.toast', {hasText: 'Created Learn guitar, no date'}).waitFor();
+    assert.equal(await page.locator('.toast button').count(), 0);
+    const created = await until('the create confirmed', () => setpoint.api<CommandOut[]>('GET', '/commands?active=false'), list => list.some(one => one.kind === 'item_create' && one.state === 'confirmed'));
+    const id = created.find(one => one.kind === 'item_create')!.target_id;
+    await assert.rejects(setpoint.api('GET', `/items/${id}`), /404|No such item/);
+    assert.equal(await page.locator('.tk', {hasText: 'Learn guitar'}).count(), 0);
+
+    // Refused by Todoist: there's no day to fail in place on, so the toast says why, with Try again.
+    await page.keyboard.press('d');
+    await line.waitFor();
+    await line.pressSequentially('Renew passport');
+    await page.getByRole('button', {name: 'Remove due date'}).click();
+    await page.getByRole('button', {name: 'Create task'}).click();
+    await page.locator('.toast', {hasText: 'Couldn\'t create Renew passport, Insufficient permissions (403 Forbidden)'}).getByRole('button', {name: 'Try again'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

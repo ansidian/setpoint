@@ -164,7 +164,8 @@ export const calendars = sqliteTable('calendars', {
 /**
  * Anything on the calendar: a Google event or a Todoist task, one model (BRIEF.md › Decided
  * elsewhere). A timed event has `starts_at`/`ends_at`; an all-day event `start_date`/`end_date`
- * (end exclusive, as Google's); a task `due_date`, plus `due_at` when it has a time.
+ * (end exclusive, as Google's); a task `due_date`, plus `due_at` when it has a time. A task created
+ * here with no date (SV-74) has neither until Todoist confirms it, and then leaves (commands/index.ts).
  */
 export const items = sqliteTable('items', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -226,7 +227,7 @@ export const items = sqliteTable('items', {
   check('items_exception', sql`(${table.recurringItemId} is null) = (${table.originalStart} is null)`),
   check('items_kind', sql`${table.kind} in (${quoted(ITEM_KINDS)})`),
   check('items_when', sql`case ${table.kind}
-    when 'task' then ${table.dueDate} is not null and ${table.startsAt} is null and ${table.startDate} is null
+    when 'task' then (${table.dueDate} is not null or ${table.dueAt} is null) and ${table.startsAt} is null and ${table.startDate} is null
     else (${table.allDay} and ${table.startDate} is not null and ${table.endDate} is not null)
       or (not ${table.allDay} and ${table.startsAt} is not null and ${table.endsAt} is not null) end`),
 ]);

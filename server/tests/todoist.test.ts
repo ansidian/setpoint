@@ -168,6 +168,21 @@ describe('changes through the command layer', () => {
     expect(tasks('2026-10-09')).toEqual(['○ CS 101 lab report']);
   });
 
+  test('SV-74: create with no date: Todoist gets its "no date", and once it confirms the task leaves the mirror, as an undated task isn\'t on the calendar', async () => {
+    const {w, todoist, run, command, calendarId} = await todoistWorld();
+    await run();
+    const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Learn guitar', project: 'Home'}));
+    expect(command(created.id).state).toBe('pending');
+    await run();
+    expect(command(created.id).state).toBe('confirmed');
+    const sent = todoist.requests.find(request => request.method === 'POST' && request.path === '/api/v1/tasks')!;
+    expect(sent.body).toEqual({content: 'Learn guitar', project_id: 'p-home', due_string: 'no date', due_lang: 'en'});
+    expect(w.store.db.select().from(t.items).where(eq(t.items.id, created.targetId)).get()).toBeUndefined();
+    w.advance(5 * 60_000);
+    await run();
+    expect(w.store.db.select().from(t.items).where(eq(t.items.title, 'Learn guitar')).get()).toBeUndefined();
+  });
+
   test('create with a new project (SV-24, D50): Todoist makes the project first, the task goes in it, and the project list has it at once', async () => {
     const {w, todoist, run, command, calendarId, tasks} = await todoistWorld();
     await run();

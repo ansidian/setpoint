@@ -160,6 +160,14 @@ describe('item changes', () => {
     const w = world({seed: true});
     const todoist = calendarList(w.store).find(calendar => calendar.provider === 'todoist')!.id;
     expect(() => createItem(w.store, itemCreateInput.parse({kind: 'event', calendar_id: todoist, title: 'x', starts_at: zoned('2026-10-08', '10:00'), ends_at: zoned('2026-10-08', '11:00')}))).toThrow(/Google calendar/);
-    expect(() => itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'x'})).toThrow(/due date/);
+    expect(() => itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'x', due_at: zoned('2026-10-08', '10:00')})).toThrow(/due date/);
+  });
+
+  test('SV-74: a new task may have no date, but not a time or a repeat without one; an existing task keeps its date', () => {
+    const w = world({seed: true});
+    const todoist = calendarList(w.store).find(calendar => calendar.provider === 'todoist')!.id;
+    expect(itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'Learn piano'})).toMatchObject({due_date: null, due_at: null});
+    expect(() => createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'Stretch', repeat: 'every day'}))).toThrow(/repeat needs a due date/);
+    expect(() => updateItem(w.store, itemId(w, 'Pay rent'), itemUpdateInput.parse({changes: {due_date: null, due_at: null}}))).toThrow(/date is taken off in Todoist/);
   });
 });

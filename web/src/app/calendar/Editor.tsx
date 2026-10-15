@@ -75,6 +75,8 @@ interface Draft {
   text: string;
   title: string;
   date: string;
+  // SV-74: a new task's date taken off with its ×; `date` stays, for a day picked again.
+  undated: boolean;
   // The day it was put on (opened on, or a grid day clicked, D56): its date when the line names none.
   day: string;
   // Minutes after the date's midnight; null is all day (an event) or no time (a task). A timed
@@ -139,7 +141,7 @@ export const handProposal = (next: Handed) => {
 function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Draft {
   const at = kind === 'event' ? slot : null;
   return {
-    id: nextDraft++, kind, text: '', title: '', date, day: date, slot: at,
+    id: nextDraft++, kind, text: '', title: '', date, undated: false, day: date, slot: at,
     start: at ? at.start : kind === 'event' ? DEFAULT_START : null, end: at ? at.end : kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH : null, days: at?.days ?? 1,
     place: '', address: null, picked: null, calendarId: null, reminders: null, leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, fromEmail: [], manual: [],
   };
@@ -158,7 +160,7 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const end = item.kind === 'event' && timed ? start! + Math.round((Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) / 60_000) : null;
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   return {
-    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, date, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
+    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     fromEmail: [], manual: ['title', 'date', 'time', 'place', 'calendar', 'recurrence', 'project'],
   };
@@ -220,10 +222,12 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
   if (!draft.title.trim()) return null;
   if (draft.kind === 'task') {
     if (todoist === null) return null;
+    // With no date (SV-74) it has no time or repeat either: a repeat starts on a day.
+    const dated = !draft.undated;
     return {
       kind: 'task', calendar_id: todoist, title: draft.title.trim(), all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null,
-      due_date: draft.date, due_at: draft.start === null ? null : instantAt(draft.date, draft.start, timeZone), time_zone: null, recurrence: null,
-      place: null, address: null, attendees: [], leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: draft.repeat,
+      due_date: dated ? draft.date : null, due_at: dated && draft.start !== null ? instantAt(draft.date, draft.start, timeZone) : null, time_zone: null, recurrence: null,
+      place: null, address: null, attendees: [], leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null,
     };
   }
   if (draft.calendarId === null) return null;
@@ -800,11 +804,17 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
           <Icon name="schedule" size={17} className={echo.when} />
           <div className={`prow${lastDay !== draft.date ? ' days' : ''}`}>
-            <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'} value={draft.date}
-              shown={lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
-              today={today} read={text => parseDay(text, today)} onValue={date => change({date}, ['date'])}
-              range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change(spanTo(from, to, draft.start, draft.end), ['date'])} : undefined} />
-            {draft.start !== null ? (
+            <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'}
+              value={draft.undated ? null : draft.date} placeholder="No date"
+              shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
+              today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
+              range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change(spanTo(from, to, draft.start, draft.end), ['date'])} : undefined}
+              // SV-74: a new task can go to Todoist with no date, its time going with it; a day picked brings one back.
+              onClear={kind === 'task' && !editing ? () => {
+                change({undated: true, start: null}, ['date', 'time']);
+                form.current?.focus();
+              } : undefined} />
+            {draft.undated ? null : draft.start !== null ? (
               <>
                 <TimeField className={`time num${changed('start') ? ' changed' : ''}`} label="Start" value={draft.start} choices={timeChoices()}
                   read={text => parseClock(text, draft.start)} onValue={start => change({start, end: draft.end === null ? null : start + (draft.end - draft.start!)}, ['time'])} />
@@ -842,7 +852,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             change({recurrence}, ['recurrence']);
             setMenu(null);
           }} />}
-          {kind === 'task' && (
+          {kind === 'task' && !draft.undated && (
             <>
               <Icon name="repeat" size={17} />
               <span className="menu-host">

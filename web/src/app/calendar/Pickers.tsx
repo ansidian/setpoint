@@ -187,7 +187,7 @@ export interface DateRange {
  * either side of it (#103), the days between a band that follows the pointer; a lone day typed
  * keeps the length.
  */
-export function DateField({className, label, value, shown, placeholder, today, read, onValue, range}: {
+export function DateField({className, label, value, shown, placeholder, today, read, onValue, range, onClear}: {
   className: string;
   label: string;
   value: string | null;
@@ -198,6 +198,8 @@ export function DateField({className, label, value, shown, placeholder, today, r
   read: (text: string) => string | null;
   onValue: (date: string) => void;
   range?: DateRange;
+  // An × in the field takes the day off (SV-74: a new task's due date); none without it.
+  onClear?: () => void;
 }) {
   const [text, setText] = useState<string | null>(null);
   // The month shown, its cursor, and with a range which day the next pick is and the day pointed at.
@@ -250,6 +252,13 @@ export function DateField({className, label, value, shown, placeholder, today, r
             const cursor = addDays(open?.cursor ?? value ?? today, down ? 7 : -7);
             setOpen({...(open ?? at(cursor)), month: monthOf(cursor), cursor, hover: null});
           }, commit, () => pick(open!.cursor), () => setOpen(null))} />
+        {onClear && value !== null && (
+          <button type="button" className="ibtn sm clear" aria-label={`Remove ${label.toLowerCase()}`} title="No date" onMouseDown={event => event.preventDefault()} onClick={() => {
+            setText(null);
+            setOpen(null);
+            onClear();
+          }}><Icon name="close" size={16} /></button>
+        )}
       </label>
       {open && (
         // A press inside keeps the field's focus, so its blur doesn't close the month first.

@@ -84,6 +84,8 @@ export function boardRefusals(store: Store, command: CommandRow): string | null 
   if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
   // SV-25's failed colour, for Settings › Todoist: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
+  // SV-74's refused task with no date, which says so in a toast: Todoist refuses "Renew passport".
+  if (command.kind === 'item_create') return (command.payload.input as {title?: string} | undefined)?.title === 'Renew passport' ? 'Insufficient permissions (403 Forbidden)' : null;
   if (command.kind !== 'item_update') return null;
   const item = store.db.select().from(t.items).where(eq(t.items.id, command.targetId)).get();
   const changes = command.payload.changes as {starts_at?: string} | undefined;

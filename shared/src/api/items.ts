@@ -112,10 +112,10 @@ const editable = {
   repeat: z.string().trim().min(1).max(100).nullable(),
 };
 
-/** Whether the time fields fit the kind: a timed event, an all-day event, or a task's due day. */
+/** Whether the time fields fit the kind: a timed event, an all-day event, or a task's due day (or none, SV-74). */
 export function whenProblem(item: {kind: ItemKind} & Partial<ItemWhen>): string | null {
   if (item.kind === 'task') {
-    if (!item.due_date) return 'A task needs a due date.';
+    if (!item.due_date && item.due_at) return 'A task\'s time needs a due date.';
     if (item.starts_at || item.start_date) return 'A task has a due date, not a start.';
     return null;
   }

@@ -10,7 +10,7 @@
 // One command per target at a time: a second change waits until the first settles (enforced by a
 // partial unique index too).
 import type {Colour, TodoistColour, CommandKind, CommandOut, CommandTarget, ItemWhen, SourceProvider} from '@setpoint/shared';
-import {and, eq, inArray} from 'drizzle-orm';
+import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {nextCommandState} from '../domain/commandStates.ts';
 import type {CommandEvent} from '../domain/commandStates.ts';
@@ -135,9 +135,15 @@ function transition(store: Store, commandId: number, event: CommandEvent, then: 
   });
 }
 
-/** Effects that show only once the provider confirms: a deleted item goes. */
+/**
+ * Effects that show only once the provider confirms: a deleted item goes, and so does a task created
+ * with no date (SV-74), which isn't on the calendar, as a sync leaves undated tasks out.
+ */
 function applyOnConfirm(store: Store, row: CommandRow) {
   if (row.kind === 'item_delete') deleteItemInMirror(store, row.payload as unknown as ItemDeletion);
+  if (row.kind === 'item_create') {
+    store.db.delete(t.items).where(and(eq(t.items.id, row.targetId), eq(t.items.kind, 'task'), isNull(t.items.dueDate))).run();
+  }
 }
 
 /** Move back: what the mirror held before the change, restored as it was. */

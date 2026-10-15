@@ -42,6 +42,8 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   if ((target.provider === 'todoist') !== (input.kind === 'task')) throw invalid(input.kind === 'task' ? 'Tasks go in Todoist.' : 'Events go in a Google calendar.');
   if (input.kind === 'task' && input.colour) throw invalid('Todoist tasks have no colour of their own.');
   if (input.kind === 'event' && (input.labels.length || input.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
+  // SV-74: Todoist would drop a repeat sent without the day it starts on.
+  if (input.kind === 'task' && input.repeat && !input.due_date) throw invalid('A repeat needs a due date.');
   const settings = getSettings(store);
   return createCommand(store, {
     target: 'item', kind: 'item_create', sourceId: calendarSourceId(store, input.calendar_id), payload: {input},
@@ -64,6 +66,8 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
   if (row.readOnly) throw invalid('Google Calendar doesn\'t let this kind of event be changed here.');
   if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be changed.');
   if (row.kind === 'event' && ((input.changes.labels?.length ?? 0) > 0 || input.changes.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
+  // SV-74: a date is taken off only in Todoist (Setpoint would need Todoist's "no date"), so an existing task keeps one.
+  if (row.kind === 'task' && input.changes.due_date === null) throw invalid('A task\'s date is taken off in Todoist.');
   const changes = {...input.changes};
   if (row.kind === 'task' && (changes.due_date !== undefined || changes.due_at !== undefined || changes.repeat !== undefined)) {
     // A new date goes to Todoist with the repeat in one due string, or Todoist would drop the repeat (D16).

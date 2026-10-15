@@ -99,6 +99,24 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
   }
 }
 
+const SETTLE_POLL_MS = 400;
+const SETTLE_WAIT_MS = 60_000;
+
+/**
+ * A command until its provider settles it, as it last stood (still pending if the provider takes
+ * over a minute): for a change with nothing on the grid to fail in place (an email's Add as task,
+ * a task created with no date, SV-74).
+ */
+export async function untilSettled(command: CommandOut): Promise<CommandOut> {
+  const ends = Date.now() + SETTLE_WAIT_MS;
+  // shortcut: polls the command, as live events only name item ranges; follow `items` events if they come to name commands' paths.
+  while (command.state === 'pending' && Date.now() < ends) {
+    await new Promise(resolve => setTimeout(resolve, SETTLE_POLL_MS));
+    command = await getJson<CommandOut>(`/commands/${command.id}`);
+  }
+  return command;
+}
+
 /** Creates items one after another (batch drafts, Paste), each its own command. */
 export const createItems = (inputs: ItemCreateInput[]) => change(async () => {
   const commands: CommandOut[] = [];

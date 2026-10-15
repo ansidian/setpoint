@@ -39,6 +39,8 @@ export async function fakeTodoist() {
   const dueFrom = (body: Record<string, unknown>, recurring: TodoistTask['due']) => {
     // Enough of Todoist's due words for a repeat: "every <weekday>[ at HH:MM] starting YYYY-MM-DD"
     // lands on that weekday on or after the start, as Todoist's does; other repeats on the start.
+    // "no date" takes the date off, as Todoist's does (SV-74).
+    if (body.due_string === 'no date') return null;
     if (typeof body.due_string === 'string') {
       const words = body.due_string;
       const start = /starting (\d{4}-\d{2}-\d{2})/.exec(words)?.[1] ?? clock().toISOString().slice(0, 10);

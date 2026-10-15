@@ -3,6 +3,7 @@
 // change here, a command: pending until its provider confirms it, failed with the provider's words.
 import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
+import {untilSettled} from './items.ts';
 
 export const SETTINGS_PATH = '/settings';
 
@@ -35,21 +36,12 @@ export const alfredStep = (ask: string) => getJson<AskStepOut>(`/alfred/asks/${a
 /** Add to calendar / Add as task: the item pre-filled from the email, created by nothing. */
 export const proposeFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalOut>('POST', '/proposals/from-message', {message_id: messageId, kind});
 
-const SETTLE_POLL_MS = 400;
-const SETTLE_WAIT_MS = 60_000;
-
 /**
  * Create: POST /api/items, then the command until its provider settles it. Resolves with the
  * command as it last stood (still pending if the provider takes over a minute).
  */
 export async function createItem(item: ProposalItemOut & {reminders?: number[]; create_project?: boolean}, onPending: (command: CommandOut) => void): Promise<CommandOut> {
-  let command = await sendJson<CommandOut>('POST', '/items', item);
+  const command = await sendJson<CommandOut>('POST', '/items', item);
   onPending(command);
-  const ends = Date.now() + SETTLE_WAIT_MS;
-  // shortcut: polls the command, as live events only name item ranges; follow `items` events if they come to name commands' paths.
-  while (command.state === 'pending' && Date.now() < ends) {
-    await new Promise(resolve => setTimeout(resolve, SETTLE_POLL_MS));
-    command = await getJson<CommandOut>(`/commands/${command.id}`);
-  }
-  return command;
+  return untilSettled(command);
 }

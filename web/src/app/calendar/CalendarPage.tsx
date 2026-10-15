@@ -20,7 +20,7 @@ import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, Item
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, updateItem} from '../../api/items.ts';
+import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, untilSettled, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {addDays, localDate, monthName} from '../../logic/format.ts';
@@ -660,13 +660,27 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         settle(commands.map(command => command.target_id));
         // The server's own copies land as they're drawn settled (polish audit calflows-02).
         expectLanding(commands.map(command => command.target_id));
-        said(line(drafts), () => {
+        // SV-74: a task with no date isn't on the calendar and leaves the mirror once Todoist has it,
+        // so there's no Undo, and a failure, with no place to show in, comes as a toast.
+        const undated = commands.filter((_, index) => inputs[index]!.kind === 'task' && !inputs[index]!.due_date);
+        said(line(drafts), undated.length ? null : () => {
           sendDeletes(commands.map(command => ({id: command.target_id, scope: 'this', occurrence_start: null, sent: false})), commands.map(() => 'it'));
         });
+        undated.forEach(command => watchUndated(command, inputs[commands.indexOf(command)]!.title));
       }, error => {
         settle();
         toastFailure(what)(error);
       });
+  };
+
+  /** SV-74: a task created with no date, until Todoist has it; refused, the toast says why and offers Try again. */
+  const watchUndated = (command: CommandOut, title: string) => {
+    void untilSettled(command).then(settled => {
+      if (settled.state !== 'failed') return;
+      showToast(`Couldn't create ${title}, ${settled.provider_message ?? 'Todoist refused it.'}`, {
+        label: 'Try again', run: () => void retryChange(settled.id).then(next => watchUndated(next, title), toastFailure('Couldn\'t try again')),
+      }, 'failed');
+    }, () => {});
   };
 
   /** Copy and ⌘C say what they took: "Copied Dinner with Sam, ⌘V pastes on the selected day" ("Copied 3 items, …"). */
@@ -852,7 +866,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               closeEditor();
               create(inputs, inputs.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${inputs[0]!.title}`, drafts => {
                 const day = drafts.length === 1 ? dayOf(drafts[0]!, zone) : null;
-                return drafts.length === 1 ? `Created ${drafts[0]!.title}${day ? `, ${dayTitle(day)}` : ''}` : `Created ${drafts.length} items`;
+                return drafts.length === 1 ? `Created ${drafts[0]!.title}, ${day ? dayTitle(day) : 'no date'}` : `Created ${drafts.length} items`;
               });
             }}
             onSave={(item, changes, scope) => {

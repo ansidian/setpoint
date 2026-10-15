@@ -529,7 +529,7 @@ Notifications) with **Time to Leave** added from the same menu, never by default
 1h 30m"). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
 menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
 only dashed until it's picked and lands, and a field another's change moved flashes (#187). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
-editor with project, labels and due date.
+editor with project, labels and due date; a new one's due date has an × that sends it with no date (#244).
 
 ### Recurring events
 
@@ -2489,3 +2489,12 @@ it changes what's on screen.
     `caution` dot and ring (#167) and Noise recedes (#168) on the list's rows. Board audit (override
     33): 01 1.91% → 6.18%, 04 0.19% → 2.39%, 09 0.51% → 5.09%, 10 2.72% → 7.58%, 19a 0.97% → 3.35%,
     22a 1.97% → 4.45%; 05 4.52% → 4.39%, 21a 10.35% → 10.24%; the rest within 0.1%.
+244. **A new task can go to Todoist with no date:** its Due date starts on the day the editor opened
+    on, as before, and an × in the field takes it off. The field then reads "No date" (`ink3`), and
+    Time and Repeat go with it, since a time or a repeat needs a day; a day picked brings the date
+    back. Created, it's on no day, so nothing is drawn. The toast reads "Created Learn guitar, no
+    date" and has no Undo, because Setpoint keeps no copy once Todoist has it (undated tasks aren't
+    on the calendar, v1's choice). A refusal has no item to fail in place on, so it comes as a
+    failed toast in Todoist's words, with Try again. An existing task keeps its date; taking one
+    off is done in Todoist (Andy, 2026-10-14; darma SV-74). Board audit: no board draws a new task's
+    editor; the numbers are #243's (22a 4.45%, 19a 3.35%, 21a 10.24%).
