@@ -483,7 +483,8 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
 ### The floating detail
 
 - **Card:** 280 px wide (decision 46), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
-  at the top. Content (board 12a): colour dot and title, date and time, place and address, Time to
+  at the top. Content (board 12a): colour dot and title, date and time, place and address (a link
+  as its host with Open, #245), Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
   Fri", #126), reminder, calendar (its glyph in the item's colour, #126); then **Edit E** and icon
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
@@ -2498,3 +2499,14 @@ it changes what's on screen.
     failed toast in Todoist's words, with Try again. An existing task keeps its date; taking one
     off is done in Todoist (Andy, 2026-10-14; darma SV-74). Board audit: no board draws a new task's
     editor; the numbers are #243's (22a 4.45%, 19a 3.35%, 21a 10.24%).
+245. **A link in an event's place has Open** (extending #125 to the floating detail): a place that
+    is a link alone reads as the right pane's does, a 17 px `videocam` and the link's host
+    ("zoom.us") in `ink`, the whole link as its tooltip. A link among other words ("Room 204 or
+    https://…") keeps the words as written after `location_on`, breaking anywhere so a long link
+    wraps inside the card. Either way an **Open** button (`btn ghost sm`, a 16 px `open_in_new`)
+    ends the place's first line and opens the first link in a new tab; `O` does the same while the
+    card is open. A link is `http://`, `https://` or `www.` (a bare domain isn't), without
+    punctuation after it, read from the place and an address Google kept on the same line
+    (`placeLink` in web/src/logic/place.ts, which the right pane's line now uses too). Time to Leave
+    keeps its own test for a link (server/src/domain/timeToLeave.ts) (Andy, 2026-10-15; darma SV-77).
+    Board audit: no board draws a link as a place, so it's unchanged (11 0.70%, 12a 0.43%).

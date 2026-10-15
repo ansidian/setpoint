@@ -1,5 +1,6 @@
 // What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
-// colour dot and title, the date and time, the place and its address, Time to Leave (in `caution`
+// colour dot and title, the date and time, the place and its address (a link alone as `videocam` and
+// its host, and any link with Open, SV-77), Time to Leave (in `caution`
 // once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
 // recurring event's repeat (#126), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
@@ -12,7 +13,7 @@ import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {describeTaskRepeat} from '../../../logic/compose.ts';
 import {attendeesLine, detailWhen, leaveBy, remindersLine, repeatLine} from '../../../logic/detail.ts';
-import {placeLines} from '../../../logic/place.ts';
+import {placeLines, placeLink} from '../../../logic/place.ts';
 import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
 import {colourVar} from '../../accounts.ts';
@@ -44,6 +45,15 @@ function Fact({icon, className, style, children}: {icon: IconName; className?: s
   return <div className={className ? `fact ${className}` : 'fact'} style={style}><Icon name={icon} size={17} />{children}</div>;
 }
 
+/** Open (SV-77): the place's link in a new tab, as `O` does on Calendar. */
+function OpenLink({url}: {url: string}) {
+  return (
+    <a className="btn ghost sm fd-open" href={url} target="_blank" rel="noopener noreferrer" data-hint="o" title={`Open ${url} · O`}>
+      <Icon name="open_in_new" size={16} />Open
+    </a>
+  );
+}
+
 export function DetailContent({target, timeZone, actions, onClose, onEdit}: DetailContentProps) {
   const {item, calendar} = target;
   const [picking, setPicking] = useState(false);
@@ -57,6 +67,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const attendees = attendeesLine(item.attendees);
   const reminders = remindersLine(item.reminders);
   const place = placeLines(item.place, item.address);
+  const link = item.kind === 'event' ? placeLink(item) : null;
   const repeat = repeatLine(item, timeZone);
   // A task's card is drawn as the task is on the grid (polish audit calflows-10, shell-15): its ring in
   // its project's colour, struck through once done, at .5 with the spinner while Todoist hasn't
@@ -77,9 +88,15 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
       </div>
       <div className="card-b">
         <div className="ink2 num fd-when">{detailWhen(item, timeZone)}</div>
-        {place && (
-          <Fact icon="location_on">
+        {link?.only ? (
+          <Fact icon="videocam" className="link">
+            <span className="grow"><span className="v fd-place" title={link.url}>{link.host}</span></span>
+            <OpenLink url={link.url} />
+          </Fact>
+        ) : place && (
+          <Fact icon="location_on" className={link ? 'link' : undefined}>
             <span className="grow"><span className="v fd-place">{place.name}</span>{place.address && <span className="ink3 fd-address">{place.address}</span>}</span>
+            {link && <OpenLink url={link.url} />}
           </Fact>
         )}
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}

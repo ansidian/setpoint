@@ -27,6 +27,7 @@ import {addDays, localDate, monthName} from '../../logic/format.ts';
 import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating} from '../../logic/manipulate.ts';
 import type {Creating} from '../../logic/manipulate.ts';
 import type {Deleting} from '../../logic/manipulate.ts';
+import {placeLink} from '../../logic/place.ts';
 import {routePath} from '../../logic/route.ts';
 import type {CalendarMode, Route} from '../../logic/route.ts';
 import {DEFAULT_SCOPE, moveLine, scopeChoices} from '../../logic/scope.ts';
@@ -762,6 +763,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && !selection.length) {
         echoKey('e');
         editItem(selectedItem, true);
+      }
+      else if (plainKey(event, 'o') && detailTarget?.item.kind === 'event' && placeLink(detailTarget.item)) {
+        // SV-77: the open card's place link, as its Open does.
+        echoKey('o');
+        window.open(placeLink(detailTarget.item)!.url, '_blank', 'noopener');
       }
       else if (plain && (event.key === 'Delete' || event.key === 'Backspace') && writable.length && !editor) remove(writable);
       else if (command && event.key.toLowerCase() === 'c' && selectedItems.length && !window.getSelection()?.toString()) copy(selectedItems);

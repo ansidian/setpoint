@@ -5,7 +5,7 @@
 import type {CalendarOut, ItemOut, WeatherCondition, WeatherDayOut} from '@setpoint/shared';
 import {layout, monthPaging} from '../tokens.ts';
 import {addDays, clockTime, daysBetween, localDate, startsIn, timeLeft} from './format.ts';
-import {placeName} from './place.ts';
+import {placeLink, placeName} from './place.ts';
 
 // ---------- Weeks and months ----------
 
@@ -322,18 +322,12 @@ export interface Agenda {
   nowAt: number | null;
 }
 
-const LINK = /^(?:https?:\/\/|www\.)\S+$/i;
-
 /** An event's place line (#125): a link's host ("zoom.us"), else the place's name or the street of its address. */
 export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPlace | null {
+  const link = placeLink(item);
+  if (link?.only) return {text: link.host, video: true};
   const name = placeName(item);
-  if (!name) return null;
-  if (!LINK.test(name)) return {text: name, video: false};
-  try {
-    return {text: new URL(/^www\./i.test(name) ? `https://${name}` : name).hostname.replace(/^www\./, ''), video: true};
-  } catch {
-    return {text: name, video: false};
-  }
+  return name ? {text: name, video: false} : null;
 }
 
 /**

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {glidePosition, glideSegment, glideVelocity} from '../../src/logic/glide.ts';
+import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, rested, startSetpoint, until, watch} from './harness.ts';
 
 const GAP = 8;
@@ -503,6 +504,57 @@ test('SV-76: a place with a long link wraps inside the card rather than running 
     const line = (await rested(() => place.boundingBox()))!;
     assert.ok(line.x + line.width <= body.x + body.width, `the place ends inside the card: ${line.x + line.width} ≤ ${body.x + body.width}`);
     assert.ok(await rested(() => place.evaluate(element => element.scrollWidth <= element.clientWidth)), 'nothing of it runs past its own box');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-77: a place that is a link shows its host and Open; a link among words keeps them with Open; O opens it', async () => {
+  const setpoint = await startSetpoint({fixtures: ['link-places']});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-10-15`);
+    await page.evaluate(() => {
+      (window as unknown as {opened: string[]}).opened = [];
+      window.open = (url?: string | URL) => {
+        (window as unknown as {opened: string[]}).opened.push(String(url));
+        return null;
+      };
+    });
+    // The agenda's line and the card's say the host, after `videocam` (#125).
+    assert.equal(await page.locator('.ag-item', {hasText: 'Career fair'}).locator('.place').textContent(), 'careers.example.edu');
+    await chip(page, '2026-10-15', 'Career fair').click();
+    await card(page).waitFor();
+    await atRest(page);
+    const fact = card(page).locator('.fd-layer.in .fact.link');
+    assert.equal(await fact.locator('.fd-place').textContent(), 'careers.example.edu');
+    assert.equal(await fact.locator('.fd-place').getAttribute('title'), 'https://www.careers.example.edu/fair/fall-2026');
+    assert.equal(await fact.locator('.icon path').first().getAttribute('d'), ICONS.videocam);
+    assert.equal(await page.locator('.ag-item', {hasText: 'Career fair'}).locator('.place .icon path').getAttribute('d'), ICONS.videocam);
+    const open = fact.getByRole('link', {name: 'Open'});
+    assert.equal(await open.getAttribute('href'), 'https://www.careers.example.edu/fair/fall-2026');
+    assert.equal(await open.getAttribute('target'), '_blank');
+    // Open ends the place's first line, inside the card.
+    const body = (await rested(() => card(page).locator('.fd-layer.in .card-b').boundingBox()))!;
+    const button = (await rested(() => open.boundingBox()))!;
+    assert.ok(button.x + button.width <= body.x + body.width, 'Open ends inside the card');
+    await page.mouse.move(1000, 28);
+    await page.keyboard.press('o');
+    await until('the link opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {opened: string[]}).opened), ['https://www.careers.example.edu/fair/fall-2026']);
+    // Study group's room and link stay as written, after `location_on`, with Open for the link.
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    await chip(page, '2026-10-09', 'Study group').click();
+    await card(page).waitFor();
+    await atRest(page);
+    const words = card(page).locator('.fd-layer.in .fact.link');
+    assert.equal(await words.locator('.icon path').first().getAttribute('d'), ICONS.location_on);
+    assert.match((await words.locator('.fd-place').textContent())!, /^Room 204 or https:\/\//);
+    assert.equal(await words.getByRole('link', {name: 'Open'}).getAttribute('href'), 'https://meet.example.com/j/81234567890?pwd=Q2xhc3NSb29tTGlua0ZvclN0dWR5R3JvdXA');
+    // A place with no link has no Open, and O does nothing there.
+    await glideTo(page, chip(page, '2026-10-09', 'Dinner with Sam'));
+    assert.equal(await card(page).locator('.fd-layer.in .fd-open').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

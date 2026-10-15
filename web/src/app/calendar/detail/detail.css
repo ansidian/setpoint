@@ -42,6 +42,9 @@
    running out under the card's clip. */
 .fd .fact > span { min-width: 0; overflow-wrap: anywhere; }
 .fd-place { display: block; }
+/* SV-77: Open sits at the end of the place's first line, its 26 px riding over the line's 20. */
+.fd .fd-open { margin: -3px -2px -3px 0; padding: 0 10px 0 8px; gap: 4px; text-decoration: none; }
+.fd .fd-open .icon { color: var(--ink2); margin-top: 0; }
 .fd-address { font-size: 12.5px; }
 .fd-title, .fd-place, .fd-address, .fd-when { user-select: text; -webkit-user-select: text; }
 .fd .card-acts { display: flex; align-items: center; gap: 2px; padding: 8px 10px 10px 12px; border-top: 1px solid var(--hair); }
