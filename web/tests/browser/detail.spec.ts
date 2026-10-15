@@ -539,6 +539,17 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     const body = (await rested(() => card(page).locator('.fd-layer.in .card-b').boundingBox()))!;
     const button = (await rested(() => open.boundingBox()))!;
     assert.ok(button.x + button.width <= body.x + body.width, 'Open ends inside the card');
+    // Under the pointer its fill deepens to `sub3`, as every ghost button's does, though it's a link.
+    const sub3 = await rested(() => page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--sub3)';
+      document.body.append(probe);
+      const computed = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return computed;
+    }));
+    await open.hover();
+    await until('Open fills on hover', () => open.evaluate(link => getComputedStyle(link).backgroundColor), fill => fill === sub3);
     await page.mouse.move(1000, 28);
     await page.keyboard.press('o');
     await until('the link opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
