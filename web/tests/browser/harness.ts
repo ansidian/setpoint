@@ -8,6 +8,8 @@
 // Each check's pages record a trace (SV-75), and a check that fails, or that its timeout cancels,
 // keeps it under test-results/browser/traces/, saying where in the run's output, to open with
 // `npx playwright-core show-trace <file>`; a passing check's is dropped.
+// `rested` takes a one-shot read of a computed style or box once nothing on the check's pages is
+// moving (the lint asks).
 import {spawn, spawnSync} from 'node:child_process';
 import type {ChildProcess} from 'node:child_process';
 import fs from 'node:fs';
@@ -81,7 +83,8 @@ export async function closeBrowser() {
 }
 
 // The check running in this process (spec files run side by side, each in a process of its own,
-// and a file's checks one after another) with the contexts and pages it opened, for its traces. Every context records a trace (SETPOINT_BROWSER_TRACE=0 turns that off); the hooks
+// and a file's checks one after another) with the contexts and pages it opened, for its traces and
+// for `rested`. Every context records a trace (SETPOINT_BROWSER_TRACE=0 turns that off); the hooks
 // here, registered for every spec file that uses the harness, keep a failed check's.
 const TRACE = process.env.SETPOINT_BROWSER_TRACE !== '0';
 interface Check {
@@ -136,6 +139,17 @@ function keepTraces(check: Check): Promise<string[]> {
     return files;
   })();
   return check.kept;
+}
+
+/**
+ * Reads once nothing on the check's pages is moving (`still`), for a one-shot read of a computed
+ * style or box: an element mid-entrance, mid-fade or mid-slide measures as it passes, not where it
+ * rests (SV-75; the lint asks). A read that polls until a value holds (`until`) needs no rest; one
+ * meant to catch motion says so on the line before it.
+ */
+export async function rested<T>(read: () => Promise<T>): Promise<T> {
+  for (const page of current?.pages ?? []) if (!page.isClosed()) await still(page);
+  return read();
 }
 
 // Every Setpoint a check started and hasn't stopped. A check that fails or times out (node --test

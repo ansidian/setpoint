@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, still, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, still, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -66,49 +66,49 @@ test('hover: the primary, quiet and outlined buttons, segmented controls, fields
     await page.locator('.list .row').first().waitFor();
     // A row, the search field; an outlined button in the reader (the segmented control is the editor's, below).
     await answers(page, 'a row', page.locator('.row').first(), fill);
-    await answers(page, 'the search field', page.locator('label.search'), ring);
+    await rested(() => answers(page, 'the search field', page.locator('label.search'), ring));
     // The list's first email open: Previous, disabled, doesn't answer.
     await page.locator('.list [data-id]').first().click();
     const previous = page.getByRole('button', {name: 'Previous email'});
     assert.equal(await previous.isDisabled(), true);
-    const [previousBefore, previousAfter] = await hovered(page, previous, element => `${getComputedStyle(element).backgroundColor} ${getComputedStyle(element).color}`);
+    const [previousBefore, previousAfter] = await rested(() => hovered(page, previous, element => `${getComputedStyle(element).backgroundColor} ${getComputedStyle(element).color}`));
     assert.equal(previousAfter, previousBefore, 'a disabled button doesn\'t answer');
     await page.locator('.list .row[title^="Final exam schedule"]').click();
     const addToCalendar = page.locator('.rd-acts .btn.out', {hasText: 'Add to calendar'});
-    await answers(page, 'an outlined button', addToCalendar, ring);
-    assert.match(await addToCalendar.evaluate(timing), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
+    await rested(() => answers(page, 'an outlined button', addToCalendar, ring));
+    assert.match(await rested(() => addToCalendar.evaluate(timing)), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
     // The Undo toast's button.
     await page.keyboard.press('h');
-    await answers(page, 'Undo', page.locator('.toast button', {hasText: 'Undo'}), fill);
+    await rested(() => answers(page, 'Undo', page.locator('.toast button', {hasText: 'Undo'}), fill));
 
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     const newButton = page.locator('.hd .btn', {hasText: 'New'});
-    await answers(page, '+ New', newButton, fill);
-    assert.match(await newButton.evaluate(timing), /0\.12s/);
-    await answers(page, 'an event chip', page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}), layer);
+    await rested(() => answers(page, '+ New', newButton, fill));
+    assert.match(await rested(() => newButton.evaluate(timing)), /0\.12s/);
+    await rested(() => answers(page, 'an event chip', page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}), layer));
     // Week is built (#81, retiring #57): it answers as any segment does, and so does a block on it.
     await answers(page, 'Month | Week', page.locator('.hd .seg > *', {hasText: 'Week'}), fill);
     await page.keyboard.press('w');
-    await answers(page, 'a week block', page.locator('.wk-col[data-date="2026-10-07"] .wb', {hasText: 'Dentist'}), layer);
+    await rested(() => answers(page, 'a week block', page.locator('.wk-col[data-date="2026-10-07"] .wb', {hasText: 'Dentist'}), layer));
     await page.keyboard.press('m');
     await page.locator('.cal-month').waitFor();
 
     await page.keyboard.press('c');
     await page.getByLabel('Describe the event').fill('Dinner fri 7-9pm');
-    await answers(page, 'Event | Task', page.locator('.editor .seg > *', {hasText: 'Task'}), fill);
-    await answers(page, 'the calendar field', page.locator('.editor button.field[aria-label="Calendar"]'), ring);
-    await answers(page, 'Add another', page.locator('.editor .btn', {hasText: 'Add another'}), fill);
-    await answers(page, 'Create', page.locator('.editor .ed-foot .btn', {hasText: 'Create'}), fill);
-    await answers(page, 'Cancel', page.locator('.editor .ed-foot .btn', {hasText: 'Cancel'}), fill);
+    await rested(() => answers(page, 'Event | Task', page.locator('.editor .seg > *', {hasText: 'Task'}), fill));
+    await rested(() => answers(page, 'the calendar field', page.locator('.editor button.field[aria-label="Calendar"]'), ring));
+    await rested(() => answers(page, 'Add another', page.locator('.editor .btn', {hasText: 'Add another'}), fill));
+    await rested(() => answers(page, 'Create', page.locator('.editor .ed-foot .btn', {hasText: 'Create'}), fill));
+    await rested(() => answers(page, 'Cancel', page.locator('.editor .ed-foot .btn', {hasText: 'Cancel'}), fill));
     await page.getByRole('button', {name: 'Add reminder'}).click();
-    await answers(page, 'a menu item', page.locator('.editor .menu .menu-i').first(), fill);
+    await rested(() => answers(page, 'a menu item', page.locator('.editor .menu .menu-i').first(), fill));
 
     await openSettings(page, setpoint.base, 'calendar');
     await page.getByRole('button', {name: 'Set Home'}).click();
     await page.locator('.settings input[aria-label="Home"]').fill('blue door');
-    await answers(page, 'a Home suggestion', page.locator('.settings button.set-row', {hasText: 'Blue Door Bistro'}), fill);
-    await answers(page, 'a switch', page.getByRole('switch', {name: 'Show Classes'}), fill);
+    await rested(() => answers(page, 'a Home suggestion', page.locator('.settings button.set-row', {hasText: 'Blue Door Bistro'}), fill));
+    await rested(() => answers(page, 'a switch', page.getByRole('switch', {name: 'Show Classes'}), fill));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -136,7 +136,7 @@ async function pressed(page: Page, control: Locator): Promise<[string, string, s
   await page.mouse.down();
   // The 80 ms press goes in.
   await page.waitForTimeout(150);
-  const held = await control.evaluate(element => [getComputedStyle(element).transform, getComputedStyle(element).backgroundColor, getComputedStyle(element).transitionDuration.split(', ').at(-1)!] as [string, string, string]);
+  const held = await rested(() => control.evaluate(element => [getComputedStyle(element).transform, getComputedStyle(element).backgroundColor, getComputedStyle(element).transitionDuration.split(', ').at(-1)!] as [string, string, string]));
   await page.mouse.move(700, 28);
   await page.mouse.up();
   return held;
@@ -150,7 +150,7 @@ test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    const [sub3, sub4] = [await computed(page, 'var(--sub3)'), await computed(page, 'var(--sub4)')];
+    const [sub3, sub4] = [await rested(() => computed(page, 'var(--sub3)')), await rested(() => computed(page, 'var(--sub4)'))];
 
     // A row takes `sub3`, never scaling.
     assert.deepEqual(await pressed(page, page.locator('.row').first()), ['none', sub3, '0.08s']);
@@ -182,7 +182,7 @@ test('press: a pill gives .97 with a fill step, a round icon button .92 and `sub
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     assert.deepEqual(await pressed(page, page.locator('.hd .btn', {hasText: 'New'})),
-      [scale(0.97), await computed(page, 'color-mix(in oklch, var(--ink) 78%, var(--page))'), '0.08s']);
+      [scale(0.97), await rested(() => computed(page, 'color-mix(in oklch, var(--ink) 78%, var(--page))')), '0.08s']);
     assert.deepEqual((await pressed(page, page.locator('.hd .btn.ghost', {hasText: 'Today'}))).slice(0, 2), [scale(0.97), sub4]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -203,19 +203,19 @@ test('News rows and task chips fade over 120 ms and a hovered task isn\'t select
     await page.goto(`${setpoint.base}/news`);
     const story = page.locator('.nw-row').first();
     await story.waitFor();
-    assert.match(await story.evaluate(timing), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
-    assert.deepEqual([await cursor(story), await cursor(page.locator('.nw-up'))], ['default', 'default']);
+    assert.match(await rested(() => story.evaluate(timing)), /0\.12s.*cubic-bezier\(0\.2, 0, 0, 1\)/);
+    assert.deepEqual([await rested(() => cursor(story)), await rested(() => cursor(page.locator('.nw-up')))], ['default', 'default']);
 
     await page.goto(`${setpoint.base}/calendar`);
     const task = page.locator('.cell[data-date="2026-10-07"] .tk').first();
     await task.waitFor();
-    assert.match(await task.evaluate(timing), /0\.12s/);
-    await answers(page, 'a task chip', task, fill);
-    assert.equal(await task.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'var(--sub)'), 'a hovered task is `sub`, not the selection\'s `sub2`');
-    assert.equal(await cursor(page.locator('.ev')), 'default');
+    assert.match(await rested(() => task.evaluate(timing)), /0\.12s/);
+    await rested(() => answers(page, 'a task chip', task, fill));
+    assert.equal(await rested(() => task.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'var(--sub)')), 'a hovered task is `sub`, not the selection\'s `sub2`');
+    assert.equal(await rested(() => cursor(page.locator('.ev'))), 'default');
     // A calendar turned off: its check shrinks away over 120 ms rather than vanishing.
     const check = page.locator('.calrow .chk').first();
-    assert.match(await check.evaluate(element => getComputedStyle(element, '::after').transitionDuration), /^0\.12s/);
+    assert.match(await rested(() => check.evaluate(element => getComputedStyle(element, '::after').transitionDuration)), /^0\.12s/);
     await page.locator('.calrow').first().click();
     await page.locator('.calrow .chk.off').first().waitFor();
     await until('the check gone', () => check.evaluate(element => getComputedStyle(element, '::after').opacity), opacity => opacity === '0');
@@ -252,29 +252,29 @@ test('a calendar chip deepens in its own colour under the pointer and gives when
       return colour;
     }, percent);
     const layer = () => dentist.evaluate(chip => [getComputedStyle(chip, '::after').backgroundColor, getComputedStyle(chip, '::after').opacity]);
-    await answers(page, 'an event chip', dentist, element => getComputedStyle(element, '::after').opacity);
-    assert.deepEqual(await layer(), [await own('18%'), '1'], 'under the pointer, its own colour at 18% (Night)');
+    await rested(() => answers(page, 'an event chip', dentist, element => getComputedStyle(element, '::after').opacity));
+    assert.deepEqual(await rested(() => layer()), [await rested(() => own('18%')), '1'], 'under the pointer, its own colour at 18% (Night)');
     const [transform, pressedLayer] = await (async () => {
       await page.mouse.down();
       // The 80 ms press goes in.
       await page.waitForTimeout(150);
-      const held = [await dentist.evaluate(chip => getComputedStyle(chip).transform), (await layer())[0]];
+      const held = [await rested(() => dentist.evaluate(chip => getComputedStyle(chip).transform)), (await rested(() => layer()))[0]];
       // Let go where it was pressed (moving away would drag it): a click, which selects it.
       await page.mouse.up();
       return held;
     })();
-    assert.deepEqual([transform, pressedLayer], ['matrix(0.97, 0, 0, 0.97, 0, 0)', await own('28%')]);
+    assert.deepEqual([transform, pressedLayer], ['matrix(0.97, 0, 0, 0.97, 0, 0)', await rested(() => own('28%'))]);
 
     // Saturday's "+3": a chip's 20 px and radius 6, its count where the chips' titles start, three dots.
     await page.goto(`${setpoint.base}/calendar/2026-10-17`);
     const more = page.locator('.cell[data-date="2026-10-17"] .more');
     await more.waitFor();
     assert.equal(await more.textContent(), '+3');
-    assert.deepEqual(await more.evaluate(element => [getComputedStyle(element).height, getComputedStyle(element).borderRadius, getComputedStyle(element).paddingLeft]), ['20px', '6px', '9px']);
-    assert.deepEqual(await more.locator('.md').evaluateAll(dots => dots.map(dot => [dot.classList.contains('task') ? 'task' : 'event', dot.getBoundingClientRect().width])),
+    assert.deepEqual(await rested(() => more.evaluate(element => [getComputedStyle(element).height, getComputedStyle(element).borderRadius, getComputedStyle(element).paddingLeft])), ['20px', '6px', '9px']);
+    assert.deepEqual(await rested(() => more.locator('.md').evaluateAll(dots => dots.map(dot => [dot.classList.contains('task') ? 'task' : 'event', dot.getBoundingClientRect().width]))),
       [['event', 6], ['task', 6], ['task', 6]]);
-    await answers(page, '"+3"', more, fill);
-    assert.equal(await more.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'var(--sub)'));
+    await rested(() => answers(page, '"+3"', more, fill));
+    assert.equal(await rested(() => more.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'var(--sub)')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -292,12 +292,12 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
     await page.keyboard.press('Enter');
     const chip = page.locator('.search .qchip:not([aria-hidden])', {hasText: 'Northwind'});
     await chip.waitFor();
-    assert.deepEqual([await chip.evaluate(element => getComputedStyle(element).animationName), await chip.evaluate(element => getComputedStyle(element).animationDuration)], ['qchip-in', '0.12s']);
+    assert.deepEqual([await rested(() => chip.evaluate(element => getComputedStyle(element).animationName)), await rested(() => chip.evaluate(element => getComputedStyle(element).animationDuration))], ['qchip-in', '0.12s']);
     await chip.locator('.x').hover();
     // The 120 ms fill runs its course.
     await page.waitForTimeout(200);
-    assert.deepEqual(await chip.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow]),
-      [await computed(page, 'var(--sub3)'), `${await computed(page, 'var(--edgeHover)')} 0px 0px 0px 1px inset`]);
+    assert.deepEqual(await rested(() => chip.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow])),
+      [await rested(() => computed(page, 'var(--sub3)')), `${await rested(() => computed(page, 'var(--edgeHover)'))} 0px 0px 0px 1px inset`]);
     await chip.locator('.x').click();
     // It goes from the field at once; a copy that takes nothing collapses away in its place.
     assert.equal(await chip.count(), 0);
@@ -310,7 +310,7 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
     const picker = page.getByRole('menu', {name: 'Business colour'});
     const current = picker.locator('.sw.on');
     await current.waitFor();
-    assert.deepEqual(await current.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow.replace(/ 0px 0px 0px 1\.5px inset$/, '') === getComputedStyle(element, '::before').backgroundColor]), ['rgba(0, 0, 0, 0)', true]);
+    assert.deepEqual(await rested(() => current.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element).boxShadow.replace(/ 0px 0px 0px 1\.5px inset$/, '') === getComputedStyle(element, '::before').backgroundColor])), ['rgba(0, 0, 0, 0)', true]);
     const other = picker.locator('.sw:not(.on)').first();
     await other.hover();
     await until('the dot swells', () => other.evaluate(element => getComputedStyle(element, '::before').transform), transform => transform === 'matrix(1.25, 0, 0, 1.25, 0, 0)');
@@ -318,7 +318,7 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
     // The account's options set its icons off with a hairline.
     await page.getByRole('button', {name: 'Business options'}).click();
     const icons = page.getByRole('group', {name: 'Icon'});
-    assert.deepEqual(await icons.evaluate(element => [getComputedStyle(element).borderTopWidth, getComputedStyle(element).borderTopColor]), ['1px', await computed(page, 'var(--hair)')]);
+    assert.deepEqual(await rested(() => icons.evaluate(element => [getComputedStyle(element).borderTopWidth, getComputedStyle(element).borderTopColor])), ['1px', await rested(() => computed(page, 'var(--hair)'))]);
     await page.keyboard.press('Escape');
 
     // Appearance: the chosen theme is filled `sub2`, its tile inverted, its check `good`.
@@ -328,8 +328,8 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
     await page.mouse.move(1, 1);
     // A hover fill the move left fades out.
     await page.waitForTimeout(200);
-    assert.deepEqual(await night.evaluate(row => [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.aico')!).backgroundColor, getComputedStyle(row.querySelector(':scope > .icon')!).color]),
-      [await computed(page, 'var(--sub2)'), await computed(page, 'var(--ink)'), await computed(page, 'var(--good)')]);
+    assert.deepEqual(await rested(() => night.evaluate(row => [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.aico')!).backgroundColor, getComputedStyle(row.querySelector(':scope > .icon')!).color])),
+      [await rested(() => computed(page, 'var(--sub2)')), await rested(() => computed(page, 'var(--ink)')), await rested(() => computed(page, 'var(--good)'))]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -343,15 +343,15 @@ test('press on the phone: a tapped row fills `sub2` at once and nothing stays li
     await page.goto(`${setpoint.base}/inbox`);
     const row = page.locator('.list .row[title^="Interview availability"]');
     await row.waitFor();
-    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color')), 'rgba(0, 0, 0, 0)');
-    assert.deepEqual(await pressed(page, row), ['none', await computed(page, 'var(--sub2)'), '0s']);
+    assert.equal(await rested(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color'))), 'rgba(0, 0, 0, 0)');
+    assert.deepEqual(await pressed(page, row), ['none', await rested(() => computed(page, 'var(--sub2)')), '0s']);
     // The reader's Pin, tapped: no hover fill stays on it under the finger.
     await row.tap();
     const pin = page.locator('.ph-top .ph-icon');
     await pin.tap();
     // The 120 ms press lets go.
     await page.waitForTimeout(300);
-    assert.equal(await pin.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)', 'nothing stays lit after a tap');
+    assert.equal(await rested(() => pin.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)', 'nothing stays lit after a tap');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -413,7 +413,7 @@ test('the mail list: Done folds its row away over 180 ms and the next takes its 
     // Done from the cursor on Northwind: it folds out of New; the code below it slides up by its height.
     const northwind = page.locator('.list .row[data-key^="new:"][title^="Interview availability"]');
     const exams = page.locator('.list .row[data-key^="new:"]', {has: page.locator('.code-line')});
-    const [gap, place] = [(await northwind.boundingBox())!.height, (await exams.boundingBox())!.y];
+    const [gap, place] = [(await rested(() => northwind.boundingBox()))!.height, (await rested(() => exams.boundingBox()))!.y];
     await point(northwind);
     await page.keyboard.press('h');
     await until('Northwind folded away', () => northwind.count(), count => count === 0);
@@ -467,8 +467,8 @@ test('live reordering: dragging Business down past Personal makes room as it pas
     // The rows top to bottom as they show (while dragged they slide, staying in place in the page).
     const labels = () => rows.evaluateAll(all => all.map(row => ({label: row.querySelector('.lines .t')!.textContent!, y: row.getBoundingClientRect().y}))
       .sort((a, b) => a.y - b.y).map(row => row.label));
-    const [first, second, third] = await labels();
-    const box = async (index: number) => (await rows.nth(index).boundingBox())!;
+    const [first, second, third] = await rested(() => labels());
+    const box = async (index: number) => (await rested(() => rows.nth(index).boundingBox()))!;
 
     // Every slide a row starts, as it starts.
     await page.evaluate(() => {
@@ -529,19 +529,19 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
     await page.getByRole('button', {name: 'Weather options'}).click();
     const weather = page.getByRole('menu', {name: 'Weather options'});
     await page.getByRole('menuitem', {name: 'Check now'}).waitFor();
-    assert.deepEqual(await unclipped(weather), [], 'Weather\'s menu');
+    assert.deepEqual(await rested(() => unclipped(weather)), [], 'Weather\'s menu');
     await page.keyboard.press('Escape');
 
     const last = page.locator('.settings [data-account]').last();
     const label = (await last.locator('.lines .t').textContent())!;
     await last.getByRole('button', {name: `${label} options`}).click();
-    assert.deepEqual(await unclipped(page.getByRole('menu', {name: `${label} options`})), [], `${label}'s menu`);
+    assert.deepEqual(await rested(() => unclipped(page.getByRole('menu', {name: `${label} options`}))), [], `${label}'s menu`);
     await page.keyboard.press('Escape');
 
     await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
     await page.locator('.settings .rule', {hasText: 'Proseware alerts'}).waitFor();
     await page.getByRole('button', {name: 'Rule options'}).last().click();
-    assert.deepEqual(await unclipped(page.getByRole('menu', {name: 'Rule options'})), [], 'the last rule\'s menu');
+    assert.deepEqual(await rested(() => unclipped(page.getByRole('menu', {name: 'Rule options'}))), [], 'the last rule\'s menu');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -563,7 +563,7 @@ test('menus: on a short window the last source\'s opens upward, whole; the edito
     const menu = short.getByRole('menu', {name: 'Weather options'});
     await menu.waitFor();
     assert.equal(await menu.getAttribute('data-up'), '', 'it opens upward');
-    assert.deepEqual(await unclipped(menu), []);
+    assert.deepEqual(await rested(() => unclipped(menu)), []);
 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
@@ -574,7 +574,7 @@ test('menus: on a short window the last source\'s opens upward, whole; the edito
     await still(page);
     for (const opener of ['Add reminder', 'Repeat']) {
       await page.getByRole('button', {name: opener, exact: true}).click();
-      assert.deepEqual(await unclipped(page.locator('.editor .menu')), [], `${opener}'s menu`);
+      assert.deepEqual(await rested(() => unclipped(page.locator('.editor .menu'))), [], `${opener}'s menu`);
       await page.getByRole('button', {name: opener, exact: true}).click();
     }
     assert.deepEqual(setpoint.pageErrors, []);

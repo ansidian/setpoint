@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {glidePosition, glideSegment, glideVelocity} from '../../src/logic/glide.ts';
-import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until, watch} from './harness.ts';
 
 const GAP = 8;
 
@@ -28,17 +28,17 @@ const atRest = (page: Page) => until('the card comes to rest', () => motion(page
 
 /** The card's box relative to the month section, where the boards place it. */
 async function cardAt(page: Page): Promise<{left: number; top: number; width: number; height: number}> {
-  const section = (await page.locator('.cal-month').boundingBox())!;
-  const box = (await card(page).boundingBox())!;
+  const section = (await rested(() => page.locator('.cal-month').boundingBox()))!;
+  const box = (await rested(() => card(page).boundingBox()))!;
   return {left: Math.round(box.x - section.x), top: Math.round(box.y - section.y), width: Math.round(box.width), height: Math.round(box.height)};
 }
 
 /** At rest beside its item: 8 px off it on the side it says, centred on it unless an edge slid it. */
 async function assertBeside(page: Page, item: Locator) {
   const side = await card(page).getAttribute('data-side');
-  const box = (await card(page).boundingBox())!;
-  const anchor = (await item.boundingBox())!;
-  const grid = (await page.locator('.cal-scroll').boundingBox())!;
+  const box = (await rested(() => card(page).boundingBox()))!;
+  const anchor = (await rested(() => item.boundingBox()))!;
+  const grid = (await rested(() => page.locator('.cal-scroll').boundingBox()))!;
   if (side === 'right') assert.equal(Math.round(box.x - (anchor.x + anchor.width)), GAP);
   else if (side === 'left') assert.equal(Math.round(anchor.x - (box.x + box.width)), GAP);
   else if (side === 'above') assert.equal(Math.round(anchor.y - (box.y + box.height)), GAP);
@@ -96,8 +96,8 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
       probe.remove();
       return computed;
     }, colour);
-    assert.equal(await card(page).locator('.fd-layer.in .fact.cal .icon').evaluate(icon => getComputedStyle(icon).color), await tint('var(--cool)'));
-    assert.equal(await card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color), await tint('var(--ink2)'), 'its name stays ink2');
+    assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal .icon').evaluate(icon => getComputedStyle(icon).color)), await rested(() => tint('var(--cool)')));
+    assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color)), await rested(() => tint('var(--ink2)')), 'its name stays ink2');
     await settle(page);
     await matchGolden(page, '12a-floating-detail-dentist', 'grid');
     // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
@@ -194,7 +194,7 @@ test('the glide never crosses the grid\'s edge: its overshoot shrinks to the roo
     await page.goto(`${setpoint.base}/calendar`);
     await openDentist(page);
     // Every frame of the glide to Thursday's CS 101 lecture, whose card rests 13 px from the right pane.
-    const furthest = await page.evaluate(async () => {
+    const furthest = await rested(() => page.evaluate(async () => {
       const grid = document.querySelector('.cal-scroll')!.getBoundingClientRect();
       const lecture = [...document.querySelectorAll<HTMLElement>('.cell[data-date="2026-10-08"] .ev')].find(element => element.textContent?.includes('CS 101'))!;
       lecture.click();
@@ -205,7 +205,7 @@ test('the glide never crosses the grid\'s edge: its overshoot shrinks to the roo
         right = Math.max(right, document.querySelector('.fd')!.getBoundingClientRect().right);
       }
       return {right, edge: grid.right};
-    });
+    }));
     assert.ok(furthest.right <= furthest.edge, `the card reached ${furthest.right}, past the grid's edge at ${furthest.edge}`);
     assert.ok(furthest.right > furthest.edge - 13 + 3, 'it still bounces past where it rests');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -256,16 +256,16 @@ test('a click mid-glide retargets from where the card is, keeping its velocity: 
     await glideTo(page, chip(page, '2026-10-09', 'Dinner with Sam'));
     const to = await placed(page);
     const size = await card(page).evaluate(element => ({width: (element as HTMLElement).offsetWidth, height: (element as HTMLElement).offsetHeight}));
-    const bounds = await page.evaluate(() => {
+    const bounds = await rested(() => page.evaluate(() => {
       const section = document.querySelector('.cal-month')!.getBoundingClientRect();
       const grid = document.querySelector('.cal-scroll')!.getBoundingClientRect();
       return {left: grid.left - section.left, top: grid.top - section.top, width: grid.width, height: grid.height};
-    });
+    }));
     await glideTo(page, chip(page, '2026-10-07', 'Dentist'));
     const resting = await placed(page);
     const first = glideSegment(resting, to, size, bounds);
 
-    const trace = await page.evaluate(async () => {
+    const trace = await rested(() => page.evaluate(async () => {
       const find = (date: string, title: string) => [...document.querySelectorAll<HTMLElement>(`.cell[data-date="${date}"] .ev`)].find(element => element.textContent?.includes(title))!;
       const fd = () => document.querySelector<HTMLElement>('.fd');
       const frames: {x: number; y: number; left: number; top: number; at: number; motion: string | null}[] = [];
@@ -295,7 +295,7 @@ test('a click mid-glide retargets from where the card is, keeping its velocity: 
         sample();
       }
       return {frames, retargetIndex, motionAtRetarget, from, firstClickAt, retargetAt, fromAt, same: fd() === card};
-    });
+    }));
     assert.equal(trace.motionAtRetarget, 'glide', 'the second click came mid-glide');
     assert.ok(trace.same, 'the same card element throughout');
     assert.ok(trace.frames.every(frame => frame.motion !== null && frame.motion !== 'closing'), 'it never closed');
@@ -365,7 +365,7 @@ test('board 12d: dragged aside by its grip, the card stays where it\'s dropped; 
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     await openDentist(page);
-    const grip = (await card(page).locator('.grip').boundingBox())!;
+    const grip = (await rested(() => card(page).locator('.grip').boundingBox()))!;
     const start = {x: grip.x + grip.width / 2, y: grip.y + grip.height / 2};
     // 12d drops it at 742, 607, low over Friday and Saturday.
     const at = await cardAt(page);
@@ -401,7 +401,7 @@ test('the whole card drags from anywhere but its buttons and text; its text stay
     await page.goto(`${setpoint.base}/calendar`);
     await openDentist(page);
     const before = await cardAt(page);
-    const when = (await card(page).locator('.fd-when').boundingBox())!;
+    const when = (await rested(() => card(page).locator('.fd-when').boundingBox()))!;
     const drag = async (x: number, y: number) => {
       await page.mouse.move(x, y);
       await page.mouse.down();
@@ -470,8 +470,8 @@ test('beside its item the card scrolls with the grid, and an item picked from th
     const top = await page.locator('.cal-scroll').evaluate(element => element.scrollTop);
     await page.mouse.wheel(0, 120);
     await until('the grid scrolled', () => page.locator('.cal-scroll').evaluate(element => element.scrollTop), scrolled => scrolled > top);
-    const anchor = (await chip(page, '2026-10-09', 'Study group').boundingBox())!;
-    const box = (await card(page).boundingBox())!;
+    const anchor = (await rested(() => chip(page, '2026-10-09', 'Study group').boundingBox()))!;
+    const box = (await rested(() => card(page).boundingBox()))!;
     // Above it on Friday (SV-29: weeks start on Sunday), still centred over it.
     assert.ok(Math.abs(box.x + box.width / 2 - (anchor.x + anchor.width / 2)) <= 1, 'still centred on its item');
     assert.equal(Math.round(anchor.y - (box.y + box.height)), GAP, 'still 8 px above it');

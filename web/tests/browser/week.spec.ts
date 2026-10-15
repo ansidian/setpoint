@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, startSetpoint, still, until, writeOutput} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, until, writeOutput} from './harness.ts';
 
 after(cleanUp);
 
@@ -20,7 +20,7 @@ async function openWeek(page: Page, base: string) {
 
 /** The centre of a minute in a day's column, in page pixels. */
 async function slot(page: Page, date: string, minutes: number) {
-  const column = (await page.locator(`.wk-col[data-date="${date}"]`).boundingBox())!;
+  const column = (await rested(() => page.locator(`.wk-col[data-date="${date}"]`).boundingBox()))!;
   return {x: column.x + column.width / 2, y: column.y + (minutes / 60) * 44};
 }
 
@@ -51,7 +51,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     // Board 16's measures: an hour is 44 px, a one-hour block 42 px, 139 px a day at the design target.
     const dentist = (await block(page, '2026-10-07', 'Dentist').boundingBox())!;
     assert.equal(Math.round(dentist.height), 42);
-    const column = (await page.locator('.wk-col[data-date="2026-10-07"]').boundingBox())!;
+    const column = (await rested(() => page.locator('.wk-col[data-date="2026-10-07"]').boundingBox()))!;
     assert.ok(Math.abs(column.width - 139) <= 2, `a day is ${column.width} px`);
     assert.equal(await page.locator('.wk-now').count(), 1);
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');
@@ -157,7 +157,7 @@ test('a block moves by drag in 15-minute steps to another day, and its bottom ed
   try {
     const page = await setpoint.page('target');
     await openWeek(page, setpoint.base);
-    const dentist = (await block(page, '2026-10-07', 'Dentist').boundingBox())!;
+    const dentist = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
     // Held 8 px into the block (1 px under its start's line), let go as far into 3:00 PM's hour.
     const target = await slot(page, '2026-10-08', 15 * 60);
     await dragFrom(page, {x: dentist.x + dentist.width / 2, y: dentist.y + 8}, {x: target.x, y: target.y + 9});
@@ -167,7 +167,7 @@ test('a block moves by drag in 15-minute steps to another day, and its bottom ed
 
     // Once Google has it, its edges resize it.
     await page.locator('.wk-col[data-date="2026-10-08"] .wb:not(.pending)', {hasText: 'Dentist'}).waitFor();
-    const moved = (await block(page, '2026-10-08', 'Dentist').boundingBox())!;
+    const moved = (await rested(() => block(page, '2026-10-08', 'Dentist').boundingBox()))!;
     const end = await slot(page, '2026-10-08', 16 * 60 + 30);
     await dragFrom(page, {x: moved.x + moved.width / 2, y: moved.y + moved.height - 2}, {x: end.x, y: end.y});
     await page.locator('.toast', {hasText: 'Changed Dentist to 3:00 – 4:30 PM'}).waitFor();
@@ -190,7 +190,7 @@ test('a recurring block dropped asks this, following or all; a click opens the f
   try {
     const page = await setpoint.page('target');
     await openWeek(page, setpoint.base);
-    const gym = (await block(page, '2026-10-09', 'Gym').boundingBox())!;
+    const gym = (await rested(() => block(page, '2026-10-09', 'Gym').boundingBox()))!;
     const target = await slot(page, '2026-10-09', 8 * 60 + 10);
     await dragFrom(page, {x: gym.x + gym.width / 2, y: gym.y + 8}, {x: target.x, y: target.y + 8});
     await page.locator('.scope-card', {hasText: 'Move recurring event'}).waitFor();
@@ -200,8 +200,8 @@ test('a recurring block dropped asks this, following or all; a click opens the f
     await block(page, '2026-10-07', 'Dentist').click();
     await page.locator('.fd .card', {hasText: 'Dentist'}).waitFor();
     await until('the card at rest', () => page.locator('.fd').getAttribute('data-motion'), phase => phase === 'rest');
-    const card = (await page.locator('.fd .card').boundingBox())!;
-    const chip = (await block(page, '2026-10-07', 'Dentist').boundingBox())!;
+    const card = (await rested(() => page.locator('.fd .card').boundingBox()))!;
+    const chip = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
     assert.ok(card.x >= chip.x + chip.width || card.x + card.width <= chip.x || card.y >= chip.y + chip.height || card.y + card.height <= chip.y, 'the card sits beside its block');
     writeOutput('week.detail.png', await page.screenshot());
     assert.deepEqual(setpoint.pageErrors, []);

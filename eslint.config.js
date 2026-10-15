@@ -39,8 +39,19 @@ const windowNetwork = ['window', 'globalThis', 'self'].flatMap(object => network
 // enough on an idle machine is too short on a busy one; a "nothing happened" check, or a hover
 // fading before a screenshot, keeps its pause and says so. A bound shorter than the 5 s default
 // says why too (SV-49): "at once" is proven by holding the server's answer, not by a short limit,
-// which only adds a way for a slow machine to fail.
+// which only adds a way for a slow machine to fail. A one-shot read of a computed style or box goes
+// through `rested` (nothing moving first) or polls with `until`, or says why on the line before it
+// (SV-75): an element mid-entrance, mid-fade or mid-slide measures as it passes, not where it rests.
+// A named function that reads is a reader, and so is one that uses a reader: each use of one is a
+// read, checked where it's used. A read explained on the line before its own statement inside the
+// function (at rest already, or meant to catch motion) is settled there; a doc comment on the
+// function itself excuses nothing.
 const SHORT_BOUND_MS = 5000;
+const RESTING = new Set(['rested', 'until']);
+const insideResting = node => {
+  for (let at = node.parent; at; at = at.parent) if (at.type === 'CallExpression' && at.callee.type === 'Identifier' && RESTING.has(at.callee.name)) return true;
+  return false;
+};
 const explainedOnLineBefore = (context, node) => {
   let statement = node;
   while (statement.parent && !['Program', 'BlockStatement', 'SwitchCase'].includes(statement.parent.type)) statement = statement.parent;
@@ -79,6 +90,69 @@ const browserChecks = {
           'CallExpression[callee.name="until"]'(node) { check(node, node.arguments[3]); },
           // {timeout: …} given to any call: waitFor, waitForResponse, expect's matchers, …
           'CallExpression > ObjectExpression > Property[key.name="timeout"]'(property) { check(property.parent.parent, property.value); },
+        };
+      },
+    },
+    'rested-read': {
+      meta: {
+        type: 'problem',
+        schema: [],
+        messages: {unrested: 'Read a computed style or box through `rested` (nothing moving first) or `until`, or say why on the line before it (SV-75).'},
+      },
+      create(context) {
+        const {sourceCode} = context;
+        const reads = [];
+        const isFunction = node => ['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression'].includes(node.type);
+        // A function's name, for one declared with one: `function fill() {}` or `const fill = () => {}`.
+        const nameOf = fn => (fn.type === 'FunctionDeclaration' ? fn.id : fn.parent?.type === 'VariableDeclarator' && fn.parent.id.type === 'Identifier' ? fn.parent.id : null);
+        const readerOf = node => {
+          for (let at = node.parent; at; at = at.parent) if (isFunction(at) && nameOf(at)) return at;
+          return null;
+        };
+        const report = node => {
+          if (explainedOnLineBefore(context, node)) return;
+          context.report({node, messageId: 'unrested'});
+        };
+        // Explained by a comment before a statement of the function's own body, not before the function.
+        const settledIn = (read, fn) => {
+          let statement = read;
+          while (statement.parent && statement.parent !== fn.body && !['Program', 'BlockStatement', 'SwitchCase'].includes(statement.parent.type)) statement = statement.parent;
+          return statement.parent === fn.body && explainedOnLineBefore(context, read);
+        };
+        return {
+          'CallExpression[callee.name="getComputedStyle"]'(node) { reads.push(node); },
+          'CallExpression[callee.property.name="getBoundingClientRect"]'(node) { reads.push(node); },
+          'CallExpression[callee.property.name="boundingBox"]'(node) { reads.push(node); },
+          // A named function that reads (`const fill = element => getComputedStyle(element)…`, passed to
+          // evaluate, or one that evaluates) is a reader, and so is one that uses a reader: each use of
+          // a reader is a read, checked where it's used.
+          'Program:exit'() {
+            const readers = new Set();
+            for (const read of reads) {
+              if (insideResting(read)) continue;
+              const reader = readerOf(read);
+              if (!reader) report(read);
+              else if (!settledIn(read, reader)) readers.add(reader);
+            }
+            const checked = new Set();
+            const queue = [...readers];
+            while (queue.length) {
+              const reader = queue.pop();
+              if (checked.has(reader)) continue;
+              checked.add(reader);
+              const name = nameOf(reader).name;
+              const declared = reader.type === 'FunctionDeclaration' ? reader : reader.parent;
+              for (const variable of sourceCode.getDeclaredVariables(declared)) {
+                if (variable.name !== name) continue;
+                for (const reference of variable.references) {
+                  if (reference.init || insideResting(reference.identifier)) continue;
+                  const outer = readerOf(reference.identifier);
+                  if (outer) queue.push(outer);
+                  else report(reference.identifier);
+                }
+              }
+            }
+          },
         };
       },
     },
@@ -140,6 +214,6 @@ export default tseslint.config(
   {
     files: ['web/tests/browser/**/*.ts'],
     plugins: {'browser-checks': browserChecks},
-    rules: {'browser-checks/explained-pause': 'error', 'browser-checks/explained-short-bound': 'error'},
+    rules: {'browser-checks/explained-pause': 'error', 'browser-checks/explained-short-bound': 'error', 'browser-checks/rested-read': 'error'},
   },
 );

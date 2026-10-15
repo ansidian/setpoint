@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -48,7 +48,7 @@ interface Fold {
  * fold in, with its fold's timing and keyframes, the classes it beats with, and its gutter's glyph.
  */
 async function watchFolds(page: Page) {
-  await page.evaluate(() => {
+  await rested(() => page.evaluate(() => {
     const folds: Fold[] = [];
     (window as unknown as {folds: Fold[]}).folds = folds;
     const note = (element: Element, fold: 'out' | 'in') => {
@@ -70,7 +70,7 @@ async function watchFolds(page: Page) {
         for (const node of record.addedNodes) if (node instanceof HTMLElement && !node.classList.contains('leaving')) note(node, 'in');
       }
     }).observe(document.querySelector('.content')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true});
-  });
+  }));
 }
 
 /** An element's turn in whole degrees, from its computed transform. */
@@ -95,7 +95,7 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     await watchFolds(page);
-    const [good, alert] = [await colourOf(page, '--good'), await colourOf(page, '--alert')];
+    const [good, alert] = [await rested(() => colourOf(page, '--good')), await rested(() => colourOf(page, '--alert'))];
 
     // Done from the cursor: the row tints `good` 14% and its dot gives way to a 14 px check in `good`,
     // then it folds out of New after the beat, its text first, and into its day.
@@ -107,14 +107,14 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     assert.match(done.text, /Northwind Talent/);
     assert.ok(done.classes.split(' ').includes('beat-done'), done.classes);
     assert.deepEqual([done.delay, done.duration, done.frames, done.glyph], [120, 180, LEAVING, good]);
-    assert.equal(await page.evaluate(() => {
+    assert.equal(await rested(() => page.evaluate(() => {
       const probe = document.querySelector('.list')!.appendChild(document.createElement('div'));
       probe.className = 'row beat-done';
       probe.style.transition = 'none';
       const colour = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return colour;
-    }), await backgroundOf(page, 'color-mix(in oklch, var(--good) 14%, transparent)'));
+    })), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--good) 14%, transparent)')));
     await until('Northwind in its day', () => page.locator('.list .row.done[data-key^="all:"][title^="Interview availability"]').count(), count => count === 1);
     await until('the fold is over', () => page.locator('.list .leaving').count(), count => count === 0);
 
@@ -127,14 +127,14 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     const trash = (await folds(page)).find(fold => fold.fold === 'out')!;
     assert.ok(trash.classes.split(' ').includes('beat-trash'), trash.classes);
     assert.deepEqual([trash.delay, trash.frames, trash.glyph], [120, LEAVING, alert]);
-    assert.equal(await page.evaluate(() => {
+    assert.equal(await rested(() => page.evaluate(() => {
       const probe = document.querySelector('.list')!.appendChild(document.createElement('div'));
       probe.className = 'row beat-trash';
       probe.style.transition = 'none';
       const colour = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return colour;
-    }), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 8%, transparent)'));
+    })), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 8%, transparent)')));
     // Undo folds it back in, its height first.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await until('Woodgrove back', () => folds(page), list => list.some(fold => fold.fold === 'in' && /Woodgrove Bank/.test(fold.text)));
@@ -148,8 +148,8 @@ test('inbox-05, -06, -14: a folding row\'s text goes first; Done and Trash beat 
     const noise = page.locator('.list .nfold').first();
     const chevron = noise.locator('.chev .icon');
     assert.equal(await chevron.count(), 1);
-    assert.equal(await chevron.evaluate(icon => getComputedStyle(icon).transitionDuration), '0.12s');
-    assert.equal(turn(await chevron.evaluate(icon => getComputedStyle(icon).transform)), -90);
+    assert.equal(await rested(() => chevron.evaluate(icon => getComputedStyle(icon).transitionDuration)), '0.12s');
+    assert.equal(turn(await rested(() => chevron.evaluate(icon => getComputedStyle(icon).transform))), -90);
     const stagger = Array.from({length: 6}, (_, index) => Math.min(index * 12, 60));
     await noise.click();
     await until('its rows folded in', () => folds(page), list => list.filter(fold => fold.fold === 'in').length === 6);
@@ -196,7 +196,7 @@ test('SV-69, #243: Done moves an email out of New into its day, quiet with a Don
     await inDay.waitFor();
     assert.ok((await inDay.getAttribute('class'))!.split(' ').includes('done'));
     assert.equal(await inDay.locator('.tag').textContent(), 'Done');
-    const ink3 = await colourOf(page, '--ink3');
+    const ink3 = await rested(() => colourOf(page, '--ink3'));
     await until('Northwind quiet', () => inDay.locator('.from').evaluate(element => getComputedStyle(element).color), colour => colour === ink3);
     await until('it leaves New', () => fresh.count(), count => count === 0);
     assert.equal(await lane.textContent(), 'Attention 1');
@@ -209,7 +209,7 @@ test('SV-69, #243: Done moves an email out of New into its day, quiet with a Don
     const status = page.locator('.rd-tools .rd-done');
     await until('the reader\'s Done', () => status.textContent(), text => text === 'Done');
     assert.equal(await page.locator('.rd-tools .tool.done').count(), 0);
-    assert.equal(await status.locator('.icon').evaluate(element => getComputedStyle(element).color), await colourOf(page, '--good'));
+    assert.equal(await rested(() => status.locator('.icon').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, '--good')));
 
     // Undo puts it back as it was: in New, no tag, Attention 2, and Done offered again.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -240,35 +240,37 @@ test('shell-06, motion-04: the Today event leads with its calendar\'s bar and wa
     // The bar: 3 × 14, radius 2, in Personal's `cool`, in the rings' 19 px column; the time lines up
     // with the task titles.
     const bar = dentist.locator('.evbar > i');
-    assert.deepEqual(await bar.evaluate(element => {
+    assert.deepEqual(await rested(() => bar.evaluate(element => {
       const style = getComputedStyle(element);
       return [style.width, style.height, style.borderRadius];
-    }), ['3px', '14px', '2px']);
-    assert.equal(await bar.evaluate(element => getComputedStyle(element).backgroundColor), await colourOf(page, '--cool'));
-    assert.equal(await left(dentist, '.evbar'), await left(rent, '.check'));
-    assert.equal(await left(dentist, '.t'), await left(rent, '.title'));
+    })), ['3px', '14px', '2px']);
+    assert.equal(await rested(() => bar.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => colourOf(page, '--cool')));
+    assert.equal(await rested(() => left(dentist, '.evbar')), await rested(() => left(rent, '.check')));
+    assert.equal(await rested(() => left(dentist, '.t')), await rested(() => left(rent, '.title')));
 
     // Completing Pay rent: its done check lands as every task's does (the shared ring-done, 120 ms), and
     // its title goes ink3 over 180 ms.
     await rent.getByRole('button', {name: 'Complete Pay rent'}).click();
     const check = rent.locator('.check .task-glyph.done');
     await check.waitFor();
+    // Read as it lands: the line folds away 360 ms after the check, so a rest would wait it out.
     assert.deepEqual(await check.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration, getComputedStyle(element).color]),
       ['ring-done', '0.12s', await colourOf(page, '--good')]);
+    // And its title's fade, read as it lands too.
     assert.equal(await rent.locator('.title').evaluate(element => getComputedStyle(element).transitionDuration), '0.18s');
     await page.clock.runFor(1000);
     await until('Pay rent folded away', () => rent.count(), count => count === 0);
 
     // At 9:12 AM "in 5h" is ink3; at 2:20 PM "in 10m" is caution 500; at 2:31 PM "now" is alert 500.
     const time = dentist.locator('.in');
-    const look = async () => [await time.textContent(), ...await time.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight])];
-    assert.deepEqual(await look(), ['in 5h', await colourOf(page, '--ink3'), '400']);
+    const look = async () => [await time.textContent(), ...await rested(() => time.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]))];
+    assert.deepEqual(await look(), ['in 5h', await rested(() => colourOf(page, '--ink3')), '400']);
     await page.clock.fastForward((5 * 60 + 8) * 60_000);
     await until('in 10m', look, seen => seen[0] === 'in 10m');
-    assert.deepEqual(await look(), ['in 10m', await colourOf(page, '--caution'), '500']);
+    assert.deepEqual(await look(), ['in 10m', await rested(() => colourOf(page, '--caution')), '500']);
     await page.clock.fastForward(11 * 60_000);
     await until('now', look, seen => seen[0] === 'now');
-    assert.deepEqual(await look(), ['now', await colourOf(page, '--alert'), '500']);
+    assert.deepEqual(await look(), ['now', await rested(() => colourOf(page, '--alert')), '500']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -291,9 +293,9 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
     await page.waitForURL(/\/calendar/);
     await until('the accounts folded', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height === 0);
     assert.equal(await accounts.evaluate(element => (element as HTMLElement).inert), true);
-    const [inbox, calendar] = [(await nav('Inbox').boundingBox())!, (await nav('Calendar').boundingBox())!];
+    const [inbox, calendar] = [(await rested(() => nav('Inbox').boundingBox()))!, (await rested(() => nav('Calendar').boundingBox()))!];
     assert.equal(calendar.y - (inbox.y + inbox.height), 2);
-    assert.deepEqual(await page.locator('.sb .sb-sec').first().evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['fade-in', '0.12s']);
+    assert.deepEqual(await rested(() => page.locator('.sb .sb-sec').first().evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration])), ['fade-in', '0.12s']);
     await nav('Inbox').click();
     await page.waitForURL(/\/inbox/);
     await until('the accounts back', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height > 100);
@@ -339,17 +341,17 @@ test('shell-08, shell-11, motion-07: the accounts fold away on Calendar; counts 
     for (const id of attention) await setpoint.api('POST', `/mail/messages/${id}/done`, {done: true});
     await until('the pill gone', () => pill.count(), number => number === 0);
     assert.ok((await going()).includes('apill num going'), 'it scaled out first');
-    assert.deepEqual(await page.evaluate(() => {
+    assert.deepEqual(await rested(() => page.evaluate(() => {
       const probe = document.querySelector('.sb .nav')!.appendChild(document.createElement('span'));
       probe.className = 'apill going';
       const style = getComputedStyle(probe);
       const seen = [style.animationName, style.animationDuration];
       probe.remove();
       return seen;
-    }), ['apill-out', '0.12s']);
+    })), ['apill-out', '0.12s']);
     await setpoint.api('POST', `/mail/messages/${attention[0]}/done`, {done: false});
     await until('the pill back', () => pill.count(), number => number === 1);
-    assert.deepEqual(await pill.evaluate(element => [element.className, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['apill num arriving', 'apill-in', '0.18s']);
+    assert.deepEqual(await rested(() => pill.evaluate(element => [element.className, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration])), ['apill num arriving', 'apill-in', '0.18s']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -364,17 +366,17 @@ test('inbox-09, -10, -12: a pin out of the shelf\'s sight says so and lands on t
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     const list = page.locator('.content > .list');
-    const ink3 = await colourOf(page, '--ink3');
+    const ink3 = await rested(() => colourOf(page, '--ink3'));
 
     // Bands stick to the top, each sliding over the last; J and K keep a row clear of them.
     assert.deepEqual(await page.locator('.list .gh').first().evaluate(header => [getComputedStyle(header).position, getComputedStyle(header).top, getComputedStyle(header).zIndex]), ['sticky', '0px', '2']);
-    assert.equal(await list.evaluate(element => getComputedStyle(element).scrollPaddingTop), '30px');
+    assert.equal(await rested(() => list.evaluate(element => getComputedStyle(element).scrollPaddingTop)), '30px');
     await list.evaluate(element => element.scrollBy(0, 300));
-    const stuck = await page.evaluate(() => {
+    const stuck = await rested(() => page.evaluate(() => {
       const box = document.querySelector('.content > .list')!.getBoundingClientRect();
       const top = document.elementFromPoint(box.left + 200, box.top + 15)?.closest('.gh');
       return top ? top.textContent : null;
-    });
+    }));
     assert.ok(stuck && !/^Pinned/.test(stuck), `a later group's header is on top: ${stuck}`);
 
     // P on Consolidated Messenger near New's top, with the shelf below, out of sight: the toast says
@@ -383,7 +385,7 @@ test('inbox-09, -10, -12: a pin out of the shelf\'s sight says so and lands on t
     const pay = page.locator('.row:not(.shelf)', {hasText: 'Consolidated Messenger'});
     await point(pay);
     // What the row arriving on the shelf plays, as it arrives.
-    await page.evaluate(() => {
+    await rested(() => page.evaluate(() => {
       const landings: string[][] = [];
       (window as unknown as {landings: string[][]}).landings = landings;
       new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
@@ -399,15 +401,15 @@ test('inbox-09, -10, -12: a pin out of the shelf\'s sight says so and lands on t
           return `${timing.duration} ${timing.delay} ${colour}`;
         }));
       }))).observe(document.querySelector('.content > .list')!, {childList: true});
-    });
+    }));
     await page.keyboard.press('p');
     const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
     await toast.waitFor();
-    assert.equal(await toast.locator('.tone .icon').evaluate(icon => getComputedStyle(icon).color), ink3);
+    assert.equal(await rested(() => toast.locator('.tone .icon').evaluate(icon => getComputedStyle(icon).color)), ink3);
     // It landed on the shelf: it folded in, then holds `sub3` and lets it go over 260 ms.
     await page.locator('.row.shelf', {hasText: 'Consolidated Messenger'}).waitFor();
     await until('it left New', () => pay.count(), count => count === 0);
-    const sub3 = await backgroundOf(page, 'var(--sub3)');
+    const sub3 = await rested(() => backgroundOf(page, 'var(--sub3)'));
     assert.deepEqual(await page.evaluate(() => (window as unknown as {landings: string[][]}).landings), [['180 0 ', `260 180 ${sub3}`]]);
     // Undo unpins it, back in New, and the toast goes.
     await toast.getByRole('button', {name: 'Undo'}).click();
@@ -428,14 +430,14 @@ test('inbox-09, -10, -12: a pin out of the shelf\'s sight says so and lands on t
     await page.locator('.content.filtered').waitFor();
     await page.locator('.hd-title', {hasText: 'Inbox · Personal'}).waitFor();
     await page.locator('.content.filtered .list .row').first().waitFor();
-    assert.deepEqual(await page.locator('.list .row .ac').evaluateAll(parts => [...new Set(parts.map(part => getComputedStyle(part).display))]), ['none']);
+    assert.deepEqual(await rested(() => page.locator('.list .row .ac').evaluateAll(parts => [...new Set(parts.map(part => getComputedStyle(part).display))])), ['none']);
     assert.ok(await page.locator('.list .row .age').first().isVisible());
 
     // Day headings outrank lanes: the day ink2, its date ink3.
     await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
     const day = page.locator('.list.all .gh.day').first();
     await day.waitFor();
-    assert.deepEqual([await day.evaluate(element => getComputedStyle(element).color), await day.locator('.date').evaluate(element => getComputedStyle(element).color)], [await colourOf(page, '--ink2'), ink3]);
+    assert.deepEqual([await rested(() => day.evaluate(element => getComputedStyle(element).color)), await rested(() => day.locator('.date').evaluate(element => getComputedStyle(element).color))], [await rested(() => colourOf(page, '--ink2')), ink3]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -454,19 +456,19 @@ test('reader-03, -04, -09: each email swaps in from the way the user stepped; a 
     // The first email arrives with the pane (its slide), not as a swap.
     await page.locator('.list .row[title="Interview availability for Software Engineer I"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    assert.deepEqual(await swapped(), [null, 'none', '0s']);
+    assert.deepEqual(await rested(() => swapped()), [null, 'none', '0s']);
     const tools = page.locator('.pane > .rd-tools');
     await tools.evaluate(element => element.setAttribute('data-first', ''));
     // J: up 8 px from below, over 180 ms; K: down from above; a click fades over 120 ms. The tools stay.
     await page.keyboard.press('j');
     await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
-    assert.deepEqual(await swapped(), ['next', 'rd-in-next', '0.18s']);
+    assert.deepEqual(await rested(() => swapped()), ['next', 'rd-in-next', '0.18s']);
     await page.keyboard.press('k');
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    assert.deepEqual(await swapped(), ['prev', 'rd-in-prev', '0.18s']);
+    assert.deepEqual(await rested(() => swapped()), ['prev', 'rd-in-prev', '0.18s']);
     await page.locator('.list .row', {has: page.locator('.code-line')}).click();
     await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
-    assert.deepEqual(await swapped(), ['fade', 'fade-in', '0.12s']);
+    assert.deepEqual(await rested(() => swapped()), ['fade', 'fade-in', '0.12s']);
     assert.equal(await page.locator('.pane > .rd-tools[data-first]').count(), 1, 'the tools never swap');
     assert.deepEqual(await page.evaluate(() => {
       const probe = document.querySelector('.pane .rd-scroll')!.appendChild(document.createElement('div'));
@@ -482,16 +484,16 @@ test('reader-03, -04, -09: each email swaps in from the way the user stepped; a 
     const card = page.locator('.rd-head .code-card');
     await card.waitFor();
     assert.equal(await card.evaluate(element => element.previousElementSibling?.className), 'rd-meta');
-    assert.deepEqual(await card.evaluate(element => {
+    assert.deepEqual(await rested(() => card.evaluate(element => {
       const style = getComputedStyle(element);
       return [style.height, style.paddingLeft, style.paddingRight, style.columnGap, style.borderTopLeftRadius];
-    }), ['56px', '18px', '12px', '14px', '14px']);
+    })), ['56px', '18px', '12px', '14px', '14px']);
     const code = card.locator('.code');
-    assert.deepEqual(await code.evaluate(element => [element.textContent, getComputedStyle(element).fontSize, getComputedStyle(element).fontWeight, getComputedStyle(element).letterSpacing, getComputedStyle(element).fontFamily]),
-      ['482 913', '22px', '500', '2.64px', (await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mono').trim())).replaceAll('\'', '"')]);
+    assert.deepEqual(await rested(() => code.evaluate(element => [element.textContent, getComputedStyle(element).fontSize, getComputedStyle(element).fontWeight, getComputedStyle(element).letterSpacing, getComputedStyle(element).fontFamily])),
+      ['482 913', '22px', '500', '2.64px', (await rested(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mono').trim()))).replaceAll('\'', '"')]);
     const expiry = card.locator('.expiry');
     assert.match((await expiry.textContent())!, /^Expires in \d+ min$/);
-    assert.deepEqual(await expiry.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize]), [await colourOf(page, '--ink3'), '12.5px']);
+    assert.deepEqual(await rested(() => expiry.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize])), [await rested(() => colourOf(page, '--ink3')), '12.5px']);
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
     await card.getByRole('button', {name: 'Copy'}).click();
     await card.getByRole('button', {name: 'Copied'}).waitFor();
@@ -501,21 +503,21 @@ test('reader-03, -04, -09: each email swaps in from the way the user stepped; a 
     // 14 × 28 grip at the pointer's height; a double-click puts the pane back to 680.
     const pane = (await page.locator('.pane').boundingBox())!;
     const edge = page.locator('.pane-edge');
-    const lineColour = await page.evaluate(() => {
+    const lineColour = await rested(() => page.evaluate(() => {
       const probe = document.body.appendChild(document.createElement('i'));
       probe.style.background = 'color-mix(in srgb, var(--ink) 26%, transparent)';
       const colour = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return colour;
-    });
-    const box = (await edge.boundingBox())!;
+    }));
+    const box = (await rested(() => edge.boundingBox()))!;
     assert.deepEqual([box.x, box.width], [pane.x - 5, 10]);
     await page.mouse.move(pane.x, pane.y + 300);
     const grip = edge.locator('.grip');
     await until('the grip shows', () => grip.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '1');
-    const [hover, line] = await edge.evaluate(element => [getComputedStyle(element.querySelector('.grip')!).transitionDelay, getComputedStyle(element, '::before').transitionDelay]);
+    const [hover, line] = await rested(() => edge.evaluate(element => [getComputedStyle(element.querySelector('.grip')!).transitionDelay, getComputedStyle(element, '::before').transitionDelay]));
     assert.deepEqual([hover, line], ['0.08s', '0.08s']);
-    const held = (await grip.boundingBox())!;
+    const held = (await rested(() => grip.boundingBox()))!;
     assert.deepEqual([held.width, held.height, Math.round(held.y + held.height / 2)], [14, 28, Math.round(pane.y + 300)]);
     assert.ok(Math.abs(held.x + held.width / 2 - (pane.x + 2)) <= 1, 'centred on the line by the border');
     // Its line, once its fade has ended.
@@ -572,12 +574,12 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
     const parts = page.locator('.no-results .part');
     await until('no results', () => parts.count(), count => count >= 2);
     assert.equal(await page.locator('.no-results .ink3').count(), 0);
-    assert.deepEqual(await parts.first().evaluate(part => {
+    assert.deepEqual(await rested(() => parts.first().evaluate(part => {
       const style = getComputedStyle(part);
       return [style.height, style.paddingLeft, style.paddingRight, style.borderTopLeftRadius, style.fontWeight];
-    }), ['22px', '9px', '4px', '999px', '400']);
-    assert.equal(await parts.first().evaluate(part => getComputedStyle(part).backgroundColor), await backgroundOf(page, 'var(--sub2)'));
-    assert.equal(await page.locator('.no-results').evaluate(line => getComputedStyle(line).columnGap), '8px');
+    })), ['22px', '9px', '4px', '999px', '400']);
+    assert.equal(await rested(() => parts.first().evaluate(part => getComputedStyle(part).backgroundColor)), await rested(() => backgroundOf(page, 'var(--sub2)')));
+    assert.equal(await rested(() => page.locator('.no-results').evaluate(line => getComputedStyle(line).columnGap)), '8px');
     const not = parts.filter({has: page.locator('.k')});
     if (await not.count()) assert.equal(await not.locator('.k').textContent(), 'Not');
     const before = await parts.count();
@@ -585,7 +587,7 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
     await until('a chip knocked off', () => parts.count(), count => count === before - 1);
 
     // The answer's key fact: underlined 2 px, 3 px under, in Night's `sun` at 70%.
-    assert.deepEqual(await page.evaluate(() => {
+    assert.deepEqual(await rested(() => page.evaluate(() => {
       const answer = document.querySelector('.content')!.appendChild(document.createElement('p'));
       answer.className = 'ans';
       const fact = answer.appendChild(document.createElement('b'));
@@ -593,7 +595,7 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
       const seen = [style.textDecorationLine, style.textDecorationThickness, style.textUnderlineOffset, style.textDecorationColor, style.fontWeight];
       answer.remove();
       return seen;
-    }), ['underline', '2px', '3px', await colourOf(page, 'color-mix(in oklch, var(--sun) 70%, transparent)'), '500']);
+    })), ['underline', '2px', '3px', await colourOf(page, 'color-mix(in oklch, var(--sun) 70%, transparent)'), '500']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -612,8 +614,8 @@ test('shell-13: ⌘K marks what was typed', async () => {
     await page.keyboard.type('ne');
     const mark = page.locator('.palette .item', {hasText: 'News'}).first().locator('mark');
     await mark.waitFor();
-    assert.deepEqual(await mark.evaluate(element => [element.textContent, getComputedStyle(element).fontWeight, getComputedStyle(element).color, getComputedStyle(element).backgroundColor]),
-      ['Ne', '600', await colourOf(page, '--ink'), 'rgba(0, 0, 0, 0)']);
+    assert.deepEqual(await rested(() => mark.evaluate(element => [element.textContent, getComputedStyle(element).fontWeight, getComputedStyle(element).color, getComputedStyle(element).backgroundColor])),
+      ['Ne', '600', await rested(() => colourOf(page, '--ink')), 'rgba(0, 0, 0, 0)']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

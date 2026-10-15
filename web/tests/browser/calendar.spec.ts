@@ -7,7 +7,7 @@ import {after, test} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
 /** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
@@ -46,10 +46,10 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
-    assert.deepEqual(await dentist.locator('.place').evaluate(line => {
+    assert.deepEqual(await rested(() => dentist.locator('.place').evaluate(line => {
       const icon = line.querySelector('.icon')!;
       return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(line).color, getComputedStyle(line).marginTop, getComputedStyle(line.nextElementSibling!).marginTop, getComputedStyle(line).fontSize];
-    }), [ICONS.location_on, '16', await tokenColour(page, 'ink3'), '4px', '4px', '12.5px']);
+    })), [ICONS.location_on, '16', await rested(() => tokenColour(page, 'ink3')), '4px', '4px', '12.5px']);
     await settle(page);
     assert.equal(await page.title(), 'October 2026 · Calendar');
     await matchGolden(page, '11-calendar-october-2026', 'main');
@@ -107,7 +107,7 @@ for (const size of ['target', 'large'] as SizeName[]) {
       const page = await setpoint.page(size);
       await page.goto(`${setpoint.base}/calendar`);
       await page.locator('.ev').first().waitFor();
-      const box = async (selector: string) => (await page.locator(selector).first().boundingBox())!;
+      const box = async (selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
       assert.equal((await box('.cal-dow')).height, 30);
       const cell = await box('.cell[data-date="2026-10-07"]');
       // 147 at the design target (1677 − 248 − 400 over seven days).
@@ -120,8 +120,8 @@ for (const size of ['target', 'large'] as SizeName[]) {
       assert.deepEqual(scroll, [0, 0]);
       // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.
       const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
-      assert.deepEqual(await look('Gym'), ['1', 'rgb(125, 127, 132)'], 'past: ink3');
-      const [opacity, colour] = await look('Dentist');
+      assert.deepEqual(await rested(() => look('Gym')), ['1', 'rgb(125, 127, 132)'], 'past: ink3');
+      const [opacity, colour] = await rested(() => look('Dentist'));
       assert.equal(opacity, '1');
       assert.notEqual(colour, 'rgb(125, 127, 132)', 'ahead: its calendar\'s colour');
       assert.equal(await page.locator('.cell.sel').getAttribute('data-date'), '2026-10-07');
@@ -304,9 +304,9 @@ test('SV-56: a day outside the month takes the outside tint, a weekend among the
     // Sun Sep 27 and Sat Nov 7 are both outside October and weekends.
     assert.match((await cell('2026-09-27').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
     assert.match((await cell('2026-11-07').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
-    assert.equal(await fill('2026-09-27'), await fill('2026-09-28'), 'Sun Sep 27 as Mon Sep 28');
-    assert.equal(await fill('2026-11-07'), await fill('2026-11-02'), 'Sat Nov 7 as Mon Nov 2');
-    assert.notEqual(await fill('2026-10-04'), await fill('2026-09-27'), 'Sun Oct 4 takes the weekend tint');
+    assert.equal(await rested(() => fill('2026-09-27')), await rested(() => fill('2026-09-28')), 'Sun Sep 27 as Mon Sep 28');
+    assert.equal(await rested(() => fill('2026-11-07')), await rested(() => fill('2026-11-02')), 'Sat Nov 7 as Mon Nov 2');
+    assert.notEqual(await rested(() => fill('2026-10-04')), await rested(() => fill('2026-09-27')), 'Sun Oct 4 takes the weekend tint');
     // Selected, Sun Sep 27 is `sub` like any selected day.
     await cell('2026-09-27').click({position: {x: 100, y: 150}});
     await until('Sun Sep 27 selected', () => cell('2026-09-27').getAttribute('class'), cls => !!cls?.split(' ').includes('sel'));
@@ -334,10 +334,10 @@ test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and t
     const fact = page.locator('.fd .fact.leave');
     await fact.waitFor();
     const colours = async () => [
-      await leave.evaluate(element => getComputedStyle(element).color),
-      await leave.locator('.icon').evaluate(element => getComputedStyle(element).color),
-      await fact.locator('.icon').evaluate(element => getComputedStyle(element).color),
-      await fact.locator('.v').evaluate(element => getComputedStyle(element).color),
+      await rested(() => leave.evaluate(element => getComputedStyle(element).color)),
+      await rested(() => leave.locator('.icon').evaluate(element => getComputedStyle(element).color)),
+      await rested(() => fact.locator('.icon').evaluate(element => getComputedStyle(element).color)),
+      await rested(() => fact.locator('.v').evaluate(element => getComputedStyle(element).color)),
     ];
     // 9:12 AM: the line is ink2, the card's fact its usual ink3 glyph and ink time.
     const [ink, ink2, ink3, caution] = [await tokenColour(page, 'ink'), await tokenColour(page, 'ink2'), await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
@@ -380,10 +380,10 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     for (const name of names.slice(1)) await page.locator('.calrow', {hasText: name}).click();
     await until('the pane says what\'s hidden', () => empty.textContent(), line => line === '4 hidden · Show all');
     assert.equal(await empty.locator('.icon').count(), 1, 'with the visibility_off glyph');
-    assert.deepEqual(await leadGlyph(empty), [ICONS.visibility_off, '16', await tokenColour(page, 'ink3'), 8]);
+    assert.deepEqual(await rested(() => leadGlyph(empty)), [ICONS.visibility_off, '16', await rested(() => tokenColour(page, 'ink3')), 8]);
     await hiddenMark.waitFor();
     assert.equal(await hiddenMark.locator('.icon').getAttribute('width'), '16');
-    assert.equal(await hiddenMark.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'ink3'));
+    assert.equal(await rested(() => hiddenMark.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'ink3')));
     assert.equal(await page.locator('.hd-title').textContent(), 'October 2026');
     // The grid stays quiet: Wed Oct 7's cell has nothing in it.
     assert.deepEqual(await chips(page, '2026-10-07'), []);

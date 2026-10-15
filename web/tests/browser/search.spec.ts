@@ -12,7 +12,7 @@ import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from 
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred} from './fakeAlfred.ts';
-import {cleanUp, startSetpoint, until, writeOutput} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -106,15 +106,15 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await page.keyboard.type('zebra');
     await page.locator('.no-results', {hasText: 'No emails match'}).waitFor();
     assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwindRejectionzebra');
-    const ink3 = await page.evaluate(() => {
+    const ink3 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'var(--ink3)';
       document.body.append(probe);
       const colour = getComputedStyle(probe).color;
       probe.remove();
       return colour;
-    });
-    assert.deepEqual(await leadGlyph(page.locator('.no-results')), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#124)');
+    }));
+    assert.deepEqual(await rested(() => leadGlyph(page.locator('.no-results'))), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#124)');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await page.locator('.arow.result').first().waitFor();
     // Typing over the selected query replaces it, chips and words; ⌘F selects the words again.
@@ -313,7 +313,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
     // Alfred's sources: the same, the account clear of the age, and each column's ends aligned.
     await page.keyboard.press('Meta+Enter');
     await page.locator('.answer .src').first().waitFor();
-    const sources = await rowEnds(page, '.answer .src', '.ac');
+    const sources = await rested(() => rowEnds(page, '.answer .src', '.ac'));
     assert.ok(sources.length >= 3, `${sources.length} sources`);
     assert.ok(sources.some(row => row.age === 'Dec 20, 2025'), JSON.stringify(sources));
     for (const row of sources) {
@@ -352,10 +352,10 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     const trail = page.locator('.answer .trail .done-step');
     assert.deepEqual(await trail.allTextContents(), ['Searched “the”']);
     assert.deepEqual(await trail.locator('.icon').evaluateAll(icons => icons.map(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width')])), [[ICONS.search, '14']]);
-    assert.equal(await trail.first().evaluate(row => row.getBoundingClientRect().height), 20);
-    assert.deepEqual(await waiting.locator('.now').evaluate(now => [getComputedStyle(now).animationName, getComputedStyle(now).animationDuration, getComputedStyle(now).backgroundClip]), ['alfred-shimmer', '1.6s', 'text']);
+    assert.equal(await rested(() => trail.first().evaluate(row => row.getBoundingClientRect().height)), 20);
+    assert.deepEqual(await rested(() => waiting.locator('.now').evaluate(now => [getComputedStyle(now).animationName, getComputedStyle(now).animationDuration, getComputedStyle(now).backgroundClip])), ['alfred-shimmer', '1.6s', 'text']);
     assert.equal(await page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), 2);
-    assert.deepEqual(await page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection]), ['twinkle', '1.2s', 'alternate']);
+    assert.deepEqual(await rested(() => page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection])), ['twinkle', '1.2s', 'alternate']);
     await page.locator('.answer .ans').waitFor({timeout: 10_000});
     // The answer fades up where its place was held; the trail folds away.
     assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'turn-in');
@@ -434,7 +434,7 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
     const field = page.locator('.pane .answer .field');
     await field.locator('input').waitFor();
     const opacity = () => field.evaluate(element => getComputedStyle(element).opacity);
-    assert.equal(await opacity(), '1');
+    assert.equal(await rested(() => opacity()), '1');
     let asks = 0;
     page.on('request', request => {
       if (request.url().endsWith('/api/alfred/ask')) asks += 1;
@@ -468,7 +468,7 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
     await place.waitFor();
     // The field keeps its column's width, as Title's.
     const width = (field: typeof place) => field.locator('xpath=..').evaluate(label => Math.round(label.getBoundingClientRect().width));
-    assert.equal(await width(place), await width(card.locator('input[aria-label="Title"]')));
+    assert.equal(await rested(() => width(place)), await rested(() => width(card.locator('input[aria-label="Title"]'))));
     // Its own place from the email offers nothing; emptied, the recent places show.
     await place.focus();
     const places = card.getByRole('listbox', {name: 'Places'});
@@ -700,7 +700,7 @@ test('calendar search: a result\'s line stays on one line, cut with an ellipsis 
     await gym.waitFor();
     const line = gym.locator('.line');
     assert.equal(await line.getAttribute('title'), await line.textContent());
-    assert.ok((await line.boundingBox())!.height <= 20, 'one line');
+    assert.ok((await rested(() => line.boundingBox()))!.height <= 20, 'one line');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

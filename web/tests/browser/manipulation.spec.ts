@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
@@ -42,8 +42,8 @@ async function openCalendar(page: Page, base: string) {
 
 /** Presses a chip and carries it to another day's cell, `held` true to stop before letting go. */
 async function drag(page: Page, from: Locator, to: string, {held = false} = {}) {
-  const box = (await from.boundingBox())!;
-  const target = (await page.locator(`.cell[data-date="${to}"]`).boundingBox())!;
+  const box = (await rested(() => from.boundingBox()))!;
+  const target = (await rested(() => page.locator(`.cell[data-date="${to}"]`).boundingBox()))!;
   await page.mouse.move(box.x + 20, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + 40, box.y + box.height / 2 + 10, {steps: 3});
@@ -78,8 +78,8 @@ test('boards 15 and 15b: Gym dragged from Wednesday to Thursday, then the drop a
     await page.locator('.ag-item', {hasText: 'Moving to Thu, Oct 8'}).waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .ev.ghost.faded', {hasText: 'Gym'}).waitFor();
     assert.equal(await prompt.getAttribute('data-side'), 'left');
-    const dropped = (await page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox())!;
-    const box = (await prompt.boundingBox())!;
+    const dropped = (await rested(() => page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox()))!;
+    const box = (await rested(() => prompt.boundingBox()))!;
     assert.equal(Math.round(dropped.x - (box.x + box.width)), GAP);
     await page.mouse.move(700, 28);
     // Lets a hover fill the move left fade out (120 ms) before the screenshot.
@@ -144,6 +144,7 @@ test('an event and a task move at once, waiting at .5 with a spinner until the p
     const moved = chip(page, '2026-10-08', 'Dentist');
     // The spinner shows only after a second (DESIGN.md #54), and the dev provider confirms sooner.
     await page.locator('.cell[data-date="2026-10-08"] .ev.pending .spin').waitFor({state: 'attached'});
+    // Read while it's pending: the dev provider confirms within the moment a rest would wait.
     assert.equal(await moved.evaluate(element => getComputedStyle(element).opacity), '0.5');
     await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
@@ -182,8 +183,8 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     assert.equal(await card.getAttribute('data-side'), 'below');
     // The card's × is 16 px in a 26 px button, as every card's (#123).
     assert.deepEqual(await card.getByRole('button', {name: 'Close'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
-    const failed = (await chip(page, '2026-10-10', 'Dinner with Sam').boundingBox())!;
-    assert.equal(Math.round((await card.boundingBox())!.y - (failed.y + failed.height)), GAP);
+    const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
+    assert.equal(Math.round((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)), GAP);
     await page.mouse.move(700, 28);
     // Lets a hover fill the move left fade out (120 ms) before the screenshot.
     await page.waitForTimeout(200);
@@ -554,7 +555,7 @@ test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top 
     const page = await setpoint.page('target');
     await openCalendar(page, setpoint.base);
     const scroller = page.locator('.cal-scroll');
-    const grid = (await scroller.boundingBox())!;
+    const grid = (await rested(() => scroller.boundingBox()))!;
     const scrollTop = () => scroller.evaluate(element => element.scrollTop);
     // Off the edge, a tick already under way can still land: at rest once two frames don't move it.
     const atRest = () => until('the grid at rest', () => scroller.evaluate(element => new Promise<boolean>(done => {
@@ -562,7 +563,7 @@ test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top 
       requestAnimationFrame(() => requestAnimationFrame(() => done(element.scrollTop === top)));
     })), still => still);
     const start = await scrollTop();
-    const dentist = (await chip(page, '2026-10-07', 'Dentist').boundingBox())!;
+    const dentist = (await rested(() => chip(page, '2026-10-07', 'Dentist').boundingBox()))!;
     await page.mouse.move(dentist.x + 20, dentist.y + dentist.height / 2);
     await page.mouse.down();
     await page.mouse.move(dentist.x + 60, dentist.y + 40, {steps: 3});
@@ -599,7 +600,7 @@ test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top 
       return found;
     }, found => found !== null))!;
     await atRest();
-    const box = (await page.locator(`.cell[data-date="${date}"]`).boundingBox())!;
+    const box = (await rested(() => page.locator(`.cell[data-date="${date}"]`).boundingBox()))!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 3});
     await page.locator('.drag-tip', {hasText: new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})}).waitFor();
     await page.mouse.up();
@@ -645,22 +646,22 @@ test('under the 1.25 wide-screen zoom: the drag\'s tooltip, the drop prompt and 
     // The failed card: below its chip, 8 CSS px off it.
     const card = page.locator('.failed-card');
     await card.waitFor();
-    const failed = (await chip(page, '2026-10-10', 'Dinner with Sam').boundingBox())!;
-    assert.ok(Math.abs((await card.boundingBox())!.y - (failed.y + failed.height) - zoomGap) <= 1.5, 'the failed card is 8 px under its chip');
+    const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
+    assert.ok(Math.abs((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height) - zoomGap) <= 1.5, 'the failed card is 8 px under its chip');
     await card.getByRole('button', {name: 'Close'}).click();
 
     // The drag: the tooltip 18, 30 off the lifted chip, which keeps the press's place under the pointer.
     await drag(page, chip(page, '2026-10-07', 'Gym'), '2026-10-08', {held: true});
-    const lifted = (await page.locator('.ev.lift').boundingBox())!;
-    const tip = (await page.locator('.drag-tip').boundingBox())!;
+    const lifted = (await rested(() => page.locator('.ev.lift').boundingBox()))!;
+    const tip = (await rested(() => page.locator('.drag-tip').boundingBox()))!;
     // The lift's tilt and scale grow its box a little around its centre.
     assert.ok(Math.abs(tip.y - lifted.y - 30 * 1.25) < 6, `the tooltip sits under the chip: ${tip.y - lifted.y}`);
     await page.mouse.up();
     // The prompt: right of the dropped chip, 8 CSS px off it.
     const prompt = page.locator('.scope-card');
     await prompt.waitFor();
-    const dropped = (await page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox())!;
-    const box = (await prompt.boundingBox())!;
+    const dropped = (await rested(() => page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox()))!;
+    const box = (await rested(() => prompt.boundingBox()))!;
     assert.ok(Math.abs(box.x - (dropped.x + dropped.width) - zoomGap) <= 1.5, `the prompt is 8 px right of the chip: ${box.x - (dropped.x + dropped.width)}`);
     assert.ok(Math.abs(box.y + box.height / 2 - (dropped.y + dropped.height / 2)) <= 1.5, 'centred on it');
     assert.deepEqual(setpoint.pageErrors, []);

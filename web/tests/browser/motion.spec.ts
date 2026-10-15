@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -44,7 +44,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.locator('.list .row[title^="Interview availability"]').click();
     const tools = page.locator('.pane > .rd-tools');
     await tools.waitFor();
-    assert.deepEqual(await entrance(tools), ['pane-in', '0.18s']);
+    assert.deepEqual(await rested(() => entrance(tools)), ['pane-in', '0.18s']);
     await tools.evaluate(element => element.setAttribute('data-first', ''));
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('j');
@@ -56,7 +56,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.getByRole('button', {name: 'More'}).click();
     const more = page.getByRole('menu');
     await more.waitFor();
-    assert.deepEqual([await entrance(more), await origin(more)], [['pop-in', '0.18s'], [1, 0]]);
+    assert.deepEqual([await rested(() => entrance(more)), await rested(() => origin(more))], [['pop-in', '0.18s'], [1, 0]]);
     await page.keyboard.press('Escape');
 
     // A proposal slides into place; Cancel folds it away (a copy that takes nothing, gone in 180 ms).
@@ -64,7 +64,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.locator('.rd-acts .btn', {hasText: 'Add to calendar'}).click();
     const proposal = page.getByRole('form', {name: 'Proposal: add to calendar'});
     await proposal.waitFor();
-    assert.deepEqual(await entrance(proposal), ['card-in', '0.18s']);
+    assert.deepEqual(await rested(() => entrance(proposal)), ['card-in', '0.18s']);
     await proposal.getByRole('button', {name: 'Cancel'}).click();
     const folding = page.locator('.prop[aria-hidden="true"]');
     assert.equal(await proposal.count(), 0, 'the card itself goes at once');
@@ -74,7 +74,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.keyboard.press('Meta+k');
     const palette = page.locator('.palette');
     await palette.waitFor();
-    assert.deepEqual([await entrance(palette), await entrance(page.locator('.palette-scrim'))], [['pal-in', '0.18s'], ['scrim-in', '0.18s']]);
+    assert.deepEqual([await rested(() => entrance(palette)), await rested(() => entrance(page.locator('.palette-scrim')))], [['pal-in', '0.18s'], ['scrim-in', '0.18s']]);
     const paletteClass = await watch(palette, 'class');
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => document.activeElement?.closest('.palette') ?? null), null, 'focus is back on the page at once');
@@ -86,11 +86,11 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.keyboard.press('Meta+,');
     const settings = page.locator('.settings');
     await settings.waitFor();
-    assert.deepEqual([await entrance(settings), await entrance(page.locator('.settings-scrim'))], [['set-in', '0.26s'], ['scrim-in', '0.26s']]);
+    assert.deepEqual([await rested(() => entrance(settings)), await rested(() => entrance(page.locator('.settings-scrim')))], [['set-in', '0.26s'], ['scrim-in', '0.26s']]);
     await settings.getByRole('button', {name: 'Business options'}).click();
     const options = settings.getByRole('menu', {name: 'Business options'});
     await options.waitFor();
-    assert.deepEqual([await entrance(options), await origin(options)], [['pop-in', '0.18s'], [1, 0]]);
+    assert.deepEqual([await rested(() => entrance(options)), await rested(() => origin(options))], [['pop-in', '0.18s'], [1, 0]]);
     await page.keyboard.press('Escape');
     await options.waitFor({state: 'detached'});
     await settings.getByRole('button', {name: 'Mail', exact: true}).click();
@@ -108,13 +108,13 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await plus.click();
     const popover = page.getByRole('dialog', {name: 'Sat, Oct 17'});
     await popover.waitFor();
-    assert.equal((await entrance(popover))[1], '0.18s');
-    const [from, box, anchor] = await Promise.all([
+    assert.equal((await rested(() => entrance(popover)))[1], '0.18s');
+    const [from, box, anchor] = await rested(() => Promise.all([
       popover.evaluate(element => getComputedStyle(element).transformOrigin.split(' ').map(parseFloat)),
       popover.evaluate(element => ({left: (element as HTMLElement).offsetLeft, top: (element as HTMLElement).offsetTop})),
       plus.evaluate(element => element.getBoundingClientRect()),
-    ]);
-    const section = await page.locator('.cal-month').evaluate(element => element.getBoundingClientRect());
+    ]));
+    const section = await rested(() => page.locator('.cal-month').evaluate(element => element.getBoundingClientRect()));
     assert.equal(Math.round(box.left + from[0]!), Math.round(anchor.left - section.left + anchor.width / 2), 'it grows from the "+3" across');
     assert.ok(box.top + from[1]! <= anchor.bottom - section.top + 8, 'and from its foot down');
     const popoverClass = await watch(popover, 'class');
@@ -126,7 +126,7 @@ test('menus and popovers grow in from their anchor over 180 ms; ⌘K, Settings a
     await page.keyboard.press('c');
     const editor = page.locator('.editor');
     await editor.waitFor();
-    assert.deepEqual(await entrance(editor), ['pane-in', '0.18s']);
+    assert.deepEqual(await rested(() => entrance(editor)), ['pane-in', '0.18s']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -161,8 +161,8 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
     await page.mouse.move(700, 28);
     // The button's 120 ms fill runs its course with the pointer gone.
     await page.waitForTimeout(200);
-    assert.equal(await style(moreButton, 'background-color'), await colour(page, '--sub2'), 'More stays lit');
-    assert.deepEqual(await menuShape(page, more, more.getByRole('menuitem').first()), shape);
+    assert.equal(await rested(() => style(moreButton, 'background-color')), await rested(() => colour(page, '--sub2')), 'More stays lit');
+    assert.deepEqual(await rested(() => menuShape(page, more, more.getByRole('menuitem').first())), shape);
     await page.keyboard.press('Escape');
 
     // ⌘K's items take the same height, padding and fill.
@@ -174,7 +174,7 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
     await until('the pointer takes the cursor', () => second.getAttribute('class'), classes => classes === 'item cur');
     // The 120 ms fill runs its course.
     await page.waitForTimeout(200);
-    assert.deepEqual([await style(second, 'height'), await style(second, 'padding-left'), await style(second, 'background-color') === await colour(page, '--sub2')], ['32px', '10px', true]);
+    assert.deepEqual([await rested(() => style(second, 'height')), await rested(() => style(second, 'padding-left')), await rested(() => style(second, 'background-color')) === await rested(() => colour(page, '--sub2'))], ['32px', '10px', true]);
     await page.keyboard.press('Escape');
     await palette.waitFor({state: 'detached'});
 
@@ -186,11 +186,11 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
     await options.click();
     const menu = settings.getByRole('menu', {name: 'Business options'});
     await menu.waitFor();
-    assert.deepEqual(await menuShape(page, menu, menu.getByRole('menuitem').first()), shape);
+    assert.deepEqual(await rested(() => menuShape(page, menu, menu.getByRole('menuitem').first())), shape);
     await page.mouse.move(700, 28);
     // The button's 120 ms fill runs its course with the pointer gone.
     await page.waitForTimeout(200);
-    assert.equal(await style(options, 'background-color'), await colour(page, '--sub2'), 'the row\'s … stays lit');
+    assert.equal(await rested(() => style(options, 'background-color')), await rested(() => colour(page, '--sub2')), 'the row\'s … stays lit');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
     await settings.waitFor({state: 'detached'});
@@ -202,7 +202,7 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
     await page.getByRole('button', {name: 'Add reminder', exact: true}).click();
     const reminders = page.locator('.editor .menu');
     await reminders.waitFor();
-    assert.deepEqual(await menuShape(page, reminders, reminders.locator('.menu-i').nth(1)), shape);
+    assert.deepEqual(await rested(() => menuShape(page, reminders, reminders.locator('.menu-i').nth(1))), shape);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -221,13 +221,13 @@ test('the toast drops in over 180 ms and again when a new one replaces it, leads
     await page.keyboard.press('h');
     const toast = page.locator('.toast');
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
-    assert.deepEqual([await style(toast, 'animation-name'), await style(toast, 'animation-duration')], ['toast-in', '0.18s']);
+    assert.deepEqual([await rested(() => style(toast, 'animation-name')), await rested(() => style(toast, 'animation-duration'))], ['toast-in', '0.18s']);
     assert.equal(await toast.locator('.tone').count(), 1);
-    assert.equal(await style(toast.locator('.tone'), 'color'), await colour(page, '--good'));
+    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--good')));
     assert.equal(await toast.locator('.tone svg').getAttribute('width'), '16');
     // Its Undo's six seconds drain as a 2 px hairline, `ink3` at 45%.
     assert.deepEqual([await style(toast, 'height', '::after'), await style(toast, 'animation-duration', '::after'), await style(toast, 'animation-timing-function', '::after')], ['2px', '6s', 'linear']);
-    assert.equal(await style(toast, 'background-color', '::after'), await colour(page, 'color-mix(in oklch, var(--ink3) 45%, transparent)'));
+    assert.equal(await rested(() => style(toast, 'background-color', '::after')), await rested(() => colour(page, 'color-mix(in oklch, var(--ink3) 45%, transparent)')));
 
     // E on the next email replaces it with "Moved to Trash · Undo": a new toast, dropping in afresh,
     // led by `delete` in `ink3`.
@@ -237,12 +237,12 @@ test('the toast drops in over 180 ms and again when a new one replaces it, leads
     await page.keyboard.press('e');
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
     assert.equal(await page.locator('.toast[data-first]').count(), 0, 'the replacing toast is a new one, so it drops in again');
-    assert.equal(await style(toast.locator('.tone'), 'color'), await colour(page, '--ink3'));
+    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--ink3')));
 
     // Under the pointer it waits, its hairline held, past its six seconds.
     await toast.hover();
     await until('held', () => toast.getAttribute('class'), classes => classes?.split(' ').includes('held') ?? false);
-    assert.equal(await style(toast, 'animation-play-state', '::after'), 'paused');
+    assert.equal(await rested(() => style(toast, 'animation-play-state', '::after')), 'paused');
     // Nothing happens to wait for: the toast stays while held, past the 6 seconds it has.
     await page.waitForTimeout(6500);
     await setpoint.idle();
@@ -276,12 +276,12 @@ test('a failure\'s toast leads with `error` in `alert`, wears an `alert` ring an
     await page.keyboard.press('p');
     const toast = page.locator('.toast.failed', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'});
     await toast.waitFor();
-    assert.equal(await style(toast.locator('.tone'), 'color'), await colour(page, '--alert'));
-    assert.match(await style(toast, 'box-shadow'), new RegExp(`^${(await colour(page, 'color-mix(in oklch, var(--alert) 40%, transparent)')).replace(/[()]/g, '\\$&')} 0px 0px 0px 1px inset`));
-    assert.equal(await style(toast, 'background-color'), await colour(page, 'color-mix(in oklch, var(--alert) 8%, var(--cardOn))'));
+    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--alert')));
+    assert.match(await rested(() => style(toast, 'box-shadow')), new RegExp(`^${(await rested(() => colour(page, 'color-mix(in oklch, var(--alert) 40%, transparent)'))).replace(/[()]/g, '\\$&')} 0px 0px 0px 1px inset`));
+    assert.equal(await rested(() => style(toast, 'background-color')), await rested(() => colour(page, 'color-mix(in oklch, var(--alert) 8%, var(--cardOn))')));
     // Its words stay `ink`; it stays 8 seconds, so the provider's words can be read.
     assert.equal(await style(toast.locator('span:not(.tone)'), 'color'), await colour(page, '--ink'));
-    assert.equal(await style(toast, '--toast-ms'), '8000ms');
+    assert.equal(await rested(() => style(toast, '--toast-ms')), '8000ms');
     // A line with no action has no hairline.
     assert.equal(await style(toast, 'content', '::after'), 'none');
     assert.deepEqual(setpoint.pageErrors, []);

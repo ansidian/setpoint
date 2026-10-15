@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -77,8 +77,8 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await unsorted.textContent(), '12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retryingShow headlines');
     // At the top of the list, above the Missed strip: 32 px, `caution` 12.5.
     assert.deepEqual(await page.locator('.nw-list > *').evaluateAll(all => all.slice(0, 2).map(element => element.className)), ['nw-state failing', 'nw-missed']);
-    assert.deepEqual(await unsorted.evaluate(line => [line.getBoundingClientRect().height, getComputedStyle(line).fontSize]), [32, '12.5px']);
-    assert.equal(await unsorted.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--caution)'));
+    assert.deepEqual(await rested(() => unsorted.evaluate(line => [line.getBoundingClientRect().height, getComputedStyle(line).fontSize])), [32, '12.5px']);
+    assert.equal(await rested(() => unsorted.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--caution)')));
     assert.equal(await unsorted.locator('.btn').getAttribute('class'), 'btn ghost sm');
     // News's AI down is a source struggling: the `warning` triangle in `caution` (states-04).
     assert.deepEqual(await toneGlyph(unsorted), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
@@ -87,7 +87,7 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     const aiLine = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await aiLine.textContent(), 'AI, as of 7:02 AM');
     assert.equal(await aiLine.getAttribute('class'), 'nw-line stale');
-    assert.equal(await aiLine.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--ink3)'));
+    assert.equal(await rested(() => aiLine.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--ink3)')));
     // Stale is `history` in `ink3`, as on every page (states-04).
     assert.deepEqual(await toneGlyph(aiLine), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
     await row(page, 'Anthropic releases Claude Haiku 5.5').waitFor();
@@ -96,9 +96,9 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     // Tech: one 44 px line in `ink3`, no rows, no Upcoming, no "N more".
     const tech = page.locator('.nw-sec', {hasText: 'Tech'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await tech.textContent(), 'Nothing new in Tech since Mon');
-    assert.deepEqual(await tech.evaluate(line => [line.className, line.getBoundingClientRect().height]), ['nw-empty', 44]);
-    assert.equal(await tech.evaluate(line => getComputedStyle(line).color), await colourOf(page, 'var(--ink3)'));
-    assert.deepEqual(await leadGlyph(tech), [ICONS.newspaper, '16', await colourOf(page, 'var(--ink3)'), 8], 'it leads with newspaper (#124)');
+    assert.deepEqual(await rested(() => tech.evaluate(line => [line.className, line.getBoundingClientRect().height])), ['nw-empty', 44]);
+    assert.equal(await rested(() => tech.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--ink3)')));
+    assert.deepEqual(await rested(() => leadGlyph(tech)), [ICONS.newspaper, '16', await rested(() => colourOf(page, 'var(--ink3)')), 8], 'it leads with newspaper (#124)');
     assert.equal(await page.locator('.nw-up').count(), 0);
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '4 more in AI', '9 more in General']);
     await settle(page);
@@ -112,7 +112,7 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await raw.first().textContent(), 'Crews contain a brush fire near the 210 at 40%Local·KTLA·3m');
     assert.equal(await raw.first().getAttribute('href'), 'https://ktla.example/news/crews-contain-a-brush-fire-near-the-210-at-40');
     assert.equal(await raw.first().getAttribute('target'), '_blank');
-    assert.equal(await raw.first().evaluate(link => link.getBoundingClientRect().height), 36);
+    assert.equal(await rested(() => raw.first().evaluate(link => link.getBoundingClientRect().height)), 36);
     await settle(page);
     await matchGolden(page, 'news-show-headlines', 'news');
     await unsorted.getByRole('button', {name: 'Hide headlines'}).click();
@@ -154,13 +154,13 @@ test('board 29b: the first run, sorting the last 48 hours; no Missed strip; noth
     await line.waitFor();
     await row(page, 'Brush fire near the 210').waitFor();
     assert.equal(await line.textContent(), 'Sorting the last 48 hours · 186 of 312 articles · showing what’s sorted so far');
-    assert.deepEqual(await line.evaluate(bar => [bar.getBoundingClientRect().height, getComputedStyle(bar).color]), [32, await colourOf(page, 'var(--ink3)')]);
+    assert.deepEqual(await rested(() => line.evaluate(bar => [bar.getBoundingClientRect().height, getComputedStyle(bar).color])), [32, await rested(() => colourOf(page, 'var(--ink3)'))]);
     // The spinner turns once every 900 ms wherever it shows (DESIGN.md #54), and sits where the board draws it.
     // Its place is the wrapper's, which stays still while the icon inside turns.
-    assert.deepEqual(await line.locator('.spin').evaluate(spin => {
+    assert.deepEqual(await rested(() => line.locator('.spin').evaluate(spin => {
       const style = getComputedStyle(spin.querySelector('.icon')!);
       return [style.animationName, style.animationDuration, style.animationIterationCount, Math.round(spin.getBoundingClientRect().left - spin.closest('.nw-state')!.getBoundingClientRect().left)];
-    }), ['spin', '0.9s', 'infinite', 24]);
+    })), ['spin', '0.9s', 'infinite', 24]);
     assert.equal(await page.locator('.nw-missed').count(), 0, 'no Missed strip');
     assert.equal(await page.locator('.nw-state.failing').count(), 0, 'articles waiting while sorting runs are no Unsorted line');
     const ai = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
@@ -170,7 +170,7 @@ test('board 29b: the first run, sorting the last 48 hours; no Missed strip; noth
     // The first run's progress along its line's foot: 186 of 312 in ink3 on a sub2 track.
     const foot = await line.evaluate(element => [element.getBoundingClientRect().width, parseFloat(getComputedStyle(element, '::after').width), getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::before').height]);
     assert.ok(Math.abs((foot[1] as number) - (foot[0] as number) * 186 / 312) < 1, `186 of 312 (${foot[1]} of ${foot[0]})`);
-    assert.deepEqual(foot.slice(2), [await colourOf(page, 'var(--ink3)'), '2px']);
+    assert.deepEqual(foot.slice(2), [await rested(() => colourOf(page, 'var(--ink3)')), '2px']);
     assert.equal(await page.locator('.nw-list [data-story]:not(.new)').count(), 0, 'everything starts new');
     await settle(page);
     await matchGolden(page, '29b-states-first-run', 'news');
@@ -195,7 +195,7 @@ test('offline on News: the pill, the page dimmed but readable, J still moving th
     assert.equal(await pill.textContent(), 'Offline, as of 9:12 AM, retryingRetry now');
     const content = page.locator('.main.offline > .content');
     await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
-    assert.equal(await content.evaluate(element => getComputedStyle(element).pointerEvents), 'auto');
+    assert.equal(await rested(() => content.evaluate(element => getComputedStyle(element).pointerEvents)), 'auto');
     await page.mouse.move(700, 28);
     // Reading goes on offline: J moves the cursor.
     await page.keyboard.press('j');

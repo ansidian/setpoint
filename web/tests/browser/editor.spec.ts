@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -399,13 +399,13 @@ test('SV-29: an event\'s days in one sheet: a first click, then a last, the band
     await until('the band runs back to the 13th', band, days => days.join() === '13,14,15,16');
     // The band is `cool` (#104): 28% between, 50% at an end, 60% at the end under the pointer.
     // Each is compared with `cool` mixed in this page, once the fill's fade has ended.
-    const expected = await page.evaluate(() => [60, 28, 28, 50].map(percent => {
+    const expected = await rested(() => page.evaluate(() => [60, 28, 28, 50].map(percent => {
       const probe = document.body.appendChild(document.createElement('i'));
       probe.style.background = `color-mix(in oklch, var(--cool) ${percent}%, transparent)`;
       const fill = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return fill;
-    }));
+    })));
     const fills = () => page.locator('.datepop .mini .in').evaluateAll(days => days.map(day => getComputedStyle(day).backgroundColor));
     await until('the band is cool', fills, now => now.join() === expected.join());
     await page.locator('.datepop').getByRole('button', {name: '2026-10-13'}).click();
@@ -415,7 +415,7 @@ test('SV-29: an event\'s days in one sheet: a first click, then a last, the band
     await page.getByLabel('End', {exact: true}).click();
     const ends = page.getByRole('listbox', {name: 'End times'});
     assert.equal(await ends.getByRole('option').first().textContent(), '12:00 AM');
-    const box = (await ends.boundingBox())!;
+    const box = (await rested(() => ends.boundingBox()))!;
     assert.ok(box.x + box.width <= (page.viewportSize()!.width), `the End list ends at ${box.x + box.width}`);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('.conflict').count(), 0, 'no one-day timeline for days');
@@ -519,7 +519,7 @@ test('SV-72: a new task\'s ghost takes its default project\'s colour before one 
     await ring.waitFor();
     // The same ring as Renew car registration's, a task already in Home.
     const ringColour = (locator: typeof ring) => locator.evaluate(element => getComputedStyle(element).borderTopColor);
-    const home = await ringColour(page.locator('.cell[data-date="2026-10-08"] .tk:not(.ghost)', {hasText: 'Renew car registration'}).locator('.ring'));
+    const home = await rested(() => ringColour(page.locator('.cell[data-date="2026-10-08"] .tk:not(.ghost)', {hasText: 'Renew car registration'}).locator('.ring')));
     // The ghost knows the default project once Settings and the projects have answered.
     await until('the ghost takes Home\'s colour', () => ringColour(ring), colour => colour === home);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -543,15 +543,15 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     await page.locator('.nl .tok-j', {hasText: '#hom'}).waitFor();
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
     // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#175).
-    const orange = await page.evaluate(() => {
+    const orange = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'oklch(from #c77100 clamp(var(--ringMin), l, var(--ringMax)) c h)';
       document.body.append(probe);
       const computed = getComputedStyle(probe).color;
       probe.remove();
       return computed;
-    });
-    assert.equal(await menu.getByRole('option', {name: 'Home'}).locator('.dot').evaluate(dot => getComputedStyle(dot).backgroundColor), orange);
+    }));
+    assert.equal(await rested(() => menu.getByRole('option', {name: 'Home'}).locator('.dot').evaluate(dot => getComputedStyle(dot).backgroundColor)), orange);
     await page.keyboard.press('Enter');
     await menu.waitFor({state: 'detached'});
     // The line reads the project's name, then a space (SV-29).
@@ -610,7 +610,7 @@ test('SV-56: "#ho" puts Home first in Project\'s menu, as the line reads it; Ent
     assert.equal(await page.getByLabel('Project', {exact: true}).inputValue(), 'Home');
     // Home's orange, as its dot in the Project field and menu (TODOIST_COLOURS.orange).
     await mark.filter({hasText: '#Home'}).waitFor();
-    assert.equal(await markColour(), '#c77100');
+    assert.equal(await rested(() => markColour()), '#c77100');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -631,7 +631,7 @@ test('SV-56: a line longer than the field shows its typed end and marks, faded w
     await place.waitFor();
     // The caret is at the end, and so is what shows: the place's mark is inside the field.
     const inView = async (mark: typeof place) => {
-      const [field, box] = [(await marks.boundingBox())!, (await mark.boundingBox())!];
+      const [field, box] = [(await rested(() => marks.boundingBox()))!, (await rested(() => mark.boundingBox()))!];
       // A mark draws 2 px either side of its text, and the caret takes a pixel past it.
       return box.x + 2 >= field.x && box.x + box.width - 2 <= field.x + field.width + 2;
     };
@@ -639,7 +639,7 @@ test('SV-56: a line longer than the field shows its typed end and marks, faded w
     const scrolled = await line.evaluate(input => (input as HTMLInputElement).scrollLeft);
     assert.ok(scrolled > 0, `the input scrolled ${scrolled} px`);
     const shift = () => marks.locator('.nl-text').evaluate(element => new DOMMatrix(getComputedStyle(element).transform).m41);
-    assert.equal(await shift(), -scrolled, 'the marks moved with the text');
+    assert.equal(await rested(() => shift()), -scrolled, 'the marks moved with the text');
     const clipped = () => marks.evaluate(element => [element.hasAttribute('data-clip-left'), element.hasAttribute('data-clip-right')]);
     assert.deepEqual(await clipped(), [true, false]);
     // The cut side fades over 14 px.
@@ -647,15 +647,15 @@ test('SV-56: a line longer than the field shows its typed end and marks, faded w
     // Home: the start shows again, the end is cut and fades.
     await page.keyboard.press('Home');
     await until('back at the start', clipped, clip => !clip[0] && !!clip[1]);
-    assert.equal(await shift(), 0);
-    assert.equal(await marks.evaluate(element => getComputedStyle(element).maskImage), 'linear-gradient(270deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
+    assert.equal(await rested(() => shift()), 0);
+    assert.equal(await rested(() => marks.evaluate(element => getComputedStyle(element).maskImage)), 'linear-gradient(270deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
     assert.equal(await inView(place), false, '@Blue Door is past the end');
     // However the field scrolls (a drag past its edge), the marks follow: scrolled partway, both sides are cut.
     await line.evaluate(input => {
       input.scrollLeft = 80;
     });
     await until('cut both sides', clipped, clip => !!clip[0] && !!clip[1]);
-    assert.equal(await shift(), -80);
+    assert.equal(await rested(() => shift()), -80);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -798,7 +798,7 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
     const starts = page.getByRole('listbox', {name: 'Start times'});
     const at10 = starts.getByRole('option', {name: '10:00 AM', exact: true});
     assert.equal(await at10.getAttribute('aria-selected'), 'true');
-    const [list, row] = [await starts.boundingBox(), await at10.boundingBox()];
+    const [list, row] = [await rested(() => starts.boundingBox()), await rested(() => at10.boundingBox())];
     assert.ok(row!.y >= list!.y && row!.y + row!.height <= list!.y + list!.height, 'the list shows its value');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page, Route} from 'playwright-core';
 import {skeleton} from '../../src/tokens.ts';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -66,15 +66,15 @@ test('Inbox loading: a skeleton in the rows\' shapes after 200 ms, breathing, ne
       const style = getComputedStyle(element);
       return [style.animationName, style.animationDuration, style.animationDelay, style.animationTimingFunction, style.animationIterationCount];
     };
-    assert.deepEqual(await sk.evaluate(motion), ['sk-in', '0.18s', `${skeleton.delayMs / 1000}s`, 'cubic-bezier(0.2, 0, 0, 1)', '1']);
-    assert.deepEqual(await sk.locator('.sk-bar').first().evaluate(motion),
+    assert.deepEqual(await rested(() => sk.evaluate(motion)), ['sk-in', '0.18s', `${skeleton.delayMs / 1000}s`, 'cubic-bezier(0.2, 0, 0, 1)', '1']);
+    assert.deepEqual(await rested(() => sk.locator('.sk-bar').first().evaluate(motion)),
       ['sk-breathe', `${skeleton.breatheMs / 1000}s`, `${(skeleton.delayMs + 180) / 1000}s`, skeleton.breatheEase.replace(/,/g, ', ').replace(/\.(\d)/g, '0.$1'), 'infinite']);
     // The headers' band stays still under them.
     assert.equal(await sk.locator('.sk-gh').first().evaluate(header => getComputedStyle(header).animationName), 'none');
-    assert.equal(await page.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor), await tokenColour(page, 'sub2'));
+    assert.equal(await rested(() => page.locator('.sk-bar').first().evaluate(bar => getComputedStyle(bar).backgroundColor)), await rested(() => tokenColour(page, 'sub2')));
     // No row is a skeleton's.
     assert.equal(await page.locator('.list .row, .list .gh').count(), 0);
-    const before = {gh: await heights(page, '.sk-gh'), row: await heights(page, '.sk-row')};
+    const before = {gh: await rested(() => heights(page, '.sk-gh')), row: await rested(() => heights(page, '.sk-row'))};
     assert.deepEqual([before.gh[0], before.row[0]], [30, 38]);
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-inbox', 'list');
@@ -85,7 +85,7 @@ test('Inbox loading: a skeleton in the rows\' shapes after 200 ms, breathing, ne
     assert.equal(await page.locator('section.list').getAttribute('class'), 'list all sk-arrive', 'the rows fade in');
     // The rows stand where the skeleton's did: a band, then rows.
     assert.equal((await heights(page, '.list .gh'))[0], before.gh[0]);
-    assert.equal((await heights(page, '.list .row'))[0], before.row[0]);
+    assert.equal((await rested(() => heights(page, '.list .row')))[0], before.row[0]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -218,9 +218,9 @@ test('a load that fails says so in place, in caution with its warning, and Try a
     const line = page.locator('section.list .load-failed');
     await line.waitFor();
     assert.equal(await line.innerText(), 'Couldn’t load the Inbox, Something went wrong.\n·\nTry again');
-    assert.equal(await line.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'caution'));
+    assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'caution')));
     assert.deepEqual(await line.locator('.icon').evaluateAll(icons => icons.map(icon => icon.getAttribute('width'))), ['16', '16']);
-    assert.equal(await line.evaluate(element => element.getBoundingClientRect().height), 32);
+    assert.equal(await rested(() => line.evaluate(element => element.getBoundingClientRect().height)), 32);
     assert.equal(await page.locator('[data-skeleton="all"]').count(), 0, 'no skeleton says it\'s still coming');
     failing = false;
     await line.getByRole('button', {name: 'Try again'}).click();
@@ -280,13 +280,13 @@ test('the reader draws the email\'s head from its row at once, and only its body
     assert.equal(await page.locator('.pane .mailtext').count(), 0);
     // Its lines at the body's rhythm: 10 px bars 12 apart, at most 600 px.
     assert.deepEqual(await body.evaluate(element => [getComputedStyle(element).rowGap, element.getBoundingClientRect().width <= 600, element.querySelector('.sk-bar')!.getBoundingClientRect().height]), ['12px', true, 10]);
-    const subjectAt = (await head.locator('.rd-subj').boundingBox())!.y;
+    const subjectAt = (await rested(() => head.locator('.rd-subj').boundingBox()))!.y;
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-reader', 'reader');
     await release();
     await page.locator('.pane .facts-card').waitFor();
     assert.equal(await page.locator('.pane [data-skeleton]').count(), 0);
-    assert.equal((await head.locator('.rd-subj').boundingBox())!.y, subjectAt, 'the head stays where it was');
+    assert.equal((await rested(() => head.locator('.rd-subj').boundingBox()))!.y, subjectAt, 'the head stays where it was');
     assert.equal(await page.locator('.pane .rd-body').getAttribute('class'), 'rd-body sk-arrive', 'the body fades in');
 
     // An email with an attachment holds its card's place too.
@@ -304,12 +304,12 @@ test('the reader draws the email\'s head from its row at once, and only its body
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     const box = page.locator('.mailframe-box');
     await box.waitFor();
-    assert.deepEqual(await box.evaluate(element => [element.className, element.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity]),
-      ['mailframe-box measuring', 240, await tokenColour(page, 'sub'), '0']);
+    assert.deepEqual(await rested(() => box.evaluate(element => [element.className, element.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity])),
+      ['mailframe-box measuring', 240, await rested(() => tokenColour(page, 'sub')), '0']);
     await release();
     await page.locator('.mailframe-box:not(.measuring)').waitFor();
     await until('the frame takes the email\'s height', () => box.evaluate(element => element.getBoundingClientRect().height), height => height > 300);
-    assert.equal(await box.evaluate(element => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)');
+    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -345,7 +345,7 @@ test('News loading: its list\'s skeleton in the blocks\' shapes, a header, a lea
     const sk = await shown(page, 'news');
     assert.deepEqual(await sk.evaluate(element => [element.querySelectorAll('.sk-nw-sec').length, element.querySelectorAll('.sk-nw-lead').length, element.querySelectorAll('.sk-nw-row').length]), [2, 2, 6]);
     assert.equal(await page.locator('.nw-list :is(.nw-lead, .nw-row, .nw-sec, .nw-empty)').count(), 0, 'no story, and no "Nothing new"');
-    const before = {sec: await heights(page, '.sk-nw-sec'), lead: await heights(page, '.sk-nw-lead'), row: await heights(page, '.sk-nw-row')};
+    const before = {sec: await rested(() => heights(page, '.sk-nw-sec')), lead: await rested(() => heights(page, '.sk-nw-lead')), row: await rested(() => heights(page, '.sk-nw-row'))};
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-news', 'news');
     await release();
@@ -354,8 +354,8 @@ test('News loading: its list\'s skeleton in the blocks\' shapes, a header, a lea
     assert.equal(await page.locator('.nw-list .list').getAttribute('class'), 'list sk-arrive', 'the stories fade in');
     // The header, the lead and a row with its thumbnail stand where the skeleton's did.
     assert.equal((await heights(page, '.nw-sec'))[0], before.sec[0]);
-    assert.equal((await heights(page, '.nw-lead'))[0], before.lead[0]);
-    assert.equal(await page.locator('.nw-row', {hasText: 'Federal agents detain 9'}).evaluate(row => row.getBoundingClientRect().height), before.row[0]);
+    assert.equal((await rested(() => heights(page, '.nw-lead')))[0], before.lead[0]);
+    assert.equal(await rested(() => page.locator('.nw-row', {hasText: 'Federal agents detain 9'}).evaluate(row => row.getBoundingClientRect().height)), before.row[0]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -374,9 +374,9 @@ test('a news image\'s box waits with a skeleton\'s fill, Light\'s `sub3`, and th
       const image = element.querySelector('.nw-img')!;
       return [element.className, getComputedStyle(element).backgroundColor, getComputedStyle(element).animationName, getComputedStyle(image).opacity];
     });
-    assert.deepEqual(await look(), ['nw-ph', await tokenColour(page, 'sub2'), 'sk-breathe', '0']);
-    assert.deepEqual(await box.locator('.nw-img').evaluate(image => [getComputedStyle(image).outlineStyle, getComputedStyle(image).outlineWidth, getComputedStyle(image).outlineOffset, getComputedStyle(image).outlineColor, getComputedStyle(image).transitionDuration]),
-      ['solid', '1px', '-1px', await tokenColour(page, 'edge'), '0.18s']);
+    assert.deepEqual(await rested(() => look()), ['nw-ph', await rested(() => tokenColour(page, 'sub2')), 'sk-breathe', '0']);
+    assert.deepEqual(await rested(() => box.locator('.nw-img').evaluate(image => [getComputedStyle(image).outlineStyle, getComputedStyle(image).outlineWidth, getComputedStyle(image).outlineOffset, getComputedStyle(image).outlineColor, getComputedStyle(image).transitionDuration])),
+      ['solid', '1px', '-1px', await rested(() => tokenColour(page, 'edge')), '0.18s']);
     await release();
     assert.deepEqual(await until('the image faded in', look, value => value[3] === '1'), ['nw-ph done', 'rgba(0, 0, 0, 0)', 'none', '1']);
 
@@ -385,7 +385,7 @@ test('a news image\'s box waits with a skeleton\'s fill, Light\'s `sub3`, and th
     release = await hold(page, /^\/api\/news\/images\//);
     await visit(page, `${setpoint.base}/news`);
     await box.waitFor();
-    assert.equal(await box.evaluate(element => getComputedStyle(element).backgroundColor), await tokenColour(page, 'sub3'));
+    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => tokenColour(page, 'sub3')));
     await release();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -411,7 +411,7 @@ test('a story opens at once from its row: sections, headline, meta and its image
     assert.equal(await pane.locator('.st-img .nw-ph .nw-blur').evaluate(image => getComputedStyle(image).filter), 'blur(6px)');
     await shown(page, 'story');
     assert.equal(await pane.locator('.st-sum').count(), 0);
-    assert.equal(await pane.locator('.st-swap').evaluate(element => getComputedStyle(element).animationName), 'st-in');
+    assert.equal(await rested(() => pane.locator('.st-swap').evaluate(element => getComputedStyle(element).animationName)), 'st-in');
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-story', 'reader');
     await release();
@@ -433,22 +433,22 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
     await visit(page, `${setpoint.base}/inbox`);
     const mark = page.locator('.boot.starting svg.mark');
     await mark.waitFor();
-    const box = (await mark.boundingBox())!;
+    const box = (await rested(() => mark.boundingBox()))!;
     assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
     // Each chip settles as the mark's settle has them (#203), once the start has taken 200 ms, 70 ms after the one before.
     assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => [getComputedStyle(chip).animationName, getComputedStyle(chip).animationDuration, getComputedStyle(chip).animationDelay])),
       [['mark-settle', '0.26s', '0.2s'], ['mark-settle', '0.26s', '0.27s'], ['mark-settle', '0.26s', '0.34s']]);
     await until('the chips settled', () => mark.locator('g').evaluateAll(chips => chips.map(chip => chip.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
-    assert.equal(await mark.evaluate(svg => getComputedStyle(svg).animationName), 'sk-breathe', 'then it breathes as a skeleton does');
+    assert.equal(await rested(() => mark.evaluate(svg => getComputedStyle(svg).animationName)), 'sk-breathe', 'then it breathes as a skeleton does');
     await matchGolden(page, 'starting');
 
     // Setpoint answers: the app fades in; its accounts and Today wait as skeletons, three rows each.
     const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
     await releaseMe();
     await page.locator('.app.boot-after').waitFor();
-    assert.equal(await page.locator('.app.boot-after').evaluate(element => getComputedStyle(element).animationName), 'sk-arrive');
+    assert.equal(await rested(() => page.locator('.app.boot-after').evaluate(element => getComputedStyle(element).animationName)), 'sk-arrive');
     await shown(page, 'accounts');
-    assert.deepEqual(await heights(page, '[data-skeleton="accounts"] .sk-acct'), [28, 28, 28]);
+    assert.deepEqual(await rested(() => heights(page, '[data-skeleton="accounts"] .sk-acct')), [28, 28, 28]);
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
     await release();
     await page.locator('aside.sb .acct').first().waitFor();
@@ -471,14 +471,14 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
       inbox: aside.querySelector('.nav')!.textContent,
       calendarAt: [...aside.querySelectorAll('.nav')].find(nav => nav.textContent === 'Calendar')!.getBoundingClientRect().y,
     }));
-    const loaded = await sidebar();
+    const loaded = await rested(() => sidebar());
     const todayLines = await page.locator('.today-row').count();
 
     // The next open: Setpoint hasn't answered yet.
     const releaseMe = await hold(page, /^\/api\/me$/);
     await visit(page, `${setpoint.base}/inbox`);
     await page.locator('.app[data-frame]').waitFor();
-    assert.deepEqual(await sidebar(), loaded, 'the accounts and counts as they were, nothing moved');
+    assert.deepEqual(await rested(() => sidebar()), loaded, 'the accounts and counts as they were, nothing moved');
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), todayLines, 'Today\'s place, its lines as many as it had');
     await shown(page, 'all');
     await page.mouse.move(700, 28);
@@ -489,11 +489,11 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
     const release = await hold(page, /^\/api\/(accounts|mail\/(counts|inbox))$/);
     await releaseMe();
     await page.locator('.app:not([data-frame])').waitFor();
-    assert.deepEqual(await sidebar(), loaded);
+    assert.deepEqual(await rested(() => sidebar()), loaded);
     assert.match((await page.locator('[data-skeleton="all"]').getAttribute('class'))!, /\bcarried\b/);
     await release();
     await page.locator('.list .row').first().waitFor();
-    assert.deepEqual(await sidebar(), loaded);
+    assert.deepEqual(await rested(() => sidebar()), loaded);
 
     // Signed out, this browser forgets the session's shape.
     await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
@@ -541,11 +541,11 @@ test('a search on its way keeps the list, dimmed, then shows the results\' skele
     // At once: the Inbox stays, at .55, not a blank page. It's dimmed only until the skeleton comes,
     // which a busy machine can spend typing, so the list is read as it dims, not after.
     const inbox = page.locator('section.list[aria-label="Inbox"]');
-    await inbox.evaluate(list => new MutationObserver((_, observer) => {
+    await rested(() => inbox.evaluate(list => new MutationObserver((_, observer) => {
       if (!list.classList.contains('search-wait')) return;
       (window as unknown as {dimmed?: string}).dimmed = getComputedStyle(list).transitionDuration;
       observer.disconnect();
-    }).observe(list, {attributes: true, attributeFilter: ['class']}));
+    }).observe(list, {attributes: true, attributeFilter: ['class']})));
     await page.keyboard.press('/');
     await page.keyboard.type('northwind');
     assert.equal(await until('the Inbox dimmed', () => page.evaluate(() => (window as unknown as {dimmed?: string}).dimmed), dimmed => dimmed !== undefined), '0.12s');
@@ -559,13 +559,13 @@ test('a search on its way keeps the list, dimmed, then shows the results\' skele
     await until('the field pending', () => field.getAttribute('class'), classes => /\bpending\b/.test(classes!));
     await until('the glass gives way to the spinner', () => field.evaluate(label => [getComputedStyle(label.querySelector('.glass > .spin')!).visibility, getComputedStyle(label.querySelector('.glass > .icon')!).visibility]),
       ([spin, glass]) => spin === 'visible' && glass === 'hidden');
-    assert.equal(await field.locator('.glass > .spin').evaluate(spin => getComputedStyle(spin).animationDelay), `${skeleton.delayMs / 1000}s`);
+    assert.equal(await rested(() => field.locator('.glass > .spin').evaluate(spin => getComputedStyle(spin).animationDelay)), `${skeleton.delayMs / 1000}s`);
     await page.mouse.move(700, 28);
     await matchGolden(page, 'loading-search', 'main');
     await release();
     const results = page.locator('section.search-list');
     await results.locator('.arow.result').first().waitFor();
-    assert.equal(await results.evaluate(list => getComputedStyle(list).animationName), 'sk-arrive');
+    assert.equal(await rested(() => results.evaluate(list => getComputedStyle(list).animationName)), 'sk-arrive');
     await until('the field\'s glass back', () => field.getAttribute('class'), classes => !classes!.includes('pending'));
 
     // A refinement on its way: the results stay, dimmed once it's taken a moment.

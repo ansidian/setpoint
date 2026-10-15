@@ -9,7 +9,7 @@ import type {InboxOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -57,11 +57,11 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
     // The deep links' emails, while they're in the Inbox: an FYI one read below leaves it.
     const links = [[await email(setpoint, 'Interview availability'), 'Interview availability', ['Done', 'Trash', 'Mark unread', 'Open in Gmail']], [await email(setpoint, 'Bill is ready'), 'Bill is ready', ['Trash', 'Mark unread']]] as const;
     const page = await inbox(setpoint);
-    const colours = {ink: await tokenColour(page, 'ink'), ink2: await tokenColour(page, 'ink2'), good: await tokenColour(page, 'good')};
+    const colours = {ink: await rested(() => tokenColour(page, 'ink')), ink2: await rested(() => tokenColour(page, 'ink2')), good: await rested(() => tokenColour(page, 'good'))};
     // Attention mail: four, a quarter each of the bar's 374 px; Done's label `ink` 500 and its check `good`, the rest `ink2` under `ink` icons.
     await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-    const four = await actionBar(page);
+    const four = await rested(() => actionBar(page));
     assert.deepEqual(four.map(action => action.label), ['Done', 'Trash', 'Mark unread', 'Open in Gmail']);
     assert.deepEqual(four.map(action => action.width), [94, 94, 94, 94]);
     assert.deepEqual(four.map(action => [action.colour, action.weight, action.icon]), [
@@ -72,13 +72,13 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
     // Gmail mail that isn't Attention: three, a third each, Trash leading (#93).
     await page.locator('.row', {hasText: 'Woodgrove Bank'}).tap();
     await page.locator('.rd-subj', {hasText: 'Statement ready'}).waitFor();
-    assert.deepEqual((await actionBar(page)).map(action => [action.label, action.width]), [['Trash', 125], ['Mark unread', 125], ['Open in Gmail', 125]]);
+    assert.deepEqual((await rested(() => actionBar(page))).map(action => [action.label, action.width]), [['Trash', 125], ['Mark unread', 125], ['Open in Gmail', 125]]);
     await page.locator('.ph-back').tap();
 
     // iCloud mail: two, a half each, no Open in Gmail.
     await page.locator('.row', {hasText: 'Proseware'}).tap();
     await page.locator('.rd-subj', {hasText: 'Bill is ready'}).waitFor();
-    assert.deepEqual((await actionBar(page)).map(action => [action.label, action.width]), [['Trash', 187], ['Mark unread', 187]]);
+    assert.deepEqual((await rested(() => actionBar(page))).map(action => [action.label, action.width]), [['Trash', 187], ['Mark unread', 187]]);
 
     // A deep link while the email is on its way: the bar holds what it will show, or nothing, and
     // nothing moves along when the email arrives (Done once drew late and pushed the rest right).
@@ -92,12 +92,12 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
       const going = page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id})}`);
       await page.locator('.pane .ph-acts').waitFor();
       await page.locator('.list .row').first().waitFor();
-      const before = (await actionBar(page)).map(action => action.label);
+      const before = (await rested(() => actionBar(page))).map(action => action.label);
       assert.ok(before.length === 0 || JSON.stringify(before) === JSON.stringify(labels), `before the email: ${JSON.stringify(before)}`);
       release();
       await going;
       await page.locator('.rd-subj', {hasText: subject}).waitFor();
-      assert.deepEqual((await actionBar(page)).map(action => action.label), labels);
+      assert.deepEqual((await rested(() => actionBar(page))).map(action => action.label), labels);
       await page.unroute(`**/api/mail/messages/${id}`);
     }
     assert.deepEqual(setpoint.pageErrors, []);
@@ -122,7 +122,7 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
     assert.deepEqual(await page.locator('.ph-acts .ph-swap').evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['ph-pop', '0.12s']);
     await until('the dot has popped in', () => dot.evaluate(element => element.getAnimations().length), running => running === 0);
     // The list's dot: 6 px `ink`, 10 px before the subject, in its line's middle.
-    const look = await dot.evaluate(element => {
+    const look = await rested(() => dot.evaluate(element => {
       const style = getComputedStyle(element);
       const line = element.parentElement!.getBoundingClientRect();
       const box = element.getBoundingClientRect();
@@ -132,8 +132,8 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
       const first = words.getClientRects()[0]!;
       return {size: [box.width, box.height], colour: style.backgroundColor, gap: Math.round(first.left - box.right), middle: Math.abs((box.top + box.bottom) / 2 - (first.top + first.bottom) / 2) <= 2,
         inLine: box.top >= line.top, animation: [style.animationName, style.animationDuration]};
-    });
-    assert.deepEqual(look, {size: [6, 6], colour: await tokenColour(page, 'ink'), gap: 10, middle: true, inLine: true, animation: ['ph-pop', '0.12s']});
+    }));
+    assert.deepEqual(look, {size: [6, 6], colour: await rested(() => tokenColour(page, 'ink')), gap: 10, middle: true, inLine: true, animation: ['ph-pop', '0.12s']});
     await page.locator('.ph-acts button', {hasText: 'Mark read'}).tap();
     await page.locator('.ph-acts button', {hasText: 'Mark unread'}).waitFor();
     assert.equal(await dot.count(), 0);
@@ -181,11 +181,11 @@ test('the reader slides in over the list and back off it, Done too; the browser\
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await recordSlides(page);
-    assert.deepEqual(await styles(page, '.content > .list', ['view-transition-name']), ['ph-list']);
+    await rested(() => recordSlides(page));
+    assert.deepEqual(await rested(() => styles(page, '.content > .list', ['view-transition-name'])), ['ph-list']);
     await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-    assert.deepEqual(await styles(page, '.pane', ['view-transition-name']), ['ph-reader']);
+    assert.deepEqual(await rested(() => styles(page, '.pane', ['view-transition-name'])), ['ph-reader']);
     // In: the reader from the right over 260 ms, the list a fifth left and dimmed under it, taps
     // going through to the page meanwhile.
     const opened = await until('the slide in has started', () => slides(page), seen => seen.length === 1 && seen[0]!.animations.length > 0);
@@ -221,7 +221,7 @@ test('the reader slides in over the list and back off it, Done too; the browser\
     const desk = await setpoint.page('target');
     await desk.goto(`${setpoint.base}/inbox`);
     await desk.locator('.list .row').first().waitFor();
-    await recordSlides(desk);
+    await rested(() => recordSlides(desk));
     await desk.locator('.list .row', {hasText: 'Your recovery email'}).click();
     await desk.locator('.rd-subj', {hasText: 'Your recovery email'}).waitFor();
     await desk.keyboard.press('Escape');
@@ -257,12 +257,12 @@ test('the agenda\'s detail rises into place over its fading scrim, and the toast
       const from = find(rules)?.findRule('from') ?? find(rules)?.findRule('0%');
       return [style.animationName, style.animationDuration, style.animationTimingFunction, from ? [from.style.transform, from.style.opacity] : null];
     });
-    assert.deepEqual(await entrance('.fd.ph-detail'), ['ph-rise', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translateY(24px)', '0']]);
-    assert.deepEqual(await entrance('.ph-scrim'), ['ph-fade', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['', '0']]);
+    assert.deepEqual(await rested(() => entrance('.fd.ph-detail')), ['ph-rise', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translateY(24px)', '0']]);
+    assert.deepEqual(await rested(() => entrance('.ph-scrim')), ['ph-fade', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['', '0']]);
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.hd button[aria-label="Mark all as read"]').tap();
     await page.locator('.toast').waitFor();
-    assert.deepEqual(await entrance('.toast'), ['ph-toast-in', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translate(-50%, 8px)', '0']]);
+    assert.deepEqual(await rested(() => entrance('.toast')), ['ph-toast-in', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translate(-50%, 8px)', '0']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -285,9 +285,9 @@ test('phone search: a clear button where the hint was, no Mark all as read meanw
     // The way out, where the desktop's Esc hint is: 32 px round, an 18 px `close` in `ink3`, 4 px in
     // from the field's border (8 px into its 12 px padding).
     const clear = page.locator('.search .search-clear');
-    const [field, button, icon] = [await page.locator('.hd > .search').boundingBox(), await clear.boundingBox(), await clear.locator('svg').boundingBox()];
+    const [field, button, icon] = [await rested(() => page.locator('.hd > .search').boundingBox()), await rested(() => clear.boundingBox()), await rested(() => clear.locator('svg').boundingBox())];
     assert.deepEqual([button!.width, button!.height, icon!.width, Math.round(field!.x + field!.width - 1 - (button!.x + button!.width))], [32, 32, 18, 4]);
-    assert.deepEqual(await styles(page, '.search .search-clear', ['color', 'border-radius']), [await tokenColour(page, 'ink3'), '999px']);
+    assert.deepEqual(await rested(() => styles(page, '.search .search-clear', ['color', 'border-radius'])), [await rested(() => tokenColour(page, 'ink3')), '999px']);
     assert.equal(await page.locator('.search .kbd').count(), 0);
     // Mark all as read would read the hidden Inbox's mail, not the results: it's gone while searching.
     assert.equal(await markAll.count(), 0);
@@ -341,10 +341,10 @@ test('the tab bar: the current tab filled, Inbox badged while Attention waits on
     // The header's pill, shrunk: the attention count, a 16 px `caution` pill with `onInk` 10.5 / 600
     // figures, 8 px from the top and 6 px right of the tab's middle, in a 2 px `panel` ring.
     assert.equal(await badge.textContent(), '3');
-    const [tab, pill] = [await page.locator('.ph-tab', {hasText: 'Inbox'}).boundingBox(), await badge.boundingBox()];
+    const [tab, pill] = [await rested(() => page.locator('.ph-tab', {hasText: 'Inbox'}).boundingBox()), await rested(() => badge.boundingBox())];
     assert.deepEqual([pill!.height, pill!.y - tab!.y, pill!.x - (tab!.x + tab!.width / 2)], [16, 8, 6]);
-    assert.deepEqual(await styles(page, '.ph-badge', ['background-color', 'color', 'font-size', 'font-weight', 'font-variant-numeric', 'box-shadow']),
-      [await tokenColour(page, 'caution'), await tokenColour(page, 'onInk'), '10.5px', '600', 'tabular-nums', `${await tokenColour(page, 'panel')} 0px 0px 0px 2px`]);
+    assert.deepEqual(await rested(() => styles(page, '.ph-badge', ['background-color', 'color', 'font-size', 'font-weight', 'font-variant-numeric', 'box-shadow'])),
+      [await rested(() => tokenColour(page, 'caution')), await rested(() => tokenColour(page, 'onInk')), '10.5px', '600', 'tabular-nums', `${await rested(() => tokenColour(page, 'panel'))} 0px 0px 0px 2px`]);
     // It follows the count.
     await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Final exam')}/done`, {done: true});
     await until('the badge follows', () => badge.textContent(), text => text === '2');
@@ -368,10 +368,10 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
     assert.deepEqual([await tint.count(), await tint.getAttribute('content')], [1, '#050506']);
     // In a browser tab there's no inset: 6 px under the labels, the bars 54 and 58 px.
     const bars = async () => [await styles(page, '.app', ['padding-top']), await styles(page, '.ph-tabs', ['min-height', 'padding-bottom', 'height'])];
-    assert.deepEqual(await bars(), [['0px'], ['54px', '6px', '54px']]);
+    assert.deepEqual(await rested(() => bars()), [['0px'], ['54px', '6px', '54px']]);
     await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj').waitFor();
-    assert.deepEqual(await styles(page, '.ph-acts', ['min-height', 'padding-bottom', 'height']), ['58px', '6px', '58px']);
+    assert.deepEqual(await rested(() => styles(page, '.ph-acts', ['min-height', 'padding-bottom', 'height'])), ['58px', '6px', '58px']);
     // As a Home Screen app on an iPhone: 47 px for the status bar, 34 for the home indicator.
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setSafeAreaInsetsOverride', {insets: {top: 47, bottom: 34}});
@@ -379,7 +379,7 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
       value => JSON.stringify(value) === '[["47px"],["34px"]]');
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    assert.deepEqual((await bars()).map(values => values.slice(0, 2)), [['47px'], ['54px', '34px']]);
+    assert.deepEqual((await rested(() => bars())).map(values => values.slice(0, 2)), [['47px'], ['54px', '34px']]);
     // The theme drawn, not the system's: Light's page once the browser prefers light (System).
     await page.emulateMedia({colorScheme: 'light'});
     await until('Light\'s page colour', () => tint.getAttribute('content'), value => value === '#f6f6f4');
@@ -394,32 +394,32 @@ test('the phone\'s list reads a step up: rows 15, ages and accounts 13, bands 12
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    const ink3 = await tokenColour(page, 'ink3');
-    assert.deepEqual(await styles(page, '.row .from', ['font-size']), ['15px']);
-    assert.deepEqual(await styles(page, '.row', ['min-height', 'row-gap']), ['62px', '3px']);
-    assert.deepEqual(await styles(page, '.row .age', ['font-size', 'color']), ['13px', ink3]);
-    assert.deepEqual(await styles(page, '.row .ac', ['font-size', 'color']), ['13px', ink3]);
-    assert.deepEqual(await styles(page, '.gh', ['font-size', 'height']), ['12px', '30px']);
-    assert.deepEqual(await styles(page, '.code-line .copy', ['height', 'font-size', 'padding-left', 'padding-right']), ['30px', '13px', '10px', '10px']);
+    const ink3 = await rested(() => tokenColour(page, 'ink3'));
+    assert.deepEqual(await rested(() => styles(page, '.row .from', ['font-size'])), ['15px']);
+    assert.deepEqual(await rested(() => styles(page, '.row', ['min-height', 'row-gap'])), ['62px', '3px']);
+    assert.deepEqual(await rested(() => styles(page, '.row .age', ['font-size', 'color'])), ['13px', ink3]);
+    assert.deepEqual(await rested(() => styles(page, '.row .ac', ['font-size', 'color'])), ['13px', ink3]);
+    assert.deepEqual(await rested(() => styles(page, '.gh', ['font-size', 'height'])), ['12px', '30px']);
+    assert.deepEqual(await rested(() => styles(page, '.code-line .copy', ['height', 'font-size', 'padding-left', 'padding-right'])), ['30px', '13px', '10px', '10px']);
     // The unread dot stays level with the larger first line.
-    const [dot, from] = await page.locator('.list .row.unread').first().evaluate(row => [row.querySelector('.ud')!, row.querySelector('.from')!].map(part => {
+    const [dot, from] = await rested(() => page.locator('.list .row.unread').first().evaluate(row => [row.querySelector('.ud')!, row.querySelector('.from')!].map(part => {
       const box = part.getBoundingClientRect();
       return box.top + box.height / 2;
-    }));
+    })));
     assert.ok(Math.abs(dot! - from!) <= 1, 'the dot is level with the sender');
     await page.locator('.search input').tap();
     await page.keyboard.type('northwind');
     await page.locator('.search-list .result').first().waitFor();
-    assert.deepEqual(await styles(page, '.search-list .result .r1 .age', ['font-size']), ['13px']);
+    assert.deepEqual(await rested(() => styles(page, '.search-list .result .r1 .age', ['font-size'])), ['13px']);
     // A why line shows only what a row doesn't (search-11), so here none does: one put in a result reads it.
-    assert.deepEqual(await page.locator('.search-list .result').first().evaluate(row => {
+    assert.deepEqual(await rested(() => page.locator('.search-list .result').first().evaluate(row => {
       const why = row.appendChild(document.createElement('div'));
       why.className = 'why';
       const size = getComputedStyle(why).fontSize;
       why.remove();
       return [size];
-    }), ['13px']);
-    assert.deepEqual(await styles(page, '.search-list .result .l2', ['font-size']), ['15px']);
+    })), ['13px']);
+    assert.deepEqual(await rested(() => styles(page, '.search-list .result .l2', ['font-size'])), ['15px']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -432,10 +432,10 @@ test('the agenda marks today and now, draws events as their calendar\'s chips, a
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ph-agenda .pitem').first().waitFor();
-    const [ink, ink3, alert] = [await tokenColour(page, 'ink'), await tokenColour(page, 'ink3'), await tokenColour(page, 'alert')];
+    const [ink, ink3, alert] = [await rested(() => tokenColour(page, 'ink')), await rested(() => tokenColour(page, 'ink3')), await rested(() => tokenColour(page, 'alert'))];
     // "Today" in `ink` 500, then its date as every day's, `ink3` 400.
     assert.deepEqual(await styles(page, '.pday.today .pd-today', ['color', 'font-weight']), [ink, '500']);
-    assert.deepEqual(await styles(page, '.pday.today', ['color', 'font-weight']), [ink3, '400']);
+    assert.deepEqual(await rested(() => styles(page, '.pday.today', ['color', 'font-weight'])), [ink3, '400']);
     assert.equal(await page.locator('.pday .pd-today').count(), 1);
     // Now, at the seed's 9:12 AM, between the past Gym and the Dentist.
     const today = page.locator('.ph-agenda [data-days="2026-10-07"]');
@@ -445,7 +445,7 @@ test('the agenda marks today and now, draws events as their calendar\'s chips, a
     // The right pane's now-line: 16 px; the time `alert` 12 / 500 in the 96 px time column; a 7 px
     // `alert` dot on the marks' column, centred on the tasks' rings; a 1 px `alert` line at .7 from
     // the titles' column.
-    const now = await page.locator('.ph-now').evaluate(row => {
+    const now = await rested(() => page.locator('.ph-now').evaluate(row => {
       const [time, dot, line] = [row.querySelector('.t')!, row.querySelector('.dot')!, row.querySelector('.line')!];
       const box = (element: Element) => element.getBoundingClientRect();
       const style = (element: Element) => getComputedStyle(element);
@@ -455,9 +455,9 @@ test('the agenda marks today and now, draws events as their calendar\'s chips, a
         dot: [box(dot).width, box(dot).height, style(dot).backgroundColor, box(dot).left + box(dot).width / 2],
         line: [box(line).height, style(line).backgroundColor, style(line).opacity, box(line).left],
       };
-    });
+    }));
     const task = page.locator('.pitem', {hasText: 'Pay rent'});
-    const [ring, title] = [(await task.locator('.mk').boundingBox())!, (await task.locator('.ell').boundingBox())!];
+    const [ring, title] = [(await rested(() => task.locator('.mk').boundingBox()))!, (await rested(() => task.locator('.ell').boundingBox()))!];
     assert.deepEqual(now, {
       height: 16, time: [96, alert, '12px', '500', 'tabular-nums'],
       dot: [7, 7, alert, ring.x + ring.width / 2], line: [1, alert, '0.7', title.x],
@@ -466,19 +466,19 @@ test('the agenda marks today and now, draws events as their calendar\'s chips, a
     // 42 px line, the title level with a task's; past ones at .55; tasks keep their ring.
     const chip = page.locator('.pitem.chip', {hasText: 'Dentist'}).locator('.ell');
     assert.equal(await page.locator('.ph-agenda .cbar').count(), 0);
-    assert.deepEqual(await chip.evaluate(element => {
+    assert.deepEqual(await rested(() => chip.evaluate(element => {
       const style = getComputedStyle(element);
       return [element.getBoundingClientRect().height, style.borderRadius, style.paddingLeft, style.boxShadow.endsWith('3px 0px 0px 0px inset'), style.backgroundColor !== 'rgba(0, 0, 0, 0)', style.opacity];
-    }), [34, '6px', '25px', true, true, '1']);
-    assert.deepEqual(await styles(page, '.pitem.chip.past .ell', ['opacity']), ['0.55']);
+    })), [34, '6px', '25px', true, true, '1']);
+    assert.deepEqual(await rested(() => styles(page, '.pitem.chip.past .ell', ['opacity'])), ['0.55']);
     const words = (cell: typeof chip) => cell.evaluate(element => {
       const range = document.createRange();
       range.selectNodeContents(element.firstChild!);
       return range.getBoundingClientRect().left;
     });
-    assert.equal(await words(chip), await words(task.locator('.ell')));
+    assert.equal(await rested(() => words(chip)), await rested(() => words(task.locator('.ell'))));
     assert.ok(await task.locator('.ring').isVisible());
-    assert.deepEqual(await styles(page, '.ph-agenda .pday', ['position', 'top', 'z-index']), ['sticky', '0px', '1']);
+    assert.deepEqual(await rested(() => styles(page, '.ph-agenda .pday', ['position', 'top', 'z-index'])), ['sticky', '0px', '1']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -494,7 +494,7 @@ test('a busy day\'s head stays in view as its items scroll under it', async () =
     const agenda = page.locator('.ph-agenda');
     await agenda.evaluate(element => element.scrollTo(0, 40));
     await until('scrolled', () => agenda.evaluate(element => element.scrollTop), top => top === 40);
-    const [box, head] = [await agenda.boundingBox(), await page.locator('.ph-agenda [data-days="2026-10-17"] .pday').boundingBox()];
+    const [box, head] = [await rested(() => agenda.boundingBox()), await rested(() => page.locator('.ph-agenda [data-days="2026-10-17"] .pday').boundingBox())];
     assert.equal(head!.y, box!.y, 'Saturday\'s head stays at the top');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -510,12 +510,12 @@ test('on the phone the sign-in card sits 18% from the top, clear of the keyboard
     await page.getByLabel('Setup token').waitFor();
     // 18vh, to the 1/64 px layout rounds to.
     const near = (y: number) => Math.abs(y - 844 * 0.18) < 0.05;
-    assert.ok(near((await page.locator('.sign-in').boundingBox())!.y), 'the card');
+    assert.ok(near((await rested(() => page.locator('.sign-in').boundingBox()))!.y), 'the card');
     const boot = await setpoint.page('iphone');
     await boot.route('**/api/me', route => route.fulfill({status: 502, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>'}));
     await boot.goto(`${setpoint.base}/inbox`);
     await boot.locator('.boot .offline-pill').waitFor();
-    assert.ok(near((await boot.locator('.boot svg.mark').boundingBox())!.y), 'the mark');
+    assert.ok(near((await rested(() => boot.locator('.boot svg.mark').boundingBox()))!.y), 'the mark');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

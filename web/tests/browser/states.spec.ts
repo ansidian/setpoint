@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, point, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, point, rested, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -48,7 +48,7 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     assert.deepEqual(await glyph(page.locator('.acct', {hasText: 'Business'}).locator('.reconnect .icon')), [ICONS.sync_problem, '16']);
     // Each tone has one glyph (states-04): stale is `history` in `ink3`, triage down the `warning` triangle in `caution`.
     assert.deepEqual(await toneGlyph(page.locator('.hbar.muted')), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
-    assert.deepEqual(await toneGlyph(page.locator('.gh-note')), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
+    assert.deepEqual(await rested(() => toneGlyph(page.locator('.gh-note'))), [ICONS.warning, '16', await rested(() => colourOf(page, 'var(--caution)'))]);
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
     // Retry now carries refresh, as every Try again does (#123).
@@ -99,7 +99,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     // Dimmed lighter, over 180 ms; the page still takes the pointer.
     const content = page.locator('.main.offline > .content');
     await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
-    assert.deepEqual(await content.evaluate(element => [getComputedStyle(element).filter, getComputedStyle(element).pointerEvents, getComputedStyle(element).transitionDuration]), ['grayscale(0.5)', 'auto', '0.18s, 0.18s']);
+    assert.deepEqual(await rested(() => content.evaluate(element => [getComputedStyle(element).filter, getComputedStyle(element).pointerEvents, getComputedStyle(element).transitionDuration])), ['grayscale(0.5)', 'auto', '0.18s, 0.18s']);
     // What changes something is held back: Mark all as read at .4, taking no pointer.
     assert.deepEqual(await page.locator('.listfoot .lnk').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
     // Reading goes on: the list scrolls, J moves the cursor, Enter opens an email this browser has.
@@ -160,13 +160,13 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
     assert.equal(await page.locator('.sign-in').count(), 0, 'no sign-in card: nothing says the user was signed out');
     // The mark at 36 px where the sign-in card's top sits, dimmed; the pill 22 px under it.
     const mark = page.locator('.boot svg.mark');
-    const box = (await mark.boundingBox())!;
-    const pillBox = (await pill.boundingBox())!;
+    const box = (await rested(() => mark.boundingBox()))!;
+    const pillBox = (await rested(() => pill.boundingBox()))!;
     assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
     assert.equal(pillBox.y - (box.y + box.height), 22);
     // Centred on the same line, to the half pixel an odd width rounds to.
     assert.ok(Math.abs(box.x + box.width / 2 - (pillBox.x + pillBox.width / 2)) <= 0.5, 'the pill is centred under the mark');
-    assert.deepEqual(await mark.evaluate(svg => [getComputedStyle(svg).opacity, getComputedStyle(svg).filter]), ['0.5', 'grayscale(0.4)']);
+    assert.deepEqual(await rested(() => mark.evaluate(svg => [getComputedStyle(svg).opacity, getComputedStyle(svg).filter])), ['0.5', 'grayscale(0.4)']);
     await page.mouse.move(700, 28);
     await matchGolden(page, 'unreachable-at-launch');
 
@@ -222,9 +222,9 @@ test('a failing account says why in caution, and a healthy Inbox shows no line',
     // The fix is on the line (states-08): " · Check now", the bar's Reconnect look in ink2, 12.5 and 24 px
     // tall; it checks Work's own source, reading "Checking…" until the check lands.
     const button = line.getByRole('button', {name: 'Check now'});
-    assert.deepEqual(await line.locator('.sep').evaluate(dot => [dot.textContent, getComputedStyle(dot).color]), ['·', await colourOf(page, 'var(--ink3)')]);
-    assert.deepEqual(await button.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize, element.getBoundingClientRect().height, getComputedStyle(element).paddingLeft]),
-      [await colourOf(page, 'var(--ink2)'), '12.5px', 24, '9px']);
+    assert.deepEqual(await rested(() => line.locator('.sep').evaluate(dot => [dot.textContent, getComputedStyle(dot).color])), ['·', await rested(() => colourOf(page, 'var(--ink3)'))]);
+    assert.deepEqual(await rested(() => button.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontSize, element.getBoundingClientRect().height, getComputedStyle(element).paddingLeft])),
+      [await rested(() => colourOf(page, 'var(--ink2)')), '12.5px', 24, '9px']);
     const work = (await setpoint.api<AccountOut[]>('GET', '/accounts')).find(account => account.label === 'Work')!;
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -267,7 +267,7 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     await until('both lines', () => lines.count(), count => count === 2);
     assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
-    const [stale, failing] = await lines.evaluateAll(all => all.map(line => getComputedStyle(line).color));
+    const [stale, failing] = await rested(() => lines.evaluateAll(all => all.map(line => getComputedStyle(line).color)));
     const token = (name: string) => page.evaluate(value => {
       const probe = document.createElement('span');
       probe.style.color = `var(--${value})`;
@@ -276,8 +276,8 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
       probe.remove();
       return computed;
     }, name);
-    assert.equal(stale, await token('ink3'));
-    assert.equal(failing, await token('caution'));
+    assert.equal(stale, await rested(() => token('ink3')));
+    assert.equal(failing, await rested(() => token('caution')));
     // Stale `history`, failing the `warning` triangle (states-04).
     assert.deepEqual([await toneGlyph(lines.nth(0)), await toneGlyph(lines.nth(1))], [[ICONS.history, '16', stale], [ICONS.warning, '16', failing]]);
     // Each line carries Check now (states-08), whole after its words.
@@ -331,8 +331,8 @@ test('state lines fold in as they come, a line whose source is healthy again sho
     const line = page.locator('.hbar', {hasText: 'Work, as of'});
     await line.getByRole('button', {name: 'Check now'}).click();
     await line.locator('.icon.ok').waitFor();
-    assert.deepEqual(await toneGlyph(line), [ICONS.check, '16', await colourOf(page, 'var(--good)')]);
-    assert.deepEqual(await line.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('.check-now') === null]), ['hbar muted cleared', await colourOf(page, 'var(--ink3)'), true]);
+    assert.deepEqual(await rested(() => toneGlyph(line)), [ICONS.check, '16', await rested(() => colourOf(page, 'var(--good)'))]);
+    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('.check-now') === null])), ['hbar muted cleared', await rested(() => colourOf(page, 'var(--ink3)')), true]);
     const folds = await watch(line, 'data-fold');
     await line.waitFor({state: 'detached'});
     assert.deepEqual(await folds(), ['out'], 'it folded out');
@@ -344,7 +344,7 @@ test('state lines fold in as they come, a line whose source is healthy again sho
     await network(page, false);
     const pill = page.locator('.main > .offline-pill');
     await pill.waitFor();
-    assert.deepEqual(await pill.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['pill-in', '0.18s']);
+    assert.deepEqual(await rested(() => pill.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration])), ['pill-in', '0.18s']);
     await network(page, true);
     await until('the pill gone', () => pill.count(), count => count === 0);
     assert.deepEqual(await arrivals(page), ['none', 'leaving copy']);
@@ -395,19 +395,19 @@ test('the first backfill: search says what it has indexed so far', async () => {
     // it in ink3, easing over 260 ms (the polish audit's states-15, search-12).
     assert.deepEqual(await line.locator('.spin .icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).animationDuration, getComputedStyle(icon.closest('.spin')!).color]),
       [ICONS.progress_activity, '16', '0.9s', await colourOf(page, 'var(--ink3)')]);
-    const foot = await line.evaluate(element => {
+    const foot = await rested(() => line.evaluate(element => {
       const [track, fill] = [getComputedStyle(element, '::before'), getComputedStyle(element, '::after')];
       return {width: element.getBoundingClientRect().width, track: [track.height, track.backgroundColor, track.bottom], fill: [parseFloat(fill.width), fill.backgroundColor, fill.transitionDuration]};
-    });
-    assert.deepEqual(foot.track, ['2px', await page.evaluate(() => {
+    }));
+    assert.deepEqual(foot.track, ['2px', await rested(() => page.evaluate(() => {
       const probe = document.body.appendChild(document.createElement('i'));
       probe.style.background = 'var(--sub2)';
       const fill = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return fill;
-    }), '-1px']);
+    })), '-1px']);
     assert.ok(Math.abs(foot.fill[0] as number - foot.width * 0.62) < 1, `62% of the line (${foot.fill[0]} of ${foot.width})`);
-    assert.deepEqual(foot.fill.slice(1), [await colourOf(page, 'var(--ink3)'), '0.26s']);
+    assert.deepEqual(foot.fill.slice(1), [await rested(() => colourOf(page, 'var(--ink3)')), '0.26s']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

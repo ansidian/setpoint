@@ -12,7 +12,7 @@ import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, readSecurity, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, point, readSecurity, rested, startSetpoint, still, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -537,13 +537,13 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     // Copied confirms in `good`: a 14% fill, its words and glyph `good` (inbox-11).
     const copied = row.locator('.copy.copied');
     const look = () => copied.evaluate(button => [getComputedStyle(button).backgroundColor, getComputedStyle(button).color, getComputedStyle(button.querySelector('.icon')!).color]);
-    const green = [await page.evaluate(() => {
+    const green = [await rested(() => page.evaluate(() => {
         const probe = document.body.appendChild(document.createElement('i'));
         probe.style.background = 'color-mix(in oklch, var(--good) 14%, transparent)';
         const colour = getComputedStyle(probe).backgroundColor;
         probe.remove();
         return colour;
-      }), await tokenColour(page, 'good'), await tokenColour(page, 'good')];
+      })), await rested(() => tokenColour(page, 'good')), await rested(() => tokenColour(page, 'good'))];
     // Its fill and words change over 120 ms.
     await until('Copied in good', look, seen => JSON.stringify(seen) === JSON.stringify(green));
     assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
@@ -562,7 +562,7 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     const countdown = row.locator('.sum');
     const seconds = Number(/^Expires in (\d+) sec$/.exec((await countdown.textContent())!)?.[1]);
     assert.ok(seconds > 0 && seconds <= 12, `${seconds} seconds left`);
-    assert.equal(await countdown.evaluate(element => getComputedStyle(element).color), await tokenColour(page, 'caution'));
+    assert.equal(await rested(() => countdown.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'caution')));
     // A second later it reads one less.
     await page.clock.runFor(1000);
     await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
@@ -679,16 +679,16 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     await until('the hidden newsletter fits its frame', () => fit(page), fits);
     // Measured where the pane rests, once its content has slid in.
     await still(page);
-    const width = (await page.locator('.imgbar').boundingBox())!.width;
+    const width = (await rested(() => page.locator('.imgbar').boundingBox()))!.width;
     assert.ok(width > 622, `the images bar is ${width} px wide`);
-    assert.equal((await element.boundingBox())!.width, width);
+    assert.equal((await rested(() => element.boundingBox()))!.width, width);
 
     await page.locator('.imgbar').getByRole('button', {name: 'Show', exact: true}).click();
     await until('the pictures load', () => picturesLoaded(page), count => count === 4);
     // Shown, the frame grows with the pictures: over a thousand pixels, not a short box with its
     // own scrollbars.
     await until('the newsletter fits its frame', () => fit(page), fits);
-    const shown = (await element.boundingBox())!;
+    const shown = (await rested(() => element.boundingBox()))!;
     assert.ok(shown.height > 1000, `the frame is ${shown.height} px tall`);
     assert.equal(shown.width, width);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -706,7 +706,7 @@ test('on the phone, a newsletter wider than the screen is zoomed to fit it, as t
     await page.locator('.imgbar').getByRole('button', {name: 'Show', exact: true}).tap();
     await until('the pictures load', () => picturesLoaded(page), count => count === 4);
     await until('the newsletter fits its frame', () => fit(page), fits);
-    const frame = (await page.locator('iframe.mailframe').boundingBox())!;
+    const frame = (await rested(() => page.locator('iframe.mailframe').boundingBox()))!;
     assert.equal(frame.width, 350);
     // 622 px zoomed into 350: the pictures' 1060 px come to under 600, and the frame follows.
     assert.ok(frame.height > 550 && frame.height < 750, `the frame is ${frame.height} px tall`);
@@ -839,25 +839,25 @@ test('#122: an attachment\'s type tile says what it is in its colour and glyph, 
     const card = page.locator('.attach', {hasText: 'Renewal agreement.pdf'});
     const tile = card.locator('.type');
     await tile.waitFor();
-    assert.equal(await card.evaluate(element => getComputedStyle(element).padding), '0px 8px 0px 7px');
+    assert.equal(await rested(() => card.evaluate(element => getComputedStyle(element).padding)), '0px 8px 0px 7px');
     // 30 px, radius 8, concentric in the 44 px card (7 px from its edges), 12 px before the name.
-    assert.deepEqual(await tile.evaluate(element => {
+    assert.deepEqual(await rested(() => tile.evaluate(element => {
       const box = element.getBoundingClientRect();
       const outer = element.closest('.attach')!.getBoundingClientRect();
       const names = element.closest('.attach')!.querySelector('.names')!.getBoundingClientRect();
       return [box.width, box.height, getComputedStyle(element).borderRadius, box.left - outer.left, box.top - outer.top, names.left - box.right];
-    }), [30, 30, '8px', 7, 7, 12]);
-    const alert = await tokenColour(page, 'alert');
-    assert.deepEqual(await glyphs(tile.locator('.icon')), [['picture_as_pdf', '18', alert]]);
-    assert.equal(await tile.evaluate(element => getComputedStyle(element).backgroundColor), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)'));
+    })), [30, 30, '8px', 7, 7, 12]);
+    const alert = await rested(() => tokenColour(page, 'alert'));
+    assert.deepEqual(await rested(() => glyphs(tile.locator('.icon'))), [['picture_as_pdf', '18', alert]]);
+    assert.equal(await rested(() => tile.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)')));
     const download = card.locator('.dl');
-    assert.deepEqual(await glyphs(download.locator('.icon')), [['download', '16', await tokenColour(page, 'ink2')]]);
-    assert.deepEqual(await download.evaluate(element => [getComputedStyle(element).columnGap, getComputedStyle(element).padding]), ['6px', '0px 10px 0px 8px']);
+    assert.deepEqual(await rested(() => glyphs(download.locator('.icon'))), [['download', '16', await rested(() => tokenColour(page, 'ink2'))]]);
+    assert.deepEqual(await rested(() => download.evaluate(element => [getComputedStyle(element).columnGap, getComputedStyle(element).padding])), ['6px', '0px 10px 0px 8px']);
     // Under the pointer: the tile deepens to 22%, the eye turns ink, and in Night the card lifts to cardOn.
     await card.locator('.names').hover();
-    const deeper = await backgroundOf(page, 'color-mix(in oklch, var(--alert) 22%, transparent)');
+    const deeper = await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 22%, transparent)'));
     await until('the tile deepens', () => tile.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === deeper);
-    const [ink, cardOn] = [await tokenColour(page, 'ink'), await backgroundOf(page, 'var(--cardOn)')];
+    const [ink, cardOn] = [await rested(() => tokenColour(page, 'ink')), await rested(() => backgroundOf(page, 'var(--cardOn)'))];
     await until('the eye turns ink', () => card.locator('.look').evaluate(element => getComputedStyle(element).color), colour => colour === ink);
     await until('the card lifts', () => card.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === cardOn);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -951,19 +951,19 @@ test('#237: with the reader open, the kinds turn into subheadings under FYI, and
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    const ink3 = await tokenColour(page, 'ink3');
+    const ink3 = await rested(() => tokenColour(page, 'ink3'));
     const subheads = page.locator('.list.all .kh');
     // Wide, the kinds sit in the left column and no subheading shows.
     assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), true);
     assert.equal(await subheads.first().isVisible(), false);
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
-    const before = (await fabrikam.boundingBox())!.y;
+    const before = (await rested(() => fabrikam.boundingBox()))!.y;
     await fabrikam.click();
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     // Each FYI run of one kind gets its subheading, its glyph at 13 px in ink3; the column goes.
     await subheads.first().waitFor();
     assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.deepEqual((await glyphs(subheads.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
+    assert.deepEqual((await rested(() => glyphs(subheads.locator('.icon')))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), false);
     // New's subheadings sit under FYI's header, each before its run's first row.
     const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
@@ -974,7 +974,7 @@ test('#237: with the reader open, the kinds turn into subheadings under FYI, and
     await page.keyboard.press('Escape');
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
     assert.equal(await subheads.first().isVisible(), false);
-    assert.equal(Math.round((await fabrikam.boundingBox())!.y), Math.round(before));
+    assert.equal(Math.round((await rested(() => fabrikam.boundingBox()))!.y), Math.round(before));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -999,12 +999,12 @@ test('#240: with the reader open the sender column takes 24% of its row, between
       assert.equal((await widths(row))[1], wide);
       await row.click();
       await page.locator('.pane .rd-subj').waitFor();
-      const [width, from] = await widths(row);
+      const [width, from] = await rested(() => widths(row));
       assert.equal(Math.round(from), Math.round(Math.min(wide, Math.max(112, width * .24))), path);
       assert.ok(from < wide, `${path}: narrower with the reader open (${from}px of a ${width}px row)`);
       await page.keyboard.press('Escape');
       await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-      assert.equal((await widths(row))[1], wide);
+      assert.equal((await rested(() => widths(row)))[1], wide);
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -1020,7 +1020,7 @@ test('#238: the reader shows the email\'s summary under its subject, and none wh
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     const summary = page.locator('.rd-sum');
     assert.equal(await summary.textContent(), 'Data Analyst');
-    assert.equal(await summary.evaluate(node => getComputedStyle(node).color), await tokenColour(page, 'ink2'));
+    assert.equal(await rested(() => summary.evaluate(node => getComputedStyle(node).color)), await rested(() => tokenColour(page, 'ink2')));
     // Under the subject, 6 px below it, and above the sender.
     const [subject, sum, meta] = [await page.locator('.rd-subj').boundingBox(), await summary.boundingBox(), await page.locator('.rd-meta').boundingBox()];
     assert.equal(Math.round(sum!.y - (subject!.y + subject!.height)), 6);
@@ -1039,23 +1039,23 @@ test('#119: each band leads with its glyph, 14 px in ink3 and 8 px before its la
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    const [ink3, caution] = [await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
+    const [ink3, caution] = [await rested(() => tokenColour(page, 'ink3')), await rested(() => tokenColour(page, 'caution'))];
     const headers = page.locator('.list .gh:not(.day)');
     const labels = await headers.evaluateAll(all => all.map(header => header.querySelector('.gi')!.nextSibling!.textContent));
     assert.deepEqual(labels, ['New', 'Attention', 'Pinned']);
-    assert.deepEqual(await glyphs(headers.locator('.gi .icon')), [['mark_email_unread', '14', ink3], ['flag', '14', caution], ['keep', '14', ink3]]);
+    assert.deepEqual(await rested(() => glyphs(headers.locator('.gi .icon'))), [['mark_email_unread', '14', ink3], ['flag', '14', caution], ['keep', '14', ink3]]);
     // The label starts 8 px after the glyph, as the band's other parts are spaced.
-    const gaps = await headers.evaluateAll(all => all.map(header => {
+    const gaps = await rested(() => headers.evaluateAll(all => all.map(header => {
       const glyph = header.querySelector('.gi')!;
       const range = document.createRange();
       range.selectNode(glyph.nextSibling!);
       return Math.round(range.getBoundingClientRect().left - glyph.getBoundingClientRect().right);
-    }));
+    })));
     assert.deepEqual(new Set(gaps), new Set([8]));
     // Each kind word after its group's glyph at 13 px.
     const kinds = page.locator('.list.all .row .kd:has(.icon)');
     assert.deepEqual((await kinds.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.deepEqual((await glyphs(kinds.locator('.icon'))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
+    assert.deepEqual((await rested(() => glyphs(kinds.locator('.icon')))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1185,13 +1185,13 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
   try {
     const page = await load(setpoint);
     const pane = page.locator('.pane');
-    const paneWidth = async () => Math.round((await pane.boundingBox())!.width);
+    const paneWidth = async () => Math.round((await rested(() => pane.boundingBox()))!.width);
     await page.locator('.row', {hasText: 'New sign-in'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     assert.equal(await paneWidth(), 680);
 
     const drag = async (dx: number) => {
-      const edge = (await page.locator('.pane-edge').boundingBox())!;
+      const edge = (await rested(() => page.locator('.pane-edge').boundingBox()))!;
       const at = {x: edge.x + edge.width / 2, y: edge.y + 200};
       await page.mouse.move(at.x, at.y);
       await page.mouse.down();
@@ -1222,9 +1222,9 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
     const hints = () => tools.locator('.tool .kbd').evaluateAll(kbds => kbds.map(kbd => kbd.checkVisibility()));
     assert.deepEqual((await tools.locator('.tool').allInnerTexts()).map(text => text.trim()), ['Done', 'Trash', 'Pin', 'Open in Gmail']);
     assert.deepEqual(await hints(), [false, false, false, false]);
-    const right = (await pane.boundingBox())!.x + 480;
+    const right = (await rested(() => pane.boundingBox()))!.x + 480;
     for (const name of ['Previous email', 'Next email', 'More']) {
-      const button = (await tools.getByRole('button', {name, exact: true}).boundingBox())!;
+      const button = (await rested(() => tools.getByRole('button', {name, exact: true}).boundingBox()))!;
       assert.ok(button.x + button.width <= right, `${name} ends at ${button.x + button.width}, inside the pane's ${right}`);
     }
     // Wide enough again, the hints come back.
@@ -1429,12 +1429,12 @@ test('a long account label: the account column fits the longest, every row\'s ac
     await setpoint.api('PATCH', `/accounts/${business.id}`, {label: 'Business (Studio)'});
     for (const path of ['/inbox']) {
       const page = await load(setpoint, path);
-      const rows = await page.locator('.list .row').evaluateAll(rows => rows.filter(row => row.querySelector('.ac .label')?.textContent).map(row => {
+      const rows = await rested(() => page.locator('.list .row').evaluateAll(rows => rows.filter(row => row.querySelector('.ac .label')?.textContent).map(row => {
         const ac = row.querySelector('.ac')!.getBoundingClientRect();
         const label = row.querySelector('.ac .label') as HTMLElement;
         const age = row.querySelector('.age')!.getBoundingClientRect();
         return {label: label.textContent, left: Math.round(ac.left), cut: label.scrollWidth > label.clientWidth, gap: Math.round(age.left - label.getBoundingClientRect().right)};
-      }));
+      })));
       assert.ok(rows.some(row => row.label === 'Business (Studio)'), `${path}: ${JSON.stringify(rows)}`);
       for (const row of rows) {
         assert.ok(!row.cut, `${path}: ${row.label} whole`);

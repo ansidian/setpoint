@@ -7,12 +7,12 @@ import {after, describe, test} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, SIZES, startSetpoint, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
 after(cleanUp);
 
-const box = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!;
+const box = async (page: Page, selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
 
 test('the sign-in card claims Setpoint with the setup token, then signs in with the password', async () => {
   const setpoint = await startSetpoint({claim: false});
@@ -34,7 +34,7 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
     // Signed out (another tab, or the session ending): the card asks for the password.
     await page.evaluate(() => fetch('/api/auth/sign-out', {method: 'POST'}));
     await page.reload();
-    const top = async () => (await page.locator('.sign-in').boundingBox())!.y;
+    const top = async () => (await rested(() => page.locator('.sign-in').boundingBox()))!.y;
     await page.getByLabel('Password').waitFor();
     const before = await top();
     await page.getByLabel('Password').fill('not the password');
@@ -78,11 +78,11 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
     assert.deepEqual(await kinds(), ['btn', 'btn ghost']);
     assert.deepEqual(await passkey.locator('.icon').evaluate(icon => [icon.getAttribute('width'), icon.querySelector('path')!.getAttribute('d')]), ['16', ICONS.passkey]);
     // Three don't fit the card's row: Use a recovery code goes under the other two, inside the card.
-    assert.deepEqual(await card.evaluate(element => {
+    assert.deepEqual(await rested(() => card.evaluate(element => {
       const box = element.getBoundingClientRect();
       const [main, , recovery] = [...element.querySelectorAll('.sign-in-foot .btn')].map(button => button.getBoundingClientRect());
       return [[...element.querySelectorAll('.sign-in-foot .btn')].every(button => button.getBoundingClientRect().left >= box.left && button.getBoundingClientRect().right <= box.right), recovery!.top > main!.bottom];
-    }), [true, true]);
+    })), [true, true]);
     await page.getByLabel('Password').press('a');
     await until('Sign in leads again', kinds, classes => classes.join() === 'btn ghost,btn');
     await page.getByLabel('Password').press('Backspace');
@@ -111,7 +111,7 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
     assert.equal(await page.getByLabel('Password').inputValue(), `browser checks only ${port}`, 'typing replaced it');
 
     // Signed in: the card scales to .98 and fades over 180 ms while the app fades in under it, then goes.
-    await page.evaluate(() => {
+    await rested(() => page.evaluate(() => {
       const seen: string[][] = [];
       (window as unknown as {leaving: string[][]}).leaving = seen;
       const observer = new MutationObserver(() => {
@@ -122,7 +122,7 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
         seen.push([style.animationName, style.animationDuration], [getComputedStyle(app).animationName, getComputedStyle(app).animationDuration]);
       });
       observer.observe(document.getElementById('root')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
-    });
+    }));
     await page.keyboard.press('Enter');
     await page.locator('.list .row').first().waitFor();
     await until('the card gone', () => page.locator('.sign-in').count(), count => count === 0);
@@ -142,7 +142,7 @@ test('in Light the sign-in card keeps the modal\'s shadow (states-14 deepens Nig
     const card = page.locator('.sign-in');
     await page.getByLabel('Setup token').waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
-    assert.equal(await card.evaluate(element => getComputedStyle(element).boxShadow), 'rgba(15, 20, 28, 0.18) 0px 30px 80px 0px');
+    assert.equal(await rested(() => card.evaluate(element => getComputedStyle(element).boxShadow)), 'rgba(15, 20, 28, 0.18) 0px 30px 80px 0px');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -213,7 +213,7 @@ for (const size of ['target', 'large'] as SizeName[]) {
         assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
         // Focus on a control draws no ring.
         await page.locator('.rd-tools .tool').first().focus();
-        const outline = await page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle);
+        const outline = await rested(() => page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle));
         assert.equal(outline, 'none');
         assert.deepEqual(setpoint.pageErrors, []);
       } finally {
@@ -268,7 +268,7 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await lines.filter({hasText: 'Renew car registration'}).click();
     const card = page.locator('.today-card');
     await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
-    assert.equal(await card.evaluate(element => getComputedStyle(element).animationName), 'today-card-in');
+    assert.equal(await rested(() => card.evaluate(element => getComputedStyle(element).animationName)), 'today-card-in');
     assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
     assert.equal(Math.round((await box(page, '.today-card')).x), Math.round((await box(page, '.sb')).width) + 8);
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
@@ -310,7 +310,7 @@ test('a Today task\'s ring shows the done check for 360 ms before its line folds
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
     // Pay rent's line from the press on, in the page's time: too quick to read after each step.
-    await page.evaluate(() => {
+    await rested(() => page.evaluate(() => {
       const block = document.querySelector('.sb .today')!;
       const log: {at: number; state: string}[] = [];
       (window as unknown as {rent: typeof log}).rent = log;
@@ -333,14 +333,14 @@ test('a Today task\'s ring shows the done check for 360 ms before its line folds
         // Back from Undo: its height opens (app/fold.ts), not a hover's transition.
         return note(line.getAnimations().some(animation => animation.constructor === Animation) ? 'unfolding' : 'open');
       }).observe(block, {subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style']});
-    });
-    const [good, ink3] = await page.evaluate(() => ['--good', '--ink3'].map(token => {
+    }));
+    const [good, ink3] = await rested(() => page.evaluate(() => ['--good', '--ink3'].map(token => {
       const probe = document.body.appendChild(document.createElement('i'));
       probe.style.color = `var(${token})`;
       const colour = getComputedStyle(probe).color;
       probe.remove();
       return colour;
-    }));
+    })));
     const log = () => page.evaluate(() => (window as unknown as {rent: {at: number; state: string}[]}).rent);
 
     await lines.filter({hasText: 'Pay rent'}).getByRole('button', {name: 'Complete Pay rent'}).dblclick();

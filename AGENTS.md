@@ -73,6 +73,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   holding the server's answer, not by a short limit (the lint asks, SV-49).
   A "nothing happened" pause is followed by `setpoint.idle()`, so a wrong change still on its way
   is answered and drawn before the check reads, rather than landing after it (SV-49).
+  A one-shot read of a computed style or box (`getComputedStyle`, `getBoundingClientRect`,
+  `boundingBox`) goes through `rested`, which waits until nothing on the check's pages is moving:
+  an element mid-entrance or mid-slide measures as it passes, not where it rests. A helper that
+  reads is a reader, and so is one that calls a reader; each use of one rests, polls (`until`), or
+  says why on the line before it, a read meant to catch motion (the lint asks, SV-75).
 - Every bug fix starts with a failing test. There is no known-failing list.
 
 ## Boundaries (the lint enforces them)

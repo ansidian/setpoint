@@ -9,7 +9,7 @@ import {after, test} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, startSetpoint, until, writeOutput} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -29,7 +29,7 @@ async function inbox(setpoint: Setpoint): Promise<Page> {
   return page;
 }
 
-const box = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!;
+const box = async (page: Page, selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
 
 test('board 21: the Inbox after reading Northwind, the reader on it, and the agenda', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
@@ -62,7 +62,7 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
     const page = await inbox(setpoint);
     // Parkside's line (its subject and summary, on the shelf) runs to two lines, all of it there.
     const lease = page.locator('.row.shelf .subj');
-    const lines = await lease.evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight)));
+    const lines = await rested(() => lease.evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight))));
     assert.equal(lines, 2);
     // Every row's line in the seed fits in its two lines, none cut.
     const cut = await page.locator('.list .row .subj:not(.code-line)').evaluateAll(all => all.filter(node => node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
@@ -75,12 +75,12 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
     // They show already, so opening an email and coming back moves nothing.
     const bank = page.locator('.list.all .row', {hasText: 'Proseware'}).first();
     await bank.scrollIntoViewIfNeeded();
-    const before = (await bank.boundingBox())!.y;
+    const before = (await rested(() => bank.boundingBox()))!.y;
     await bank.tap();
     await page.locator('.rd-subj', {hasText: 'Bill is ready'}).waitFor();
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    assert.equal(Math.round((await bank.boundingBox())!.y), Math.round(before));
+    assert.equal(Math.round((await rested(() => bank.boundingBox()))!.y), Math.round(before));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -95,7 +95,7 @@ test('SV-73: on the phone a Done row\'s tag sits on its sender line, between the
     await page.goto(`${setpoint.base}/inbox`);
     const row = page.locator('.list.all .row.done', {hasText: 'Northwind'});
     await row.locator('.tag').waitFor();
-    const boxOf = async (selector: string) => (await row.locator(selector).boundingBox())!;
+    const boxOf = async (selector: string) => (await rested(() => row.locator(selector).boundingBox()))!;
     const [from, tag, account, line] = await Promise.all([boxOf('.from'), boxOf('.tag'), boxOf('.ac'), boxOf('.subj')]);
     // On the sender's line, vertically centred with it, and wholly above the summary.
     assert.ok(Math.abs((tag.y + tag.height / 2) - (from.y + from.height / 2)) <= 1, `tag centre ${tag.y + tag.height / 2}, sender centre ${from.y + from.height / 2}`);
@@ -115,15 +115,15 @@ test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoo
     const sizes = () => page.locator('.sign-in .input').evaluateAll(inputs => inputs.map(input => [input.getAttribute('aria-label'), getComputedStyle(input).fontSize, getComputedStyle(input, '::placeholder').fontSize]));
     await page.goto(`${setpoint.base}/inbox`);
     await page.getByLabel('Setup token').waitFor();
-    assert.deepEqual(await sizes(), [['Setup token', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Setup token', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
     // Claimed (elsewhere), the card asks for the password; then a recovery code and a new password.
     await setpoint.api('POST', '/auth/claim', {setup_token: setpoint.setupToken, password: 'a long enough password'});
     await page.reload();
     await page.getByLabel('Password').waitFor();
-    assert.deepEqual(await sizes(), [['Password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Password', '16px', '13.5px']]);
     await page.getByRole('button', {name: 'Use a recovery code'}).click();
     await page.getByLabel('Recovery code').waitFor();
-    assert.deepEqual(await sizes(), [['Recovery code', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Recovery code', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -330,7 +330,7 @@ test('an empty day with a forecast keeps its own line to show it, "No events" be
     ]);
     // "No events" follows the date, and the forecast takes the end, on one 30 px line.
     const head = page.locator('.ph-agenda [data-days="2026-10-10"] .pday');
-    const [line, none, wx] = await Promise.all([head.boundingBox(), head.locator('.none').boundingBox(), head.locator('.pwx').boundingBox()]);
+    const [line, none, wx] = await rested(() => Promise.all([head.boundingBox(), head.locator('.none').boundingBox(), head.locator('.pwx').boundingBox()]));
     assert.equal(line!.height, 30);
     assert.ok(none!.x + none!.width < wx!.x - 40, 'a space between "No events" and the forecast');
     assert.ok(Math.abs(line!.x + line!.width - 20 - (wx!.x + wx!.width)) <= 1, 'the forecast at the end');

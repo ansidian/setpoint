@@ -7,7 +7,7 @@ import {after, test} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -187,15 +187,15 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
     await page.keyboard.type('zebra');
     const none = page.locator('.palette .none', {hasText: 'No command matches'});
     await none.waitFor();
-    const ink3 = await page.evaluate(() => {
+    const ink3 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'var(--ink3)';
       document.body.append(probe);
       const colour = getComputedStyle(probe).color;
       probe.remove();
       return colour;
-    });
-    assert.deepEqual(await leadGlyph(none), [ICONS.search_off, '16', ink3, 8]);
+    }));
+    assert.deepEqual(await rested(() => leadGlyph(none)), [ICONS.search_off, '16', ink3, 8]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

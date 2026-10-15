@@ -9,7 +9,7 @@ import type {Locator, Page} from 'playwright-core';
 import {hangFrom} from '../../src/logic/calendar.ts';
 import type {Rect} from '../../src/logic/calendar.ts';
 import {placeBeside} from '../../src/logic/placement.ts';
-import {cleanUp, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, until} from './harness.ts';
 
 const WIDE = {width: 2400, height: 1300};
 const GAP = 8;
@@ -25,11 +25,11 @@ const zoomOf = (page: Page) => page.locator('.cal-month').evaluate(element => el
 
 /** A box on the page in the month section's CSS pixels. */
 async function inSection(page: Page, box: {x: number; y: number; width: number; height: number}): Promise<Rect> {
-  const section = (await page.locator('.cal-month').boundingBox())!;
+  const section = (await rested(() => page.locator('.cal-month').boundingBox()))!;
   const zoom = await zoomOf(page);
   return {left: (box.x - section.x) / zoom, top: (box.y - section.y) / zoom, width: box.width / zoom, height: box.height / zoom};
 }
-const rectOf = async (page: Page, locator: Locator) => inSection(page, (await locator.boundingBox())!);
+const rectOf = async (page: Page, locator: Locator) => inSection(page, (await rested(() => locator.boundingBox()))!);
 
 const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a} and ${b}`);
 
@@ -49,7 +49,7 @@ async function assertBeside(page: Page, item: Locator) {
   const others: Rect[] = [];
   for (const other of await page.locator('.cal-grid :is(.ev, .tk, .more)').all()) {
     if (await other.evaluate((node, self) => node === self, element)) continue;
-    const bounds = await other.boundingBox();
+    const bounds = await rested(() => other.boundingBox());
     if (bounds) others.push(await inSection(page, bounds));
   }
   const place = placeBeside(anchor, {width: box.width, height: box.height}, grid, others);
@@ -70,11 +70,11 @@ test('at 2400 × 1300 (zoom 1.25) the card sits 8 px beside Gym, Dinner with Sam
     const page = await setpoint.page(WIDE);
     await page.goto(`${setpoint.base}/calendar`);
     await chip(page, '2026-10-16', 'Gym').waitFor();
-    assert.equal(await zoomOf(page), 1.25);
+    assert.equal(await rested(() => zoomOf(page)), 1.25);
     await open(page, '2026-10-16', 'Gym');
-    await assertBeside(page, chip(page, '2026-10-16', 'Gym'));
+    await rested(() => assertBeside(page, chip(page, '2026-10-16', 'Gym')));
     // Every frame of the glide to Dinner with Sam stays inside the grid (decision 47's clamp).
-    const outside = await page.evaluate(async () => {
+    const outside = await rested(() => page.evaluate(async () => {
       const grid = document.querySelector('.cal-scroll')!.getBoundingClientRect();
       const dinner = [...document.querySelectorAll<HTMLElement>('.cell[data-date="2026-10-09"] .ev')].find(element => element.textContent?.includes('Dinner'))!;
       dinner.click();
@@ -86,12 +86,12 @@ test('at 2400 × 1300 (zoom 1.25) the card sits 8 px beside Gym, Dinner with Sam
         worst = Math.max(worst, grid.left - box.left, grid.top - box.top, box.right - grid.right, box.bottom - grid.bottom);
       }
       return worst;
-    });
+    }));
     assert.ok(outside <= 0.5, `the glide went ${outside} px past the grid's edge`);
     await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam'));
+    await rested(() => assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam')));
     await open(page, '2026-10-09', 'Study group');
-    await assertBeside(page, chip(page, '2026-10-09', 'Study group'));
+    await rested(() => assertBeside(page, chip(page, '2026-10-09', 'Study group')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -105,8 +105,8 @@ test('at 2400 × 1300 a drag follows the pointer, and the next glide starts from
     await page.goto(`${setpoint.base}/calendar`);
     await chip(page, '2026-10-07', 'Dentist').waitFor();
     await open(page, '2026-10-07', 'Dentist');
-    const grip = (await card(page).locator('.grip').boundingBox())!;
-    const before = (await card(page).boundingBox())!;
+    const grip = (await rested(() => card(page).locator('.grip').boundingBox()))!;
+    const before = (await rested(() => card(page).boundingBox()))!;
     const start = {x: grip.x + grip.width / 2, y: grip.y + grip.height / 2};
     const delta = {x: 300, y: 250};
     await page.mouse.move(start.x, start.y);
@@ -114,16 +114,16 @@ test('at 2400 × 1300 a drag follows the pointer, and the next glide starts from
     for (let step = 1; step <= 10; step += 1) await page.mouse.move(start.x + delta.x * step / 10, start.y + delta.y * step / 10);
     await page.mouse.up();
     await atRest(page);
-    const after = (await card(page).boundingBox())!;
+    const after = (await rested(() => card(page).boundingBox()))!;
     near(after.x - before.x, delta.x, 'it moved with the pointer across');
     near(after.y - before.y, delta.y, 'and down');
-    const dropped = await rectOf(page, card(page));
+    const dropped = await rested(() => rectOf(page, card(page)));
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     const from = (await card(page).getAttribute('data-glide-from'))!.split(',').map(Number);
     near(from[0]!, dropped.left, 'the glide starts at the drop (left)');
     near(from[1]!, dropped.top, 'the glide starts at the drop (top)');
     await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam'));
+    await rested(() => assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -142,10 +142,10 @@ test('at 2400 × 1300 the "+3" popover hangs from its "+3"', async () => {
     await popover.waitFor();
     // Measured where it rests, once it has grown in.
     await still(page);
-    const box = await rectOf(page, popover);
-    const anchor = await rectOf(page, more);
-    const section = await rectOf(page, page.locator('.cal-month'));
-    const grid = await rectOf(page, page.locator('.cal-scroll'));
+    const box = await rested(() => rectOf(page, popover));
+    const anchor = await rested(() => rectOf(page, more));
+    const section = await rested(() => rectOf(page, page.locator('.cal-month')));
+    const grid = await rested(() => rectOf(page, page.locator('.cal-scroll')));
     const place = hangFrom(anchor, {width: box.width, height: box.height}, {left: 0, top: grid.top, width: section.width, height: grid.height});
     near(box.left, place.left, 'left where hangFrom puts it');
     near(box.top, place.top, 'top where hangFrom puts it');

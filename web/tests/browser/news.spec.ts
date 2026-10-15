@@ -11,7 +11,7 @@ import {after, test} from 'node:test';
 import type {MissedOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, startSetpoint, still, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, still, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -36,13 +36,13 @@ const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<St
  * those stories.
  */
 async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
-  const ids = await list(page).evaluate(scroller => {
+  const ids = await rested(() => list(page).evaluate(scroller => {
     const box = scroller.getBoundingClientRect();
     return [...new Set([...scroller.querySelectorAll<HTMLElement>('[data-key]')].filter(element => {
       const rect = element.getBoundingClientRect();
       return rect.top >= box.top - 0.5 && rect.bottom <= box.bottom + 0.5 && (element.classList.contains('new') || element.classList.contains('upd'));
     }).map(element => Number(element.dataset.story)))];
-  });
+  }));
   for (const id of ids) await until(`story ${id} seen on the server`, () => stateOf(setpoint, id), state => state === 'seen');
   await setpoint.idle();
   return ids;
@@ -124,8 +124,8 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
     // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#120).
     const ink3 = await colourOf(page, 'var(--ink3)');
-    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
-    assert.equal(await page.locator('.nw-sec').first().evaluate(header => getComputedStyle(header).color), await colourOf(page, 'var(--ink2)'));
+    assert.deepEqual(await rested(() => glyphs(page.locator('.nw-sec > .icon'))), [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
+    assert.equal(await rested(() => page.locator('.nw-sec').first().evaluate(header => getComputedStyle(header).color)), await rested(() => colourOf(page, 'var(--ink2)')));
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '7 more in Tech', '4 more in AI', '9 more in General']);
     assert.equal(await page.locator('.nw-missed').textContent(), '14 stories you missed since MonCatch up');
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
@@ -140,19 +140,19 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]);
     const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' '));
     const leadHeadline = () => lead.locator('.hl').evaluate(element => [getComputedStyle(element).fontSize, getComputedStyle(element).lineHeight, getComputedStyle(element).fontWeight]);
-    assert.deepEqual(await leadImage(), [320, 180, 'cover', '12px']);
-    assert.equal(await leadColumns(), '12px 320px');
-    assert.deepEqual(await leadHeadline(), ['19px', '24.7px', '500']);
-    assert.equal(await lead.locator('.sm').evaluate(element => getComputedStyle(element).webkitLineClamp), '3');
+    assert.deepEqual(await rested(() => leadImage()), [320, 180, 'cover', '12px']);
+    assert.equal(await rested(() => leadColumns()), '12px 320px');
+    assert.deepEqual(await rested(() => leadHeadline()), ['19px', '24.7px', '500']);
+    assert.equal(await rested(() => lead.locator('.sm').evaluate(element => getComputedStyle(element).webkitLineClamp)), '3');
     const redFlag = row(page, 'Red Flag Warning');
-    assert.match(await redFlag.evaluate(element => getComputedStyle(element).gridTemplateColumns), /^12px \S+ \S+ 72px$/);
-    assert.deepEqual(await row(page, 'Federal agents detain 9').locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).borderRadius]), [72, 48, '8px']);
+    assert.match(await rested(() => redFlag.evaluate(element => getComputedStyle(element).gridTemplateColumns)), /^12px \S+ \S+ 72px$/);
+    assert.deepEqual(await rested(() => row(page, 'Federal agents detain 9').locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).borderRadius])), [72, 48, '8px']);
     assert.equal(await redFlag.locator('img').count(), 0, 'NWS\'s story has no image');
     assert.equal(await row(page, 'Council approves').locator('img, .nw-hz').count(), 0, 'an outlet\'s story without an image leaves its column empty');
     const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
     // The General block's rows are below the fold, so they're still new or updated here.
     assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
-    assert.equal(await dot('Four killed in a warehouse shooting'), await colourOf(page, 'var(--accent)'), 'updated: accent');
+    assert.equal(await rested(() => dot('Four killed in a warehouse shooting')), await rested(() => colourOf(page, 'var(--accent)')), 'updated: accent');
 
     const seen = await seenSettled(page, setpoint);
     assert.ok(seen.includes(await storyId(setpoint, 'Red Flag Warning for the valleys until Thu 6 PM')), 'Red Flag Warning was seen');
@@ -163,11 +163,11 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     await until('the pill', () => pill.textContent(), text => text === '3 new · 1 updatedN');
     // It drops into place over 180 ms (news-06): measured once it's there.
     await pill.evaluate(element => Promise.all(element.getAnimations().map(animation => animation.finished)));
-    const pillBox = await pill.evaluate(element => {
+    const pillBox = await rested(() => pill.evaluate(element => {
       const box = element.getBoundingClientRect();
       const strip = document.querySelector('.nw-missed')!.getBoundingClientRect();
       return {height: box.height, below: box.top - strip.bottom, centred: Math.abs((box.left + box.right) / 2 - (strip.left + strip.right) / 2) < 1};
-    });
+    }));
     assert.deepEqual(pillBox, {height: 32, below: 10, centred: true}, 'a 32 px pill, centred, 10 px under the Missed strip');
 
     await lead.click();
@@ -178,9 +178,9 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     // With the pane open the list is under 1000 px, and the lead is the boards' 232 × 130 again; opened,
     // it's seen, and stays ink, at 400 (#127).
     assert.deepEqual(await leadImage(), [232, 130, 'cover', '12px']);
-    assert.equal(await leadColumns(), '12px 232px');
-    assert.deepEqual(await leadHeadline(), ['16px', '21.6px', '400']);
-    assert.equal(await lead.locator('.hl').evaluate(element => getComputedStyle(element).color), await colourOf(page, 'var(--ink)'));
+    assert.equal(await rested(() => leadColumns()), '12px 232px');
+    assert.deepEqual(await rested(() => leadHeadline()), ['16px', '21.6px', '400']);
+    assert.equal(await rested(() => lead.locator('.hl').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink)')));
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '25-news-a-typical-morning', 'main');
@@ -209,20 +209,20 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     // The single values, each Light's own token.
     const style = (selector: string, property: 'color' | 'backgroundColor') => page.locator(selector).first().evaluate((element, name) => getComputedStyle(element)[name], property);
     const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
-    assert.equal(await colourOf(page, 'var(--ink)'), 'rgb(29, 30, 33)', 'Light\'s ink');
-    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
-    assert.equal(await style('.nw-sec', 'backgroundColor'), await backgroundOf(page, 'var(--panel)'));
-    assert.equal(await style('.nw-sec', 'color'), await colourOf(page, 'var(--ink2)'), 'the section\'s name in ink2 (#120)');
-    assert.equal(await style('.nw-sec > .icon', 'color'), await colourOf(page, 'var(--ink3)'), 'its glyph in ink3');
-    assert.equal(await style('.nw-missed', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 9%, var(--page))'));
-    assert.equal(await style('.nw-missed > .icon', 'color'), await colourOf(page, 'var(--accent)'));
-    assert.equal(await style('.nw-pill', 'backgroundColor'), await backgroundOf(page, 'var(--cardOn)'));
-    assert.equal(await style('.nw-pill .upd', 'color'), await colourOf(page, 'var(--accent)'));
-    assert.equal(await dot('Red Flag Warning'), await colourOf(page, 'var(--ink)'), 'new: ink');
-    assert.equal(await dot('Man arrested after a stabbing'), await colourOf(page, 'var(--accent)'), 'updated: accent');
-    assert.equal(await style('.nw-row.new .hl', 'color'), await colourOf(page, 'var(--ink)'));
-    assert.equal(await style('.nw-row .sm', 'color'), await colourOf(page, 'var(--ink3)'));
-    assert.equal(await style('.nw-meta .upd', 'color'), await colourOf(page, 'var(--accent)'));
+    assert.equal(await rested(() => colourOf(page, 'var(--ink)')), 'rgb(29, 30, 33)', 'Light\'s ink');
+    assert.equal(await rested(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
+    assert.equal(await rested(() => style('.nw-sec', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--panel)')));
+    assert.equal(await rested(() => style('.nw-sec', 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'the section\'s name in ink2 (#120)');
+    assert.equal(await rested(() => style('.nw-sec > .icon', 'color')), await rested(() => colourOf(page, 'var(--ink3)')), 'its glyph in ink3');
+    assert.equal(await rested(() => style('.nw-missed', 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--accent) 9%, var(--page))')));
+    assert.equal(await rested(() => style('.nw-missed > .icon', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
+    assert.equal(await rested(() => style('.nw-pill', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--cardOn)')));
+    assert.equal(await rested(() => style('.nw-pill .upd', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
+    assert.equal(await rested(() => dot('Red Flag Warning')), await rested(() => colourOf(page, 'var(--ink)')), 'new: ink');
+    assert.equal(await rested(() => dot('Man arrested after a stabbing')), await rested(() => colourOf(page, 'var(--accent)')), 'updated: accent');
+    assert.equal(await rested(() => style('.nw-row.new .hl', 'color')), await rested(() => colourOf(page, 'var(--ink)')));
+    assert.equal(await rested(() => style('.nw-row .sm', 'color')), await rested(() => colourOf(page, 'var(--ink3)')));
+    assert.equal(await rested(() => style('.nw-meta .upd', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
     // Upcoming's tile is the accent, not Jobs' violet (#163).
     assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--accent)'));
 
@@ -230,9 +230,9 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     await page.locator('.pane .st-img .nw-img').evaluate((image: HTMLImageElement) => image.decode());
-    assert.equal(await style('.st-new', 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))'));
-    assert.equal(await style('.st-new .lab', 'color'), await colourOf(page, 'var(--accent)'));
-    assert.equal(await style('.src-list', 'backgroundColor'), await backgroundOf(page, 'var(--sub)'));
+    assert.equal(await rested(() => style('.st-new', 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))')));
+    assert.equal(await rested(() => style('.st-new .lab', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
+    assert.equal(await rested(() => style('.src-list', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--sub)')));
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '31-light-news');
@@ -249,14 +249,14 @@ test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph i
     await page.goto(`${setpoint.base}/news`);
     const redFlag = row(page, 'Red Flag Warning');
     await redFlag.waitFor();
-    const caution = await colourOf(page, 'var(--caution)');
+    const caution = await rested(() => colourOf(page, 'var(--caution)'));
     const tile = redFlag.locator('.nw-hz');
-    assert.deepEqual(await tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor]),
-      [72, 48, '8px', await backgroundOf(page, 'color-mix(in oklch, var(--caution) 10%, transparent)')]);
-    assert.deepEqual(await glyphs(tile.locator('.icon')), [['thunderstorm', '22', caution]]);
+    assert.deepEqual(await rested(() => tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor])),
+      [72, 48, '8px', await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--caution) 10%, transparent)'))]);
+    assert.deepEqual(await rested(() => glyphs(tile.locator('.icon'))), [['thunderstorm', '22', caution]]);
     // The tile sits in the thumbnail's column, level with a photo's.
     const photo = row(page, 'Federal agents detain 9').locator('img');
-    assert.equal(await tile.evaluate(box => box.getBoundingClientRect().right), await photo.evaluate(image => image.getBoundingClientRect().right));
+    assert.equal(await rested(() => tile.evaluate(box => box.getBoundingClientRect().right)), await rested(() => photo.evaluate(image => image.getBoundingClientRect().right)));
     assert.equal(await row(page, 'Council approves').locator('.nw-hz').count(), 0, 'an outlet\'s story leaves its column empty');
     // Ranked first in Local, it leads the block without a photo: an 18 px glyph before its headline, no tile.
     await newsChange(setpoint, `UPDATE news_stories SET score = 99 WHERE headline = 'Red Flag Warning for the valleys until Thu 6 PM'`);
@@ -264,7 +264,7 @@ test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph i
     const lead = page.locator('.nw-lead', {hasText: 'Red Flag Warning'});
     await lead.waitFor();
     assert.equal(await lead.locator('.nw-hz, img').count(), 0);
-    assert.deepEqual(await glyphs(lead.locator('.hl .hz .icon')), [['thunderstorm', '18', caution]]);
+    assert.deepEqual(await rested(() => glyphs(lead.locator('.hl .hz .icon'))), [['thunderstorm', '18', caution]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -284,20 +284,20 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await still(page);
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
-    assert.deepEqual(await glyphs(pane.locator('.st-secs .tag .icon')), [['location_on', '14', await colourOf(page, 'var(--ink3)')]], 'the section\'s tag leads with its glyph (#120)');
+    assert.deepEqual(await rested(() => glyphs(pane.locator('.st-secs .tag .icon'))), [['location_on', '14', await rested(() => colourOf(page, 'var(--ink3)'))]], 'the section\'s tag leads with its glyph (#120)');
     assert.equal(await pane.locator('.st-meta').textContent(), '5 outlets·first reported Mon 6:12 AM·updated 8:40 AM');
     assert.equal(await pane.locator('.st-img .cap').textContent(), 'KTLA');
-    assert.deepEqual(await pane.locator('.st-img').evaluate(box => [box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).marginLeft]), [220, '14px', '28px']);
+    assert.deepEqual(await rested(() => pane.locator('.st-img').evaluate(box => [box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).marginLeft])), [220, '14px', '28px']);
     assert.deepEqual(await pane.locator('.st-new .it').allTextContents(), ['8:40 AMGrew from 150 to 400 acres overnight; evacuation warnings widened', '6:55 AMTwo schools in the warning area are closed for the day']);
     assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['KTLASummary only', 'NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
     assert.deepEqual(await pane.locator('.src-row .fav').allTextContents(), ['K', 'NBC', 'CBS', '7', '11']);
-    assert.equal(await pane.locator('.src-row', {hasText: 'NBC Los Angeles'}).evaluate(element => element.getBoundingClientRect().height >= 52), true);
+    assert.equal(await rested(() => pane.locator('.src-row', {hasText: 'NBC Los Angeles'}).evaluate(element => element.getBoundingClientRect().height >= 52)), true);
     // The pane's body is one 600 px column at the reading measure, however wide the pane (#98).
     const column = async (selector: string) => pane.locator(selector).first().evaluate((box, paneLeft) => {
       const rect = box.getBoundingClientRect();
       return [Math.round(rect.left - paneLeft), Math.round(rect.width)];
     }, await pane.evaluate(element => element.getBoundingClientRect().left + element.clientLeft));
-    assert.deepEqual(await Promise.all(['.st-img', '.st-new', '.st-sum', '.src-list'].map(column)), [[28, 600], [28, 600], [28, 600], [28, 600]]);
+    assert.deepEqual(await rested(() => Promise.all(['.st-img', '.st-new', '.st-sum', '.src-list'].map(column))), [[28, 600], [28, 600], [28, 600], [28, 600]]);
     // Opening it saw it: its dot goes at once, and the server has it.
     const fireId = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
     await until('seen on the server', () => stateOf(setpoint, fireId), state => state === 'seen');
@@ -305,10 +305,10 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     // Its dot shrinks out in its colour over 180 ms rather than vanishing, and its headline eases to seen's
     // colour over 120 ms (news-06).
     const dot = fire.locator('.nd');
-    assert.deepEqual(await dot.evaluate(element => [getComputedStyle(element, '::before').transitionProperty, getComputedStyle(element, '::before').transitionDuration, getComputedStyle(element, '::before').transitionDelay]),
+    assert.deepEqual(await rested(() => dot.evaluate(element => [getComputedStyle(element, '::before').transitionProperty, getComputedStyle(element, '::before').transitionDuration, getComputedStyle(element, '::before').transitionDelay])),
       ['transform, background-color', '0.18s, 0s', '0s, 0.18s']);
     await until('the dot shrunk away', () => dot.evaluate(element => getComputedStyle(element, '::before').transform), transform => transform === 'matrix(0, 0, 0, 0, 0, 0)');
-    assert.deepEqual(await fire.locator('.hl').evaluate(element => [getComputedStyle(element).transitionProperty, getComputedStyle(element).transitionDuration]), ['color', '0.12s']);
+    assert.deepEqual(await rested(() => fire.locator('.hl').evaluate(element => [getComputedStyle(element).transitionProperty, getComputedStyle(element).transitionDuration])), ['color', '0.12s']);
     // Still new since the user's last look before this visit.
     await pane.locator('.st-new').waitFor();
 
@@ -325,9 +325,9 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     // At a reading size: 16 / 1.65, paragraphs 16 apart, and in Night ink softened 10% toward ink2 (#129).
     assert.deepEqual(await pane.locator('.ar-text').evaluate(text => [getComputedStyle(text).fontSize, getComputedStyle(text).lineHeight, getComputedStyle(text).color]),
       ['16px', '26.4px', await colourOf(page, 'color-mix(in oklch, var(--ink) 90%, var(--ink2))')]);
-    assert.equal(await pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom), '16px');
-    assert.equal(await pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height), 240);
-    assert.deepEqual(await Promise.all(['.st-img.article', '.ar-text'].map(column)), [[28, 600], [28, 600]]);
+    assert.equal(await rested(() => pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom)), '16px');
+    assert.equal(await rested(() => pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height)), 240);
+    assert.deepEqual(await rested(() => Promise.all(['.st-img.article', '.ar-text'].map(column))), [[28, 600], [28, 600]]);
     await page.locator('.st-img.article .nw-img').evaluate((image: HTMLImageElement) => image.decode());
     await settle(page);
     await matchGolden(page, '26a-an-article-in-the-pane', 'reader');
@@ -370,25 +370,25 @@ test('New since you looked shows the newest four facts, then "6 more"; a click o
     const card = page.locator('.pane .st-new');
     await card.locator('.st-fold').waitFor();
     const visible = () => card.locator('.it').evaluateAll(lines => lines.filter(line => line.getBoundingClientRect().height > 0 && !line.closest('[inert]')).map(line => line.lastElementChild!.textContent));
-    assert.deepEqual(await visible(), ['Grew from 150 to 400 acres overnight; evacuation warnings widened', 'Two schools in the warning area are closed for the day', 'Fact 8 since the last look', 'Fact 7 since the last look']);
+    assert.deepEqual(await rested(() => visible()), ['Grew from 150 to 400 acres overnight; evacuation warnings widened', 'Two schools in the warning area are closed for the day', 'Fact 8 since the last look', 'Fact 7 since the last look']);
     assert.equal(await card.locator('.st-fold').textContent(), '6 more');
-    assert.deepEqual(await glyphs(card.locator('.st-fold .icon')), [['expand_more', '16', await colourOf(page, 'var(--ink3)')]]);
+    assert.deepEqual(await rested(() => glyphs(card.locator('.st-fold .icon'))), [['expand_more', '16', await rested(() => colourOf(page, 'var(--ink3)'))]]);
     // The fold sits level with the facts' text, in ink2 12.5, 20 px high: measured once the pane's
     // content has slid its 12 px into place, as the two are read one after the other.
     await still(page);
-    const textLeft =await card.locator('.it').first().locator('span').last().evaluate(text => text.getBoundingClientRect().left);
-    assert.deepEqual(await card.locator('.st-fold').evaluate(fold => {
+    const textLeft =await rested(() => card.locator('.it').first().locator('span').last().evaluate(text => text.getBoundingClientRect().left));
+    assert.deepEqual(await rested(() => card.locator('.st-fold').evaluate(fold => {
       const range = document.createRange();
       range.selectNodeContents(fold.firstChild!);
       return [range.getBoundingClientRect().left, fold.getBoundingClientRect().height, getComputedStyle(fold).fontSize, getComputedStyle(fold).color];
-    }), [textLeft, 20, '12.5px', await colourOf(page, 'var(--ink2)')]);
-    const closed = await card.evaluate(element => element.getBoundingClientRect().height);
-    assert.equal(await card.locator('.st-more').evaluate(more => getComputedStyle(more).transitionDuration), '0.18s');
+    })), [textLeft, 20, '12.5px', await rested(() => colourOf(page, 'var(--ink2)'))]);
+    const closed = await rested(() => card.evaluate(element => element.getBoundingClientRect().height));
+    assert.equal(await rested(() => card.locator('.st-more').evaluate(more => getComputedStyle(more).transitionDuration)), '0.18s');
 
     await card.locator('.st-fold').click();
     await until('all ten facts', visible, lines => lines.length === 10);
     assert.equal(await card.locator('.st-fold').textContent(), 'Show fewer');
-    assert.deepEqual((await glyphs(card.locator('.st-fold .icon')))[0]![0], 'expand_less');
+    assert.deepEqual((await rested(() => glyphs(card.locator('.st-fold .icon'))))[0]![0], 'expand_less');
     // Grown by the six facts' lines once it settles.
     await until('the card grown', () => card.evaluate(element => element.getBoundingClientRect().height), height => height > closed + 6 * 20);
     await card.locator('.st-fold').click();
@@ -438,14 +438,16 @@ test('Missed (28): Catch up lists the stories that left unseen, by day, each row
     await page.locator('.nw-back .t', {hasText: 'Missed since Mon 10:40 PM'}).waitFor();
     assert.equal(await page.locator('.nw-back .n').textContent(), '14 stories');
     assert.equal(await page.locator('.nw-sec').textContent(), 'TuesdayOct 6');
-    assert.deepEqual(await glyphs(page.locator('.nw-sec > .icon')), [['history', '14', await colourOf(page, 'var(--ink3)')]], 'a day of Missed leads with history (#120)');
+    assert.deepEqual(await rested(() => glyphs(page.locator('.nw-sec > .icon'))), [['history', '14', await rested(() => colourOf(page, 'var(--ink3)'))]], 'a day of Missed leads with history (#120)');
     assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
     const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
     assert.match(await tornado.getAttribute('class') ?? '', /^nw-lead/);
     // Ages follow DESIGN.md › Copy: Tuesday is "Yesterday" on a Wednesday.
     assert.equal(await tornado.locator('.nw-meta').textContent(), 'General·NPR +9·Yesterday');
     assert.deepEqual(await row(page, 'Google DeepMind releases Gemini 3.5 Flash').locator('.side .nw-meta').allTextContents(), ['AI·Google +6', 'Yesterday']);
-    const tornadoId = (await setpoint.api<{days: {stories: {id: number; headline: string}[]}[]}>('GET', '/news/missed')).days[0]!.stories[0]!.id;
+    // Its id from its row: the page's list holds for the visit, but the server's Missed lets a seen
+    // story go, and by now the rows have been on screen a while.
+    const tornadoId = Number(await tornado.getAttribute('data-story'));
     await seenSettled(page, setpoint);
     // A story leaves Missed once it's seen; the list holds while it's open.
     assert.equal((await setpoint.api<{days: {stories: {id: number}[]}[]}>('GET', '/news/missed')).days.flatMap(day => day.stories).some(story => story.id === tornadoId), false);
@@ -505,7 +507,7 @@ test('seen: about a second fully on screen, or opened; flicking past doesn\'t co
     await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, hurricane), 'new', 'below the fold');
     // Flicking past: General's lead is drawn fully on screen for a few frames, then scrolled away.
-    const flicked = await list(page).evaluate(async scroller => {
+    const flicked = await rested(() => list(page).evaluate(async scroller => {
       const frame = () => new Promise(next => requestAnimationFrame(next));
       scroller.scrollTo({top: scroller.scrollHeight});
       await frame();
@@ -516,7 +518,7 @@ test('seen: about a second fully on screen, or opened; flicking past doesn\'t co
       const shown = rect.top >= box.top && rect.bottom <= box.bottom;
       scroller.scrollTo({top: 0});
       return shown;
-    });
+    }));
     assert.equal(flicked, true, 'Hurricane was fully on screen');
     // Nothing should happen: a second and more passes with Hurricane off screen.
     await page.waitForTimeout(1500);
@@ -538,8 +540,8 @@ test('seen: about a second fully on screen, or opened; flicking past doesn\'t co
     // A seen lead keeps its ink, at 400, so it never ranks below a row; a seen row is ink2 (#127).
     const ink = (headline: string) => row(page, headline).locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
     assert.match(await row(page, 'Brush fire near the 210').getAttribute('class') ?? '', /^nw-lead seen\b/);
-    assert.deepEqual(await ink('Brush fire near the 210'), [await colourOf(page, 'var(--ink)'), '400']);
-    assert.deepEqual(await ink('Red Flag Warning'), [await colourOf(page, 'var(--ink2)'), '400']);
+    assert.deepEqual(await rested(() => ink('Brush fire near the 210')), [await rested(() => colourOf(page, 'var(--ink)')), '400']);
+    assert.deepEqual(await rested(() => ink('Red Flag Warning')), [await rested(() => colourOf(page, 'var(--ink2)')), '400']);
     // Seen by Pixel Watch's opening, even off screen.
     await page.goto(`${setpoint.base}/news/story/${pixel}`);
     await until('Pixel Watch seen', () => stateOf(setpoint, pixel), state => state === 'seen');
@@ -579,14 +581,14 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
       probe.remove();
       return shadow;
     }, edge);
-    const hovered = [await ring('--edgeHover'), await colourOf(page, 'var(--ink)')];
+    const hovered = [await rested(() => ring('--edgeHover')), await rested(() => colourOf(page, 'var(--ink)'))];
     await pill.hover();
     await until('the pill answers the pointer', () => pill.evaluate(element => [getComputedStyle(element).boxShadow, getComputedStyle(element.querySelector('.icon')!).color]),
       answer => answer.join() === hovered.join());
     await page.mouse.move(700, 28);
     await list(page).evaluate(scroller => scroller.scrollTo({top: 400}));
     // Each row N brings onto the list settles in from sub2 over 900 ms: noted as it lands.
-    await page.evaluate(() => {
+    await rested(() => page.evaluate(() => {
       const landed: string[][] = [];
       (window as unknown as {landed: string[][]}).landed = landed;
       new MutationObserver(() => {
@@ -594,7 +596,7 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
           if (!landed.some(([id]) => id === element.dataset.story)) landed.push([element.dataset.story!, getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]);
         }
       }).observe(document.querySelector('.nw-list')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
-    });
+    }));
     // N takes the new order and scrolls to the top.
     await page.keyboard.press('n');
     await until('the new order', () => page.locator('.nw-list [data-story]').first().textContent(), text => text?.startsWith('Water main break floods an intersection') ?? false);
@@ -731,31 +733,31 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
     assert.equal(await page.locator('.nw-list').evaluate(element => element.getBoundingClientRect().width), 420);
 
     const upcoming = page.locator('.nw-up');
-    assert.equal(await upcoming.evaluate(element => element.getBoundingClientRect().height), 46);
+    assert.equal(await rested(() => upcoming.evaluate(element => element.getBoundingClientRect().height)), 46);
     const what = upcoming.locator('span:has(> .what)');
-    assert.deepEqual(await what.evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).textOverflow, element.scrollWidth > element.clientWidth]),
+    assert.deepEqual(await rested(() => what.evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).textOverflow, element.scrollWidth > element.clientWidth])),
       ['nowrap', 'ellipsis', true], 'name · date is one line, cut short with an ellipsis');
     assert.equal(await what.getAttribute('title'), 'Apple event · Tue Oct 20 · 10 AM');
     assert.equal(await upcoming.locator('.lab').isVisible(), false, 'no UPCOMING label');
     assert.equal(await upcoming.locator('.nw-meta').isVisible(), false, 'no outlet');
-    const inside = await upcoming.evaluate(element => {
+    const inside = await rested(() => upcoming.evaluate(element => {
       const box = element.getBoundingClientRect();
       return [...element.children].every(child => {
         const rect = child.getBoundingClientRect();
         return rect.width === 0 || (rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom);
       });
-    });
+    }));
     assert.equal(inside, true, 'everything in the row stays inside it');
     assert.equal(await upcoming.locator('.btn', {hasText: 'Add to calendar'}).isVisible(), true);
 
-    assert.deepEqual(await fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height]), [160, 90]);
-    assert.equal(await fire.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' ')), '12px 160px');
+    assert.deepEqual(await rested(() => fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height])), [160, 90]);
+    assert.equal(await rested(() => fire.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' '))), '12px 160px');
     // Under 480 px a row's headline wraps to two 18 px lines and its summary goes; the row keeps its height, 66 px and its hairline (#128).
     const carWash = row(page, 'Federal agents detain 9 at a car wash');
-    assert.deepEqual(await carWash.locator('.hl').evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).webkitLineClamp, getComputedStyle(element).lineHeight, element.getBoundingClientRect().height]),
+    assert.deepEqual(await rested(() => carWash.locator('.hl').evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).webkitLineClamp, getComputedStyle(element).lineHeight, element.getBoundingClientRect().height])),
       ['normal', '2', '18px', 36]);
     assert.equal(await carWash.locator('.sm').isVisible(), false, 'no summary');
-    assert.equal(await carWash.evaluate(element => element.getBoundingClientRect().height), 67);
+    assert.equal(await rested(() => carWash.evaluate(element => element.getBoundingClientRect().height)), 67);
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, 'news-narrow', 'news');

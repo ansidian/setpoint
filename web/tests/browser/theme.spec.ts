@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -71,7 +71,7 @@ test('System follows the browser, the first paint doesn\'t fade, and a change do
     // Mid-fade the page is between the two backgrounds, then lands on Light's.
     const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     await until('the fade ends', () => page.evaluate(() => document.documentElement.classList.contains('theme-fade')), on => !on);
-    assert.equal(await background(), 'rgb(246, 246, 244)');
+    assert.equal(await rested(() => background()), 'rgb(246, 246, 244)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

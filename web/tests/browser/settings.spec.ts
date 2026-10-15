@@ -16,7 +16,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, ROOT, startSetpoint, still, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -52,10 +52,10 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     // Attention precision leads with its figure, 24 / 500 in ink, then the 30 days as a 1.5 px line in
     // good on a 180 × 32 drawing (the polish audit's settings-08).
     const precision = page.locator('.settings .precision');
-    assert.deepEqual(await precision.locator('.big').evaluate(big => [big.textContent, getComputedStyle(big).fontSize, getComputedStyle(big).fontWeight, getComputedStyle(big).color]),
-      ['82%', '24px', '500', await computed(page, 'color', 'var(--ink)')]);
-    assert.deepEqual(await precision.locator('svg.spark').evaluate(svg => [svg.getBoundingClientRect().width, svg.getBoundingClientRect().height]), [180, 32]);
-    assert.deepEqual(await precision.locator('.spark .line').evaluate(line => [getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth]), [await computed(page, 'color', 'var(--good)'), '1.5px']);
+    assert.deepEqual(await rested(() => precision.locator('.big').evaluate(big => [big.textContent, getComputedStyle(big).fontSize, getComputedStyle(big).fontWeight, getComputedStyle(big).color])),
+      ['82%', '24px', '500', await rested(() => computed(page, 'color', 'var(--ink)'))]);
+    assert.deepEqual(await rested(() => precision.locator('svg.spark').evaluate(svg => [svg.getBoundingClientRect().width, svg.getBoundingClientRect().height])), [180, 32]);
+    assert.deepEqual(await rested(() => precision.locator('.spark .line').evaluate(line => [getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth])), [await rested(() => computed(page, 'color', 'var(--good)')), '1.5px']);
     // Each day's column names it as the app writes dates, "Tue, Oct 6 · 9 of 11 opened first", not "2026-10-06".
     const {days} = await setpoint.api<PrecisionOut>('GET', '/mail/precision');
     const titles = await page.locator('.settings .spark .day title').allTextContents();
@@ -66,7 +66,7 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
     // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#123).
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon path').getAttribute('d'), ICONS.sync_problem);
-    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'), 'in caution on the current page too');
+    assert.equal(await rested(() => page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color)), await rested(() => computed(page, 'color', 'var(--caution)')), 'in caution on the current page too');
     assert.equal(await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).locator('.state > .icon path').getAttribute('d'), ICONS.sync_problem);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '17-settings-accounts', 'settings');
@@ -88,20 +88,20 @@ test('each source\'s state leads with its glyph (the polish audit\'s settings-01
         ? ['dot', getComputedStyle(first).width, getComputedStyle(first).backgroundColor]
         : [first.querySelector('path')!.getAttribute('d'), first.getAttribute('width'), getComputedStyle(first).color];
     });
-    const [good, ink2, ink3, caution] = [await computed(page, 'background', 'var(--good)'), await computed(page, 'color', 'var(--ink2)'), await computed(page, 'color', 'var(--ink3)'), await computed(page, 'color', 'var(--caution)')];
+    const [good, ink2, ink3, caution] = [await rested(() => computed(page, 'background', 'var(--good)')), await rested(() => computed(page, 'color', 'var(--ink2)')), await rested(() => computed(page, 'color', 'var(--ink3)')), await rested(() => computed(page, 'color', 'var(--caution)'))];
     const account = (label: string) => page.locator('.settings [data-account]', {hasText: label});
     await state(account('Personal')).getByText('Checks stopped, as of 9:14 PM').waitFor();
     await state(account('Work')).getByText('Gmail answered 503.').waitFor();
-    assert.deepEqual(await lead(account('Jobs')), ['dot', '7px', good], 'checked: a 7 px good dot');
-    assert.deepEqual(await lead(account('Personal')), [ICONS.history, '16', ink3], 'stopped: history in ink3');
-    assert.equal(await state(account('Personal')).evaluate(element => getComputedStyle(element).color), ink2, 'its words a step up, ink2');
-    assert.deepEqual(await lead(account('Work')), [ICONS.warning, '16', caution], 'failing: the warning triangle in caution');
-    assert.deepEqual(await lead(account('Business')), [ICONS.sync_problem, '16', caution], 'sign-in: sync_problem');
+    assert.deepEqual(await rested(() => lead(account('Jobs'))), ['dot', '7px', good], 'checked: a 7 px good dot');
+    assert.deepEqual(await rested(() => lead(account('Personal'))), [ICONS.history, '16', ink3], 'stopped: history in ink3');
+    assert.equal(await rested(() => state(account('Personal')).evaluate(element => getComputedStyle(element).color)), ink2, 'its words a step up, ink2');
+    assert.deepEqual(await rested(() => lead(account('Work'))), [ICONS.warning, '16', caution], 'failing: the warning triangle in caution');
+    assert.deepEqual(await rested(() => lead(account('Business'))), [ICONS.sync_problem, '16', caution], 'sign-in: sync_problem');
     // A failing row takes caution at 7%, as a row needing sign-in does and Settings › News's failing rows do.
     assert.deepEqual(await page.locator('.settings .set-row.warn[data-account]').evaluateAll(rows => rows.map(row => row.textContent!.match(/^(Business|Work)/)?.[0])), ['Business', 'Work']);
     const todoist = page.locator('.settings [data-source="todoist"]');
-    assert.deepEqual(await lead(todoist), [ICONS.history, '16', ink3]);
-    assert.deepEqual(await lead(page.locator('.settings [data-source="weather"]')), ['dot', '7px', good]);
+    assert.deepEqual(await rested(() => lead(todoist)), [ICONS.history, '16', ink3]);
+    assert.deepEqual(await rested(() => lead(page.locator('.settings [data-source="weather"]'))), ['dot', '7px', good]);
     // The gap to the words stays 8 px.
     assert.equal(await state(account('Work')).evaluate(element => getComputedStyle(element).columnGap), '8px');
 
@@ -109,14 +109,14 @@ test('each source\'s state leads with its glyph (the polish audit\'s settings-01
     await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
     const connected = page.locator('.settings .health-t', {hasText: 'Connected'});
     await connected.waitFor();
-    assert.deepEqual(await connected.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color]), [ICONS.history, ink3]);
+    assert.deepEqual(await rested(() => connected.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color])), [ICONS.history, ink3]);
 
     // Settings › News: the seed's FOX 11 failing, the rest checked.
     await page.locator('.settings .set-nav .nav', {hasText: 'News'}).click();
     const fox = page.locator('.settings .news-src.warn').first();
     await fox.waitFor();
-    assert.deepEqual(await lead(fox), [ICONS.warning, '16', caution]);
-    assert.deepEqual(await lead(page.locator('.settings .news-src:not(.warn)').first()), ['dot', '7px', good]);
+    assert.deepEqual(await rested(() => lead(fox)), [ICONS.warning, '16', caution]);
+    assert.deepEqual(await rested(() => lead(page.locator('.settings .news-src:not(.warn)').first())), ['dot', '7px', good]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -151,7 +151,7 @@ test('board 18b: Settings › Notifications', async () => {
     await page.locator('.settings .set-label', {hasText: 'Connected · last sent 8:02 AM'}).waitFor();
     // Every group has its label (the polish audit's settings-11), spaced as every other group is.
     assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['ntfy', 'Reminder defaults', 'Time to Leave', 'Alerts']);
-    assert.deepEqual(await page.locator('.settings .set-sec').evaluateAll(sections => sections.slice(1).map(section => getComputedStyle(section).marginTop)), ['14px', '14px', '14px']);
+    assert.deepEqual(await rested(() => page.locator('.settings .set-sec').evaluateAll(sections => sections.slice(1).map(section => getComputedStyle(section).marginTop))), ['14px', '14px', '14px']);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '18b-settings-notifications', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -182,7 +182,7 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon path').getAttribute('d'), ICONS.warning, 'a failing feed keeps warning (override 24)');
-    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color), await computed(page, 'color', 'var(--caution)'));
+    assert.equal(await rested(() => page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
     // The head's counts, then one group per section with its count, and no Keys group (#97).
     const sources = await setpoint.api<NewsSourcesOut>('GET', '/news/sources');
     assert.equal(await page.locator('.settings .set-head .head-note').textContent(), `${sources.articles_today} articles today · ${sources.stories_on_page} stories`);
@@ -191,8 +191,8 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     // FOX 11 fails in `caution` on a `caution` 7% row; the rest say when they were checked, each 44 px.
     assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
     assert.equal(await fox.locator('.state').getAttribute('title'), '404 Not Found');
-    assert.equal(await fox.locator('.state').evaluate(state => getComputedStyle(state).color), await computed(page, 'color', 'var(--caution)'));
-    assert.equal(await fox.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'background', 'color-mix(in oklch, var(--caution) 7%, transparent)'));
+    assert.equal(await rested(() => fox.locator('.state').evaluate(state => getComputedStyle(state).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
+    assert.equal(await rested(() => fox.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'background', 'color-mix(in oklch, var(--caution) 7%, transparent)')));
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});
     assert.deepEqual(await ktla.evaluate(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.prov')?.textContent, element.querySelector('.state')?.textContent]),
       ['KTLA · Local news', 'Feed, summary only', 'Every 15 min', 'Checked 9:10 AM']);
@@ -230,13 +230,13 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     // The meter: 160 × 6, filled to $18.40 of $40, measured once Settings has settled into place.
     await still(page);
     const meter = news.locator('.meter');
-    assert.deepEqual(await meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10]), [160, 6, 73.6]);
+    assert.deepEqual(await rested(() => meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10])), [160, 6, 73.6]);
     // The money first (the polish audit's settings-10): the amount in ink, and a neutral meter, ink3 on a sub2
     // track: a usage meter is neither "you are here" (accent) nor an identity (cool).
     const neutral = await computed(page, 'background', 'var(--ink3)');
-    assert.deepEqual(await meter.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element.firstElementChild!).backgroundColor]),
-      [await computed(page, 'background', 'var(--sub2)'), neutral]);
-    assert.equal(await amount.evaluate(element => getComputedStyle(element).color), await computed(page, 'color', 'var(--ink)'));
+    assert.deepEqual(await rested(() => meter.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element.firstElementChild!).backgroundColor])),
+      [await rested(() => computed(page, 'background', 'var(--sub2)')), neutral]);
+    assert.equal(await rested(() => amount.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--ink)')));
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '30b-settings-ai', 'settings');
 
@@ -250,7 +250,7 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     ]);
     // The month's total in the label, each cost in ink at 500.
     assert.equal(await usage.locator('.set-label .r').textContent(), '$21.35');
-    assert.deepEqual(await usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight]), [await computed(page, 'color', 'var(--ink)'), '500']);
+    assert.deepEqual(await rested(() => usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight])), [await rested(() => computed(page, 'color', 'var(--ink)')), '500']);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, 'settings-ai-usage', 'settings');
 
@@ -259,8 +259,8 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     await choose(page, 'Monthly cap', '$20');
     await amount.filter({hasText: '$18.40 of $20'}).waitFor();
     assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
-    assert.equal(await meter.locator('span').evaluate(fill => getComputedStyle(fill).transitionDuration), '0.26s, 0.12s', 'the fill eases to its new width');
-    const caution = await computed(page, 'background', 'var(--caution)');
+    assert.equal(await rested(() => meter.locator('span').evaluate(fill => getComputedStyle(fill).transitionDuration)), '0.26s, 0.12s', 'the fill eases to its new width');
+    const caution = await rested(() => computed(page, 'background', 'var(--caution)'));
     await until('the meter in caution', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === caution);
     await choose(page, 'Monthly cap', '$50');
     await settled('the cap saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.news.monthly_cap_usd === 50);
@@ -282,10 +282,10 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
     await month.locator('.amount', {hasText: '$40.40 of $40'}).waitFor();
     const line = month.locator('.s .caution');
     assert.equal(await line.textContent(), 'Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
-    assert.equal(await line.evaluate(element => getComputedStyle(element).color), await computed(page, 'color', 'var(--caution)'));
+    assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
     // Measured once Settings has settled into place.
     await still(page);
-    assert.deepEqual(await month.locator('.meter > span').evaluate(fill => [fill.getBoundingClientRect().width, getComputedStyle(fill).backgroundColor]), [160, await computed(page, 'background', 'var(--caution)')]);
+    assert.deepEqual(await rested(() => month.locator('.meter > span').evaluate(fill => [fill.getBoundingClientRect().width, getComputedStyle(fill).backgroundColor])), [160, await rested(() => computed(page, 'background', 'var(--caution)'))]);
     await choose(page, 'Monthly cap', '$50');
     await month.locator('.amount', {hasText: '$40.40 of $50'}).waitFor();
     await line.waitFor({state: 'detached'});
@@ -313,23 +313,23 @@ test('a long page keeps its title and × in place while it scrolls, a hairline u
       return {title: Math.round(title.top - modal.top), close: [Math.round(close.top - modal.top), Math.round(modal.right - close.right)],
         head: [Math.round(head.top - modal.top), Math.round(modal.right - head.right)]};
     });
-    const before = await place();
+    const before = await rested(() => place());
     assert.deepEqual(before.close, [24, 20]);
     assert.deepEqual(before.head, [1, 1], 'the head stops short of the modal\'s ring');
-    assert.equal(await head.evaluate(element => getComputedStyle(element).boxShadow), 'rgba(0, 0, 0, 0) 0px 0px 0px 0px', 'no hairline before it scrolls');
-    const hairline = await page.evaluate(() => {
+    assert.equal(await rested(() => head.evaluate(element => getComputedStyle(element).boxShadow)), 'rgba(0, 0, 0, 0) 0px 0px 0px 0px', 'no hairline before it scrolls');
+    const hairline = await rested(() => page.evaluate(() => {
       const probe = document.createElement('div');
       probe.style.boxShadow = '0 1px 0 var(--hair)';
       document.body.append(probe);
       const shadow = getComputedStyle(probe).boxShadow;
       probe.remove();
       return shadow;
-    });
+    }));
     await main.evaluate(element => element.scrollTo({top: 200}));
     await until('scrolled', () => main.evaluate(element => element.scrollTop), top => top === 200);
-    assert.deepEqual(await place(), before, 'the title and × stay where they were');
+    assert.deepEqual(await rested(() => place()), before, 'the title and × stay where they were');
     await until('the hairline under the title', () => head.evaluate(element => getComputedStyle(element).boxShadow), shadow => shadow === hairline);
-    assert.equal(await head.evaluate(element => getComputedStyle(element).backgroundColor), await computed(page, 'background', 'var(--modal)'), 'over the modal\'s colour, so rows pass under it');
+    assert.equal(await rested(() => head.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'background', 'var(--modal)')), 'over the modal\'s colour, so rows pass under it');
     await page.getByRole('button', {name: 'Close settings'}).click();
     await page.locator('.settings').waitFor({state: 'detached'});
 
@@ -345,10 +345,10 @@ test('a long page keeps its title and × in place while it scrolls, a hairline u
       scroller.scrollTo({top: section.offsetTop + 100});
       return section.querySelector('.set-label')!.firstChild!.textContent;
     });
-    const stuck = await page.evaluate(() => {
+    const stuck = await rested(() => page.evaluate(() => {
       const bottom = document.querySelector('.settings .set-head')!.getBoundingClientRect().bottom;
       return [...document.querySelectorAll('.settings .set-label')].filter(label => Math.abs(label.getBoundingClientRect().top - bottom) < 1).map(label => label.firstChild!.textContent);
-    });
+    }));
     assert.deepEqual(stuck, [longest], 'its label sits under the title');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -367,13 +367,13 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     assert.equal(new URL(page.url()).pathname, '/calendar', 'the page under it keeps the address');
     // The current page keeps its raised `navOn` chip (#166) with the keys in the nav, opened with ⌘,
     // or after ↓; the keyboard's own fill is `sub`, on any other page it reaches.
-    const raised = await page.evaluate(() => {
+    const raised = await rested(() => page.evaluate(() => {
       const probe = document.body.appendChild(document.createElement('i'));
       probe.style.background = 'var(--navOn)';
       const fill = getComputedStyle(probe).backgroundColor;
       probe.remove();
       return fill;
-    });
+    }));
     const current = page.locator('.settings .set-nav .nav.on');
     const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav, getComputedStyle(nav).backgroundColor]);
     await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true, raised]));
@@ -397,10 +397,10 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.locator('.settings .set-title', {hasText: 'Accounts'}).waitFor();
     await page.locator('.toast', {hasText: 'Gmail couldn’t be connected, access denied'}).waitFor();
     // The toast sits above Settings and its scrim, not under them (SV-25).
-    assert.equal(await page.locator('.toast').evaluate(toast => {
+    assert.equal(await rested(() => page.locator('.toast').evaluate(toast => {
       const box = toast.getBoundingClientRect();
       return toast.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
-    }), true);
+    })), true);
     await page.keyboard.press('Escape');
 
     // The bar's Reconnect goes straight to Google's sign-in for the one Gmail account needing it, not
@@ -435,7 +435,7 @@ test('Accounts: colour, rename and order save; Connect Gmail says Google isn\'t 
     await business.locator('.sw').first().click();
     await page.locator('.settings .swatches .sw[aria-label="cyan"]').click();
     await settled('Business is cyan', accounts, list => list.find(account => account.label === 'Business')?.colour === 'cyan');
-    assert.equal(await page.locator('.acct', {hasText: 'Business'}).locator('.dot').evaluate(dot => getComputedStyle(dot).getPropertyValue('--c').trim()), 'oklch(0.86 0.11 182)', 'the sidebar follows (cyan)');
+    assert.equal(await rested(() => page.locator('.acct', {hasText: 'Business'}).locator('.dot').evaluate(dot => getComputedStyle(dot).getPropertyValue('--c').trim())), 'oklch(0.86 0.11 182)', 'the sidebar follows (cyan)');
 
     await business.getByRole('button', {name: 'Business options'}).click();
     await page.getByRole('menuitem', {name: 'Rename'}).click();
@@ -498,10 +498,10 @@ test('Mail: a rule added, a learned rule undone, a domain untrusted, the code ex
     // SV-25 (D54): nothing matching is one plain line across the group, with no pill on hover and nothing cut off.
     const empty = page.locator('.settings .set-row', {hasText: 'No domain matches'});
     await empty.hover();
-    const box = await empty.evaluate(row => ({
+    const box = await rested(() => empty.evaluate(row => ({
       width: row.getBoundingClientRect().width, group: row.closest('.set-group')!.getBoundingClientRect().width,
       fits: row.scrollWidth <= row.clientWidth, fill: getComputedStyle(row).backgroundColor,
-    }));
+    })));
     assert.equal(box.width, box.group, 'the line spans the group');
     assert.ok(box.fits, 'the line isn\'t cut off');
     assert.equal(box.fill, 'rgba(0, 0, 0, 0)', 'no pill on hover');
@@ -594,10 +594,10 @@ test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, rea
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
-    assert.deepEqual(await leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'})), [ICONS.rule, '20', await computed(page, 'color', 'var(--ink3)'), 12], 'it leads with rule (#124)');
+    assert.deepEqual(await rested(() => leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'}))), [ICONS.rule, '20', await rested(() => computed(page, 'color', 'var(--ink3)')), 12], 'it leads with rule (#124)');
     const empty = page.locator('.settings .set-row', {hasText: 'No rules yet'}).getByRole('button', {name: 'Add rule'});
     const colour = () => empty.evaluate(button => getComputedStyle(button).color);
-    const resting = await colour();
+    const resting = await rested(() => colour());
     await empty.hover();
     await until('the hover colour', colour, value => value !== resting);
     await page.mouse.move(0, 0);
@@ -618,7 +618,7 @@ test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
     const row = page.locator('.settings .set-row', {hasText: 'No rules yet'});
-    const shape = await row.evaluate((element: HTMLElement) => {
+    const shape = await rested(() => row.evaluate((element: HTMLElement) => {
       const line = element.querySelector<HTMLElement>('.s')!;
       const words = document.createRange();
       words.selectNodeContents(line.firstChild!);
@@ -627,7 +627,7 @@ test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox
         wordsTop: Math.round(words.getBoundingClientRect().top), buttonTop: Math.round(line.querySelector('button')!.getBoundingClientRect().top),
         leadLeft: Math.round(element.querySelector('.icon')!.getBoundingClientRect().left - element.getBoundingClientRect().left),
       };
-    });
+    }));
     assert.ok(shape.line < 24, `one line, not ${shape.line}px`);
     assert.ok(Math.abs(shape.wordsTop - shape.buttonTop) <= 2, 'Add rule sits on the words\' line');
     assert.ok(shape.row <= 46, `a 46px row, not ${shape.row}px`);
@@ -773,15 +773,17 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     // Saved, a check in good at the field's right end.
     const saved = page.locator('.settings .fld-at .saved');
     await saved.waitFor();
+    // Read while it shows: Saved stays 1.5 s and fades, which a rest would wait out.
     assert.deepEqual(await saved.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]),
       [ICONS.check, '16', await computed(page, 'color', 'var(--good)')]);
+    // Measured as it shows, for the same reason.
     const [field, mark] = [(await server.boundingBox())!, (await saved.boundingBox())!];
     assert.equal(Math.round(field.x + field.width - (mark.x + mark.width)), 9, 'at the field\'s right end');
     // It goes after 1.5 s and its fade.
     await saved.waitFor({state: 'detached'});
 
     const button = page.getByRole('button', {name: 'Send test'});
-    const width = (await button.boundingBox())!.width;
+    const width = (await rested(() => button.boundingBox()))!.width;
     let release = () => {};
     const held = new Promise<void>(resolve => {
       release = resolve;
@@ -794,17 +796,17 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     // While it sends, the shared spinner stands where its glyph was, and the button keeps its width.
     await button.locator('.spin .icon').waitFor();
     assert.equal(await button.locator('.spin .icon path').getAttribute('d'), ICONS.progress_activity);
-    assert.equal((await button.boundingBox())!.width, width);
+    assert.equal((await rested(() => button.boundingBox()))!.width, width);
     release();
     // A failure is a failure: in alert, led by error, in words rather than Node's "fetch failed".
     const line = page.locator('.settings .line');
     await line.filter({hasText: `Not sent, Can’t reach ${unreachable}`}).waitFor();
-    assert.deepEqual(await line.evaluate(element => [element.className, element.textContent, getComputedStyle(element).color, element.querySelector('.icon path')?.getAttribute('d'), element.querySelector('.icon')?.getAttribute('width')]),
-      ['line failed', `Not sent, Can’t reach ${unreachable}`, await computed(page, 'color', 'var(--alert)'), ICONS.error, '16']);
+    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, element.textContent, getComputedStyle(element).color, element.querySelector('.icon path')?.getAttribute('d'), element.querySelector('.icon')?.getAttribute('width')])),
+      ['line failed', `Not sent, Can’t reach ${unreachable}`, await rested(() => computed(page, 'color', 'var(--alert)')), ICONS.error, '16']);
     // The header agrees, as a source failing does: a caution dot.
     const header = page.locator('.settings .set-label', {hasText: 'ntfy'});
     await header.getByText(`Failing, Can’t reach ${unreachable}`).waitFor();
-    assert.equal(await header.locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor), await computed(page, 'background', 'var(--caution)'));
+    assert.equal(await rested(() => header.locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor)), await rested(() => computed(page, 'background', 'var(--caution)')));
     await page.unroute('**/api/notifications/test');
 
     // A server that answers: the test goes, its line ticks in good, and so does the button for 2 s.
@@ -813,9 +815,9 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     await settled('the server', () => setpoint.api<Settings>('GET', '/settings'), value => value.notifications.ntfy_server === ntfy.url);
     await button.click();
     await line.filter({hasText: 'Sent to setpoint-reminders'}).waitFor();
-    const good = await computed(page, 'color', 'var(--good)');
-    assert.deepEqual(await line.evaluate(element => [element.className, getComputedStyle(element.querySelector('.icon')!).color, element.querySelector('.icon path')?.getAttribute('d')]), ['line done', good, ICONS.check]);
-    assert.deepEqual(await button.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color]), [ICONS.check, good]);
+    const good = await rested(() => computed(page, 'color', 'var(--good)'));
+    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, getComputedStyle(element.querySelector('.icon')!).color, element.querySelector('.icon path')?.getAttribute('d')])), ['line done', good, ICONS.check]);
+    assert.deepEqual(await rested(() => button.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color])), [ICONS.check, good]);
     await until('the button\'s glyph back to send', () => button.locator('.icon path').getAttribute('d'), d => d === ICONS.send);
     assert.equal(ntfy.published.length, 1);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -883,14 +885,14 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     await settled('Personal is violet at Google', calendars, list => list.some(calendar => calendar.name === 'Personal' && calendar.colour === 'violet' && calendar.command === null));
     await personal.locator('.spin').waitFor({state: 'detached'});
     const violet = 'oklch(0.8 0.11 300)';
-    assert.equal(await personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim()), violet);
+    assert.equal(await rested(() => personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim())), violet);
 
     // Google refuses sun (the dev provider's rule): failed in place, in Google's words.
     await personal.getByRole('button', {name: 'Personal colour'}).click();
     await page.locator('.settings .swatches .sw[aria-label="sun"]').click();
     const refusal = personal.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Google Calendar, The caller does not have permission (403 Forbidden)'});
     await refusal.waitFor();
-    assert.equal(await personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim()), 'oklch(0.86 0.16 92)', 'the colour picked stays in place');
+    assert.equal(await rested(() => personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim())), 'oklch(0.86 0.16 92)', 'the colour picked stays in place');
     // Try again: pending once more, then refused again.
     await personal.getByRole('button', {name: 'Try again'}).click();
     await personal.locator('.spin').waitFor({state: 'attached'});
@@ -904,8 +906,8 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     await page.keyboard.press('Escape');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
-    assert.equal(await page.locator('.calrow', {hasText: 'Personal'}).evaluate(row => getComputedStyle(row).getPropertyValue('--c').trim()), violet);
-    assert.equal(await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'}).evaluate(chip => getComputedStyle(chip).getPropertyValue('--c').trim()), violet);
+    assert.equal(await rested(() => page.locator('.calrow', {hasText: 'Personal'}).evaluate(row => getComputedStyle(row).getPropertyValue('--c').trim())), violet);
+    assert.equal(await rested(() => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'}).evaluate(chip => getComputedStyle(chip).getPropertyValue('--c').trim())), violet);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -921,7 +923,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     const home = page.locator('.settings [data-project]', {hasText: 'Home'});
     const colourOf = (row: typeof home) => row.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim());
     assert.deepEqual(await page.locator('.settings [data-project] .t').allTextContents(), ['Inbox', 'School', 'Home']);
-    assert.equal(await colourOf(home), '#c77100', 'the seed\'s Home is orange');
+    assert.equal(await rested(() => colourOf(home)), '#c77100', 'the seed\'s Home is orange');
 
     await home.getByRole('button', {name: 'Home colour'}).click();
     assert.equal(await page.locator('.settings .swatches .sw').count(), 20);
@@ -931,14 +933,14 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     assert.equal(await home.getAttribute('class'), 'set-row one cal-row pending');
     await settled('Home is teal at Todoist', projects, list => list.some(project => project.name === 'Home' && project.colour === 'teal' && project.command === null));
     await home.locator('.spin').waitFor({state: 'detached'});
-    assert.equal(await colourOf(home), '#148fad');
+    assert.equal(await rested(() => colourOf(home)), '#148fad');
 
     // Todoist refuses taupe (the dev provider's rule): failed in place, in Todoist's words.
     await home.getByRole('button', {name: 'Home colour'}).click();
     await page.getByRole('button', {name: 'Taupe', exact: true}).click();
     const refusal = home.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Todoist, Insufficient permissions (403 Forbidden)'});
     await refusal.waitFor();
-    assert.equal(await colourOf(home), '#8f7a69', 'the colour picked stays in place');
+    assert.equal(await rested(() => colourOf(home)), '#8f7a69', 'the colour picked stays in place');
     await home.getByRole('button', {name: 'Try again'}).click();
     await home.locator('.spin').waitFor({state: 'attached'});
     await refusal.waitFor();
@@ -953,7 +955,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     const ring = (selector: string, title: string) => page.locator(selector, {hasText: title}).locator('.ring').evaluate(el => getComputedStyle(el).borderTopColor);
     // Todoist's teal (#148fad) and sky blue (#319dc0), their lightness clamped to the theme's band (#175).
     const teal = await computed(page, 'color', 'oklch(from #148fad clamp(var(--ringMin), l, var(--ringMax)) c h)');
-    const sky = await computed(page, 'color', 'oklch(from #319dc0 clamp(var(--ringMin), l, var(--ringMax)) c h)');
+    const sky = await rested(() => computed(page, 'color', 'oklch(from #319dc0 clamp(var(--ringMin), l, var(--ringMax)) c h)'));
     // A ring can still be easing its colour in (the agenda's does), so each is read once it's there.
     await until('Pay rent rings teal on the grid', () => ring('.cell[data-date="2026-10-07"] .tk', 'Pay rent'), colour => colour === teal);
     await until('and in the agenda', () => ring('.ag-task', 'Pay rent'), colour => colour === teal);
@@ -1030,7 +1032,7 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     // the recovery row is titled, its count its value (the polish audit's settings-11).
     const none = page.locator('.settings .set-row', {hasText: 'None yet'});
     assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
-    assert.deepEqual(await leadGlyph(none), [ICONS.passkey, '20', await computed(page, 'color', 'var(--ink3)'), 12]);
+    assert.deepEqual(await rested(() => leadGlyph(none)), [ICONS.passkey, '20', await rested(() => computed(page, 'color', 'var(--ink3)')), 12]);
     const recovery = page.locator('.settings .set-row', {hasText: '8 left'});
     assert.deepEqual([await recovery.locator('.t').textContent(), await recovery.locator('.val').textContent()], ['Recovery codes', '8 left']);
     await none.getByRole('button', {name: 'Add passkey'}).click();
@@ -1095,7 +1097,7 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     const page = await setpoint.page({width: 2400, height: 1300});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
+    const box = async (selector: string) => (await rested(() => page.locator(selector).boundingBox()))!;
     const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a}, expected ${b}`);
 
     // Each measured where it rests, once it has risen into place.

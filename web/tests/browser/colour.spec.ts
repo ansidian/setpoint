@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, startSetpoint, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -62,7 +62,7 @@ function contrast(a: [number, number, number], b: [number, number, number]): num
 
 /** A blank point inside an element: its middle, a little left of its right edge. */
 async function blank(target: Locator, fromRight = 80): Promise<[number, number]> {
-  const box = (await target.boundingBox())!;
+  const box = (await rested(() => target.boundingBox()))!;
   return [box.x + box.width - fromRight, box.y + box.height / 2];
 }
 
@@ -105,19 +105,19 @@ test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light 
   try {
     const page = await setpoint.page('target');
     await inbox(page, setpoint.base, 'night');
-    assert.equal(await style(page.locator('.list .row .age').first(), 'color'), 'rgb(125, 127, 132)', 'Night ink3: an age');
-    assert.equal(await style(page.locator('aside.sb'), 'backgroundColor'), 'rgb(11, 12, 14)', 'Night panel: the sidebar');
+    assert.equal(await rested(() => style(page.locator('.list .row .age').first(), 'color')), 'rgb(125, 127, 132)', 'Night ink3: an age');
+    assert.equal(await rested(() => style(page.locator('aside.sb'), 'backgroundColor')), 'rgb(11, 12, 14)', 'Night panel: the sidebar');
 
     await inbox(page, setpoint.base, 'light');
     const read = page.locator('.list .row:not(.unread)[title^="Final exam schedule"]');
-    assert.equal(await style(read.locator('.from'), 'color'), 'rgb(75, 77, 82)', 'Light ink2: a read sender');
+    assert.equal(await rested(() => style(read.locator('.from'), 'color')), 'rgb(75, 77, 82)', 'Light ink2: a read sender');
     // Done from the cursor: the toast floats on white above the page's header.
     await point(page.locator('.list .row[title^="Interview availability"]'));
     await page.keyboard.press('h');
     const toast = page.locator('.toast');
     await toast.waitFor();
-    assert.equal(await style(toast, 'backgroundColor'), 'rgb(255, 255, 255)', 'Light\'s toast is white');
-    assert.equal(await colourOf(page, 'var(--cardOn)'), 'rgb(255, 255, 255)', 'Light cardOn');
+    assert.equal(await rested(() => style(toast, 'backgroundColor')), 'rgb(255, 255, 255)', 'Light\'s toast is white');
+    assert.equal(await rested(() => colourOf(page, 'var(--cardOn)')), 'rgb(255, 255, 255)', 'Light cardOn');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -136,7 +136,7 @@ async function calendar(page: Page, base: string, theme: 'night' | 'light') {
 
 /** A blank point low in a day's cell, under its items. */
 async function inCell(page: Page, date: string): Promise<[number, number, number]> {
-  const box = (await page.locator(`.cell[data-date="${date}"]`).boundingBox())!;
+  const box = (await rested(() => page.locator(`.cell[data-date="${date}"]`).boundingBox()))!;
   return pixel(page, box.x + box.width / 2, box.y + box.height - 12);
 }
 
@@ -154,30 +154,30 @@ for (const theme of ['night', 'light'] as const) {
       assert.ok(contrast(weekend, weekday) >= 1.02, `a weekend shows: ${contrast(weekend, weekday).toFixed(3)}:1`);
       assert.ok(contrast(outside, weekday) > contrast(weekend, weekday) + 0.01, `outside the month recedes further: ${contrast(outside, weekday).toFixed(3)}:1`);
       assert.deepEqual(outsideWeekend, outside, 'an outside weekend takes the outside shading');
-      assert.equal(await style(page.locator('.cell[data-date="2026-10-03"]'), 'backgroundColor'), await colourOf(page, 'var(--dayOff)'));
-      assert.equal(await style(page.locator('.cell[data-date="2026-09-27"]'), 'backgroundColor'), await colourOf(page, 'var(--dayOut)'));
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-10-03"]'), 'backgroundColor')), await rested(() => colourOf(page, 'var(--dayOff)')));
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-09-27"]'), 'backgroundColor')), await rested(() => colourOf(page, 'var(--dayOut)')));
 
       // 7 AM Gym is over; Dentist at 2:30 PM is ahead, in Personal's cool, capped at .43 in Light.
       const chip = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title});
-      const ink3 = await colourOf(page, 'var(--ink3)');
-      const ahead = await colourOf(page, theme === 'light' ? 'oklch(0.43 0.12 235)' : 'var(--cool)');
-      assert.equal(await style(chip('Gym'), 'color'), ink3, 'a past item is ink3');
-      assert.equal(await style(chip('Gym'), 'opacity'), '1', 'at full strength');
-      assert.equal(await style(chip('Dentist'), 'color'), ahead);
+      const ink3 = await rested(() => colourOf(page, 'var(--ink3)'));
+      const ahead = await rested(() => colourOf(page, theme === 'light' ? 'oklch(0.43 0.12 235)' : 'var(--cool)'));
+      assert.equal(await rested(() => style(chip('Gym'), 'color')), ink3, 'a past item is ink3');
+      assert.equal(await rested(() => style(chip('Gym'), 'opacity')), '1', 'at full strength');
+      assert.equal(await rested(() => style(chip('Dentist'), 'color')), ahead);
       // Classes' cyan sits at 182°, lighter than Personal's cool (#162).
       assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .ev', {hasText: 'CS 101 lecture'}), 'color'),
         await colourOf(page, theme === 'light' ? 'oklch(0.43 0.1 182)' : 'oklch(0.86 0.11 182)'));
-      assert.equal(await style(page.locator('.cell[data-date="2026-10-06"] .dn'), 'color'), ink3, 'a day that\'s over');
-      assert.equal(await style(page.locator('.cell[data-date="2026-10-01"] .dn'), 'color'), await colourOf(page, 'var(--ink)'), 'Oct 1 keeps its ink');
-      assert.equal(await style(page.locator('.cell[data-date="2026-10-08"] .dn'), 'color'), await colourOf(page, 'var(--ink2)'), 'a day ahead keeps ink2');
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-10-06"] .dn'), 'color')), ink3, 'a day that\'s over');
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-10-01"] .dn'), 'color')), await rested(() => colourOf(page, 'var(--ink)')), 'Oct 1 keeps its ink');
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-10-08"] .dn'), 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'a day ahead keeps ink2');
 
       // The week: its weekend columns, its blocks the same.
       await page.keyboard.press('w');
       const block = (title: string) => page.locator('.wk-col[data-date="2026-10-07"] .wb', {hasText: title});
       await block('Dentist').waitFor();
-      assert.equal(await style(page.locator('.wk-weekend').first(), 'backgroundColor'), await colourOf(page, 'var(--dayOff)'));
-      assert.equal(await style(block('Gym'), 'color'), ink3);
-      assert.equal(await style(block('Dentist'), 'color'), ahead);
+      assert.equal(await rested(() => style(page.locator('.wk-weekend').first(), 'backgroundColor')), await rested(() => colourOf(page, 'var(--dayOff)')));
+      assert.equal(await rested(() => style(block('Gym'), 'color')), ink3);
+      assert.equal(await rested(() => style(block('Dentist'), 'color')), ahead);
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
@@ -191,9 +191,9 @@ for (const theme of ['night', 'light'] as const) {
     try {
       const page = await setpoint.page('target');
       await inbox(page, setpoint.base, theme);
-      const accent = await colourOf(page, 'var(--accent)');
-      assert.equal(accent, await colourOf(page, theme === 'light' ? 'oklch(0.54 0.12 235)' : 'oklch(0.8 0.11 235)'));
-      assert.equal(await style(page.locator('.nav.on .icon'), 'color'), accent, 'Inbox, the current page');
+      const accent = await rested(() => colourOf(page, 'var(--accent)'));
+      assert.equal(accent, await rested(() => colourOf(page, theme === 'light' ? 'oklch(0.54 0.12 235)' : 'oklch(0.8 0.11 235)')));
+      assert.equal(await rested(() => style(page.locator('.nav.on .icon'), 'color')), accent, 'Inbox, the current page');
 
       const northwind = page.locator('.list .row[title^="Interview availability"]');
       const exams = page.locator('.list .row[title^="Final exam schedule"]');
@@ -218,10 +218,10 @@ for (const theme of ['night', 'light'] as const) {
 
       // The reader's tools on Attention mail: Done's check good and its label ink; Trash stays ink2.
       const done = page.locator('.rd-tools .tool', {hasText: 'Done'});
-      assert.equal(await style(done.locator('.icon'), 'color'), await colourOf(page, 'var(--good)'));
-      assert.equal(await style(done, 'color'), await colourOf(page, 'var(--ink)'));
+      assert.equal(await rested(() => style(done.locator('.icon'), 'color')), await rested(() => colourOf(page, 'var(--good)')));
+      assert.equal(await rested(() => style(done, 'color')), await rested(() => colourOf(page, 'var(--ink)')));
       await page.mouse.move(1, 1);
-      assert.equal(await style(page.locator('.rd-tools .tool', {hasText: 'Trash'}), 'color'), await colourOf(page, 'var(--ink2)'));
+      assert.equal(await rested(() => style(page.locator('.rd-tools .tool', {hasText: 'Trash'}), 'color')), await rested(() => colourOf(page, 'var(--ink2)')));
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
@@ -236,12 +236,12 @@ test('today is the now-line\'s alert disc in the month, the week\'s heads and th
     for (const theme of ['night', 'light'] as const) {
       await calendar(page, setpoint.base, theme);
       const disc = async (target: Locator) => [await style(target, 'backgroundColor'), await style(target, 'color')];
-      const alert = [await colourOf(page, 'var(--alert)'), await colourOf(page, 'var(--onAlert)')];
-      assert.deepEqual(await disc(page.locator('.cell[data-date="2026-10-07"] .dn.today')), alert, `${theme}: the month`);
-      assert.deepEqual(await disc(page.locator('.mini > .t')), alert, `${theme}: the mini-month`);
+      const alert = [await rested(() => colourOf(page, 'var(--alert)')), await rested(() => colourOf(page, 'var(--onAlert)'))];
+      assert.deepEqual(await rested(() => disc(page.locator('.cell[data-date="2026-10-07"] .dn.today'))), alert, `${theme}: the month`);
+      assert.deepEqual(await rested(() => disc(page.locator('.mini > .t'))), alert, `${theme}: the mini-month`);
       await page.keyboard.press('w');
       await page.locator('.wk-dhead .dn.today').waitFor();
-      assert.deepEqual(await disc(page.locator('.wk-dhead .dn.today')), alert, `${theme}: the week`);
+      assert.deepEqual(await rested(() => disc(page.locator('.wk-dhead .dn.today'))), alert, `${theme}: the week`);
       await page.keyboard.press('m');
     }
     assert.deepEqual(setpoint.pageErrors, []);
@@ -258,14 +258,14 @@ for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
       const inboxNav = page.locator('.sb .nav', {hasText: 'Inbox'});
       const calendarNav = page.locator('.sb .nav', {hasText: 'Calendar'});
-      const raised = [await colourOf(page, 'var(--navOn)'), `${await colourOf(page, 'var(--navOnEdge)')} 0px 0px 0px 1px inset`];
+      const raised = [await rested(() => colourOf(page, 'var(--navOn)')), `${await rested(() => colourOf(page, 'var(--navOnEdge)'))} 0px 0px 0px 1px inset`];
       assert.equal(raised[0], theme === 'light' ? 'rgb(255, 255, 255)' : 'rgba(255, 255, 255, 0.1)');
-      assert.deepEqual([await style(inboxNav, 'backgroundColor'), await style(inboxNav, 'boxShadow')], raised, 'Inbox, current');
+      assert.deepEqual([await rested(() => style(inboxNav, 'backgroundColor')), await rested(() => style(inboxNav, 'boxShadow'))], raised, 'Inbox, current');
       // Hovering Calendar draws a flat tint, plainly not the current page's chip.
       await calendarNav.hover();
-      const sub = await colourOf(page, 'var(--sub)');
+      const sub = await rested(() => colourOf(page, 'var(--sub)'));
       await until('Calendar\'s hover', () => style(calendarNav, 'backgroundColor'), fill => fill === sub);
-      assert.equal(await style(calendarNav, 'boxShadow'), 'none');
+      assert.equal(await rested(() => style(calendarNav, 'boxShadow')), 'none');
       // Business filters the Inbox: its row is the chip, and Inbox its parent in ink, without a fill.
       await page.locator('.sb .acct', {hasText: 'Business'}).click();
       const business = page.locator('.sb .acct.on', {hasText: 'Business'});
@@ -274,8 +274,8 @@ for (const theme of ['night', 'light'] as const) {
       await until('Business raised', () => style(business, 'backgroundColor'), fill => fill === raised[0]);
       assert.equal(await inboxNav.getAttribute('class'), 'nav parent');
       await until('Inbox without a fill', () => style(inboxNav, 'backgroundColor'), fill => fill === 'rgba(0, 0, 0, 0)');
-      const ink = await colourOf(page, 'var(--ink)');
-      assert.deepEqual([await style(inboxNav, 'color'), await style(inboxNav.locator('.icon'), 'color')], [ink, ink]);
+      const ink = await rested(() => colourOf(page, 'var(--ink)'));
+      assert.deepEqual([await rested(() => style(inboxNav, 'color')), await rested(() => style(inboxNav.locator('.icon'), 'color'))], [ink, ink]);
       // Settings' current page is the same chip, focused as Settings opens from its address.
       await page.goto(`${setpoint.base}/settings/notifications`);
       const current = page.locator('.settings .set-nav .nav.on');
@@ -284,8 +284,8 @@ for (const theme of ['night', 'light'] as const) {
       await until('Settings\' current page raised', () => style(current, 'backgroundColor'), fill => fill === raised[0]);
       // Its glyph is the accent; a warning glyph in the nav stays caution, current or not (#163).
       assert.equal(await style(current.locator('> .icon'), 'color'), await colourOf(page, 'var(--accent)'));
-      const caution = await colourOf(page, 'var(--caution)');
-      const warnings = await page.locator('.settings .set-nav .nav .warn .icon').evaluateAll(all => all.map(icon => getComputedStyle(icon).color));
+      const caution = await rested(() => colourOf(page, 'var(--caution)'));
+      const warnings = await rested(() => page.locator('.settings .set-nav .nav .warn .icon').evaluateAll(all => all.map(icon => getComputedStyle(icon).color)));
       assert.ok(warnings.length > 0, 'a warning in the nav (FOX 11 fails)');
       assert.deepEqual(warnings, warnings.map(() => caution));
       assert.deepEqual(setpoint.pageErrors, []);
@@ -300,23 +300,23 @@ for (const theme of ['night', 'light'] as const) {
       const page = await setpoint.page('target');
       await inbox(page, setpoint.base, theme);
       await page.mouse.move(700, 28);
-      const caution = await colourOf(page, 'var(--caution)');
+      const caution = await rested(() => colourOf(page, 'var(--caution)'));
       const band = page.locator('.list .gh.att');
-      assert.equal(await style(band, 'backgroundColor'), await colourOf(page, `color-mix(in srgb, var(--caution) ${theme === 'light' ? 6 : 8}%, var(--panel))`));
-      assert.equal(await style(band, 'color'), caution, 'its label');
+      assert.equal(await rested(() => style(band, 'backgroundColor')), await rested(() => colourOf(page, `color-mix(in srgb, var(--caution) ${theme === 'light' ? 6 : 8}%, var(--panel))`)));
+      assert.equal(await rested(() => style(band, 'color')), caution, 'its label');
       const dot = (row: Locator) => row.locator('.ud').evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::before').boxShadow]);
-      assert.equal(await style(page.locator('.list .lh.att').first(), 'color'), caution, 'New\'s Attention lane');
-      assert.deepEqual(await dot(page.locator('.list .row.unread[title^="Interview availability"]')), [caution, 'none'], 'an unread Attention row');
-      assert.deepEqual(await dot(page.locator('.list .row:not(.unread)[title^="Final exam schedule"]')), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
+      assert.equal(await rested(() => style(page.locator('.list .lh.att').first(), 'color')), caution, 'New\'s Attention lane');
+      assert.deepEqual(await rested(() => dot(page.locator('.list .row.unread[title^="Interview availability"]'))), [caution, 'none'], 'an unread Attention row');
+      assert.deepEqual(await rested(() => dot(page.locator('.list .row:not(.unread)[title^="Final exam schedule"]'))), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
 
       // Noise's rows, New's Noise opened: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
       await page.locator('.list .nfold').first().click();
       await page.mouse.move(700, 28);
       const noise = page.locator('.row.noise.unread', {hasText: 'Tailspin Toys'});
-      assert.deepEqual(await noise.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink2)'), '400']);
-      assert.equal((await dot(noise))[0], await colourOf(page, 'var(--ink3)'));
+      assert.deepEqual(await rested(() => noise.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight])), [await rested(() => colourOf(page, 'var(--ink2)')), '400']);
+      assert.equal((await rested(() => dot(noise)))[0], await rested(() => colourOf(page, 'var(--ink3)')));
       const delivery = page.locator('.row.unread', {hasText: 'Consolidated Messenger'});
-      assert.deepEqual(await delivery.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]), [await colourOf(page, 'var(--ink)'), '500']);
+      assert.deepEqual(await rested(() => delivery.locator('.from').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight])), [await rested(() => colourOf(page, 'var(--ink)')), '500']);
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
@@ -330,21 +330,21 @@ for (const theme of ['night', 'light'] as const) {
     try {
       const page = await setpoint.page('target');
       await inbox(page, setpoint.base, theme);
-      const alert = await colourOf(page, 'var(--alert)');
-      const good = await colourOf(page, 'var(--good)');
+      const alert = await rested(() => colourOf(page, 'var(--alert)'));
+      const good = await rested(() => colourOf(page, 'var(--good)'));
       await page.locator('.list .row[title^="Interview availability"]').click();
       const trash = page.locator('.rd-tools .tool.trash');
       await trash.waitFor();
-      assert.equal(await style(trash, 'color'), await colourOf(page, 'var(--ink2)'), 'Trash at rest');
+      assert.equal(await rested(() => style(trash, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'Trash at rest');
       await trash.hover();
       await until('Trash turns alert', () => style(trash, 'color'), colour => colour === alert);
-      assert.equal(await style(trash, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 12%, transparent)'));
+      assert.equal(await rested(() => style(trash, 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 12%, transparent)')));
       // Pressed, it gives as every pill does (.97) on a stronger alert, in alert; let go elsewhere, nothing's trashed.
       await page.mouse.down();
       await until('Trash pressed in', () => style(trash, 'transform'), transform => transform === 'matrix(0.97, 0, 0, 0.97, 0, 0)');
-      const pressed = await backgroundOf(page, 'color-mix(in oklch, var(--alert) 20%, transparent)');
+      const pressed = await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 20%, transparent)'));
       await until('Trash pressed in alert', () => style(trash, 'backgroundColor'), fill => fill === pressed);
-      assert.equal(await style(trash, 'color'), alert);
+      assert.equal(await rested(() => style(trash, 'color')), alert);
       await page.mouse.move(700, 28);
       await page.mouse.up();
 
@@ -352,18 +352,18 @@ for (const theme of ['night', 'light'] as const) {
       await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).click();
       const del = page.locator('.fd .card-acts .ibtn.danger');
       await del.waitFor();
-      assert.equal(await style(del, 'marginLeft'), '9px');
-      assert.deepEqual(await del.evaluate(button => [getComputedStyle(button, '::before').width, getComputedStyle(button, '::before').height]), ['1px', '14px'], 'its divider');
-      assert.equal(await style(del, 'color'), await colourOf(page, 'var(--ink2)'), 'Delete at rest');
+      assert.equal(await rested(() => style(del, 'marginLeft')), '9px');
+      assert.deepEqual(await rested(() => del.evaluate(button => [getComputedStyle(button, '::before').width, getComputedStyle(button, '::before').height])), ['1px', '14px'], 'its divider');
+      assert.equal(await rested(() => style(del, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'Delete at rest');
       await del.hover();
       await until('Delete turns alert', () => style(del, 'color'), colour => colour === alert);
-      assert.equal(await style(del, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)'));
+      assert.equal(await rested(() => style(del, 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)')));
       await page.keyboard.press('Escape');
       await page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'}).click();
       const complete = page.locator('.fd .card-acts .ibtn.affirm');
       await complete.hover();
       await until('Complete turns good', () => style(complete, 'color'), colour => colour === good);
-      assert.equal(await style(complete, 'backgroundColor'), await backgroundOf(page, 'color-mix(in oklch, var(--good) 16%, transparent)'));
+      assert.equal(await rested(() => style(complete, 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--good) 16%, transparent)')));
       await page.keyboard.press('Escape');
 
       // The editor's More › Delete.
@@ -373,7 +373,7 @@ for (const theme of ['night', 'light'] as const) {
       const item = page.locator('.editor .menu-i.danger');
       await item.hover();
       await until('More › Delete turns alert', () => style(item, 'color'), colour => colour === alert);
-      assert.equal(await style(item.locator('.icon'), 'color'), alert);
+      assert.equal(await rested(() => style(item.locator('.icon'), 'color')), alert);
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
@@ -390,16 +390,16 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
       await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
       const frame = page.locator('iframe.mailframe');
       await page.frameLocator('iframe.mailframe').locator('body > *').first().waitFor();
-      assert.equal(await style(frame, 'filter'), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
-      assert.equal(await style(frame, 'boxShadow'), theme === 'night' ? 'rgba(0, 0, 0, 0) 0px 0px 0px 1px' : 'rgba(29, 30, 33, 0.1) 0px 0px 0px 1px', `${theme}: its edge`);
+      assert.equal(await rested(() => style(frame, 'filter')), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
+      assert.equal(await rested(() => style(frame, 'boxShadow')), theme === 'night' ? 'rgba(0, 0, 0, 0) 0px 0px 0px 1px' : 'rgba(29, 30, 33, 0.1) 0px 0px 0px 1px', `${theme}: its edge`);
       const ask = page.locator('.rd-acts .btn.out', {hasText: 'Ask about this email'});
       await page.mouse.move(1, 1);
-      assert.equal(await style(ask, 'color'), await colourOf(page, 'var(--ink2)'), `${theme}: an action's label`);
-      assert.equal(await style(page.locator('.rd-acts .btn.out').first().locator('.icon'), 'color'), await colourOf(page, 'var(--ink3)'), `${theme}: its icon`);
+      assert.equal(await rested(() => style(ask, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), `${theme}: an action's label`);
+      assert.equal(await rested(() => style(page.locator('.rd-acts .btn.out').first().locator('.icon'), 'color')), await rested(() => colourOf(page, 'var(--ink3)')), `${theme}: its icon`);
       await ask.hover();
-      const ink = await colourOf(page, 'var(--ink)');
+      const ink = await rested(() => colourOf(page, 'var(--ink)'));
       await until('ink under the pointer', () => style(ask, 'color'), colour => colour === ink);
-      assert.equal(await page.locator('.rd-body').evaluate(body => getComputedStyle(body).paddingTop), '12px');
+      assert.equal(await rested(() => page.locator('.rd-body').evaluate(body => getComputedStyle(body).paddingTop)), '12px');
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -419,16 +419,16 @@ for (const theme of ['night', 'light'] as const) {
       await page.keyboard.press('/');
       // Focused and still empty: Esc is the way out.
       await until('the hint reads Esc', () => field.locator('.kbd').textContent(), text => text === 'Esc');
-      const focus = await colourOf(page, 'var(--edgeFocus)');
+      const focus = await rested(() => colourOf(page, 'var(--edgeFocus)'));
       assert.equal(focus, theme === 'light' ? 'rgba(29, 30, 33, 0.3)' : 'rgba(255, 255, 255, 0.2)');
       await until('the focused border', () => style(field, 'borderTopColor'), colour => colour === focus);
-      assert.equal(await style(field, 'backgroundColor'), await colourOf(page, 'var(--cardOn)'));
-      if (theme === 'light') assert.equal(await style(field, 'backgroundColor'), 'rgb(255, 255, 255)', 'white in Light');
+      assert.equal(await rested(() => style(field, 'backgroundColor')), await rested(() => colourOf(page, 'var(--cardOn)')));
+      if (theme === 'light') assert.equal(await rested(() => style(field, 'backgroundColor')), 'rgb(255, 255, 255)', 'white in Light');
       await page.keyboard.type('northwind');
       await page.keyboard.press('Enter');
       const mark = page.locator('.arow.result').first().locator('mark.hl').first();
       await mark.waitFor();
-      assert.equal(await style(mark, 'backgroundColor'), await backgroundOf(page, theme === 'light' ? 'oklch(0.92 0.12 96)' : 'color-mix(in oklch, var(--sun) 26%, transparent)'));
+      assert.equal(await rested(() => style(mark, 'backgroundColor')), await rested(() => backgroundOf(page, theme === 'light' ? 'oklch(0.92 0.12 96)' : 'color-mix(in oklch, var(--sun) 26%, transparent)')));
       // Blurred, with a query: still Esc; cleared, the slash again.
       await page.keyboard.press('Escape');
       await page.locator('.list .row').first().waitFor();
@@ -447,24 +447,24 @@ test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred,
     for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
       assert.equal(await page.locator('linearGradient#alfred-ink').count(), 1);
-      const stops = await page.locator('linearGradient#alfred-ink stop').evaluateAll(all => all.map(stop => getComputedStyle(stop).stopColor));
-      assert.deepEqual(stops, [await colourOf(page, 'var(--cool)'), await colourOf(page, 'var(--violet)')], `${theme}: cool to violet`);
+      const stops = await rested(() => page.locator('linearGradient#alfred-ink stop').evaluateAll(all => all.map(stop => getComputedStyle(stop).stopColor)));
+      assert.deepEqual(stops, [await rested(() => colourOf(page, 'var(--cool)')), await rested(() => colourOf(page, 'var(--violet)'))], `${theme}: cool to violet`);
       const inked = (icon: Locator) => icon.locator('path').evaluate(path => getComputedStyle(path).fill);
       await page.locator('.list .row[title^="Interview availability"]').click();
       const ask = page.locator('.rd-acts .btn', {hasText: 'Ask about this email'});
-      assert.equal(await inked(ask.locator('.icon')), 'url("#alfred-ink")', 'the reader\'s Ask about this email');
+      assert.equal(await rested(() => inked(ask.locator('.icon'))), 'url("#alfred-ink")', 'the reader\'s Ask about this email');
       await page.keyboard.press('Meta+k');
       const item = page.locator('.palette .item', {hasText: 'Ask about this email'});
-      assert.equal(await inked(item.locator('.icon')), 'url("#alfred-ink")', '⌘K\'s');
+      assert.equal(await rested(() => inked(item.locator('.icon'))), 'url("#alfred-ink")', '⌘K\'s');
       await page.keyboard.press('Escape');
       await page.keyboard.press('/');
       await page.keyboard.type('northwind');
       await page.keyboard.press('Enter');
       const row = page.locator('button.ask');
       await row.waitFor();
-      assert.equal(await inked(row.locator('.icon')), 'url("#alfred-ink")', 'Ask Alfred');
+      assert.equal(await rested(() => inked(row.locator('.icon'))), 'url("#alfred-ink")', 'Ask Alfred');
       await page.mouse.move(1, 1);
-      assert.equal(await style(row, 'color'), await colourOf(page, 'var(--ink)'), 'Ask Alfred in ink');
+      assert.equal(await rested(() => style(row, 'color')), await rested(() => colourOf(page, 'var(--ink)')), 'Ask Alfred in ink');
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -479,12 +479,12 @@ test('the forecast\'s sun is sunGlyph, Light\'s a deeper amber, and the high lea
     for (const theme of ['night', 'light'] as const) {
       await calendar(page, setpoint.base, theme);
       const sunny = page.locator('.cell[data-date="2026-10-07"] .wx.sun');
-      assert.equal(await style(sunny, 'color'), await colourOf(page, theme === 'light' ? 'oklch(0.58 0.14 78)' : 'var(--sun)'), `${theme}: the sun`);
-      assert.equal(await style(page.locator('.rp-sub .sun'), 'color'), await colourOf(page, 'var(--sunGlyph)'), `${theme}: the right pane's`);
+      assert.equal(await rested(() => style(sunny, 'color')), await rested(() => colourOf(page, theme === 'light' ? 'oklch(0.58 0.14 78)' : 'var(--sun)')), `${theme}: the sun`);
+      assert.equal(await rested(() => style(page.locator('.rp-sub .sun'), 'color')), await rested(() => colourOf(page, 'var(--sunGlyph)')), `${theme}: the right pane's`);
       const high = sunny.locator('.temps .hi');
       assert.equal(await high.textContent(), '78°');
-      assert.equal(await style(high, 'color'), await colourOf(page, 'var(--ink2)'));
-      assert.equal(await style(sunny.locator('.temps'), 'color'), await colourOf(page, 'var(--ink3)'), 'the low stays ink3');
+      assert.equal(await rested(() => style(high, 'color')), await rested(() => colourOf(page, 'var(--ink2)')));
+      assert.equal(await rested(() => style(sunny.locator('.temps'), 'color')), await rested(() => colourOf(page, 'var(--ink3)')), 'the low stays ink3');
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -503,15 +503,15 @@ for (const theme of ['night', 'light'] as const) {
       const agenda = page.locator('.ag-task', {hasText: 'CS 101 lab report'});
       const ring = agenda.locator('.ring');
       await until('the ring\'s colour', () => style(ring, 'borderTopColor'), colour => colour === shown);
-      assert.equal(await style(ring, 'backgroundColor'), await backgroundOf(page, `color-mix(in oklch, ${shown} 14%, transparent)`));
-      assert.equal(await style(page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'}).locator('.ring'), 'borderTopColor'), shown, 'the grid\'s too');
+      assert.equal(await rested(() => style(ring, 'backgroundColor')), await rested(() => backgroundOf(page, `color-mix(in oklch, ${shown} 14%, transparent)`)));
+      assert.equal(await rested(() => style(page.locator('.cell[data-date="2026-10-07"] .tk', {hasText: 'CS 101 lab report'}).locator('.ring'), 'borderTopColor')), shown, 'the grid\'s too');
       const check = ring.locator('.icon');
-      assert.equal(await style(check, 'opacity'), '0', 'no check at rest');
+      assert.equal(await rested(() => style(check, 'opacity')), '0', 'no check at rest');
       await agenda.locator('.check').hover();
       await until('the check shows', () => style(check, 'opacity'), opacity => opacity === '1');
-      const risen = await backgroundOf(page, `color-mix(in oklch, ${shown} 24%, transparent)`);
+      const risen = await rested(() => backgroundOf(page, `color-mix(in oklch, ${shown} 24%, transparent)`));
       await until('the fill rises to 24%', () => style(ring, 'backgroundColor'), fill => fill === risen);
-      assert.equal(await style(check, 'color'), shown, 'the check in the ring\'s colour');
+      assert.equal(await rested(() => style(check, 'color')), shown, 'the check in the ring\'s colour');
       // Centred on the whole ring, stroke included: the same room on every side.
       const [outer, inner] = [await ring.boundingBox(), await check.boundingBox()];
       assert.deepEqual([inner!.width, inner!.height], [11, 11]);
@@ -537,11 +537,11 @@ for (const theme of ['night', 'light'] as const) {
       await until('the switches work', () => on.isDisabled(), disabled => !disabled);
       await page.mouse.move(1, 1);
       const knob = (target: Locator) => target.evaluate(element => [getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::after').width]);
-      const track = await backgroundOf(page, 'var(--switchOn)');
+      const track = await rested(() => backgroundOf(page, 'var(--switchOn)'));
       await until('on: the good track', () => style(on, 'backgroundColor'), fill => fill === track);
-      assert.deepEqual(await knob(on), [await colourOf(page, theme === 'light' ? '#ffffff' : 'var(--ink)'), '16px']);
-      assert.equal(await style(off, 'backgroundColor'), await backgroundOf(page, 'var(--sub3)'));
-      assert.deepEqual(await knob(off), [await colourOf(page, 'var(--ink3)'), '16px'], 'off recedes');
+      assert.deepEqual(await rested(() => knob(on)), [await rested(() => colourOf(page, theme === 'light' ? '#ffffff' : 'var(--ink)')), '16px']);
+      assert.equal(await rested(() => style(off, 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--sub3)')));
+      assert.deepEqual(await rested(() => knob(off)), [await rested(() => colourOf(page, 'var(--ink3)')), '16px'], 'off recedes');
       // The track as drawn is green: its green leads its red and blue.
       const box = (await on.boundingBox())!;
       const [r, g, b] = await pixel(page, box.x + 6, box.y + box.height / 2);
@@ -550,7 +550,7 @@ for (const theme of ['night', 'light'] as const) {
       await on.hover();
       await page.mouse.down();
       await until('the knob stretches', () => knob(on), ([, width]) => width === '20px');
-      assert.equal(await on.evaluate(element => getComputedStyle(element, '::after').left), '12px');
+      assert.equal(await rested(() => on.evaluate(element => getComputedStyle(element, '::after').left)), '12px');
       await page.mouse.move(1, 1);
       await page.mouse.up();
       assert.deepEqual(setpoint.pageErrors, []);
@@ -573,8 +573,8 @@ test('the compact rail carries the roles: the current page is the navOn chip wit
       assert.equal(await inbox.getAttribute('title'), 'Inbox');
       assert.equal(await inbox.getAttribute('class'), 'nav on', `${theme}: Inbox current in the rail, filtered`);
       await until(`${theme}: the raised chip`, () => style(inbox, 'backgroundColor'), fill => fill !== 'rgba(0, 0, 0, 0)');
-      assert.equal(await style(inbox, 'backgroundColor'), await colourOf(page, 'var(--navOn)'));
-      assert.equal(await style(inbox.locator('> .icon'), 'color'), await colourOf(page, 'var(--accent)'));
+      assert.equal(await rested(() => style(inbox, 'backgroundColor')), await rested(() => colourOf(page, 'var(--navOn)')));
+      assert.equal(await rested(() => style(inbox.locator('> .icon'), 'color')), await rested(() => colourOf(page, 'var(--accent)')));
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

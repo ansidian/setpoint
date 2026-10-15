@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, matchGolden, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -35,24 +35,24 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
       // tooltips; no accounts and no Today.
       const rail = (await page.locator('aside.sb').boundingBox())!;
       assert.deepEqual([rail.x, rail.width], [0, layout.rail], `${width}: the rail`);
-      const items = await page.locator('.sb .nav').evaluateAll(links => links.map(link => {
+      const items = await rested(() => page.locator('.sb .nav').evaluateAll(links => links.map(link => {
         const box = link.getBoundingClientRect();
         return [link.getAttribute('title'), box.width, box.height, (link.querySelector('.grow') as HTMLElement).offsetWidth];
-      }));
+      })));
       assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
       // The attention pill as a 16 px badge on Inbox's icon: 2 px from its top, 2 px past its right,
       // 10.5 / 600, in a 2 px `panel` ring.
       const [inbox, badge] = [(await page.locator('.sb .nav').first().boundingBox())!, (await page.locator('.sb .nav .apill').boundingBox())!];
       assert.deepEqual([await page.locator('.sb .nav .apill').textContent(), badge.height, badge.y - inbox.y, badge.x + badge.width - (inbox.x + inbox.width)], ['3', 16, 2, 2]);
-      assert.deepEqual(await page.locator('.sb .nav .apill').evaluate(pill => [getComputedStyle(pill).fontSize, getComputedStyle(pill).fontWeight, getComputedStyle(pill).boxShadow.endsWith('0px 0px 0px 2px')]), ['10.5px', '600', true]);
-      assert.deepEqual(await headerWhole(page), [], `${width}: the Inbox's header`);
+      assert.deepEqual(await rested(() => page.locator('.sb .nav .apill').evaluate(pill => [getComputedStyle(pill).fontSize, getComputedStyle(pill).fontWeight, getComputedStyle(pill).boxShadow.endsWith('0px 0px 0px 2px')])), ['10.5px', '600', true]);
+      assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
       assert.equal(await sideways(page), 0);
 
       // An email covers the list, under the header: Back leads its tools, and J, K and Esc work.
       await page.locator('.list .row[title^="Interview availability"]').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-      assert.deepEqual(await page.locator('section.pane').boundingBox(), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
+      assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
       assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('title')], [true, 'Back · Esc']);
@@ -71,16 +71,16 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
       // News: its header whole, a story over the list with Back.
       await page.goto(`${setpoint.base}/news`);
       await page.locator('.nw-list [data-story]').first().waitFor();
-      assert.deepEqual(await headerWhole(page), [], `${width}: News's header`);
+      assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: News's header`);
       await page.locator('.nw-list [data-story]').first().click();
       await page.locator('section.pane .rd-subj').waitFor();
-      assert.deepEqual(await page.locator('section.pane').boundingBox(), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the story`);
+      assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the story`);
       await page.locator('section.pane .rd-back').click();
       await until('Back closes the story', () => page.locator('section.pane').count(), count => count === 0);
       assert.equal(await sideways(page), 0);
       // ⌘K fits too.
       await page.keyboard.press('Meta+k');
-      const palette = (await page.locator('.palette').boundingBox())!;
+      const palette = (await rested(() => page.locator('.palette').boundingBox()))!;
       assert.ok(palette.x >= 16 && palette.x + palette.width <= width - 16, `${width}: ⌘K inside the window`);
       await page.keyboard.press('Escape');
       await page.close();
@@ -90,11 +90,11 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
     const wide = await setpoint.page({width: 1100, height: HEIGHT});
     await wide.goto(`${setpoint.base}/inbox`);
     await wide.locator('.list .row').first().waitFor();
-    assert.equal((await wide.locator('aside.sb').boundingBox())!.width, layout.sidebar);
+    assert.equal((await rested(() => wide.locator('aside.sb').boundingBox()))!.width, layout.sidebar);
     assert.ok(await wide.locator('.sb .acct').first().isVisible());
     await wide.locator('.list .row[title^="Interview availability"]').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    const [list, pane] = [(await wide.locator('section.list').boundingBox())!, (await wide.locator('section.pane').boundingBox())!];
+    const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane').boundingBox()))!];
     assert.equal(pane.x, list.x + list.width, 'beside the list');
     assert.equal(await wide.locator('.rd-tools .rd-back').isVisible(), false);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -110,14 +110,14 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/calendar`);
       await page.locator('.cal-month .cell').first().waitFor();
-      const grid = async () => (await page.locator('section.cal-month').boundingBox())!;
+      const grid = async () => (await rested(() => page.locator('section.cal-month').boundingBox()))!;
       // The grid takes the width; the day's pane isn't drawn, and its health line sits atop the grid.
       assert.equal((await grid()).width, width - layout.rail, `${width}: the grid`);
       assert.equal(await page.locator('.rpane').count(), 0);
-      const health = (await page.locator('.cal-health .rp-health').boundingBox())!;
+      const health = (await rested(() => page.locator('.cal-health .rp-health').boundingBox()))!;
       assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist, as of /);
       assert.equal(health.y + health.height, (await grid()).y, 'the health line sits atop the grid');
-      assert.deepEqual(await headerWhole(page), [], `${width}: Calendar's header`);
+      assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
       // The editor lies over the grid's right side, 400 px, with an overlay's shadow; the grid stays.
       await page.keyboard.press('c');
       const editor = page.locator('.rpane.editor');
@@ -125,10 +125,10 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       // It comes in 24 px from the right over 180 ms; measured where it lands.
       const landed = (pane: typeof editor) => until('the pane has come in', () => pane.evaluate(element => element.getAnimations().length), running => running === 0);
       await landed(editor);
-      const box = (await editor.boundingBox())!;
+      const box = (await rested(() => editor.boundingBox()))!;
       assert.deepEqual([box.x, box.width, box.y], [width - layout.rightPane, layout.rightPane, layout.header]);
       assert.equal((await grid()).width, width - layout.rail);
-      assert.notEqual(await editor.evaluate(form => getComputedStyle(form).boxShadow), 'none');
+      assert.notEqual(await rested(() => editor.evaluate(form => getComputedStyle(form).boxShadow)), 'none');
       assert.equal(await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest('.editor') !== null, [box.x + 200, box.y + 300]), true, 'over the grid');
       await page.keyboard.press('Escape');
       await until('Esc closes the editor', () => editor.count(), count => count === 0);
@@ -136,7 +136,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.keyboard.press('/');
       await page.locator('.rpane.cal-search').waitFor();
       await landed(page.locator('.rpane.cal-search'));
-      assert.equal((await page.locator('.rpane.cal-search').boundingBox())!.x, width - layout.rightPane);
+      assert.equal((await rested(() => page.locator('.rpane.cal-search').boundingBox()))!.x, width - layout.rightPane);
       await page.keyboard.press('Escape');
       await until('Esc closes the search', () => page.locator('.rpane').count(), count => count === 0);
       // The week's grid takes the width too.
@@ -144,7 +144,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.locator('section.cal-week').waitFor();
       // Measured once Week has zoomed in from Month (polish audit grids-09).
       await still(page);
-      assert.equal((await page.locator('section.cal-week').boundingBox())!.width, width - layout.rail);
+      assert.equal((await rested(() => page.locator('section.cal-week').boundingBox()))!.width, width - layout.rail);
       await page.keyboard.press('m');
       await page.locator('section.cal-month').waitFor();
       assert.equal(await sideways(page), 0);
@@ -201,18 +201,18 @@ test('the day\'s pane comes over the grid from its header button, lit while open
     const pane = page.locator('.rpane');
     await pane.locator('.rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
     await until('it has come in', () => pane.evaluate(element => element.getAnimations().length), running => running === 0);
-    const box = (await pane.boundingBox())!;
+    const box = (await rested(() => pane.boundingBox()))!;
     assert.deepEqual([box.x, box.width, box.y], [820 - layout.rightPane, layout.rightPane, layout.header], 'where the editor lies');
-    assert.deepEqual([await pane.locator('.ag-item', {hasText: 'Dentist'}).count(), await pane.locator('.rp-health').evaluateAll(lines => lines.filter(line => getComputedStyle(line).display !== 'none').length)], [1, 0]);
+    assert.deepEqual([await pane.locator('.ag-item', {hasText: 'Dentist'}).count(), await rested(() => pane.locator('.rp-health').evaluateAll(lines => lines.filter(line => getComputedStyle(line).display !== 'none').length))], [1, 0]);
     assert.equal(await button.getAttribute('aria-pressed'), 'true');
-    const sub2 = await page.evaluate(() => {
+    const sub2 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('div');
       probe.style.color = 'var(--sub2)';
       document.body.append(probe);
       const computed = getComputedStyle(probe).color;
       probe.remove();
       return computed;
-    });
+    }));
     await until('lit while open', () => button.evaluate(element => getComputedStyle(element).backgroundColor), fill => fill === sub2);
     // Another day picked shows there.
     await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 40, y: 150}});
