@@ -483,10 +483,10 @@ test('SV-74: a new task\'s × takes its date off, its time and repeat with it; T
     assert.deepEqual([await due.inputValue(), await due.getAttribute('placeholder')], ['', 'No date']);
     assert.deepEqual([await page.getByLabel('Start', {exact: true}).count(), await page.getByRole('button', {name: 'Add a time'}).count(), await page.getByRole('button', {name: 'Repeat'}).count()], [0, 0, 0]);
     await page.getByRole('button', {name: 'Create task'}).click();
-    // No Undo: once Todoist has it, it isn't Setpoint's to take back (it's on no day).
-    await page.locator('.toast', {hasText: 'Created Learn guitar, no date'}).waitFor();
-    assert.equal(await page.locator('.toast button').count(), 0);
     const created = await until('the create confirmed', () => setpoint.api<CommandOut[]>('GET', '/commands?active=false'), list => list.some(one => one.kind === 'item_create' && one.state === 'confirmed'));
+    // A create says nothing (DESIGN #247), even with no day to land on.
+    await setpoint.idle();
+    assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
     const id = created.find(one => one.kind === 'item_create')!.target_id;
     await assert.rejects(setpoint.api('GET', `/items/${id}`), /404|No such item/);
     assert.equal(await page.locator('.tk', {hasText: 'Learn guitar'}).count(), 0);

@@ -646,7 +646,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
 
   /** Draws the new items at once, pending, and creates them, saying so; Undo or ⌘Z deletes them again. */
-  const create = (inputs: ItemCreateInput[], what: string, line: (drafts: ItemOut[]) => string) => {
+  // `line` says what a clone or paste made; a create from the editor passes null and says nothing, the item
+  // on the grid being the answer (DESIGN #247), while ⌘Z still takes it back.
+  const create = (inputs: ItemCreateInput[], what: string, line: ((drafts: ItemOut[]) => string) | null) => {
     const at = new Date().toISOString();
     const drafts = inputs.map(input => pendingItem(input, -++newIds.current, at));
     const asked: Creating = {drafts, listed: new Set(items.map(item => item.id))};
@@ -664,7 +666,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         // SV-74: a task with no date isn't on the calendar and leaves the mirror once Todoist has it,
         // so there's no Undo, and a failure, with no place to show in, comes as a toast.
         const undated = commands.filter((_, index) => inputs[index]!.kind === 'task' && !inputs[index]!.due_date);
-        said(line(drafts), undated.length ? null : () => {
+        said(line?.(drafts) ?? null, undated.length ? null : () => {
           sendDeletes(commands.map(command => ({id: command.target_id, scope: 'this', occurrence_start: null, sent: false})), commands.map(() => 'it'));
         });
         undated.forEach(command => watchUndated(command, inputs[commands.indexOf(command)]!.title));
@@ -870,10 +872,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             dayItems={date => byDay.get(date) ?? EMPTY_ITEMS} onPreview={onPreview}
             onCreate={inputs => {
               closeEditor();
-              create(inputs, inputs.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${inputs[0]!.title}`, drafts => {
-                const day = drafts.length === 1 ? dayOf(drafts[0]!, zone) : null;
-                return drafts.length === 1 ? `Created ${drafts[0]!.title}, ${day ? dayTitle(day) : 'no date'}` : `Created ${drafts.length} items`;
-              });
+              create(inputs, inputs.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${inputs[0]!.title}`, null);
             }}
             onSave={(item, changes, scope) => {
               closeEditor();

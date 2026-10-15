@@ -1361,7 +1361,7 @@ it changes what's on screen.
       meanwhile keeps it and sends nothing.
     - **The calendar says what each change did, with Undo:** "Moved Dentist to Thu, Oct 8",
       "Completed Pay rent" ("Reopened"), "Cloned Gym", "Pasted Dentist on Tue, Oct 13", "Changed the
-      colour of Dinner with Sam", "Created Haircut, Fri, Oct 9" ("Created 2 items"). The toast's
+      colour of Dinner with Sam"; a create says nothing (#247). The toast's
       Undo and ⌘Z are the same; a change to a recurring event's occurrences says what it did, with
       no Undo. An edit saved in the editor stays silent.
     - **A started draft or unsaved edit survives leaving Calendar** (amending #49): coming back
@@ -2493,8 +2493,8 @@ it changes what's on screen.
 244. **A new task can go to Todoist with no date:** its Due date starts on the day the editor opened
     on, as before, and an × in the field takes it off. The field then reads "No date" (`ink3`), and
     Time and Repeat go with it, since a time or a repeat needs a day; a day picked brings the date
-    back. Created, it's on no day, so nothing is drawn. The toast reads "Created Learn guitar, no
-    date" and has no Undo, because Setpoint keeps no copy once Todoist has it (undated tasks aren't
+    back. Created, it's on no day, so nothing is drawn. It says nothing (#247, which dropped the
+    "Created Learn guitar, no date" toast) and has no Undo, because Setpoint keeps no copy once Todoist has it (undated tasks aren't
     on the calendar, v1's choice). A refusal has no item to fail in place on, so it comes as a
     failed toast in Todoist's words, with Try again. An existing task keeps its date; taking one
     off is done in Todoist (Andy, 2026-10-14; darma SV-74). Board audit: no board draws a new task's
@@ -2520,3 +2520,11 @@ it changes what's on screen.
     the editor's preview says No conflicts. Once its start has gone it's past (Andy, 2026-10-15;
     darma SV-78). Board audit: no board draws an event with no end; board 13's End field still
     reads "9:00 PM", so it's unchanged (13 1.56%).
+247. **A create says nothing** (amending #76 and #244): creating an event or a task, from the
+    editor or an email's proposal card, raises no toast on success, since a toast read as an error
+    every time. The item on the grid, or the card closing, is the answer. ⌘Z still takes back a
+    create made in the editor while it's on a day; a task created with no day has no Undo, as
+    before. A failure still speaks: in place on the grid, in the proposal card, or, for a task with
+    no day, as a failed toast with Try again. Clone and Paste keep their toasts with Undo, being
+    changes to what's already there rather than something new (Andy, 2026-10-15; darma SV-79).
+    Board audit: no board draws a create's toast, so it's unchanged.

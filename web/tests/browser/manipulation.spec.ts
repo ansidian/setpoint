@@ -444,7 +444,7 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
   }
 });
 
-test('UX #6: a move, a completion, a clone, a paste, a colour and a create each say what they did, with an Undo that takes it back', async () => {
+test('UX #6: a move, a completion, a clone, a paste and a colour each say what they did, with an Undo that takes it back; a create says nothing and ⌘Z takes it back (#247)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -498,14 +498,15 @@ test('UX #6: a move, a completion, a clone, a paste, a colour and a create each 
     await undo('Changed the colour of Dinner with Sam');
     await until('the colour back', () => named('2026-10-09', 'Dinner with Sam'), list => list[0]!.colour !== 'good' && !list[0]!.command);
 
-    // A create, from the editor: the toast says where it went.
+    // A create, from the editor, says nothing: the item on the grid is the answer (DESIGN #247). ⌘Z still takes it back.
     await page.keyboard.press('Escape');
     await page.keyboard.press('c');
     await page.keyboard.type('Haircut fri 3pm');
     await page.keyboard.press('Meta+Enter');
-    await toast('Created Haircut, Fri, Oct 9').waitFor();
     await until('the haircut', () => named('2026-10-09', 'Haircut'), list => list.length === 1 && !list[0]!.command);
-    await undo('Created Haircut, Fri, Oct 9');
+    await setpoint.idle();
+    assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
+    await page.keyboard.press('Meta+z');
     await until('the haircut gone', () => named('2026-10-09', 'Haircut'), list => list.length === 0, 10_000);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

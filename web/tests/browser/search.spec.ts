@@ -532,8 +532,10 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     assert.equal(await card.locator('.srcm').count(), 2);
     await card.locator('button', {hasText: 'Create'}).click();
     await page.locator('.pane .prop.pending').waitFor();
-    await page.locator('.toast', {hasText: 'Added to Classes'}).waitFor();
-    assert.equal(await card.count(), 0);
+    // The card closing is the answer: a create says nothing (DESIGN #247).
+    await card.waitFor({state: 'detached'});
+    await setpoint.idle();
+    assert.equal(await page.locator('.toast').count(), 0, 'no toast for a create');
     const [created] = await exams();
     const classes = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;
     assert.deepEqual([created?.calendar_id, created?.starts_at, created?.ends_at, created?.place], [classes.id, '2026-12-12T03:00:00.000Z', '2026-12-12T05:00:00.000Z', 'Contoso University · Room 214']);
@@ -606,7 +608,7 @@ test('a proposal with no day from the email starts blank; a day typed and Create
     assert.deepEqual([await day.inputValue(), await day.getAttribute('placeholder')], ['', 'Pick a day']);
     await day.fill('oct 20');
     await page.locator('.pane .prop button', {hasText: 'Create'}).click();
-    await page.locator('.toast', {hasText: 'Added to'}).waitFor();
+    await page.locator('.pane .prop:not([aria-hidden])').waitFor({state: 'detached'});
     const items = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-20&to=2026-10-21')).items;
     assert.ok(items.some(item => item.all_day && item.start_date === '2026-10-20'), 'an all-day event on Oct 20');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -781,7 +783,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
     await field.click();
     assert.equal(await menu.count(), 0);
     await card.locator('button', {hasText: 'Create'}).click();
-    await page.locator('.toast', {hasText: 'Added to'}).waitFor();
+    await card.waitFor({state: 'detached'});
     assert.ok((await projects()).includes('Work'));
     const tasks = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.kind === 'task' && item.title === 'CS 101 final exam');
     assert.deepEqual(tasks.map(task => task.project), ['Work']);

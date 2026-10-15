@@ -23,7 +23,6 @@ import {handProposal, PlaceList} from '../calendar/Editor.tsx';
 import {DateField, ProjectField, stepCursor, TimeField} from '../calendar/Pickers.tsx';
 import {navigate} from '../router.ts';
 import {foldAway} from '../fold.ts';
-import {showToast} from '../toast.ts';
 
 // A time added to an all-day proposal starts here, as the editor's do.
 const DEFAULT_START = 9 * 60;
@@ -128,8 +127,8 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
     if (command.state === 'failed') setFailed(failedLine(command.provider, command.provider_message));
     else {
       if (chosen?.create_project) void refresh(TODOIST_PROJECTS_PATH);
+      // The card closing is the answer: a create says nothing (DESIGN #247).
       close();
-      showToast(`Added to ${calendar?.name ?? (kind === 'task' ? 'Todoist' : 'Calendar')}`);
     }
   }
 
