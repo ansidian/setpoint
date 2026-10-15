@@ -458,15 +458,20 @@ export function spanTo(from: string, to: string, start: number | null, end: numb
   return {date: from, end: next > start ? next : start + 60, days: 1};
 }
 
-/** The End list: the 24 hours after `start` (SV-25) while the event ends on its first day or the next; on a later last day, that day's times. */
+/** An event with no end (SV-78): Google needs one, so it ends as it starts. */
+export const NO_END = 'No end';
+
+/** The End list: No end (SV-78), then the 24 hours after `start` (SV-25) while the event ends on its first day or the next; on a later last day, that day's times. */
 export function endChoices(start: number, end: number): {minutes: number; label: string}[] {
   const extra = extraDays(start, end, 1);
-  if (extra === 0) return timeChoices(start);
-  return Array.from({length: 96}, (_, index) => ({minutes: extra * 1440 + index * 15, label: clockLabel(index * 15)}));
+  const none = {minutes: start, label: NO_END};
+  if (extra === 0) return [none, ...timeChoices(start)];
+  return [none, ...Array.from({length: 96}, (_, index) => ({minutes: extra * 1440 + index * 15, label: clockLabel(index * 15)}))];
 }
 
 /** A typed end: as `parseEnd` while the event ends on its first day; on a later last day, that day's time. */
 export function readEnd(text: string, start: number, end: number): number | null {
+  if (/^\s*(?:no end|none)\s*$/i.test(text)) return start;
   const extra = extraDays(start, end, 1);
   if (extra === 0) return parseEnd(text, start, end);
   const found = parseClock(text, end % 1440);

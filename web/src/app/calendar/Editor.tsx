@@ -20,7 +20,7 @@ import {placeSuggestions, proposalFrom, RECENT_PLACES_PATH, SETTINGS_PATH, TODOI
 import {newsProposal} from '../../api/news.ts';
 import {findPlace} from '../../api/settings.ts';
 import {dayTitle, timeRange} from '../../logic/calendar.ts';
-import {bareToken, clockLabel, completeToken, describeRule, lineWithTitle, describeTaskRepeat, draftStarted, endChoices, extraDays, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices} from '../../logic/compose.ts';
+import {bareToken, clockLabel, completeToken, describeRule, lineWithTitle, describeTaskRepeat, draftStarted, endChoices, extraDays, NO_END, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices} from '../../logic/compose.ts';
 import type {Mark} from '../../logic/compose.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {placeName} from '../../logic/place.ts';
@@ -821,7 +821,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 {draft.end !== null && (
                   <>
                     <span className="ink3">–</span>
-                    <TimeField className={`time num${changed('end') ? ' changed' : ''}`} label="End" value={draft.end} choices={endChoices(draft.start, draft.end)}
+                    <TimeField className={`time num${changed('end') ? ' changed' : ''}`} label="End" value={draft.end} blank={draft.end === draft.start ? NO_END : undefined}
+                      choices={endChoices(draft.start, draft.end)}
                       read={text => readEnd(text, draft.start!, draft.end!)} onValue={end => change({end}, ['time'])} />
                     {laterDays > 0 && <span className="later num" title={`Ends ${dayTitle(lastDay)}`}>+{laterDays}</span>}
                   </>

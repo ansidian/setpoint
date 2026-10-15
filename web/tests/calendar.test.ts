@@ -180,6 +180,7 @@ describe('items on days', () => {
     ['noon', event('Lunch with Jo', '2026-10-17', '12:30', '13:30'), '12:30 PM', '12:30 – 1:30 PM'],
     ['across noon', event('Career fair', '2026-10-15', '10:00', '14:00'), '10 AM', '10:00 AM – 2:00 PM'],
     ['all day', item({all_day: true, start_date: '2026-10-07', end_date: '2026-10-08'}), null, 'All day'],
+    ['no end, its start alone (SV-78)', event('Call Mom', '2026-10-07', '15:00', '15:00'), '3 PM', '3:00 PM'],
   ])('%s: chip %s, span %s', (_name, one, chip, span) => {
     expect(chipTime(one, zone)).toBe(chip);
     expect(timeRange(one, zone)).toBe(span);

@@ -414,7 +414,7 @@ test('SV-29: an event\'s days in one sheet: a first click, then a last, the band
     // The End list is the last day's times, and lines up with its field rather than run off the page.
     await page.getByLabel('End', {exact: true}).click();
     const ends = page.getByRole('listbox', {name: 'End times'});
-    assert.equal(await ends.getByRole('option').first().textContent(), '12:00 AM');
+    assert.deepEqual((await ends.getByRole('option').allTextContents()).slice(0, 2), ['No end', '12:00 AM']);
     const box = (await rested(() => ends.boundingBox()))!;
     assert.ok(box.x + box.width <= (page.viewportSize()!.width), `the End list ends at ${box.x + box.width}`);
     await page.keyboard.press('Escape');
@@ -804,10 +804,10 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
     await page.keyboard.press('Enter');
     await starts.waitFor({state: 'detached'});
     assert.deepEqual([await start!.inputValue(), await end!.inputValue()], ['10:15 AM', '11:15 AM']);
-    // End: from after the start, with lengths.
+    // End: No end (SV-78), then from after the start, with lengths.
     await end!.click();
     const ends = page.getByRole('listbox', {name: 'End times'});
-    assert.equal(await ends.getByRole('option').first().textContent(), '10:30 AM (15 min)');
+    assert.deepEqual((await ends.getByRole('option').allTextContents()).slice(0, 2), ['No end', '10:30 AM (15 min)']);
     assert.equal(await ends.getByRole('option', {name: '11:15 AM (1 hr)'}).getAttribute('aria-selected'), 'true');
     await ends.getByRole('option', {name: '11:45 AM (1.5 hrs)'}).click();
     assert.equal(await end!.inputValue(), '11:45 AM');
@@ -831,6 +831,48 @@ test('SV-25: the date and time pickers: a month under the date, 15-minute lists 
     assert.equal(await start!.inputValue(), '3:00 PM');
     await page.getByRole('button', {name: 'Remove time'}).click();
     await page.getByRole('button', {name: 'Add a time'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-78: No end in the End list makes an event that ends as it starts; it says its start alone and overlaps nothing', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Call Mom fri 7:30pm');
+    const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
+    // A new event keeps its hour.
+    assert.deepEqual([await start!.inputValue(), await end!.inputValue()], ['7:30 PM', '8:30 PM']);
+    await end!.click();
+    await page.getByRole('listbox', {name: 'End times'}).getByRole('option', {name: 'No end', exact: true}).click();
+    // The field reads No end as the Date field reads No date: its placeholder, in ink3.
+    assert.deepEqual([await end!.inputValue(), await end!.getAttribute('placeholder')], ['', 'No end']);
+    // A new start keeps it without an end.
+    await start!.fill('745p');
+    await start!.press('Enter');
+    assert.deepEqual([await start!.inputValue(), await end!.inputValue()], ['7:45 PM', '']);
+    // During Dinner with Sam and Study group, but taking no time, it has no conflicts.
+    await page.locator('.editor', {hasText: 'No conflicts'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const call = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Call Mom')!;
+    assert.equal(call.ends_at, call.starts_at);
+    // The agenda and the card say its start alone; the agenda finds no overlap.
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    const row = page.locator('.ag-item', {hasText: 'Call Mom'});
+    assert.match((await row.locator('.line').textContent())!, /^7:45 PM · /);
+    assert.equal(await row.locator('.overlap').count(), 0);
+    await chip(page, '2026-10-09', 'Call Mom').click();
+    assert.equal(await page.locator('.fd .fd-layer.in .fd-when').textContent(), 'Fri, Oct 9 · 7:45 PM');
+    // Opened again, its End still reads No end.
+    await page.keyboard.press('e');
+    await page.locator('.editor').waitFor();
+    assert.deepEqual([await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')], ['7:45 PM', '', 'No end']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

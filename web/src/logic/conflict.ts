@@ -20,14 +20,16 @@ export interface Overlap {
   end: number;
 }
 
-/** A timed event's span; null for all-day events, tasks and events without times. */
+/** A timed event's span; null for all-day events, tasks, events without times and, taking no time, one with no end (SV-78). */
 export function spanOf(item: ItemOut): Span | null {
   if (item.kind !== 'event' || item.all_day || !item.starts_at || !item.ends_at) return null;
-  return {start: Date.parse(item.starts_at), end: Date.parse(item.ends_at)};
+  const span = {start: Date.parse(item.starts_at), end: Date.parse(item.ends_at)};
+  return span.end > span.start ? span : null;
 }
 
 /** The timed events `span` shares time with (touching isn't overlapping), earliest first; `except` is the event itself. */
 export function overlapsWith(span: Span, items: ItemOut[], except: string | null = null): Overlap[] {
+  if (span.end <= span.start) return [];
   return items.flatMap(item => {
     const other = item.key === except ? null : spanOf(item);
     if (!other || other.start >= span.end || other.end <= span.start) return [];

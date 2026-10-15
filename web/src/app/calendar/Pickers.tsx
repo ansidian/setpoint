@@ -276,10 +276,12 @@ export function DateField({className, label, value, shown, placeholder, today, r
  * A time field (SV-25): it takes typing as `read` does ("3p", "930a"), and focusing it opens its list
  * (`choices`), scrolled to its value, until typing starts. ↑/↓ move, Enter picks, Esc closes.
  */
-export function TimeField({className, label, value, choices, read, onValue}: {
+export function TimeField({className, label, value, blank, choices, read, onValue}: {
   className: string;
   label: string;
   value: number;
+  // What the field reads in `ink3` in place of its time, as the Date field's "No date": SV-78's No end.
+  blank?: string;
   choices: {minutes: number; label: string}[];
   read: (text: string) => number | null;
   onValue: (minutes: number) => void;
@@ -317,7 +319,7 @@ export function TimeField({className, label, value, choices, read, onValue}: {
   return (
     <span className="menu-host menu-anchor pick-time">
       <label className={`field ${className}`}>
-        <input className="grow" aria-label={label} value={text ?? clockLabel(value)} autoComplete="off"
+        <input className="grow" aria-label={label} placeholder={blank} value={text ?? (blank ? '' : clockLabel(value))} autoComplete="off"
           onFocus={() => setCur(near())} onClick={() => cur === null && setCur(near())}
           onBlur={() => {
             commit();

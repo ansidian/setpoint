@@ -366,13 +366,13 @@ describe('SV-29: an event\'s days, from its first to its last', () => {
     ['a last day before the first is the first', '2026-10-23', '2026-10-20', null, null, {date: '2026-10-23', end: null, days: 1}],
   ])('%s', (_, from, to, start, end, span) => expect(spanTo(from, to, start, end)).toEqual(span));
 
-  test('the End list on the first day is the 24 hours after the start, with lengths', () => {
-    expect(endChoices(h(9), h(10))).toEqual(timeChoices(h(9)));
+  test('the End list on the first day is No end, then the 24 hours after the start, with lengths (SV-78)', () => {
+    expect(endChoices(h(9), h(10))).toEqual([{minutes: h(9), label: 'No end'}, ...timeChoices(h(9))]);
   });
-  test('on a later last day, it\'s that day\'s times, without lengths', () => {
+  test('on a later last day, it\'s No end, then that day\'s times, without lengths', () => {
     const list = endChoices(h(9), h(48 + 10));
-    expect(list.length).toBe(96);
-    expect(list.slice(0, 2)).toEqual([{minutes: h(48), label: '12:00 AM'}, {minutes: h(48) + 15, label: '12:15 AM'}]);
+    expect(list.length).toBe(97);
+    expect(list.slice(0, 3)).toEqual([{minutes: h(9), label: 'No end'}, {minutes: h(48), label: '12:00 AM'}, {minutes: h(48) + 15, label: '12:15 AM'}]);
     expect(list.at(-1)).toEqual({minutes: h(72) - 15, label: '11:45 PM'});
   });
   test.each([
@@ -380,6 +380,8 @@ describe('SV-29: an event\'s days, from its first to its last', () => {
     ['on the first day, before the start is the next', '8a', h(9), h(10), h(32)],
     ['on a later day, that day\'s time', '8a', h(9), h(48 + 10), h(48 + 8)],
     ['unreadable', 'soon', h(9), h(48 + 10), null],
+    ['"no end" is the start (SV-78)', 'no end', h(9), h(10), h(9)],
+    ['"none" too', ' None ', h(9), h(48 + 10), h(9)],
   ])('end %s', (_, text, start, end, minutes) => expect(readEnd(text, start, end)).toBe(minutes));
 
   test.each([

@@ -1232,7 +1232,7 @@ it changes what's on screen.
     typing. Focusing the date opens the sidebar's mini month under it (‹ › step it, a click picks;
     ↑/↓ move a week, Enter picks, Esc closes). Focusing a time opens its list in 15-minute steps,
     scrolled to its value (↑/↓, Enter, Esc); End's list starts after the start and gives each
-    length ("10:00 AM (1 hr)"). Typing in either closes its picker, so it never covers the card's
+    length ("10:00 AM (1 hr)"), after No end (#246). Typing in either closes its picker, so it never covers the card's
     Create. The time fields take shorthand, "3p", "330p", "930a", "2130"; the
     typed line still keeps 4-digit numbers as title words. An × after the times sets an event back
     to all day, or takes a task's time off. Settings' reminder time and search's date chips are
@@ -2510,3 +2510,13 @@ it changes what's on screen.
     (`placeLink` in web/src/logic/place.ts, which the right pane's line now uses too). Time to Leave
     keeps its own test for a link (server/src/domain/timeToLeave.ts) (Andy, 2026-10-15; darma SV-77).
     Board audit: no board draws a link as a place, so it's unchanged (11 0.70%, 12a 0.43%).
+246. **An event can have no end:** End's list starts with **No end**, and "no end" or "none" typed
+    there does the same. A new event still gets an hour; No end is picked. Google needs an end, so
+    the event ends as it starts (v1 kept the same zero-length hold), and that's how one made in
+    Google reads here too. The End field then reads "No end" in `ink3`, as the Date field's "No
+    date" (#244), and a new start keeps it without one. Its time says its start alone, "7:45 PM",
+    in the agenda, the card, search and the week block, which is drawn at the shortest block's
+    height. It takes no time, so it overlaps nothing and nothing overlaps it: no Overlaps line, and
+    the editor's preview says No conflicts. Once its start has gone it's past (Andy, 2026-10-15;
+    darma SV-78). Board audit: no board draws an event with no end; board 13's End field still
+    reads "9:00 PM", so it's unchanged (13 1.56%).

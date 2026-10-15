@@ -246,6 +246,8 @@ export function chipTime(item: ItemOut, timeZone: string): string | null {
 export function timeRange(item: ItemOut, timeZone: string): string {
   if (item.all_day || !item.starts_at || !item.ends_at) return 'All day';
   const start = clockTime(item.starts_at, timeZone);
+  // SV-78: an event with no end ends as it starts, and says its start alone.
+  if (Date.parse(item.ends_at) === Date.parse(item.starts_at)) return start;
   const end = clockTime(item.ends_at, timeZone);
   const [startTime, startHalf] = start.split(' ');
   const [, endHalf] = end.split(' ');

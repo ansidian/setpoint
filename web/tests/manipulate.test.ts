@@ -72,6 +72,13 @@ describe('overlaps (the conflict preview)', () => {
     // All-day events and tasks take no time.
     ['the morning', span('09:00', '10:00'), 'No conflicts'],
   ])('%s', (_, draft, line) => expect(conflictLine(overlapsWith(draft, friday)).text).toBe(line));
+  test('an event with no end takes no time: it overlaps nothing, and nothing overlaps it (SV-78)', () => {
+    const call = event('Call', '2026-10-09', '19:00', '19:00');
+    expect(spanOf(call)).toBeNull();
+    expect(overlapsWith(span('19:00', '19:00'), friday)).toEqual([]);
+    expect(overlapsWith(span('18:00', '20:00'), [call])).toEqual([]);
+    expect(agendaOverlap(call, [study, call], zone)).toBeNull();
+  });
   test('an event doesn\'t overlap itself', () => expect(overlapsWith(spanOf(study)!, [study], study.key)).toEqual([]));
   test.each([[90 * 60_000, '1h 30m'], [45 * 60_000, '45m'], [2 * 3600_000, '2h']])('%i ms is %s', (ms, text) => expect(shortDuration(ms)).toBe(text));
   const h = (hour: number, minute = 0) => hour * 60 + minute;
