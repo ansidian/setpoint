@@ -38,6 +38,9 @@
 .fd .fact.cal .icon { color: var(--c); }
 /* SV-56: Time to Leave once it's time to go, glyph and words, as the day agenda's line. */
 .fd .fact.due, .fd .fact.due .icon, .fd .fact.due .v { color: var(--caution); }
+/* SV-76: a fact's words shrink to the card and a long link or address breaks anywhere, rather than
+   running out under the card's clip. */
+.fd .fact > span { min-width: 0; overflow-wrap: anywhere; }
 .fd-place { display: block; }
 .fd-address { font-size: 12.5px; }
 .fd-title, .fd-place, .fd-address, .fd-when { user-select: text; -webkit-user-select: text; }

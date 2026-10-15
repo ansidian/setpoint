@@ -487,3 +487,24 @@ test('beside its item the card scrolls with the grid, and an item picked from th
     await setpoint.stop();
   }
 });
+
+test('SV-76: a place with a long link wraps inside the card rather than running out of it', async () => {
+  const setpoint = await startSetpoint({fixtures: ['link-places']});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    await chip(page, '2026-10-09', 'Study group').click();
+    await card(page).waitFor();
+    await atRest(page);
+    const place = card(page).locator('.fd-layer.in .fd-place');
+    assert.match((await place.textContent())!, /^Room 204 or https:\/\/meet\.example\.com\/j\/81234567890\?pwd=/);
+    // Fits: the place's right edge is inside the card's body, not under its clip.
+    const body = (await rested(() => card(page).locator('.fd-layer.in .card-b').boundingBox()))!;
+    const line = (await rested(() => place.boundingBox()))!;
+    assert.ok(line.x + line.width <= body.x + body.width, `the place ends inside the card: ${line.x + line.width} ≤ ${body.x + body.width}`);
+    assert.ok(await rested(() => place.evaluate(element => element.scrollWidth <= element.clientWidth)), 'nothing of it runs past its own box');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

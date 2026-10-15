@@ -13,6 +13,7 @@ import {failedChange, noDinner} from './calendarChanges.ts';
 import {codeExpiring, coffeeHtml, lastYear, newDigest, newsletterHtml, recoveryHtml, secondPin} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
+import {linkPlaces} from './linkPlaces.ts';
 import {timeToLeave} from './timeToLeave.ts';
 import {weekendForecast} from './weekendForecast.ts';
 
@@ -29,6 +30,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'code-expiring': {board: 'mail checks', apply: codeExpiring},
   // Not a board: the mail checks size the reader's frame to a newsletter that is mostly pictures.
   'newsletter-html': {board: 'mail checks', apply: newsletterHtml},
+  // Not a board: the floating detail's place line with a link in it (SV-76, SV-77).
+  'link-places': {board: 'detail checks', apply: linkPlaces},
   // Not a board: search's rows and Alfred's sources hold an age with its year.
   'last-year': {board: 'search checks', apply: lastYear},
   // F7 (states.ts): health states and Settings' contents.
