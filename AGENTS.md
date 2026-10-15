@@ -64,8 +64,13 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   provider, ntfy, Home Assistant or a model.
 - No mocks of internal modules. Presentation goes to browser checks against approved screenshots of
   the app (`web/tests/browser/goldens/`, D69), each of the region its check is about, with the
-  shared parts checked once each (`REGIONS` in harness.ts, D76). A decision that is a single value
-  (a gap, a colour, an alignment) also gets a check that states it. A deliberate visual change
+  shared parts checked once each (`REGIONS` in harness.ts, D76). A single value also gets a check
+  that states it when a golden can't hold it: a colour or fill that depends on state, theme or the
+  cascade (hover, press, focus, selected, outside the month, Light beside Night, a role colour on a
+  glyph); a relation rather than a literal (fits or clips, beside or inside, equal room, a width at
+  a breakpoint); or a value that has already moved by accident, stated in the commit that fixes it.
+  A literal that only restates the stylesheet or a token (a padding, a gap, a font size, a motion
+  duration) is left to the golden and `web/tests/tokens.test.ts` (D269). A deliberate visual change
   re-captures its screenshots in the same commit (`npm run goldens`), and each changed image is
   looked at beside its diff before committing. A decision that changes the screen also runs the
   board audit (`npm run audit:boards`) and notes what it showed in the decision.
@@ -82,6 +87,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   reads is a reader, and so is one that calls a reader; each use of one rests, polls (`until`), or
   says why on the line before it, a read meant to catch motion (the lint asks, SV-75).
 - Every bug fix starts with a failing test. There is no known-failing list.
+- A fix whose browser check went red on its own, not because the design changed, says so in its
+  commit message ("the X check caught it"): git has no other record of a check catching something,
+  and the single-value rule is judged by that count (D269).
 
 ## Boundaries (the lint enforces them)
 

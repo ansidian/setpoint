@@ -94,7 +94,9 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   (`npm run test:browser:stress`: a CPU slowed 4×, /api late and out of order, the fonts late;
   D81), so a check that reads too early fails every time rather than now and then; a change to a
   page runs the spec files it touches under stress before commit. A failed check keeps a trace
-  (SV-75), and a one-shot read of a style or box rests first (`rested`; the lint asks).
+  (SV-75), and a one-shot read of a style or box rests first (`rested`; the lint asks). A single
+  value is stated in a check only where a golden can't hold it: a state-, theme- or cascade-dependent
+  colour, a relation, or a value that has moved by accident before (D269).
 - Every bug fix starts with a failing test. There is no known-failing list.
 
 ### Verification
