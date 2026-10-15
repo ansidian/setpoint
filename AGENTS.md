@@ -40,10 +40,13 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - A check that fails or times out keeps a trace of its pages under `test-results/browser/traces/`,
   and the run says where: `npx playwright-core show-trace <file>` replays every action, with the
   screen and the DOM at each step, before guessing at what was mid-flight (SV-75).
+- A change to what a page shows also runs the spec files it touches under stress before commit
+  (`npm run test:browser:stress -- mail search`, a few minutes for a large file), so a check that reads
+  before what it reads has come is caught in the same commit, not at the release's run.
 - Before a release, besides those: the board audit (`npm run audit:boards`) and
   `npm run test:browser:stress`, the browser checks on a CPU slowed 4×, with /api answering late,
   one at a time and last-asked first, and the web fonts late (D81), so a check that reads before
-  what it reads has come fails every time. A stress run takes about 5 minutes.
+  what it reads has come fails every time. A stress run takes about 10 minutes.
 - `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
   how to sign in: the quickest way to see a change or reproduce a report by hand.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
