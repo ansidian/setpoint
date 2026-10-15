@@ -469,6 +469,9 @@ export async function still(page: Page): Promise<void> {
   await until('nothing moving', () => page.evaluate(() => document.getAnimations()
     .filter(animation => animation.playState === 'running' && (animation.effect?.getComputedTiming().endTime as number) < 2000)
     .map(animation => (animation as CSSAnimation).animationName ?? animation.constructor.name)), moving => moving.length === 0);
+  // Two frames drawn since. Under a clock a check has installed (page.clock) requestAnimationFrame
+  // fires only as the check runs the clock, so its frames are the check's to wait for.
+  if (await page.evaluate(() => '__pwClock' in window)) return;
   await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
 }
 
