@@ -37,6 +37,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   with its time and slowest checks; past its budget, look there before adding checks. A direct
   `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
   and each of them waits while a checkout from before the lock has a browser open.
+- A check that fails or times out keeps a trace of its pages under `test-results/browser/traces/`,
+  and the run says where: `npx playwright-core show-trace <file>` replays every action, with the
+  screen and the DOM at each step, before guessing at what was mid-flight (SV-75).
 - Before a release, besides those: the board audit (`npm run audit:boards`) and
   `npm run test:browser:stress`, the browser checks on a CPU slowed 4×, with /api answering late,
   one at a time and last-asked first, and the web fonts late (D81), so a check that reads before

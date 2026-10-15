@@ -5,12 +5,17 @@
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
+// Each check's pages record a trace (SV-75), and a check that fails, or that its timeout cancels,
+// keeps it under test-results/browser/traces/, saying where in the run's output, to open with
+// `npx playwright-core show-trace <file>`; a passing check's is dropped.
 import {spawn, spawnSync} from 'node:child_process';
 import type {ChildProcess} from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import {afterEach, beforeEach} from 'node:test';
+import type {TestContext} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
 import type {Browser, BrowserContext, Locator, Page, Request} from 'playwright-core';
@@ -20,6 +25,8 @@ export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const WEB_DIST = path.join(ROOT, 'web', 'dist');
 /** Where each run's screenshots and diffs go (git ignores it). */
 export const OUTPUT = path.join(ROOT, 'test-results', 'browser');
+/** Where a failed check's traces go (run.ts empties it at the start of a run). */
+export const TRACES = path.join(OUTPUT, 'traces');
 /** The approved screenshots of the app the checks compare with (SV-33, D69). */
 export const GOLDENS = fileURLToPath(new URL('./goldens/', import.meta.url));
 
@@ -71,6 +78,64 @@ export async function launchBrowser(): Promise<Browser> {
 export async function closeBrowser() {
   await browser?.close();
   browser = null;
+}
+
+// The check running in this process (spec files run side by side, each in a process of its own,
+// and a file's checks one after another) with the contexts and pages it opened, for its traces. Every context records a trace (SETPOINT_BROWSER_TRACE=0 turns that off); the hooks
+// here, registered for every spec file that uses the harness, keep a failed check's.
+const TRACE = process.env.SETPOINT_BROWSER_TRACE !== '0';
+interface Check {
+  name: string;
+  contexts: Set<BrowserContext>;
+  pages: Set<Page>;
+  finished: boolean;
+  kept: Promise<string[]> | null;
+}
+let current: Check | null = null;
+
+beforeEach(t => {
+  const check: Check = {name: t.fullName, contexts: new Set(), pages: new Set(), finished: false, kept: null};
+  current = check;
+  // node --test cancels a check at its timeout by aborting its signal, before its hooks run; it
+  // aborts the signal after every check too, so a finished one is left alone.
+  t.signal.addEventListener('abort', () => {
+    if (!check.finished) void keepTraces(check);
+  });
+});
+
+afterEach(async hook => {
+  const check = current;
+  if (!check) return;
+  check.finished = true;
+  current = null;
+  // The check's own context: a hook's is typed as a suite's too, which has no outcome.
+  const t = hook as TestContext & {passed: boolean};
+  if (!t.passed) await keepTraces(check);
+  // Closing a cancelled check's contexts also ends what its body still waits on.
+  await Promise.all([...check.contexts].map(context => context.close().catch(() => {})));
+});
+
+/** Writes the check's traces under test-results/browser/traces/, once, and says where (the reporter has the failure's words by then). */
+function keepTraces(check: Check): Promise<string[]> {
+  check.kept ??= (async () => {
+    const files: string[] = [];
+    const slug = check.name.replace(/\W+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+    fs.mkdirSync(TRACES, {recursive: true});
+    let n = 0;
+    for (const context of check.contexts) {
+      n += 1;
+      const file = path.join(TRACES, `${slug}${n > 1 ? `-${n}` : ''}.zip`);
+      try {
+        await context.tracing.stop({path: file});
+        files.push(path.relative(ROOT, file));
+      } catch {
+        // The context went with its check.
+      }
+    }
+    if (files.length) console.log(`${check.name}: trace ${files.join(', ')} (npx playwright-core show-trace <file>)`);
+    return files;
+  })();
+  return check.kept;
 }
 
 // Every Setpoint a check started and hasn't stopped. A check that fails or times out (node --test
@@ -251,7 +316,11 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   const pageErrors: string[] = [];
   const stop = async () => {
     running.delete(server);
-    await Promise.all(contexts.map(context => context.close().catch(() => {})));
+    // Its pages close before the server goes, so nothing asks a port that's gone; within a check the
+    // contexts stay open, with their traces, for the afterEach, which keeps a failed check's and
+    // closes them. Outside one (cleanUp) they close here.
+    if (current) await Promise.all(contexts.flatMap(context => context.pages()).map(page => page.close().catch(() => {})));
+    else await Promise.all(contexts.map(context => context.close().catch(() => {})));
     if (server.exitCode === null && server.signalCode === null) {
       const exited = new Promise(resolve => server.once('exit', resolve));
       server.kill('SIGTERM');
@@ -280,6 +349,8 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         timezoneId: 'America/Los_Angeles', locale: 'en-US', colorScheme: 'dark',
       });
       contexts.push(context);
+      if (TRACE) await context.tracing.start({screenshots: true, snapshots: true});
+      current?.contexts.add(context);
       if (cookie) await context.addCookies([{name: cookie.name, value: cookie.value, url: base}]);
       if (STRESS) {
         // A check's own page.route takes precedence, so what it holds or fails isn't delayed too.
@@ -316,6 +387,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         });
       }
       const page = await context.newPage();
+      current?.pages.add(page);
       page.on('pageerror', error => pageErrors.push(String(error)));
       const loading = new Set<Request>();
       loadingByPage.set(page, loading);

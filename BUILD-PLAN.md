@@ -92,7 +92,7 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   are checked separately by the board audit (`npm run audit:boards`), when a decision changes the
   screen and before a release. Before a release the checks also run under stress
   (`npm run test:browser:stress`: a CPU slowed 4×, /api late and out of order, the fonts late;
-  D81), so a check that reads too early fails every time rather than now and then.
+  D81), so a check that reads too early fails every time rather than now and then. A failed check keeps a trace (SV-75).
 - Every bug fix starts with a failing test. There is no known-failing list.
 
 ### Verification

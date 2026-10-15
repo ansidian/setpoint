@@ -2,7 +2,8 @@
 // spec files or the ones named, six at a time, one run at a time on this machine (lock.ts): a run
 // waits for the lock, saying whose run it waits for. The build and the checks together get LIMIT
 // minutes, then everything is stopped, so a hung run can't sit for hours. At the end it prints the
-// run's time against BUDGET and the slowest checks (slowest.ts).
+// run's time against BUDGET and the slowest checks (slowest.ts). A failed check's trace is under
+// test-results/browser/traces/ (harness.ts), emptied at the start of each run.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,6 +53,7 @@ async function main(): Promise<number> {
   const waited = await acquire();
   if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
   handDown();
+  fs.rmSync(path.join(ROOT, 'test-results', 'browser', 'traces'), {recursive: true, force: true});
   const started = Date.now();
   const timer = setTimeout(() => {
     console.error(`\nThe browser run passed its ${clock(LIMIT)} limit (SETPOINT_BROWSER_LIMIT_MIN) and was stopped.`);
