@@ -115,10 +115,17 @@ export function refresh(path: string): Promise<void> {
   }
   const version = current.version;
   const writesAtStart = writes;
+  const heldAtStart = isHeld(path);
   const askedAt = Date.now();
   current.loading = getJson<unknown>(path).then(
     data => {
       if (current.version !== version) return;
+      // Asked or answered while a change to it is on its way, it may be from before that change:
+      // what's shown stays, and the hold's end loads it again (SV-80).
+      if ((heldAtStart || isHeld(path)) && current.data !== undefined) {
+        if (!isHeld(path)) queueMicrotask(() => void refresh(path));
+        return;
+      }
       current.data = data;
       current.error = undefined;
       current.askedAt = askedAt;
@@ -134,6 +141,32 @@ export function refresh(path: string): Promise<void> {
     notify();
   });
   return current.loading;
+}
+
+// SV-80: paths whose answers wait while a change to them is on its way (the pin's lists and email),
+// by prefix, each with how many holds it has.
+const holds = new Map<string, number>();
+const isHeld = (path: string) => [...holds.keys()].some(prefix => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`));
+
+/**
+ * Holds the answers of the paths under `prefixes` until the returned release: one that lands
+ * meanwhile, or was asked meanwhile, doesn't replace what's shown, and the release loads the ones
+ * on screen again. For a run of changes whose at-once effect a refresh landing between them would
+ * undo (a pin, then an unpin before it's answered).
+ */
+export function holdLoads(prefixes: string[]): () => void {
+  for (const prefix of prefixes) holds.set(prefix, (holds.get(prefix) ?? 0) + 1);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    for (const prefix of prefixes) {
+      const left = (holds.get(prefix) ?? 1) - 1;
+      if (left > 0) holds.set(prefix, left);
+      else holds.delete(prefix);
+    }
+    for (const prefix of prefixes) for (const path of cachedPaths(prefix)) if (!isHeld(path)) refreshIfShown(path);
+  };
 }
 
 /**

@@ -362,8 +362,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
       const pinned = rowOf(id)?.pinned ?? false;
       // Out of the shelf's sight, a pin says where it went, with Undo (inbox-09).
       const unseen = !pinned && !phone && !shelfInView();
-      void setPinned(id, !pinned).then(() => {
-        if (unseen) showToast('Pinned', {label: 'Undo', run: () => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'))});
+      // Only if it's still pinned once the last P is in: a pin taken back before it was answered says nothing (SV-80).
+      void setPinned(id, !pinned).then(message => {
+        if (unseen && message.pinned) showToast('Pinned', {label: 'Undo', run: () => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'))});
       }, toastFailure(pinned ? 'Couldn\'t unpin it' : 'Couldn\'t pin it'));
     },
     openInGmail: () => {

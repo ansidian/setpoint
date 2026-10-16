@@ -305,6 +305,60 @@ test('P on an email just opened: the open\'s answer, arriving after the pin\'s, 
   }
 });
 
+test('SV-80: P then P again before the pin is answered: one pin change at a time, the last asked is what the server keeps, and it never shows pinned again', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    // Each pin change's answer is held, as a slow connection can; what's sent and answered is noted in order.
+    const gates = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
+    const seen: string[] = [];
+    await page.route('**/api/mail/messages/*/pin', async route => {
+      const {pinned} = route.request().postDataJSON() as {pinned: boolean};
+      const gate = gates[seen.filter(one => one.startsWith('send')).length];
+      seen.push(`send ${pinned}`);
+      await gate?.promise;
+      const response = await route.fetch();
+      seen.push(`answer ${pinned}`);
+      await route.fulfill({response});
+    });
+    // The shelf's rows, not one folding away (it has no key).
+    const shelf = () => page.locator('.row.shelf[data-key]').count();
+    await rowOf(page, 'Pick a 30-minute slot').click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    await page.keyboard.press('p');
+    await until('the pin is on its way', async () => seen, list => list.length === 1);
+    await page.keyboard.press('p');
+    await until('off the shelf at once', shelf, count => count === 1);
+    // Nothing more goes out while the pin waits: a second change sent now could reach the server first.
+    await page.waitForTimeout(300);
+    assert.deepEqual(seen, ['send true'], 'the unpin waits for the pin\'s answer');
+    // The pin lands, and the lists load again while the unpin is still on its way: the server says
+    // pinned then, but the screen keeps what was last asked.
+    const reloaded = page.waitForResponse(/\/api\/mail\/inbox$/);
+    gates[0]!.resolve();
+    await until('the unpin follows the pin', async () => seen, list => list.length === 3);
+    assert.deepEqual(seen, ['send true', 'answer true', 'send false']);
+    await reloaded;
+    // The answer is in; the next frame has drawn what the cache made of it.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    assert.equal(await shelf(), 1, 'not back on the shelf while the unpin is on its way');
+    assert.equal(await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).count(), 0, 'the reader still says Pin');
+    gates[1]!.resolve();
+    await until('the unpin answered', async () => seen, list => list.length === 4);
+    await until('the server keeps it unpinned', () => setpoint.api<InboxOut>('GET', '/mail/inbox'),
+      inbox => !inbox.groups.some(group => group.rows.some(row => row.pinned && row.subject.startsWith('Interview availability'))));
+    await setpoint.idle();
+    assert.equal(await shelf(), 1);
+    await page.locator('.rd-tools .tool:not(.active)', {hasText: 'Pin'}).waitFor();
+    // No "Pinned" toast for a pin taken back before it was answered.
+    assert.equal(await page.locator('.toast', {hasText: 'Pinned'}).count(), 0);
+    await page.unroute('**/api/mail/messages/*/pin');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('P on an email still loading: its first answer, from before the pin, doesn\'t unpin it on screen', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -342,10 +396,11 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
     await delivered;
     await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
     assert.equal(await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).count(), 1, 'still pinned on screen');
-    // So P unpins it.
+    // So P unpins it, at once on screen; the unpin goes once the pin is answered (SV-80).
     await page.keyboard.press('p');
-    await until('the server unpinned it', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), inbox => !inbox.groups.some(group => group.rows.some(row => row.pinned && row.subject.startsWith('Interview availability'))));
+    await page.locator('.rd-tools .tool:not(.active)', {hasText: 'Pin'}).waitFor();
     end.resolve();
+    await until('the server unpinned it', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), inbox => !inbox.groups.some(group => group.rows.some(row => row.pinned && row.subject.startsWith('Interview availability'))));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

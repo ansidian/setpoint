@@ -5,7 +5,7 @@
 import type {AllOut, CommandOut, InboxOut, MailCountsOut, MarkAllReadOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
 import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, markAllReads} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
-import {afterPending, ApiFailure, cachedPaths, getCached, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
+import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
 export const inboxPath = (account: number | null) => (account ? `/mail/inbox?account_id=${account}` : '/mail/inbox');
 export const COUNTS_PATH = '/mail/counts';
@@ -141,17 +141,49 @@ export function setDone(id: number, done = true): Promise<MessageOut> {
   });
 }
 
-/** Pin (`P`) puts it on the Pinned shelf, or takes it off. */
+// SV-80: each email's pin changes go one at a time. Two sent together (P, then P again before the
+// first is answered) can reach the server in either order and leave it pinned while the screen
+// says unpinned, so a change made while one is on its way only updates what's wanted, and that is
+// sent once the one in flight is answered, if it differs. The last asked is what the server keeps,
+// and the lists and the email hold their answers meanwhile, so one landing between the two can't
+// show the pin back.
+const pinning = new Map<number, {wanted: boolean; mark: number; done: Promise<MessageOut>}>();
+
+/**
+ * Pin (`P`) puts it on the Pinned shelf, or takes it off, at once on screen. Every way to pin
+ * comes here (the reader's P, the Pinned toast's Undo, the shelf's Unpin); it resolves with the
+ * email as the server has it once the last change asked is in.
+ */
 export function setPinned(id: number, pinned: boolean): Promise<MessageOut> {
   const fromAll = cachedAllRow(id);
   for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterPin(inbox, id, pinned, fromAll));
   updateAllRows(row => (row.id === id ? {...row, pinned} : row));
   const mark = updateMessage(id, {pinned});
-  return change(async () => {
-    const message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/pin`, {pinned});
-    answered(id, mark, message);
-    return message;
+  const queued = pinning.get(id);
+  if (queued) {
+    queued.wanted = pinned;
+    queued.mark = mark;
+    return queued.done;
+  }
+  const state = {wanted: pinned, mark} as {wanted: boolean; mark: number; done: Promise<MessageOut>};
+  const release = holdLoads(['/mail/inbox', '/mail/all', messagePath(id)]);
+  state.done = change(async () => {
+    try {
+      let sent: boolean;
+      let message: MessageOut;
+      do {
+        sent = state.wanted;
+        message = await sendJson<MessageOut>('POST', `/mail/messages/${id}/pin`, {pinned: sent});
+      } while (state.wanted !== sent);
+      answered(id, state.mark, message);
+      return message;
+    } finally {
+      pinning.delete(id);
+      release();
+    }
   });
+  pinning.set(id, state);
+  return state.done;
 }
 
 /** Mark unread (⌘K on an open email): a command the provider confirms. */
