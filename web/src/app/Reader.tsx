@@ -24,6 +24,9 @@ import {Icon} from '../ui/Icon.tsx';
 import {colourVar, dotStyle} from './accounts.ts';
 import {Attachments} from './Attachments.tsx';
 import {CodeCard} from './Code.tsx';
+import {copyText, openContextMenu} from './ContextMenu.tsx';
+import type {MenuAction} from './ContextMenu.tsx';
+import {emailActions} from './emailActions.ts';
 import {foldAway} from './fold.ts';
 import {MailFrame} from './MailFrame.tsx';
 import {useCommands} from './palette/commands.ts';
@@ -111,19 +114,13 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
-  // the email stays unread; from the email's row too, as the tools are, so it's there at once.
+  // the email stays unread; from the email's row too, as the tools are, so it's there at once. The
+  // same list as the row's right-click menu and More (emailActions.ts).
+  const handlers = {...actions, propose: cards.propose, ask: cards.ask};
+  const offered = listed ? emailActions(listed, gmail, handlers, 'palette') : [];
   useCommands(() => (listed ? {
     context: {label: listed.subject, colour: accounts.get(listed.account_id)?.colour ?? 'ink3'},
-    commands: [
-      ...(doneable ? [{id: 'done', section: 'email' as const, label: 'Done', icon: 'check' as const, hint: 'H', run: actions.done}] : []),
-      {id: 'trash', section: 'email', label: 'Trash', icon: 'delete', hint: 'E', run: actions.trash},
-      {id: 'pin', section: 'email', label: pinned ? 'Unpin' : 'Pin', icon: pinned ? 'keep_off' : 'keep', hint: 'P', run: actions.pin},
-      ...(gmail ? [{id: 'gmail', section: 'email' as const, label: 'Open in Gmail', icon: 'open_in_new' as const, hint: 'O', run: actions.openInGmail}] : []),
-      {id: 'event', section: 'email', label: 'Add to calendar', icon: 'event', run: () => cards.propose('event')},
-      {id: 'task', section: 'email', label: 'Add as task', icon: 'task_alt', run: () => cards.propose('task')},
-      {id: 'ask', section: 'email', label: 'Ask about this email', icon: 'auto_awesome', keywords: 'alfred', run: cards.ask},
-      {id: 'unread', section: 'email', label: 'Mark unread', icon: 'mark_email_unread', hint: '⇧U', run: actions.markUnread},
-    ],
+    commands: offered.map(action => ({...action, section: 'email' as const})),
   } : {commands: []}));
   return (
     <section className="pane" aria-label="Reading pane" style={{'--readingPane': `${width}px`} as CSSProperties}>
@@ -158,10 +155,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         {moreItems && (
           <span className="menu-anchor">
             <button className="ibtn" type="button" aria-label="More" aria-expanded={moreFor === id} onClick={() => setMoreFor(moreFor === id ? null : id)}><Icon name="more_horiz" /></button>
-            {moreFor === id && <MoreMenu onClose={() => setMoreFor(null)} onPropose={kind => {
-              setMoreFor(null);
-              cards.propose(kind);
-            }} />}
+            {moreFor === id && <MoreMenu actions={offered.filter(action => action.id === 'event' || action.id === 'task')} onClose={() => setMoreFor(null)} />}
           </span>
         )}
       </div>
@@ -199,6 +193,17 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
 type Panel = {kind: ItemKind; proposal: ProposalOut | null} | {kind: 'ask'} | null;
 type Cards = ReturnType<typeof useCards>;
 
+// A card asked for from outside the reader (an email row's right-click: Add to calendar, Add as task,
+// Ask about this email, DESIGN.md #248), taken by the reader once it shows that email.
+let asked: {id: number; card: ItemKind | 'ask'} | null = null;
+const askers = new Set<() => void>();
+
+/** Opens `card` on email `id` in the reader, now if it shows that email, else as it opens it. */
+export function askCard(id: number, card: ItemKind | 'ask') {
+  asked = {id, card};
+  askers.forEach(take => take());
+}
+
 /** The card at the top of the open email: a proposal (on its way, then shown), or Alfred about it. */
 function useCards(id: number) {
   const [state, setState] = useState<{id: number; panel: Panel}>({id, panel: null});
@@ -211,7 +216,9 @@ function useCards(id: number) {
   const alfred = useAlfred(id);
   // Its button again closes the card: it folds away as its own × does (app/fold.ts).
   const foldCard = () => foldAway(document.querySelector('.pane .rd-swap > .card'));
-  return {
+  // A card asked for from the list opens, rather than toggling one already open shut.
+  const latest = useRef({panel, propose: (_kind: ItemKind) => {}, ask: () => {}});
+  const cards = {
     panel, alfred,
     propose(kind: ItemKind) {
       if (panel?.kind === kind) {
@@ -241,10 +248,30 @@ function useCards(id: number) {
       show(null);
     },
   };
+  useEffect(() => {
+    latest.current = {panel, propose: cards.propose, ask: cards.ask};
+  });
+  useEffect(() => {
+    const take = () => {
+      if (asked?.id !== id) return;
+      const {card} = asked;
+      asked = null;
+      const {panel: shown, propose, ask} = latest.current;
+      if (shown?.kind === card) return;
+      if (card === 'ask') ask();
+      else propose(card);
+    };
+    take();
+    askers.add(take);
+    return () => {
+      askers.delete(take);
+    };
+  }, [id]);
+  return cards;
 }
 
 /** The reader's More menu (2026-10-08): Add to calendar and Add as task on Security and Noise mail. */
-function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: ItemKind) => void}) {
+function MoreMenu({actions, onClose}: {actions: MenuAction[]; onClose: () => void}) {
   const menu = useRef<HTMLDivElement>(null);
   useEffect(() => {
     menu.current?.querySelector('button')?.focus();
@@ -264,8 +291,12 @@ function MoreMenu({onClose, onPropose}: {onClose: () => void; onPropose: (kind: 
   });
   return (
     <div ref={menu} className="pop menu more-menu" role="menu">
-      <button type="button" role="menuitem" className="menu-i" onClick={() => onPropose('event')}><Icon name="event" size={16} />Add to calendar</button>
-      <button type="button" role="menuitem" className="menu-i" onClick={() => onPropose('task')}><Icon name="task_alt" size={16} />Add as task</button>
+      {actions.map(action => (
+        <button key={action.id} type="button" role="menuitem" className="menu-i" onClick={() => {
+          onClose();
+          action.run();
+        }}><Icon name={action.icon} size={16} />{action.label}</button>
+      ))}
     </div>
   );
 }
@@ -335,7 +366,9 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
       {summary && <p className="rd-sum selectable">{summary}</p>}
       <div className="rd-meta">
         <span className="avatar" style={{background: `color-mix(in oklch, ${colour} 22%, var(--cardOn))`, color: colour}}>{who.slice(0, 1).toUpperCase()}</span>
-        <div className="who grow">
+        <div className="who grow" onContextMenu={event => openContextMenu(event, event.currentTarget, [
+          {id: 'copy-address', label: 'Copy sender address', icon: 'alternate_email', run: () => copyText(listed.from_address)},
+        ])}>
           <div className="ell selectable" title={listed.from_address}>
             <span className="name">{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
           </div>

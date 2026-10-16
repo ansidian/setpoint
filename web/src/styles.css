@@ -544,6 +544,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .menu-i[aria-checked] > .icon:last-child, .menu-i .kbd { margin-left: auto; }
 .menu-i[aria-checked] > .icon:last-child { color: var(--ink); }
 .menu-i:disabled { opacity: .5; background: none; color: var(--ink2); }
+/* The right-click menu (#248): the same menu at the pointer, over everything but the palette and Settings' scrims, its groups apart by a hairline. */
+.ctx-menu { position: fixed; z-index: 38; min-width: 208px; max-width: 320px; }
+.ctx-menu .menu-i > .ell { min-width: 0; }
+.menu-sep { height: 1px; flex: none; margin: 3px 4px; background: var(--hair); }
 /* A menu's button stays lit while its menu is open, so the menu always has an owner: an icon button,
    a tool or a quiet button `sub2` and `ink` (Settings' row buttons sit in an expanded anchor), a ghost
    button `sub3`, a field as when it's focused. */

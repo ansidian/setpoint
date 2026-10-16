@@ -14,6 +14,7 @@ import {paragraphs} from '../../logic/body.ts';
 import {age, fullTimestamp, readerTime} from '../../logic/format.ts';
 import {articleNote, dayWord, factsSince, foldFacts, foldLine, initials, SECTION_GLYPHS, SECTION_LABELS, stamp, storyMeta} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {copyText, openContextMenu} from '../ContextMenu.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 import {PaneEdge} from '../Reader.tsx';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
@@ -150,7 +151,12 @@ function Sources({sources, now, timeZone, onArticle}: {sources: StorySourceOut[]
   return (
     <div className="src-list">
       {sources.map(source => (
-        <button key={source.article_id} className="src-row" type="button" data-article={source.article_id} onClick={() => onArticle(source.article_id)}>
+        <button key={source.article_id} className="src-row" type="button" data-article={source.article_id} onClick={() => onArticle(source.article_id)}
+          onContextMenu={event => openContextMenu(event, event.currentTarget, [
+            {id: 'open', label: 'Open here', icon: 'newspaper', run: () => onArticle(source.article_id)},
+            {id: 'original', label: `Open at ${source.outlet}`, icon: 'open_in_new', run: () => window.open(source.url, '_blank', 'noopener')},
+            {id: 'copy-link', group: 'copy', label: 'Copy link', icon: 'content_copy', run: () => copyText(source.url, `${source.outlet}'s link`)},
+          ])}>
           <span className="fav">{initials(source.outlet)}</span>
           <span className="lines">
             <span className="o">{source.outlet}{source.summary_only && <span className="tag">Summary only</span>}</span>

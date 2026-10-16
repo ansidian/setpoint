@@ -18,6 +18,7 @@
 // is, the recurring scope asked first. The view rides in the address (?view=week).
 import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, WeatherDayOut} from '@setpoint/shared';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import type {MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, untilSettled, updateItem} from '../../api/items.ts';
@@ -38,6 +39,8 @@ import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
+import {openContextMenu} from '../ContextMenu.tsx';
+import type {MenuAction} from '../ContextMenu.tsx';
 import {navigate} from '../router.ts';
 import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
@@ -50,6 +53,7 @@ import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
 import {DayPane, HealthLines} from './DayPane.tsx';
 import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
+import {ColourPanel} from './detail/DetailContent.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
@@ -426,12 +430,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setEditorDirty(false);
   };
   const newItem = (kind: 'event' | 'task') => openEditor({kind, date: selectedDay});
-  // A day's + on the month: that day, selected, and a new event on it (polish audit grids-06).
-  const newOn = (date: string) => {
+  // A day's + on the month: that day, selected, and a new event on it (polish audit grids-06); a
+  // right-click's New event here and New task here too, at a week slot's time (#248).
+  const newOn = (date: string, kind: 'event' | 'task' = 'event', slot?: Slot) => {
     const there: CalendarRoute = {page: 'calendar', date, item: null, at: null};
     // A started draft stays, as New says (openEditor), and so does the day.
     if (!(editor && editorDirty)) selectDay(date);
-    openEditor({kind: 'event', date}, false, addressOf(there));
+    openEditor({kind, date, ...(slot ? {slot} : {})}, false, addressOf(there));
   };
   // A range dragged on the week: a new event there, its line still to write.
   const createAt = (date: string, slot: Slot) => openEditor({kind: 'event', date, slot});
@@ -692,10 +697,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     showToast(`Copied ${list.length === 1 ? list[0]!.title : `${list.length} items`}, ⌘V pastes on the selected day`);
   };
 
-  const paste = () => {
+  // ⌘V on the selected day; a right-click's Paste here on the day it was on (#248).
+  const paste = (day = selectedDay) => {
     if (!clipboard.current.length) return;
     const list = clipboard.current;
-    create(pasteOn(list, selectedDay, zone), 'Couldn\'t paste', () => `Pasted ${list.length === 1 ? list[0]!.title : `${list.length} items`} on ${dayTitle(selectedDay)}`);
+    create(pasteOn(list, day, zone), 'Couldn\'t paste', () => `Pasted ${list.length === 1 ? list[0]!.title : `${list.length} items`} on ${dayTitle(day)}`);
   };
 
   const answer = () => {
@@ -713,6 +719,94 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     copy: item => copy([item]),
     colour: recolour,
     remove: item => remove([item]),
+  };
+
+  // ---------- The right-click menu (DESIGN.md #248) ----------
+
+  /** An item's actions, the floating detail's, unavailable where its card's are (Google's own kinds, a change on its way). */
+  const itemMenu = (item: ItemOut, date: string): MenuAction[] => {
+    if (item.command?.state === 'failed') {
+      return [
+        {id: 'retry', label: 'Try again', icon: 'refresh', run: () => void retry(item)},
+        {id: 'move-back', label: 'Move back', icon: 'undo', run: () => void moveBack(item.command!.id).catch(toastFailure('Couldn\'t move it back'))},
+      ];
+    }
+    const fixed = item.read_only || item.command !== null;
+    const link = item.kind === 'event' ? placeLink(item) : null;
+    const calendar = calendarsById.get(item.calendar_id);
+    return [
+      ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && item.recurring), run: () => complete(item)} satisfies MenuAction] : []),
+      // Edit opens the editor at once, the item's day selected, with no card to hand it over (#248).
+      {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null}))},
+      ...(link ? [{id: 'open-link', label: `Open ${link.host}`, icon: 'open_in_new', hint: 'O', run: () => window.open(link.url, '_blank', 'noopener')} satisfies MenuAction] : []),
+      {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', disabled: item.read_only, run: () => actions.clone!(item)},
+      {id: 'copy', group: 'copy', label: 'Copy', icon: 'content_copy', hint: '⌘C', disabled: item.read_only, run: () => copy([item])},
+      ...(item.kind === 'event' ? [{id: 'colour', group: 'copy', label: 'Colour', icon: 'contrast', disabled: fixed,
+        run: () => {}, panel: close => <ColourPanel item={item} calendar={calendar} onPick={colour => {
+          close();
+          if (colour !== item.colour) recolour(item, colour);
+        }} />} satisfies MenuAction] : []),
+      {id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', hint: 'Del', danger: true, disabled: fixed, run: () => remove([item])},
+    ];
+  };
+
+  /** A selection's: Copy, Colour (when every one is an event that can take it), Delete, Clear selection. */
+  const selectionMenu = (list: ItemOut[]): MenuAction[] => {
+    const writable = list.filter(item => !item.read_only && !item.command);
+    const colourable = writable.length === list.length && list.every(item => item.kind === 'event' && !item.recurring);
+    return [
+      {id: 'copy', label: `Copy ${list.length} items`, icon: 'content_copy', hint: '⌘C', run: () => copy(list)},
+      ...(colourable ? [{id: 'colour', label: 'Colour', icon: 'contrast', run: () => {},
+        panel: close => <ColourPanel item={null} calendar={undefined} onPick={colour => {
+          close();
+          list.forEach(item => item.colour !== colour && recolour(item, colour));
+        }} />} satisfies MenuAction] : []),
+      {id: 'delete', group: 'delete', label: `Delete ${writable.length} items`, icon: 'delete', hint: 'Del', danger: true, disabled: !writable.length, run: () => remove(writable)},
+      {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: () => setSelection([])},
+    ];
+  };
+
+  /**
+   * Empty grid: a new event or task on that day (the event at a week slot's time, an hour long, or all
+   * day from the week's all-day row), or the copied items pasted there, keeping their times as ⌘V does.
+   */
+  const dayMenu = (date: string, at: number | 'all' | null): MenuAction[] => [
+    {id: 'new-event', label: 'New event here', icon: 'event', hint: 'C',
+      run: () => newOn(date, 'event', at === null ? undefined : at === 'all' ? {start: null, end: null, days: 1} : {start: at, end: at + 60, days: 1})},
+    {id: 'new-task', label: 'New task here', icon: 'task_alt', hint: 'D', run: () => newOn(date, 'task')},
+    {id: 'paste', label: 'Paste here', icon: 'content_copy', hint: '⌘V', disabled: !clipboard.current.length, run: () => {
+      selectDay(date);
+      paste(date);
+    }},
+  ];
+
+  /**
+   * A right-click on the grid, the day's pane or search's results: on an item, its menu, selecting it
+   * without the floating detail (a card open on another goes); on an item in a selection, the
+   * selection's, which stays; on an empty day, a day head or the all-day row, the day's.
+   */
+  const onContextMenu = (event: ReactMouseEvent) => {
+    const target = event.target as Element;
+    const element = target.closest<HTMLElement>('[data-key]');
+    const key = element?.dataset.key;
+    if (element && key) {
+      const item = drawn.find(one => one.key === key) ?? paneItems.find(one => one.key === key) ?? search.results.find(result => result.item.key === key)?.item;
+      if (!item || item.id < 0) return;
+      if (selection.length > 1 && selection.includes(key)) {
+        openContextMenu(event, element, selectionMenu(selectedItems));
+        return;
+      }
+      const date = element.closest<HTMLElement>('[data-date]')?.dataset.date ?? dayOf(item, zone) ?? selectedDay;
+      if (!openContextMenu(event, element, itemMenu(item, date))) return;
+      setPopover(null);
+      setAsk(null);
+      rememberDay(item.key, date);
+      navigate({page: 'calendar', date, item: null, at: null});
+      setSelection([item.key]);
+      return;
+    }
+    const day = target.closest<HTMLElement>('.cal-month .cell[data-date], .wk-dhead[data-date], .wk-acell[data-date]');
+    if (day && !target.closest('.more')) openContextMenu(event, day, dayMenu(day.dataset.date!, day.matches('.wk-acell') ? 'all' : null));
   };
 
   const complete = (task: ItemOut, undoing = false) => {
@@ -854,14 +948,15 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           }}><Icon name="search" /></button>}
         <button className="btn cal-new" data-hint="c" title="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
       </header>
-      <div className="content cal-content">
+      <div className="content cal-content" onContextMenu={onContextMenu}>
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
             sit atop the grid instead, so a failing one still shows (#140). */}
         {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
         {mode === 'week' ? (
           <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
             calendars={calendarsById} now={now} timeZone={zone} scroll={view.scroll} popover={popover} onSelectDay={clickDay} onSelectItem={selectItem} onPopover={setPopover}
-            onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} detail={detailProps} overlays={overlays} />
+            onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} onSlotMenu={(event, date, minutes) => openContextMenu(event, event.currentTarget, dayMenu(date, minutes))}
+            detail={detailProps} overlays={overlays} />
         ) : (
           <MonthGrid enter={zoom?.to === 'month' ? zoom.y : null} onEntered={() => setZoom(null)} shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
             now={now} timeZone={zone} scroll={view.scroll} popover={popover} onShownMonth={setShownMonth} onSelectDay={clickDay}

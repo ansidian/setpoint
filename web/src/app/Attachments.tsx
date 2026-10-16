@@ -9,6 +9,7 @@ import {attachmentLabel, attachmentType, parseCsv, previewKind} from '../logic/r
 import type {AttachmentType, PreviewKind} from '../logic/reader.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {openContextMenu} from './ContextMenu.tsx';
 import {PreviewSkeleton} from './states/Skeletons.tsx';
 
 const CSV_ROWS = 500;
@@ -37,7 +38,11 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
             </>
           );
           return kind ? (
-            <div key={file.id} className="attach" data-id={file.id} data-type={type}>
+            // A right-click offers Preview and Download (#248); a card that's only a Download link keeps the browser's menu for it.
+            <div key={file.id} className="attach" data-id={file.id} data-type={type} onContextMenu={event => openContextMenu(event, event.currentTarget, [
+              {id: 'preview', label: 'Preview', icon: 'visibility', run: () => setOpen(file)},
+              {id: 'download', label: 'Download', icon: 'download', run: () => download(attachmentUrl(messageId, file.id), file.filename)},
+            ])}>
               <button type="button" className="open" onClick={() => setOpen(file)}>{about}<span className="look"><Icon name="visibility" size={16} /></span></button>
               <Download messageId={messageId} file={file} />
             </div>
@@ -49,6 +54,14 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
       {open && <Preview key={open.id} messageId={messageId} file={open} kind={previewKind(open)!} onClose={() => setOpen(null)} />}
     </>
   );
+}
+
+/** Download from a menu: as the card's own link would. */
+function download(url: string, filename: string) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
 }
 
 function Download({messageId, file}: {messageId: number; file: AttachmentOut}) {

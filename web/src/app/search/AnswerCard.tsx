@@ -96,7 +96,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
             {turn.sources.length > 0 && (
               <div className="srcs">
                 {shownSources(turn.sources, allSources.has(turn.turn_id)).shown.map(source => (
-                  <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} onClick={() => onOpen(source.message_id)}>
+                  <button key={source.message_id} type="button" className={source.message_id === openId ? 'src open' : 'src'} data-id={source.message_id} onClick={() => onOpen(source.message_id)}>
                     <span className="line">
                       <span className="who">{source.organisation ?? source.from_name}</span>
                       <span className="grow ell">{source.subject}</span>

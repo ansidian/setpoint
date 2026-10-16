@@ -2556,11 +2556,26 @@ it changes what's on screen.
       a selection, the selection's: Copy, Colour, Delete, Clear selection, leaving it selected. A
       failed item: Try again, Move back. Colour's choices hang at the same spot.
     - **Empty grid** (a day, a week's slot, the all-day row, a day head): New event here C, New
-      task here D, Paste here ⌘V, each on the day clicked (and a slot's time) rather than the
-      selected day.
+      task here D, Paste here ⌘V, each on the day clicked rather than the selected day, which it
+      selects. The event starts at a week slot's 15-minute step, an hour long, or is all day from
+      the all-day row; Paste keeps the copied times, as ⌘V does, and is unavailable with nothing
+      copied.
     - **News:** a story, Open ↵, Open at its outlet O, Copy link; an Upcoming row, Add to calendar
       and Open the story; a source in the story pane, Open here, Open at the outlet, Copy link. No
       Mark seen (D87).
     - **No menu:** Settings, fields, search, ⌘K, toasts, Calendars rows, the mini-month, "+3" and
       the ghost rows. A Copy item says what it took in the toast (#40), or "Couldn't copy it"
       (#109). The menu is the reader's More (`.pop.menu`) with the palette's key hints.
+    - **Settled while building** (small gaps, decided by the build): the menu opens down and right
+      from the pointer, to its left or upward where it would run out of the window, 8 px inside
+      it; its cursor starts on the first item, and an item's key (H, E, P, ⇧U, ⌘C) runs it from
+      the menu; a scroll, the window resizing or losing focus closes it. Mark read says "Marked as
+      read · Undo". An attachment that's only a Download link, an Alfred source whose email isn't
+      in a list on screen, and a sidebar row with nothing to offer keep the browser's menu. The
+      Today block lists only open tasks, so its lines offer Complete, never Reopen, and a repeating
+      event's line no Delete, as its card. On Calendar a failed item offers only its card's Try
+      again and Move back, a change on its way leaves Edit, Colour, Delete and Complete
+      unavailable, and a selection offers Colour only when every one is an event that isn't
+      recurring. Paste here takes the copy glyph, the set having no paste glyph. Board audit: no
+      board draws a right-click menu and no approved screenshot changed, so it's unchanged; the
+      menu's own is `right-click-an-email`.

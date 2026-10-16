@@ -14,6 +14,7 @@ import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
 import {InboxPage} from './InboxPage.tsx';
 import {NewsPage} from './news/NewsPage.tsx';
+import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
 import {isPhone, PhoneSettings, PhoneTabs, usePhone} from './Phone.tsx';
 import {currentRoute, navigate, useRoute} from './router.ts';
@@ -97,6 +98,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
         <>
           <Settings />
           <Palette />
+          <ContextMenu />
         </>
       )}
     </div>

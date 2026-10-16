@@ -65,6 +65,8 @@ export interface WeekGridProps {
   onCreate: (date: string, slot: Slot) => void;
   // A block moved or resized: the change, the day it was on and the day it's on now.
   onChange: (item: ItemOut, changes: ItemChanges, from: string, to: string, kind: 'move' | 'resize') => void;
+  // A right-click on empty hours (#248): the day and the 15-minute step under the pointer.
+  onSlotMenu?: (event: ReactMouseEvent<HTMLElement>, date: string, minutes: number) => void;
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   overlays?: ReactNode;
   // Arriving from Month: it zooms in from this height in the section, the selected week's row there (polish audit grids-09).
@@ -498,7 +500,13 @@ export function WeekGrid(props: WeekGridProps) {
                     leaveSlot();
                     pressEmpty(date, 'hours', event);
                   }}
-                  onPointerMove={event => hoverSlot(date, event)} onPointerLeave={leaveSlot}>
+                  onPointerMove={event => hoverSlot(date, event)} onPointerLeave={leaveSlot}
+                  onContextMenu={event => {
+                    // Empty hours only: a block's right-click goes on up to the page, as its click does.
+                    if (event.target !== event.currentTarget && !(event.target as Element).closest('.wk-hover')) return;
+                    const at = whereAt(event.clientX, event.clientY);
+                    props.onSlotMenu?.(event, date, Math.max(0, Math.min(DAY - 2 * tokens.snapMinutes, Math.floor(at.minutes / tokens.snapMinutes) * tokens.snapMinutes)));
+                  }}>
                   {hovered?.date === date && !drag && (
                     <div className={`wk-hover num${hovered.shown ? '' : ' gone'}`} style={{transform: `translateY(${minuteTop(hovered.minutes)}px)`}} aria-hidden="true">
                       <Icon name="add" size={12} />{clockTime(instantAt(date, hovered.minutes, timeZone), timeZone)}

@@ -7,7 +7,7 @@
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
 // can carry out and Open in Calendar; the others aren't drawn.
-import type {EventColour, ItemOut} from '@setpoint/shared';
+import type {CalendarOut, EventColour, ItemOut} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
@@ -133,22 +133,31 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} title="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
       </div>
       {picking && (
-        <div className="fd-swatches" role="radiogroup" aria-label="Colour">
-          <button role="radio" aria-checked={item.colour === null} aria-label={`${calendar?.name ?? 'Calendar'}'s colour`} title={`${calendar?.name ?? 'Calendar'}'s colour`}
-            className={`swatch calendar${item.colour === null ? ' on' : ''}`} style={{'--c': colourVar(calendar?.colour ?? 'cool')} as CSSProperties}
-            onClick={() => {
-              setPicking(false);
-              if (item.colour !== null) actions!.colour!(item, null);
-            }} />
-          {EVENT_COLOURS.map(swatch => (
-            <button key={swatch} role="radio" aria-checked={item.colour === swatch} aria-label={swatch} className={`swatch${item.colour === swatch ? ' on' : ''}`}
-              style={{'--c': colourVar(swatch)} as CSSProperties} onClick={() => {
-                setPicking(false);
-                if (item.colour !== swatch) actions!.colour!(item, swatch);
-              }} />
-          ))}
-        </div>
+        <ColourPanel item={item} calendar={calendar} onPick={swatch => {
+          setPicking(false);
+          if (item.colour !== swatch) actions!.colour!(item, swatch);
+        }} />
       )}
     </>
+  );
+}
+
+/**
+ * Colour's swatches: the calendar's own colour, then the ones Google's event colours fall on, the
+ * item's ticked. The card's Colour shows them under its actions, the right-click menu's in its place
+ * (#248), where a selection's have no calendar of their own and nothing ticked (`item` null).
+ */
+export function ColourPanel({item, calendar, onPick}: {item: ItemOut | null; calendar: CalendarOut | undefined; onPick: (colour: EventColour | null) => void}) {
+  const own = item ? `${calendar?.name ?? 'Calendar'}'s colour` : 'Each one\'s calendar\'s colour';
+  return (
+    <div className="fd-swatches" role="radiogroup" aria-label="Colour">
+      <button role="radio" aria-checked={item?.colour === null} aria-label={own} title={own}
+        className={`swatch calendar${item?.colour === null ? ' on' : ''}`} style={{'--c': colourVar(item ? calendar?.colour ?? 'cool' : 'ink3')} as CSSProperties}
+        onClick={() => onPick(null)} />
+      {EVENT_COLOURS.map(swatch => (
+        <button key={swatch} role="radio" aria-checked={item?.colour === swatch} aria-label={swatch} className={`swatch${item?.colour === swatch ? ' on' : ''}`}
+          style={{'--c': colourVar(swatch)} as CSSProperties} onClick={() => onPick(swatch)} />
+      ))}
+    </div>
   );
 }

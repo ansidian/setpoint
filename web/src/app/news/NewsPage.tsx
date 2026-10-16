@@ -24,7 +24,7 @@ import type {
 } from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, RefObject} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
@@ -44,6 +44,7 @@ import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
 import {useNow} from '../clock.ts';
+import {copyText, openContextMenu} from '../ContextMenu.tsx';
 import {navigate} from '../router.ts';
 import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
@@ -222,6 +223,19 @@ export function NewsPage({route}: {route: NewsRoute}) {
   function close() {
     go({story: null, article: null});
   }
+  /** A story row's right-click (DESIGN.md #248): Open, Open at its leading outlet, Copy link; the cursor moves there and nothing opens, so nothing is seen. */
+  function onContextMenu(event: ReactMouseEvent) {
+    const element = (event.target as Element).closest<HTMLElement>('[data-key][data-story]');
+    const row = element ? rows.get(Number(element.dataset.story)) : undefined;
+    if (!element || !row) return;
+    const key = element.dataset.key!;
+    const opened = openContextMenu(event, element, [
+      {id: 'open', label: 'Open', icon: 'newspaper', hint: '↵', run: () => openAt(key)},
+      {id: 'original', label: `Open at ${row.lead.outlet}`, icon: 'open_in_new', hint: 'O', run: () => window.open(row.lead.url, '_blank', 'noopener')},
+      {id: 'copy-link', group: 'copy', label: 'Copy link', icon: 'content_copy', run: () => copyText(row.lead.url, `${row.lead.outlet}'s link`)},
+    ]);
+    if (opened) setCursor(key);
+  }
   /** A story by its id: at its row when the list shows it, else in the pane alone (Upcoming's, SV-50). */
   function openStoryOf(id: number) {
     const key = keys.find(one => keyStory(one) === id);
@@ -312,7 +326,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
         <SearchField search={search} label="Search news" onEnter={first => setCursor(storyKey(SEARCH_SHELF, first.id))} />
       </header>
       <div className="content">
-        <section className="nw-list" aria-label={searching ? 'Stories found' : view === 'missed' ? 'Missed stories' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
+        <section className="nw-list" onContextMenu={onContextMenu} aria-label={searching ? 'Stories found' : view === 'missed' ? 'Missed stories' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
           {!searching && unsorted && (
             <div className="nw-state failing">
               <Icon name="warning" size={16} />
@@ -503,7 +517,11 @@ function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut;
     return () => window.removeEventListener('keydown', onKey, true);
   }, [open]);
   return (
-    <div className={open ? 'nw-up on' : 'nw-up'} onClick={() => setOpen(!open)}>
+    <div className={open ? 'nw-up on' : 'nw-up'} onClick={() => setOpen(!open)}
+      onContextMenu={event => openContextMenu(event, event.currentTarget, [
+        {id: 'event', label: 'Add to calendar', icon: 'event', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: upcoming.id}})},
+        {id: 'story', label: 'Open the story', icon: 'newspaper', run: () => onStory(upcoming.story_id)},
+      ])}>
       <span className="ico"><Icon name="event" size={16} /></span>
       <span className="lab">Upcoming</span>
       <span className="ell" title={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span> <span className="num">· {when}</span></span>

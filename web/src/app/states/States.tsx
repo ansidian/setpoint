@@ -100,7 +100,7 @@ function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts
 }
 
 /** The bar's Reconnect: Google's sign-in for the one Gmail account needing it, else Settings › Accounts (states-08). */
-function reconnectFrom(accounts: AccountOut[]) {
+export function reconnectFrom(accounts: AccountOut[]) {
   const target = reconnectTarget(accounts);
   if (target === 'settings') {
     openSettings('accounts');

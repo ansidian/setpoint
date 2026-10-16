@@ -7,6 +7,7 @@ import type {MouseEvent} from 'react';
 import {serverNow} from '../api/auth.ts';
 import {codeGroups, countdownChange, expiresIn, expiresSoon} from '../logic/format.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {copyText, openContextMenu} from './ContextMenu.tsx';
 import {showToast} from './toast.ts';
 
 const COPIED_MS = 1500;
@@ -60,7 +61,8 @@ export function useCountdown(at: string): {text: string; soon: boolean; expired:
 export function CodeCard({code}: {code: {value: string; expires_at: string}}) {
   const countdown = useCountdown(code.expires_at);
   return (
-    <div className={countdown.expired ? 'code-card expired' : 'code-card'}>
+    <div className={countdown.expired ? 'code-card expired' : 'code-card'}
+      onContextMenu={event => openContextMenu(event, event.currentTarget, [{id: 'copy-code', label: 'Copy code', icon: 'content_copy', run: () => copyText(code.value)}])}>
       <span className="code">{codeGroups(code.value)}</span>
       <CodeCopy value={code.value} />
       <span className="grow" />

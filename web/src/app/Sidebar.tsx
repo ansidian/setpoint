@@ -12,7 +12,7 @@ import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
-import {ACCOUNTS_PATH, COUNTS_PATH} from '../api/mail.ts';
+import {ACCOUNTS_PATH, COUNTS_PATH, markAllRead} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {FIRST_ACCOUNTS, shapeOf} from '../logic/shape.ts';
@@ -20,24 +20,47 @@ import type {ShapeAccount} from '../logic/shape.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {motion} from '../tokens.ts';
 import {CalendarSidebar} from './calendar/CalendarSidebar.tsx';
+import {openContextMenu} from './ContextMenu.tsx';
+import type {MenuAction} from './ContextMenu.tsx';
 import {Count} from './Count.tsx';
 import {useCompact} from './Phone.tsx';
 import {lastShape, rememberShape} from './lastShape.ts';
 import {AccountsSkeleton} from './states/Skeletons.tsx';
+import {reconnectFrom} from './states/States.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
 import {dotStyle} from './accounts.ts';
-import {navigate} from './router.ts';
+import {offered} from './palette/commands.ts';
+import {currentRoute, navigate} from './router.ts';
 import {openSettings} from './settings/store.ts';
+import {toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
 
 /** A link that the app follows itself; ⌘-click still opens a new tab. */
-function Link({to, className, style, title, children}: {to: Route; className: string; style?: CSSProperties; title?: string; children: ReactNode}) {
+function Link({to, className, style, title, onContextMenu, children}: {
+  to: Route;
+  className: string;
+  style?: CSSProperties;
+  title?: string;
+  onContextMenu?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  children: ReactNode;
+}) {
   const onClick = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
     navigate(to);
   };
-  return <a className={className} style={style} title={title} href={routePath(to)} onClick={onClick}>{children}</a>;
+  return <a className={className} style={style} title={title} href={routePath(to)} onClick={onClick} onContextMenu={onContextMenu}>{children}</a>;
+}
+
+/**
+ * Mark all as read from a sidebar row's right-click (DESIGN.md #248): the Inbox page's own, with its
+ * Undo, while it shows that same mail; otherwise as ⌘K's is.
+ */
+function markAllReadOf(account: number | null): () => void {
+  const route = currentRoute();
+  const page = offered().commands.find(command => command.id === 'mark-all-read');
+  if (page && route.page === 'inbox' && route.account === account) return page.run;
+  return () => void markAllRead(account).catch(toastFailure('Couldn\'t mark all as read'));
 }
 
 /**
@@ -98,7 +121,10 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
       </div>
       {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#166); the rail has no
           accounts, so there Inbox stays the current page. */}
-      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}>
+      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}
+        onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
+          {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadOf(null)},
+        ])}>
         <Icon name="inbox" />
         <span className="grow">Inbox</span>
         {counts && <AttentionPill value={counts.attention} />}
@@ -115,7 +141,14 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
               const on = filtered === account.id;
               return (
                 <Link key={account.id} className={on ? 'acct on' : 'acct'} style={dotStyle(account.colour)}
-                  to={route.page === 'inbox' ? {...route, account: on ? null : account.id, open: null} : toInbox(account.id)}>
+                  to={route.page === 'inbox' ? {...route, account: on ? null : account.id, open: null} : toInbox(account.id)}
+                  onContextMenu={event => {
+                    const full = loadedAccounts?.find(one => one.id === account.id);
+                    openContextMenu(event, event.currentTarget, [
+                      ...(unread > 0 ? [{id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', run: markAllReadOf(account.id)} satisfies MenuAction] : []),
+                      ...(account.reconnect && full ? [{id: 'reconnect', label: 'Reconnect', icon: 'sync_problem', run: () => reconnectFrom([full])} satisfies MenuAction] : []),
+                    ]);
+                  }}>
                   <span className="dot sm" />
                   {account.label}
                   {account.reconnect && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}

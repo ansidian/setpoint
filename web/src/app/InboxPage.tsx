@@ -15,13 +15,14 @@
 //
 // On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts, the
 // account filter and Mark all as read, with a plain search field under it (no chips, no Alfred).
-import type {AllOut, InboxGroupOut, InboxOut, MailCountsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
+import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
+import type {MouseEvent as ReactMouseEvent} from 'react';
 import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
-import {getCached, refreshIfShown, useResource, useResources} from '../api/client.ts';
+import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
-  allPath, answerPrompt, COUNTS_PATH, inboxPath, markAllRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
+  allPath, answerPrompt, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
 import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} from '../logic/all.ts';
 import type {Place} from '../logic/all.ts';
@@ -41,7 +42,9 @@ import {useNow} from './clock.ts';
 import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
 import {usePhone} from './Phone.tsx';
-import {Reader} from './Reader.tsx';
+import {askCard, Reader} from './Reader.tsx';
+import {openContextMenu} from './ContextMenu.tsx';
+import {emailActions} from './emailActions.ts';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
@@ -338,27 +341,27 @@ export function InboxPage({route}: {route: InboxRoute}) {
     showToast(toast, {label: 'Undo', run: back});
   }
 
-  const actions = {
-    done: () => target !== null && doneable(target) && leave(target, 'done', id => {
-      search.mark(id, {done: true});
-      return setDone(id);
-    }, 'Marked Done', id => {
-      search.mark(id, {done: false});
-      return () => setDone(id, false);
+  // What each action does to email `id`: H, E, P and the rest act on `target`, a row's right-click
+  // menu on its own email (DESIGN.md #248).
+  const on = {
+    done: (id: number) => doneable(id) && leave(id, 'done', one => {
+      search.mark(one, {done: true});
+      return setDone(one);
+    }, 'Marked Done', one => {
+      search.mark(one, {done: false});
+      return () => setDone(one, false);
     }, 'Couldn\'t mark it Done', 'Couldn\'t undo Done'),
-    trash: () => target !== null && leave(target, 'trash', id => {
-      setTrashing(ids => new Set(ids).add(id));
-      return trashMessage(id).catch(error => {
-        untrashing(id);
+    trash: (id: number) => leave(id, 'trash', one => {
+      setTrashing(ids => new Set(ids).add(one));
+      return trashMessage(one).catch(error => {
+        untrashing(one);
         throw error;
       });
-    }, 'Moved to Trash', id => {
-      untrashing(id);
-      return () => untrashMessage(id);
+    }, 'Moved to Trash', one => {
+      untrashing(one);
+      return () => untrashMessage(one);
     }, 'Couldn\'t move it to Trash', 'Couldn\'t bring it back from Trash'),
-    pin: () => {
-      if (target === null) return;
-      const id = target;
+    pin: (id: number) => {
       const pinned = rowOf(id)?.pinned ?? false;
       // Out of the shelf's sight, a pin says where it went, with Undo (inbox-09).
       const unseen = !pinned && !phone && !shelfInView();
@@ -367,21 +370,52 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (unseen && message.pinned) showToast('Pinned', {label: 'Undo', run: () => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'))});
       }, toastFailure(pinned ? 'Couldn\'t unpin it' : 'Couldn\'t pin it'));
     },
-    openInGmail: () => {
-      const url = open ? getCached<MessageOut>(messagePath(open))?.open_url : null;
+    // The email's Gmail link: the open one's is in; a row's comes with the email, asked for as its menu opened.
+    openInGmail: (id: number) => {
+      const url = getCached<MessageOut>(messagePath(id))?.open_url;
       if (url) window.open(url, '_blank', 'noopener');
+      else if (id !== open) {
+        const tab = window.open('about:blank', '_blank');
+        void getJson<MessageOut>(messagePath(id)).then(message => {
+          if (!tab || !message.open_url) return tab?.close();
+          tab.opener = null;
+          tab.location.href = message.open_url;
+        }, () => tab?.close());
+      }
     },
+    // ⇧U or ⌘K: the email unread again; an open one's reader closes, so it stays unread (UX #11).
+    markUnread: (id: number) => {
+      if (id === open) close();
+      void markUnread(id).catch(toastFailure('Couldn\'t mark it unread'));
+    },
+    // The menu's Mark read on an unread row, as Mark all as read is for one email (#248): it stays where
+    // it is for the visit, the attention pill doesn't move, and Undo or ⌘Z marks it unread again.
+    markRead: (id: number) => {
+      if (searching) search.mark(id, {unread: false});
+      void markRead(id).catch(toastFailure('Couldn\'t mark it read'));
+      const back = () => {
+        const at = undos.indexOf(back);
+        if (at < 0) return;
+        undos.splice(at, 1);
+        dismissToast();
+        if (searching) search.mark(id, {unread: true});
+        void markUnread(id).catch(toastFailure('Couldn\'t mark it unread'));
+      };
+      undos.push(back);
+      showToast('Marked as read', {label: 'Undo', run: back});
+    },
+  };
+
+  const actions = {
+    done: () => target !== null && on.done(target),
+    trash: () => target !== null && on.trash(target),
+    pin: () => target !== null && on.pin(target),
+    openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
-    // ⇧U or ⌘K: the email unread again; an open one's reader closes, so it stays unread (UX #11).
-    markUnread: () => {
-      if (target === null) return;
-      const id = target;
-      if (id === open) close();
-      void markUnread(id).catch(toastFailure('Couldn\'t mark it unread'));
-    },
+    markUnread: () => target !== null && on.markUnread(target),
     // U: the cursor to New's first email, wherever the list is scrolled (D264).
     toNew: () => {
       const first = freshView ? dayStops([], [], {fresh: freshView})[0] : undefined;
@@ -488,6 +522,47 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
 
+  /**
+   * A right-click (DESIGN.md #248): on an email's row (New, Attention, the shelf, a day, search's results
+   * or Alfred's sources) its actions, the cursor moving there and nothing opening; on New's band, Mark
+   * all as read. Add to calendar, Add as task and Ask open the email with their card.
+   */
+  function onContextMenu(event: ReactMouseEvent) {
+    const target = event.target as Element;
+    const band = target.closest('.gh.new');
+    if (band) {
+      if (markAllReadIds(withHeld(groups ?? [], held)).length) {
+        openContextMenu(event, band, [{id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: actions.markAllRead}]);
+      }
+      return;
+    }
+    const element = target.closest<HTMLElement>('.list [data-key][data-id], .answer .src[data-id]');
+    const id = element ? Number(element.dataset.id) : NaN;
+    const row = rowOf(id);
+    if (!element || !row) return;
+    const key = element.dataset.key ?? stopOf(stops, id)?.key ?? null;
+    const provider = accounts.get(row.account_id)?.provider;
+    const withCard = (card: ItemKind | 'ask') => {
+      askCard(id, card);
+      if (id !== open) openEmail(id, key ?? undefined);
+    };
+    const offered = emailActions(row, provider === undefined ? null : provider === 'gmail', {
+      open: () => openEmail(id, key ?? undefined),
+      done: () => on.done(id),
+      trash: () => on.trash(id),
+      pin: () => on.pin(id),
+      openInGmail: () => on.openInGmail(id),
+      propose: withCard,
+      ask: () => withCard('ask'),
+      markRead: () => on.markRead(id),
+      markUnread: () => on.markUnread(id),
+    }, 'menu');
+    if (!openContextMenu(event, element, offered)) return;
+    if (key && stops.some(stop => stop.key === key)) setCursor(key);
+    // Open in Gmail needs the email's own link: asked for now, so it's in by the time it's picked.
+    if (provider === 'gmail' && id !== open) prefetch(messagePath(id));
+  }
+
   return (
     <>
       <header className="hd">
@@ -513,7 +588,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       {/* Filtered to one account, the rows drop the account they'd all repeat (inbox-12). */}
-      <div className={route.account && !phone ? 'content filtered' : 'content'} style={accountWidth}>
+      <div className={route.account && !phone ? 'content filtered' : 'content'} style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (

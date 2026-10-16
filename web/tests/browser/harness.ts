@@ -635,6 +635,8 @@ export const REGIONS = {
   rightPane: '.rpane',
   settings: '.settings',
   palette: '.palette',
+  // The right-click menu (#248).
+  menu: '.ctx-menu',
 } as const;
 export type Region = keyof typeof REGIONS;
 

@@ -32,6 +32,8 @@ import type {DetailActions} from './calendar/detail/DetailContent.tsx';
 import './calendar/detail/detail.css';
 import {rectIn} from './calendar/geometry.ts';
 import {useNow} from './clock.ts';
+import {openContextMenu} from './ContextMenu.tsx';
+import type {MenuAction} from './ContextMenu.tsx';
 import {foldIn, foldOut, useFold} from './fold.ts';
 import {browserDay, lastShape, rememberShape} from './lastShape.ts';
 import {TodaySkeleton} from './states/Skeletons.tsx';
@@ -163,12 +165,23 @@ export function TodayBlock({frame = false}: {frame?: boolean}) {
     setOpenKey(key => (key === item.key ? null : item.key));
   };
   const lineClass = (item: ItemOut) => (item.key === openKey ? 'today-row on' : 'today-row');
+  // A right-click (DESIGN.md #248): the card's actions at the pointer, in place of the card, so an open one goes.
+  const lineMenu = (item: ItemOut) => (event: MouseEvent<HTMLElement>) => {
+    const offers = actionsFor(item);
+    const opened = openContextMenu(event, event.currentTarget, [
+      {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: item.read_only, run: () => navigate(itemRoute(item, true))},
+      ...(item.kind === 'task' && !item.done ? [{id: 'complete', label: 'Complete', icon: 'task_alt', run: () => complete(item)} satisfies MenuAction] : []),
+      {id: 'open', label: 'Open in Calendar', icon: 'calendar_month', run: () => navigate(itemRoute(item))},
+      ...(offers.remove ? [{id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', danger: true, run: () => remove(item)} satisfies MenuAction] : []),
+    ]);
+    if (opened) setOpenKey(null);
+  };
 
   return (
     <div className="sb-sec today">
       <div className="sb-label">Today</div>
       {today.event && (
-        <a className={lineClass(today.event.item)} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)}
+        <a className={lineClass(today.event.item)} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)} onContextMenu={lineMenu(today.event.item)}
           aria-haspopup="dialog" aria-expanded={openKey === today.event.key}>
           {/* Its calendar's bar (or its own colour's), as calendar chips and the agenda draw it, where tasks have rings (shell-06). */}
           <span className="evbar" style={dotStyle(today.event.item.colour ?? calendars?.find(calendar => calendar.id === today.event!.item.calendar_id)?.colour ?? undefined)}><i /></span>
@@ -183,7 +196,7 @@ export function TodayBlock({frame = false}: {frame?: boolean}) {
         const classes = [lineClass(item), done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
         return (
           <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
-            href={routePath(itemRoute(item))} onClick={toggle(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
+            href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
             <button className="check" type="button" aria-label={`Complete ${title}`} title="Complete"
               onClick={event => {
                 event.preventDefault();
