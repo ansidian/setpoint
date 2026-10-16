@@ -3,11 +3,14 @@
 // waits for the lock, saying whose run it waits for. The build and the checks together get LIMIT
 // minutes, then everything is stopped, so a hung run can't sit for hours. At the end it prints the
 // run's time against BUDGET and the slowest checks (slowest.ts). A failed check's trace is under
-// test-results/browser/traces/ (harness.ts), emptied at the start of each run.
+// test-results/browser/traces/ (harness.ts), emptied at the start of each run. A run that passes
+// records its spec files for the content it ran on (passes.ts), unless the files changed meanwhile
+// or it was capturing goldens, so release:check doesn't run them again.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {record, specName, treeOf} from '../passes.ts';
 import {acquire, clock, handDown, release} from './lock.ts';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -54,6 +57,7 @@ async function main(): Promise<number> {
   if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
   handDown();
   fs.rmSync(path.join(ROOT, 'test-results', 'browser', 'traces'), {recursive: true, force: true});
+  const tree = process.env.SETPOINT_UPDATE_GOLDENS === '1' ? null : treeOf();
   const started = Date.now();
   const timer = setTimeout(() => {
     console.error(`\nThe browser run passed its ${clock(LIMIT)} limit (SETPOINT_BROWSER_LIMIT_MIN) and was stopped.`);
@@ -73,7 +77,12 @@ async function main(): Promise<number> {
     const whole = files.length === specs([]).length;
     console.log(`\nBrowser run: ${clock(took)} (build ${clock(building)}, checks ${clock(took - building)})${whole ? `, budget ${clock(BUDGET)}` : ''}.`);
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
-    return Date.now() - started >= LIMIT ? 1 : code;
+    if (Date.now() - started >= LIMIT) return 1;
+    if (code === 0 && tree) {
+      if (treeOf() === tree) record(tree, {check: process.env.SETPOINT_BROWSER_STRESS === '1' ? 'stress' : 'browser', specs: files.map(specName)});
+      else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
+    }
+    return code;
   } finally {
     clearTimeout(timer);
   }

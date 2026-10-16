@@ -104,7 +104,8 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
 - `npm test`: lint, typecheck and Vitest.
 - `npm run test:browser`: build plus Playwright.
 - Both pass before every commit that touches what they cover, and the orchestrator states what ran.
-- Before a release, also `npm run test:browser:stress` (about 5 minutes) and the board audit.
+- Before a release, `npm run release:check`: the same under stress and the board audit too, each
+  only where it hasn't already passed on HEAD's exact content (D274).
 
 ## Slices
 

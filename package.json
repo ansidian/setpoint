@@ -22,11 +22,12 @@
     "glyphs": "npm run glyphs -w web",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "eslint . && npm run typecheck && vitest run",
+    "test": "node web/tests/unit.ts",
     "test:browser": "node web/tests/browser/run.ts",
     "test:browser:stress": "SETPOINT_BROWSER_STRESS=1 node web/tests/browser/run.ts",
     "goldens": "SETPOINT_UPDATE_GOLDENS=1 node web/tests/browser/run.ts",
-    "audit:boards": "node web/tests/browser/audit.ts"
+    "audit:boards": "node web/tests/browser/audit.ts",
+    "release:check": "node web/tests/release.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

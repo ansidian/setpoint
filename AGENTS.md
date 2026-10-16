@@ -43,10 +43,17 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - A change to what a page shows also runs the spec files it touches under stress before commit
   (`npm run test:browser:stress -- mail search`, a few minutes for a large file), so a check that reads
   before what it reads has come is caught in the same commit, not at the release's run.
-- Before a release, besides those: the board audit (`npm run audit:boards`) and
-  `npm run test:browser:stress`, the browser checks on a CPU slowed 4×, with /api answering late,
-  one at a time and last-asked first, and the web fonts late (D81), so a check that reads before
-  what it reads has come fails every time. A stress run takes about 10 minutes.
+- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the browser checks,
+  the same under stress (`npm run test:browser:stress`: a CPU slowed 4×, /api answering late, one
+  at a time and last-asked first, and the web fonts late, D81, so a check that reads before what it
+  reads has come fails every time) and the board audit, each only where it hasn't already passed on
+  HEAD's exact content. Every passing run records itself by the working tree's content, so the runs
+  before a commit count, spec file by spec file, and the audit runs when the goldens or boards have
+  changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes 5
+  to 10 minutes.
+- When Andy says a release is coming, the session that pushes its commit runs
+  `npm run release:check` in the background straight after, so the release finds it done. It holds
+  the browser lock while it runs.
 - `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
   how to sign in: the quickest way to see a change or reproduce a report by hand.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;

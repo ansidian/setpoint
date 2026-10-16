@@ -7,7 +7,8 @@
 // otherwise than the board. The patches are the differences already decided, so what the diff
 // still shows is either a patch nobody wrote yet or a real gap. Every patch must match its board
 // exactly once, so a changed board fails loudly. Run it when a decision changes the screen, after
-// `npm run goldens`, and before a release:
+// `npm run goldens`, and before a release (release:check runs it only when its inputs have changed
+// since it last ran, passes.ts):
 //
 //   npm run audit:boards
 import fs from 'node:fs';
@@ -15,6 +16,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {colour, evtint, lightColour} from '../../src/tokens.ts';
+import {auditKey, record, treeOf} from '../passes.ts';
 import {closeBrowser, compareImages, GOLDENS, launchBrowser, ROOT} from './harness.ts';
 
 export interface Patch {
@@ -1374,7 +1376,9 @@ export async function audit(): Promise<string> {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   try {
+    const key = auditKey(treeOf());
     console.log(`Wrote ${path.relative(ROOT, await audit())}`);
+    if (auditKey(treeOf()) === key) record(key, {check: 'audit'});
   } finally {
     await closeBrowser();
   }
