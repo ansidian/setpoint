@@ -927,6 +927,9 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   fades and folds away, and Undo or ⌘Z folds it back and lands it (#193).
 - **Overlays** anchored to calendar items follow the placement rule; Esc closes the topmost.
 - **Text selection:** titles, addresses, codes and email bodies can be selected; controls can't.
+- **Right-click** on an email, a calendar item or empty grid, a story, or a sidebar row opens its
+  actions at the pointer; selected text, links and fields keep the browser's menu ([Decided while
+  building](#decided-while-building) #248).
 
 ## Copy
 
@@ -2528,3 +2531,36 @@ it changes what's on screen.
     no day, as a failed toast with Try again. Clone and Paste keep their toasts with Undo, being
     changes to what's already there rather than something new (Andy, 2026-10-15; darma SV-79).
     Board audit: no board draws a create's toast, so it's unchanged.
+248. **A right-click opens the thing's actions at the pointer** (Andy, 2026-10-15; darma SV-81 D272,
+    following darma's DA-14 D13): the actions it already has (More, the floating detail, ⌘K's This
+    email, its keys), kept on screen with their key hints, plus Copy items, which exist nowhere
+    else. More, ⌘K and the menu draw from one list of actions. On a link, a field, selected text, an
+    email's body or with ⌥ held, the browser keeps its own menu; a right-click that closes a popover
+    opens nothing; the phone has none. It moves the cursor to the row and never opens it, so it
+    never reads an email.
+    - **An email's row** (New, Attention, Pinned, the days, search, Alfred's sources): Open ↵, Done
+      H (Attention not yet Done), Trash E, Pin or Unpin P, Mark read on an unread row (no key; as
+      Mark all as read for one email: it stays where it is in New for the visit, the attention
+      pill doesn't move, Undo and ⌘Z) or Mark unread ⇧U on a read one, Open in Gmail O, Add to
+      calendar, Add as task, Ask about this email (on every row; each opens the email, whose
+      reading pane holds its card), Copy sender address, and Copy code on a code row. **New**'s
+      band: Mark all as read ⇧I. Nothing changes an email's lane or kind (brief decision 28).
+    - **The reader:** an attachment, Preview and Download; the sender, Copy address; the code
+      card, Copy.
+    - **The sidebar:** Inbox, Mark all as read; an account, Mark all as read for it, and Reconnect
+      while it needs sign-in. **The Today block's** lines: Edit E, Complete or Reopen, Delete, Open
+      in Calendar.
+    - **A calendar item** (grid and day pane) is selected (solid) without the floating detail, and
+      a card open on another item goes away (as #17): an event, Edit E, Open link O (#245), Clone,
+      Copy ⌘C, Colour, Delete; a task, Complete or Reopen, Edit, Clone, Copy, Delete. On an item in
+      a selection, the selection's: Copy, Colour, Delete, Clear selection, leaving it selected. A
+      failed item: Try again, Move back. Colour's choices hang at the same spot.
+    - **Empty grid** (a day, a week's slot, the all-day row, a day head): New event here C, New
+      task here D, Paste here ⌘V, each on the day clicked (and a slot's time) rather than the
+      selected day.
+    - **News:** a story, Open ↵, Open at its outlet O, Copy link; an Upcoming row, Add to calendar
+      and Open the story; a source in the story pane, Open here, Open at the outlet, Copy link. No
+      Mark seen (D87).
+    - **No menu:** Settings, fields, search, ⌘K, toasts, Calendars rows, the mini-month, "+3" and
+      the ghost rows. A Copy item says what it took in the toast (#40), or "Couldn't copy it"
+      (#109). The menu is the reader's More (`.pop.menu`) with the palette's key hints.
