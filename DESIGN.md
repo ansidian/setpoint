@@ -930,6 +930,9 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 - **Right-click** on an email, a calendar item or empty grid, a story, or a sidebar row opens its
   actions at the pointer; selected text, links and fields keep the browser's menu ([Decided while
   building](#decided-while-building) #248).
+- **Selecting emails:** ⌘ or Ctrl-click, and ⇧-click for a range, select several; the reading pane
+  shows the selection, and H, E, P, ⇧U and a right-click act on all of it ([Decided while
+  building](#decided-while-building) #249).
 
 ## Copy
 
@@ -2579,3 +2582,30 @@ it changes what's on screen.
       recurring. Paste here takes the copy glyph, the set having no paste glyph. Board audit: no
       board draws a right-click menu and no approved screenshot changed, so it's unchanged; the
       menu's own is `right-click-an-email`.
+249. **⌘ or Ctrl-click selects several emails, and the reading pane shows the selection** (Andy,
+    2026-10-16; darma SV-82): what led to it was trashing a few emails in one go. In the Inbox's list
+    and search's results:
+    - **Selecting:** ⌘ or Ctrl-click adds a row or takes it out; the first one also takes the open
+      email, whose reader gives way to the selection. ⇧-click selects every email from the last one
+      clicked (or the open one) to this one. A plain click, or Enter, ends the selection and opens
+      that email; Esc ends it, before anything else Esc does. Selecting never opens or reads an email.
+      A selected row is drawn as the open one is (`sub3`, the 2 px `accent` bar). The phone has none.
+    - **The pane** (option B, drawn in the chat): the reader's tools, **Done H** (when any can be),
+      **Trash E**, **Pin P** (Unpin when every one is pinned), **Mark read** (Mark unread ⇧U when none
+      is unread), then **Clear Esc** at the right; then "3 emails selected" where the subject goes, and
+      each email in list order as its row reads (sender, then the summary or subject), with an × that
+      takes it out; past eight, "and 4 more". A click on one opens it. A selection of one is still a
+      selection ("1 email selected"). From 640 to 1099 px, where a pane covers the list, there's no
+      pane: the rows show the selection, and the keys and right-click act on it.
+    - **Right-click on a selected row:** the same, as a menu: Done H, Trash E, Pin or Unpin P, Mark read
+      or Mark unread, Clear selection. Open, Open in Gmail, the cards and the Copy items are one email's
+      only. A right-click on a row outside the selection gives that row's own menu and keeps the
+      selection. ⌘K offers the selection's actions under its count.
+    - **H, E, P and ⇧U act on the whole selection.** One toast for each: "Moved 3 to Trash · Undo",
+      "Marked 3 Done · Undo", "Marked 3 as read · Undo", and ⌘Z undoes the whole of it. Done counts
+      only the emails that can be Done ("Done 2" when two of three can). Trash and Done end the
+      selection; Pin and the read changes keep it.
+    - **No batch endpoint:** each email's change is its own command, as it is for one email; they go
+      out together, and the lists' answers wait until the last is in, so none comes back for a moment.
+      Board audit: no board draws a selection and no approved screenshot changed, so it's unchanged; the
+      selection's own is `selected-emails`.
