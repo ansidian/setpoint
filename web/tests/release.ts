@@ -74,7 +74,7 @@ for (const check of ['browser', 'stress'] as const) {
   console.log(`\n${name}: running ${left.length === all.length ? 'every spec file' : list(left)}.${skipped}`);
   run(['run', check === 'browser' ? 'test:browser' : 'test:browser:stress', ...(left.length === all.length ? [] : ['--', ...left])]);
   recorded(!missing(all, passesOf(tree), check).length, `the ${name.toLowerCase()}`);
-  summary.push(`${name}: passed (${left.length} spec file${left.length === 1 ? '' : 's'} run${skipped}).`);
+  summary.push(`${name}: passed, ${left.length} spec file${left.length === 1 ? '' : 's'} run${done.length ? ` and ${done.length} skipped as already passed` : ''}.`);
 }
 
 const key = auditKey(tree);
