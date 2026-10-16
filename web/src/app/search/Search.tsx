@@ -4,12 +4,13 @@
 // chip removable. Kept thin: the rules are logic/search.ts's, and the state is state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useRef, useState} from 'react';
-import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
+import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {keepTextUnselected} from '../../ui/keys.ts';
 import {dotStyle} from '../accounts.ts';
 import {leaveCopy} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
@@ -180,13 +181,16 @@ export interface ResultsProps {
   search: Search;
   cursor: string | null;
   openId: number | null;
+  // The emails selected (#249), drawn as the open one is.
+  selected?: ReadonlySet<number>;
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
   // Alfred's Answer card, above the results.
   card: ReactNode;
   onPoint: (key: string) => void;
-  onOpen: (id: number, key: string) => void;
+  // A click on a result, with its modifiers: ⌘ or Ctrl and ⇧ select (#249), a plain one opens.
+  onOpen: (id: number, key: string, event: MouseEvent) => void;
   onAsk: () => void;
 }
 
@@ -240,12 +244,12 @@ export function SearchResults(props: ResultsProps) {
   );
 }
 
-function ResultRow({result, cursor, openId, accounts, now, timeZone, onPoint, onOpen}: ResultsProps & {result: SearchResultOut}) {
+function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, onPoint, onOpen}: ResultsProps & {result: SearchResultOut}) {
   const key = resultKey(result.id);
   const reasons = shownReasons(result);
-  const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open'].filter(Boolean).join(' ');
+  const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open', selected?.has(result.id) && 'sel'].filter(Boolean).join(' ');
   return (
-    <div className={classes} data-key={key} data-id={result.id} onMouseMove={() => onPoint(key)} onClick={() => onOpen(result.id, key)}>
+    <div className={classes} data-key={key} data-id={result.id} onMouseMove={() => onPoint(key)} onMouseDown={keepTextUnselected} onClick={event => onOpen(result.id, key, event)}>
       <span className="ud" />
       <div className="l1">
         <span className="from"><Marked parts={resultSender(result)} /></span>

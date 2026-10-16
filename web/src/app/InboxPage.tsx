@@ -8,6 +8,11 @@
 // E Trash (each with Undo in the toast, and ⌘Z), P Pin, O Open in Gmail, ⇧I Mark all as read, ⇧U Mark unread, U to New's
 // first email; Esc closes the reader. Done or Trash on the open email opens the next one (2026-10-07).
 //
+// ⌘ or Ctrl-click and ⇧-click select several emails (DESIGN.md #249): the reading pane shows the
+// selection (SelectionPane), and H, E, P, ⇧U, a selected row's right-click and ⌘K act on all of it,
+// each email's change its own command, with one toast and one Undo. A plain click or Enter ends it and
+// opens the email; Esc ends it first.
+//
 // Search (DESIGN.md › Search): while the header's field holds a search, its results replace the list
 // and the header reads "Search"; the reading pane, J, K and Enter work the same, and each open is
 // logged with its position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes
@@ -22,7 +27,7 @@ import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
-  allPath, answerPrompt, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
+  allPath, answerPrompt, changeEach, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
 import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} from '../logic/all.ts';
 import type {Place} from '../logic/all.ts';
@@ -31,6 +36,8 @@ import {
   allStops, codeExpired, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
 import {readerActions} from '../logic/reader.ts';
+import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
+import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
 import type {Route} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
@@ -41,10 +48,12 @@ import {AllList} from './AllList.tsx';
 import {useNow} from './clock.ts';
 import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
-import {usePhone} from './Phone.tsx';
+import {useCompact, usePhone} from './Phone.tsx';
 import {askCard, Reader} from './Reader.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
-import {emailActions} from './emailActions.ts';
+import {emailActions, selectionActions} from './emailActions.ts';
+import type {SelectionHandlers} from './emailActions.ts';
+import {SelectionPane} from './SelectionPane.tsx';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
@@ -84,6 +93,11 @@ let lastOpened: number | null = null;
 
 // ⌘Z: what undoes each Done and Trash made here, newest last; the toast's Undo runs the same one.
 const undos: (() => void)[] = [];
+
+/** The emails whose change the server refused, with why, from `changeEach`'s outcomes. */
+function refusals(ids: number[], outcomes: PromiseSettledResult<unknown>[]): {id: number; error: unknown}[] {
+  return outcomes.flatMap((outcome, at) => (outcome.status === 'rejected' ? [{id: ids[at]!, error: outcome.reason as unknown}] : []));
+}
 
 // The slide under way, so one that a newer one cut short doesn't take the newer one's direction away.
 let slides = 0;
@@ -131,6 +145,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const filteredTo = route.account ? accounts.get(route.account)?.label ?? null : null;
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
+  const compact = useCompact();
   const inboxLoad = {path: inboxPath(route.account), ...useResource<InboxOut>(inboxPath(route.account))};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
@@ -220,6 +235,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
     setTrack({stops, cursor});
   }
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
+  // The emails ⌘ or Ctrl-click and ⇧-click selected this visit (#249): those still in the list, in its
+  // order. None on the phone.
+  const [selecting, setSelecting] = useState<Selection & {visit: string}>({...NO_SELECTION, visit});
+  const selection = selecting.visit === visit ? selecting : NO_SELECTION;
+  const selected = useMemo(() => (phone ? [] : inListOrder(selection.ids, stops)), [phone, selection.ids, stops]);
+  const select = (next: Selection) => setSelecting({...next, visit});
+  const clearSelection = () => setSelecting({...NO_SELECTION, visit});
 
   const open = route.open;
   // The way the user last stepped to an email (reader-03).
@@ -247,6 +269,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
    * on), so the reader's swap comes from that side (reader-03); a click has none.
    */
   function openEmail(id: number, key?: string, travel: Travel | null = null) {
+    if (selected.length) clearSelection();
     setTravelled(travel ? {id, travel} : null);
     const stop = (key ? stops.find(item => item.key === key) : null) ?? stopOf(stops, id);
     if (stop?.kind === 'row') setCursor(stop.key);
@@ -259,6 +282,24 @@ export function InboxPage({route}: {route: InboxRoute}) {
     if (phone && open === null) slide('in', () => go({open: id}));
     else go({open: id});
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
+  }
+
+  /**
+   * A click on a row (#249): with ⌘ or Ctrl it joins the selection or leaves it (the first one taking the
+   * open email, whose reader gives way), with ⇧ every email from the last one clicked to it joins; a
+   * plain click ends the selection and opens it. Selecting opens and reads nothing.
+   */
+  function clickRow(id: number, key: string, event?: ReactMouseEvent) {
+    const adding = !phone && !!event && !event.altKey && (event.metaKey || event.ctrlKey);
+    const ranging = !phone && !!event && !event.altKey && !adding && event.shiftKey;
+    if (!adding && !ranging) {
+      openEmail(id, key);
+      return;
+    }
+    const now = {ids: selected, anchor: selection.anchor};
+    select(adding ? toggled(now, id, open) : ranged(now, stops, id, open));
+    setCursor(key);
+    if (open !== null) go({open: null});
   }
 
   /** ⌘Enter, or Ask Alfred: the Answer card above the results, asked what the field holds. */
@@ -297,78 +338,99 @@ export function InboxPage({route}: {route: InboxRoute}) {
   };
 
   /**
-   * Done or Trash: it leaves the list. On the open email the next one opens (and reads), or the
-   * reader closes at the end (on the phone, always); from the cursor row nothing opens. The toast's Undo, or ⌘Z later, puts
-   * it back where it was in this visit's list, read or not, and an open email back in the reader.
-   * `undo` puts it back on screen at once and gives what to send once the change itself is in.
+   * Done or Trash: the emails leave the list. On the open email the next one opens (and reads), or the
+   * reader closes at the end (on the phone, always); from the cursor row or a selection nothing opens.
+   * Each email's change is its own command, sent together (`changeEach`). The toast's Undo, or ⌘Z
+   * later, puts them back where they were in this visit's list, read or not, and an open email back in
+   * the reader. `undo` puts one back on screen at once and gives what to send once its change is in.
    */
-  function leave(id: number, beat: Beat, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>, failed: string, undoFailed: string) {
-    const wasOpen = id === open;
-    // Its row beats before it folds: ticked off, or thrown away (inbox-05).
-    beats.set(id, beat);
+  function leave(ids: number[], beat: Beat, change: (id: number) => Promise<unknown>, toast: string, undo: (id: number) => () => Promise<unknown>,
+    failed: (n: number) => string, undoFailed: (n: number) => string) {
+    const wasOpen = open !== null && ids.includes(open) ? open : null;
+    // Their rows beat before they fold: ticked off, or thrown away (inbox-05).
+    for (const id of ids) beats.set(id, beat);
     const from = visit;
-    const places = withHeld(groups ?? [], held).flatMap(group => {
-      const index = group.rows.findIndex(row => row.id === id);
-      return index < 0 ? [] : [{group: group.group, index, row: group.rows[index]!}];
-    });
-    if (wasOpen) {
+    const places = withHeld(groups ?? [], held).flatMap(group => group.rows.flatMap((row, index) => (ids.includes(row.id) ? [{group: group.group, index, row}] : [])));
+    if (wasOpen !== null) {
       // The phone goes back to the list, where the toast is: the next email isn't in view there, so
       // opening it would be a jump into an email the user didn't pick (UX #12).
-      const next = phone ? null : nextAfterLeaving(stops, cursor, id);
+      const next = phone ? null : nextAfterLeaving(stops, cursor, wasOpen);
       // The next one down the list: the reader swaps as J does.
       if (next !== null) openEmail(next, undefined, 'next');
       else close();
     }
-    takeOut([id]);
-    // Whether the server took the change; Undo waits for it, as an untrash sent before the trash is refused.
-    const sent = change(id).then(() => true, (error: unknown) => {
-      beats.delete(id);
-      toastFailure(failed)(error);
-      return false;
+    takeOut(ids);
+    // The emails the server took; Undo waits for them, as an untrash sent before the trash is refused.
+    const sent = changeEach(ids, change).then(outcomes => {
+      const refused = refusals(ids, outcomes);
+      for (const {id} of refused) beats.delete(id);
+      if (refused.length) toastFailure(failed(refused.length))(refused[0]!.error);
+      return ids.filter(id => !refused.some(one => one.id === id));
     });
     const back = () => {
       const at = undos.indexOf(back);
       if (at < 0) return;
       undos.splice(at, 1);
       dismissToast();
-      beats.delete(id);
-      const send = undo(id);
-      void sent.then(done => done && send().catch(toastFailure(undoFailed)));
-      setKept(state => (state.visit === from ? {...state, out: new Set([...state.out].filter(one => one !== id)), held: [...state.held, ...places]} : state));
-      if (wasOpen) reopen(id);
+      for (const id of ids) beats.delete(id);
+      const sends = new Map(ids.map(id => [id, undo(id)]));
+      void sent.then(took => changeEach(took, id => sends.get(id)!()).then(outcomes => {
+        const refused = refusals(took, outcomes);
+        if (refused.length) toastFailure(undoFailed(refused.length))(refused[0]!.error);
+      }));
+      setKept(state => (state.visit === from ? {...state, out: new Set([...state.out].filter(one => !ids.includes(one))), held: [...state.held, ...places]} : state));
+      if (wasOpen !== null) reopen(wasOpen);
     };
     undos.push(back);
     showToast(toast, {label: 'Undo', run: back});
   }
 
-  // What each action does to email `id`: H, E, P and the rest act on `target`, a row's right-click
-  // menu on its own email (DESIGN.md #248).
+  // What each action does to emails `ids`: one email for H, E, P and the rest on `target` or a row's
+  // right-click menu (DESIGN.md #248), every selected one for a selection's (#249).
   const on = {
-    done: (id: number) => doneable(id) && leave(id, 'done', one => {
-      search.mark(one, {done: true});
-      return setDone(one);
-    }, 'Marked Done', one => {
-      search.mark(one, {done: false});
-      return () => setDone(one, false);
-    }, 'Couldn\'t mark it Done', 'Couldn\'t undo Done'),
-    trash: (id: number) => leave(id, 'trash', one => {
-      setTrashing(ids => new Set(ids).add(one));
-      return trashMessage(one).catch(error => {
+    done: (ids: number[]) => {
+      const can = ids.filter(doneable);
+      if (!can.length) return;
+      leave(can, 'done', one => {
+        search.mark(one, {done: true});
+        return setDone(one);
+      }, counted(can.length, 'Marked Done', n => `Marked ${n} Done`), one => {
+        search.mark(one, {done: false});
+        return () => setDone(one, false);
+      }, n => counted(n, 'Couldn\'t mark it Done', m => `Couldn't mark ${m} Done`), n => counted(n, 'Couldn\'t undo Done', m => `Couldn't undo Done on ${m}`));
+    },
+    trash: (ids: number[]) => {
+      // Hidden at once, every one, rather than as each is answered.
+      setTrashing(trashed => new Set([...trashed, ...ids]));
+      leave(ids, 'trash', one => trashMessage(one).catch(error => {
         untrashing(one);
         throw error;
-      });
-    }, 'Moved to Trash', one => {
-      untrashing(one);
-      return () => untrashMessage(one);
-    }, 'Couldn\'t move it to Trash', 'Couldn\'t bring it back from Trash'),
-    pin: (id: number) => {
-      const pinned = rowOf(id)?.pinned ?? false;
+      }), counted(ids.length, 'Moved to Trash', n => `Moved ${n} to Trash`), one => {
+        untrashing(one);
+        return () => untrashMessage(one);
+      }, n => counted(n, 'Couldn\'t move it to Trash', m => `Couldn't move ${m} to Trash`), n => counted(n, 'Couldn\'t bring it back from Trash', m => `Couldn't bring ${m} back from Trash`));
+    },
+    // Pin, or Unpin when every one is pinned already.
+    pin: (ids: number[]) => {
+      const rows = ids.flatMap(id => rowOf(id) ?? []);
+      const pinning = rows.some(row => !row.pinned);
+      const changing = rows.filter(row => row.pinned !== pinning).map(row => row.id);
       // Out of the shelf's sight, a pin says where it went, with Undo (inbox-09).
-      const unseen = !pinned && !phone && !shelfInView();
-      // Only if it's still pinned once the last P is in: a pin taken back before it was answered says nothing (SV-80).
-      void setPinned(id, !pinned).then(message => {
-        if (unseen && message.pinned) showToast('Pinned', {label: 'Undo', run: () => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'))});
-      }, toastFailure(pinned ? 'Couldn\'t unpin it' : 'Couldn\'t pin it'));
+      const unseen = pinning && !phone && !shelfInView();
+      void changeEach(changing, id => setPinned(id, pinning)).then(outcomes => {
+        const refused = refusals(changing, outcomes);
+        if (refused.length) toastFailure(pinning ? counted(refused.length, 'Couldn\'t pin it', n => `Couldn't pin ${n}`) : counted(refused.length, 'Couldn\'t unpin it', n => `Couldn't unpin ${n}`))(refused[0]!.error);
+        // Only those still pinned once the last P is in: a pin taken back before it was answered says nothing (SV-80).
+        const pinned = changing.filter((_, at) => {
+          const outcome = outcomes[at]!;
+          return outcome.status === 'fulfilled' && outcome.value.pinned;
+        });
+        if (unseen && pinned.length) {
+          showToast(counted(pinned.length, 'Pinned', n => `Pinned ${n}`), {label: 'Undo', run: () => void changeEach(pinned, id => setPinned(id, false)).then(results => {
+            if (results.some(result => result.status === 'rejected')) toastFailure('Couldn\'t unpin it')(results.find(result => result.status === 'rejected')!.reason);
+          })});
+        }
+      });
     },
     // The email's Gmail link: the open one's is in; a row's comes with the email, asked for as its menu opened.
     openInGmail: (id: number) => {
@@ -383,39 +445,70 @@ export function InboxPage({route}: {route: InboxRoute}) {
         }, () => tab?.close());
       }
     },
-    // ⇧U or ⌘K: the email unread again; an open one's reader closes, so it stays unread (UX #11).
-    markUnread: (id: number) => {
-      if (id === open) close();
-      void markUnread(id).catch(toastFailure('Couldn\'t mark it unread'));
+    // ⇧U or ⌘K: the emails unread again; an open one's reader closes, so it stays unread (UX #11).
+    markUnread: (ids: number[]) => {
+      if (open !== null && ids.includes(open)) close();
+      void changeEach(ids, id => markUnread(id)).then(outcomes => {
+        const refused = refusals(ids, outcomes);
+        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
+      });
     },
-    // The menu's Mark read on an unread row, as Mark all as read is for one email (#248): it stays where
-    // it is for the visit, the attention pill doesn't move, and Undo or ⌘Z marks it unread again.
-    markRead: (id: number) => {
-      if (searching) search.mark(id, {unread: false});
-      void markRead(id).catch(toastFailure('Couldn\'t mark it read'));
+    // The menu's Mark read on unread rows, as Mark all as read is for them (#248): they stay where they
+    // are for the visit, the attention pill doesn't move, and Undo or ⌘Z marks them unread again.
+    markRead: (ids: number[]) => {
+      const unread = ids.filter(id => rowOf(id)?.unread ?? true);
+      if (!unread.length) return;
+      if (searching) for (const id of unread) search.mark(id, {unread: false});
+      void changeEach(unread, id => markRead(id)).then(outcomes => {
+        const refused = refusals(unread, outcomes);
+        if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it read', n => `Couldn't mark ${n} read`))(refused[0]!.error);
+      });
       const back = () => {
         const at = undos.indexOf(back);
         if (at < 0) return;
         undos.splice(at, 1);
         dismissToast();
-        if (searching) search.mark(id, {unread: true});
-        void markUnread(id).catch(toastFailure('Couldn\'t mark it unread'));
+        if (searching) for (const id of unread) search.mark(id, {unread: true});
+        void changeEach(unread, id => markUnread(id)).then(outcomes => {
+          const refused = refusals(unread, outcomes);
+          if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
+        });
       };
       undos.push(back);
-      showToast('Marked as read', {label: 'Undo', run: back});
+      showToast(counted(unread.length, 'Marked as read', n => `Marked ${n} as read`), {label: 'Undo', run: back});
     },
   };
 
+  // The selection's actions (#249), for its pane, its right-click menu, its keys and ⌘K. Done and Trash
+  // end it; Pin and the read changes keep it.
+  const selectedRows = selected.flatMap(id => rowOf(id) ?? []);
+  const forSelection: SelectionHandlers = {
+    done: () => {
+      on.done(selected);
+      clearSelection();
+    },
+    trash: () => {
+      on.trash(selected);
+      clearSelection();
+    },
+    pin: () => on.pin(selected),
+    markRead: () => on.markRead(selected),
+    markUnread: () => on.markUnread(selected),
+    clear: clearSelection,
+  };
+  // Whether the keys act on the selection: while nothing's open over it.
+  const onSelection = open === null && selected.length > 0;
+
   const actions = {
-    done: () => target !== null && on.done(target),
-    trash: () => target !== null && on.trash(target),
-    pin: () => target !== null && on.pin(target),
+    done: () => (onSelection ? forSelection.done() : target !== null && on.done([target])),
+    trash: () => (onSelection ? forSelection.trash() : target !== null && on.trash([target])),
+    pin: () => (onSelection ? forSelection.pin() : target !== null && on.pin([target])),
     openInGmail: () => open !== null && on.openInGmail(open),
     step: (delta: 1 | -1) => {
       const next = open ? neighbour(stops, open, delta) : null;
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
-    markUnread: () => target !== null && on.markUnread(target),
+    markUnread: () => (onSelection ? forSelection.markUnread() : target !== null && on.markUnread([target])),
     // U: the cursor to New's first email, wherever the list is scrolled (D264).
     toNew: () => {
       const first = freshView ? dayStops([], [], {fresh: freshView})[0] : undefined;
@@ -494,7 +587,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'u') && !searching) run(actions.toNew);
       else if (plainKey(event, '1') && (searching || phone)) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
-        if (open !== null) run(close);
+        if (selected.length) run(clearSelection, 'escape');
+        else if (open !== null) run(close);
         else if (alfred.open) run(() => {
           // The Answer card folds away, as its own Esc does (app/fold.ts).
           foldAway(document.querySelector('.search-list > .answer'));
@@ -509,7 +603,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   });
 
   // ⌘K's Mark all as read is this page's while it's on screen, as ⇧I is (the palette's own is for other pages).
-  useCommands(() => ({commands: [
+  // A selection's are too, under its count, while its pane is up (#249).
+  useCommands(() => ({...(onSelection ? {context: {label: counted(selected.length, '1 email selected', n => `${n} emails selected`), colour: 'ink3' as const}} : {}), commands: [
+    ...(onSelection ? selectionActions(selectedRows, forSelection, 'palette').map(action => ({...action, section: 'selection' as const})) : []),
     ...(searching || !freshView ? [] : [{id: 'to-new', section: 'more', label: 'Go to New', icon: 'mark_email_unread', hint: 'U', keywords: 'unread new', run: actions.toNew} satisfies Command]),
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: actions.markAllRead},
   ]}));
@@ -520,6 +616,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const listArrived = useArrival(ready, visit);
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
 
   /**
@@ -541,6 +638,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const row = rowOf(id);
     if (!element || !row) return;
     const key = element.dataset.key ?? stopOf(stops, id)?.key ?? null;
+    // On a selected row, the selection's (#249); on any other, its own, the selection kept.
+    if (selected.includes(id)) {
+      if (openContextMenu(event, element, selectionActions(selectedRows, forSelection, 'menu')) && key && stops.some(stop => stop.key === key)) setCursor(key);
+      return;
+    }
     const provider = accounts.get(row.account_id)?.provider;
     const withCard = (card: ItemKind | 'ask') => {
       askCard(id, card);
@@ -548,14 +650,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
     };
     const offered = emailActions(row, provider === undefined ? null : provider === 'gmail', {
       open: () => openEmail(id, key ?? undefined),
-      done: () => on.done(id),
-      trash: () => on.trash(id),
-      pin: () => on.pin(id),
+      done: () => on.done([id]),
+      trash: () => on.trash([id]),
+      pin: () => on.pin([id]),
       openInGmail: () => on.openInGmail(id),
       propose: withCard,
       ask: () => withCard('ask'),
-      markRead: () => on.markRead(id),
-      markUnread: () => on.markUnread(id),
+      markRead: () => on.markRead([id]),
+      markUnread: () => on.markUnread([id]),
     }, 'menu');
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);
@@ -592,16 +694,16 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
-          <SearchResults search={{...search, results}} cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone}
+          <SearchResults search={{...search, results}} cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onAsk={askAlfred} />
+            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
           // Another account's list starts afresh: its rows don't fold. Until both answers are in, its
           // skeleton, or why they didn't come (#225, #228); rows not shown before don't fold in then.
           <AllList key={visit} fresh={freshView} freshUnread={fresh.filter(row => row.unread).length} attention={attention} days={dayViews} shelf={shelf}
-            cursor={cursor} openId={open} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
+            cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={prompt} markable={markAllReadIds(withHeld(groups ?? [], held)).length > 0}
-            onPoint={key => key !== cursor && setCursor(key)} onOpen={openEmail} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
+            onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
             onMarkAllRead={actions.markAllRead} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
               void answerPrompt(answer.id, yes).catch(toastFailure('Couldn\'t answer it'));
@@ -611,6 +713,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
             marks={searching ? readerMarks(open, search.results, alfred.turns) : []}
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
+        )}
+        {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
+        {open === null && selected.length > 0 && !compact && (
+          <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
       </div>
     </>

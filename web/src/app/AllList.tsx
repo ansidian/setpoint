@@ -19,6 +19,7 @@ import {age, clockTime, codeGroups, fullTimestamp, localDate} from '../logic/for
 import {GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {keepTextUnselected} from '../ui/keys.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {dotStyle} from './accounts.ts';
 import {CodeCopy, useCountdown} from './Code.tsx';
@@ -50,10 +51,12 @@ const RULES: FoldRules<Part> = {
     return line?.kind === 'noise' && !line.open;
   },
 };
+const NONE: ReadonlySet<number> = new Set();
+
 // A row's run, for staggering rows that fold together: its lane, its Noise, or its band.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
-export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor, openId, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null, markable = false,
+export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null, markable = false,
   onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onMarkAllRead}: {
   // New's lanes and Noise, drawn as a day's (null when nothing's New), how many of it are unread (its
   // band's count), and Attention's rows.
@@ -65,6 +68,8 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
   shelf: MessageRowOut[];
   cursor: string | null;
   openId: number | null;
+  // The emails selected (#249), drawn as the open one is.
+  selected?: ReadonlySet<number>;
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
@@ -79,7 +84,8 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
   prompt?: PatternPrompt | null;
   markable?: boolean;
   onPoint: (key: string) => void;
-  onOpen: (id: number, key: string) => void;
+  // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select (#249), a plain one opens.
+  onOpen: (id: number, key: string, event: MouseEvent) => void;
   onToggleNoise: (date: string) => void;
   onNearEnd: () => void;
   onUnpin: (id: number) => void;
@@ -194,7 +200,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
         const account = accounts.get(row.account_id);
         const tick = ticked.has(row.id);
         // Attention's dot and ring are `caution` (#167), and Noise recedes (#168), wherever they are.
-        const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
+        const classes = ['row', item.shelf && 'shelf', row.lane === 'attention' && 'att', row.lane === 'noise' && 'noise', row.unread && 'unread', row.done && 'done', tick && 'ticked', !leaving && cursor === key && 'cur', !leaving && openId === row.id && 'open', !leaving && selected.has(row.id) && 'sel', showsPending(row) && 'pending', leaving && 'leaving', beat && `beat-${beat}`]
           .filter(Boolean).join(' ');
         const unpin = (event: MouseEvent) => {
           event.stopPropagation();
@@ -202,7 +208,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
         };
         return (
           <div key={key} ref={ref} className={classes} title={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
-            onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onClick={leaving ? undefined : () => onOpen(row.id, key)}>
+            onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>

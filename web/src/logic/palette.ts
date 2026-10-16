@@ -1,11 +1,11 @@
 // ⌘K's list (DESIGN.md › ⌘K; board 20): commands, not search. With nothing typed it shows This
-// email (on an open email), Go to and Appearance; typing finds every command, the ones that only
+// email (on an open email) or Selected emails (#249), Go to and Appearance; typing finds every command, the ones that only
 // have a key too (New event, New task, Mark all as read, Sign out), in the same section order.
 
-export const PALETTE_SECTIONS = ['email', 'goto', 'appearance', 'more'] as const;
+export const PALETTE_SECTIONS = ['email', 'selection', 'goto', 'appearance', 'more'] as const;
 export type PaletteSection = (typeof PALETTE_SECTIONS)[number];
 
-export const SECTION_LABELS: Record<PaletteSection, string> = {email: 'This email', goto: 'Go to', appearance: 'Appearance', more: 'Commands'};
+export const SECTION_LABELS: Record<PaletteSection, string> = {email: 'This email', selection: 'Selected emails', goto: 'Go to', appearance: 'Appearance', more: 'Commands'};
 
 export interface Matchable {
   section: PaletteSection;

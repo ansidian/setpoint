@@ -109,6 +109,21 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * One change to several emails (a selection's, DESIGN.md #249): each its own command, as for one email,
+ * sent together, with the lists' and counts' answers held until the last is in, so one landing
+ * between them doesn't bring back for a moment what the others did at once; one email's goes as it
+ * always has. Each one's outcome.
+ */
+export async function changeEach<T>(ids: number[], change: (id: number) => Promise<T>): Promise<PromiseSettledResult<T>[]> {
+  const release = ids.length > 1 ? holdLoads(['/mail/inbox', '/mail/all', COUNTS_PATH]) : () => undefined;
+  try {
+    return await Promise.allSettled(ids.map(id => change(id)));
+  } finally {
+    release();
+  }
+}
+
 /** Opens an email (a click or Enter): an unread one turns read, and the unread counts drop at once. */
 export function openMessage(id: number): Promise<MessageOut> {
   const found = cachedRow(id);

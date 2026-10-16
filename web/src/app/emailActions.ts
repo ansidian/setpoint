@@ -6,6 +6,7 @@
 // its Copy items: the sender's address and a code row's code.
 import type {ItemKind, MessageRowOut} from '@setpoint/shared';
 import {readerActions} from '../logic/reader.ts';
+import {selectionOffers} from '../logic/selection.ts';
 import {copyText} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 
@@ -42,5 +43,32 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
       {id: 'copy-address', group: 'copy', label: 'Copy sender address', icon: 'alternate_email', run: () => copyText(row.from_address)} satisfies MenuAction,
       ...(row.code ? [{id: 'copy-code', group: 'copy', label: 'Copy code', icon: 'content_copy', run: () => copyText(row.code!.value)} satisfies MenuAction] : []),
     ] : []),
+  ];
+}
+
+export interface SelectionHandlers {
+  done: () => void;
+  trash: () => void;
+  pin: () => void;
+  markRead: () => void;
+  markUnread: () => void;
+  clear: () => void;
+}
+
+/**
+ * A selection's actions (DESIGN.md #249), for its right-click menu and ⌘K, as its pane's tools: Done H
+ * for the emails that can be ("Done 2" when not all of them), Trash E, Pin or Unpin P, Mark read or
+ * Mark unread ⇧U, Clear selection. Nothing that's one email's only.
+ */
+export function selectionActions(rows: MessageRowOut[], on: SelectionHandlers, where: 'menu' | 'palette'): MenuAction[] {
+  const offer = selectionOffers(rows);
+  return [
+    ...(offer.done ? [{id: 'done', group: 'act', label: offer.done === rows.length ? 'Done' : `Done ${offer.done}`, icon: 'check', hint: 'H', run: on.done} satisfies MenuAction] : []),
+    {id: 'trash', group: 'act', label: 'Trash', icon: 'delete', hint: 'E', danger: where === 'menu', run: on.trash},
+    {id: 'pin', group: 'act', label: offer.pin ? 'Pin' : 'Unpin', icon: offer.pin ? 'keep' : 'keep_off', hint: 'P', run: on.pin},
+    offer.read
+      ? {id: 'read', group: 'read', label: 'Mark read', icon: 'mark_email_read', run: on.markRead}
+      : {id: 'unread', group: 'read', label: 'Mark unread', icon: 'mark_email_unread', hint: '⇧U', run: on.markUnread},
+    {id: 'clear', group: 'clear', label: 'Clear selection', icon: 'close', hint: 'Esc', run: on.clear},
   ];
 }

@@ -23,3 +23,8 @@ export function echoKey(hint: string) {
   button.dataset.echo = '';
   window.setTimeout(() => delete button.dataset.echo, motion.press);
 }
+
+/** A ⇧-click on a row selects emails (DESIGN.md #249), not the text between it and the last click. */
+export function keepTextUnselected(event: {shiftKey: boolean; preventDefault: () => void}) {
+  if (event.shiftKey) event.preventDefault();
+}
