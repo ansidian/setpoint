@@ -83,6 +83,10 @@ const present = (row: Device): DeviceOut => ({id: row.id, name: row.name, paired
 export const listDevices = (store: Store): DeviceOut[] =>
   store.db.select().from(t.devices).orderBy(desc(t.devices.createdAt), desc(t.devices.id)).all().map(present);
 
+/** Whether any iPhone is paired: notifications then open the app (SV-87). */
+export const hasPairedDevice = (store: Store): boolean =>
+  store.db.select({id: t.devices.id}).from(t.devices).limit(1).get() !== undefined;
+
 /** Revoke: the token stops working at once. An unknown device is fine. */
 export function revokeDevice(store: Store, id: number) {
   store.db.delete(t.devices).where(eq(t.devices.id, id)).run();

@@ -1,5 +1,5 @@
-// notify(): ntfy delivery against a fake ntfy server, with topics, click deep links, Send test,
-// the log, "once" keys and Settings' switches.
+// notify(): ntfy delivery against a fake ntfy server, with topics, click deep links (the app's while
+// an iPhone is paired), Send test, the log, "once" keys and Settings' switches.
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import {describe, expect, test} from 'vitest';
@@ -101,5 +101,67 @@ describe('Send test', () => {
     expect(response.body).toMatchObject({kind: 'test', state: 'sent', click: `${PUBLIC}/settings/notifications`});
     expect(ntfy.published.map(message => [message.body.topic, message.body.title])).toEqual([['setpoint-reminders', 'Setpoint']]);
     expect((await c.send('GET', '/api/notifications/status')).body).toMatchObject({configured: true, last_sent_at: expect.any(String), last_error: null});
+  });
+});
+
+describe('while an iPhone is paired (SV-87)', () => {
+  const mail = {kind: 'mail' as const, topic: 'mail' as const, title: 'Google', body: 'Your recovery email was changed', link: {to: 'message' as const, id: 2}};
+  const reminder = {kind: 'reminder' as const, topic: 'reminders' as const, title: 'Dentist', body: '2:30 PM · Smile Dental', link: {to: 'item' as const, id: 2, occurrence_start: '2026-10-07T21:30:00.000Z'}};
+  const task = {kind: 'reminder' as const, topic: 'reminders' as const, title: 'Pay rent', body: 'Due today', link: {to: 'day' as const, date: '2026-10-07'}};
+
+  /** Pairs a phone as the app does: Add iPhone's code, exchanged with no cookie and no Origin. */
+  async function pair(c: Awaited<ReturnType<typeof signedIn>>): Promise<number> {
+    const code = (await c.send('POST', '/api/security/pairing')).body.code as string;
+    const response = await c.app.request('/api/auth/pair', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({code})});
+    expect(response.status).toBe(201);
+    return ((await response.json()) as {device: {id: number}}).device.id;
+  }
+
+  test('an email or item opens in the app, by the ids the API takes; web links unpaired and again once the last is revoked', async () => {
+    const {w, ntfy, notifier} = await setUp();
+    updateSettings(w.store, {notifications: {attention_mail: true}});
+    const c = await signedIn(w, {notifier});
+    const clicks = async () => [(await notifier.notify(mail)).click, (await notifier.notify(reminder)).click];
+    const web = [`${PUBLIC}/inbox/2`, `${PUBLIC}/calendar/item/2?at=2026-10-07T21%3A30%3A00.000Z`];
+    const app = ['setpoint://mail/2', 'setpoint://item/2'];
+
+    expect(await clicks()).toEqual(web);
+    const first = await pair(c);
+    expect(await clicks()).toEqual(app);
+    const second = await pair(c);
+    expect((await c.send('DELETE', `/api/security/devices/${first}`)).status).toBe(204);
+    expect(await clicks()).toEqual(app);
+    expect((await c.send('DELETE', `/api/security/devices/${second}`)).status).toBe(204);
+    expect(await clicks()).toEqual(web);
+
+    expect(ntfy.published.map(message => message.body.click)).toEqual([...web, ...app, ...app, ...web]);
+  });
+
+  test('a day or a Settings page, which the app has no screen for, keeps its web link', async () => {
+    const {w, ntfy, notifier} = await setUp();
+    await pair(await signedIn(w, {notifier}));
+    expect(await notifier.notify(task)).toMatchObject({state: 'sent', click: `${PUBLIC}/calendar/2026-10-07`});
+    expect(await notifier.sendTest()).toMatchObject({state: 'sent', click: `${PUBLIC}/settings/notifications`});
+    expect(ntfy.published.map(message => message.body.click)).toEqual([`${PUBLIC}/calendar/2026-10-07`, `${PUBLIC}/settings/notifications`]);
+  });
+
+  test('the app\'s link needs no public URL; a web link does', async () => {
+    const {w, ntfy} = await setUp();
+    const notifier = new Notifier(w.store, {publicUrl: null});
+    await pair(await signedIn(w, {notifier}));
+    expect(await notifier.notify(reminder)).toMatchObject({state: 'sent', click: 'setpoint://item/2'});
+    expect(await notifier.notify(task)).toMatchObject({state: 'sent', click: null});
+    expect(ntfy.published[1]!.body.click).toBeUndefined();
+  });
+
+  test('a failure tried again takes the link of its retry: paired since, it opens the app', async () => {
+    const {w, ntfy, notifier} = await setUp();
+    const alert = {...reminder, dedupe: 'reminder:2@x'};
+    ntfy.refuseWith(500, 'oops');
+    expect(await notifier.notify(alert)).toMatchObject({state: 'failed', click: `${PUBLIC}/calendar/item/2?at=2026-10-07T21%3A30%3A00.000Z`});
+    await pair(await signedIn(w, {notifier}));
+    ntfy.accept();
+    expect(await notifier.notify(alert)).toMatchObject({state: 'sent', click: 'setpoint://item/2'});
+    expect(ntfy.published.map(message => message.body.click)).toEqual(['setpoint://item/2']);
   });
 });

@@ -2,10 +2,13 @@
 // reconnecting and Send test all go through notify(), which logs each one and delivers it by ntfy.
 // Nothing else knows about ntfy (the lint enforces it). Topics come from Settings › Notifications
 // (`setpoint-reminders`, `setpoint-mail`), and each notification's click opens the exact email,
-// item or Settings page.
-import {deepLinkPath} from '@setpoint/shared';
+// item or Settings page: in the iPhone app while one is paired, for an email or item (SV-87).
+// The link is chosen as each notification is sent, so a retry follows a pairing or a Revoke since.
+// ntfy is one delivery; APNs could later be a second beside it, given the same Notification.
+import {appLink, deepLinkPath} from '@setpoint/shared';
 import type {DeepLink, NotificationKind, NotificationOut, NotifyStatusOut, NotifyTopic} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
+import {hasPairedDevice} from '../auth/devices.ts';
 import * as t from '../db/schema.ts';
 import {readSecret} from '../secrets/store.ts';
 import {getSettings} from '../settings.ts';
@@ -24,7 +27,7 @@ export interface Notification {
 }
 
 export interface NotifierOptions {
-  // Setpoint's own origin, for click links; without it, notifications carry no link.
+  // Setpoint's own origin, for web click links; without it, only the app's links go.
   publicUrl: string | null;
   // The network: tests pass a fake ntfy's.
   fetch?: typeof fetch;
@@ -60,7 +63,7 @@ export class Notifier {
     const earlier = notification.dedupe ? store.db.select().from(t.notifications).where(eq(t.notifications.dedupe, notification.dedupe)).get() : undefined;
     if (earlier && earlier.state !== 'failed') return present(earlier);
     const settings = getSettings(store).notifications;
-    const click = notification.link && this.options.publicUrl ? new URL(deepLinkPath(notification.link), this.options.publicUrl).href : null;
+    const click = this.click(notification.link);
     let state: Row['state'] = 'sent';
     let error: string | null = null;
     if (!settings.ntfy_server) [state, error] = ['skipped', 'ntfy isn\'t set up.'];
@@ -85,6 +88,14 @@ export class Notifier {
       ? store.db.update(t.notifications).set(values).where(eq(t.notifications.id, earlier.id)).returning().get()
       : store.db.insert(t.notifications).values(values).returning().get();
     return present(row!);
+  }
+
+  /** The app's link while an iPhone is paired, else the web's on the public URL; none without either. */
+  private click(link: DeepLink | undefined): string | null {
+    if (!link) return null;
+    const app = hasPairedDevice(this.store) ? appLink(link) : null;
+    if (app) return app;
+    return this.options.publicUrl ? new URL(deepLinkPath(link), this.options.publicUrl).href : null;
   }
 
   /** Settings › Notifications' Send test. */
