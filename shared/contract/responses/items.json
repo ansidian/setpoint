@@ -234,7 +234,7 @@
       "done": true,
       "done_at": "2026-10-07T16:12:00.000Z",
       "command": {
-        "id": 7,
+        "id": 8,
         "target": "item",
         "target_id": 8,
         "kind": "item_complete",

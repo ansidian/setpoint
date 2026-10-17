@@ -218,6 +218,24 @@
       ]
     },
     {
+      "name": "mail-read-false",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/read",
+      "path": "/api/mail/messages/9/read",
+      "request": {
+        "unread": false
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-read-false.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
       "name": "mail-done",
       "type": "MessageOut",
       "method": "POST",
@@ -279,6 +297,16 @@
         "previous: always null",
         "settled_at: always null"
       ]
+    },
+    {
+      "name": "error-command-pending",
+      "type": "ApiError",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/untrash",
+      "path": "/api/mail/messages/4/untrash",
+      "status": 409,
+      "content_type": "application/json",
+      "file": "responses/error-command-pending.json"
     },
     {
       "name": "mail-untrash",
@@ -346,7 +374,7 @@
       "type": "CommandOut",
       "method": "POST",
       "route": "/api/commands/:id/move-back",
-      "path": "/api/commands/6/move-back",
+      "path": "/api/commands/7/move-back",
       "status": 200,
       "content_type": "application/json",
       "file": "responses/command-move-back.json",

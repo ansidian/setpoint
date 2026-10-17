@@ -1,7 +1,7 @@
 {
   "attention": 2,
-  "unread": 13,
-  "unread_fyi": 8,
+  "unread": 12,
+  "unread_fyi": 7,
   "accounts": [
     {
       "account_id": 1,
@@ -9,7 +9,7 @@
     },
     {
       "account_id": 2,
-      "unread": 9
+      "unread": 8
     },
     {
       "account_id": 3,

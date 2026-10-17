@@ -1,7 +1,7 @@
 {
   "commands": [
     {
-      "id": 5,
+      "id": 6,
       "target": "account",
       "target_id": 1,
       "kind": "mark_all_read",

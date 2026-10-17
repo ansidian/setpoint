@@ -93,7 +93,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 4,
+            "id": 5,
             "target": "message",
             "target_id": 4,
             "kind": "untrash",
@@ -218,7 +218,7 @@
           "subject": "Statement ready",
           "summary": "Checking ending in 1234",
           "received_at": "2026-10-07T11:05:00.000Z",
-          "unread": true,
+          "unread": false,
           "lane": "fyi",
           "kind": "money",
           "type": "statement",
@@ -228,7 +228,20 @@
           "fact": null,
           "code": null,
           "attachment_count": 0,
-          "command": null
+          "command": {
+            "id": 3,
+            "target": "message",
+            "target_id": 9,
+            "kind": "mark_read",
+            "state": "pending",
+            "provider": "gmail",
+            "provider_message": null,
+            "can_retry": false,
+            "can_move_back": false,
+            "previous": null,
+            "created_at": "2026-10-07T16:12:00.000Z",
+            "settled_at": null
+          }
         },
         {
           "id": 10,
@@ -251,7 +264,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",
@@ -286,7 +299,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",
@@ -370,7 +383,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",
@@ -405,7 +418,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",
@@ -440,7 +453,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",
@@ -546,7 +559,7 @@
           "code": null,
           "attachment_count": 0,
           "command": {
-            "id": 5,
+            "id": 6,
             "target": "account",
             "target_id": 1,
             "kind": "mark_all_read",

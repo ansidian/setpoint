@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "command_pending",
+    "message": "The last change is still waiting for its provider."
+  }
+}

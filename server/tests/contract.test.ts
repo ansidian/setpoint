@@ -13,7 +13,7 @@ import {
   LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
   SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
-import type {HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
+import type {ApiError, HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {confirmCommand, failCommand} from '../src/commands/index.ts';
 import {devProvider} from '../src/providers/dev/index.ts';
@@ -138,10 +138,14 @@ async function recordAll(w: World) {
   // The mail actions.
   const opened = await app.record('mail-open', 'MessageOut', 'POST', '/api/mail/messages/:id/open', '/api/mail/messages/5/open') as {command: {id: number}};
   const marked = await app.record('mail-read', 'CommandOut', 'POST', '/api/mail/messages/:id/read', '/api/mail/messages/27/read', {unread: true}) as {id: number};
+  // Mark read, on an email the seed has unread.
+  await app.record('mail-read-false', 'CommandOut', 'POST', '/api/mail/messages/:id/read', '/api/mail/messages/9/read', {unread: false});
   await app.record('mail-done', 'MessageOut', 'POST', '/api/mail/messages/:id/done', '/api/mail/messages/5/done', {done: true});
   await app.record('mail-pin', 'MessageOut', 'POST', '/api/mail/messages/:id/pin', '/api/mail/messages/3/pin', {pinned: true});
   const trashed = await app.record('mail-trash', 'CommandOut', 'POST', '/api/mail/messages/:id/trash', '/api/mail/messages/4/trash') as {id: number};
-  // Undo waits for the trash to settle, as the web's does.
+  // Undo while the provider still holds the trash is refused, and the app sends it again, as the
+  // web's afterPending does; once the trash settles, Undo goes through.
+  await app.record('error-command-pending', 'ApiError', 'POST', '/api/mail/messages/:id/untrash', '/api/mail/messages/4/untrash');
   confirmCommand(w.store, trashed.id);
   await app.record('mail-untrash', 'CommandOut', 'POST', '/api/mail/messages/:id/untrash', '/api/mail/messages/4/untrash');
   await app.record('mail-mark-all-read', 'MarkAllReadOut', 'POST', '/api/mail/mark-all-read', '/api/mail/mark-all-read', {account_id: 1});
@@ -256,6 +260,12 @@ function compare({responses, events}: Awaited<ReturnType<typeof recordAll>>) {
     }
     if (entry.status !== pinned.status) found.push(`${entry.name}: answered ${entry.status}, was ${pinned.status}`);
     if (entry.content_type !== pinned.content_type) found.push(`${entry.name}: sent ${entry.content_type}, was ${pinned.content_type}`);
+    // A refusal's code is what the app branches on, so it's pinned like a status.
+    if (entry.type === 'ApiError' && pinned.file) {
+      const code = (entry.body as ApiError | null)?.error.code;
+      const was = (readJson(pinned.file) as ApiError).error.code;
+      if (code !== was) found.push(`${entry.name}: refused with ${code}, was ${was}`);
+    }
     if (pinned.file && entry.body !== null) check(pinned.file, entry.body);
   }
   for (const entry of events) {
