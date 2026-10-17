@@ -1,0 +1,9 @@
+{
+  "token": "sp_device_0000000000000000000000000000000000000000000",
+  "device": {
+    "id": 1,
+    "name": "iPhone 17 Pro",
+    "paired_at": "2026-10-07T16:12:00.000Z",
+    "last_used_at": null
+  }
+}

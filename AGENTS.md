@@ -97,6 +97,10 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - A fix whose browser check went red on its own, not because the design changed, says so in its
   commit message ("the X check caught it"): git has no other record of a check catching something,
   and the single-value rule is judged by that count (D269).
+- What the iPhone app (setpoint-ios) reads is pinned in `shared/contract/`, recorded from the seed
+  (SV-85). `npm test` fails when a response loses a key, changes a kind or a status, or an enum it
+  carries gains a value, since an installed app is older than the server; a new key passes.
+  `npm run contract:record` re-records, only once setpoint-ios handles the change.
 
 ## Boundaries (the lint enforces them)
 

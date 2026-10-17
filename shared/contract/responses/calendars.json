@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "provider": "google",
+    "account_id": 2,
+    "name": "Personal",
+    "colour": "cool",
+    "position": 0,
+    "visible": true,
+    "command": null
+  },
+  {
+    "id": 2,
+    "provider": "google",
+    "account_id": 2,
+    "name": "Classes",
+    "colour": "cyan",
+    "position": 1,
+    "visible": true,
+    "command": null
+  },
+  {
+    "id": 3,
+    "provider": "google",
+    "account_id": 4,
+    "name": "Jobs",
+    "colour": "violet",
+    "position": 2,
+    "visible": true,
+    "command": null
+  },
+  {
+    "id": 4,
+    "provider": "todoist",
+    "account_id": null,
+    "name": "Todoist",
+    "colour": null,
+    "position": 3,
+    "visible": true,
+    "command": null
+  }
+]

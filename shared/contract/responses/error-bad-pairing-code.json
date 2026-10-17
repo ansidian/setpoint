@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "bad_pairing_code",
+    "message": "That pairing code isn't valid any more. Add iPhone again in Settings › Security."
+  }
+}

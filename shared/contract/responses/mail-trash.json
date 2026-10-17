@@ -1,0 +1,14 @@
+{
+  "id": 3,
+  "target": "message",
+  "target_id": 4,
+  "kind": "trash",
+  "state": "pending",
+  "provider": "gmail",
+  "provider_message": null,
+  "can_retry": false,
+  "can_move_back": false,
+  "previous": null,
+  "created_at": "2026-10-07T16:12:00.000Z",
+  "settled_at": null
+}

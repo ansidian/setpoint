@@ -1,0 +1,173 @@
+[
+  {
+    "id": 1,
+    "provider": "gmail",
+    "account_id": 1,
+    "name": "Business",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 300,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 2,
+    "provider": "gmail",
+    "account_id": 2,
+    "name": "Personal",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 300,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 3,
+    "provider": "gmail",
+    "account_id": 3,
+    "name": "Work",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 300,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 4,
+    "provider": "gmail",
+    "account_id": 4,
+    "name": "Jobs",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 300,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 5,
+    "provider": "icloud",
+    "account_id": 5,
+    "name": "iCloud",
+    "sync": {
+      "mode": "poll",
+      "interval_seconds": 120,
+      "push_renews_at": null
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 6,
+    "provider": "google_calendar",
+    "account_id": 2,
+    "name": "Google Calendar · Personal",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 900,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 7,
+    "provider": "google_calendar",
+    "account_id": 4,
+    "name": "Google Calendar · Jobs",
+    "sync": {
+      "mode": "push",
+      "interval_seconds": 900,
+      "push_renews_at": "2026-10-09T16:00:00.000Z"
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 8,
+    "provider": "todoist",
+    "account_id": null,
+    "name": "Todoist",
+    "sync": {
+      "mode": "poll",
+      "interval_seconds": 300,
+      "push_renews_at": null
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  },
+  {
+    "id": 9,
+    "provider": "weather",
+    "account_id": null,
+    "name": "Weather",
+    "sync": {
+      "mode": "poll",
+      "interval_seconds": 1800,
+      "push_renews_at": null
+    },
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    },
+    "has_credentials": false,
+    "dev": true
+  }
+]

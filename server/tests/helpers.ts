@@ -86,6 +86,28 @@ export function client(w: World, options: Partial<AppOptions> = {}) {
   };
 }
 
+/** Reads SSE events from a stream until `until` says stop. */
+export async function readEvents(response: globalThis.Response, until: (events: {event: string; data: unknown; id?: string}[]) => boolean) {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const events: {event: string; data: unknown; id?: string}[] = [];
+  let buffer = '';
+  while (!until(events)) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, {stream: true});
+    let end;
+    while ((end = buffer.indexOf('\n\n')) >= 0) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const fields = Object.fromEntries(block.split('\n').filter(line => line && !line.startsWith(':')).map(line => [line.slice(0, line.indexOf(':')), line.slice(line.indexOf(':') + 1).trim()]));
+      if (fields.event) events.push({event: fields.event, data: JSON.parse(fields.data ?? 'null'), id: fields.id});
+    }
+  }
+  await reader.cancel();
+  return events;
+}
+
 /** Claims Setpoint (bcrypt at cost 4) and signs this client in. */
 export async function signedIn(w: World, options: Partial<AppOptions> = {}) {
   const c = client(w, options);

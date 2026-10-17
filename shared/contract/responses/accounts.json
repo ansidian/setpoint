@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "provider": "gmail",
+    "label": "Business",
+    "address": "user@studio.example.com",
+    "colour": "warm",
+    "icon": "storefront",
+    "position": 0,
+    "source_id": 1,
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    }
+  },
+  {
+    "id": 2,
+    "provider": "gmail",
+    "label": "Personal",
+    "address": "user@example.com",
+    "colour": "cool",
+    "icon": "person",
+    "position": 1,
+    "source_id": 2,
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    }
+  },
+  {
+    "id": 3,
+    "provider": "gmail",
+    "label": "Work",
+    "address": "user@work.example.org",
+    "colour": "comf",
+    "icon": "work",
+    "position": 2,
+    "source_id": 3,
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    }
+  },
+  {
+    "id": 4,
+    "provider": "gmail",
+    "label": "Jobs",
+    "address": "user.jobs@example.com",
+    "colour": "violet",
+    "icon": "badge",
+    "position": 3,
+    "source_id": 4,
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    }
+  },
+  {
+    "id": 5,
+    "provider": "icloud",
+    "label": "iCloud",
+    "address": "user@example.net",
+    "colour": "ink2",
+    "icon": "cloud",
+    "position": 4,
+    "source_id": 5,
+    "health": {
+      "state": "healthy",
+      "as_of": "2026-10-07T16:11:00.000Z",
+      "reason": null,
+      "last_check_at": "2026-10-07T16:11:00.000Z"
+    }
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "id": 2,
+  "account_id": 2,
+  "from_name": "Google",
+  "from_address": "no-reply@accounts.google.com",
+  "organisation": "Google",
+  "via": null,
+  "subject": "Your recovery email was changed",
+  "summary": "If you didn't make this change, secure your account now",
+  "received_at": "2026-10-07T15:52:00.000Z",
+  "unread": true,
+  "lane": "attention",
+  "kind": "security",
+  "type": "alert",
+  "protected": true,
+  "pinned": false,
+  "done": false,
+  "fact": "Recovery email changed · Windows · Chrome · Phoenix, AZ",
+  "code": null,
+  "attachment_count": 0,
+  "command": null,
+  "thread_id": "seed-002-thread",
+  "body_text": "Your recovery email was changed\n\nThe recovery email for your Google Account was changed to r••••••@example.net.\n\nIf you didn't change it, someone else may be using your account. Check this activity and secure your account now.\n\nYou received this email to let you know about important changes to your Google Account and services.",
+  "body_html": null,
+  "key_date": null,
+  "security": {
+    "what": "Recovery email changed",
+    "device": "Windows · Chrome",
+    "location": "Phoenix, AZ",
+    "unfamiliar": true
+  },
+  "attachments": [],
+  "remote_content": {
+    "domain": "accounts.google.com",
+    "trust_domain": "google.com",
+    "sender_authenticated": null,
+    "trusted": false,
+    "load": false,
+    "reason": "unknown"
+  },
+  "open_url": "https://mail.google.com/mail/?authuser=user%40example.com#all/seed-002"
+}

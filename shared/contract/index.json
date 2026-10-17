@@ -1,0 +1,446 @@
+{
+  "about": "The API responses and live events the iPhone app reads, recorded from the seed at SEED_NOW by server/tests/contract.test.ts (npm run contract:record). Each file is the body as sent. npm test fails when the server stops answering in a way an app built against these can decode.",
+  "responses": [
+    {
+      "name": "auth-pair",
+      "type": "PairOut",
+      "method": "POST",
+      "route": "/api/auth/pair",
+      "path": "/api/auth/pair",
+      "request": {
+        "code": "0000000000000000000000000000000000000000000",
+        "name": "iPhone 17 Pro"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/auth-pair.json",
+      "unseen": [
+        "device.last_used_at: always null"
+      ]
+    },
+    {
+      "name": "me",
+      "type": "MeOut",
+      "method": "GET",
+      "route": "/api/me",
+      "path": "/api/me",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/me.json"
+    },
+    {
+      "name": "accounts",
+      "type": "AccountOut[]",
+      "method": "GET",
+      "route": "/api/accounts",
+      "path": "/api/accounts",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/accounts.json",
+      "unseen": [
+        "[].health.reason: always null"
+      ]
+    },
+    {
+      "name": "calendars",
+      "type": "CalendarOut[]",
+      "method": "GET",
+      "route": "/api/calendars",
+      "path": "/api/calendars",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/calendars.json",
+      "unseen": [
+        "[].command: always null"
+      ]
+    },
+    {
+      "name": "sources",
+      "type": "SourceOut[]",
+      "method": "GET",
+      "route": "/api/sources",
+      "path": "/api/sources",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/sources.json",
+      "unseen": [
+        "[].health.reason: always null"
+      ]
+    },
+    {
+      "name": "mail-message",
+      "type": "MessageOut",
+      "method": "GET",
+      "route": "/api/mail/messages/:id",
+      "path": "/api/mail/messages/27",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-message.json",
+      "unseen": [
+        "via: always null",
+        "fact: always null",
+        "code: always null",
+        "command: always null",
+        "body_html: always null",
+        "security: always null",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-message-security",
+      "type": "MessageOut",
+      "method": "GET",
+      "route": "/api/mail/messages/:id",
+      "path": "/api/mail/messages/2",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-message-security.json",
+      "unseen": [
+        "via: always null",
+        "code: always null",
+        "command: always null",
+        "body_html: always null",
+        "key_date: always null",
+        "attachments: always empty",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-message-html",
+      "type": "MessageOut",
+      "method": "GET",
+      "route": "/api/mail/messages/:id",
+      "path": "/api/mail/messages/8",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-message-html.json",
+      "unseen": [
+        "via: always null",
+        "kind: always null",
+        "fact: always null",
+        "code: always null",
+        "command: always null",
+        "key_date: always null",
+        "security: always null",
+        "attachments: always empty",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-body",
+      "type": "HTML page",
+      "method": "GET",
+      "route": "/api/mail/messages/:id/body",
+      "path": "/api/mail/messages/8/body",
+      "status": 200,
+      "content_type": "text/html",
+      "file": null
+    },
+    {
+      "name": "mail-open",
+      "type": "MessageOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/open",
+      "path": "/api/mail/messages/5/open",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-open.json",
+      "unseen": [
+        "type: always null",
+        "fact: always null",
+        "code: always null",
+        "command.provider_message: always null",
+        "command.previous: always null",
+        "command.settled_at: always null",
+        "body_html: always null",
+        "key_date: always null",
+        "security: always null",
+        "attachments: always empty",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-read",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/read",
+      "path": "/api/mail/messages/27/read",
+      "request": {
+        "unread": true
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-read.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "mail-done",
+      "type": "MessageOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/done",
+      "path": "/api/mail/messages/5/done",
+      "request": {
+        "done": true
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-done.json",
+      "unseen": [
+        "type: always null",
+        "fact: always null",
+        "code: always null",
+        "command.provider_message: always null",
+        "command.previous: always null",
+        "command.settled_at: always null",
+        "body_html: always null",
+        "key_date: always null",
+        "security: always null",
+        "attachments: always empty",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-pin",
+      "type": "MessageOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/pin",
+      "path": "/api/mail/messages/3/pin",
+      "request": {
+        "pinned": true
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-pin.json",
+      "unseen": [
+        "via: always null",
+        "code: always null",
+        "command: always null",
+        "body_html: always null",
+        "key_date: always null",
+        "attachments: always empty",
+        "remote_content.sender_authenticated: always null"
+      ]
+    },
+    {
+      "name": "mail-trash",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/trash",
+      "path": "/api/mail/messages/4/trash",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-trash.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "mail-untrash",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/untrash",
+      "path": "/api/mail/messages/4/untrash",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-untrash.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "mail-mark-all-read",
+      "type": "MarkAllReadOut",
+      "method": "POST",
+      "route": "/api/mail/mark-all-read",
+      "path": "/api/mail/mark-all-read",
+      "request": {
+        "account_id": 1
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-mark-all-read.json",
+      "unseen": [
+        "commands[].provider_message: always null",
+        "commands[].previous: always null",
+        "commands[].settled_at: always null"
+      ]
+    },
+    {
+      "name": "command",
+      "type": "CommandOut",
+      "method": "GET",
+      "route": "/api/commands/:id",
+      "path": "/api/commands/2",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/command.json",
+      "unseen": [
+        "previous: always null"
+      ]
+    },
+    {
+      "name": "command-retry",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/commands/:id/retry",
+      "path": "/api/commands/1/retry",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/command-retry.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "mail-inbox",
+      "type": "InboxOut",
+      "method": "GET",
+      "route": "/api/mail/inbox",
+      "path": "/api/mail/inbox",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-inbox.json",
+      "unseen": [
+        "account_id: always null",
+        "groups[].rows[].command.previous: always null"
+      ]
+    },
+    {
+      "name": "mail-counts",
+      "type": "MailCountsOut",
+      "method": "GET",
+      "route": "/api/mail/counts",
+      "path": "/api/mail/counts",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-counts.json"
+    },
+    {
+      "name": "items",
+      "type": "ItemsOut",
+      "method": "GET",
+      "route": "/api/items",
+      "path": "/api/items?from=2026-10-01&to=2026-11-01",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/items.json",
+      "unseen": [
+        "items[].start_date: always null",
+        "items[].end_date: always null",
+        "items[].due_at: always null",
+        "items[].command.provider_message: always null",
+        "items[].command.previous: always null",
+        "items[].command.settled_at: always null",
+        "items[].due_string: always null",
+        "items[].time_to_leave: always null",
+        "items[].colour: always null",
+        "items[].labels: always empty",
+        "items[].repeat: always null"
+      ]
+    },
+    {
+      "name": "search",
+      "type": "SearchOut",
+      "method": "POST",
+      "route": "/api/search",
+      "path": "/api/search",
+      "request": {
+        "text": "northwind interview"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/search.json",
+      "unseen": [
+        "results[].type: always null",
+        "results[].fact: always null",
+        "results[].code: always null",
+        "results[].command.provider_message: always null",
+        "results[].command.previous: always null",
+        "results[].command.settled_at: always null",
+        "next_offset: always null",
+        "indexing: always null"
+      ]
+    },
+    {
+      "name": "device-unpair",
+      "type": "(no body)",
+      "method": "DELETE",
+      "route": "/api/device",
+      "path": "/api/device",
+      "status": 204,
+      "content_type": null,
+      "file": null
+    },
+    {
+      "name": "error-unauthorized",
+      "type": "ApiError",
+      "method": "GET",
+      "route": "/api/mail/inbox",
+      "path": "/api/mail/inbox",
+      "status": 401,
+      "content_type": "application/json",
+      "file": "responses/error-unauthorized.json"
+    },
+    {
+      "name": "error-bad-pairing-code",
+      "type": "ApiError",
+      "method": "POST",
+      "route": "/api/auth/pair",
+      "path": "/api/auth/pair",
+      "request": {
+        "code": "not-a-code"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "file": "responses/error-bad-pairing-code.json"
+    }
+  ],
+  "events": [
+    {
+      "name": "ready",
+      "type": "ReadyOut",
+      "file": "events/ready.json"
+    },
+    {
+      "name": "mail",
+      "type": "LiveEvent",
+      "file": "events/mail.json"
+    },
+    {
+      "name": "items",
+      "type": "LiveEvent",
+      "file": "events/items.json"
+    },
+    {
+      "name": "health",
+      "type": "LiveEvent",
+      "file": "events/health.json"
+    },
+    {
+      "name": "news",
+      "type": "LiveEvent",
+      "file": "events/news.json"
+    },
+    {
+      "name": "ping",
+      "type": "{}",
+      "file": "events/ping.json"
+    },
+    {
+      "name": "resync",
+      "type": "{}",
+      "file": "events/resync.json"
+    }
+  ],
+  "enums": "enums.json"
+}

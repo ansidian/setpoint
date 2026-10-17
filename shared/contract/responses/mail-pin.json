@@ -1,0 +1,41 @@
+{
+  "id": 3,
+  "account_id": 1,
+  "from_name": "Google",
+  "from_address": "no-reply@accounts.google.com",
+  "organisation": "Google",
+  "via": null,
+  "subject": "Security alert",
+  "summary": "New sign-in · MacBook Pro · Los Angeles",
+  "received_at": "2026-10-07T15:12:00.000Z",
+  "unread": true,
+  "lane": "fyi",
+  "kind": "security",
+  "type": "alert",
+  "protected": false,
+  "pinned": true,
+  "done": false,
+  "fact": "New sign-in · MacBook Pro · Los Angeles",
+  "code": null,
+  "attachment_count": 0,
+  "command": null,
+  "thread_id": "seed-003-thread",
+  "body_text": "A new sign-in to your Google Account on a MacBook Pro near Los Angeles. If this was you, you don't need to do anything.",
+  "body_html": null,
+  "key_date": null,
+  "security": {
+    "what": "New sign-in",
+    "device": "MacBook Pro",
+    "location": "Los Angeles"
+  },
+  "attachments": [],
+  "remote_content": {
+    "domain": "accounts.google.com",
+    "trust_domain": "google.com",
+    "sender_authenticated": null,
+    "trusted": false,
+    "load": false,
+    "reason": "unknown"
+  },
+  "open_url": "https://mail.google.com/mail/?authuser=user%40studio.example.com#all/seed-003"
+}

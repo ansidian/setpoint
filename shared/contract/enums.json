@@ -1,0 +1,173 @@
+{
+  "ACCOUNT_PROVIDERS": [
+    "gmail",
+    "icloud"
+  ],
+  "CALENDAR_PROVIDERS": [
+    "google",
+    "todoist"
+  ],
+  "COLOURS": [
+    "ink2",
+    "ink3",
+    "cool",
+    "warm",
+    "caution",
+    "comf",
+    "good",
+    "sun",
+    "alert",
+    "violet",
+    "cyan"
+  ],
+  "COMMAND_KINDS": [
+    "open",
+    "mark_read",
+    "mark_unread",
+    "done",
+    "trash",
+    "untrash",
+    "pin",
+    "unpin",
+    "mark_all_read",
+    "item_create",
+    "item_update",
+    "item_delete",
+    "item_complete",
+    "item_reopen",
+    "calendar_colour",
+    "project_colour"
+  ],
+  "COMMAND_STATES": [
+    "pending",
+    "confirmed",
+    "failed",
+    "reverted"
+  ],
+  "COMMAND_TARGETS": [
+    "message",
+    "item",
+    "account",
+    "calendar",
+    "project"
+  ],
+  "HEALTH_STATES": [
+    "healthy",
+    "stale",
+    "failing",
+    "needs_reconnect"
+  ],
+  "HIGHLIGHT_FIELDS": [
+    "from_name",
+    "organisation",
+    "subject",
+    "excerpt"
+  ],
+  "INBOX_GROUPS": [
+    "pinned",
+    "attention",
+    "unsorted",
+    "security",
+    "deliveries",
+    "money",
+    "career",
+    "people",
+    "updates",
+    "other",
+    "noise"
+  ],
+  "ITEM_KINDS": [
+    "event",
+    "task"
+  ],
+  "KINDS": [
+    "deliveries",
+    "money",
+    "career",
+    "security",
+    "updates",
+    "people",
+    "other"
+  ],
+  "LANES": [
+    "attention",
+    "fyi",
+    "noise"
+  ],
+  "LIVE_EVENT_TYPES": [
+    "mail",
+    "items",
+    "health",
+    "news"
+  ],
+  "MATCH_FIELDS": [
+    "organisation",
+    "type",
+    "date",
+    "account",
+    "kind",
+    "sender",
+    "subject",
+    "body"
+  ],
+  "ME_METHODS": [
+    "password",
+    "passkey",
+    "password_plus_passkey",
+    "recovery",
+    "claim",
+    "device"
+  ],
+  "MESSAGE_TYPES": [
+    "confirmation",
+    "rejection",
+    "receipt",
+    "shipping",
+    "deadline",
+    "reminder",
+    "verification_code",
+    "alert",
+    "newsletter",
+    "statement"
+  ],
+  "NEWS_SECTIONS": [
+    "local",
+    "tech",
+    "ai",
+    "general"
+  ],
+  "REMOTE_CONTENT_REASONS": [
+    "trusted",
+    "authenticated",
+    "noise",
+    "not_authenticated",
+    "unknown"
+  ],
+  "SEARCH_CHIP_KINDS": [
+    "organisation",
+    "type",
+    "date",
+    "account",
+    "kind"
+  ],
+  "SEARCH_ORDERS": [
+    "newest",
+    "match"
+  ],
+  "SOURCE_PROVIDERS": [
+    "gmail",
+    "icloud",
+    "google_calendar",
+    "todoist",
+    "weather"
+  ],
+  "STREAM_EVENTS": [
+    "ready",
+    "resync",
+    "ping"
+  ],
+  "SYNC_MODES": [
+    "push",
+    "poll"
+  ]
+}

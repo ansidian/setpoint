@@ -1,0 +1,18 @@
+{
+  "commands": [
+    {
+      "id": 5,
+      "target": "account",
+      "target_id": 1,
+      "kind": "mark_all_read",
+      "state": "pending",
+      "provider": "gmail",
+      "provider_message": null,
+      "can_retry": false,
+      "can_move_back": false,
+      "previous": null,
+      "created_at": "2026-10-07T16:12:00.000Z",
+      "settled_at": null
+    }
+  ]
+}

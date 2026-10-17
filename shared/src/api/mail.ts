@@ -7,8 +7,8 @@
 //   GET  /api/mail/messages/:id                MessageOut, without marking it read
 //   POST /api/mail/messages/:id/open           MessageOut; marks it read (a command) if unread
 //   POST /api/mail/messages/:id/read           {unread}            CommandOut (Mark read / unread)
-//   POST /api/mail/messages/:id/done           {done}              MessageRowOut (local, no provider)
-//   POST /api/mail/messages/:id/pin            {pinned}            MessageRowOut (local, no provider)
+//   POST /api/mail/messages/:id/done           {done}              MessageOut (local, no provider)
+//   POST /api/mail/messages/:id/pin            {pinned}            MessageOut (local, no provider)
 //   POST /api/mail/messages/:id/trash          CommandOut; /untrash is Undo
 //   POST /api/mail/mark-all-read               {account_id?}       {commands: CommandOut[]}
 //   GET/POST /api/mail/trusted-domains, DELETE /api/mail/trusted-domains/:domain

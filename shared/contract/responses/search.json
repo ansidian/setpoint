@@ -1,0 +1,87 @@
+{
+  "search_id": 1,
+  "chips": [
+    {
+      "kind": "organisation",
+      "value": "Northwind",
+      "label": "Northwind"
+    }
+  ],
+  "text": "interview",
+  "order": "newest",
+  "total": 1,
+  "partial": false,
+  "results": [
+    {
+      "id": 5,
+      "account_id": 4,
+      "from_name": "Priya Raman",
+      "from_address": "no-reply@northwind.example",
+      "organisation": "Northwind Talent",
+      "via": "Greenhouse",
+      "subject": "Interview availability for Software Engineer I",
+      "summary": "Pick a 30-minute slot this week",
+      "received_at": "2026-10-07T14:12:00.000Z",
+      "unread": false,
+      "lane": "attention",
+      "kind": "career",
+      "type": null,
+      "protected": false,
+      "pinned": false,
+      "done": true,
+      "fact": null,
+      "code": null,
+      "attachment_count": 0,
+      "command": {
+        "id": 1,
+        "target": "message",
+        "target_id": 5,
+        "kind": "open",
+        "state": "pending",
+        "provider": "gmail",
+        "provider_message": null,
+        "can_retry": false,
+        "can_move_back": false,
+        "previous": null,
+        "created_at": "2026-10-07T16:12:00.000Z",
+        "settled_at": null
+      },
+      "reasons": [
+        {
+          "field": "organisation",
+          "label": "Org Northwind",
+          "matched": [
+            "Northwind"
+          ]
+        },
+        {
+          "field": "subject",
+          "label": "Subject interview",
+          "matched": [
+            "interview"
+          ]
+        }
+      ],
+      "excerpt": "Hi there, Thanks for applying to the Software Engineer I role at Northwind. The team would like to set up a 30-minute call with you this week. Please pick a…",
+      "highlights": [
+        {
+          "field": "organisation",
+          "start": 0,
+          "end": 9
+        },
+        {
+          "field": "subject",
+          "start": 0,
+          "end": 9
+        },
+        {
+          "field": "excerpt",
+          "start": 65,
+          "end": 74
+        }
+      ]
+    }
+  ],
+  "next_offset": null,
+  "indexing": null
+}

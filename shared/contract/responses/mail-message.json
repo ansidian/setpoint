@@ -1,0 +1,45 @@
+{
+  "id": 27,
+  "account_id": 2,
+  "from_name": "Dana Whitfield",
+  "from_address": "dana.whitfield@parksideapts.example",
+  "organisation": "Parkside Apartments",
+  "via": null,
+  "subject": "Lease renewal terms",
+  "summary": "Renewal offer for the lease ending Nov 30 · sign by Oct 31",
+  "received_at": "2026-09-30T21:15:00.000Z",
+  "unread": false,
+  "lane": "fyi",
+  "kind": "people",
+  "type": "deadline",
+  "protected": false,
+  "pinned": true,
+  "done": false,
+  "fact": null,
+  "code": null,
+  "attachment_count": 1,
+  "command": null,
+  "thread_id": "seed-027-thread",
+  "body_text": "Hi there,\n\nYour lease for Unit 4B ends on Nov 30, 2026, and we'd love to have you stay. Here are your renewal terms:\n\nTerm: 12 months, Dec 1, 2026 – Nov 30, 2027\nNew monthly rent: $2,140 (currently $2,060)\nSign by: Oct 31, 2026\n\nTo renew, sign the attached agreement in the resident portal by Oct 31; once it's signed, your new term starts Dec 1. If we haven't heard from you by Oct 31, we'll treat your unit as available from Dec 1.\n\nQuestions? Stop by the leasing office, Monday – Friday, 9 AM – 6 PM.\n\nThanks,\nDana Whitfield\nLeasing Office, Parkside Apartments",
+  "body_html": null,
+  "key_date": "2026-10-31",
+  "security": null,
+  "attachments": [
+    {
+      "id": 1,
+      "filename": "Renewal agreement.pdf",
+      "mime_type": "application/pdf",
+      "size_bytes": 188416,
+      "previewable": true
+    }
+  ],
+  "remote_content": {
+    "domain": "parksideapts.example",
+    "trust_domain": "parksideapts.example",
+    "sender_authenticated": null,
+    "trusted": false,
+    "load": false,
+    "reason": "unknown"
+  },
+  "open_url": "https://mail.google.com/mail/?authuser=user%40example.com#all/seed-027"
+}
