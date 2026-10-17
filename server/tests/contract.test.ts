@@ -9,14 +9,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
-  COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
+  CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
   LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
   SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
 import type {HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {confirmCommand, failCommand} from '../src/commands/index.ts';
+import {devProvider} from '../src/providers/dev/index.ts';
 import {noteLive} from '../src/store.ts';
+import {SyncEngine} from '../src/sync/engine.ts';
+import {Adapters} from '../src/sync/registry.ts';
 import {addedValues, breaks, shapeOf, unseen} from './contractShape.ts';
 import {readEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -38,7 +41,7 @@ export type ContractUnionsCheck = [
 
 /** Every fixed set a pinned response or event carries. */
 const ENUMS: Record<string, readonly string[]> = {
-  ACCOUNT_PROVIDERS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, HEALTH_STATES, HIGHLIGHT_FIELDS,
+  ACCOUNT_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, HEALTH_STATES, HIGHLIGHT_FIELDS,
   INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_SECTIONS,
   REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES,
 };
@@ -97,7 +100,10 @@ function phone(app: {request: (url: string, init: RequestInit) => Response | Pro
 
 /** Everything the app reads, from the seed at SEED_NOW, in one fixed order. */
 async function recordAll(w: World) {
-  const browser = await signedIn(w, {keepAliveMs: 20});
+  // The dev provider serves the seed's attachment bytes; nothing ticks the engine, so commands stay
+  // as the steps below leave them.
+  const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
+  const browser = await signedIn(w, {keepAliveMs: 20, engine});
   const app = phone(browser.app);
   const {code} = (await browser.send('POST', '/api/security/pairing')).body;
 
@@ -124,6 +130,10 @@ async function recordAll(w: World) {
   await app.record('mail-message-html', 'MessageOut', 'GET', '/api/mail/messages/:id', '/api/mail/messages/8');
   await app.record('mail-body', 'HTML page', 'GET', '/api/mail/messages/:id/body', '/api/mail/messages/8/body');
   await app.record('mail-body-app', 'HTML page', 'GET', '/api/mail/messages/:id/body?frame=app', '/api/mail/messages/8/body?frame=app');
+  await app.record('mail-body-app-show', 'HTML page', 'GET', '/api/mail/messages/:id/body?frame=app&images=show', '/api/mail/messages/8/body?frame=app&images=show');
+  // Plain-text email has no body page.
+  await app.record('mail-body-app-plain', 'ApiError', 'GET', '/api/mail/messages/:id/body?frame=app', '/api/mail/messages/27/body?frame=app');
+  await app.record('mail-attachment', 'file bytes', 'GET', '/api/mail/messages/:id/attachments/:attachment', '/api/mail/messages/27/attachments/1');
 
   // The mail actions.
   const opened = await app.record('mail-open', 'MessageOut', 'POST', '/api/mail/messages/:id/open', '/api/mail/messages/5/open') as {command: {id: number}};
@@ -141,6 +151,10 @@ async function recordAll(w: World) {
   await app.record('command', 'CommandOut', 'GET', '/api/commands/:id', `/api/commands/${marked.id}`);
   failCommand(w.store, opened.command.id, 'Gmail answered 503.');
   await app.record('command-retry', 'CommandOut', 'POST', '/api/commands/:id/retry', `/api/commands/${opened.command.id}/retry`);
+  // A failed trash moved back instead.
+  const stuck = await app.send('POST', '/api/mail/messages/3/trash');
+  failCommand(w.store, stuck.body.id, 'Gmail answered 503.');
+  await app.record('command-move-back', 'CommandOut', 'POST', '/api/commands/:id/move-back', `/api/commands/${stuck.body.id}/move-back`);
 
   // A task done, so the agenda has a change waiting too.
   await app.send('POST', '/api/items/8/complete', {done: true});
@@ -163,8 +177,22 @@ async function recordAll(w: World) {
   // The lists, with those changes in them.
   await app.record('mail-inbox', 'InboxOut', 'GET', '/api/mail/inbox', '/api/mail/inbox');
   await app.record('mail-counts', 'MailCountsOut', 'GET', '/api/mail/counts', '/api/mail/counts');
+  // The one list's days in pages of 20 of the seed's 32 emails: the first ends partway through a
+  // day with a real cursor, and the page from that cursor ends the list.
+  const all = await app.record('mail-all', 'AllOut', 'GET', '/api/mail/all', '/api/mail/all?limit=20') as {next_before: string};
+  await app.record('mail-all-before', 'AllOut', 'GET', '/api/mail/all', `/api/mail/all?limit=20&before=${encodeURIComponent(all.next_before)}`);
   await app.record('items', 'ItemsOut', 'GET', '/api/items', '/api/items?from=2026-10-01&to=2026-11-01');
-  await app.record('search', 'SearchOut', 'POST', '/api/search', '/api/search', {text: 'northwind interview'});
+  // The phone's agenda: today and the next 7 days.
+  await app.record('items-agenda', 'ItemsOut', 'GET', '/api/items', '/api/items?from=2026-10-07&to=2026-10-15');
+  // An item's detail, as a link opens it: an event with a place and a guest, and a task.
+  await app.record('item', 'ItemOut', 'GET', '/api/items/:id', '/api/items/3');
+  await app.record('item-task', 'ItemOut', 'GET', '/api/items/:id', '/api/items/9');
+  const found = await app.record('search', 'SearchOut', 'POST', '/api/search', '/api/search', {text: 'northwind interview'}) as SearchOut;
+  await app.record('search-opened', '(no body)', 'POST', '/api/search/opened', '/api/search/opened', {search_id: found.search_id, message_id: found.results[0]!.id, position: 0});
+  await app.record('calendar-search', 'CalendarSearchOut', 'POST', '/api/calendar/search', '/api/calendar/search', {text: 'dinner sam'});
+  // A link to an email or item the server no longer has.
+  await app.record('error-message-not-found', 'ApiError', 'GET', '/api/mail/messages/:id', '/api/mail/messages/9999');
+  await app.record('error-item-not-found', 'ApiError', 'GET', '/api/items/:id', '/api/items/9999');
 
   // Unpairing, and what every request gets after it.
   await app.record('device-unpair', '(no body)', 'DELETE', '/api/device', '/api/device');

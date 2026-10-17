@@ -3,6 +3,16 @@
     "gmail",
     "icloud"
   ],
+  "CALENDAR_MATCH_FIELDS": [
+    "calendar",
+    "date",
+    "title",
+    "place",
+    "address",
+    "attendees",
+    "project",
+    "labels"
+  ],
   "CALENDAR_PROVIDERS": [
     "google",
     "todoist"

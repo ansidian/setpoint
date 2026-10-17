@@ -1,0 +1,322 @@
+{
+  "days": [
+    {
+      "date": "2026-10-05",
+      "rows": [
+        {
+          "id": 21,
+          "account_id": 2,
+          "from_name": "Sam Lee",
+          "from_address": "sam.lee@example.com",
+          "organisation": null,
+          "via": null,
+          "subject": "Dinner Friday?",
+          "summary": "Blue Door at 7?",
+          "received_at": "2026-10-05T19:40:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "people",
+          "type": null,
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        },
+        {
+          "id": 22,
+          "account_id": 2,
+          "from_name": "Office of the Registrar",
+          "from_address": "registrar@contosou.example",
+          "organisation": "Contoso University",
+          "via": null,
+          "subject": "Final exam schedule · CS 101",
+          "summary": "Fall 2026 finals, rooms and times",
+          "received_at": "2026-10-05T17:05:00.000Z",
+          "unread": false,
+          "lane": "attention",
+          "kind": "updates",
+          "type": null,
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        },
+        {
+          "id": 23,
+          "account_id": 2,
+          "from_name": "Margie's Travel",
+          "from_address": "trips@margiestravel.example",
+          "organisation": "Margie's Travel",
+          "via": null,
+          "subject": "Fall getaways from $199",
+          "summary": "Three nights, flights included",
+          "received_at": "2026-10-05T15:40:00.000Z",
+          "unread": true,
+          "lane": "noise",
+          "kind": null,
+          "type": "newsletter",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-10-04",
+      "rows": [
+        {
+          "id": 24,
+          "account_id": 1,
+          "from_name": "Wingtip Toys",
+          "from_address": "auto-confirm@wingtiptoys.example",
+          "organisation": "Wingtip Toys",
+          "via": null,
+          "subject": "Ordered: USB-C hub",
+          "summary": "Arriving Wed, Oct 7",
+          "received_at": "2026-10-04T22:47:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "deliveries",
+          "type": "confirmation",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-10-01",
+      "rows": [
+        {
+          "id": 25,
+          "account_id": 4,
+          "from_name": "Northwind Recruiting",
+          "from_address": "no-reply@northwind.example",
+          "organisation": "Northwind Talent",
+          "via": "Greenhouse",
+          "subject": "Thanks for applying",
+          "summary": "Software Engineer I",
+          "received_at": "2026-10-01T18:26:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "career",
+          "type": "confirmation",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        },
+        {
+          "id": 26,
+          "account_id": 2,
+          "from_name": "Parkside Apartments",
+          "from_address": "office@parksideapts.example",
+          "organisation": "Parkside Apartments",
+          "via": null,
+          "subject": "October rent received",
+          "summary": "We received $2,060 for Unit 4B",
+          "received_at": "2026-10-01T16:00:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "money",
+          "type": "receipt",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-09-30",
+      "rows": [
+        {
+          "id": 27,
+          "account_id": 2,
+          "from_name": "Dana Whitfield",
+          "from_address": "dana.whitfield@parksideapts.example",
+          "organisation": "Parkside Apartments",
+          "via": null,
+          "subject": "Lease renewal terms",
+          "summary": "Renewal offer for the lease ending Nov 30 · sign by Oct 31",
+          "received_at": "2026-09-30T21:15:00.000Z",
+          "unread": true,
+          "lane": "fyi",
+          "kind": "people",
+          "type": "deadline",
+          "protected": false,
+          "pinned": true,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 1,
+          "command": {
+            "id": 2,
+            "target": "message",
+            "target_id": 27,
+            "kind": "mark_unread",
+            "state": "failed",
+            "provider": "gmail",
+            "provider_message": "Gmail answered 503.",
+            "can_retry": true,
+            "can_move_back": true,
+            "previous": null,
+            "created_at": "2026-10-07T16:12:00.000Z",
+            "settled_at": "2026-10-07T16:12:00.000Z"
+          }
+        },
+        {
+          "id": 28,
+          "account_id": 5,
+          "from_name": "Apple",
+          "from_address": "noreply@icloud.example",
+          "organisation": "Apple",
+          "via": null,
+          "subject": "Your iCloud storage is almost full",
+          "summary": null,
+          "received_at": "2026-09-30T15:03:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "updates",
+          "type": "alert",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-09-28",
+      "rows": [
+        {
+          "id": 29,
+          "account_id": 2,
+          "from_name": "DMV",
+          "from_address": "notices@dmv.example",
+          "organisation": "DMV",
+          "via": null,
+          "subject": "Car registration renewal notice",
+          "summary": "Renewal notice for your vehicle · online or by mail",
+          "received_at": "2026-09-28T17:00:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "updates",
+          "type": "reminder",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-08-22",
+      "rows": [
+        {
+          "id": 30,
+          "account_id": 2,
+          "from_name": "Contoso Insurance",
+          "from_address": "policies@contosoinsurance.example",
+          "organisation": "Contoso Insurance",
+          "via": null,
+          "subject": "Your renters policy renewal is coming up",
+          "summary": "Renews automatically on Sep 15",
+          "received_at": "2026-08-22T17:12:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "updates",
+          "type": "reminder",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-14",
+      "rows": [
+        {
+          "id": 31,
+          "account_id": 4,
+          "from_name": "Northwind Recruiting",
+          "from_address": "no-reply@northwind.example",
+          "organisation": "Northwind Talent",
+          "via": "Greenhouse",
+          "subject": "Update on your application",
+          "summary": null,
+          "received_at": "2026-03-14T22:22:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "career",
+          "type": "rejection",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-03",
+      "rows": [
+        {
+          "id": 32,
+          "account_id": 4,
+          "from_name": "Northwind Recruiting",
+          "from_address": "no-reply@northwind.example",
+          "organisation": "Northwind Talent",
+          "via": "Greenhouse",
+          "subject": "Your application for Data Engineer Intern",
+          "summary": null,
+          "received_at": "2026-03-03T17:41:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "career",
+          "type": "rejection",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    }
+  ],
+  "next_before": null
+}

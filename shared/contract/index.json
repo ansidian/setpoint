@@ -147,6 +147,36 @@
       "file": null
     },
     {
+      "name": "mail-body-app-show",
+      "type": "HTML page",
+      "method": "GET",
+      "route": "/api/mail/messages/:id/body?frame=app&images=show",
+      "path": "/api/mail/messages/8/body?frame=app&images=show",
+      "status": 200,
+      "content_type": "text/html",
+      "file": null
+    },
+    {
+      "name": "mail-body-app-plain",
+      "type": "ApiError",
+      "method": "GET",
+      "route": "/api/mail/messages/:id/body?frame=app",
+      "path": "/api/mail/messages/27/body?frame=app",
+      "status": 404,
+      "content_type": "application/json",
+      "file": "responses/mail-body-app-plain.json"
+    },
+    {
+      "name": "mail-attachment",
+      "type": "file bytes",
+      "method": "GET",
+      "route": "/api/mail/messages/:id/attachments/:attachment",
+      "path": "/api/mail/messages/27/attachments/1",
+      "status": 200,
+      "content_type": "application/pdf",
+      "file": null
+    },
+    {
       "name": "mail-open",
       "type": "MessageOut",
       "method": "POST",
@@ -312,6 +342,19 @@
       ]
     },
     {
+      "name": "command-move-back",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/commands/:id/move-back",
+      "path": "/api/commands/6/move-back",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/command-move-back.json",
+      "unseen": [
+        "previous: always null"
+      ]
+    },
+    {
       "name": "mail-inbox",
       "type": "InboxOut",
       "method": "GET",
@@ -334,6 +377,37 @@
       "status": 200,
       "content_type": "application/json",
       "file": "responses/mail-counts.json"
+    },
+    {
+      "name": "mail-all",
+      "type": "AllOut",
+      "method": "GET",
+      "route": "/api/mail/all",
+      "path": "/api/mail/all?limit=20",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-all.json",
+      "unseen": [
+        "days[].rows[].command.provider_message: always null",
+        "days[].rows[].command.previous: always null",
+        "days[].rows[].command.settled_at: always null"
+      ]
+    },
+    {
+      "name": "mail-all-before",
+      "type": "AllOut",
+      "method": "GET",
+      "route": "/api/mail/all",
+      "path": "/api/mail/all?limit=20&before=2026-10-05T23%3A18%3A00.000Z%7C20",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-all-before.json",
+      "unseen": [
+        "days[].rows[].fact: always null",
+        "days[].rows[].code: always null",
+        "days[].rows[].command.previous: always null",
+        "next_before: always null"
+      ]
     },
     {
       "name": "items",
@@ -359,6 +433,86 @@
       ]
     },
     {
+      "name": "items-agenda",
+      "type": "ItemsOut",
+      "method": "GET",
+      "route": "/api/items",
+      "path": "/api/items?from=2026-10-07&to=2026-10-15",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/items-agenda.json",
+      "unseen": [
+        "items[].start_date: always null",
+        "items[].end_date: always null",
+        "items[].due_at: always null",
+        "items[].command.provider_message: always null",
+        "items[].command.previous: always null",
+        "items[].command.settled_at: always null",
+        "items[].due_string: always null",
+        "items[].time_to_leave: always null",
+        "items[].colour: always null",
+        "items[].labels: always empty",
+        "items[].repeat: always null"
+      ]
+    },
+    {
+      "name": "item",
+      "type": "ItemOut",
+      "method": "GET",
+      "route": "/api/items/:id",
+      "path": "/api/items/3",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item.json",
+      "unseen": [
+        "start_date: always null",
+        "end_date: always null",
+        "due_date: always null",
+        "due_at: always null",
+        "recurrence: always null",
+        "occurrence_start: always null",
+        "project: always null",
+        "done_at: always null",
+        "command: always null",
+        "due_string: always null",
+        "time_to_leave: always null",
+        "colour: always null",
+        "labels: always empty",
+        "repeat: always null"
+      ]
+    },
+    {
+      "name": "item-task",
+      "type": "ItemOut",
+      "method": "GET",
+      "route": "/api/items/:id",
+      "path": "/api/items/9",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-task.json",
+      "unseen": [
+        "starts_at: always null",
+        "ends_at: always null",
+        "start_date: always null",
+        "end_date: always null",
+        "due_at: always null",
+        "time_zone: always null",
+        "recurrence: always null",
+        "occurrence_start: always null",
+        "place: always null",
+        "address: always null",
+        "attendees: always empty",
+        "reminders: always empty",
+        "done_at: always null",
+        "command: always null",
+        "due_string: always null",
+        "time_to_leave: always null",
+        "colour: always null",
+        "labels: always empty",
+        "repeat: always null"
+      ]
+    },
+    {
       "name": "search",
       "type": "SearchOut",
       "method": "POST",
@@ -380,6 +534,73 @@
         "next_offset: always null",
         "indexing: always null"
       ]
+    },
+    {
+      "name": "search-opened",
+      "type": "(no body)",
+      "method": "POST",
+      "route": "/api/search/opened",
+      "path": "/api/search/opened",
+      "request": {
+        "search_id": 1,
+        "message_id": 5,
+        "position": 0
+      },
+      "status": 204,
+      "content_type": null,
+      "file": null
+    },
+    {
+      "name": "calendar-search",
+      "type": "CalendarSearchOut",
+      "method": "POST",
+      "route": "/api/calendar/search",
+      "path": "/api/calendar/search",
+      "request": {
+        "text": "dinner sam"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/calendar-search.json",
+      "unseen": [
+        "chips: always empty",
+        "results[].item.start_date: always null",
+        "results[].item.end_date: always null",
+        "results[].item.due_date: always null",
+        "results[].item.due_at: always null",
+        "results[].item.recurrence: always null",
+        "results[].item.occurrence_start: always null",
+        "results[].item.project: always null",
+        "results[].item.done_at: always null",
+        "results[].item.command: always null",
+        "results[].item.due_string: always null",
+        "results[].item.time_to_leave: always null",
+        "results[].item.colour: always null",
+        "results[].item.labels: always empty",
+        "results[].item.repeat: always null",
+        "results[].rule: always null",
+        "next_offset: always null"
+      ]
+    },
+    {
+      "name": "error-message-not-found",
+      "type": "ApiError",
+      "method": "GET",
+      "route": "/api/mail/messages/:id",
+      "path": "/api/mail/messages/9999",
+      "status": 404,
+      "content_type": "application/json",
+      "file": "responses/error-message-not-found.json"
+    },
+    {
+      "name": "error-item-not-found",
+      "type": "ApiError",
+      "method": "GET",
+      "route": "/api/items/:id",
+      "path": "/api/items/9999",
+      "status": 404,
+      "content_type": "application/json",
+      "file": "responses/error-item-not-found.json"
     },
     {
       "name": "device-unpair",
