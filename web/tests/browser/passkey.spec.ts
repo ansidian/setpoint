@@ -74,6 +74,9 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
     await page.locator('.settings .set-label', {hasText: 'Confirm it'}).waitFor();
     assert.equal(await page.getByRole('button', {name: 'Make new codes'}).isDisabled(), true);
+    // Add iPhone too: it mints a token that never idles out (#250).
+    const addIphone = page.locator('.settings .set-label').getByRole('button', {name: 'Add iPhone'});
+    assert.equal(await addIphone.isDisabled(), true);
     await page.locator('.settings input[name="password"]').fill('not it');
     await page.keyboard.press('Enter');
     await page.locator('.settings .line.failed', {hasText: 'Wrong password.'}).waitFor();
@@ -81,6 +84,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
     await page.keyboard.press('Enter');
     await page.locator('.settings .set-label', {hasText: 'Confirm it'}).waitFor({state: 'detached'});
     assert.equal(await page.getByRole('button', {name: 'Make new codes'}).isDisabled(), false);
+    assert.equal(await addIphone.isDisabled(), false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -245,3 +245,17 @@
 .settings .amount { color: var(--ink); font-size: 12.5px; width: 92px; text-align: right; flex: none; white-space: nowrap; }
 .settings .cost { color: var(--ink); font-weight: 500; flex: none; }
 .settings .s > .caution { color: var(--caution); }
+
+/* Security › iPhones (#250): the pairing panel, its QR on a tile that scans in either theme (dark
+   modules on the lightest surface the theme has), the link in mono beside Copy, and its countdown,
+   in `caution` through its last minute as a code's is. */
+.settings .set-row.pairing { align-items: center; gap: 16px; padding-top: 14px; padding-bottom: 14px; }
+.settings .qr { width: 132px; height: 132px; flex: none; border-radius: var(--r-row); background: var(--ink); color: var(--onInk); }
+:root[data-theme="light"] .settings .qr { background: var(--cardOn); color: var(--ink); box-shadow: inset 0 0 0 1px var(--edge); }
+.settings .qr.expired { opacity: .25; }
+.settings .pairing .lines { gap: 6px; min-width: 0; }
+.settings .pair-link { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.settings .pair-link code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink2); user-select: all; -webkit-user-select: all; }
+.settings .pairing .s.soon { color: var(--caution); }
+.settings .pairing .again { color: var(--ink2); }
+.settings .pairing .again:hover, .settings .pairing .again:focus-visible { color: var(--ink); }

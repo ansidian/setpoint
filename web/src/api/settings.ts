@@ -2,7 +2,7 @@
 // routes). Each change shows its answer at once and refreshes what else it touches; secrets are
 // write-only, so only whether one is set ever comes back.
 import type {
-  AccountOut, AuthMode, GmailAuthorizeOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleOut, SecretName,
+  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleOut, SecretName,
   SecurityOut, Settings, SettingsPatch, TodoistConnectOut, TrustedDomainOut,
 } from '@setpoint/shared';
 import {ACCOUNTS_PATH} from './mail.ts';
@@ -205,6 +205,22 @@ export async function addPasskey(label: string): Promise<PasskeyOut[]> {
 export async function deletePasskey(id: number): Promise<void> {
   try {
     await sendJson<void>('DELETE', `/security/passkeys/${id}`);
+  } finally {
+    afterSecurityChange();
+  }
+}
+
+// ---- Paired iPhones (SV-84): Add iPhone needs the recent password; Cancel and Revoke don't ----
+
+/** A one-time pairing code for the QR, five minutes, replacing any earlier one. */
+export const startPairing = () => sendJson<PairingOut>('POST', '/security/pairing');
+
+/** Cancel: the code shown stops working. */
+export const cancelPairing = () => sendJson<void>('DELETE', '/security/pairing');
+
+export async function revokeDevice(id: number): Promise<void> {
+  try {
+    await sendJson<void>('DELETE', `/security/devices/${id}`);
   } finally {
     afterSecurityChange();
   }

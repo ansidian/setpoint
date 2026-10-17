@@ -347,6 +347,28 @@ export const haToken = sqliteTable('ha_token', {
   createdAt: text('created_at').notNull(),
 }, table => [check('ha_token_singleton', sql`${table.id} = 1`)]);
 
+/**
+ * The code Settings › Security's Add iPhone shows (in its QR and its setpoint://pair link), as a
+ * hash: one at a time, five minutes, spent by the iPhone that exchanges it for a device token.
+ */
+export const pairingCodes = sqliteTable('pairing_codes', {
+  hash: text('hash').primaryKey(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+});
+
+/**
+ * A paired iPhone: only its bearer token's SHA-256 is kept. It has no idle timeout and outlives
+ * security changes; it ends when revoked (the row deleted), or at recovery.
+ */
+export const devices = sqliteTable('devices', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  hash: text('hash').notNull().unique(),
+  name: text('name').notNull(),
+  createdAt: text('created_at').notNull(),
+  lastUsedAt: text('last_used_at'),
+});
+
 // ---- Settings and secrets ----
 
 /** One row per settings section (`@setpoint/shared` settingsSchema); missing ones take the defaults. */

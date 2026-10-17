@@ -1,7 +1,7 @@
 // Settings' row pattern (DESIGN.md › Settings): a page's head, sections with their uppercase label,
 // `sub` groups of rows 52 px or more, 34 × 20 switches, selects, steppers and small menus. Every
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -206,7 +206,9 @@ export function useAttempt() {
       setBusy(false);
     }
   }
-  return {line, busy, attempt, clear: () => setLine(null)};
+  // Stable, for an effect's answer to say what happened ("Paired iPhone 17 Pro").
+  const say = useCallback((text: string) => setLine({text}), []);
+  return {line, busy, attempt, clear: () => setLine(null), say};
 }
 
 const TITLES = [150, 186, 132, 210, 168, 120];

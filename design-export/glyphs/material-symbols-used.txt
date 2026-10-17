@@ -110,3 +110,4 @@ passkey
 expand_less
 visibility_off
 right_panel_open
+smartphone

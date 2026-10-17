@@ -7,11 +7,11 @@ import {serveStatic} from '@hono/node-server/serve-static';
 import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
-  itemUpdateInput, markAllReadInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
+  itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchInput, searchOpenedInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
 } from '@setpoint/shared';
 import type {
-  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
+  ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
   TodoistConnectOut,
 } from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -35,6 +35,8 @@ import {alfredStep, askAlfred, conversation} from '../alfred/ask.ts';
 import type {AlfredOptions} from '../alfred/ask.ts';
 import {proposeFromMessage} from '../alfred/proposals.ts';
 import {haTokenMatches} from '../auth/haToken.ts';
+import {bearerToken, findDevice, issuePairingCode, listDevices, pairDevice, revokeDevice, withdrawPairingCode} from '../auth/devices.ts';
+import type {Device} from '../auth/devices.ts';
 import {createSession, endSession, findSession, hasRecentPassword, markPasswordGiven} from '../auth/sessions.ts';
 import type {Session} from '../auth/sessions.ts';
 import {commandPresenter, activeCommands, getCommand, moveBackCommand, retryCommand} from '../commands/index.ts';
@@ -78,7 +80,9 @@ import {newsApi} from './news.ts';
 import type {NewsApiOptions} from './news.ts';
 import {triageApi} from './triage.ts';
 
-type Env = {Variables: {session: Session; secret: string}};
+// A request is signed in by the browser's session cookie or a paired iPhone's bearer token, never
+// both; `alive` says whether it still is, for the live stream's checks.
+type Env = {Variables: {session: Session | null; device: Device | null; alive: () => boolean}};
 
 /**
  * Connecting mail accounts (Settings › Accounts), from the providers: Gmail's OAuth consent and
@@ -257,6 +261,14 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({recovery_codes: codes} satisfies RecoveryCodesOut);
   });
 
+  // The iPhone app's side of pairing (SV-84): the code from Settings › Security's QR for a device
+  // token. The code is the proof, and the app sends no Origin, so there is no origin check; a wrong
+  // code spends no password attempt, since it's 256 random bits and lives five minutes.
+  app.post('/api/auth/pair', async c => {
+    const input = parse(pairInput, await body(c));
+    return c.json(pairDevice(store, input.code, input.name) satisfies PairOut, 201);
+  });
+
   app.post('/api/auth/sign-out', c => {
     ownPage(c);
     const secret = readCookie(c, cookies.session);
@@ -361,40 +373,78 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json(haStatus(store, origin(c)) satisfies HaStatusOut);
   });
 
-  // ---- Everything else needs the session ----
+  // ---- Everything else needs the session, or a paired iPhone's token ----
 
   app.use('/api/*', async (c: Context<Env>, next: Next) => {
+    if (c.req.header('authorization') !== undefined) {
+      const token = bearerToken(c.req.header('authorization'));
+      const device = token ? findDevice(store, token) : null;
+      if (!token || !device) {
+        c.header('WWW-Authenticate', 'Bearer realm="setpoint"');
+        return c.json(errorBody('unauthorized', 'This iPhone isn\'t paired with Setpoint any more.'), 401);
+      }
+      // No origin check: a browser sends no bearer token by itself, so another page can't ride on it.
+      c.set('session', null);
+      c.set('device', device);
+      c.set('alive', () => findDevice(store, token, false) !== null);
+      return next();
+    }
     const secret = readCookie(c, cookies.session);
     const session = secret ? findSession(store, secret) : null;
     if (!secret || !session) return c.json(errorBody('unauthorized', 'Sign in to Setpoint.'), 401);
     if (!['GET', 'HEAD'].includes(c.req.method)) ownPage(c);
     if (session.renewed) setSessionCookie(c, cookies, secret);
     c.set('session', session);
-    c.set('secret', secret);
+    c.set('device', null);
+    c.set('alive', () => findSession(store, secret, false) !== null);
     await next();
   });
 
   app.get('/api/me', c => {
     const session = c.get('session');
-    return c.json({method: session.method, time_zone: store.timeZone, now: isoNow(store), recent_password: hasRecentPassword(store, session)} satisfies MeOut);
+    return c.json({
+      method: session?.method ?? 'device', time_zone: store.timeZone, now: isoNow(store), recent_password: session ? hasRecentPassword(store, session) : false,
+    } satisfies MeOut);
+  });
+
+  // The app's Unpair: its own token stops working.
+  app.delete('/api/device', c => {
+    const device = c.get('device');
+    if (!device) throw forbidden('Only a paired iPhone unpairs itself here; a browser revokes one in Settings › Security.', 'device_only');
+    revokeDevice(store, device.id);
+    return c.body(null, 204);
   });
 
   // ---- Settings › Security ----
 
+  /** Settings › Security is the browser's: a paired iPhone's token can't read or change it. */
+  const browserSession = (c: Context<Env>) => {
+    const session = c.get('session');
+    if (!session) throw forbidden('Security settings are changed from a browser.', 'browser_only');
+    return session;
+  };
+  // Before any route's own work, so a device spends no password attempt either.
+  const browserOnly = async (c: Context<Env>, next: Next) => {
+    browserSession(c);
+    await next();
+  };
+  app.use('/api/security', browserOnly);
+  app.use('/api/security/*', browserOnly);
   /** Security changes need the password in the last 10 minutes, and a new session afterwards. */
   const recentPassword = (c: Context<Env>) => {
-    const session = c.get('session');
+    const session = browserSession(c);
     if (!hasRecentPassword(store, session)) throw forbidden('Confirm your password first.', 'password_required');
     return session;
   };
   const afterChange = (c: Context<Env>, generation: number | null, passwordAt: string | null) => {
     if (generation === null) throw conflict('security_changed', 'Security settings changed; sign in again.');
-    const secret = createSession(store, {generation, method: c.get('session').method, passwordAt});
+    const secret = createSession(store, {generation, method: browserSession(c).method, passwordAt});
     if (!secret) throw conflict('security_changed', 'Security settings changed; sign in again.');
     setSessionCookie(c, cookies, secret);
   };
   const security = (c: Context<Env>): SecurityOut => ({
-    auth_mode: requireOwner(store).authMode, passkeys: listPasskeys(store), recovery: recoveryStatus(store), recent_password: hasRecentPassword(store, c.get('session')),
+    auth_mode: requireOwner(store).authMode, passkeys: listPasskeys(store), devices: listDevices(store), recovery: recoveryStatus(store),
+    recent_password: hasRecentPassword(store, browserSession(c)),
   });
 
   app.get('/api/security', c => c.json(security(c)));
@@ -402,7 +452,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const input = parse(confirmPasswordInput, await body(c));
     reservePasswordAttempt(store);
     if (!await passwordMatches(requireOwner(store), input.password)) throw unauthorized('Wrong password.', 'wrong_password');
-    markPasswordGiven(store, c.get('session').id);
+    markPasswordGiven(store, browserSession(c).id);
     return c.json({...security(c), recent_password: true});
   });
   app.put('/api/security/password', async c => {
@@ -436,6 +486,23 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.delete('/api/security/passkeys/:id', c => {
     const session = recentPassword(c);
     afterChange(c, deletePasskey(store, session.securityGeneration, id(c.req.param('id'))), session.passwordAt);
+    return c.body(null, 204);
+  });
+  // Add iPhone mints a token that never idles out, so it needs the recent password; withdrawing the
+  // code and Revoke only take access away, so they don't (D276). None of them is a security
+  // transition: sessions carry on.
+  app.post('/api/security/pairing', c => {
+    recentPassword(c);
+    return c.json(issuePairingCode(store, origin(c)) satisfies PairingOut, 201);
+  });
+  app.delete('/api/security/pairing', c => {
+    browserSession(c);
+    withdrawPairingCode(store);
+    return c.body(null, 204);
+  });
+  app.delete('/api/security/devices/:id', c => {
+    browserSession(c);
+    revokeDevice(store, id(c.req.param('id')));
     return c.body(null, 204);
   });
 
@@ -702,14 +769,15 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // Server-Sent Events of LiveEvents: `ready` starts each connection with the id to resume from;
   // `mail`, `items`, `health` and `news` name what changed; `resync` means refetch everything; a comment
-  // and a `ping` every 25 s keep it open. It ends once the session stops working or the server stops.
+  // and a `ping` every 25 s keep it open. It ends once the session or the iPhone's token stops working,
+  // or the server stops.
   let streams = 0;
   app.get('/api/events', c => {
     const feed = store.live;
     if (!feed) throw new SetpointError('unavailable', 'Live updates are off in this Setpoint.', 503);
     if (feed.closed) throw new SetpointError('unavailable', 'Setpoint is stopping.', 503);
     if (streams >= MAX_STREAMS) throw new SetpointError('too_many_streams', `Setpoint keeps at most ${MAX_STREAMS} live streams open.`, 503);
-    const secret = c.get('secret');
+    const alive = c.get('alive');
     const lastId = c.req.header('last-event-id') ?? c.req.query('last_event_id');
     c.header('X-Accel-Buffering', 'no');
     return streamSSE(c, async stream => {
@@ -731,7 +799,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
       else for (const event of missed) send(toMessage(event));
       send({event: 'ready', id: feed.lastId, data: JSON.stringify({last_id: feed.lastId} satisfies ReadyOut), retry: 3000});
       const timer = setInterval(() => {
-        if (!findSession(store, secret, false)) return finish();
+        if (!alive()) return finish();
         send(': keep-alive\n\n');
         send({event: 'ping', data: '{}'});
       }, keepAliveMs);

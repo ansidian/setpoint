@@ -1,7 +1,8 @@
 // A Setpoint to try things in, in one step: builds the web app into data/try/web (not web/dist,
 // which may be stale, and which a browser run in this checkout may be serving), seeds data/try
 // with BRIEF.md's sample the first time, starts the dev server on its own port and claims it with
-// a test password, then prints how to sign in (SV-39).
+// a test password, then prints how to sign in (SV-39) and a link that pairs the iPhone app with it
+// (SV-84).
 //
 //   npm run try                     http://localhost:7450, data/try
 //   npm run try -- --reset          seeds data/try afresh
@@ -77,5 +78,15 @@ function announce() {
 Setpoint is at ${base}, with the sample's data (its clock is the seed's, ${path.relative(ROOT, dataDir)}).
 Sign in with the password "${TRY_PASSWORD}". From a page's console (an agent's browser pane):
   await fetch('/api/auth/sign-in', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: '${TRY_PASSWORD}'})}); location.reload();
-`);
+${pairingLink()}`);
+}
+
+/** A one-time link pairing the iPhone app (in the Simulator, which reaches this Mac's localhost). */
+function pairingLink(): string {
+  const issued = spawnSync(process.execPath, ['src/cli.ts', 'pair-link'], {cwd: SERVER, env, encoding: 'utf8'});
+  const link = issued.stdout.match(/^setpoint:\/\/pair\?\S+$/m)?.[0];
+  if (issued.status !== 0 || !link) return `Couldn't make a pairing link: ${issued.stderr.trim() || 'no link'}\n`;
+  return `Pair the iPhone app (once; a new link: SETPOINT_DATA_DIR=${path.relative(ROOT, dataDir)} SETPOINT_PORT=${port} npm run cli -- pair-link):
+  xcrun simctl openurl booted '${link}'
+`;
 }

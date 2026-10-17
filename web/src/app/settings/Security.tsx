@@ -1,15 +1,19 @@
 // Settings › Security (not drawn; DESIGN.md › Settings' row pattern): the password, how sign-in
-// works (a password or a passkey, or both), passkeys and recovery codes (new ones shown once); Sign
-// out is the nav's foot. Changes need the password confirmed in the last 10 minutes, so the page
-// asks for it first.
-import type {AuthMode, SecurityOut} from '@setpoint/shared';
+// works (a password or a passkey, or both), passkeys, paired iPhones (#250) and recovery codes (new
+// ones shown once); Sign out is the nav's foot. Changes need the password confirmed in the last 10
+// minutes, so the page asks for it first; revoking an iPhone doesn't, since it only takes access away.
+import type {AuthMode, DeviceOut, PairingOut, SecurityOut} from '@setpoint/shared';
 import {MIN_PASSWORD_LENGTH} from '@setpoint/shared';
-import {useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {encode} from 'uqr';
 import {timeZone} from '../../api/auth.ts';
-import {useResource} from '../../api/client.ts';
-import {addPasskey, changePassword, confirmPassword, deletePasskey, regenerateRecoveryCodes, SECURITY_PATH, setAuthMode} from '../../api/settings.ts';
+import {getCached, refresh, useResource} from '../../api/client.ts';
+import {
+  addPasskey, cancelPairing, changePassword, confirmPassword, deletePasskey, regenerateRecoveryCodes, revokeDevice, SECURITY_PATH, setAuthMode, startPairing,
+} from '../../api/settings.ts';
 import {readerTime} from '../../logic/format.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {CodeCopy, useCountdown} from '../Code.tsx';
 import {useNow} from '../clock.ts';
 import {escapeCancels, Line, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
@@ -97,6 +101,8 @@ export function SecurityPage() {
         </div>}
       </Section>
 
+      <Iphones security={security} locked={locked} change={change} when={when} />
+
       <Section label="Recovery codes">
         {!security ? <SkeletonRows count={1} /> : <div className="set-group">
           <Row title="Recovery codes" sub={security.recovery.generated_at ? `Made ${when(security.recovery.generated_at)} · each works once` : 'Each works once'}>
@@ -134,5 +140,97 @@ function ConfirmPassword() {
       </form>
       <Line text={send.line?.text ?? null} tone={send.line?.tone} />
     </Section>
+  );
+}
+
+// How often the page asks whether the phone has paired while the QR shows.
+const PAIRED_POLL_MS = 2000;
+
+/**
+ * Paired iPhones (#250, D276): + Add iPhone opens the QR inside the group, with its link to copy and
+ * how long it lasts; once the phone pairs, the panel closes and its row is there. A code doesn't
+ * outlive its panel: Cancel, or leaving the page, withdraws it.
+ */
+function Iphones({security, locked, change, when}: {
+  security: SecurityOut | undefined; locked: boolean; change: ReturnType<typeof useAttempt>; when: (at: string) => string;
+}) {
+  const [pairing, setPairing] = useState<{code: PairingOut; known: Set<number>} | null>(null);
+  const live = useRef(false);
+  const devices = security?.devices;
+  const {say} = change;
+
+  useEffect(() => {
+    live.current = pairing !== null;
+  }, [pairing]);
+  useEffect(() => () => {
+    if (live.current) void cancelPairing().catch(() => {});
+  }, []);
+  // Until a device the list didn't have when the code was made comes back.
+  useEffect(() => {
+    if (!pairing) return;
+    const timer = window.setInterval(() => void refresh(SECURITY_PATH).then(() => {
+      const paired = getCached<SecurityOut>(SECURITY_PATH)?.devices.find(device => !pairing.known.has(device.id));
+      if (!paired) return;
+      setPairing(null);
+      say(`Paired ${paired.name}`);
+    }), PAIRED_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [pairing, say]);
+
+  const add = () => void change.attempt(startPairing).then(code => code && setPairing({code, known: new Set(devices?.map(device => device.id))}));
+  const cancel = () => {
+    setPairing(null);
+    void change.attempt(cancelPairing);
+  };
+
+  return (
+    <Section label="iPhones" right={<button className="btn quiet sm" type="button" disabled={locked || pairing !== null} onClick={add}><Icon name="add" size={17} />Add iPhone</button>}>
+      {!devices && !pairing ? <SkeletonRows count={1} /> : <div className="set-group">
+        {pairing && <PairingPanel code={pairing.code} onCancel={cancel} onAgain={add} />}
+        {devices?.map((device: DeviceOut) => (
+          <Row key={device.id} title={device.name} sub={`Paired ${when(device.paired_at)}${device.last_used_at ? ` · last used ${when(device.last_used_at)}` : ''}`}>
+            <button className="btn quiet sm" type="button" onClick={() => void change.attempt(() => revokeDevice(device.id), () => `Revoked ${device.name}`)}>Revoke</button>
+          </Row>
+        ))}
+        {devices && !devices.length && !pairing && (
+          <div className="set-row one">
+            <span className="set-empty-icon"><Icon name="smartphone" size={20} /></span>
+            <span className="s set-empty">None yet · <button type="button" disabled={locked} onClick={add}>Add iPhone</button></span>
+          </div>
+        )}
+      </div>}
+    </Section>
+  );
+}
+
+/** The QR for the iPhone's camera, the same link to copy (the Simulator opens it), and its countdown. */
+function PairingPanel({code, onCancel, onAgain}: {code: PairingOut; onCancel: () => void; onAgain: () => void}) {
+  const countdown = useCountdown(code.expires_at);
+  return (
+    <div className="set-row pairing" onKeyDown={escapeCancels(onCancel)}>
+      <Qr value={code.link} label="Pairing QR code" expired={countdown.expired} />
+      <div className="lines grow">
+        <span className="t">Scan with Setpoint on your iPhone</span>
+        <span className="pair-link"><code className="topic" title={code.link}>{code.link}</code><CodeCopy value={code.link} /></span>
+        {countdown.expired
+          ? <span className="s">Expired · <button className="again" type="button" onClick={onAgain}>New code</button></span>
+          : <span className={countdown.soon ? 's soon' : 's'}>Works once · {countdown.text}</span>}
+      </div>
+      <button className="btn quiet sm" type="button" autoFocus onClick={onCancel}>Cancel</button>
+    </div>
+  );
+}
+
+/** A QR code as one SVG path, a module per unit with a four-module quiet zone, on its tile. */
+function Qr({value, label, expired}: {value: string; label: string; expired: boolean}) {
+  const {path, size} = useMemo(() => {
+    const {data, size} = encode(value, {ecc: 'M', border: 4});
+    const cells = data.flatMap((row, y) => row.flatMap((dark, x) => (dark ? [`M${x} ${y}h1v1h-1z`] : [])));
+    return {path: cells.join(''), size};
+  }, [value]);
+  return (
+    <svg className={expired ? 'qr expired' : 'qr'} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label} shapeRendering="crispEdges">
+      <path d={path} fill="currentColor" />
+    </svg>
   );
 }

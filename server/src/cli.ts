@@ -5,6 +5,9 @@
 //   npm run cli -- ha-token         a new bearer token for Home Assistant's GET /api/status/ha,
 //                                   replacing (revoking) any earlier one; shown once
 //   npm run cli -- ha-token --revoke   revoke Home Assistant's token
+//   npm run cli -- pair-link        a setpoint://pair link for the iPhone app, as Settings › Security's
+//                                   Add iPhone shows, for the server at SETPOINT_PUBLIC_URL (else
+//                                   localhost); works once, for five minutes, replacing any earlier one
 //   npm run cli -- import-v1 <file>          v1's export file, once: accounts, sign-in, keys, rules,
 //                                            trusted senders and pins (src/importV1.ts has the format)
 //   npm run cli -- import-v1-triage <file>   only v1's triage rules and lane corrections
@@ -18,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {loadConfig} from './config.ts';
 import {openDatabase} from './db/open.ts';
+import {issuePairingCode} from './auth/devices.ts';
 import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
@@ -35,6 +39,7 @@ const USAGE = `Usage:
   status          whether Setpoint is claimed, and each source's health
   ha-token        print a new token for Home Assistant's status endpoint, replacing any earlier one
   ha-token --revoke   revoke Home Assistant's token
+  pair-link       print a one-time link that pairs the iPhone app, as Settings › Security's Add iPhone does
   import-v1 <file>          import v1's export file (src/importV1.ts has the format); safe to run again
   import-v1-triage <file>   import only v1's triage rules and lane corrections (src/triage/importV1.ts)
   triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
@@ -45,7 +50,7 @@ function main(argv: string[]): number {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
     || (command === 'codes' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
-    || (['setup-token', 'status', 'triage-history'].includes(command ?? '') && rest.length === 0)
+    || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
     console.log(USAGE);
@@ -71,6 +76,12 @@ function main(argv: string[]): number {
       const {token} = issueHaToken(store);
       console.log(`Home Assistant token for ${config.databasePath}${replaced ? ' (the earlier one no longer works)' : ''}. It's shown once:\n\n${token}\n`);
       console.log('Send it as "Authorization: Bearer <token>" to GET /api/status/ha.');
+      return 0;
+    }
+    if (command === 'pair-link') {
+      const {link, expires_at: expiresAt} = issuePairingCode(store, config.publicUrl ?? `http://localhost:${config.port}`);
+      console.log(`Pairing link for ${config.databasePath}, valid once until ${expiresAt} (it replaces any earlier one):\n\n${link}\n`);
+      console.log(`In the Simulator: xcrun simctl openurl booted '${link}'`);
       return 0;
     }
     if (command === 'triage-history') {
