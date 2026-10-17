@@ -513,9 +513,9 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
   app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
   // The HTML body as its own page, for the reader's sandboxed frame: its own policy, not the app's
-  // (?images=show is the images bar's Show). Plain-text email has none.
+  // (?images=show is the images bar's Show; ?frame=app is the iPhone app's, with no script). Plain-text email has none.
   app.get('/api/mail/messages/:id/body', c => {
-    const page = messageBody(store, id(c.req.param('id')), c.req.query('images') === 'show');
+    const page = messageBody(store, id(c.req.param('id')), c.req.query('images') === 'show', c.req.query('frame') === 'app' ? 'app' : 'web');
     c.header('Content-Security-Policy', page.policy);
     c.header('X-Content-Type-Options', 'nosniff');
     c.header('Referrer-Policy', 'no-referrer');

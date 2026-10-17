@@ -6,6 +6,7 @@ import {and, eq} from 'drizzle-orm';
 import {mailSourceId} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {emailPage, emailPolicy, safeEmail} from '../domain/emailHtml.ts';
+import type {EmailFrame} from '../domain/emailHtml.ts';
 import {notFound} from '../errors.ts';
 import type {Store} from '../store.ts';
 import type {SyncEngine} from '../sync/engine.ts';
@@ -17,12 +18,15 @@ export interface BodyPage {
   load: boolean;
 }
 
-/** The body page, with images when the rule allows them or `show` asks (DESIGN.md › The reader › Images). */
-export function messageBody(store: Store, messageId: number, show: boolean): BodyPage {
+/**
+ * The body page, with images when the rule allows them or `show` asks (DESIGN.md › The reader › Images),
+ * for the web's frame or the iPhone app's, which runs no script.
+ */
+export function messageBody(store: Store, messageId: number, show: boolean, frame: EmailFrame = 'web'): BodyPage {
   const message = messageDetail(store, messageId);
   if (!message.body_html) throw notFound('That email has no HTML body.');
   const load = message.remote_content.load || show;
-  return {html: emailPage(safeEmail(message.body_html, load)), policy: emailPolicy(load), load};
+  return {html: emailPage(safeEmail(message.body_html, load), frame), policy: emailPolicy(load, frame), load};
 }
 
 /** Types the browser may show as themselves (the previews'); anything else downloads as bytes. */

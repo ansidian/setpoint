@@ -7,8 +7,9 @@
 // placeholders with their alt text (or the hidden-image glyph), as tall as their picture would be when
 // they say so and holding the email's shape when they don't; tracking pixels go, and remote
 // backgrounds go. Links open in a
-// new tab. The page ends with the reader's measuring script, the one script its policy lets run.
-// Pure: a string in, a page out.
+// new tab. The page ends with the reader's measuring script, the one script its policy lets run;
+// the iPhone app's frame (`app`) measures the page itself, so its page has no script and its policy
+// lets none run. Pure: a string in, a page out.
 import {createHash} from 'node:crypto';
 import render from 'dom-serializer';
 import {Element, Text} from 'domhandler';
@@ -153,21 +154,26 @@ export const MEASURE_SCRIPT = `(() => {
 
 const MEASURE_HASH = createHash('sha256').update(MEASURE_SCRIPT).digest('base64');
 
-/** The frame's whole page: the base style, the email's styles, its body, the measuring script. */
-export function emailPage(email: SafeEmail): string {
+/** Who frames the page: the web reader's sandboxed frame, or the iPhone app's web view, which runs no script. */
+export type EmailFrame = 'web' | 'app';
+
+/** The frame's whole page: the base style, the email's styles, its body, and in the web's frame the measuring script. */
+export function emailPage(email: SafeEmail, frame: EmailFrame = 'web'): string {
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer">'
     + `<style>${FRAME_STYLE}</style>${email.styles.map(style => `<style>${style}</style>`).join('')}</head>`
-    + `<body>${email.body}<script>${MEASURE_SCRIPT}</script></body></html>`;
+    + `<body>${email.body}${frame === 'web' ? `<script>${MEASURE_SCRIPT}</script>` : ''}</body></html>`;
 }
 
 /**
- * The page's own policy: nothing runs but the measuring script (by its hash), nothing loads but
- * inline styles and inline images, and remote images (https only) when they may load. `sandbox`
- * gives the page no origin of its own and holds even if the page is opened alone.
+ * The page's own policy: nothing runs but the measuring script (by its hash), and in the app's frame
+ * nothing at all; nothing loads but inline styles and inline images, and remote images (https only)
+ * when they may load. `sandbox` gives the page no origin of its own and holds even if the page is
+ * opened alone.
  */
-export function emailPolicy(loadImages: boolean): string {
+export function emailPolicy(loadImages: boolean, frame: EmailFrame = 'web'): string {
+  const web = frame === 'web';
   return [
-    "default-src 'none'", `script-src 'sha256-${MEASURE_HASH}'`, "style-src 'unsafe-inline'", `img-src data:${loadImages ? ' https:' : ''}`, 'font-src data:',
-    "form-action 'none'", "base-uri 'none'", "frame-ancestors 'self'", 'sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox',
+    "default-src 'none'", web ? `script-src 'sha256-${MEASURE_HASH}'` : "script-src 'none'", "style-src 'unsafe-inline'", `img-src data:${loadImages ? ' https:' : ''}`, 'font-src data:',
+    "form-action 'none'", "base-uri 'none'", "frame-ancestors 'self'", `sandbox${web ? ' allow-scripts' : ''} allow-popups allow-popups-to-escape-sandbox`,
   ].join('; ');
 }

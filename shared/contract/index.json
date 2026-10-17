@@ -137,6 +137,16 @@
       "file": null
     },
     {
+      "name": "mail-body-app",
+      "type": "HTML page",
+      "method": "GET",
+      "route": "/api/mail/messages/:id/body?frame=app",
+      "path": "/api/mail/messages/8/body?frame=app",
+      "status": 200,
+      "content_type": "text/html",
+      "file": null
+    },
+    {
       "name": "mail-open",
       "type": "MessageOut",
       "method": "POST",

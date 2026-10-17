@@ -91,4 +91,20 @@ describe('remote content', () => {
     expect(page.endsWith(`<p>Hi</p><script>${MEASURE_SCRIPT}</script></body></html>`)).toBe(true);
     expect(page.match(/<script/g)).toHaveLength(1);
   });
+
+  test.each([false, true])('the iPhone app\'s frame (images loading %s): no script, and a policy that lets none run', load => {
+    const page = emailPage(safeEmail('<p>Hi</p><script>steal()</script>', load), 'app');
+    expect(page).not.toContain('<script');
+    expect(page.endsWith('<p>Hi</p></body></html>')).toBe(true);
+    // The web's policy, with no script allowed and none in the sandbox.
+    const policy = emailPolicy(load, 'app');
+    expect(policy).toContain("script-src 'none';");
+    expect(policy).toMatch(/sandbox allow-popups allow-popups-to-escape-sandbox$/);
+    expect(policy).toBe(emailPolicy(load).replace(/script-src '[^']+'/, "script-src 'none'").replace(' allow-scripts', ''));
+  });
+
+  test('the app\'s page is the web\'s without its script', () => {
+    const email = safeEmail('<style>p { margin: 0; }</style><p>Hi</p><img src="https://cdn.example/a.png" alt="A">', false);
+    expect(emailPage(email, 'app')).toBe(emailPage(email).replace(`<script>${MEASURE_SCRIPT}</script>`, ''));
+  });
 });

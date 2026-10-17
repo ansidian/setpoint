@@ -41,6 +41,27 @@ describe('GET /api/mail/messages/:id/body', () => {
     expect(page.body.match(/<img src="https:\/\/cdn\.contosocoffee\.example\//g)).toHaveLength(7);
   });
 
+  test('the iPhone app\'s frame (?frame=app): the same page and placeholders, with no script and a policy that lets none run', async () => {
+    const {api, id} = await coffee();
+    const web = await api.send('GET', `/api/mail/messages/${id}/body`);
+    const app = await api.send('GET', `/api/mail/messages/${id}/body?frame=app`);
+    expect(app.status).toBe(200);
+    expect(web.body).toContain('<script>');
+    expect(app.body).not.toContain('<script');
+    expect(app.body).toBe(web.body.replace(/<script>[\s\S]*<\/script>/, ''));
+    expect(app.body.match(/data-hidden-image/g)).toHaveLength(7);
+    const policy = app.headers.get('content-security-policy')!;
+    expect(policy).toContain("script-src 'none';");
+    expect(policy).toContain('img-src data:;');
+    expect(policy).toContain('sandbox allow-popups allow-popups-to-escape-sandbox');
+    expect(policy).not.toContain('allow-scripts');
+    expect(app.headers.get('referrer-policy')).toBe('no-referrer');
+    const shown = await api.send('GET', `/api/mail/messages/${id}/body?frame=app&images=show`);
+    expect(shown.headers.get('content-security-policy')).toContain('img-src data: https:;');
+    expect(shown.body.match(/<img src="https:\/\/cdn\.contosocoffee\.example\//g)).toHaveLength(7);
+    expect(shown.body).not.toContain('<script');
+  });
+
   test('a trusted domain loads them without Show; so does an authenticated sender that isn\'t Noise', async () => {
     const {w, api, id} = await coffee();
     await api.send('POST', '/api/mail/trusted-domains', {body: {domain: 'contosocoffee.example'}});

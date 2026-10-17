@@ -123,6 +123,7 @@ async function recordAll(w: World) {
   await app.record('mail-message-security', 'MessageOut', 'GET', '/api/mail/messages/:id', '/api/mail/messages/2');
   await app.record('mail-message-html', 'MessageOut', 'GET', '/api/mail/messages/:id', '/api/mail/messages/8');
   await app.record('mail-body', 'HTML page', 'GET', '/api/mail/messages/:id/body', '/api/mail/messages/8/body');
+  await app.record('mail-body-app', 'HTML page', 'GET', '/api/mail/messages/:id/body?frame=app', '/api/mail/messages/8/body?frame=app');
 
   // The mail actions.
   const opened = await app.record('mail-open', 'MessageOut', 'POST', '/api/mail/messages/:id/open', '/api/mail/messages/5/open') as {command: {id: number}};
