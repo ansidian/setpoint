@@ -1,0 +1,20 @@
+[
+  {
+    "date": "2026-10-07",
+    "condition": "sun",
+    "high_f": 78,
+    "low_f": 61
+  },
+  {
+    "date": "2026-10-08",
+    "condition": "cloud",
+    "high_f": 72,
+    "low_f": 59
+  },
+  {
+    "date": "2026-10-13",
+    "condition": "rain",
+    "high_f": 64,
+    "low_f": 55
+  }
+]

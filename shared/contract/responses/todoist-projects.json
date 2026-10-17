@@ -1,0 +1,23 @@
+[
+  {
+    "id": "seed-project-1",
+    "name": "Inbox",
+    "inbox": true,
+    "colour": "charcoal",
+    "command": null
+  },
+  {
+    "id": "seed-project-2",
+    "name": "School",
+    "inbox": false,
+    "colour": "sky_blue",
+    "command": null
+  },
+  {
+    "id": "seed-project-3",
+    "name": "Home",
+    "inbox": false,
+    "colour": "orange",
+    "command": null
+  }
+]

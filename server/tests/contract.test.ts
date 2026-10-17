@@ -11,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 import {
   CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
   LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
-  SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, ACCOUNT_PROVIDERS,
+  SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
 import type {ApiError, HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
@@ -43,7 +43,8 @@ export type ContractUnionsCheck = [
 const ENUMS: Record<string, readonly string[]> = {
   ACCOUNT_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, HEALTH_STATES, HIGHLIGHT_FIELDS,
   INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_SECTIONS,
-  REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES,
+  REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES,
+  WEATHER_CONDITIONS,
 };
 
 interface Recorded {
@@ -117,6 +118,8 @@ async function recordAll(w: World) {
   await app.record('accounts', 'AccountOut[]', 'GET', '/api/accounts', '/api/accounts');
   await app.record('calendars', 'CalendarOut[]', 'GET', '/api/calendars', '/api/calendars');
   await app.record('sources', 'SourceOut[]', 'GET', '/api/sources', '/api/sources');
+  // A task ring takes its Todoist project's colour (D54).
+  await app.record('todoist-projects', 'TodoistProjectOut[]', 'GET', '/api/todoist/projects', '/api/todoist/projects');
 
   // The live stream, open while the changes below are made: they send its mail and items events.
   const stream = await browser.app.request('/api/events', {headers: {authorization: `Bearer ${token}`}});
@@ -188,6 +191,8 @@ async function recordAll(w: World) {
   await app.record('items', 'ItemsOut', 'GET', '/api/items', '/api/items?from=2026-10-01&to=2026-11-01');
   // The phone's agenda: today and the next 7 days.
   await app.record('items-agenda', 'ItemsOut', 'GET', '/api/items', '/api/items?from=2026-10-07&to=2026-10-15');
+  // Its day heads' forecasts: the seed has them on the 7th, the 8th and the 13th.
+  await app.record('weather-agenda', 'WeatherDayOut[]', 'GET', '/api/weather', '/api/weather?from=2026-10-07&to=2026-10-15');
   // An item's detail, as a link opens it: an event with a place and a guest, and a task.
   await app.record('item', 'ItemOut', 'GET', '/api/items/:id', '/api/items/3');
   await app.record('item-task', 'ItemOut', 'GET', '/api/items/:id', '/api/items/9');
