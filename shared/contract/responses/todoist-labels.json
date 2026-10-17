@@ -1,0 +1,14 @@
+[
+  {
+    "id": "seed-label-1",
+    "name": "errand"
+  },
+  {
+    "id": "seed-label-2",
+    "name": "school"
+  },
+  {
+    "id": "seed-label-3",
+    "name": "waiting"
+  }
+]

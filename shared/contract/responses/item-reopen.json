@@ -1,0 +1,14 @@
+{
+  "id": 23,
+  "target": "item",
+  "target_id": 10,
+  "kind": "item_reopen",
+  "state": "pending",
+  "provider": "todoist",
+  "provider_message": null,
+  "can_retry": false,
+  "can_move_back": false,
+  "previous": null,
+  "created_at": "2026-10-07T16:12:00.000Z",
+  "settled_at": null
+}

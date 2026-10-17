@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "invalid_input",
+    "message": "changes: Nothing to change",
+    "details": [
+      {
+        "path": "changes",
+        "message": "Nothing to change"
+      }
+    ]
+  }
+}

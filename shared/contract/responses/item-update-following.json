@@ -1,0 +1,22 @@
+{
+  "id": 18,
+  "target": "item",
+  "target_id": 1,
+  "kind": "item_update",
+  "state": "pending",
+  "provider": "google_calendar",
+  "provider_message": null,
+  "can_retry": false,
+  "can_move_back": false,
+  "previous": {
+    "all_day": false,
+    "starts_at": "2026-10-19T14:00:00.000Z",
+    "ends_at": "2026-10-19T15:00:00.000Z",
+    "start_date": null,
+    "end_date": null,
+    "due_date": null,
+    "due_at": null
+  },
+  "created_at": "2026-10-07T16:12:00.000Z",
+  "settled_at": null
+}

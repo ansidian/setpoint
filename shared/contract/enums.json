@@ -61,6 +61,17 @@
     "calendar",
     "project"
   ],
+  "EVENT_COLOURS": [
+    "ink2",
+    "cool",
+    "warm",
+    "comf",
+    "good",
+    "sun",
+    "alert",
+    "violet",
+    "cyan"
+  ],
   "HEALTH_STATES": [
     "healthy",
     "stale",
@@ -145,6 +156,11 @@
     "tech",
     "ai",
     "general"
+  ],
+  "RECURRING_SCOPES": [
+    "this",
+    "following",
+    "all"
   ],
   "REMOTE_CONTENT_REASONS": [
     "trusted",

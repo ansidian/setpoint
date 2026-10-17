@@ -654,6 +654,454 @@
       "file": "responses/error-item-not-found.json"
     },
     {
+      "name": "places",
+      "type": "PlaceSuggestionOut[]",
+      "method": "GET",
+      "route": "/api/places",
+      "path": "/api/places?query=blue%20door&session_token=0000000000000000",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/places.json"
+    },
+    {
+      "name": "places-recent",
+      "type": "RecentPlaceOut[]",
+      "method": "GET",
+      "route": "/api/places/recent",
+      "path": "/api/places/recent",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/places-recent.json"
+    },
+    {
+      "name": "todoist-labels",
+      "type": "TodoistLabelOut[]",
+      "method": "GET",
+      "route": "/api/todoist/labels",
+      "path": "/api/todoist/labels",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/todoist-labels.json"
+    },
+    {
+      "name": "settings",
+      "type": "Settings",
+      "method": "GET",
+      "route": "/api/settings",
+      "path": "/api/settings",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/settings.json",
+      "unseen": [
+        "notifications.ntfy_server: always null",
+        "calendar.home: always null",
+        "todoist.default_project: always null",
+        "ai.triage_model: always null",
+        "ai.triage_strong_model: always null",
+        "ai.alfred_model: always null",
+        "ai.history_model: always null"
+      ]
+    },
+    {
+      "name": "item-create-event",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "event",
+        "calendar_id": 1,
+        "title": "Coffee with Priya",
+        "all_day": false,
+        "starts_at": "2026-10-09T16:00:00.000Z",
+        "ends_at": "2026-10-09T17:00:00.000Z",
+        "time_zone": "America/Los_Angeles",
+        "place": "Blue Door Coffee",
+        "address": "77 Elm Ave, Glendale",
+        "reminders": [
+          10
+        ],
+        "leave_reminder": true,
+        "colour": "violet"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-event.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-all-day",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "event",
+        "calendar_id": 2,
+        "title": "Midterm week",
+        "all_day": true,
+        "start_date": "2026-10-19",
+        "end_date": "2026-10-24"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-all-day.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-task",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "task",
+        "calendar_id": 4,
+        "title": "Submit lab report",
+        "due_date": "2026-10-09",
+        "due_at": "2026-10-09T23:00:00.000Z",
+        "project": "School",
+        "labels": [
+          "school"
+        ]
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-task.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-task-undated",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "task",
+        "calendar_id": 4,
+        "title": "Call the bank"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-task-undated.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-task-new-project",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "task",
+        "calendar_id": 4,
+        "title": "Buy seeds",
+        "due_date": "2026-10-10",
+        "project": "Garden",
+        "create_project": true
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-task-new-project.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-task-unknown-project",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "task",
+        "calendar_id": 4,
+        "title": "Fix the gate",
+        "project": "Garden shed"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-task-unknown-project.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-create-task-repeating",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "task",
+        "calendar_id": 4,
+        "title": "Water the plants",
+        "due_date": "2026-10-12",
+        "project": "Home",
+        "labels": [
+          "errand"
+        ],
+        "repeat": "every mon"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/item-create-task-repeating.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-update",
+      "type": "CommandOut",
+      "method": "PATCH",
+      "route": "/api/items/:id",
+      "path": "/api/items/2",
+      "request": {
+        "changes": {
+          "title": "Dentist, cleaning",
+          "reminders": [
+            30,
+            60
+          ],
+          "leave_reminder": false
+        }
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-update.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-update-this",
+      "type": "CommandOut",
+      "method": "PATCH",
+      "route": "/api/items/:id",
+      "path": "/api/items/1",
+      "request": {
+        "changes": {
+          "title": "Gym, legs"
+        },
+        "scope": "this",
+        "occurrence_start": "2026-10-09T14:00:00.000Z"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-update-this.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-update-following",
+      "type": "CommandOut",
+      "method": "PATCH",
+      "route": "/api/items/:id",
+      "path": "/api/items/1",
+      "request": {
+        "changes": {
+          "starts_at": "2026-10-19T15:00:00.000Z",
+          "ends_at": "2026-10-19T16:00:00.000Z"
+        },
+        "scope": "following",
+        "occurrence_start": "2026-10-19T14:00:00.000Z"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-update-following.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-update-all",
+      "type": "CommandOut",
+      "method": "PATCH",
+      "route": "/api/items/:id",
+      "path": "/api/items/1",
+      "request": {
+        "changes": {
+          "place": "Campus gym"
+        },
+        "scope": "all",
+        "occurrence_start": "2026-10-12T14:00:00.000Z"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-update-all.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-delete",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items/:id/delete",
+      "path": "/api/items/6/delete",
+      "request": {},
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-delete.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-delete-occurrence",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items/:id/delete",
+      "path": "/api/items/5/delete",
+      "request": {
+        "scope": "this",
+        "occurrence_start": "2026-10-14T01:00:00.000Z"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-delete-occurrence.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous.start_date: always null",
+        "previous.end_date: always null",
+        "previous.due_date: always null",
+        "previous.due_at: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-complete",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items/:id/complete",
+      "path": "/api/items/7/complete",
+      "request": {
+        "done": true
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-complete.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-reopen",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items/:id/complete",
+      "path": "/api/items/10/complete",
+      "request": {
+        "done": false
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-reopen.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "item-complete-occurrence",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/items/:id/complete",
+      "path": "/api/items/17/complete",
+      "request": {
+        "done": true,
+        "occurrence_date": "2026-10-12"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/item-complete-occurrence.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
+      "name": "error-item-when",
+      "type": "ApiError",
+      "method": "POST",
+      "route": "/api/items",
+      "path": "/api/items",
+      "request": {
+        "kind": "event",
+        "calendar_id": 1,
+        "title": "Lunch",
+        "starts_at": "2026-10-09T19:00:00.000Z"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "file": "responses/error-item-when.json"
+    },
+    {
+      "name": "error-item-nothing-to-change",
+      "type": "ApiError",
+      "method": "PATCH",
+      "route": "/api/items/:id",
+      "path": "/api/items/2",
+      "request": {
+        "changes": {}
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "file": "responses/error-item-nothing-to-change.json"
+    },
+    {
       "name": "device-unpair",
       "type": "(no body)",
       "method": "DELETE",

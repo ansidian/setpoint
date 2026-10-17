@@ -1,0 +1,17 @@
+[
+  {
+    "place_id": "dev-blue-door",
+    "name": "Blue Door",
+    "address": "2118 Sunset Blvd"
+  },
+  {
+    "place_id": "dev-blue-door-bistro",
+    "name": "Blue Door Bistro",
+    "address": "845 Example St, Los Angeles"
+  },
+  {
+    "place_id": "dev-blue-door-coffee",
+    "name": "Blue Door Coffee",
+    "address": "77 Elm Ave, Glendale"
+  }
+]

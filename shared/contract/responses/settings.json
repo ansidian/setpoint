@@ -1,0 +1,39 @@
+{
+  "mail": {
+    "code_expiry_minutes": 15
+  },
+  "reminders": {
+    "event_minutes_before": 10,
+    "task_time": "09:00"
+  },
+  "time_to_leave": {
+    "enabled": true,
+    "buffer_minutes": 5
+  },
+  "notifications": {
+    "ntfy_server": null,
+    "topics": {
+      "reminders": "setpoint-reminders",
+      "mail": "setpoint-mail"
+    },
+    "reminders": true,
+    "attention_mail": false,
+    "reconnect_alerts": true
+  },
+  "calendar": {
+    "weather": true,
+    "home": null
+  },
+  "todoist": {
+    "default_project": null
+  },
+  "ai": {
+    "triage_model": null,
+    "triage_strong_model": null,
+    "alfred_model": null,
+    "history_model": null
+  },
+  "news": {
+    "monthly_cap_usd": 40
+  }
+}

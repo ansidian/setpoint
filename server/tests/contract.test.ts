@@ -9,8 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
-  CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
-  LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
+  CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, EVENT_COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
+  LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
   SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
 import type {ApiError, HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
@@ -41,8 +41,8 @@ export type ContractUnionsCheck = [
 
 /** Every fixed set a pinned response or event carries. */
 const ENUMS: Record<string, readonly string[]> = {
-  ACCOUNT_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, HEALTH_STATES, HIGHLIGHT_FIELDS,
-  INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_SECTIONS,
+  ACCOUNT_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, EVENT_COLOURS, HEALTH_STATES,
+  HIGHLIGHT_FIELDS, INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_SECTIONS, RECURRING_SCOPES,
   REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES,
   WEATHER_CONDITIONS,
 };
@@ -203,6 +203,51 @@ async function recordAll(w: World) {
   await app.record('error-message-not-found', 'ApiError', 'GET', '/api/mail/messages/:id', '/api/mail/messages/9999');
   await app.record('error-item-not-found', 'ApiError', 'GET', '/api/items/:id', '/api/items/9999');
 
+  // SV-94: the editor, after the lists so they stay as the seed has them. Every request body below is
+  // one the server took, and the app tests its encoder against them. What the editor reads first: places
+  // (the seed's invented ones, never Google's), the places events have used, Todoist's labels and Settings
+  // (Time to Leave's switch and buffer, the default reminder).
+  await app.record('places', 'PlaceSuggestionOut[]', 'GET', '/api/places', '/api/places?query=blue%20door&session_token=0000000000000000');
+  await app.record('places-recent', 'RecentPlaceOut[]', 'GET', '/api/places/recent', '/api/places/recent');
+  await app.record('todoist-labels', 'TodoistLabelOut[]', 'GET', '/api/todoist/labels', '/api/todoist/labels');
+  await app.record('settings', 'Settings', 'GET', '/api/settings', '/api/settings');
+  // Creating: a timed event with a place, Time to Leave and its own colour; an all-day event; a task due
+  // at a time in a project with a label; a task with no date; a task in a new project; a repeating task.
+  await app.record('item-create-event', 'CommandOut', 'POST', '/api/items', '/api/items', {
+    kind: 'event', calendar_id: 1, title: 'Coffee with Priya', all_day: false, starts_at: '2026-10-09T16:00:00.000Z', ends_at: '2026-10-09T17:00:00.000Z',
+    time_zone: 'America/Los_Angeles', place: 'Blue Door Coffee', address: '77 Elm Ave, Glendale', reminders: [10], leave_reminder: true, colour: 'violet',
+  });
+  await app.record('item-create-all-day', 'CommandOut', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 2, title: 'Midterm week', all_day: true, start_date: '2026-10-19', end_date: '2026-10-24'});
+  await app.record('item-create-task', 'CommandOut', 'POST', '/api/items', '/api/items', {
+    kind: 'task', calendar_id: 4, title: 'Submit lab report', due_date: '2026-10-09', due_at: '2026-10-09T23:00:00.000Z', project: 'School', labels: ['school'],
+  });
+  await app.record('item-create-task-undated', 'CommandOut', 'POST', '/api/items', '/api/items', {kind: 'task', calendar_id: 4, title: 'Call the bank'});
+  await app.record('item-create-task-new-project', 'CommandOut', 'POST', '/api/items', '/api/items', {kind: 'task', calendar_id: 4, title: 'Buy seeds', due_date: '2026-10-10', project: 'Garden', create_project: true});
+  // The server takes a project Todoist doesn't have without create_project, and Todoist files the task in
+  // its Inbox: "No project named" is the web's own check, before it sends.
+  await app.record('item-create-task-unknown-project', 'CommandOut', 'POST', '/api/items', '/api/items', {kind: 'task', calendar_id: 4, title: 'Fix the gate', project: 'Garden shed'});
+  const repeating = await app.record('item-create-task-repeating', 'CommandOut', 'POST', '/api/items', '/api/items', {
+    kind: 'task', calendar_id: 4, title: 'Water the plants', due_date: '2026-10-12', project: 'Home', labels: ['errand'], repeat: 'every mon',
+  }) as {target_id: number};
+  // Editing: a few fields of one event, then Gym's occurrences with each scope.
+  await app.record('item-update', 'CommandOut', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {title: 'Dentist, cleaning', reminders: [30, 60], leave_reminder: false}});
+  await app.record('item-update-this', 'CommandOut', 'PATCH', '/api/items/:id', '/api/items/1', {changes: {title: 'Gym, legs'}, scope: 'this', occurrence_start: '2026-10-09T14:00:00.000Z'});
+  const following = await app.record('item-update-following', 'CommandOut', 'PATCH', '/api/items/:id', '/api/items/1', {
+    changes: {starts_at: '2026-10-19T15:00:00.000Z', ends_at: '2026-10-19T16:00:00.000Z'}, scope: 'following', occurrence_start: '2026-10-19T14:00:00.000Z',
+  }) as {id: number};
+  confirmCommand(w.store, following.id);
+  await app.record('item-update-all', 'CommandOut', 'PATCH', '/api/items/:id', '/api/items/1', {changes: {place: 'Campus gym'}, scope: 'all', occurrence_start: '2026-10-12T14:00:00.000Z'});
+  // Deleting: one event, and one occurrence of the CS 101 lecture.
+  await app.record('item-delete', 'CommandOut', 'POST', '/api/items/:id/delete', '/api/items/6/delete', {});
+  await app.record('item-delete-occurrence', 'CommandOut', 'POST', '/api/items/:id/delete', '/api/items/5/delete', {scope: 'this', occurrence_start: '2026-10-14T01:00:00.000Z'});
+  // Completing a task, reopening one the seed has done, and one occurrence of the repeating task.
+  await app.record('item-complete', 'CommandOut', 'POST', '/api/items/:id/complete', '/api/items/7/complete', {done: true});
+  await app.record('item-reopen', 'CommandOut', 'POST', '/api/items/:id/complete', '/api/items/10/complete', {done: false});
+  await app.record('item-complete-occurrence', 'CommandOut', 'POST', '/api/items/:id/complete', `/api/items/${repeating.target_id}/complete`, {done: true, occurrence_date: '2026-10-12'});
+  // What the editor is refused: an event without an end, and a change with nothing in it.
+  await app.record('error-item-when', 'ApiError', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 1, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z'});
+  await app.record('error-item-nothing-to-change', 'ApiError', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {}});
+
   // Unpairing, and what every request gets after it.
   await app.record('device-unpair', '(no body)', 'DELETE', '/api/device', '/api/device');
   await app.record('error-unauthorized', 'ApiError', 'GET', '/api/mail/inbox', '/api/mail/inbox');
@@ -235,7 +280,8 @@ const blind = (body: unknown) => {
 };
 
 function write({responses, events}: Awaited<ReturnType<typeof recordAll>>) {
-  fs.rmSync(DIR, {recursive: true, force: true});
+  // Only what this records: the folder holds other files the app copies in too (compose/, SV-95).
+  for (const owned of ['responses', 'events', 'index.json', 'enums.json']) fs.rmSync(fixture(owned), {recursive: true, force: true});
   const index: Index = {
     about: 'The API responses and live events the iPhone app reads, recorded from the seed at SEED_NOW by server/tests/contract.test.ts (npm run contract:record). Each file is the body as sent. npm test fails when the server stops answering in a way an app built against these can decode.',
     responses: responses.map(({body, ...entry}) => {
