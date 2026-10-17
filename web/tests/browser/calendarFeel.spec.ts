@@ -148,11 +148,14 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
   }
 });
 
-/** Records, from now on, the grid's scrollTop each time a disc of today's starts to pulse, and which. */
-async function recordPulses(page: Page): Promise<() => Promise<{where: string; scrollTop: number | null}[]>> {
-  await page.evaluate(() => {
-    const seen: {where: string; scrollTop: number | null}[] = [];
-    (window as unknown as {pulses: typeof seen}).pulses = seen;
+/**
+ * Records, from now on, each time a disc of today's starts to pulse: which, the grid's scrollTop, and
+ * its animation as the class goes on, before the pulse can end and take the class with it.
+ */
+async function recordPulses(page: Page): Promise<() => Promise<Pulse[]>> {
+  await rested(() => page.evaluate(() => {
+    const seen: Pulse[] = [];
+    (window as unknown as {pulses: Pulse[]}).pulses = seen;
     new MutationObserver(records => {
       records.forEach((record, at) => {
         const element = record.target as HTMLElement;
@@ -161,12 +164,14 @@ async function recordPulses(page: Page): Promise<() => Promise<{where: string; s
         const after = next ? next.oldValue : element.getAttribute('class');
         if (!after?.split(' ').includes('pulse') || record.oldValue?.split(' ').includes('pulse')) return;
         const where = element.closest('.mini') ? 'mini' : element.closest('.wk-dhead') ? 'week' : 'month';
-        seen.push({where, scrollTop: document.querySelector('.cal-scroll')?.scrollTop ?? null});
+        const style = getComputedStyle(element);
+        seen.push({where, scrollTop: document.querySelector('.cal-scroll')?.scrollTop ?? null, animation: `${style.animationName} ${style.animationDuration}`});
       });
     }).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true});
-  });
-  return () => page.evaluate(() => [...(window as unknown as {pulses: {where: string; scrollTop: number | null}[]}).pulses]);
+  }));
+  return () => page.evaluate(() => [...(window as unknown as {pulses: Pulse[]}).pulses]);
 }
+type Pulse = {where: string; scrollTop: number | null; animation: string};
 
 test('T always answers: today\'s disc on the grid and in the mini-month swells once over 260 ms as Today lands, and in the week\'s heads', async () => {
   const setpoint = await startSetpoint();
@@ -180,8 +185,8 @@ test('T always answers: today\'s disc on the grid and in the mini-month swells o
     let pulses = await recordPulses(page);
     await page.keyboard.press('t');
     await until('the grid\'s and the mini-month\'s discs pulse', async () => (await pulses()).map(pulse => pulse.where).sort().join(), where => where === 'mini,month');
-    // Read as it pulses: the pulse plays once and its class goes, so a rest would wait it out.
-    assert.deepEqual([await style(disc, 'animation-name'), await style(disc, 'animation-duration')], ['today-pulse', '0.26s']);
+    // Read as each pulse started: it plays once and its class goes, perhaps before a read from here.
+    assert.deepEqual((await pulses()).map(pulse => `${pulse.where} ${pulse.animation}`).sort(), ['mini today-pulse 0.26s', 'month today-pulse 0.26s']);
     await until('it plays once and lets go', () => disc.getAttribute('class'), classes => !classes?.split(' ').includes('pulse'));
 
     // From November, only once the glide has landed back on October.
