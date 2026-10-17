@@ -2609,3 +2609,22 @@ it changes what's on screen.
       out together, and the lists' answers wait until the last is in, so none comes back for a moment.
       Board audit: no board draws a selection and no approved screenshot changed, so it's unchanged; the
       selection's own is `selected-emails`.
+250. **Settings › Security pairs an iPhone and lists the paired ones** (Andy, 2026-10-16; darma SV-84
+    D276): the native iPhone app (D275) reaches Setpoint only over a private network, where passkeys
+    can't work, so a signed-in browser pairs it. Security isn't drawn; this follows its row pattern.
+    - **The group:** "iPhones", after Passkeys, with **+ Add iPhone** on its label as Add passkey has.
+      Each paired iPhone is a row: the name the app sent (its model, "iPhone 17 Pro"; "iPhone" if
+      none), "Paired 9:12 AM · last used 9:41 AM", and **Revoke**. Empty, it's the one-line empty
+      state, "None yet · Add iPhone" after a 20 px `smartphone` in `ink3` (#135).
+    - **Add iPhone opens a panel inside the group**, not a sheet, as Add passkey's form does: a 132 px
+      QR on its tile (dark modules on the theme's lightest surface, `ink` in Night and `cardOn` in
+      Light, so it scans in either), "Scan with Setpoint on your iPhone", the `setpoint://pair?…` link
+      in mono with **Copy** (the Simulator opens it with `xcrun simctl openurl`), and "Works once ·
+      Expires in 5 min", the code's countdown in a verification code's words and `caution` through its
+      last minute; then **Cancel**, or Esc. Expired, it says so with **New code**. Add iPhone rests
+      while the panel shows. Once the phone pairs, the panel closes by itself, its row is there and the
+      line under the page says "Paired iPhone 17 Pro". Cancel, or leaving the page, withdraws the code.
+    - **Add iPhone needs the password confirmed in the last 10 minutes**, as every change here does;
+      **Revoke doesn't**, since it only takes access away, and nothing here ends a session.
+    Board audit: no board draws Security and no approved screenshot with a board changed, so it's
+    unchanged; the panel's own is `settings-security-iphones`.

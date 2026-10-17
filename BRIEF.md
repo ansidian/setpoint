@@ -595,7 +595,7 @@ the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to 
 - **News** (after 2.0): the sources by section, each with its health. Read-only until the tuning
   round.
 - **Appearance:** System, Light or Night (per browser).
-- **Security:** password, passkeys, recovery codes, sign out.
+- **Security:** password, passkeys, paired iPhones (SV-84, the native app of D275), recovery codes, sign out.
 
 ## Layout
 
