@@ -160,7 +160,7 @@ const browserChecks = {
 };
 
 export default tseslint.config(
-  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/']},
+  {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/', 'shared/compose/compose.js']},
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

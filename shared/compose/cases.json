@@ -1,0 +1,3812 @@
+{
+  "about": "What shared/compose/compose.js (SetpointCompose) returns for each input, recorded by web/tests/composeBundle.test.ts (npm run compose:record) from web/src/logic/compose.ts. Today is the seed's Wed, Oct 7, 2026; the calendars are its Google calendars and the projects its Todoist projects. The iPhone app runs every case through its JavaScriptCore copy of the bundle and expects the same output.",
+  "cases": [
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dinner with Sam fri 7-9pm @Blue Door",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dinner with Sam",
+        "marks": [
+          {
+            "start": 16,
+            "end": 25,
+            "kind": "when"
+          },
+          {
+            "start": 26,
+            "end": 36,
+            "kind": "place"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1140,
+        "end": 1260,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dentist",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dentist",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Gym 7",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Gym 7",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dinner at 7",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dinner at 7",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Room 2026",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Room 2026",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Mayday drill",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Mayday drill",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "@",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "@",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "@x",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "@x",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "#1 priority",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "#1 priority",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch feb 30",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch feb 30",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 13/1",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch 13/1",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch today",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch tonight",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 13,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch tomorrow",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch tmr",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch tmrw",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch wed",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch friday",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch tues",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-13",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch this fri",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch next fri",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-16",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch on sat",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-10",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch oct 12",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch October 12th",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 18,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 12 oct",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch dec 9, 2026",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 17,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-12-09",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch oct 1",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": "2027-10-01",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch jan 5",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": "2027-01-05",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 10/12",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 10/12/26",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 3/4/2027",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": "2027-03-04",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch 2026-10-30",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 16,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-30",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 8,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7:30 PM",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1170,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call at 7pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 19:00",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7:30",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 450,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call noon",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 720,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call midnight",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 13,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 0,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 12am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 0,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 9a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 7,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 540,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7-9pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": 1260,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7pm - 9pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": 1260,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 7 to 9pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 13,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1140,
+        "end": 1260,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call from 9 to 5pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 18,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 540,
+        "end": 1020,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 11-1pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 660,
+        "end": 780,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 9am-5",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 540,
+        "end": 1020,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 9:00-10:30",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 540,
+        "end": 630,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 13-15",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 780,
+        "end": 900,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 11pm-1am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 13,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1380,
+        "end": 1500,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call at 7",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call at 7",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Gym sat 9am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Gym",
+        "marks": [
+          {
+            "start": 4,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-10",
+        "start": 540,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dinner tmr at 7:30pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dinner",
+        "marks": [
+          {
+            "start": 7,
+            "end": 20,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": 1170,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice daily",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 14,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=DAILY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice weekly",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=WE",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice monthly",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 16,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=MONTHLY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice yearly",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=YEARLY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice annually",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 17,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=YEARLY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice biweekly",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 17,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=WE",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every day",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 18,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=DAILY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every week",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=WE",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every month",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 20,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=MONTHLY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every year",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=YEARLY",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every 2 weeks",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 22,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=WE",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every 3 days",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 21,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=DAILY;INTERVAL=3",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every other mon",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 24,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every mon, wed and fri",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 31,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every tue and thu",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 26,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=TU,TH",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every weekday",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 22,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every weekend",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 22,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-10",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=SA,SU",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice first mon of every month",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 33,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=MONTHLY;BYDAY=1MO",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice last fri of every month",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 32,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=MONTHLY;BYDAY=-1FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every mon 7am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 22,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": 420,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=MO",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice weekly fri 6pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 23,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1080,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Practice every weekday at 9:30am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Practice",
+        "marks": [
+          {
+            "start": 9,
+            "end": 32,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": 570,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Coffee @Blue Door at 3pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Coffee",
+        "marks": [
+          {
+            "start": 7,
+            "end": 17,
+            "kind": "place"
+          },
+          {
+            "start": 18,
+            "end": 24,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 900,
+        "end": null,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Coffee @Blue Door tomorrow 3pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Coffee",
+        "marks": [
+          {
+            "start": 7,
+            "end": 17,
+            "kind": "place"
+          },
+          {
+            "start": 18,
+            "end": 30,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": 900,
+        "end": null,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Coffee @Blue Door, then errands",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Coffee then errands",
+        "marks": [
+          {
+            "start": 7,
+            "end": 18,
+            "kind": "place"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call @https://zoom.us/j/1. at 9am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call .",
+        "marks": [
+          {
+            "start": 5,
+            "end": 25,
+            "kind": "place"
+          },
+          {
+            "start": 27,
+            "end": 33,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 540,
+        "end": null,
+        "place": "https://zoom.us/j/1",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lunch @www.example.com fri",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lunch",
+        "marks": [
+          {
+            "start": 6,
+            "end": 22,
+            "kind": "place"
+          },
+          {
+            "start": 23,
+            "end": 26,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": "www.example.com",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Coffee @Blue Door Cafe and friends",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "pickedPlace": "Blue Door Cafe"
+      },
+      "output": {
+        "title": "Coffee and friends",
+        "marks": [
+          {
+            "start": 7,
+            "end": 22,
+            "kind": "place"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": "Blue Door Cafe",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dinner @Blue Door, Seattle fri 7pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "pickedPlace": "Blue Door, Seattle"
+      },
+      "output": {
+        "title": "Dinner",
+        "marks": [
+          {
+            "start": 7,
+            "end": 26,
+            "kind": "place"
+          },
+          {
+            "start": 27,
+            "end": 34,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1140,
+        "end": null,
+        "place": "Blue Door, Seattle",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Coffee @Blue Door Cafe tmr",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "pickedPlace": "Blue Door"
+      },
+      "output": {
+        "title": "Coffee Cafe",
+        "marks": [
+          {
+            "start": 7,
+            "end": 17,
+            "kind": "place"
+          },
+          {
+            "start": 23,
+            "end": 26,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lecture #classes tmr 6pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lecture",
+        "marks": [
+          {
+            "start": 8,
+            "end": 16,
+            "kind": "calendar"
+          },
+          {
+            "start": 17,
+            "end": 24,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": 1080,
+        "end": null,
+        "place": null,
+        "calendar": "Classes",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lecture #cl 6pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lecture",
+        "marks": [
+          {
+            "start": 8,
+            "end": 11,
+            "kind": "calendar"
+          },
+          {
+            "start": 12,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1080,
+        "end": null,
+        "place": null,
+        "calendar": "Classes",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Interview #Jobs fri @Contoso",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Interview",
+        "marks": [
+          {
+            "start": 10,
+            "end": 15,
+            "kind": "calendar"
+          },
+          {
+            "start": 16,
+            "end": 19,
+            "kind": "when"
+          },
+          {
+            "start": 20,
+            "end": 28,
+            "kind": "place"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": "Contoso",
+        "calendar": "Jobs",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Review #1 priority",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Review #1 priority",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Seminar #Classes, fri",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "pickedHash": "Classes"
+      },
+      "output": {
+        "title": "Seminar",
+        "marks": [
+          {
+            "start": 8,
+            "end": 17,
+            "kind": "calendar"
+          },
+          {
+            "start": 18,
+            "end": 21,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": "Classes",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Pay rent #home tmr",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Pay rent",
+        "marks": [
+          {
+            "start": 9,
+            "end": 14,
+            "kind": "project"
+          },
+          {
+            "start": 15,
+            "end": 18,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "Home"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Lab report #School fri 5pm",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Lab report",
+        "marks": [
+          {
+            "start": 11,
+            "end": 18,
+            "kind": "project"
+          },
+          {
+            "start": 19,
+            "end": 26,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1020,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "School"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Buy milk #Groceries",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Buy milk",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "project"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "Groceries"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Buy milk #Groceries tomorrow",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Buy milk",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "project"
+          },
+          {
+            "start": 20,
+            "end": 28,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "Groceries"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Plan #Side Project fri",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "pickedHash": "Side Project"
+      },
+      "output": {
+        "title": "Plan",
+        "marks": [
+          {
+            "start": 5,
+            "end": 18,
+            "kind": "project"
+          },
+          {
+            "start": 19,
+            "end": 22,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "Side Project"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call mom #home, tmr",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call mom",
+        "marks": [
+          {
+            "start": 9,
+            "end": 15,
+            "kind": "project"
+          },
+          {
+            "start": 16,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-08",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "Home"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Water plants every mon #Home",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Water plants",
+        "marks": [
+          {
+            "start": 13,
+            "end": 22,
+            "kind": "when"
+          },
+          {
+            "start": 23,
+            "end": 28,
+            "kind": "project"
+          }
+        ],
+        "date": "2026-10-12",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=MO",
+        "project": "Home"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "#1 priority report",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "",
+        "marks": [
+          {
+            "start": 0,
+            "end": 18,
+            "kind": "project"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": "1 priority report"
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Interview cal Jobs fri 10am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Interview",
+        "marks": [
+          {
+            "start": 10,
+            "end": 18,
+            "kind": "calendar"
+          },
+          {
+            "start": 19,
+            "end": 27,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 600,
+        "end": null,
+        "place": null,
+        "calendar": "Jobs",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Study cal Classes",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Study",
+        "marks": [
+          {
+            "start": 6,
+            "end": 17,
+            "kind": "calendar"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": "Classes",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "cal Personal Dentist oct 20 2:30pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dentist",
+        "marks": [
+          {
+            "start": 0,
+            "end": 12,
+            "kind": "calendar"
+          },
+          {
+            "start": 21,
+            "end": 34,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-20",
+        "start": 870,
+        "end": null,
+        "place": null,
+        "calendar": "Personal",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Study cal classes #Jobs",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Study #Jobs",
+        "marks": [
+          {
+            "start": 6,
+            "end": 17,
+            "kind": "calendar"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": "Classes",
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Dinner with Sam fri 7-9pm @Blue Door cal Personal every week",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Dinner with Sam",
+        "marks": [
+          {
+            "start": 16,
+            "end": 25,
+            "kind": "when"
+          },
+          {
+            "start": 26,
+            "end": 36,
+            "kind": "place"
+          },
+          {
+            "start": 37,
+            "end": 49,
+            "kind": "calendar"
+          },
+          {
+            "start": 50,
+            "end": 60,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1140,
+        "end": 1260,
+        "place": "Blue Door",
+        "calendar": "Personal",
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=FR",
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "🎉 Party fri 8pm @Blue Door",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "🎉 Party",
+        "marks": [
+          {
+            "start": 9,
+            "end": 16,
+            "kind": "when"
+          },
+          {
+            "start": 17,
+            "end": 27,
+            "kind": "place"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1200,
+        "end": null,
+        "place": "Blue Door",
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Pay rent on fri at noon for",
+        "kind": "task",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Pay rent",
+        "marks": [
+          {
+            "start": 9,
+            "end": 23,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 720,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "Lunch #",
+        "trigger": "#"
+      },
+      "output": {
+        "start": 6,
+        "query": ""
+      }
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "Lunch @",
+        "trigger": "@"
+      },
+      "output": {
+        "start": 6,
+        "query": ""
+      }
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "Lunch @B",
+        "trigger": "@"
+      },
+      "output": {
+        "start": 6,
+        "query": "B"
+      }
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "Lunch @Bl",
+        "trigger": "@"
+      },
+      "output": null
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "Lunch#",
+        "trigger": "#"
+      },
+      "output": null
+    },
+    {
+      "fn": "bareToken",
+      "input": {
+        "text": "#",
+        "trigger": "#"
+      },
+      "output": {
+        "start": 0,
+        "query": ""
+      }
+    },
+    {
+      "fn": "completeToken",
+      "input": {
+        "text": "Coffee @blu fri",
+        "start": 7,
+        "end": 11,
+        "name": "Blue Door"
+      },
+      "output": {
+        "text": "Coffee @Blue Door fri",
+        "caret": 18
+      }
+    },
+    {
+      "fn": "completeToken",
+      "input": {
+        "text": "Coffee @blu, fri",
+        "start": 7,
+        "end": 12,
+        "name": "Blue Door"
+      },
+      "output": {
+        "text": "Coffee @Blue Door, fri",
+        "caret": 19
+      }
+    },
+    {
+      "fn": "completeToken",
+      "input": {
+        "text": "Pay rent #ho",
+        "start": 9,
+        "end": 12,
+        "name": "Home"
+      },
+      "output": {
+        "text": "Pay rent #Home ",
+        "caret": 15
+      }
+    },
+    {
+      "fn": "lineWithTitle",
+      "input": {
+        "text": "Coffee fri",
+        "marks": [
+          {
+            "start": 7,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "title": "Coffee with Ana"
+      },
+      "output": "Coffee with Ana fri"
+    },
+    {
+      "fn": "lineWithTitle",
+      "input": {
+        "text": "Coffee fri 3pm @Blue Door",
+        "marks": [
+          {
+            "start": 7,
+            "end": 14,
+            "kind": "when"
+          },
+          {
+            "start": 15,
+            "end": 25,
+            "kind": "place"
+          }
+        ],
+        "title": ""
+      },
+      "output": "fri 3pm @Blue Door"
+    },
+    {
+      "fn": "lineWithTitle",
+      "input": {
+        "text": "fri",
+        "marks": [
+          {
+            "start": 0,
+            "end": 3,
+            "kind": "when"
+          }
+        ],
+        "title": "Coffee "
+      },
+      "output": "Coffee fri"
+    }
+  ]
+}
