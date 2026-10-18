@@ -58,7 +58,7 @@ const adapters = new Adapters({
 // B3: triage runs as jobs on the same engine; with no AI key, new mail waits in Unsorted.
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
 const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl, openai: config.devAiUrl} : AI_ENDPOINTS;
-const triage = new TriageWorker({store, endpoints: aiEndpoints});
+const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier});
 // And, once backfills are done and a key is set, the one-time model pass over history (D20).
 const history = new HistoryExtractor({store, endpoints: aiEndpoints});
 // News: its sources read on the same engine through their adapters (N2), each new article's page

@@ -1,15 +1,19 @@
 // Triage as it runs (B3): durable jobs on the engine, Unsorted while it's down and re-sorted once it
 // recovers, the health line, the ledger, backfilled history, once per email, and the learning loop
-// and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, precision, AI).
+// and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, precision, AI), and
+// new Attention and FYI mail sent by ntfy once sorted.
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import {openMessage, setDone} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
+import {Notifier} from '../src/notify/index.ts';
 import {inbox} from '../src/queries/mail.ts';
 import {setSecret} from '../src/secrets/store.ts';
+import {updateSettings} from '../src/settings.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
 import {answerPrompt, currentPrompts, deleteRule, listRules, precision} from '../src/triage/learning.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
+import {fakeNtfy} from './fakeNtfy.ts';
 import type {FakeAnswer} from './fakeModels.ts';
 import {signedIn} from './helpers.ts';
 import {triageWorld} from './triageWorld.ts';
@@ -159,6 +163,61 @@ describe('once per email, history, the ledger', () => {
       {model: 'claude-sonnet-5-5', input: 3000, output: 100, cached: 2000, cost: 2000 + 400 + 1000, purpose: 'triage'},
       {model: 'claude-opus-5-5', input: 1000, output: 100, cached: 0, cost: 4000 + 2000, purpose: 'triage'},
     ]);
+  });
+});
+
+describe('new mail by ntfy', () => {
+  async function notifying() {
+    const fake = await fakeModels();
+    const ntfy = await fakeNtfy();
+    const world = triageWorld(fake.endpoints, {notifier: store => new Notifier(store, {publicUrl: 'https://setpoint.example.com'})});
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    updateSettings(world.store, {notifications: {ntfy_server: ntfy.url, attention_mail: true, fyi_mail: true}});
+    const deliver = (changes: Parameters<typeof world.fetched>[0] = {}, backfill = false) =>
+      upsertMessages(world.store, world.accountId('Jobs'), [world.fetched(changes)], {backfill}).inserted[0]!;
+    const log = () => world.store.db.select().from(t.notifications).all();
+    return {fake, ntfy, world, deliver, log};
+  }
+
+  test('FYI mail, once sorted, goes to setpoint-mail from its sender with its subject, opening it, once', async () => {
+    const {fake, ntfy, world, deliver} = await notifying();
+    fake.answer(() => decision());
+    const id = deliver({fromName: 'Northwind Engineering', subject: 'Northwind Engineering Digest · October'});
+    await world.drain();
+    expect(world.message(id).lane).toBe('fyi');
+    expect(ntfy.published.map(message => message.body)).toEqual([{
+      topic: 'setpoint-mail', title: 'Northwind Engineering', message: 'Northwind Engineering Digest · October', click: `https://setpoint.example.com/inbox/${id}`, tags: ['email'], priority: 3,
+    }]);
+    world.worker.configurationChanged();
+    await world.drain();
+    expect(ntfy.published).toHaveLength(1);
+  });
+
+  test('each lane follows its own switch, and Noise never notifies', async () => {
+    const {fake, ntfy, world, deliver, log} = await notifying();
+    updateSettings(world.store, {notifications: {fyi_mail: false}});
+    const sorted = [];
+    for (const lane of ['attention', 'fyi', 'noise'] as const) {
+      fake.answer(() => decision({lane}));
+      const id = deliver({subject: lane});
+      await world.drain();
+      sorted.push(world.message(id).lane);
+    }
+    expect(sorted).toEqual(['attention', 'fyi', 'noise']);
+    expect(log().map(row => [row.body, row.state, row.error])).toEqual([['attention', 'sent', null], ['fyi', 'skipped', 'FYI mail notifications are off.']]);
+    expect(ntfy.published.map(message => message.body.message)).toEqual(['attention']);
+  });
+
+  test('history, mail read before it was sorted, and mail that waited over an hour for triage stay quiet', async () => {
+    const {fake, ntfy, world, deliver, log} = await notifying();
+    fake.answer(() => decision());
+    deliver({subject: 'From the backfill'}, true);
+    deliver({subject: 'Read in Gmail', unread: false});
+    deliver({subject: 'An hour and a minute old', receivedAt: new Date(world.store.now().getTime() - 61 * 60_000).toISOString()});
+    deliver({subject: 'Just in', receivedAt: world.store.now().toISOString()});
+    await world.drain();
+    expect(log().map(row => row.body)).toEqual(['Just in']);
+    expect(ntfy.published).toHaveLength(1);
   });
 });
 

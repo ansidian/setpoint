@@ -38,6 +38,17 @@ describe('notify()', () => {
     expect(ntfy.published.map(message => message.body.topic)).toEqual(['setpoint-mail']);
   });
 
+  test('FYI mail has its own switch on setpoint-mail, apart from Attention mail\'s', async () => {
+    const {ntfy, notifier, w} = await setUp();
+    const fyi = {kind: 'mail' as const, topic: 'mail' as const, lane: 'fyi' as const, title: 'Contoso', body: 'Your order has shipped', link: {to: 'message' as const, id: 3}};
+    updateSettings(w.store, {notifications: {attention_mail: true}});
+    expect(await notifier.notify(fyi)).toMatchObject({state: 'skipped', error: 'FYI mail notifications are off.'});
+    updateSettings(w.store, {notifications: {attention_mail: false, fyi_mail: true}});
+    expect(await notifier.notify(fyi)).toMatchObject({state: 'sent', click: `${PUBLIC}/inbox/3`});
+    expect(await notifier.notify({...fyi, lane: 'attention'})).toMatchObject({state: 'skipped', error: 'Attention mail notifications are off.'});
+    expect(ntfy.published.map(message => [message.body.topic, message.body.tags])).toEqual([['setpoint-mail', ['email']]]);
+  });
+
   test('the setpoint-reminders switch off keeps reminders, Time to Leave and reconnect alerts quiet, but not Send test', async () => {
     const {ntfy, notifier, w} = await setUp();
     updateSettings(w.store, {notifications: {reminders: false}});

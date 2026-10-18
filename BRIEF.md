@@ -534,7 +534,9 @@ about ntfy.
 - Topics by kind (`setpoint-reminders`, `setpoint-mail`), so iOS groups them and each can be muted.
 - Each notification's click opens the exact event, task or email in Setpoint.
 - Sent: event and task reminders, Time to Leave, a source that needs reconnecting (once).
-  Attention mail stays quiet for now: turn it on once attention precision is trusted (see Health).
+  New mail notifies by lane, each with its own switch on `setpoint-mail`: Attention mail stays
+  quiet for now (turn it on once attention precision is trusted, see Health), and FYI mail is off
+  until turned on (SV-96). Noise and history never notify.
 
 ### The mail chip in mantel
 

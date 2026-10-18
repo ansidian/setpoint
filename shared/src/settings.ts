@@ -42,6 +42,8 @@ export const settingsSchema = z.strictObject({
     reminders: z.boolean(),
     // Attention mail stays quiet until attention precision is trusted (BRIEF.md › ntfy).
     attention_mail: z.boolean(),
+    // FYI mail on the same topic, off until turned on (SV-96).
+    fyi_mail: z.boolean(),
     // One notification per source that needs reconnecting.
     reconnect_alerts: z.boolean(),
   }),
@@ -80,6 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
     topics: {reminders: 'setpoint-reminders', mail: 'setpoint-mail'},
     reminders: true,
     attention_mail: false,
+    fyi_mail: false,
     reconnect_alerts: true,
   },
   calendar: {weather: true, home: null},

@@ -3,6 +3,7 @@
 import {and, eq, inArray, lte} from 'drizzle-orm';
 import * as t from '../src/db/schema.ts';
 import {FIXTURES} from '../src/dev/fixtures/index.ts';
+import type {Notifier} from '../src/notify/index.ts';
 import type {AiEndpoints} from '../src/providers/ai/index.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import type {FetchedMessage} from '../src/sync/mailMirror.ts';
@@ -12,11 +13,11 @@ import {HistoryExtractor} from '../src/triage/history.ts';
 import {TriageWorker} from '../src/triage/worker.ts';
 import {world} from './helpers.ts';
 
-export function triageWorld(endpoints: AiEndpoints, {timeoutMs = 2000, fixtures = []}: {timeoutMs?: number; fixtures?: string[]} = {}) {
+export function triageWorld(endpoints: AiEndpoints, {timeoutMs = 2000, fixtures = [], notifier}: {timeoutMs?: number; fixtures?: string[]; notifier?: (store: ReturnType<typeof world>['store']) => Notifier} = {}) {
   const w = world({seed: true});
   // Board fixtures on the seed (new-digest: board 09's four digests cleared unopened, a real prompt's run).
   for (const name of fixtures) FIXTURES[name]!.apply({sqlite: w.store.sqlite, db: w.store.db});
-  const worker = new TriageWorker({store: w.store, endpoints, timeoutMs});
+  const worker = new TriageWorker({store: w.store, endpoints, timeoutMs, notifier: notifier?.(w.store)});
   const history = new HistoryExtractor({store: w.store, endpoints, timeoutMs});
   const engine = new SyncEngine({store: w.store, adapters: new Adapters(), workers: [worker, history]});
   const dueTriage = () => w.store.db.select({id: t.jobs.id}).from(t.jobs)

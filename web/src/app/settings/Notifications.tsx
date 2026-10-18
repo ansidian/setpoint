@@ -94,6 +94,9 @@ export function NotificationsPage() {
           <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail · Off for now'} mono>
             <Switch on={ntfy.attention_mail && !noServer} disabled={noServer} label={ntfy.topics.mail} onChange={on => change({notifications: {attention_mail: on}})} />
           </Row>
+          <Row title="FYI mail">
+            <Switch on={ntfy.fyi_mail && !noServer} disabled={noServer} label="FYI mail" onChange={on => change({notifications: {fyi_mail: on}})} />
+          </Row>
         </div>
         <Line text={test.line?.text ?? null} tone={test.line?.tone} />
       </Section>

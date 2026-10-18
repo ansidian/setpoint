@@ -831,7 +831,8 @@ section's label stays under the title (#132).
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
-  `setpoint-mail`: Attention mail · Off for now), **Reminder defaults** (Events 10 min before; Tasks
+  `setpoint-mail`: Attention mail · Off for now; then **FYI mail**, to the same topic, off,
+  [Decided while building](#decided-while-building) #252), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
   buffer; on for the events given it, #86) and **Alerts** (Reconnect alerts, once per source), every
   group labelled (#135).
@@ -2640,3 +2641,14 @@ it changes what's on screen.
     nothing else changes; phrases that leave no words keep the title. Board audit: board 14 draws the
     edit's Title with no phrase in it; it reads as before, its text a pixel higher, where board 13's
     line sets it (14 0.45%).
+252. **New FYI mail can notify too, on its own switch** (Andy, 2026-10-18, the row left to Claude;
+    darma SV-96): Settings › Notifications' ntfy group gets **FYI mail** after `setpoint-mail`'s row,
+    titled in words rather than mono since it's a lane, not a topic, with just a switch, off by
+    default as Attention mail is. It has no second line: right under `setpoint-mail` it reads as that
+    topic's second switch, and a whole-pixel row keeps the sticky labels below it on whole pixels,
+    where a fractional one put Reminder defaults' a pixel lower under the stress run.
+    Each email triage sorts into Attention or FYI as it arrives sends one notification: its sender
+    as the title, its subject as the message, opening the email. Noise, history, and mail already
+    read, Done, trashed or archived, or that waited over an hour for triage, send nothing. Board
+    audit: board 18b doesn't draw the row, so the groups under it sit 52 px lower than drawn (18b
+    2.16%); no other screenshot changed.

@@ -2,12 +2,14 @@
 // pipeline with the models Settings › AI chooses. Each model call is written to the AI usage ledger
 // with its tokens and cost, and to triage's health; a refusal fails the job by the one retry policy
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
-// models change, Unsorted mail is queued again.
+// models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
+// sorted, each lane as Settings › Notifications allows (SV-96).
 import type {AiProvider} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import type {Reading} from '../domain/triagePolicy.ts';
+import type {Notifier} from '../notify/index.ts';
 import {AI_ENDPOINTS, modelClient} from '../providers/ai/index.ts';
 import type {AiEndpoints, ModelAnswer, ModelClient} from '../providers/ai/index.ts';
 import {getSettings} from '../settings.ts';
@@ -35,7 +37,13 @@ export interface TriageWorkerOptions {
   concurrency?: number;
   // One model call's limit (v1's 120 s).
   timeoutMs?: number;
+  // Sends new Attention and FYI mail; none without it.
+  notifier?: Notifier | null;
 }
+
+// Mail that waited longer than this for triage (an outage, a key added later) is sorted quietly,
+// so a recovery doesn't send a burst of old mail.
+const MAIL_NOTIFY_WITHIN_MS = 60 * 60_000;
 
 /** Writes a model call to the AI usage ledger: what it was for, its tokens and its cost. */
 export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null) {
@@ -83,16 +91,18 @@ export class TriageWorker implements JobWorker {
   private readonly resortEveryMs: number;
   private readonly concurrency: number;
   private readonly timeoutMs: number | undefined;
+  private readonly notifier: Notifier | null;
   private lastResortAt = Number.NEGATIVE_INFINITY;
   private active = 0;
   private readonly waiting: (() => void)[] = [];
 
-  constructor({store, endpoints = AI_ENDPOINTS, resortEveryMs = 5 * 60_000, concurrency = 4, timeoutMs}: TriageWorkerOptions) {
+  constructor({store, endpoints = AI_ENDPOINTS, resortEveryMs = 5 * 60_000, concurrency = 4, timeoutMs, notifier = null}: TriageWorkerOptions) {
     this.store = store;
     this.endpoints = endpoints;
     this.resortEveryMs = resortEveryMs;
     this.concurrency = concurrency;
     this.timeoutMs = timeoutMs;
+    this.notifier = notifier;
   }
 
   /** The engine's tick: queue Unsorted mail again when it's time. */
@@ -147,13 +157,14 @@ export class TriageWorker implements JobWorker {
       }
       return readingOf(answer.toolInput);
     };
+    let sorted = false;
     try {
       const outcome = await triageEmail({
         rules: loadRules(store),
         codeExpiryMinutes: getSettings(store).mail.code_expiry_minutes,
         ask: clients.cheap ? ask : null,
       }, email, incomplete);
-      applyOutcome(store, message.id, outcome);
+      sorted = applyOutcome(store, message.id, outcome);
       finishJob(store, job.id);
     } catch (caught) {
       let error: ProviderError;
@@ -166,5 +177,22 @@ export class TriageWorker implements JobWorker {
       }
       failJob(store, job, error);
     }
+    if (sorted) await this.notifyMail(message.id);
+  }
+
+  /**
+   * One notification for an email triage just sorted into Attention or FYI, opening it, unless it's
+   * been read, Done, trashed or archived meanwhile or waited too long to be news.
+   */
+  private async notifyMail(messageId: number) {
+    if (!this.notifier) return;
+    const row = this.store.db.select().from(t.messages).where(eq(t.messages.id, messageId)).get();
+    if (!row || row.lane === null || row.lane === 'noise') return;
+    if (!row.unread || row.doneAt || row.trashedAt || row.archivedAt) return;
+    if (this.store.now().getTime() - Date.parse(row.receivedAt) > MAIL_NOTIFY_WITHIN_MS) return;
+    await this.notifier.notify({
+      kind: 'mail', topic: 'mail', lane: row.lane, title: row.fromName || row.fromAddress, body: row.subject || row.snippet,
+      link: {to: 'message', id: row.id}, dedupe: `mail:${row.id}`,
+    });
   }
 }

@@ -705,7 +705,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     await page.locator('.settings .set-label', {hasText: 'Not set up'}).waitFor();
     // With no server, the topics' switches can't work: off and disabled, saying what's missing, and no
     // Send test; Time to Leave waits for Home the same way (UX #13).
-    for (const name of ['setpoint-reminders', 'setpoint-mail', 'Reconnect alerts']) {
+    for (const name of ['setpoint-reminders', 'setpoint-mail', 'FYI mail', 'Reconnect alerts']) {
       const toggle = page.getByRole('switch', {name});
       assert.deepEqual([await toggle.isDisabled(), await toggle.getAttribute('aria-checked')], [true, 'false'], name);
     }
@@ -733,9 +733,10 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     await page.locator('.settings .set-label', {hasText: 'Connected · last sent 9:12 AM'}).waitFor();
 
     await page.getByRole('switch', {name: 'setpoint-mail'}).click();
+    await page.getByRole('switch', {name: 'FYI mail'}).click();
     await page.getByRole('switch', {name: 'setpoint-reminders'}).click();
     await page.getByRole('switch', {name: 'Reconnect alerts'}).click();
-    await settled('switches', settings, value => value.notifications.attention_mail && !value.notifications.reminders && !value.notifications.reconnect_alerts);
+    await settled('switches', settings, value => value.notifications.attention_mail && value.notifications.fyi_mail && !value.notifications.reminders && !value.notifications.reconnect_alerts);
     await page.locator('.settings .set-row', {hasText: 'setpoint-mail'}).locator('.s', {hasText: /^Attention mail$/}).waitFor();
 
     await choose(page, 'Event reminders', '30 min before');

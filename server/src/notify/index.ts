@@ -6,7 +6,7 @@
 // The link is chosen as each notification is sent, so a retry follows a pairing or a Revoke since.
 // ntfy is one delivery; APNs could later be a second beside it, given the same Notification.
 import {appLink, deepLinkPath} from '@setpoint/shared';
-import type {DeepLink, NotificationKind, NotificationOut, NotifyStatusOut, NotifyTopic} from '@setpoint/shared';
+import type {DeepLink, Lane, NotificationKind, NotificationOut, NotifyStatusOut, NotifyTopic} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
 import {hasPairedDevice} from '../auth/devices.ts';
 import * as t from '../db/schema.ts';
@@ -22,6 +22,8 @@ export interface Notification {
   title: string;
   body: string;
   link?: DeepLink;
+  // Mail's lane, for its switch (Attention mail or FYI mail); Attention when left out.
+  lane?: Exclude<Lane, 'noise'>;
   // Sends at most once per key ("reconnect:3:2026-10-07T…", "reminder:12@…").
   dedupe?: string;
 }
@@ -56,7 +58,7 @@ export class Notifier {
   /**
    * Logs and sends one notification. A dedupe key already sent is not sent again; one that failed
    * is tried again. It's skipped, and logged as skipped, when ntfy isn't set up or Settings turns
-   * that kind off (the reminders topic, except Send test; attention mail; reconnect alerts).
+   * that kind off (the reminders topic, except Send test; Attention or FYI mail; reconnect alerts).
    */
   async notify(notification: Notification): Promise<NotificationOut> {
     const {store} = this;
@@ -67,7 +69,8 @@ export class Notifier {
     let state: Row['state'] = 'sent';
     let error: string | null = null;
     if (!settings.ntfy_server) [state, error] = ['skipped', 'ntfy isn\'t set up.'];
-    else if (notification.kind === 'mail' && !settings.attention_mail) [state, error] = ['skipped', 'Attention mail notifications are off.'];
+    else if (notification.kind === 'mail' && notification.lane === 'fyi' && !settings.fyi_mail) [state, error] = ['skipped', 'FYI mail notifications are off.'];
+    else if (notification.kind === 'mail' && notification.lane !== 'fyi' && !settings.attention_mail) [state, error] = ['skipped', 'Attention mail notifications are off.'];
     else if (notification.topic === 'reminders' && notification.kind !== 'test' && !settings.reminders) [state, error] = ['skipped', `${settings.topics.reminders} is off.`];
     else if (notification.kind === 'reconnect' && !settings.reconnect_alerts) [state, error] = ['skipped', 'Reconnect alerts are off.'];
     else {
