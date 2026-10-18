@@ -37,6 +37,16 @@ function item(store: Store, itemId: number): ItemRow {
   return row;
 }
 
+/**
+ * Where a task made with no project goes, as Todoist is sent it: Settings' default project, else
+ * the Inbox. The mirror has it there from the start rather than from a later sync, which may never
+ * bring it back: one that ran while the create was on its way has already gone past it (SV-88).
+ */
+function taskProjectByDefault(store: Store, defaultProject: string | null): string | null {
+  const named = defaultProject ? store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.name, defaultProject)).get() : undefined;
+  return (named ?? store.db.select().from(t.todoistProjects).where(eq(t.todoistProjects.inbox, true)).get())?.name ?? null;
+}
+
 export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   const target = calendar(store, input.calendar_id);
   if ((target.provider === 'todoist') !== (input.kind === 'task')) throw invalid(input.kind === 'task' ? 'Tasks go in Todoist.' : 'Events go in a Google calendar.');
@@ -52,7 +62,8 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
         calendarId: input.calendar_id, providerId: localProviderId(), kind: input.kind, title: input.title, allDay: input.all_day,
         startsAt: input.starts_at, endsAt: input.ends_at, startDate: input.start_date, endDate: input.end_date, dueDate: input.due_date, dueAt: input.due_at,
         timeZone: input.time_zone ?? (input.recurrence ? store.timeZone : null), recurrence: input.recurrence, place: input.place, address: input.address,
-        attendees: input.attendees, reminders: input.reminders ?? (input.kind === 'event' && settings.reminders.event_minutes_before !== null ? [settings.reminders.event_minutes_before] : []), leaveReminder: input.kind === 'event' && input.leave_reminder, project: input.project, colour: input.colour,
+        attendees: input.attendees, reminders: input.reminders ?? (input.kind === 'event' && settings.reminders.event_minutes_before !== null ? [settings.reminders.event_minutes_before] : []), leaveReminder: input.kind === 'event' && input.leave_reminder,
+        project: input.kind === 'task' ? input.project ?? taskProjectByDefault(store, settings.todoist.default_project) : input.project, colour: input.colour,
         labels: input.labels, dueString: input.repeat, dueRecurring: input.repeat !== null,
       }).returning({id: t.items.id}).get().id;
       return {targetId: id, previous: {created: [id]}, touched: {items: [id], calendars: [input.calendar_id]}};

@@ -270,6 +270,26 @@ describe('changes through the command layer', () => {
     expect(sent.body).toMatchObject({content: 'Buy stamps', project_id: 'p-home'});
   });
 
+  test('SV-88: a task made with no project is in the one it goes to, Settings\' default else the Inbox, from the start rather than from a later sync', async () => {
+    const {w, todoist, run, command, calendarId, day} = await todoistWorld();
+    await run();
+    const project = (title: string) => day('2026-10-09').find(item => item.title === title)?.project;
+    const inbox = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Mail the form', due_date: '2026-10-09'}));
+    expect(project('Mail the form')).toBe('Inbox');
+    updateSettings(w.store, {todoist: {default_project: 'Home'}});
+    const home = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Buy stamps', due_date: '2026-10-09'}));
+    expect(project('Buy stamps')).toBe('Home');
+    // A default project that's gone from Todoist leaves the task in the Inbox, as the server sends it.
+    updateSettings(w.store, {todoist: {default_project: 'Garden'}});
+    const gone = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Rake leaves', due_date: '2026-10-09'}));
+    expect(project('Rake leaves')).toBe('Inbox');
+    await run();
+    expect([inbox, home, gone].map(one => command(one.id).state)).toEqual(['confirmed', 'confirmed', 'confirmed']);
+    expect(['Mail the form', 'Buy stamps', 'Rake leaves'].map(project)).toEqual(['Inbox', 'Home', 'Inbox']);
+    expect(todoist.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/tasks').map(request => (request.body as {project_id?: string}).project_id))
+      .toEqual(['inbox', 'p-home', 'inbox']);
+  });
+
   test('F6: a task takes no colour of its own', async () => {
     const {w, run, task} = await todoistWorld();
     await run();

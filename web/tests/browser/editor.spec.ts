@@ -528,6 +528,33 @@ test('SV-72: a new task\'s ghost takes its default project\'s colour before one 
   }
 });
 
+test('SV-88: a task made with no project keeps its default project\'s colour once it\'s saved, and is in that project', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    await setpoint.api('PATCH', '/settings', {todoist: {default_project: 'Home'}});
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('d');
+    const line = page.getByLabel('Describe the task');
+    await line.waitFor();
+    await line.pressSequentially('Water plants fri');
+    await page.getByRole('button', {name: 'Create task'}).click();
+    const ring = page.locator('.cell[data-date="2026-10-09"] .tk:not(.ghost)', {hasText: 'Water plants'}).locator('.ring');
+    await ring.waitFor();
+    const ringColour = (locator: typeof ring) => locator.evaluate(element => getComputedStyle(element).borderTopColor);
+    const home = await rested(() => ringColour(page.locator('.cell[data-date="2026-10-08"] .tk:not(.ghost)', {hasText: 'Renew car registration'}).locator('.ring')));
+    // The saved chip, while its create is on its way and once Todoist has it.
+    await until('the saved task keeps Home\'s colour', () => ringColour(ring), colour => colour === home);
+    await settled(setpoint, '2026-10-09');
+    await until('the saved task keeps Home\'s colour once Todoist has it', () => ringColour(ring), colour => colour === home);
+    const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10');
+    assert.deepEqual(items.filter(item => item.kind === 'task').map(item => [item.title, item.project]), [['Water plants', 'Home']]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-25: a task\'s #project in the line: suggestions under Project, a pick ends it, and New project is made with the task; a typed repeat is the task\'s', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
