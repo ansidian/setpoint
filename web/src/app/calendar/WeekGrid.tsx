@@ -420,7 +420,8 @@ export function WeekGrid(props: WeekGridProps) {
     <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section data-enter={enter === null ? undefined : 'in'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
       onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
-      <div className="wk-scroll" ref={scroller} onWheel={onWheel} data-cal-scroll>
+      {/* Focusable, so the hours scroll from the keyboard too (axe's scrollable-region-focusable, SV-99). */}
+      <div className="wk-scroll" ref={scroller} onWheel={onWheel} data-cal-scroll tabIndex={0} aria-label="Hours">
         <div className="wk-grid" data-cal-grid>
           <div className="wk-top" ref={top}>
             <div className="wk-row wk-head">
