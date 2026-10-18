@@ -1,8 +1,8 @@
 // Settings' row pattern (DESIGN.md › Settings): a page's head, sections with their uppercase label,
 // `sub` groups of rows 52 px or more, 34 × 20 switches, selects, steppers and small menus. Every
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
-import {useCallback, useEffect, useRef, useState} from 'react';
-import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
+import {cloneElement, useCallback, useEffect, useRef, useState} from 'react';
+import type {CSSProperties, KeyboardEvent, ReactElement, ReactNode} from 'react';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
@@ -88,7 +88,7 @@ export function Stepper({value, label, onStep}: {value: string; label: string; o
  * Esc (which then goes no further, so Settings stays open, and hands focus back to the button).
  * Opened from the keyboard it focuses its checked item, or its first; ↑ ↓ move between items.
  */
-export function Menu({button, label, align = 'right', className, children}: {button: ReactNode; label: string; align?: 'left' | 'right'; className?: string; children: (close: () => void) => ReactNode}) {
+export function Menu({button, label, align = 'right', className, children}: {button: ReactElement<{'aria-expanded'?: boolean; 'aria-haspopup'?: 'menu'}>; label: string; align?: 'left' | 'right'; className?: string; children: (close: () => void) => ReactNode}) {
   const [open, setOpen] = useState<false | 'pointer' | 'keys'>(false);
   const anchor = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -123,7 +123,8 @@ export function Menu({button, label, align = 'right', className, children}: {but
         all[at < 0 ? (step > 0 ? 0 : all.length - 1) : (at + step + all.length) % all.length]?.focus();
       }
     }}>
-      <span onClick={event => setOpen(open ? false : event.detail === 0 ? 'keys' : 'pointer')} aria-label={label} aria-expanded={!!open} role="presentation">{button}</span>
+      {/* The button, already named, says whether its menu is open (axe's aria-allowed-attr, SV-99). */}
+      <span onClick={event => setOpen(open ? false : event.detail === 0 ? 'keys' : 'pointer')} role="presentation">{cloneElement(button, {'aria-expanded': !!open, 'aria-haspopup': 'menu'})}</span>
       {open && <div ref={placeMenu} className={['pop menu', align === 'left' && 'left', className].filter(Boolean).join(' ')} role="menu" aria-label={label}>{children(close)}</div>}
     </span>
   );
