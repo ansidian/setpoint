@@ -86,8 +86,9 @@
 .settings .sw::before { content: ""; width: 12px; height: 12px; border-radius: 999px; background: var(--c); }
 .settings .sw:enabled:hover, .settings .sw.on { background: var(--sub2); }
 .settings .aico { width: 30px; height: 30px; border-radius: var(--r-row); display: grid; place-items: center; flex: none; color: var(--ink2); background: var(--sub2); }
-.settings .prov { width: 186px; flex: none; color: var(--ink2); font-size: 12.5px; white-space: nowrap; }
-.settings .state { width: 214px; flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
+/* Where the row runs short (Settings at 820 px), how it syncs and its state give way before the name does (SV-99). */
+.settings .prov { width: 186px; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); font-size: 12.5px; white-space: nowrap; }
+.settings .state { width: 214px; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .settings .state.caution { color: var(--caution); }
 .settings .state .ell { min-width: 0; }
 /* A source's state leads with its glyph, so one glance down the column finds the one in trouble
