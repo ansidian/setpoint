@@ -2,7 +2,7 @@
 // `parseCalendarTitle.test.ts` cases carried over through the harvest gate (darma SV-15). Today is
 // the seed's Wed, Oct 7, 2026.
 import {describe, expect, test} from 'vitest';
-import {bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices} from '../src/logic/compose.ts';
+import {bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../src/logic/compose.ts';
 
 const TODAY = '2026-10-07';
 const CALENDARS = ['Personal', 'Classes', 'Jobs'];
@@ -411,4 +411,71 @@ describe('a Title typed by hand rewrites the line\'s title words (UX #8)', () =>
     const after = parse(rewrite('Coffee fri', 'Coffee with Ana'));
     expect([after.title, after.date]).toEqual(['Coffee with Ana', parse('Coffee fri').date]);
   });
+});
+
+describe('SV-90: an edited title reads only what the edit typed', () => {
+  test.each<[string, string, {start: number; end: number}]>([
+    ['Work', 'Work', {start: 4, end: 4}],
+    // Typed beside a word, not into it.
+    ['Work', 'Work at 3:45a', {start: 4, end: 13}],
+    ['Call fri', 'Call fri 3pm', {start: 8, end: 12}],
+    ['Dinner fri', 'Dinner on fri', {start: 7, end: 10}],
+    // A word the edit changed is typed whole, a letter taken out of it too.
+    ['Standup 9am', 'Standup 10am', {start: 8, end: 12}],
+    ['Standup 10am', 'Standup 1am', {start: 8, end: 11}],
+    ['Work', 'Shift at 3:45a', {start: 0, end: 14}],
+    // Only whole words or spaces taken out: nothing typed.
+    ['Lunch at noon', 'Lunch noon', {start: 6, end: 6}],
+  ])('%s → %s', (before, after, span) => expect(typedSpan(before, after)).toEqual(span));
+
+  const edit = (before: string, text: string, day = '2026-10-14') => parseTitle(text, TODAY, CALENDARS, null, {kind: 'calendar', names: CALENDARS, picked: null}, {before, day});
+  test('Work at 3:45a (the issue\'s example): the time, and the title as it was', () => {
+    expect(edit('Work', 'Work at 3:45a')).toMatchObject({title: 'Work', start: h(3, 45), end: null, date: null});
+  });
+  test.each([
+    // The title's own phrases stay its words: no change is the title as it was, spaces and all.
+    ['Lunch at noon', 'Lunch at noon', 'Lunch at noon', null],
+    ['Lunch at noon', 'Team lunch at noon', 'Team lunch at noon', null],
+    ['Call fri', 'Call fri 3pm', 'Call fri', h(15)],
+    ['Dinner fri', 'Dinner on fri', 'Dinner on fri', null],
+    ['Plan  trip', 'Plan  trip ', 'Plan  trip ', null],
+    ['Dinner', 'Dinner @Blue Door', 'Dinner', null],
+    // Phrases that leave no words keep the title.
+    ['Work', 'tomorrow 3pm', 'Work', h(15)],
+  ])('%s → %s is %s', (before, text, title, start) => {
+    const parsed = edit(before, text);
+    expect(parsed.title).toBe(title);
+    expect(parsed.start).toBe(start);
+  });
+  test('a place, calendar and day typed in the edit; one already in the title stays its words', () => {
+    expect(edit('Dinner @Home', 'Dinner @Home #jobs tmr')).toMatchObject({title: 'Dinner @Home', place: null, calendar: 'Jobs', date: '2026-10-08'});
+    expect(edit('Dinner', 'Dinner @Blue Door fri')).toMatchObject({title: 'Dinner', place: 'Blue Door', date: '2026-10-09'});
+  });
+  test('a place typed before the old words stops at them', () => {
+    expect(edit('lunch', '@Cafe lunch')).toMatchObject({title: 'lunch', place: 'Cafe'});
+  });
+  test('a repeat with no day of its own counts from the item\'s day, not today', () => {
+    // Wed, Oct 14 for the item; today is Wed, Oct 7.
+    expect(edit('Gym', 'Gym weekly', '2026-10-16')).toMatchObject({recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=FR', date: null});
+    expect(edit('Gym', 'Gym every mon', '2026-10-16')).toMatchObject({recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=MO', date: '2026-10-19'});
+    expect(edit('Gym', 'Gym tomorrow')).toMatchObject({date: '2026-10-08'});
+  });
+});
+
+describe('SV-90: an edited item\'s when', () => {
+  const timed = {date: '2026-10-14', start: h(3), end: h(8), days: 1};
+  const none = {date: null, start: null, end: null};
+  test.each<[string, Parameters<typeof editedWhen>[0], Parameters<typeof editedWhen>[1], 'event' | 'task', ReturnType<typeof editedWhen>]>([
+    ['a time keeps the day and length', timed, {...none, start: h(3, 45)}, 'event', {date: '2026-10-14', start: h(3, 45), end: h(8, 45), days: 1}],
+    ['a range sets both ends', timed, {...none, start: h(9), end: h(10)}, 'event', {date: '2026-10-14', start: h(9), end: h(10), days: 1}],
+    ['a day keeps the time and length', timed, {...none, date: '2026-10-16'}, 'event', {...timed, date: '2026-10-16'}],
+    ['both', timed, {date: '2026-10-16', start: h(22), end: null}, 'event', {date: '2026-10-16', start: h(22), end: h(27), days: 1}],
+    ['an overnight event keeps its length', {date: '2026-10-16', start: h(21), end: h(34), days: 1}, {...none, start: h(20)}, 'event', {date: '2026-10-16', start: h(20), end: h(33), days: 1}],
+    ['an all-day event moves with its days', {date: '2026-10-14', start: null, end: null, days: 3}, {...none, date: '2026-10-20'}, 'event', {date: '2026-10-20', start: null, end: null, days: 3}],
+    ['an all-day event given a time ends an hour later on its last day', {date: '2026-10-14', start: null, end: null, days: 2}, {...none, start: h(9)}, 'event', {date: '2026-10-14', start: h(9), end: h(1440 / 60 + 10), days: 1}],
+    ['a one-day all-day event given a time is an hour', {date: '2026-10-14', start: null, end: null, days: 1}, {...none, start: h(9)}, 'event', {date: '2026-10-14', start: h(9), end: h(10), days: 1}],
+    ['nothing read: as it was', timed, none, 'event', timed],
+    ['a task\'s time is its due time', {date: '2026-10-14', start: null, end: null, days: 1}, {...none, start: h(17)}, 'task', {date: '2026-10-14', start: h(17), end: null, days: 1}],
+    ['a task\'s day keeps its time', {date: '2026-10-14', start: h(17), end: null, days: 1}, {...none, date: '2026-10-09'}, 'task', {date: '2026-10-09', start: h(17), end: null, days: 1}],
+  ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
 });

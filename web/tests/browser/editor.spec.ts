@@ -2,8 +2,8 @@
 // 13 and 14 against their approved screenshots (board 13's Dinner with Sam isn't on the calendar
 // yet, the no-dinner fixture, D3), then
 // the flows: creating the board's two events at once, an edit asking which occurrences (This event,
-// then All events), a Todoist task from the same editor, and the editor opened from an email's
-// proposal at /calendar/new.
+// then All events), a Todoist task from the same editor, the editor opened from an email's
+// proposal at /calendar/new, and an edited item's Title read as a line (SV-90).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
@@ -1158,6 +1158,113 @@ test('UX #8: a Title typed by hand rewrites the line\'s title words, so the two 
     // The line's title words, changed there, are the Title's again.
     await line.fill('Coffee with Ana and Jo fri 3pm');
     assert.equal(await title.inputValue(), 'Coffee with Ana and Jo');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-90: what an edit types into a Title reads as a new item\'s line does; the words it had stay its title', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const classes = (await setpoint.api<{id: number; name: string}[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!.id;
+    const title = page.locator('.editor input[aria-label="Title"]');
+    // Dentist, 2:30 – 3:30 PM on Wed: a time keeps its length, a day keeps its time, #cl its calendar.
+    await chip(page, '2026-10-07', 'Dentist').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    await title.press('End');
+    await title.pressSequentially(' at 3:45p');
+    await page.locator('.nl .tok-d', {hasText: 'at 3:45p'}).waitFor();
+    await until('the end keeps the hour', () => Promise.all(['Start', 'End'].map(label => page.getByLabel(label, {exact: true}).inputValue())), times => times.join(' – ') === '3:45 PM – 4:45 PM');
+    await page.locator('.was', {hasText: 'Was 2:30 – 3:30 PM'}).waitFor();
+    await title.pressSequentially(' fri #cl');
+    await until('the date moves to Friday', () => page.getByLabel('Date', {exact: true}).inputValue(), value => /Oct 9/.test(value));
+    const menu = page.getByRole('listbox', {name: 'Calendars'});
+    assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Classes↵']);
+    await page.keyboard.press('Enter');
+    await menu.waitFor({state: 'detached'});
+    assert.equal(await title.inputValue(), 'Dentist at 3:45p fri #Classes ');
+    await page.getByRole('button', {name: 'Calendar', exact: true}).filter({hasText: 'Classes'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const dentist = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Dentist')!;
+    assert.deepEqual([dentist.starts_at, dentist.ends_at, dentist.calendar_id], ['2026-10-09T22:45:00.000Z', '2026-10-09T23:45:00.000Z', classes]);
+
+    // A repeating Gym: the time typed asks which occurrences, as the Start field does; This event moves Wednesday's.
+    await chip(page, '2026-10-07', 'Gym').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await title.press('End');
+    await title.pressSequentially(' 6:30a');
+    await until('the end keeps the hour', () => page.getByLabel('End', {exact: true}).inputValue(), value => value === '7:30 AM');
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.scope-pop .ropt.on', {hasText: 'This event'}).waitFor();
+    await page.keyboard.press('Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-07');
+    assert.deepEqual((await titles(setpoint, '2026-10-07')).filter(one => one.startsWith('Gym')), ['Gym 6:30 AM']);
+    assert.deepEqual((await titles(setpoint, '2026-10-09')).filter(one => one.startsWith('Gym')), ['Gym 7:00 AM']);
+
+    // Renew car registration, due Thu with no time: a day, a due time and a project, typed after its title.
+    await page.locator('.cell[data-date="2026-10-08"] .tk', {hasText: 'Renew car registration'}).click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit task"]').waitFor();
+    await title.press('End');
+    await title.pressSequentially(' fri 5pm #sch');
+    const projects = page.getByRole('listbox', {name: 'Projects'});
+    await projects.waitFor();
+    // Editing offers only Todoist's projects: no New project.
+    assert.deepEqual(await projects.getByRole('option').allTextContents(), ['School↵']);
+    await page.keyboard.press('Enter');
+    await projects.waitFor({state: 'detached'});
+    await until('the due date moves to Friday', () => page.getByLabel('Due date', {exact: true}).inputValue(), value => /Oct 9/.test(value));
+    assert.equal(await page.getByLabel('Start', {exact: true}).inputValue(), '5:00 PM');
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const renew = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Renew car registration')!;
+    assert.deepEqual([renew.due_date, renew.due_at, renew.project], ['2026-10-09', '2026-10-10T00:00:00.000Z', 'School']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-90: a title that already ends in "@" and a letter opens with no menu; only an edit\'s own "@" opens one', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const title = page.locator('.editor input[aria-label="Title"]');
+    const places = page.getByRole('listbox', {name: 'Places'});
+    // Study group has no place, so no Places list of its own.
+    await chip(page, '2026-10-09', 'Study group').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await title.waitFor();
+    // Selected on opening: typing replaces it, and its "@B" is the edit's, so the recent places show.
+    await page.keyboard.type('Ask @B');
+    await places.waitFor();
+    await page.keyboard.press('Escape');
+    await places.waitFor({state: 'detached'});
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    await chip(page, '2026-10-09', 'Ask @B').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await title.waitFor();
+    await setpoint.idle();
+    assert.equal(await places.count(), 0);
+    await title.press('End');
+    await page.keyboard.type(' @');
+    await places.waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

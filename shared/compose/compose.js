@@ -2,12 +2,15 @@
 // (npm run compose:record) for the iPhone app's JavaScriptCore: one script, no module loader, no DOM.
 // Generated; don't edit. It defines the global SetpointCompose with:
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
-//     pickedPlace?: string|null, pickedHash?: string|null})
+//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
 //        place, calendar, recurrence, project}
+//     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
+//   typedSpan({before, after}) → {start, end}, what an edit typed
+//   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
 // over 1440). shared/compose/cases.json records what each returns.
@@ -328,12 +331,37 @@ var SetpointCompose = (function(exports) {
 	}
 	var TRAILING_CONNECTOR = /(?:\s+(?:on|at|from|to|for))+\s*$/i;
 	/**
+	* What an edit typed into a title (SV-90): `after` from where it first differs from `before` to
+	* where the two agree again. A word the edit changed is typed whole ("Standup 9am" made "Standup
+	* 10am" typed "10am"); a word it only typed beside isn't ("Call fri" made "Call fri 3pm" typed
+	* " 3pm"). Empty when nothing changed, or when only spaces or whole words went.
+	*/
+	function typedSpan$1(before, after) {
+		let start = 0;
+		while (start < before.length && start < after.length && before[start] === after[start]) start += 1;
+		let tail = 0;
+		while (tail < before.length - start && tail < after.length - start && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail += 1;
+		let end = after.length - tail;
+		const word = (at) => at >= 0 && at < after.length && /\S/.test(after[at]);
+		while (word(start - 1) && word(start)) start -= 1;
+		while (word(end - 1) && word(end)) end += 1;
+		return {
+			start,
+			end
+		};
+	}
+	/**
 	* Reads the title as typed; `today` places weekdays and bare dates, `calendars` are the names "cal …"
 	* knows, and `picked` is the place text a suggestion was picked for, where the place stops. `hash`
 	* is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
 	* with the text a menu pick was made for.
+	*
+	* `edit` is an item's title as it was and its day, when the text is that title edited (SV-90): only
+	* phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
+	* own counts from the item's day rather than today. With no phrase read the title is the text as
+	* typed, spaces and all; phrases that leave no words keep the title as it was.
 	*/
-	function parseTitle$1(text, today, calendars = [], picked = null, hash = null) {
+	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null) {
 		const state = {
 			date: null,
 			start: null,
@@ -352,41 +380,46 @@ var SetpointCompose = (function(exports) {
 			...DATES
 		];
 		const marks = [];
-		const words = [...text.matchAll(/\S+/g)].map((word) => word.index);
+		const typed = edit ? typedSpan$1(edit.before, text) : {
+			start: 0,
+			end: text.length
+		};
+		const line = text.slice(0, typed.end);
+		const words = [...line.matchAll(/\S+/g)].map((word) => word.index).filter((index) => index >= typed.start);
 		for (let w = 0; w < words.length; w += 1) {
 			const index = words[w];
 			let found = null;
-			const place = text[index] === "@" && state.place === null;
-			if (place || text[index] === "#" && hash && state[hash.kind] === null) {
+			const place = line[index] === "@" && state.place === null;
+			if (place || line[index] === "#" && hash && state[hash.kind] === null) {
 				const from = index + 1;
 				const pick = place ? picked : hash.picked;
 				const lower = (name) => name.toLowerCase();
-				const ends = (at) => new RegExp(`^${END}`).test(text.slice(at));
+				const ends = (at) => new RegExp(`^${END}`).test(line.slice(at));
 				let next = w + 1;
-				while (next < words.length && !phraseStarts(text, words[next], phrases, today, !!hash)) next += 1;
-				const stopsAtPick = pick !== null && text.startsWith(pick, from) && ends(from + pick.length);
-				const url = place ? PLACE_URL.exec(text.slice(from)) : null;
-				const known = hash?.kind !== "project" ? void 0 : hash.names.filter((name) => lower(text.slice(from, from + name.length)) === lower(name) && ends(from + name.length)).sort((a, b) => b.length - a.length)[0];
+				while (next < words.length && !phraseStarts(line, words[next], phrases, today, !!hash)) next += 1;
+				const stopsAtPick = pick !== null && line.startsWith(pick, from) && ends(from + pick.length);
+				const url = place ? PLACE_URL.exec(line.slice(from)) : null;
+				const known = hash?.kind !== "project" ? void 0 : hash.names.filter((name) => lower(line.slice(from, from + name.length)) === lower(name) && ends(from + name.length)).sort((a, b) => b.length - a.length)[0];
 				let prefix = from;
-				for (let at = from + 1; !place && hash.kind === "calendar" && at <= text.length; at += 1) {
-					if (!hash.names.some((name) => lower(name).startsWith(lower(text.slice(from, at))))) break;
+				for (let at = from + 1; !place && hash.kind === "calendar" && at <= line.length; at += 1) {
+					if (!hash.names.some((name) => lower(name).startsWith(lower(line.slice(from, at))))) break;
 					if (ends(at)) prefix = at;
 				}
-				let end = stopsAtPick ? from + pick.length : url ? from + url[0].length : known ? from + known.length : hash?.kind === "calendar" && !place ? prefix : next < words.length ? words[next] : text.length;
-				const comma = stopsAtPick ? -1 : text.slice(from, end).indexOf(",");
+				let end = stopsAtPick ? from + pick.length : url ? from + url[0].length : known ? from + known.length : hash?.kind === "calendar" && !place ? prefix : next < words.length ? words[next] : line.length;
+				const comma = stopsAtPick ? -1 : line.slice(from, end).indexOf(",");
 				if (comma >= 0) end = from + comma;
-				const value = text.slice(from, end).trim();
+				const value = line.slice(from, end).trim();
 				if (value.length >= (place ? 2 : 1)) {
 					if (place) state.place = value;
 					else if (hash.kind === "project") state.project = known && !stopsAtPick && end === from + known.length ? known : value;
 					else state.calendar = stopsAtPick ? value : hash.names.find((name) => lower(name) === lower(value)) ?? hash.names.find((name) => lower(name).startsWith(lower(value)));
-					const after = /^\s*,/.exec(text.slice(end));
+					const after = /^\s*,/.exec(line.slice(end));
 					found = {
-						length: after ? end + after[0].length - index : text.slice(index, end).trimEnd().length,
+						length: after ? end + after[0].length - index : line.slice(index, end).trimEnd().length,
 						kind: place ? "place" : hash.kind
 					};
 				}
-			} else found = matchAt(text, index, phrases, state, today);
+			} else found = matchAt(line, index, phrases, state, today);
 			if (!found) continue;
 			marks.push({
 				start: index,
@@ -401,8 +434,9 @@ var SetpointCompose = (function(exports) {
 			if (last && last.kind === "when" && mark.kind === "when" && /^\s*$/.test(text.slice(last.end, mark.start))) last.end = mark.end;
 			else merged.push({ ...mark });
 		}
-		if (!state.date && state.repeatDays.length) state.date = addDays(today, Math.min(...state.repeatDays.map((index) => (index - weekdayOf(today) + 7) % 7)));
-		if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? today)]}`;
+		const first = edit?.day ?? today;
+		if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map((index) => (index - weekdayOf(first) + 7) % 7)));
+		if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
 		let title = "";
 		let from = 0;
 		for (const mark of merged) {
@@ -410,8 +444,10 @@ var SetpointCompose = (function(exports) {
 			from = mark.end;
 		}
 		title += text.slice(from);
+		title = title.replace(/\s+/g, " ").trim().replace(TRAILING_CONNECTOR, "");
+		if (edit) title = !merged.length ? text : title || edit.before;
 		return {
-			title: title.replace(/\s+/g, " ").trim().replace(TRAILING_CONNECTOR, ""),
+			title,
 			marks: merged,
 			date: state.date,
 			start: state.start,
@@ -433,6 +469,33 @@ var SetpointCompose = (function(exports) {
 		if (!rest) return title;
 		return /\s$/.test(title) ? `${title}${rest}` : `${title} ${rest}`;
 	}
+	/**
+	* An edited item's when, once its title's typed day and time are read (SV-90): a day moves it,
+	* keeping its time and length (an all-day event its days); a time moves its start on its own day,
+	* the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
+	* An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
+	* task's time is its due time, with no end. With neither, it's as it was.
+	*/
+	function editedWhen$1(item, read, kind) {
+		const date = read.date ?? item.date;
+		if (read.start === null) return {
+			...item,
+			date
+		};
+		if (kind === "task") return {
+			date,
+			start: read.start,
+			end: null,
+			days: 1
+		};
+		const length = item.start === null || item.end === null ? (item.days - 1) * 1440 + 60 : item.end - item.start;
+		return {
+			date,
+			start: read.start,
+			end: read.end ?? read.start + length,
+			days: 1
+		};
+	}
 	//#endregion
 	//#region web/src/logic/composeApp.ts
 	/** The line as the web's editor reads it: "#…" is a task's project or an event's calendar. */
@@ -442,7 +505,15 @@ var SetpointCompose = (function(exports) {
 			kind: input.kind === "task" ? "project" : "calendar",
 			names,
 			picked: input.pickedHash ?? null
-		});
+		}, input.edit ?? null);
+	}
+	/** What an edit typed into a title: the text from `start` to `end` of `after`. */
+	function typedSpan(input) {
+		return typedSpan$1(input.before, input.after);
+	}
+	/** An edited item's when once its typed day and time are read (its `date`, `start`, `end` from parseTitle). */
+	function editedWhen(input) {
+		return editedWhen$1(input.item, input.read, input.kind);
 	}
 	/** A "#" or "@" just typed at the line's end, which opens its menu; null when there's none. */
 	function bareToken(input) {
@@ -460,7 +531,9 @@ var SetpointCompose = (function(exports) {
 		parseTitle,
 		bareToken,
 		completeToken,
-		lineWithTitle
+		lineWithTitle,
+		typedSpan,
+		editedWhen
 	};
 	/** `call("parseTitle", '{"text":…}')` → the result as JSON text. */
 	function call(name, json) {
@@ -472,7 +545,9 @@ var SetpointCompose = (function(exports) {
 	exports.bareToken = bareToken;
 	exports.call = call;
 	exports.completeToken = completeToken;
+	exports.editedWhen = editedWhen;
 	exports.lineWithTitle = lineWithTitle;
 	exports.parseTitle = parseTitle;
+	exports.typedSpan = typedSpan;
 	return exports;
 })({});

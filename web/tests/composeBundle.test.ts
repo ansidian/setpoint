@@ -28,12 +28,15 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 // (npm run compose:record) for the iPhone app's JavaScriptCore: one script, no module loader, no DOM.
 // Generated; don't edit. It defines the global SetpointCompose with:
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
-//     pickedPlace?: string|null, pickedHash?: string|null})
+//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
 //        place, calendar, recurrence, project}
+//     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
+//   typedSpan({before, after}) → {start, end}, what an edit typed
+//   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
 // over 1440). shared/compose/cases.json records what each returns.`;
@@ -41,10 +44,12 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 type Kind = 'event' | 'task';
 type Case = {fn: keyof typeof FUNCTIONS; input: Record<string, unknown>};
 
-const FUNCTIONS = {parseTitle: app.parseTitle, bareToken: app.bareToken, completeToken: app.completeToken, lineWithTitle: app.lineWithTitle};
+const FUNCTIONS = {parseTitle: app.parseTitle, bareToken: app.bareToken, completeToken: app.completeToken, lineWithTitle: app.lineWithTitle, typedSpan: app.typedSpan, editedWhen: app.editedWhen};
 
-const line = (text: string, kind: Kind = 'event', picked: {pickedPlace?: string; pickedHash?: string} = {}): Case =>
+const line = (text: string, kind: Kind = 'event', picked: {pickedPlace?: string; pickedHash?: string; edit?: {before: string; day: string}} = {}): Case =>
   ({fn: 'parseTitle', input: {text, kind, today: TODAY, calendars: CALENDARS, projects: PROJECTS, ...picked}});
+// SV-90: the item edited is on Wed, Oct 14.
+const edited = (before: string, text: string, kind: Kind = 'event'): Case => line(text, kind, {edit: {before, day: '2026-10-14'}});
 
 // What compose.ts's header lists, a case or more for each line of it.
 const CASE_LIST: Case[] = [
@@ -105,6 +110,22 @@ const CASE_LIST: Case[] = [
   {fn: 'lineWithTitle', input: {text: 'Coffee fri', marks: [{start: 7, end: 10, kind: 'when'}], title: 'Coffee with Ana'}},
   {fn: 'lineWithTitle', input: {text: 'Coffee fri 3pm @Blue Door', marks: [{start: 7, end: 14, kind: 'when'}, {start: 15, end: 25, kind: 'place'}], title: ''}},
   {fn: 'lineWithTitle', input: {text: 'fri', marks: [{start: 0, end: 3, kind: 'when'}], title: 'Coffee '}},
+  // Editing (SV-90): only what the edit typed is read.
+  edited('Work', 'Work'),
+  edited('Work', 'Work at 3:45a'),
+  edited('Call fri', 'Call fri 3pm'),
+  edited('Standup 9am', 'Standup 10am'),
+  edited('Lunch at noon', 'Team lunch at noon'),
+  edited('Dinner @Home', 'Dinner @Home #jobs tmr'),
+  edited('Work', 'tomorrow 3pm'),
+  edited('Gym', 'Gym weekly'),
+  edited('Pay rent', 'Pay rent #home fri 5pm', 'task'),
+  {fn: 'typedSpan', input: {before: 'Work', after: 'Work at 3:45a'}},
+  {fn: 'typedSpan', input: {before: 'Standup 9am', after: 'Standup 10am'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: null, start: 225, end: null}, kind: 'event'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: '2026-10-16', start: null, end: null}, kind: 'event'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: null, end: null, days: 2}, read: {date: null, start: 540, end: null}, kind: 'event'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 1020, end: null, days: 1}, read: {date: '2026-10-09', start: null, end: null}, kind: 'task'}},
 ];
 
 async function bundle(): Promise<string> {
@@ -130,7 +151,7 @@ function load(code: string): typeof app {
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value) ?? 'null');
 
 const table = () => ({
-  about: 'What shared/compose/compose.js (SetpointCompose) returns for each input, recorded by web/tests/composeBundle.test.ts (npm run compose:record) from web/src/logic/compose.ts. Today is the seed\'s Wed, Oct 7, 2026; the calendars are its Google calendars and the projects its Todoist projects. The iPhone app runs every case through its JavaScriptCore copy of the bundle and expects the same output.',
+  about: 'What shared/compose/compose.js (SetpointCompose) returns for each input, recorded by web/tests/composeBundle.test.ts (npm run compose:record) from web/src/logic/compose.ts. Today is the seed\'s Wed, Oct 7, 2026; the calendars are its Google calendars and the projects its Todoist projects; an edited item (SV-90) is on Wed, Oct 14. The iPhone app runs every case through its JavaScriptCore copy of the bundle and expects the same output.',
   cases: CASE_LIST.map(({fn, input}) => ({fn, input, output: plain(FUNCTIONS[fn](input as never))})),
 });
 

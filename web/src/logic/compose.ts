@@ -23,6 +23,9 @@
 // - "#school": an event's calendar, when the calendars are given: the longest text a calendar's name
 //   starts with (any case), the first such calendar; "#1 priority" names none and stays (SV-25 D57).
 // - "cal Classes": a calendar, by one of the calendars' names.
+//
+// Editing an item's title reads only what the edit typed (SV-90): the words the title already had
+// stay title words.
 import {addDays, daysBetween} from './format.ts';
 
 export type MarkKind = 'when' | 'place' | 'calendar' | 'project';
@@ -285,56 +288,83 @@ export function bareToken(text: string, trigger: '#' | '@'): {start: number; que
 const TRAILING_CONNECTOR = /(?:\s+(?:on|at|from|to|for))+\s*$/i;
 
 /**
+ * What an edit typed into a title (SV-90): `after` from where it first differs from `before` to
+ * where the two agree again. A word the edit changed is typed whole ("Standup 9am" made "Standup
+ * 10am" typed "10am"); a word it only typed beside isn't ("Call fri" made "Call fri 3pm" typed
+ * " 3pm"). Empty when nothing changed, or when only spaces or whole words went.
+ */
+export function typedSpan(before: string, after: string): {start: number; end: number} {
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start += 1;
+  let tail = 0;
+  while (tail < before.length - start && tail < after.length - start && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail += 1;
+  let end = after.length - tail;
+  const word = (at: number) => at >= 0 && at < after.length && /\S/.test(after[at]!);
+  while (word(start - 1) && word(start)) start -= 1;
+  while (word(end - 1) && word(end)) end += 1;
+  return {start, end};
+}
+
+/**
  * Reads the title as typed; `today` places weekdays and bare dates, `calendars` are the names "cal …"
  * knows, and `picked` is the place text a suggestion was picked for, where the place stops. `hash`
  * is what "#…" reads (a task's projects or an event's calendars): their names, in the list's order,
  * with the text a menu pick was made for.
+ *
+ * `edit` is an item's title as it was and its day, when the text is that title edited (SV-90): only
+ * phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
+ * own counts from the item's day rather than today. With no phrase read the title is the text as
+ * typed, spaces and all; phrases that leave no words keep the title as it was.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
-  hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null): ParsedTitle {
+  hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
+  edit: {before: string; day: string} | null = null): ParsedTitle {
   const state: State = {date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null, weeklyNeedsDay: false, repeatDays: []};
   const phrases = [...calendarMatchers(calendars), ...REPEATS, ...TIMES, ...DATES];
   const marks: Mark[] = [];
-  const words = [...text.matchAll(/\S+/g)].map(word => word.index);
+  // An edit's phrases start and end in what it typed: the text is read only to its end.
+  const typed = edit ? typedSpan(edit.before, text) : {start: 0, end: text.length};
+  const line = text.slice(0, typed.end);
+  const words = [...line.matchAll(/\S+/g)].map(word => word.index).filter(index => index >= typed.start);
   for (let w = 0; w < words.length; w += 1) {
     const index = words[w]!;
     let found: {length: number; kind: MarkKind} | null = null;
-    const place = text[index] === '@' && state.place === null;
-    if (place || (text[index] === '#' && hash && state[hash.kind] === null)) {
+    const place = line[index] === '@' && state.place === null;
+    if (place || (line[index] === '#' && hash && state[hash.kind] === null)) {
       // The place or project runs to the next phrase, or stops at what a pick was made for.
       const from = index + 1;
       const pick = place ? picked : hash!.picked;
       const lower = (name: string) => name.toLowerCase();
-      const ends = (at: number) => new RegExp(`^${END}`).test(text.slice(at));
+      const ends = (at: number) => new RegExp(`^${END}`).test(line.slice(at));
       let next = w + 1;
-      while (next < words.length && !phraseStarts(text, words[next]!, phrases, today, !!hash)) next += 1;
-      const stopsAtPick = pick !== null && text.startsWith(pick, from) && ends(from + pick.length);
-      const url = place ? PLACE_URL.exec(text.slice(from)) : null;
+      while (next < words.length && !phraseStarts(line, words[next]!, phrases, today, !!hash)) next += 1;
+      const stopsAtPick = pick !== null && line.startsWith(pick, from) && ends(from + pick.length);
+      const url = place ? PLACE_URL.exec(line.slice(from)) : null;
       // A project stops at the longest name it starts with.
-      const known = hash?.kind !== 'project' ? undefined : hash.names.filter(name => lower(text.slice(from, from + name.length)) === lower(name) && ends(from + name.length))
+      const known = hash?.kind !== 'project' ? undefined : hash.names.filter(name => lower(line.slice(from, from + name.length)) === lower(name) && ends(from + name.length))
         .sort((a, b) => b.length - a.length)[0];
       // A calendar is the longest text, ending a word, that a calendar's name starts with.
       let prefix = from;
-      for (let at = from + 1; !place && hash!.kind === 'calendar' && at <= text.length; at += 1) {
-        if (!hash!.names.some(name => lower(name).startsWith(lower(text.slice(from, at))))) break;
+      for (let at = from + 1; !place && hash!.kind === 'calendar' && at <= line.length; at += 1) {
+        if (!hash!.names.some(name => lower(name).startsWith(lower(line.slice(from, at))))) break;
         if (ends(at)) prefix = at;
       }
       let end = stopsAtPick ? from + pick.length : url ? from + url[0].length : known ? from + known.length
-        : hash?.kind === 'calendar' && !place ? prefix : next < words.length ? words[next]! : text.length;
+        : hash?.kind === 'calendar' && !place ? prefix : next < words.length ? words[next]! : line.length;
       // A comma ends it, unless it's in the name picked for it (SV-29).
-      const comma = stopsAtPick ? -1 : text.slice(from, end).indexOf(',');
+      const comma = stopsAtPick ? -1 : line.slice(from, end).indexOf(',');
       if (comma >= 0) end = from + comma;
-      const value = text.slice(from, end).trim();
+      const value = line.slice(from, end).trim();
       if (value.length >= (place ? 2 : 1)) {
         if (place) state.place = value;
         else if (hash!.kind === 'project') state.project = known && !stopsAtPick && end === from + known.length ? known : value;
         else state.calendar = stopsAtPick ? value : hash!.names.find(name => lower(name) === lower(value)) ?? hash!.names.find(name => lower(name).startsWith(lower(value)))!;
         // A comma right after it goes with it, out of the title.
-        const after = /^\s*,/.exec(text.slice(end));
-        found = {length: after ? end + after[0].length - index : text.slice(index, end).trimEnd().length, kind: place ? 'place' : hash!.kind};
+        const after = /^\s*,/.exec(line.slice(end));
+        found = {length: after ? end + after[0].length - index : line.slice(index, end).trimEnd().length, kind: place ? 'place' : hash!.kind};
       }
     } else {
-      found = matchAt(text, index, phrases, state, today);
+      found = matchAt(line, index, phrases, state, today);
     }
     if (!found) continue;
     marks.push({start: index, end: index + found.length, kind: found.kind});
@@ -349,9 +379,10 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     else merged.push({...mark});
   }
 
-  // A weekly repeat with no date starts on its next day, today counting.
-  if (!state.date && state.repeatDays.length) state.date = addDays(today, Math.min(...state.repeatDays.map(index => (index - weekdayOf(today) + 7) % 7)));
-  if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? today)]}`;
+  // A weekly repeat with no date starts on its next day, today (an edited item's day) counting.
+  const first = edit?.day ?? today;
+  if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map(index => (index - weekdayOf(first) + 7) % 7)));
+  if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
 
   let title = '';
   let from = 0;
@@ -360,8 +391,10 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     from = mark.end;
   }
   title += text.slice(from);
+  title = title.replace(/\s+/g, ' ').trim().replace(TRAILING_CONNECTOR, '');
+  if (edit) title = !merged.length ? text : title || edit.before;
   return {
-    title: title.replace(/\s+/g, ' ').trim().replace(TRAILING_CONNECTOR, ''),
+    title,
     marks: merged, date: state.date, start: state.start, end: state.end, place: state.place, calendar: state.calendar, recurrence: state.recurrence,
     project: state.project,
   };
@@ -456,6 +489,29 @@ export function spanTo(from: string, to: string, start: number | null, end: numb
   const time = (((end ?? start + 60) - 1) % 1440) + 1;
   const next = extra * 1440 + time;
   return {date: from, end: next > start ? next : start + 60, days: 1};
+}
+
+/** An item's when: its first day; minutes after that day's midnight (null: all day, or a task's no time); an all-day event's days. */
+export interface When {
+  date: string;
+  start: number | null;
+  end: number | null;
+  days: number;
+}
+
+/**
+ * An edited item's when, once its title's typed day and time are read (SV-90): a day moves it,
+ * keeping its time and length (an all-day event its days); a time moves its start on its own day,
+ * the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
+ * An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
+ * task's time is its due time, with no end. With neither, it's as it was.
+ */
+export function editedWhen(item: When, read: {date: string | null; start: number | null; end: number | null}, kind: 'event' | 'task'): When {
+  const date = read.date ?? item.date;
+  if (read.start === null) return {...item, date};
+  if (kind === 'task') return {date, start: read.start, end: null, days: 1};
+  const length = item.start === null || item.end === null ? (item.days - 1) * 1440 + 60 : item.end - item.start;
+  return {date, start: read.start, end: read.end ?? read.start + length, days: 1};
 }
 
 /** An event with no end (SV-78): Google needs one, so it ends as it starts. */

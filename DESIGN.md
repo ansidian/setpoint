@@ -2628,3 +2628,15 @@ it changes what's on screen.
       **Revoke doesn't**, since it only takes access away, and nothing here ends a session.
     Board audit: no board draws Security and no approved screenshot with a board changed, so it's
     unchanged; the panel's own is `settings-security-iphones`.
+251. **An edited item's Title reads what the edit types, as a new item's line does** (Andy,
+    2026-10-17, the details left to Claude; darma SV-90 D279, D280): the Title on Edit is the same
+    marked line, with its menus, and reads only what the edit typed, so the words the title already
+    had stay its title. "Work" 3:00 – 8:00 AM, typed "Work at 3:45a", is Work at 3:45 – 8:45 AM: a
+    time keeps the day and length, a day keeps the time, a range sets both ends, and an all-day
+    event given a time ends an hour later on its last day, as Add a time does. A task's time is its
+    due time. "@place", "#calendar" (the event's own account's), a task's "#project" (Todoist's
+    only) and a repeat (counted from the item's day) apply too; a recurring event still asks This
+    event, This and following or All events. With no phrase typed, the title is as typed and
+    nothing else changes; phrases that leave no words keep the title. Board audit: board 14 draws the
+    edit's Title with no phrase in it; it reads as before, its text a pixel higher, where board 13's
+    line sets it (14 0.45%).
