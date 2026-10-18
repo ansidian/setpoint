@@ -78,10 +78,18 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   inside, equal room, a width at a breakpoint); or a value that has already moved by accident,
   stated in the commit that fixes it. A literal that only restates the stylesheet or a token (a
   padding, a gap, a font size, a motion duration) is left to `web/tests/tokens.test.ts` (D269).
-- Nine whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor, News and
-  Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) are the visual net
-  (D281, SV-97 found the region goldens before them caught nothing). They're compared only at
-  release, in release:check. When one has changed on purpose, `npm run goldens` re-captures them
+- The visual net is two things. Per change, the layout sweep (`web/tests/browser/sweep.spec.ts`,
+  SV-99, runs with every `npm run test:browser`, about 30 s) visits the main pages in Night and Light
+  at 1677, 1100 and 820 wide and on the phone. At rest it fails on anything that scrolls sideways,
+  text an `overflow: hidden` box cuts (an ellipsis is meant), an interactive element covered at its
+  centre (a pane lying over the page is meant), a broken image, a font not loaded, a failed request
+  or a console error. Then axe runs on the same pages per theme, by rule and element; its contrast
+  floor is 3:1 for now (D283, SV-100). A finding is fixed, with "the sweep caught it" or "axe caught
+  it" in the commit, or decided in darma and left out in the spec by name.
+- At release, nine whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
+  News and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside
+  the sweep (D281, SV-97 found the region goldens before them caught nothing). They're compared only
+  at release, in release:check. When one has changed on purpose, `npm run goldens` re-captures them
   and Andy looks at each changed image beside its diff before it's committed; a session never
   re-captures one just to make a run pass. The board audit (`npm run audit:boards`) sets them
   beside their boards at release.
