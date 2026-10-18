@@ -286,8 +286,10 @@ describe('changes through the command layer', () => {
     await run();
     expect([inbox, home, gone].map(one => command(one.id).state)).toEqual(['confirmed', 'confirmed', 'confirmed']);
     expect(['Mail the form', 'Buy stamps', 'Rake leaves'].map(project)).toEqual(['Inbox', 'Home', 'Inbox']);
-    expect(todoist.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/tasks').map(request => (request.body as {project_id?: string}).project_id))
-      .toEqual(['inbox', 'p-home', 'inbox']);
+    // By task, as the three commands go out side by side, in no fixed order.
+    const sent = todoist.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/tasks').map(request => request.body as {content: string; project_id?: string});
+    expect(Object.fromEntries(sent.map(body => [body.content, body.project_id]))).toEqual({'Mail the form': 'inbox', 'Buy stamps': 'p-home', 'Rake leaves': 'inbox'});
+    expect(sent).toHaveLength(3);
   });
 
   test('F6: a task takes no colour of its own', async () => {
