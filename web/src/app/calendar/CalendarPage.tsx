@@ -916,10 +916,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   return (
     <>
       <header className="hd">
-        <span className="hd-title cal-title num" key={titleKey} data-dir={titleMove.dir} data-view={mode}>
+        <h1 className="hd-title cal-title num" key={titleKey} data-dir={titleMove.dir} data-view={mode}>
           {searching ? 'Search' : title}
           {!searching && allHidden && <span className="cal-hidden ink3" title="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}
-        </span>
+        </h1>
         <span className="cal-step">
           <button className="ibtn sm" aria-label={`Previous ${mode}`} title={`Previous ${mode} · ←`} onClick={() => page(-1)}><Icon name="chevron_left" /></button>
           <button className="btn ghost sm" title="Today · T" data-hint="t" onClick={goToday}>Today</button>

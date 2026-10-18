@@ -73,7 +73,7 @@ export function PhoneSettings() {
     <>
       <header className="hd">
         <Mark />
-        <span className="hd-title">Settings</span>
+        <h1 className="hd-title">Settings</h1>
       </header>
       <div className="content ph-settings">
         <p>Settings is on the desktop</p>

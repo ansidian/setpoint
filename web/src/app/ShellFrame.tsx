@@ -24,7 +24,7 @@ export function ShellFrame() {
         <main className="main">
           <header className="hd">
             <Mark />
-            <span className="hd-title">{route.page === 'calendar' ? 'Agenda' : 'Inbox'}</span>
+            <h1 className="hd-title">{route.page === 'calendar' ? 'Agenda' : 'Inbox'}</h1>
             {/* The Inbox's search field holds its row, so the list doesn't move down when the app comes. */}
             {route.page !== 'calendar' && <span className="search"><Icon name="search" size={16} /><span className="grow">Search mail</span></span>}
           </header>
@@ -48,7 +48,7 @@ export function ShellFrame() {
     <div className="app" data-frame>
       <Sidebar route={route} frame />
       <main className="main">
-        <header className="hd"><span className="hd-title">{title}</span></header>
+        <header className="hd"><h1 className="hd-title">{title}</h1></header>
         <div className="content">
           {route.page === 'inbox' || route.page === 'settings' ? <section className="list all"><AllSkeleton /></section>
               : route.page === 'news' ? <section className="nw-list"><div className="nw-body"><div className="list"><NewsSkeleton blocks={route.view === 'all'} /></div></div></section>

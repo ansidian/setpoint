@@ -65,7 +65,7 @@ export function Agenda({route}: {route: CalendarRoute}) {
     <>
       <header className="hd">
         <Mark />
-        <span className="hd-title">Agenda</span>
+        <h1 className="hd-title">Agenda</h1>
         <span className="grow" />
         <span className="ph-range num">{agendaRange(start)}</span>
       </header>

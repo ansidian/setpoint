@@ -166,7 +166,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
-.hd-title { font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
+/* Each page's title is its heading one (axe's page-has-heading-one, SV-99), drawn as before. */
+.hd-title { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
 .seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; }
 .seg > * { height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; }
 .seg > .on { background: var(--sub3); color: var(--ink); }

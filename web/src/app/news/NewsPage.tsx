@@ -315,7 +315,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   return (
     <>
       <header className="hd">
-        <span className="hd-title">{searching ? 'Search' : 'News'}</span>
+        <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
         {!searching && (
           <span className="seg" ref={segThumb}>
             <button type="button" className={segOn('all')} onClick={() => switchTo('all')}>All</button>
