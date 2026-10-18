@@ -1,7 +1,8 @@
-// Boards 01 to 10 against their approved screenshots (web/tests/browser/goldens/, SV-33), at the
-// design target, 1677 × 1050. The app runs on the seed with the seed's clock, so its ages and counts
-// are the brief's. `npm run audit:boards` sets each screenshot beside its board. The Inbox is one list
-// since SV-70, so the boards drawing Unread's groups are taken in its place (DESIGN.md override 33).
+// Boards 01 to 10 as scenes on the seed, at the design target, 1677 × 1050, each built and checked
+// for its content and no page errors. The app runs on the seed with the seed's clock, so its ages and
+// counts are the brief's. Board 01 also takes one of the release's page screenshots (pages.ts). The
+// Inbox is one list since SV-70, so the boards drawing Unread's groups are built in its place
+// (DESIGN.md override 33).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
@@ -31,8 +32,7 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
     // Opening it read it: Inbox (3) 18 and Jobs 1 (DESIGN.md override 2).
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
     await settle(page);
-    await matchGolden(page, '01-inbox-a-typical-morning', 'main');
-    await matchGolden(page, '01-inbox-a-typical-morning.sidebar', 'sidebar');
+    await matchGolden(page, '01-inbox-a-typical-morning');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -57,10 +57,8 @@ test('board 04: nothing new, the list starting at Attention, the shelf and the d
     await page.locator('.today-row').first().waitFor();
     // Nothing unread and nothing waiting on Done: no New, no Attention, the shelf first.
     assert.deepEqual(await page.locator('.list .gh:not(.day)').allTextContents(), ['Pinned 1']);
-    await settle(page);
     assert.equal(await page.locator('.pane').count(), 0, 'the reading pane is collapsed');
     assert.equal(await page.title(), 'Inbox');
-    await matchGolden(page, '04-all-caught-up', 'list');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -92,9 +90,6 @@ test('board 02: Money collapsed, the Contoso Coffee newsletter open with images 
     await frameDrawn(page);
     // Opening it read it: Inbox (3) 18 and Personal 7 (DESIGN.md override 2).
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
-    await page.locator('.list').evaluate(list => list.scrollTo(0, 0));
-    await settle(page);
-    await matchGolden(page, '02-deliveries-expanded-images-hidden', 'reader');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -111,8 +106,6 @@ test('board 03: the protected recovery-email alert open, with its facts card', a
     await page.locator('.facts', {hasText: 'not a place you use'}).waitFor();
     await frameDrawn(page);
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
-    await settle(page);
-    await matchGolden(page, '03-security', 'reader');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -140,8 +133,6 @@ test('board 05: the days, under the Pinned shelf, the cursor on the shelf\'s lea
     await page.keyboard.press('j');
     await page.keyboard.press('j');
     await page.locator('.list.all .row.shelf.cur', {hasText: 'Parkside Apartments'}).waitFor();
-    await settle(page);
-    await matchGolden(page, '05-all-grouped-by-day', 'list');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -160,8 +151,6 @@ test('board 09: the pattern prompt in Attention, the cursor on the digest that j
     const digest = page.locator('.list .row[title^="Northwind Engineering Digest"]').first();
     for (let press = 0; press < 20 && !(await digest.evaluate(row => row.classList.contains('cur'))); press++) await page.keyboard.press('j');
     await page.locator('.list .row.cur[title^="Northwind Engineering Digest"]').waitFor();
-    await settle(page);
-    await matchGolden(page, '09-pattern-prompt', 'list');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -176,12 +165,8 @@ test('board 10: two pins, the lease open, Unpin under the pointer on the DMV not
     await page.locator('.today-row').first().waitFor();
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     await page.locator('.attach', {hasText: 'Renewal agreement.pdf'}).waitFor();
-    await page.evaluate(() => document.fonts.ready);
     await page.locator('.row.shelf', {hasText: 'DMV'}).hover();
     await page.locator('.row.shelf', {hasText: 'DMV'}).locator('.unpin').waitFor();
-    // Lets the Unpin button's hover settle before the screenshot.
-    await page.waitForTimeout(250);
-    await matchGolden(page, '10-pinned-shelf', 'main');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -205,8 +190,6 @@ test('board 06: search with chips, the first result open', async () => {
     await page.keyboard.press('Enter');
     await page.locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();
     await page.keyboard.press('/');
-    await settle(page);
-    await matchGolden(page, '06-search-with-chips', 'main');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -235,8 +218,6 @@ test('board 07: Alfred\'s Answer card with its source and one follow-up', async 
     await page.keyboard.type('what\'s the new rent?');
     await page.keyboard.press('Enter');
     await until('the follow-up\'s answer', () => page.locator('.answer .ans').count(), count => count === 2);
-    await settle(page);
-    await matchGolden(page, '07-alfred-s-answer-card', 'main');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -254,8 +235,6 @@ test('board 08: the proposal card from Add to calendar on the Contoso University
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await page.locator('.prop .conflict', {hasText: 'Free that evening'}).waitFor();
     await page.locator('.prop .field.pick', {hasText: '10 min before'}).waitFor();
-    await settle(page);
-    await matchGolden(page, '08-proposal-add-to-calendar', 'reader');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

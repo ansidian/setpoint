@@ -1,6 +1,7 @@
 // `npm run release:check` (SV-83, D274): the release checks, run only where they haven't already
 // passed on HEAD's exact content (passes.ts): npm test, each browser spec file in the normal run and
-// under stress, and the board audit when its inputs have changed since it last ran. It says what it
+// under stress, the page screenshots (pages.ts, D281), and the board audit when its inputs have
+// changed since it last ran. Stress, the screenshots and the audit run only here, not per change. It says what it
 // skipped and why, stops at the first check that fails, and ends by saying whether HEAD is ready to
 // release. When a release is coming, the session that pushes runs it straight after, so the release
 // finds everything recorded.
@@ -75,6 +76,17 @@ for (const check of ['browser', 'stress'] as const) {
   run(['run', check === 'browser' ? 'test:browser' : 'test:browser:stress', ...(left.length === all.length ? [] : ['--', ...left])]);
   recorded(!missing(all, passesOf(tree), check).length, `the ${name.toLowerCase()}`);
   summary.push(`${name}: passed, ${left.length} spec file${left.length === 1 ? '' : 's'} run${done.length ? ` and ${done.length} skipped as already passed` : ''}.`);
+}
+
+const shots = passesOf(tree).filter(pass => pass.check === 'pages');
+if (shots.length) {
+  summary.push(`Page screenshots: skipped, they matched on this content ${when(shots)}.`);
+  console.log(`\n${summary.at(-1)}`);
+} else {
+  console.log('\nPage screenshots: comparing.');
+  run(['run', 'test:pages']);
+  recorded(passesOf(tree).some(pass => pass.check === 'pages'), 'the page screenshots');
+  summary.push('Page screenshots: matched.');
 }
 
 const key = auditKey(tree);

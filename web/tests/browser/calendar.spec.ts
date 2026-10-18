@@ -1,5 +1,6 @@
-// The Calendar in the browser: boards 11 and 11b against their approved screenshots (11b's busy
-// Saturday is the busy-saturday fixture, decision D3), then the flows: the grid's sizes, scrolling and paging through months, a calendar
+// The Calendar in the browser: boards 11 and 11b built and checked (11b's busy Saturday is the
+// busy-saturday fixture, decision D3; board 11 also takes one of the release's page screenshots,
+// pages.ts), then the flows: the grid's sizes, scrolling and paging through months, a calendar
 // toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
@@ -52,8 +53,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     })), [ICONS.location_on, '16', await rested(() => tokenColour(page, 'ink3')), '4px', '4px', '12.5px']);
     await settle(page);
     assert.equal(await page.title(), 'October 2026 · Calendar');
-    await matchGolden(page, '11-calendar-october-2026', 'main');
-    await matchGolden(page, '11-calendar-october-2026.sidebar', 'sidebar');
+    await matchGolden(page, '11-calendar-october-2026');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -78,8 +78,6 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
     // A popover's × is 16 px in a 26 px button, as every card's (#123); its laid-out width, whatever its entrance.
     assert.deepEqual(await popover.getByRole('button', {name: 'Close'}).evaluate(button => [(button as HTMLElement).offsetWidth, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     await page.locator('.ag-item', {hasText: 'Movie night'}).waitFor();
-    await settle(page);
-    await matchGolden(page, '11b-a-busy-day-plus-3-and-its-popover', 'grid');
 
     await page.keyboard.press('Escape');
     await until('the popover closes', () => popover.count(), count => count === 0);

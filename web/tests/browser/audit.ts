@@ -1,14 +1,14 @@
-// The design-conformance audit (SV-33, D69): each board beside the app's approved screenshot of the
-// same state (goldens/), with a diff, on one page to read, test-results/audit/index.html. It has no
+// The design-conformance audit (SV-33, D69): each board beside the app's page screenshot of the
+// same state (goldens/, the nine pages.ts keeps, D281), with a diff, on one page to read,
+// test-results/audit/index.html; a board without one is drawn alone. It has no
 // pass or fail. Each board is drawn by Chromium at its exact size from design-export/boards/, and
 // News's from design-export/news/boards/ (SV decision D7: the export holds board HTML, not PNGs),
 // after its listed patches: DESIGN.md's
 // Overrides to the export, and where the dev seed (decision D3) or DESIGN.md's own text says
 // otherwise than the board. The patches are the differences already decided, so what the diff
 // still shows is either a patch nobody wrote yet or a real gap. Every patch must match its board
-// exactly once, so a changed board fails loudly. Run it when a decision changes the screen, after
-// `npm run goldens`, and before a release (release:check runs it only when its inputs have changed
-// since it last ran, passes.ts):
+// exactly once, so a changed board fails loudly. release:check runs it before a release, only when
+// its inputs have changed since it last ran (passes.ts); it can also be run by hand:
 //
 //   npm run audit:boards
 import fs from 'node:fs';
@@ -1311,28 +1311,18 @@ figcaption { font-size: 12px; margin-bottom: 4px; }
 img { width: 100%; height: auto; display: block; border: 1px solid var(--hair); }
 </style></head><body>
 <header><h1>Board audit</h1>
-<p>Each board as drawn, after the patches DESIGN.md has decided, beside the app's approved screenshots of the same state (web/tests/browser/goldens/), each cropped to the region its check covers, and their diff. Every board also draws the mark as Day stack (#87) and the Today block's named tasks (#78). The app's screenshots leave the mark out, except 01's sidebar, 22a and 21a, which check it. Anything the diff shows that no listed difference explains is a gap: a patch nobody wrote yet, or the app departing from the board.</p></header>
+<p>Each board as drawn, after the patches DESIGN.md has decided, beside the app's page screenshot of the same state (web/tests/browser/goldens/, the nine the release keeps, D281) and their diff; a board without one is drawn alone. Every board also draws the mark as Day stack (#87) and the Today block's named tasks (#78). Anything the diff shows that no listed difference explains is a gap: a patch nobody wrote yet, or the app departing from the board.</p></header>
 ${sections.join('\n')}
 </body></html>
 `;
 }
 
-/** A board's approved screenshots: the whole state (<name>.png), or regions of it (<name>.<part>.png). */
-function goldensOf(board: Board): string[] {
-  if (!fs.existsSync(GOLDENS)) return [];
-  return fs.readdirSync(GOLDENS).filter(file => file === `${board.name}.png` || (file.startsWith(`${board.name}.`) && file.endsWith('.png')))
-    .map(file => file.slice(0, -'.png'.length)).sort();
+/** A board's page screenshot, if pages.ts keeps one for it. */
+function goldenOf(board: Board): string | null {
+  return fs.existsSync(path.join(GOLDENS, `${board.name}.png`)) ? board.name : null;
 }
 
-/** Where a region's screenshot sits on the page (matchGolden keeps it beside it), sized as the screenshot is. */
-function regionOf(name: string, png: Buffer): {x: number; y: number; width: number; height: number} | null {
-  const box = path.join(GOLDENS, `${name}.json`);
-  if (!fs.existsSync(box)) return null;
-  const {x, y} = JSON.parse(fs.readFileSync(box, 'utf8')) as {x: number; y: number};
-  return {x, y, width: png.readUInt32BE(16), height: png.readUInt32BE(20)};
-}
-
-/** Draws every board, sets each approved screenshot beside the same region of its board with a diff, and writes the audit's page. */
+/** Draws every board, sets each page screenshot beside its board with a diff, and writes the audit's page. */
 export async function audit(): Promise<string> {
   const {base, close} = await serveExport();
   const browser = await launchBrowser();
@@ -1343,18 +1333,16 @@ export async function audit(): Promise<string> {
       const page = await browser.newPage({viewport: {width: board.width, height: board.height}, deviceScaleFactor: 1});
       await page.goto(`${base}/${board.dir ?? 'boards'}/${board.file}`);
       await page.evaluate(() => document.fonts.ready);
-      const draw = (clip?: {x: number; y: number; width: number; height: number}) =>
-        (board.phone === undefined ? page.screenshot({clip}) : page.locator('.phone').nth(board.phone).screenshot());
+      const draw = () => (board.phone === undefined ? page.screenshot() : page.locator('.phone').nth(board.phone).screenshot());
       const parts: Part[] = [];
-      const names = goldensOf(board);
-      if (!names.length) {
+      const name = goldenOf(board);
+      if (!name) {
         fs.writeFileSync(path.join(AUDIT, `${board.name}.board.png`), await draw());
-        console.log(`${board.name}: no approved screenshot yet`);
-        parts.push({name: board.name, summary: 'No approved screenshot yet', compared: false});
-      }
-      for (const name of names) {
+        console.log(`${board.name}: no page screenshot`);
+        parts.push({name: board.name, summary: 'No page screenshot (D281)', compared: false});
+      } else {
         const app = fs.readFileSync(path.join(GOLDENS, `${name}.png`));
-        const drawn = await draw(regionOf(name, app) ?? undefined);
+        const drawn = await draw();
         fs.writeFileSync(path.join(AUDIT, `${name}.board.png`), drawn);
         fs.writeFileSync(path.join(AUDIT, `${name}.app.png`), app);
         const result = await compareImages(drawn, app);

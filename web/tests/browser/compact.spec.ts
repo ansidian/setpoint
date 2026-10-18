@@ -3,14 +3,14 @@
 // their tooltips, the attention pill a badge on Inbox), an email or a story covering the list with
 // Back, Esc, J and K, the header whole, nothing scrolling sideways; Calendar's grid taking the width
 // with the editor and search over it and its sources' health atop it; ⌘K keeping the rail's lost
-// filters; the day's pane brought over the grid by its header button (D183); and the tier's approved
-// screenshots. At 1100 the full sidebar and the panes beside return.
+// filters; and the day's pane brought over the grid by its header button (D183). At 1100 the full
+// sidebar and the panes beside return.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -244,47 +244,6 @@ test('the day\'s pane comes over the grid from its header button, lit while open
     await desktop.goto(`${setpoint.base}/calendar`);
     await desktop.locator('.rpane .rp-date').waitFor();
     assert.equal(await desktop.getByRole('button', {name: 'The day'}).count(), 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('the compact tier\'s screenshots: the Inbox at 640 and an email over it at 820 in Night, Calendar\'s editor over the grid at 820 in Light, and the day\'s pane over it at 820 in Night', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const narrow = await setpoint.page({width: 640, height: HEIGHT});
-    await narrow.goto(`${setpoint.base}/inbox`);
-    await narrow.locator('.list .row').first().waitFor();
-    await narrow.mouse.move(320, 28);
-    await matchGolden(narrow, 'compact-640-inbox');
-
-    const page = await setpoint.page({width: 820, height: HEIGHT});
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row[title^="Interview availability"]').click();
-    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    await page.mouse.move(600, 28);
-    await matchGolden(page, 'compact-820-reader');
-
-    const light = await setpoint.page({width: 820, height: HEIGHT});
-    await light.emulateMedia({colorScheme: 'light'});
-    await light.goto(`${setpoint.base}/calendar`);
-    await light.locator('.cal-month .cell').first().waitFor();
-    await light.keyboard.press('c');
-    await light.locator('.rpane.editor .nl-input').waitFor();
-    // The draft takes Settings' reminder once Settings has answered.
-    await light.getByRole('button', {name: 'Remove reminder'}).waitFor();
-    await light.mouse.move(300, 28);
-    await matchGolden(light, 'compact-820-calendar-editor');
-
-    // The day's pane over the grid at 820 in Night (D183).
-    const day = await setpoint.page({width: 820, height: HEIGHT});
-    await day.goto(`${setpoint.base}/calendar`);
-    await day.locator('.cal-month .cell').first().waitFor();
-    await day.getByRole('button', {name: 'The day'}).click();
-    await day.locator('.rpane .rp-date').waitFor();
-    await day.mouse.move(300, 28);
-    await matchGolden(day, 'compact-820-calendar-day');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -1,16 +1,16 @@
 // Direct manipulation on the month grid (DESIGN.md › Drag, Recurring events and Health and states;
-// boards 15, 15b and 19b): the boards against their approved screenshots, then the flows: a drop with each
-// scope, a single event and a task moved at once (pending at .5 with a spinner until the provider
-// confirms), a change that fails in place with Try again and Move back, Clone, Copy and Paste,
-// Colour, Delete (and a recurring one asking which), multi-select, and the drag, the drop prompt and
-// the failed card under the 1.25 wide-screen zoom (D23). The dev provider confirms after 600 ms and
-// refuses moving Dinner with Sam to Saturday with Google's 409 (board 19b, by rule).
+// boards 15, 15b and 19b): the boards built and checked, then the flows: a drop with each scope, a
+// single event and a task moved at once (pending at .5 with a spinner until the provider confirms), a
+// change that fails in place with Try again and Move back, Clone, Copy and Paste, Colour, Delete (and
+// a recurring one asking which), multi-select, and the drag, the drop prompt and the failed card
+// under the 1.25 wide-screen zoom (D23). The dev provider confirms after 600 ms and refuses moving
+// Dinner with Sam to Saturday with Google's 409 (board 19b, by rule).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
@@ -67,9 +67,6 @@ test('boards 15 and 15b: Gym dragged from Wednesday to Thursday, then the drop a
     await page.locator('.drag-tip', {hasText: 'Thu, Oct 8 · 7:00 AM'}).waitFor();
     await page.locator('.cell[data-date="2026-10-08"].drop').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .ev.ghost', {hasText: 'Gym'}).waitFor();
-    // Lets the drag's ghost settle before the screenshot.
-    await page.waitForTimeout(200);
-    await matchGolden(page, '15-drag-in-progress', 'grid');
 
     // Board 15b: let go; the prompt sits beside the dropped chip, This event chosen.
     await page.mouse.up();
@@ -81,10 +78,6 @@ test('boards 15 and 15b: Gym dragged from Wednesday to Thursday, then the drop a
     const dropped = (await rested(() => page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox()))!;
     const box = (await rested(() => prompt.boundingBox()))!;
     assert.equal(Math.round(dropped.x - (box.x + box.width)), GAP);
-    await page.mouse.move(700, 28);
-    // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-    await page.waitForTimeout(200);
-    await matchGolden(page, '15b-dropped-this-following-or-all', 'grid');
 
     await page.keyboard.press('Enter');
     await prompt.waitFor({state: 'detached'});
@@ -185,10 +178,6 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     assert.deepEqual(await card.getByRole('button', {name: 'Close'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
     assert.equal(Math.round((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)), GAP);
-    await page.mouse.move(700, 28);
-    // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-    await page.waitForTimeout(200);
-    await matchGolden(page, '19b-states-a-change-that-failed', 'main');
 
     // Try again: pending once more at once, before the server has it (held here at its door), then
     // the provider refuses again, in place (SV-42).

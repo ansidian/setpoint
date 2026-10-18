@@ -86,14 +86,13 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   timeouts).
 - No mocks of internal modules. Presentation goes to browser checks, not unit tests.
 - **Playwright** runs in Chromium at 1677 × 1050, 1728 × 1117 and an iPhone size, against the
-  production build with the seed. The checks compare with **approved screenshots of the app**
-  (`web/tests/browser/goldens/`, D69): a deliberate visual change re-captures its screenshot in the
-  same commit, and each changed image is looked at beside its diff before committing. The boards
-  are checked separately by the board audit (`npm run audit:boards`), when a decision changes the
-  screen and before a release. Before a release the checks also run under stress
-  (`npm run test:browser:stress`: a CPU slowed 4×, /api late and out of order, the fonts late;
-  D81), so a check that reads too early fails every time rather than now and then; a change to a
-  page runs the spec files it touches under stress before commit. A failed check keeps a trace
+  production build with the seed. The checks state behaviour, relations and state-dependent values;
+  nine whole-page screenshots (`web/tests/browser/pages.ts`, D281, in place of D69's region goldens)
+  are compared only at release, and the board audit (`npm run audit:boards`) sets them beside their
+  boards then. Before a release the checks also run under stress (`npm run test:browser:stress`: a
+  CPU slowed 4×, /api late and out of order, the fonts late; D81), so a check that reads too early
+  fails every time rather than now and then; a spec file that is new or largely rewritten runs once
+  under stress before its commit. A failed check keeps a trace
   (SV-75), and a one-shot read of a style or box rests first (`rested`; the lint asks). A single
   value is stated in a check only where a golden can't hold it: a state-, theme- or cascade-dependent
   colour, a relation, or a value that has moved by accident before (D269).

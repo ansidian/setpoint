@@ -30,8 +30,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Verification
 
-- `npm test` (lint, typecheck, Vitest) passes before every commit; `npm run test:browser` (build
-  and Playwright, from F1) too for what it covers. Say what ran.
+- `npm test` (lint, typecheck, Vitest) passes before every commit, and `npm run test:browser`
+  (build and Playwright) for the spec files covering what the change touches; a change to the
+  harness or the shared styles runs them all. Say what ran.
 - `npm run test:browser -- mail search` runs only those spec files. One browser run at a time on
   this machine: a run waits for another session's, saying whose, and stops at 15 minutes. It ends
   with its time and slowest checks; past its budget, look there before adding checks. A direct
@@ -40,16 +41,17 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - A check that fails or times out keeps a trace of its pages under `test-results/browser/traces/`,
   and the run says where: `npx playwright-core show-trace <file>` replays every action, with the
   screen and the DOM at each step, before guessing at what was mid-flight (SV-75).
-- A change to what a page shows also runs the spec files it touches under stress before commit
-  (`npm run test:browser:stress -- mail search`, a few minutes for a large file), so a check that reads
-  before what it reads has come is caught in the same commit, not at the release's run.
+- Stress, the page screenshots and the board audit run at release, not per change (D281). A spec
+  file that is new or largely rewritten runs once under stress before its commit
+  (`npm run test:browser:stress -- mail`), so a check that reads before what it reads has come is
+  caught there rather than at the release.
 - Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the browser checks,
   the same under stress (`npm run test:browser:stress`: a CPU slowed 4×, /api answering late, one
   at a time and last-asked first, and the web fonts late, D81, so a check that reads before what it
-  reads has come fails every time) and the board audit, each only where it hasn't already passed on
-  HEAD's exact content. Every passing run records itself by the working tree's content, so the runs
-  before a commit count, spec file by spec file, and the audit runs when the goldens or boards have
-  changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes 5
+  reads has come fails every time), the page screenshots (`npm run test:pages`) and the board
+  audit, each only where it hasn't already passed on HEAD's exact content. Every passing run records
+  itself by the working tree's content, so the runs before a commit count, spec file by spec file,
+  and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes 5
   to 10 minutes.
 - When Andy says a release is coming, the session that pushes its commit runs
   `npm run release:check` in the background straight after, so the release finds it done. It holds
@@ -61,7 +63,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - With `data/news-snapshot/` there (real news taken once from prod, `server/src/dev/exportNews.ts`),
   `npm run seed` and `npm run try` load News from it, its times moved onto the seed's clock, in place
   of the sample's. It stays out of git (Local names the area); the browser checks seed with
-  `--sample-news`, so they and the goldens never see it.
+  `--sample-news`, so they and the page screenshots never see it.
 
 ## Tests own behaviour
 
@@ -69,18 +71,20 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   SQL text.
 - Providers are faked at the HTTP or IMAP boundary. No test, seed or dev run reaches a real
   provider, ntfy, Home Assistant or a model.
-- No mocks of internal modules. Presentation goes to browser checks against approved screenshots of
-  the app (`web/tests/browser/goldens/`, D69), each of the region its check is about, with the
-  shared parts checked once each (`REGIONS` in harness.ts, D76). A single value also gets a check
-  that states it when a golden can't hold it: a colour or fill that depends on state, theme or the
-  cascade (hover, press, focus, selected, outside the month, Light beside Night, a role colour on a
-  glyph); a relation rather than a literal (fits or clips, beside or inside, equal room, a width at
-  a breakpoint); or a value that has already moved by accident, stated in the commit that fixes it.
-  A literal that only restates the stylesheet or a token (a padding, a gap, a font size, a motion
-  duration) is left to the golden and `web/tests/tokens.test.ts` (D269). A deliberate visual change
-  re-captures its screenshots in the same commit (`npm run goldens`), and each changed image is
-  looked at beside its diff before committing. A decision that changes the screen also runs the
-  board audit (`npm run audit:boards`) and notes what it showed in the decision.
+- No mocks of internal modules. Presentation goes to browser checks that state what the screen
+  does: what's there after an action, and a single value where it matters: a colour or fill that
+  depends on state, theme or the cascade (hover, press, focus, selected, outside the month, Light
+  beside Night, a role colour on a glyph); a relation rather than a literal (fits or clips, beside or
+  inside, equal room, a width at a breakpoint); or a value that has already moved by accident,
+  stated in the commit that fixes it. A literal that only restates the stylesheet or a token (a
+  padding, a gap, a font size, a motion duration) is left to `web/tests/tokens.test.ts` (D269).
+- Nine whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor, News and
+  Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) are the visual net
+  (D281, SV-97 found the region goldens before them caught nothing). They're compared only at
+  release, in release:check. When one has changed on purpose, `npm run goldens` re-captures them
+  and Andy looks at each changed image beside its diff before it's committed; a session never
+  re-captures one just to make a run pass. The board audit (`npm run audit:boards`) sets them
+  beside their boards at release.
 - A browser check waits for what it reads (`until`, a waiting locator, `point`, `watch` in
   harness.ts; `goto` already waits for the page's first data and fonts). A fixed pause is only for
   a "nothing happened" check or a hover settling before a screenshot, and says so on the line

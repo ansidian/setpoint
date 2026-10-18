@@ -1,9 +1,9 @@
-// The phone at 390 × 844 (DESIGN.md › Phone; board 21; F8): board 21's three phones against their
-// approved screenshots (the Inbox after reading Northwind, the reader on it, the agenda), the Inbox, reader and
-// agenda by taps, read state, Done, Trash with Undo, Mark unread and read, Mark all as read, plain
-// search, and every kind of deep link an ntfy notification carries (`deepLinkPath`): an email, an
-// event, one occurrence of a recurring event, a task's day, and a Settings page. Sign-in's fields
-// are 16 px, so iOS doesn't zoom into them.
+// The phone at 390 × 844 (DESIGN.md › Phone; board 21; F8): board 21's three phones (the Inbox after
+// reading Northwind, the reader on it, the agenda, the Inbox also one of the release's page
+// screenshots, pages.ts), the Inbox, reader and agenda by taps, read state, Done, Trash with Undo,
+// Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
+// notification carries (`deepLinkPath`): an email, an event, one occurrence of a recurring event, a
+// task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't zoom into them.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
@@ -39,7 +39,6 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     // Opening it read it: 18 (override 2).
     await until('the server read it', () => counts(setpoint), value => value.unread === 18);
-    await matchGolden(page, '21b-phone-reader');
 
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
@@ -49,7 +48,6 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await page.locator('.ph-agenda .pitem').first().waitFor();
     assert.equal(new URL(page.url()).pathname, '/calendar');
-    await matchGolden(page, '21c-phone-agenda');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

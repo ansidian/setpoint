@@ -1,13 +1,13 @@
 // Selecting several emails (DESIGN.md #249): ⌘-click and ⇧-click select rows without opening or
-// reading them, and the reading pane shows the selection, against its approved screenshot; the first
-// ⌘-click takes the open email, and a plain click ends it and opens. A selected row's right-click offers
-// the selection's actions and another row's its own; E trashes every one with one toast, and ⌘Z
-// brings every one back; Mark read, Pin and Done act on all of it.
+// reading them, and the reading pane shows the selection; the first ⌘-click takes the open email, and
+// a plain click ends it and opens. A selected row's right-click offers the selection's actions and
+// another row's its own; E trashes every one with one toast, and ⌘Z brings every one back; Mark
+// read, Pin and Done act on all of it.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, matchGolden, startSetpoint, until} from './harness.ts';
+import {cleanUp, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -56,7 +56,6 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    await page.addInitScript(() => localStorage.setItem('setpoint.theme', 'night'));
     await openInbox(page, setpoint.base);
     const [first, second, third] = await fourInADay(page, setpoint);
 
@@ -77,7 +76,6 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     assert.equal(await page.evaluate(() => getSelection()?.toString() ?? ''), '', 'the ⇧-click selected no text');
     // A selected row is drawn as the open one is: `sub3` and the accent bar.
     await until('drawn selected', () => row(page, second!.id).evaluate(element => getComputedStyle(element).boxShadow), shadow => /2px 0px 0px 0px inset/.test(shadow));
-    await matchGolden(page, 'selected-emails', 'main');
 
     // × takes one out; ⌘-click on a selected row does too.
     await pane(page).locator(`li[data-id="${second!.id}"] .sel-drop`).click();

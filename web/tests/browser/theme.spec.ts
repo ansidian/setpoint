@@ -1,6 +1,6 @@
-// Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light) against their
-// approved screenshots, then the switch itself: System follows the browser, a choice is kept per browser, the
-// first paint doesn't fade and a switch fades every colour over 180 ms.
+// Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), each also one of the
+// release's page screenshots (pages.ts), then the switch itself: System follows the browser, a choice
+// is kept per browser, the first paint doesn't fade and a switch fades every colour over 180 ms.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Page} from 'playwright-core';

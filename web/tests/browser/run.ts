@@ -5,13 +5,16 @@
 // run's time against BUDGET and the slowest checks (slowest.ts). A failed check's trace is under
 // test-results/browser/traces/ (harness.ts), emptied at the start of each run. A run that passes
 // records its spec files for the content it ran on (passes.ts), unless the files changed meanwhile
-// or it was capturing goldens, so release:check doesn't run them again.
+// or it was capturing goldens, so release:check doesn't run them again. With SETPOINT_PAGES
+// (`npm run test:pages`, `npm run goldens`) it runs only the checks that take the release's page
+// screenshots (pages.ts), and those compare them.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {record, specName, treeOf} from '../passes.ts';
 import {acquire, clock, handDown, release} from './lock.ts';
+import {COMPARING, PAGES} from './pages.ts';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const HERE = fileURLToPath(new URL('./', import.meta.url));
@@ -52,7 +55,10 @@ function stop() {
 }
 
 async function main(): Promise<number> {
-  const files = specs(process.argv.slice(2));
+  if (COMPARING && process.argv.length > 2) throw new Error('The page screenshots run as a set (pages.ts); name no spec files.');
+  const files = specs(COMPARING ? [...new Set(PAGES.map(shot => shot.spec))] : process.argv.slice(2));
+  // Only the checks that take a page screenshot, by the start of their names.
+  const only = COMPARING ? PAGES.map(shot => `--test-name-pattern=^${shot.test}`) : [];
   const waited = await acquire();
   if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
   handDown();
@@ -71,15 +77,15 @@ async function main(): Promise<number> {
       '--test', `--test-global-setup=${path.join(HERE, 'globalSetup.ts')}`, '--test-concurrency=6', '--test-timeout=180000',
       '--test-reporter=spec', '--test-reporter-destination=stdout',
       `--test-reporter=${path.join(HERE, 'slowest.ts')}`, '--test-reporter-destination=stdout',
-      ...files,
+      ...only, ...files,
     ]);
     const took = Date.now() - started;
-    const whole = files.length === specs([]).length;
+    const whole = !COMPARING && files.length === specs([]).length;
     console.log(`\nBrowser run: ${clock(took)} (build ${clock(building)}, checks ${clock(took - building)})${whole ? `, budget ${clock(BUDGET)}` : ''}.`);
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
     if (Date.now() - started >= LIMIT) return 1;
     if (code === 0 && tree) {
-      if (treeOf() === tree) record(tree, {check: process.env.SETPOINT_BROWSER_STRESS === '1' ? 'stress' : 'browser', specs: files.map(specName)});
+      if (treeOf() === tree) record(tree, COMPARING ? {check: 'pages'} : {check: process.env.SETPOINT_BROWSER_STRESS === '1' ? 'stress' : 'browser', specs: files.map(specName)});
       else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
     }
     return code;

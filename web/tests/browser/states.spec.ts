@@ -1,16 +1,16 @@
-// Health and states in the browser (F7; DESIGN.md › Health and states): board 19a against its
-// approved screenshot (fixtures needs-reconnect, stale-icloud and triage-down, the stream cut), then the
-// flows: offline dims the page and refuses changes, Retry now tries again and the stream's return
-// clears it, the reconnect bar opens Settings › Accounts, a failing account's line says why, and
-// the first backfill's indexing line holds in search; SV-20 adds the calendar's own stale and
-// failing lines. The polish audit's states-02: Setpoint unreachable at launch shows the mark and the
-// pill, not the sign-in card, and asks again until it answers.
+// Health and states in the browser (F7; DESIGN.md › Health and states): board 19a built and checked
+// (fixtures needs-reconnect, stale-icloud and triage-down, the stream cut), then the flows: offline
+// dims the page and refuses changes, Retry now tries again and the stream's return clears it, the
+// reconnect bar opens Settings › Accounts, a failing account's line says why, and the first
+// backfill's indexing line holds in search; SV-20 adds the calendar's own stale and failing lines.
+// The polish audit's states-02: Setpoint unreachable at launch shows the mark and the pill, not the
+// sign-in card, and asks again until it answers.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, point, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
 
 after(cleanUp);
 
@@ -53,9 +53,6 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
     // Retry now carries refresh, as every Try again does (#123).
     assert.deepEqual(await glyph(page.locator('.offline-pill .retry .icon')), [ICONS.refresh, '16']);
-    await page.mouse.move(700, 28);
-    await matchGolden(page, '19a-states-reconnect-offline-unsorted', 'main');
-    await matchGolden(page, '19a-states-reconnect-offline-unsorted.sidebar', 'sidebar');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -167,8 +164,6 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
     // Centred on the same line, to the half pixel an odd width rounds to.
     assert.ok(Math.abs(box.x + box.width / 2 - (pillBox.x + pillBox.width / 2)) <= 0.5, 'the pill is centred under the mark');
     assert.deepEqual(await rested(() => mark.evaluate(svg => [getComputedStyle(svg).opacity, getComputedStyle(svg).filter])), ['0.5', 'grayscale(0.4)']);
-    await page.mouse.move(700, 28);
-    await matchGolden(page, 'unreachable-at-launch');
 
     // No connection at all is the same; it asks again on its own, with no click.
     me = 'refused';

@@ -22,6 +22,7 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
 import type {Browser, BrowserContext, Locator, Page, Request} from 'playwright-core';
 import {holdForRun} from './lock.ts';
+import {COMPARING, PAGES} from './pages.ts';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const WEB_DIST = path.join(ROOT, 'web', 'dist');
@@ -29,7 +30,7 @@ export const WEB_DIST = path.join(ROOT, 'web', 'dist');
 export const OUTPUT = path.join(ROOT, 'test-results', 'browser');
 /** Where a failed check's traces go (run.ts empties it at the start of a run). */
 export const TRACES = path.join(OUTPUT, 'traces');
-/** The approved screenshots of the app the checks compare with (SV-33, D69). */
+/** The release's page screenshots (pages.ts, D281). */
 export const GOLDENS = fileURLToPath(new URL('./goldens/', import.meta.url));
 
 /** The sizes every check runs at: the design target, the larger MacBook, and an iPhone. */
@@ -619,68 +620,29 @@ export const MAX_DIFFERING = 20;
 const GOLDEN_THRESHOLD = 0.03;
 
 /**
- * The parts of the screen a screenshot can cover (SV-33, D76): each check's covers only what it's
- * about, and the shared parts (the sidebar, with the mark, counts and Today block) are checked once
- * each in screenshots of their own, so a change re-approves only the screenshots that show it. One
- * without a region is the whole page (Light, the phone).
+ * Compares the whole page with its approved screenshot, web/tests/browser/goldens/<name>.png, once
+ * its fonts are in and it has settled: one of the release's page screenshots (pages.ts, D281), and
+ * only when `npm run test:pages` or `npm run goldens` runs, else it returns at once. The actual image
+ * and a diff land in test-results/browser/.
  */
-export const REGIONS = {
-  sidebar: 'aside.sb',
-  main: 'main.main',
-  list: 'section.list',
-  // News's list column: the Missed strip, the pill and the stories (DESIGN.md › News).
-  news: 'section.nw-list',
-  reader: 'section.pane',
-  grid: 'section.cal-month',
-  rightPane: '.rpane',
-  settings: '.settings',
-  palette: '.palette',
-  // The right-click menu (#248).
-  menu: '.ctx-menu',
-} as const;
-export type Region = keyof typeof REGIONS;
-
-// The screenshots that check Setpoint's mark (the sidebar in each theme, the phone's header, the
-// screen that says Setpoint can't be reached, All caught up's list, Setpoint starting); the rest that show it leave it out. It's hidden
-// rather than masked: a mask paints over the mark's box even where something covers it (the phone's
-// reader over the Inbox's header).
-const MARK_CHECKED = new Set(['01-inbox-a-typical-morning.sidebar', '22a-light-inbox', '21a-phone-inbox', 'unreachable-at-launch', '04-all-caught-up', 'starting']);
-const WITHOUT_MARK = 'svg.mark { visibility: hidden; }';
-
-/**
- * Compares the page, or one region of it, with its approved screenshot,
- * web/tests/browser/goldens/<name>.png, once its fonts are in and it has settled. A region's box on
- * the page is kept beside it (<name>.json), for the board audit to crop its board the same way. The
- * actual image and a diff land in test-results/browser/.
- */
-export async function matchGolden(page: Page, name: string, region?: Region): Promise<void> {
+export async function matchGolden(page: Page, name: string): Promise<void> {
+  if (!PAGES.some(shot => shot.name === name)) throw new Error(`${name} isn't one of the release's page screenshots (PAGES in pages.ts).`);
+  if (!COMPARING) return;
   await page.evaluate(() => document.fonts.ready);
   // Lets the last hover or scroll settle before the screenshot.
   await page.waitForTimeout(250);
   // And whatever arrived lately: it rests where the screenshot expects it, drawn as at rest.
   await still(page);
-  const options = {animations: 'disabled', caret: 'hide', style: MARK_CHECKED.has(name) ? undefined : WITHOUT_MARK} as const;
-  // The region's box out to whole pixels, so the board audit crops its board exactly the same.
-  const clip = region ? await page.locator(REGIONS[region]).evaluate(element => {
-    const {left, top, right, bottom} = element.getBoundingClientRect();
-    return {x: Math.floor(left), y: Math.floor(top), width: Math.ceil(right) - Math.floor(left), height: Math.ceil(bottom) - Math.floor(top)};
-  }) : undefined;
-  const actual = await page.screenshot({...options, clip});
+  const actual = await page.screenshot({animations: 'disabled', caret: 'hide'});
   const actualPath = writeOutput(`${name}.actual.png`, actual);
   const golden = path.join(GOLDENS, `${name}.png`);
   const shown = path.relative(ROOT, golden);
-  const placeBox = () => {
-    const box = path.join(GOLDENS, `${name}.json`);
-    if (clip) fs.writeFileSync(box, `${JSON.stringify(clip)}\n`);
-    else fs.rmSync(box, {force: true});
-  };
   const approve = () => {
     fs.mkdirSync(GOLDENS, {recursive: true});
     fs.writeFileSync(golden, actual);
-    placeBox();
   };
   if (!fs.existsSync(golden)) {
-    if (!UPDATE_GOLDENS) throw new Error(`${name}: no approved screenshot at ${shown}. Capture it with \`npm run goldens\` and look at it beside its board (\`npm run audit:boards\`) before committing.`);
+    if (!UPDATE_GOLDENS) throw new Error(`${name}: no approved screenshot at ${shown}. Capture it with \`npm run goldens\` and look at it before committing.`);
     approve();
     console.log(`${name}: captured ${shown}`);
     return;
@@ -688,10 +650,7 @@ export async function matchGolden(page: Page, name: string, region?: Region): Pr
   const result = await compareImages(fs.readFileSync(golden), actual, GOLDEN_THRESHOLD);
   const diffPath = writeOutput(`${name}.diff.png`, result.diff);
   console.log(`${name}: ${result.differing} pixels differ from ${shown}; actual ${actualPath}, diff ${diffPath}`);
-  if (result.differing <= MAX_DIFFERING) {
-    if (UPDATE_GOLDENS) placeBox();
-    return;
-  }
+  if (result.differing <= MAX_DIFFERING) return;
   if (UPDATE_GOLDENS) {
     approve();
     console.log(`${name}: re-captured ${shown}; look at ${diffPath} before committing`);

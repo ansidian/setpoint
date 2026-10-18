@@ -1,26 +1,19 @@
 // The floating detail in the browser (DESIGN.md › The floating detail and The glide; boards 12a,
-// 12b, 12c and 12d): boards 12a, 12b and 12d at rest against their approved screenshots (Time to
-// Leave is the time-to-leave fixture, decision D3), then the flows: open and close with Esc or the grid, a glide to another item that
-// lands 8 px off it on its side, a click mid-glide that retargets without closing, a drag that
-// leaves the card where it's dropped and the next glide starting there, and Edit handing over to
-// the right pane.
+// 12b, 12c and 12d): boards 12a, 12b and 12d at rest, where the card lies and what it says (Time to
+// Leave is the time-to-leave fixture, decision D3), then the flows: open and close with Esc or the
+// grid, a glide to another item that lands 8 px off it on its side, a click mid-glide that retargets
+// without closing, a drag that leaves the card where it's dropped and the next glide starting there,
+// and Edit handing over to the right pane.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {glidePosition, glideSegment, glideVelocity} from '../../src/logic/glide.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until, watch} from './harness.ts';
 
 const GAP = 8;
 
 after(cleanUp);
-
-async function settle(page: Page) {
-  await page.evaluate(() => document.fonts.ready);
-  await page.mouse.move(1000, 28);
-  // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-  await page.waitForTimeout(250);
-}
 
 const card = (page: Page) => page.locator('.fd');
 const chip = (page: Page, date: string, title: string) => page.locator(`.cell[data-date="${date}"] .ev`, {hasText: title});
@@ -99,8 +92,6 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     }, colour);
     assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal .icon').evaluate(icon => getComputedStyle(icon).color)), await rested(() => tint('var(--cool)')));
     assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color)), await rested(() => tint('var(--ink2)')), 'its name stays ink2');
-    await settle(page);
-    await matchGolden(page, '12a-floating-detail-dentist', 'grid');
     // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
     await glideTo(page, chip(page, '2026-10-07', 'Gym'));
     assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(), ['Weekly on Mon, Wed, Fri', '10 min before', 'Personal']);
@@ -139,8 +130,6 @@ test('board 12b: a click on Dinner with Sam glides the same card there; the sele
     await assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam'));
     assert.deepEqual(await card(page).locator('.fact').allTextContents(),
       ['Blue Door2118 Sunset Blvd', 'Leave by 6:35 PM · 21 min', 'Sam Lee', '1 hour before', 'Personal']);
-    await settle(page);
-    await matchGolden(page, '12b-floating-detail-glided-to-dinner-with-sam', 'grid');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -171,8 +160,6 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
     await openDentist(page);
     assert.equal(await scrollTop(), before, 'Dentist was in view: the grid stays');
     await october('after Dentist');
-    await settle(page);
-    await matchGolden(page, '12a-floating-detail-dentist', 'grid');
 
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
@@ -180,8 +167,6 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
     assert.equal(await scrollTop(), before, 'Dinner with Sam was in view: the grid stays');
     await october('after Dinner with Sam');
     assert.deepEqual(await page.evaluate(() => (window as unknown as {gridScrolls: number[]}).gridScrolls), [], 'the grid never scrolled');
-    await settle(page);
-    await matchGolden(page, '12b-floating-detail-glided-to-dinner-with-sam', 'grid');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -387,8 +372,6 @@ test('board 12d: dragged aside by its grip, the card stays where it\'s dropped; 
     await atRest(page);
     assert.equal(await card(page).getAttribute('data-side'), 'below');
     assert.deepEqual(await cardAt(page), {left: 668, top: 311, width: 280, height: 282});
-    await settle(page);
-    await matchGolden(page, '12d-dragged-aside-then-glides-to-dinner-with-sam', 'grid');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

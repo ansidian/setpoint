@@ -1,10 +1,12 @@
-// Settings in the browser (F7; DESIGN.md › Settings): boards 17, 18a and 18b against their
-// approved screenshots, then each page saving: the modal itself (⌘,, Esc, not in the address bar, a link
-// straight to a page, Reconnect), Accounts (colour, rename, order, Connect Gmail's "not configured",
-// Connect iCloud's form), Mail (a rule, Undo on a learned rule, a domain, code expiry), Notifications
-// (Send test to a fake ntfy on 127.0.0.1, switches, defaults), Calendar (a calendar hidden, Home,
-// weather, and SV-20's colours written to Google, waiting, refused, tried again and changed back), Todoist (SV-25's project
-// colours, the same way, and the task rings that take them), AI (a key set write-only, a model), Appearance, and Security's recovery codes and paired iPhones (SV-84). The passkey ceremony is in passkey.spec.ts.
+// Settings in the browser (F7; DESIGN.md › Settings): boards 17, 18a and 18b built and checked
+// (board 17 also takes one of the release's page screenshots, pages.ts), then each page saving: the
+// modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
+// (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form), Mail (a rule, Undo
+// on a learned rule, a domain, code expiry), Notifications (Send test to a fake ntfy on 127.0.0.1,
+// switches, defaults), Calendar (a calendar hidden, Home, weather, and SV-20's colours written to
+// Google, waiting, refused, tried again and changed back), Todoist (SV-25's project colours, the same
+// way, and the task rings that take them), AI (a key set write-only, a model), Appearance, and
+// Security's recovery codes and paired iPhones (SV-84). The passkey ceremony is in passkey.spec.ts.
 // N5 adds boards 30a and 30b: Settings › News (sources by section, read-only, no key row: #97) and AI's
 // News group (its models, the cap, this month and its usage), and the cap reached.
 import assert from 'node:assert/strict';
@@ -13,8 +15,7 @@ import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import path from 'node:path';
 import {after, test} from 'node:test';
-import {SEED_NOW} from '@setpoint/shared';
-import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairingOut, PairOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, until} from './harness.ts';
@@ -70,7 +71,7 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     assert.equal(await rested(() => page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color)), await rested(() => computed(page, 'color', 'var(--caution)')), 'in caution on the current page too');
     assert.equal(await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).locator('.state > .icon path').getAttribute('d'), ICONS.sync_problem);
     await page.mouse.move(1500, 1000);
-    await matchGolden(page, '17-settings-accounts', 'settings');
+    await matchGolden(page, '17-settings-accounts');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -137,7 +138,6 @@ test('board 18a: Settings › Mail, consolidatedmessenger.example under the poin
       'Northwind newslettersFYI · Updates', 'Proseware alertsFYI · Updates',
     ]);
     await page.locator('.settings .dom[data-domain="consolidatedmessenger.example"]').hover();
-    await matchGolden(page, '18a-settings-mail', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -153,8 +153,6 @@ test('board 18b: Settings › Notifications', async () => {
     // Every group has its label (the polish audit's settings-11), spaced as every other group is.
     assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['ntfy', 'Reminder defaults', 'Time to Leave', 'Alerts']);
     assert.deepEqual(await rested(() => page.locator('.settings .set-sec').evaluateAll(sections => sections.slice(1).map(section => getComputedStyle(section).marginTop))), ['14px', '14px', '14px']);
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, '18b-settings-notifications', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -207,8 +205,6 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     // 44 px rows (two lines of text make them taller, as the board's are).
     assert.deepEqual([...new Set(await page.locator('.settings .news-src').evaluateAll(rows => rows.map(element => getComputedStyle(element).minHeight)))], ['44px']);
     assert.equal(await page.locator('.settings .set-main').locator('.switch, .handle, [draggable="true"]').count(), 0, 'read-only: no handles, no switches');
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, '30a-settings-news', 'settings');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -238,8 +234,6 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.deepEqual(await rested(() => meter.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element.firstElementChild!).backgroundColor])),
       [await rested(() => computed(page, 'background', 'var(--sub2)')), neutral]);
     assert.equal(await rested(() => amount.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--ink)')));
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, '30b-settings-ai', 'settings');
 
     // Usage this month: Triage, Alfred and News, News in its parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
@@ -252,8 +246,6 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     // The month's total in the label, each cost in ink at 500.
     assert.equal(await usage.locator('.set-label .r').textContent(), '$21.35');
     assert.deepEqual(await rested(() => usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight])), [await rested(() => computed(page, 'color', 'var(--ink)')), '500']);
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, 'settings-ai-usage', 'settings');
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
     // the meter turns caution, before the cap is reached; under that, ink3 again.
@@ -1095,27 +1087,6 @@ test('Security › iPhones: Add iPhone shows the QR and its link, the phone pair
     await setpoint.idle();
     assert.equal(await page.locator('.settings').count(), 1, 'Settings stays open');
     assert.equal((await pair(withdrawn)).status, 401);
-
-    // The panel as drawn, its code and server fixed for the screenshot, on Security opened again with
-    // its answers in hand: a page drawn as they came, its Add passkey enabled late, rasterises that
-    // label's text a pixel off when /api answers late (the stress run), the same layout drawn apart.
-    await page.route('**/api/security/pairing', route => {
-      if (route.request().method() !== 'POST') return route.continue();
-      const server = 'http://localhost:7430';
-      const code = 'Ph0neCodeForTheScreenshotOnly_0123456789abc';
-      const fixed: PairingOut = {server, code, link: `setpoint://pair?server=${encodeURIComponent(server)}&code=${code}`, expires_at: new Date(Date.parse(SEED_NOW) + 5 * 60_000).toISOString()};
-      return route.fulfill({status: 201, contentType: 'application/json', body: JSON.stringify(fixed)});
-    });
-    await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
-    await page.locator('.settings .set-nav .nav', {hasText: 'Security'}).click();
-    await row.waitFor();
-    await add.click();
-    await panel.getByText('Works once · Expires in 5 min').waitFor();
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, 'settings-security-iphones', 'settings');
-    await panel.getByRole('button', {name: 'Cancel'}).click();
-    await panel.waitFor({state: 'detached'});
-    await page.unroute('**/api/security/pairing');
 
     // Revoke, with no password asked: the row goes and the token is refused.
     await row.getByRole('button', {name: 'Revoke'}).click();

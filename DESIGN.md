@@ -18,8 +18,8 @@ cutover. This file owns what's on screen and how it behaves.
   below; a unit test compares them, as mantel's does.
 - **Visual reference:** each board in `design-export/boards/` (gallery: `design-export/index.html`)
   is the reference for anything not written here, such as exact spacing inside a card. The board
-  audit (`npm run audit:boards`) sets each board beside the app's approved screenshot of the same
-  state; the browser checks compare with those screenshots, not with the boards (D69).
+  audit (`npm run audit:boards`) sets each board beside the app's page screenshot of the same
+  state, where the release keeps one (D69, D281); the browser checks never compare with the boards.
 - **Icons:** `design-export/glyphs/icons.json`, Material Symbols Rounded at weight 300 as SVG paths
   (`viewBox="0 -960 960 960"`), bundled. Never the icon font at runtime.
 - **Behaviour:** the tests own behaviour once specs exist; link to them rather than restating

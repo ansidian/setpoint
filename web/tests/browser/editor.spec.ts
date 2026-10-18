@@ -1,9 +1,9 @@
 // The editor in the right pane (DESIGN.md › Editor and Recurring events; boards 13 and 14): boards
-// 13 and 14 against their approved screenshots (board 13's Dinner with Sam isn't on the calendar
-// yet, the no-dinner fixture, D3), then
-// the flows: creating the board's two events at once, an edit asking which occurrences (This event,
-// then All events), a Todoist task from the same editor, the editor opened from an email's
-// proposal at /calendar/new, and an edited item's Title read as a line (SV-90).
+// 13 and 14 built and checked (board 13's Dinner with Sam isn't on the calendar yet, the no-dinner
+// fixture, D3; board 13 also takes one of the release's page screenshots, pages.ts), then the flows:
+// creating the board's two events at once, an edit asking which occurrences (This event, then All
+// events), a Todoist task from the same editor, the editor opened from an email's proposal at
+// /calendar/new, and an edited item's Title read as a line (SV-90).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
@@ -82,7 +82,7 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.mouse.move(700, 28);
     // Lets a hover fill the move left fade out (120 ms) before the screenshot.
     await page.waitForTimeout(250);
-    await matchGolden(page, '13-editor-new-event', 'main');
+    await matchGolden(page, '13-editor-new-event');
 
     // ⌘Enter creates both; they wait for the provider in place, then settle.
     await page.keyboard.press('Meta+Enter');
@@ -152,10 +152,6 @@ test('board 14: editing one Gym asks which occurrences, This event first; All ev
     await page.keyboard.press('Meta+Enter');
     await page.locator('.scope-pop .ropt.on', {hasText: 'This event'}).waitFor();
     await page.locator('.scope-pop', {hasText: 'From Wed, Oct 7 on'}).waitFor();
-    await page.mouse.move(700, 28);
-    // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-    await page.waitForTimeout(250);
-    await matchGolden(page, '14-editing-a-recurring-event', 'rightPane');
 
     // Save ↵ with This event: Wednesday's alone moves.
     await page.keyboard.press('Enter');

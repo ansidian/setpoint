@@ -1,13 +1,13 @@
-// ⌘K in the browser (F7; DESIGN.md › ⌘K): board 20 against its approved screenshot, then its commands: the
-// open email's (Done, Add to calendar's proposal, Mark unread), Go to, Appearance with the current
-// theme ticked, typing finding the commands that only have a key, the keyboard cursor, and Esc
-// giving focus back.
+// ⌘K in the browser (F7; DESIGN.md › ⌘K): board 20, what it lists on the open email, then its
+// commands: the open email's (Done, Add to calendar's proposal, Mark unread), Go to, Appearance with
+// the current theme ticked, typing finding the commands that only have a key, the keyboard cursor,
+// and Esc giving focus back.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -49,7 +49,6 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     assert.equal(await page.locator('.palette .ctx').textContent(), 'Interview availability for Software Engineer I');
     assert.equal(await page.locator('.palette .item .tick').count(), 1);
     assert.equal(await page.locator('.palette .item', {hasText: 'Night'}).locator('.tick').count(), 1, 'the current theme is ticked');
-    await matchGolden(page, '20-cmd-k-on-an-open-email', 'palette');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

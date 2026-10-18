@@ -183,8 +183,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     assert.equal(await rested(() => lead.locator('.hl').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink)')));
     await seenSettled(page, setpoint);
     await settle(page);
-    await matchGolden(page, '25-news-a-typical-morning', 'main');
-    await matchGolden(page, '25-news-a-typical-morning.sidebar', 'sidebar');
+    await matchGolden(page, '25-news-a-typical-morning');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -328,9 +327,6 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.equal(await rested(() => pane.locator('.ar-text p').first().evaluate(paragraph => getComputedStyle(paragraph).marginBottom)), '16px');
     assert.equal(await rested(() => pane.locator('.st-img.article').evaluate(box => box.getBoundingClientRect().height)), 240);
     assert.deepEqual(await rested(() => Promise.all(['.st-img.article', '.ar-text'].map(column))), [[28, 600], [28, 600]]);
-    await page.locator('.st-img.article .nw-img').evaluate((image: HTMLImageElement) => image.decode());
-    await settle(page);
-    await matchGolden(page, '26a-an-article-in-the-pane', 'reader');
     // Esc goes back to the story.
     await page.keyboard.press('Escape');
     await pane.locator('.st-head').waitFor();
@@ -343,8 +339,6 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     assert.match(await pane.locator('.ar-text').textContent() ?? '', /^A brush fire burning above the 210 Freeway grew to roughly 400 acres overnight/);
     assert.equal(await pane.locator('.st-label').textContent(), 'Also in this story');
     assert.deepEqual(await pane.locator('.src-row .o').allTextContents(), ['NBC Los Angeles', 'CBS Los Angeles', 'ABC7', 'FOX 11']);
-    await settle(page);
-    await matchGolden(page, '26b-an-article-that-cant-be-read-in-app', 'reader');
     // The Back tool, then Esc closes the pane.
     await pane.locator('.tool', {hasText: 'Back to story'}).click();
     await pane.locator('.st-head').waitFor();
@@ -419,8 +413,6 @@ test('a section (27): "12 more in Local" opens Local\'s full list, biggest first
     // Shown now, Water main is seen after its second on screen.
     await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
     await seenSettled(page, setpoint);
-    await settle(page);
-    await matchGolden(page, '27-a-section-local', 'news');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -453,8 +445,6 @@ test('Missed (28): Catch up lists the stories that left unseen, by day, each row
     assert.equal((await setpoint.api<{days: {stories: {id: number}[]}[]}>('GET', '/news/missed')).days.flatMap(day => day.stories).some(story => story.id === tornadoId), false);
     assert.equal(await page.locator('.nw-list [data-story]').count(), 14);
     assert.equal(await tornado.locator('.nw-meta').textContent(), 'General·NPR +9·Yesterday', 'seen, it still names its section');
-    await settle(page);
-    await matchGolden(page, '28-missed', 'news');
     await page.getByRole('button', {name: 'Back to All'}).click();
     await page.waitForURL(/\/news$/);
     await until('the strip counts what\'s left', () => page.locator('.nw-missed b').textContent(), text => text !== '14 stories');
@@ -759,8 +749,6 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
     assert.equal(await carWash.locator('.sm').isVisible(), false, 'no summary');
     assert.equal(await rested(() => carWash.evaluate(element => element.getBoundingClientRect().height)), 67);
     await seenSettled(page, setpoint);
-    await settle(page);
-    await matchGolden(page, 'news-narrow', 'news');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

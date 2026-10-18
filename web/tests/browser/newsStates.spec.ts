@@ -10,7 +10,7 @@ import {after, test} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -37,14 +37,6 @@ const colourOf = (page: Page, colour: string) => page.evaluate(value => {
   probe.remove();
   return computed;
 }, colour);
-
-async function settle(page: Page) {
-  await page.evaluate(() => document.fonts.ready);
-  // Out of the way of every row, so no hover fill shows.
-  await page.mouse.move(700, 28);
-  // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-  await page.waitForTimeout(250);
-}
 
 /** Changes the server's database as sorting would. */
 function sql(setpoint: Setpoint, statements: string) {
@@ -101,8 +93,6 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.deepEqual(await rested(() => leadGlyph(tech)), [ICONS.newspaper, '16', await rested(() => colourOf(page, 'var(--ink3)')), 8], 'it leads with newspaper (#124)');
     assert.equal(await page.locator('.nw-up').count(), 0);
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '4 more in AI', '9 more in General']);
-    await settle(page);
-    await matchGolden(page, '29a-states-unsorted-stale-nothing-new', 'news');
 
     // Show headlines: the raw headlines with their links, newest first, at the top of the list.
     await unsorted.getByRole('button', {name: 'Show headlines'}).click();
@@ -113,8 +103,6 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     assert.equal(await raw.first().getAttribute('href'), 'https://ktla.example/news/crews-contain-a-brush-fire-near-the-210-at-40');
     assert.equal(await raw.first().getAttribute('target'), '_blank');
     assert.equal(await rested(() => raw.first().evaluate(link => link.getBoundingClientRect().height)), 36);
-    await settle(page);
-    await matchGolden(page, 'news-show-headlines', 'news');
     await unsorted.getByRole('button', {name: 'Hide headlines'}).click();
     await raw.first().waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);
@@ -172,8 +160,6 @@ test('board 29b: the first run, sorting the last 48 hours; no Missed strip; noth
     assert.ok(Math.abs((foot[1] as number) - (foot[0] as number) * 186 / 312) < 1, `186 of 312 (${foot[1]} of ${foot[0]})`);
     assert.deepEqual(foot.slice(2), [await rested(() => colourOf(page, 'var(--ink3)')), '2px']);
     assert.equal(await page.locator('.nw-list [data-story]:not(.new)').count(), 0, 'everything starts new');
-    await settle(page);
-    await matchGolden(page, '29b-states-first-run', 'news');
     // A section's own list says the same.
     await page.locator('.hd .seg button', {hasText: 'AI'}).click();
     await page.locator('.nw-empty', {hasText: 'Nothing sorted in AI yet'}).waitFor();
@@ -231,8 +217,6 @@ test('Search news: the stories found replace the list, the archive too; one open
     const found = results.locator('[data-story]');
     assert.equal(await found.count(), 1);
     assert.deepEqual(await found.first().locator('.side .nw-meta').allTextContents(), ['General·ABC News +7', 'Updated 7:10 AM']);
-    await settle(page);
-    await matchGolden(page, 'news-search', 'main');
 
     // A story that left the page is found too (the archive), and opens in the pane.
     await page.locator('.hd .search input').fill('tornado');

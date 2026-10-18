@@ -17,7 +17,7 @@ const KEEP_MS = 30 * 24 * 60 * 60_000;
 // What the board audit's page depends on: it draws the boards beside the goldens, not the app.
 const AUDIT_INPUTS = ['design-export', 'web/tests/browser/goldens', 'web/tests/browser/audit.ts', 'web/tests/browser/harness.ts', 'web/src/tokens.ts'];
 
-export type Check = 'unit' | 'browser' | 'stress' | 'audit';
+export type Check = 'unit' | 'browser' | 'stress' | 'pages' | 'audit';
 
 export interface Pass {
   check: Check;
