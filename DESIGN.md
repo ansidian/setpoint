@@ -2652,3 +2652,10 @@ it changes what's on screen.
     read, Done, trashed or archived, or that waited over an hour for triage, send nothing. Board
     audit: board 18b doesn't draw the row, so the groups under it sit 52 px lower than drawn (18b
     2.16%); no other screenshot changed.
+253. **Under 80 px a day, the week's day heads stand the weekday over the date** (Claude,
+    2026-10-18, a small gap left to Claude; darma SV-99 D282): at 1100 wide, the narrowest width that
+    keeps the full sidebar and the right pane, the week's columns are about 57 px (under Week view's
+    "down to about 90"), and the head's weekday, gap and 24 px date need about 81, so the date was
+    cut. Below 560 px for the seven heads, each stacks its weekday over its date, 1 px apart with
+    6 px at the sides, inside the 48 px head; the weather is already gone under 96. At the design
+    target and in the compact tier nothing changes. Board audit: no board draws the week at 1100.

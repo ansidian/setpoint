@@ -36,6 +36,12 @@
 /* Narrow days keep the date and drop the weather. */
 .wk-dhead { container-type: inline-size; }
 @container (max-width: 96px) { .wk-dhead .wx { display: none; } }
+/* Under 80 px a day (about 57 at 1100 wide, the pane beside the grid), the weekday stands over the
+   date rather than cutting it (SV-99). */
+.wk-head .wk-days { container: wk-heads / inline-size; }
+@container wk-heads (max-width: 560px) {
+  .wk-dhead { flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 0 6px; }
+}
 
 /* The all-day row: bars spanning their days, then tasks; two to three 20 px lines. */
 .wk-all { border-bottom: 1px solid var(--hair); }
