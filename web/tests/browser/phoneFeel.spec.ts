@@ -4,12 +4,12 @@
 // the theme colour, the list's type a step up, the agenda's today, now and chips, and the sign-in
 // card clear of the keyboard. phone.spec.ts has board 21 and the phone's flows.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {InboxOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

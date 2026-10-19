@@ -6,11 +6,11 @@
 // filters; and the day's pane brought over the grid by its header button (D183). At 1100 the full
 // sidebar and the panes beside return.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
 
 after(cleanUp);
 

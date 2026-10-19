@@ -4,12 +4,12 @@
 // glide starts from the drop; and the "+3" popover hangs from its "+3". Boxes are measured on the
 // page and turned into the month section's own CSS pixels by its zoom.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {hangFrom} from '../../src/logic/calendar.ts';
 import type {Rect} from '../../src/logic/calendar.ts';
 import {placeBeside} from '../../src/logic/placement.ts';
-import {cleanUp, rested, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
 
 const WIDE = {width: 2400, height: 1300};
 const GAP = 8;

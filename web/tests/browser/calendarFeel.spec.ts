@@ -2,13 +2,13 @@
 // month and swaps the title the way it went, and the rest of the lane's motion and marks, each
 // stated with the values DESIGN.md gives it.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {minuteTop} from '../../src/logic/week.ts';
 import {layout, monthPaging} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

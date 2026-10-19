@@ -5,10 +5,10 @@
 // counts and only Done dropping the attention pill. The seed starts at 3 attention and 19 unread.
 // A row's key says where it is: New ("new:5"), Attention ("attention:22") or its day ("all:5").
 import assert from 'node:assert/strict';
-import {after, describe, test} from 'node:test';
+import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, readSecurity, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, describe, point, readSecurity, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint, SizeName} from './harness.ts';
 
 after(cleanUp);

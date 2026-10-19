@@ -6,11 +6,11 @@
 // The polish audit's states-02: Setpoint unreachable at launch shows the mark and the pill, not the
 // sign-in card, and asks again until it answers.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

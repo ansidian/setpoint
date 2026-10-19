@@ -7,7 +7,9 @@
 // records its spec files for the content it ran on (passes.ts), unless the files changed meanwhile
 // or it was capturing goldens, so release:check doesn't run them again. With SETPOINT_PAGES
 // (`npm run test:pages`, `npm run goldens`) it runs only the checks that take the release's page
-// screenshots (pages.ts), and those compare them.
+// screenshots (pages.ts), and those compare them. `-- settings --only "board 17"` runs only the
+// checks whose names start that way, and isn't recorded. A file's checks run side by side, as many as
+// SLOTS shared out over the files run (SV-102): one file uses every slot, a whole run one each.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,6 +24,8 @@ const minutes = (name: string, fallback: number) => Number(process.env[name] ?? 
 const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', 15);
 // A full run alone, with some room; past it, the run says so (it doesn't fail).
 const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
+// Checks at once on this machine (the six files a whole run runs side by side).
+const SLOTS = 6;
 
 /** The spec files to run: those named (`mail`, `mail.spec.ts` or a path), else every one. */
 function specs(names: string[]): string[] {
@@ -55,10 +59,16 @@ function stop() {
 }
 
 async function main(): Promise<number> {
-  if (COMPARING && process.argv.length > 2) throw new Error('The page screenshots run as a set (pages.ts); name no spec files.');
-  const files = specs(COMPARING ? [...new Set(PAGES.map(shot => shot.spec))] : process.argv.slice(2));
-  // Only the checks that take a page screenshot, by the start of their names.
-  const only = COMPARING ? PAGES.map(shot => `--test-name-pattern=^${shot.test}`) : [];
+  const args = process.argv.slice(2);
+  const at = args.indexOf('--only');
+  const named = at === -1 ? null : args.splice(at, 2)[1];
+  if (at !== -1 && !named) throw new Error('--only takes the start of a check\'s name.');
+  if (COMPARING && (args.length || named)) throw new Error('The page screenshots run as a set (pages.ts); name no spec files or checks.');
+  const files = specs(COMPARING ? [...new Set(PAGES.map(shot => shot.spec))] : args);
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // The checks that take a page screenshot, or the ones named, by the start of their names.
+  const only = (COMPARING ? PAGES.map(shot => shot.test) : named ? [named] : []).map(start => `--test-name-pattern=^${escape(start)}`);
+  process.env.SETPOINT_FILE_CONCURRENCY ??= String(Math.max(1, Math.floor(SLOTS / files.length)));
   const waited = await acquire();
   if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
   handDown();
@@ -74,17 +84,17 @@ async function main(): Promise<number> {
     if (built !== 0) return built;
     const building = Date.now() - started;
     const code = await run(process.execPath, [
-      '--test', `--test-global-setup=${path.join(HERE, 'globalSetup.ts')}`, '--test-concurrency=6', '--test-timeout=180000',
+      '--test', `--test-global-setup=${path.join(HERE, 'globalSetup.ts')}`, `--test-concurrency=${SLOTS}`, '--test-timeout=180000',
       '--test-reporter=spec', '--test-reporter-destination=stdout',
       `--test-reporter=${path.join(HERE, 'slowest.ts')}`, '--test-reporter-destination=stdout',
       ...only, ...files,
     ]);
     const took = Date.now() - started;
-    const whole = !COMPARING && files.length === specs([]).length;
+    const whole = !COMPARING && !named && files.length === specs([]).length;
     console.log(`\nBrowser run: ${clock(took)} (build ${clock(building)}, checks ${clock(took - building)})${whole ? `, budget ${clock(BUDGET)}` : ''}.`);
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
     if (Date.now() - started >= LIMIT) return 1;
-    if (code === 0 && tree) {
+    if (code === 0 && tree && !named) {
       if (treeOf() === tree) record(tree, COMPARING ? {check: 'pages'} : {check: process.env.SETPOINT_BROWSER_STRESS === '1' ? 'stress' : 'browser', specs: files.map(specName)});
       else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
     }

@@ -6,11 +6,11 @@
 // under the 1.25 wide-screen zoom (D23). The dev provider confirms after 600 ms and refuses moving
 // Dinner with Sam to Saturday with Google's 409 (board 19b, by rule).
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;

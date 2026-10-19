@@ -6,11 +6,11 @@
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
 // theme at the target width, by rule and element. Each failure names the element, page, theme and width.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import type {InboxOut, NewsSectionOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 import {SETTINGS_PAGES} from '../../src/logic/route.ts';
 

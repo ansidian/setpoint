@@ -2,9 +2,9 @@
 // release's page screenshots (pages.ts), then the switch itself: System follows the browser, a choice
 // is kept per browser, the first paint doesn't fade and a switch fades every colour over 180 ms.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

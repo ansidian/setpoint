@@ -16,8 +16,9 @@ import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import {afterEach, beforeEach} from 'node:test';
-import type {TestContext} from 'node:test';
+import {AsyncLocalStorage} from 'node:async_hooks';
+import {describe as nodeDescribe, test as nodeTest} from 'node:test';
+import type {TestContext, TestOptions} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
 import type {Browser, BrowserContext, Locator, Page, Request} from 'playwright-core';
@@ -60,33 +61,35 @@ const STRESS_STEP_LIMIT_MS = 2000;
 const STRESS_FONT_DELAY_MS = 2000;
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-let browser: Browser | null = null;
+let browser: Promise<Browser> | null = null;
 
-/** Chromium, launched once per check file, once its run holds the machine's lock (lock.ts). */
-export async function launchBrowser(): Promise<Browser> {
-  if (browser) return browser;
-  await holdForRun();
-  try {
-    browser = await chromium.launch({headless: true});
-  } catch (bundled) {
+/** Chromium, launched once per check file, once its run holds the machine's lock (lock.ts). A file's checks start side by side, so they share the one launch. */
+export function launchBrowser(): Promise<Browser> {
+  browser ??= (async () => {
+    await holdForRun();
     try {
-      browser = await chromium.launch({channel: 'chrome', headless: true});
-    } catch {
-      throw new Error(`No Chromium for the browser checks: neither Playwright's (${String((bundled as Error).message).split('\n')[0]}) nor Google Chrome.`);
+      return await chromium.launch({headless: true});
+    } catch (bundled) {
+      try {
+        return await chromium.launch({channel: 'chrome', headless: true});
+      } catch {
+        throw new Error(`No Chromium for the browser checks: neither Playwright's (${String((bundled as Error).message).split('\n')[0]}) nor Google Chrome.`);
+      }
     }
-  }
+  })();
   return browser;
 }
 
 export async function closeBrowser() {
-  await browser?.close();
+  const launched = browser;
   browser = null;
+  await (await launched?.catch(() => null))?.close();
 }
 
-// The check running in this process (spec files run side by side, each in a process of its own,
-// and a file's checks one after another) with the contexts and pages it opened, for its traces and
-// for `rested`. Every context records a trace (SETPOINT_BROWSER_TRACE=0 turns that off); the hooks
-// here, registered for every spec file that uses the harness, keep a failed check's.
+// Each check with the contexts and pages it opened, for its traces and for `rested`. A spec file's
+// checks run side by side (SV-102), so the check a page belongs to is the one whose body is running,
+// kept in async context rather than in one variable. Every context records a trace
+// (SETPOINT_BROWSER_TRACE=0 turns that off); a failed or timed-out check's is kept.
 const TRACE = process.env.SETPOINT_BROWSER_TRACE !== '0';
 interface Check {
   name: string;
@@ -95,29 +98,68 @@ interface Check {
   finished: boolean;
   kept: Promise<string[]> | null;
 }
-let current: Check | null = null;
+const checks = new AsyncLocalStorage<Check>();
 
-beforeEach(t => {
+/** Runs a check's body as its own Check: keeps its traces if it fails, and closes its contexts after. */
+async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promise<void> {
   const check: Check = {name: t.fullName, contexts: new Set(), pages: new Set(), finished: false, kept: null};
-  current = check;
-  // node --test cancels a check at its timeout by aborting its signal, before its hooks run; it
-  // aborts the signal after every check too, so a finished one is left alone.
+  const close = () => Promise.all([...check.contexts].map(context => context.close().catch(() => {})));
+  // node --test cancels a check at its timeout by aborting its signal; it aborts the signal after
+  // every check too, so a finished one is left alone. Closing the contexts ends what the body still
+  // waits on.
   t.signal.addEventListener('abort', () => {
-    if (!check.finished) void keepTraces(check);
+    if (!check.finished) void keepTraces(check).then(close);
   });
-});
+  try {
+    await checks.run(check, () => body(t));
+  } catch (error) {
+    check.finished = true;
+    await keepTraces(check);
+    throw error;
+  } finally {
+    check.finished = true;
+    await close();
+  }
+}
 
-afterEach(async hook => {
-  const check = current;
-  if (!check) return;
-  check.finished = true;
-  current = null;
-  // The check's own context: a hook's is typed as a suite's too, which has no outcome.
-  const t = hook as TestContext & {passed: boolean};
-  if (!t.passed) await keepTraces(check);
-  // Closing a cancelled check's contexts also ends what its body still waits on.
-  await Promise.all([...check.contexts].map(context => context.close().catch(() => {})));
-});
+// How many of a spec file's checks run at once: run.ts sets it from how many files it runs, so a run
+// of one file uses every slot and a whole run stays at about six checks at a time (SV-102).
+const WIDTH = Math.max(1, Number(process.env.SETPOINT_FILE_CONCURRENCY ?? 1));
+const queued: (() => void)[] = [];
+let replaying = false;
+
+/** Holds a file's top-level checks and suites until it has loaded, then registers them in one suite of WIDTH. */
+function register(entry: () => void) {
+  if (replaying) {
+    entry();
+    return;
+  }
+  if (!queued.length) {
+    queueMicrotask(() => void nodeDescribe('', {concurrency: WIDTH}, () => {
+      replaying = true;
+      try {
+        for (const next of queued) next();
+      } finally {
+        replaying = false;
+      }
+    }));
+  }
+  queued.push(entry);
+}
+
+type Body = (t: TestContext) => unknown;
+
+/** node:test's `test` for the browser checks: each is its own Check, and a file's run side by side (SV-102). */
+export function test(name: string, ...rest: [Body] | [TestOptions, Body]): void {
+  const body = rest.at(-1) as Body;
+  const options = rest.length > 1 ? rest[0] as TestOptions : {};
+  register(() => void nodeTest(name, options, t => asCheck(t, body)));
+}
+
+/** node:test's `describe` for the browser checks, so a suite's checks go with the file's. */
+export function describe(name: string, body: () => void): void {
+  register(() => void nodeDescribe(name, body));
+}
 
 /** Writes the check's traces under test-results/browser/traces/, once, and says where (the reporter has the failure's words by then). */
 function keepTraces(check: Check): Promise<string[]> {
@@ -149,7 +191,7 @@ function keepTraces(check: Check): Promise<string[]> {
  * meant to catch motion says so on the line before it.
  */
 export async function rested<T>(read: () => Promise<T>): Promise<T> {
-  for (const page of current?.pages ?? []) if (!page.isClosed()) await still(page);
+  for (const page of checks.getStore()?.pages ?? []) if (!page.isClosed()) await still(page);
   return read();
 }
 
@@ -332,9 +374,9 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   const stop = async () => {
     running.delete(server);
     // Its pages close before the server goes, so nothing asks a port that's gone; within a check the
-    // contexts stay open, with their traces, for the afterEach, which keeps a failed check's and
+    // contexts stay open, with their traces, for its end (asCheck), which keeps a failed check's and
     // closes them. Outside one (cleanUp) they close here.
-    if (current) await Promise.all(contexts.flatMap(context => context.pages()).map(page => page.close().catch(() => {})));
+    if (checks.getStore()) await Promise.all(contexts.flatMap(context => context.pages()).map(page => page.close().catch(() => {})));
     else await Promise.all(contexts.map(context => context.close().catch(() => {})));
     if (server.exitCode === null && server.signalCode === null) {
       const exited = new Promise(resolve => server.once('exit', resolve));
@@ -365,7 +407,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
       });
       contexts.push(context);
       if (TRACE) await context.tracing.start({screenshots: true, snapshots: true});
-      current?.contexts.add(context);
+      checks.getStore()?.contexts.add(context);
       if (cookie) await context.addCookies([{name: cookie.name, value: cookie.value, url: base}]);
       if (STRESS) {
         // A check's own page.route takes precedence, so what it holds or fails isn't delayed too.
@@ -402,7 +444,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         });
       }
       const page = await context.newPage();
-      current?.pages.add(page);
+      checks.getStore()?.pages.add(page);
       page.on('pageerror', error => pageErrors.push(String(error)));
       const loading = new Set<Request>();
       loadingByPage.set(page, loading);

@@ -5,9 +5,9 @@
 // and filtered account column; the reader's swap, code card and edge; search's reasons, chips and
 // widening field; ⌘K's matches. Each single value stated once.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

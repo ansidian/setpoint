@@ -4,10 +4,10 @@
 // the mail list's rows folding out and in over 180 ms; Settings › Accounts reordering live while an
 // account is dragged; menus inside clipped containers open fully in view.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, still, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, still, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

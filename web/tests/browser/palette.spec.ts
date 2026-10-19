@@ -3,11 +3,11 @@
 // the current theme ticked, typing finding the commands that only have a key, the keyboard cursor,
 // and Esc giving focus back.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 

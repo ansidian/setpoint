@@ -4,10 +4,10 @@
 // passkey"; after Sign out the card takes the password, then the passkey; then the passkey alone
 // signs in once the mode is back to either, and Security then asks for the password before a change.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {SecurityOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {choose, cleanUp, PASSWORD, startSetpoint} from './harness.ts';
+import {choose, cleanUp, PASSWORD, startSetpoint, test} from './harness.ts';
 
 after(cleanUp);
 

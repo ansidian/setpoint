@@ -2,10 +2,10 @@
 // building #157–#176): each single value stated once, in the theme it's about, and the states the
 // audit found invisible in Light (the cursor on a folded group) read from the screen itself.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 

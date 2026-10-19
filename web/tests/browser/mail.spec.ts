@@ -7,12 +7,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, readSecurity, rested, startSetpoint, still, until} from './harness.ts';
+import {cleanUp, point, readSecurity, rested, startSetpoint, still, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

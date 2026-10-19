@@ -4,11 +4,11 @@
 // toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
 /** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */

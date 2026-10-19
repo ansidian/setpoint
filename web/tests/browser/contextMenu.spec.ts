@@ -5,10 +5,10 @@
 // swatches take the menu's place, and empty grid offers New event here (at a week slot's time) and
 // Paste here on the day clicked. News's rows, the sidebar and the Today block have theirs.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

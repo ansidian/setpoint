@@ -5,11 +5,11 @@
 // without closing, a drag that leaves the card where it's dropped and the next glide starting there,
 // and Edit handing over to the right pane.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {glidePosition, glideSegment, glideVelocity} from '../../src/logic/glide.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 const GAP = 8;
 

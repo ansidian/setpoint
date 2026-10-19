@@ -7,12 +7,12 @@
 // mail. SV-23: calendar search, from the header's button, `/` or ⌘F, with its results in the right
 // pane; a click, Enter, ↓ and J / K selecting results on the grid; E to the editor and back; Esc.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred} from './fakeAlfred.ts';
-import {cleanUp, rested, startSetpoint, until, writeOutput} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

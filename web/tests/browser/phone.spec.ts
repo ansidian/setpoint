@@ -5,11 +5,11 @@
 // notification carries (`deepLinkPath`): an email, an event, one occurrence of a recurring event, a
 // task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't zoom into them.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, until, writeOutput} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

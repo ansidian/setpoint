@@ -3,9 +3,9 @@
 // fading out over 120 ms; panes and cards sliding in; the app's failures reaching the one toast as
 // failures. The toast's own motion is tests/components/toast.test.tsx's (SV-101).
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until, watch} from './harness.ts';
 
 after(cleanUp);
 

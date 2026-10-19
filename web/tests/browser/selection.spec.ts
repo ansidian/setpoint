@@ -4,10 +4,10 @@
 // another row's its own; E trashes every one with one toast, and ⌘Z brings every one back; Mark
 // read, Pin and Done act on all of it.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AllOut, MessageOut, MessageRowOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, startSetpoint, until} from './harness.ts';
+import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

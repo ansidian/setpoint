@@ -4,11 +4,11 @@
 // Inbox is one list since SV-70, so the boards drawing Unread's groups are built in its place
 // (DESIGN.md override 33).
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
-import {cleanUp, matchGolden, readSecurity, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, readSecurity, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 

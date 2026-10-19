@@ -5,10 +5,10 @@
 // events), a Todoist task from the same editor, the editor opened from an email's proposal at
 // /calendar/new, and an edited item's Title read as a line (SV-90).
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);

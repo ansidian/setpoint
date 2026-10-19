@@ -33,9 +33,14 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - `npm test` (lint, typecheck, Vitest, its component tests in Chromium too) passes before every
   commit, and `npm run test:browser` (build and Playwright) for the spec files covering what the
   change touches; a change to the harness or the shared styles runs them all. Say what ran.
-- `npm run test:browser -- mail search` runs only those spec files. One browser run at a time on
-  this machine: a run waits for another session's, saying whose, and stops at 15 minutes. It ends
-  with its time and slowest checks; past its budget, look there before adding checks. A direct
+- `npm run test:browser -- mail search` runs only those spec files, and
+  `npm run test:browser -- mail --only "S8"` only the checks whose names start that way: iterate on
+  the one check, then run its files before the commit (a run with `--only` isn't recorded for
+  release:check). A file's checks run side by side, sharing the run's six slots, so one file is
+  about as quick as its slowest few checks (SV-102); a check therefore keeps nothing in module
+  state that another check reads. One browser run at a time on this machine: a run waits for
+  another session's, saying whose, and stops at 15 minutes. It ends with its time and slowest
+  checks; past its budget, look there before adding checks. A direct
   `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
   and each of them waits while a checkout from before the lock has a browser open.
 - A check that fails or times out keeps a trace of its pages under `test-results/browser/traces/`,

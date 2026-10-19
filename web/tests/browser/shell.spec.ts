@@ -3,11 +3,11 @@
 // rings, the account filter, the page keys, the tab title, and live updates from a change made
 // elsewhere.
 import assert from 'node:assert/strict';
-import {after, describe, test} from 'node:test';
+import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, SIZES, startSetpoint, until} from './harness.ts';
+import {cleanUp, describe, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
 after(cleanUp);

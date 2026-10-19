@@ -3,10 +3,10 @@
 // and Today, a range dragged into the editor, a block moved and resized by drag with its Undo, a
 // recurring block's scope asked on the drop, and the floating detail on a block.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, still, until, writeOutput} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, test, until, writeOutput} from './harness.ts';
 
 after(cleanUp);
 

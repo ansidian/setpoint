@@ -14,11 +14,11 @@ import fs from 'node:fs';
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import path from 'node:path';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, test, until} from './harness.ts';
 
 after(cleanUp);
 

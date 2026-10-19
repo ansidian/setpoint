@@ -6,10 +6,10 @@
 // the list, then a skeleton, then spins. Every check holds the answer it's about, so "while it
 // loads" is as long as the check needs, and releases it to see the rows replace the skeleton.
 import assert from 'node:assert/strict';
-import {after, test} from 'node:test';
+import {after} from 'node:test';
 import type {Page, Route} from 'playwright-core';
 import {skeleton} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
