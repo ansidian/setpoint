@@ -30,9 +30,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Verification
 
-- `npm test` (lint, typecheck, Vitest) passes before every commit, and `npm run test:browser`
-  (build and Playwright) for the spec files covering what the change touches; a change to the
-  harness or the shared styles runs them all. Say what ran.
+- `npm test` (lint, typecheck, Vitest, its component tests in Chromium too) passes before every
+  commit, and `npm run test:browser` (build and Playwright) for the spec files covering what the
+  change touches; a change to the harness or the shared styles runs them all. Say what ran.
 - `npm run test:browser -- mail search` runs only those spec files. One browser run at a time on
   this machine: a run waits for another session's, saying whose, and stops at 15 minutes. It ends
   with its time and slowest checks; past its budget, look there before adding checks. A direct
@@ -71,13 +71,25 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   SQL text.
 - Providers are faked at the HTTP or IMAP boundary. No test, seed or dev run reaches a real
   provider, ntfy, Home Assistant or a model.
-- No mocks of internal modules. Presentation goes to browser checks that state what the screen
-  does: what's there after an action, and a single value where it matters: a colour or fill that
-  depends on state, theme or the cascade (hover, press, focus, selected, outside the month, Light
-  beside Night, a role colour on a glyph); a relation rather than a literal (fits or clips, beside or
-  inside, equal room, a width at a breakpoint); or a value that has already moved by accident,
-  stated in the commit that fixes it. A literal that only restates the stylesheet or a token (a
-  padding, a gap, a font size, a motion duration) is left to `web/tests/tokens.test.ts` (D269).
+- No mocks of internal modules. Presentation goes to browser checks and component tests that state
+  what the screen does: what's there after an action, and a single value where it matters: a colour
+  or fill that depends on state, theme or the cascade (hover, press, focus, selected, outside the
+  month, Light beside Night, a role colour on a glyph); a relation rather than a literal (fits or
+  clips, beside or inside, equal room, a width at a breakpoint); or a value that has already moved
+  by accident, stated in the commit that fixes it. A literal that only restates the stylesheet or a
+  token (a padding, a gap, a font size, a motion duration) is left to `web/tests/tokens.test.ts`
+  (D269).
+- A widget's own behaviour goes to a component test (`web/tests/components/*.test.tsx`, SV-101):
+  React renders the one widget in a real Chromium with the app's stylesheets and tokens (Vitest's
+  browser mode, part of `npm test`, a few seconds; no browser lock, it's one headless page). It
+  finds by role, waits with `expect.element` or `expect.poll`, and takes the same single-value rule
+  as a browser check. That's a select's keys and Esc, a picker's band, the toast's timing (with
+  Vitest's clock, so its seconds pass at once): what the widget does with the props and the pointer
+  or keys it's given. A browser check keeps what needs the app around it: the server and its seed, a
+  save reaching the API, routing, one page's layout beside another, a widget's place among the
+  others, and a journey across pages. When a component test takes over a check, the browser check
+  shrinks to the journey and says where the rest went. Widgets with module state (the toast) are
+  reset in the test; nothing in `web/src/` is mocked.
 - The visual net is two things. Per change, the layout sweep (`web/tests/browser/sweep.spec.ts`,
   SV-99, runs with every `npm run test:browser`, about 30 s) visits the main pages in Night and Light
   at 1677, 1100 and 820 wide and on the phone. At rest it fails on anything that scrolls sideways,
