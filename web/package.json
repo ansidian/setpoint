@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 5194 --strictPort",
     "build": "tsc -p tsconfig.json && vite build",
     "glyphs": "node generateGlyphs.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json --incremental --tsBuildInfoFile ../node_modules/.cache/tsc/web.tsbuildinfo"
   },
   "dependencies": {
     "@setpoint/shared": "*",

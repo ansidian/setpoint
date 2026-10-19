@@ -9,7 +9,11 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const args = process.argv.slice(2);
 const tree = treeOf();
 
-for (const [command, ...rest] of [['eslint', '.'], ['npm', 'run', 'typecheck'], ['vitest', 'run', ...args]] as [string, ...string[]][]) {
+// Lint and typecheck keep what they found per file under node_modules/.cache, so a run redoes only
+// the files that changed (SV-103): the lint rules each read one file, and the cache is keyed by
+// content and the config, not file times, so a branch switch can't fool it.
+const LINT = ['eslint', '.', '--cache', '--cache-strategy', 'content', '--cache-location', 'node_modules/.cache/eslint/'];
+for (const [command, ...rest] of [LINT, ['npm', 'run', 'typecheck'], ['vitest', 'run', ...args]] as [string, ...string[]][]) {
   const {status} = spawnSync(command, rest, {cwd: ROOT, stdio: 'inherit'});
   if (status !== 0) process.exit(status ?? 1);
 }

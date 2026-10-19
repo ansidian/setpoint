@@ -20,7 +20,7 @@
     "try": "npm run try -w server --",
     "db:generate": "npm run db:generate -w server --",
     "glyphs": "npm run glyphs -w web",
-    "lint": "eslint .",
+    "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "node web/tests/unit.ts",
     "test:browser": "node web/tests/browser/run.ts",

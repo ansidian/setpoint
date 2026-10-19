@@ -10,7 +10,7 @@
     "seed": "node src/seed.ts",
     "try": "node src/try.ts",
     "db:generate": "drizzle-kit generate",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json --incremental --tsBuildInfoFile ../node_modules/.cache/tsc/server.tsbuildinfo"
   },
   "dependencies": {
     "@hono/node-server": "2.1.3",
