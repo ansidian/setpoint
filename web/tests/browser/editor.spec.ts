@@ -363,7 +363,7 @@ test('SV-29: New, C and D leave a started draft be and say so; a folded draft go
   }
 });
 
-test('SV-29: an event\'s days in one sheet: a first click, then a last, the band following the pointer; typed too; the End list stays on screen', async () => {
+test('SV-29: an event\'s days picked in its sheet reach the event, the End list its last day\'s and on screen; typed too', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -373,38 +373,10 @@ test('SV-29: an event\'s days in one sheet: a first click, then a last, the band
     await line.pressSequentially('Conference 9am');
     const date = page.getByLabel('Date', {exact: true});
     await date.click();
-    const sheet = page.getByRole('dialog', {name: 'Date: pick the first day'});
-    await sheet.waitFor();
-    // Sunday first (SV-29).
-    assert.deepEqual(await sheet.locator('.mini .h').allTextContents(), ['S', 'M', 'T', 'W', 'T', 'F', 'S']);
-    await sheet.getByRole('button', {name: '2026-10-13'}).click();
-    await page.getByRole('dialog', {name: 'Date: pick the last day'}).waitFor();
-    assert.equal(await date.inputValue(), 'Tue, Oct 13');
-    const band = () => page.locator('.datepop .mini .in').allTextContents();
-    await page.locator('.datepop').getByRole('button', {name: '2026-10-16'}).hover();
-    assert.deepEqual(await band(), ['13', '14', '15', '16']);
-    await page.locator('.datepop').getByRole('button', {name: '2026-10-16'}).click();
-    await page.locator('.datepop').waitFor({state: 'detached'});
-    assert.equal(await date.inputValue(), 'Tue, Oct 13 – Fri, Oct 16');
-    // The other end may come before the first: the band follows the pointer back, and the earlier
-    // day starts it (#103).
-    await date.click();
-    await sheet.getByRole('button', {name: '2026-10-16'}).click();
-    await page.getByRole('dialog', {name: 'Date: pick the last day'}).waitFor();
-    await page.locator('.datepop').getByRole('button', {name: '2026-10-13'}).hover();
-    await until('the band runs back to the 13th', band, days => days.join() === '13,14,15,16');
-    // The band is `cool` (#104): 28% between, 50% at an end, 60% at the end under the pointer.
-    // Each is compared with `cool` mixed in this page, once the fill's fade has ended.
-    const expected = await rested(() => page.evaluate(() => [60, 28, 28, 50].map(percent => {
-      const probe = document.body.appendChild(document.createElement('i'));
-      probe.style.background = `color-mix(in oklch, var(--cool) ${percent}%, transparent)`;
-      const fill = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return fill;
-    })));
-    const fills = () => page.locator('.datepop .mini .in').evaluateAll(days => days.map(day => getComputedStyle(day).backgroundColor));
-    await until('the band is cool', fills, now => now.join() === expected.join());
-    await page.locator('.datepop').getByRole('button', {name: '2026-10-13'}).click();
+    // The sheet itself (Sunday first, the band following the pointer either way, its fills, typing)
+    // is tests/components/dateRange.test.tsx's (SV-101); here, the days picked reach the event.
+    await page.getByRole('dialog', {name: 'Date: pick the first day'}).getByRole('button', {name: '2026-10-13'}).click();
+    await page.getByRole('dialog', {name: 'Date: pick the last day'}).getByRole('button', {name: '2026-10-16'}).click();
     await page.locator('.datepop').waitFor({state: 'detached'});
     assert.equal(await date.inputValue(), 'Tue, Oct 13 – Fri, Oct 16');
     // The End list is the last day's times, and lines up with its field rather than run off the page.

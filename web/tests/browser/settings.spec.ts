@@ -632,7 +632,9 @@ test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox
   }
 });
 
-test('S13: Settings\' selects open the shared menu, not the browser\'s list: the current choice checked, Enter, ↓ and Enter to pick, Esc closing just the menu', async () => {
+// The select itself (the checked choice, the keys, Esc going no further, its ring) is
+// tests/components/select.test.tsx's (SV-101); here, every page uses it and a pick is saved.
+test('S13: Settings\' selects are the shared menu on every page, not the browser\'s list, and a pick is saved', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -648,24 +650,11 @@ test('S13: Settings\' selects open the shared menu, not the browser\'s list: the
     const chip = page.locator('.settings').getByRole('button', {name: 'Task reminders', exact: true});
     const menu = page.locator('.settings').getByRole('menu', {name: 'Task reminders', exact: true});
     await chip.click();
-    const labels = await menu.getByRole('menuitemradio').allTextContents();
-    const current = await menu.getByRole('menuitemradio', {checked: true}).allTextContents();
-    assert.equal(current.length, 1, 'one choice checked');
-    assert.equal(await chip.locator('.num').textContent(), current[0]);
-    await page.keyboard.press('Escape');
+    const next = (await menu.getByRole('menuitemradio', {checked: false}).first().textContent())!;
+    await menu.getByRole('menuitemradio', {name: next, exact: true}).click();
     await menu.waitFor({state: 'detached'});
-    assert.equal(await page.locator('.settings').count(), 1, 'Esc closes the menu, not Settings');
-
-    await chip.focus();
-    await page.keyboard.press('Enter');
-    await until('the checked choice focused', () => menu.getByRole('menuitemradio', {checked: true}).evaluate(item => document.activeElement === item), Boolean);
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('Enter');
-    await menu.waitFor({state: 'detached'});
-    const next = labels[(labels.indexOf(current[0]!) + 1) % labels.length]!;
-    await until('the chip shows the next choice', () => chip.locator('.num').textContent(), text => text === next, 5000);
+    await until('the chip shows the choice', () => chip.locator('.num').textContent(), text => text === next);
     await settled('saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.reminders.task_time !== before);
-    assert.equal(await chip.evaluate(button => document.activeElement === button), true, 'focus back on the chip');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

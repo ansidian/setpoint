@@ -1,7 +1,7 @@
 // Motion and feedback (darma SV-59; DESIGN.md › Motion and Decided while building): every menu,
 // popover and modal arriving with the 180 / 260 ms motion and ⌘K, Settings and the "+N" popover
-// fading out over 120 ms; panes and cards sliding in; the one toast dropping in, leading with its
-// tone's glyph, draining its Undo as a hairline and waiting under the pointer, then fading out.
+// fading out over 120 ms; panes and cards sliding in; the app's failures reaching the one toast as
+// failures. The toast's own motion is tests/components/toast.test.tsx's (SV-101).
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
@@ -209,56 +209,10 @@ test('every menu is one component: radius 18 and 6 inside, 32 px items of radius
   }
 });
 
-test('the toast drops in over 180 ms and again when a new one replaces it, leads with its tone\'s glyph, drains Undo as a hairline, waits under the pointer, and fades out', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-
-    // Done on Northwind: "Marked Done · Undo", led by `check` in `good`, dropping in over 180 ms.
-    await point(page.locator('.list .row[title^="Interview availability"]'));
-    await page.keyboard.press('h');
-    const toast = page.locator('.toast');
-    await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
-    assert.deepEqual([await rested(() => style(toast, 'animation-name')), await rested(() => style(toast, 'animation-duration'))], ['toast-in', '0.18s']);
-    assert.equal(await toast.locator('.tone').count(), 1);
-    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--good')));
-    assert.equal(await toast.locator('.tone svg').getAttribute('width'), '16');
-    // Its Undo's six seconds drain as a 2 px hairline, `ink3` at 45%.
-    assert.deepEqual([await style(toast, 'height', '::after'), await style(toast, 'animation-duration', '::after'), await style(toast, 'animation-timing-function', '::after')], ['2px', '6s', 'linear']);
-    assert.equal(await rested(() => style(toast, 'background-color', '::after')), await rested(() => colour(page, 'color-mix(in oklch, var(--ink3) 45%, transparent)')));
-
-    // E on the next email replaces it with "Moved to Trash · Undo": a new toast, dropping in afresh,
-    // led by `delete` in `ink3`.
-    await toast.evaluate(element => element.setAttribute('data-first', ''));
-    await page.locator('.list .row[title^="Final exam schedule"]').click();
-    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-    await page.keyboard.press('e');
-    await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
-    assert.equal(await page.locator('.toast[data-first]').count(), 0, 'the replacing toast is a new one, so it drops in again');
-    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--ink3')));
-
-    // Under the pointer it waits, its hairline held, past its six seconds.
-    await toast.hover();
-    await until('held', () => toast.getAttribute('class'), classes => classes?.split(' ').includes('held') ?? false);
-    assert.equal(await rested(() => style(toast, 'animation-play-state', '::after')), 'paused');
-    // Nothing happens to wait for: the toast stays while held, past the 6 seconds it has.
-    await page.waitForTimeout(6500);
-    await setpoint.idle();
-    assert.equal(await page.locator('.toast', {hasText: 'Moved to Trash'}).count(), 1, 'it waits under the pointer');
-    // Left, it runs on with what it had left, then fades out over 120 ms before it goes.
-    const classes = await watch(toast, 'class');
-    await page.mouse.move(1, 1);
-    await toast.waitFor({state: 'detached', timeout: 7000});
-    assert.ok((await classes()).some(value => value?.split(' ').includes('leaving')), 'it fades out before it goes');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('a failure\'s toast leads with `error` in `alert`, wears an `alert` ring and wash, and stays eight seconds; a refused copy is one', async () => {
+// The toast itself (its drop, tone glyphs, hairline, the wait under the pointer, the fade, a
+// failure's ring, wash and eight seconds) is tests/components/toast.test.tsx's (SV-101). Here, the
+// app's failures reach it as failures: a copy the clipboard refuses and a provider's refusal, in its words.
+test('a failure\'s toast: a refused copy is one, and so is a pin Gmail refuses, in Gmail\'s words', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -274,16 +228,7 @@ test('a failure\'s toast leads with `error` in `alert`, wears an `alert` ring an
     await page.route(/\/api\/mail\/messages\/\d+\/pin$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
     await point(page.locator('.list .row[title^="Interview availability"]'));
     await page.keyboard.press('p');
-    const toast = page.locator('.toast.failed', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'});
-    await toast.waitFor();
-    assert.equal(await rested(() => style(toast.locator('.tone'), 'color')), await rested(() => colour(page, '--alert')));
-    assert.match(await rested(() => style(toast, 'box-shadow')), new RegExp(`^${(await rested(() => colour(page, 'color-mix(in oklch, var(--alert) 40%, transparent)'))).replace(/[()]/g, '\\$&')} 0px 0px 0px 1px inset`));
-    assert.equal(await rested(() => style(toast, 'background-color')), await rested(() => colour(page, 'color-mix(in oklch, var(--alert) 8%, var(--cardOn))')));
-    // Its words stay `ink`; it stays 8 seconds, so the provider's words can be read.
-    assert.equal(await style(toast.locator('span:not(.tone)'), 'color'), await colour(page, '--ink'));
-    assert.equal(await rested(() => style(toast, '--toast-ms')), '8000ms');
-    // A line with no action has no hairline.
-    assert.equal(await style(toast, 'content', '::after'), 'none');
+    await page.locator('.toast.failed', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'}).locator('.tone').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
