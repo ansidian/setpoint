@@ -1,0 +1,20 @@
+{
+  "id": 2,
+  "story_id": 1,
+  "outlet": "NBC Los Angeles",
+  "outlet_short": "NBC LA",
+  "byline": "Staff report",
+  "published_at": "2026-10-07T14:10:00.000Z",
+  "headline": "Fire burns 400 acres in the foothills; evacuation warnings issued",
+  "url": "https://nbc-los-angeles.example/news/fire-burns-400-acres-in-the-foothills-evacuation-warnings-is",
+  "text": "A brush fire in the hills above the 210 Freeway grew to about 400 acres overnight, fire officials said Wednesday morning, as crews worked to keep it away from homes in the foothills.\n\nEvacuation warnings went out late Tuesday for neighborhoods north of the freeway. No homes had been damaged as of 7 a.m., and no one had been hurt.\n\nFirefighters held the fire's western edge through the night with help from water-dropping helicopters. Containment stood at 10%.\n\nA Red Flag Warning takes effect at noon and runs through Thursday evening, with gusts up to 50 mph and humidity below 10% expected across the valleys.\n\nTwo schools inside the warning area closed for the day. Officials asked residents to keep their cars fueled and to sign up for the county's emergency alerts.",
+  "feed_summary": "Evacuation warnings for foothill homes; crews held the west flank overnight",
+  "summary_only": false,
+  "discovery": false,
+  "image": {
+    "id": 3,
+    "url": "/api/news/images/3",
+    "width": 640,
+    "height": 360
+  }
+}

@@ -1,0 +1,538 @@
+{
+  "section": "local",
+  "stories": [
+    {
+      "id": 1,
+      "headline": "Brush fire near the 210 grows to 400 acres",
+      "one_line": "Evacuation warnings for foothill homes; crews held the west flank overnight",
+      "sections": [
+        "local"
+      ],
+      "state": "updated",
+      "lead": {
+        "article_id": 1,
+        "outlet": "KTLA",
+        "outlet_short": "KTLA",
+        "more": 4,
+        "published_at": "2026-10-07T15:02:00.000Z",
+        "url": "https://ktla.example/news/brush-fire-near-the-210-explodes-overnight-prompting-warning",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 2,
+          "url": "/api/news/images/2",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 1,
+          "url": "/api/news/images/1",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "KTLA"
+      },
+      "first_reported_at": "2026-10-05T13:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T15:40:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 2,
+      "headline": "Red Flag Warning for the valleys until Thu 6 PM",
+      "one_line": "Gusts to 50 mph, humidity under 10%",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 7,
+        "outlet": "NWS",
+        "outlet_short": "NWS",
+        "more": 0,
+        "published_at": "2026-10-07T13:12:00.000Z",
+        "url": "https://nws.example/news/red-flag-warning-issued-for-the-valleys",
+        "hazard": "nws"
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T13:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T13:12:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 3,
+      "headline": "Man arrested after a stabbing outside a Metro station",
+      "one_line": "The victim is in stable condition",
+      "sections": [
+        "local"
+      ],
+      "state": "updated",
+      "lead": {
+        "article_id": 8,
+        "outlet": "NBC Los Angeles",
+        "outlet_short": "NBC LA",
+        "more": 2,
+        "published_at": "2026-10-07T11:12:00.000Z",
+        "url": "https://nbc-los-angeles.example/news/man-arrested-after-a-stabbing-outside-a-metro-station",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 6,
+          "url": "/api/news/images/6",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 5,
+          "url": "/api/news/images/5",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "NBC Los Angeles"
+      },
+      "first_reported_at": "2026-10-06T03:35:00.000Z",
+      "last_new_fact_at": "2026-10-07T14:55:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 4,
+      "headline": "Federal agents detain 9 at a car wash",
+      "one_line": "Neighbors gathered to film; two were released by evening",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 11,
+        "outlet": "LAist",
+        "outlet_short": "LAist",
+        "more": 3,
+        "published_at": "2026-10-06T22:20:00.000Z",
+        "url": "https://laist.example/news/federal-agents-detain-9-at-a-car-wash",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 8,
+          "url": "/api/news/images/8",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 7,
+          "url": "/api/news/images/7",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "LAist"
+      },
+      "first_reported_at": "2026-10-05T20:05:00.000Z",
+      "last_new_fact_at": "2026-10-06T02:30:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 5,
+      "headline": "Council approves a 120-unit housing project on a former parking lot",
+      "one_line": "Construction could start next spring",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 15,
+        "outlet": "Streetsblog LA",
+        "outlet_short": "Streetsblog LA",
+        "more": 0,
+        "published_at": "2026-10-05T19:40:00.000Z",
+        "url": "https://streetsblog-la.example/news/council-approves-a-120-unit-housing-project-on-a-former-park",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-05T19:40:00.000Z",
+      "last_new_fact_at": "2026-10-05T19:40:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 6,
+      "headline": "Water main break floods an intersection; repairs through Thursday",
+      "one_line": "Detours on two blocks; no service loss for nearby homes",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 16,
+        "outlet": "ABC7",
+        "outlet_short": "ABC7",
+        "more": 2,
+        "published_at": "2026-10-07T11:12:00.000Z",
+        "url": "https://abc7.example/news/water-main-break-floods-an-intersection-repairs-through-thur",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 10,
+          "url": "/api/news/images/10",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 9,
+          "url": "/api/news/images/9",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "ABC7"
+      },
+      "first_reported_at": "2026-10-07T10:50:00.000Z",
+      "last_new_fact_at": "2026-10-07T10:50:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 7,
+      "headline": "M3.4 earthquake near the foothills, felt lightly across the valleys",
+      "one_line": "No damage reported",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 19,
+        "outlet": "USGS",
+        "outlet_short": "USGS",
+        "more": 3,
+        "published_at": "2026-10-07T09:12:00.000Z",
+        "url": "https://usgs.example/news/m3-4-earthquake-near-the-foothills-felt-lightly-across-the-v",
+        "hazard": "usgs"
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T09:05:00.000Z",
+      "last_new_fact_at": "2026-10-07T09:05:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 8,
+      "headline": "Smoke advisory for the valleys through Thursday",
+      "one_line": "Air quality may reach unhealthy levels near the fire",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 23,
+        "outlet": "South Coast AQMD",
+        "outlet_short": "South Coast AQMD",
+        "more": 1,
+        "published_at": "2026-10-07T08:12:00.000Z",
+        "url": "https://south-coast-aqmd.example/news/smoke-advisory-for-the-valleys-through-thursday",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T08:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T08:12:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 9,
+      "headline": "Three Metro stations close this weekend for track work",
+      "one_line": "Shuttle buses replace trains Saturday and Sunday",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 25,
+        "outlet": "LAist",
+        "outlet_short": "LAist",
+        "more": 1,
+        "published_at": "2026-10-07T12:12:00.000Z",
+        "url": "https://laist.example/news/three-metro-stations-close-this-weekend-for-track-work",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 12,
+          "url": "/api/news/images/12",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 11,
+          "url": "/api/news/images/11",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "LAist"
+      },
+      "first_reported_at": "2026-10-07T12:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T12:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 10,
+      "headline": "County opens cooling centers as temperatures reach 100°",
+      "one_line": "Libraries and senior centers stay open until 8 PM",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 27,
+        "outlet": "LA County",
+        "outlet_short": "LA County",
+        "more": 2,
+        "published_at": "2026-10-06T18:00:00.000Z",
+        "url": "https://la-county.example/news/county-opens-cooling-centers-as-temperatures-reach-100",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 14,
+          "url": "/api/news/images/14",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 13,
+          "url": "/api/news/images/13",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "LA County"
+      },
+      "first_reported_at": "2026-10-05T23:00:00.000Z",
+      "last_new_fact_at": "2026-10-05T23:00:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 11,
+      "headline": "Pedestrian killed in a hit-and-run; police look for a white pickup",
+      "one_line": "The crash happened just after 11 PM",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 30,
+        "outlet": "NBC Los Angeles",
+        "outlet_short": "NBC LA",
+        "more": 1,
+        "published_at": "2026-10-07T06:40:00.000Z",
+        "url": "https://nbc-los-angeles.example/news/pedestrian-killed-in-a-hit-and-run-police-look-for-a-white-p",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 16,
+          "url": "/api/news/images/16",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 15,
+          "url": "/api/news/images/15",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "NBC Los Angeles"
+      },
+      "first_reported_at": "2026-10-07T06:20:00.000Z",
+      "last_new_fact_at": "2026-10-07T06:20:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 12,
+      "headline": "Overnight ramp closures on the 5 through Saturday",
+      "one_line": "Ramps shut from 10 PM to 5 AM for paving",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 32,
+        "outlet": "CBS Los Angeles",
+        "outlet_short": "CBS LA",
+        "more": 1,
+        "published_at": "2026-10-07T10:40:00.000Z",
+        "url": "https://cbs-los-angeles.example/news/overnight-ramp-closures-on-the-5-through-saturday",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T10:40:00.000Z",
+      "last_new_fact_at": "2026-10-07T10:40:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 13,
+      "headline": "Teachers union and the district reach a tentative contract",
+      "one_line": "Members vote next week",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 34,
+        "outlet": "LAist",
+        "outlet_short": "LAist",
+        "more": 2,
+        "published_at": "2026-10-07T01:00:00.000Z",
+        "url": "https://laist.example/news/teachers-union-and-the-district-reach-a-tentative-contract",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 18,
+          "url": "/api/news/images/18",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 17,
+          "url": "/api/news/images/17",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "LAist"
+      },
+      "first_reported_at": "2026-10-07T01:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T01:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 14,
+      "headline": "Two arrested in a string of catalytic converter thefts",
+      "one_line": "Police recovered 30 converters from a storage unit",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 37,
+        "outlet": "KTLA",
+        "outlet_short": "KTLA",
+        "more": 1,
+        "published_at": "2026-10-06T16:30:00.000Z",
+        "url": "https://ktla.example/news/two-arrested-in-a-string-of-catalytic-converter-thefts",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 20,
+          "url": "/api/news/images/20",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 19,
+          "url": "/api/news/images/19",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "KTLA"
+      },
+      "first_reported_at": "2026-10-06T16:30:00.000Z",
+      "last_new_fact_at": "2026-10-06T16:30:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 15,
+      "headline": "Beach water advisory after a sewage spill",
+      "one_line": "Avoid the water near two piers until tests come back clean",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 39,
+        "outlet": "ABC7",
+        "outlet_short": "ABC7",
+        "more": 1,
+        "published_at": "2026-10-06T21:10:00.000Z",
+        "url": "https://abc7.example/news/beach-water-advisory-after-a-sewage-spill",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-06T21:10:00.000Z",
+      "last_new_fact_at": "2026-10-06T21:10:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 16,
+      "headline": "Library branch reopens after a two-year renovation",
+      "one_line": "New study rooms and a maker space",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 41,
+        "outlet": "LAist",
+        "outlet_short": "LAist",
+        "more": 0,
+        "published_at": "2026-10-05T22:00:00.000Z",
+        "url": "https://laist.example/news/library-branch-reopens-after-a-two-year-renovation",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 22,
+          "url": "/api/news/images/22",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 21,
+          "url": "/api/news/images/21",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "LAist"
+      },
+      "first_reported_at": "2026-10-05T22:00:00.000Z",
+      "last_new_fact_at": "2026-10-05T22:00:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 17,
+      "headline": "Four bus lines get more frequent service from Sunday",
+      "one_line": "Buses every 10 minutes at rush hour",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 42,
+        "outlet": "Daily News",
+        "outlet_short": "Daily News",
+        "more": 0,
+        "published_at": "2026-10-06T00:20:00.000Z",
+        "url": "https://daily-news.example/news/four-bus-lines-get-more-frequent-service-from-sunday",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-06T00:20:00.000Z",
+      "last_new_fact_at": "2026-10-06T00:20:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    }
+  ],
+  "upcoming": [],
+  "health": null
+}

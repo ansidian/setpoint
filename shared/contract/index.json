@@ -1102,6 +1102,212 @@
       "file": "responses/error-item-nothing-to-change.json"
     },
     {
+      "name": "news",
+      "type": "NewsPageOut",
+      "method": "GET",
+      "route": "/api/news",
+      "path": "/api/news",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news.json",
+      "unseen": [
+        "blocks[].stories[].expired_at: always null",
+        "blocks[].upcoming[].lead.hazard: always null",
+        "blocks[].health: always null"
+      ]
+    },
+    {
+      "name": "news-section",
+      "type": "NewsSectionOut",
+      "method": "GET",
+      "route": "/api/news/sections/:section",
+      "path": "/api/news/sections/local",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-section.json",
+      "unseen": [
+        "stories[].expired_at: always null",
+        "upcoming: always empty",
+        "health: always null"
+      ]
+    },
+    {
+      "name": "news-section-upcoming",
+      "type": "NewsSectionOut",
+      "method": "GET",
+      "route": "/api/news/sections/:section",
+      "path": "/api/news/sections/tech",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-section-upcoming.json",
+      "unseen": [
+        "stories[].lead.hazard: always null",
+        "stories[].expired_at: always null",
+        "upcoming[].lead.hazard: always null",
+        "health: always null"
+      ]
+    },
+    {
+      "name": "news-story",
+      "type": "StoryOut",
+      "method": "GET",
+      "route": "/api/news/stories/:id",
+      "path": "/api/news/stories/18",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-story.json",
+      "unseen": [
+        "lead.hazard: always null",
+        "seen_at: always null",
+        "expired_at: always null",
+        "new_since: always null"
+      ]
+    },
+    {
+      "name": "news-story-updated",
+      "type": "StoryOut",
+      "method": "GET",
+      "route": "/api/news/stories/:id",
+      "path": "/api/news/stories/1",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-story-updated.json",
+      "unseen": [
+        "lead.hazard: always null",
+        "expired_at: always null"
+      ]
+    },
+    {
+      "name": "news-article",
+      "type": "ArticleOut",
+      "method": "GET",
+      "route": "/api/news/articles/:id",
+      "path": "/api/news/articles/2",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-article.json"
+    },
+    {
+      "name": "news-article-summary-only",
+      "type": "ArticleOut",
+      "method": "GET",
+      "route": "/api/news/articles/:id",
+      "path": "/api/news/articles/1",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-article-summary-only.json",
+      "unseen": [
+        "byline: always null",
+        "text: always null"
+      ]
+    },
+    {
+      "name": "news-article-discovery",
+      "type": "ArticleOut",
+      "method": "GET",
+      "route": "/api/news/articles/:id",
+      "path": "/api/news/articles/42",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-article-discovery.json",
+      "unseen": [
+        "byline: always null",
+        "text: always null",
+        "image: always null"
+      ]
+    },
+    {
+      "name": "news-missed",
+      "type": "MissedOut",
+      "method": "GET",
+      "route": "/api/news/missed",
+      "path": "/api/news/missed",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-missed.json",
+      "unseen": [
+        "days[].stories[].lead.hazard: always null",
+        "days[].stories[].seen_at: always null"
+      ]
+    },
+    {
+      "name": "news-status",
+      "type": "NewsStatusOut",
+      "method": "GET",
+      "route": "/api/news/status",
+      "path": "/api/news/status",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-status.json",
+      "unseen": [
+        "down: always null",
+        "first_run: always null"
+      ]
+    },
+    {
+      "name": "news-search",
+      "type": "NewsSearchOut",
+      "method": "GET",
+      "route": "/api/news/search",
+      "path": "/api/news/search?q=fire",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-search.json"
+    },
+    {
+      "name": "news-image",
+      "type": "image bytes",
+      "method": "GET",
+      "route": "/api/news/images/:id",
+      "path": "/api/news/images/2",
+      "status": 200,
+      "content_type": "image/png",
+      "headers": {
+        "cache-control": "private, max-age=86400",
+        "content-security-policy": "default-src 'none'; sandbox",
+        "x-content-type-options": "nosniff"
+      },
+      "file": null
+    },
+    {
+      "name": "news-proposal",
+      "type": "NewsProposalOut",
+      "method": "POST",
+      "route": "/api/news/events/:id/proposal",
+      "path": "/api/news/events/1/proposal",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-proposal.json",
+      "unseen": [
+        "item.start_date: always null",
+        "item.end_date: always null",
+        "item.due_date: always null",
+        "item.due_at: always null",
+        "item.place: always null",
+        "item.project: always null"
+      ]
+    },
+    {
+      "name": "news-seen",
+      "type": "NewsSeenOut",
+      "method": "POST",
+      "route": "/api/news/seen",
+      "path": "/api/news/seen",
+      "request": {
+        "story_ids": [
+          18,
+          1
+        ]
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-seen.json",
+      "unseen": [
+        "stories[].lead.hazard: always null",
+        "stories[].expired_at: always null"
+      ]
+    },
+    {
       "name": "device-unpair",
       "type": "(no body)",
       "method": "DELETE",
@@ -1133,6 +1339,47 @@
       "status": 401,
       "content_type": "application/json",
       "file": "responses/error-bad-pairing-code.json"
+    },
+    {
+      "name": "news-status-unsorted",
+      "type": "NewsStatusOut",
+      "method": "GET",
+      "route": "/api/news/status",
+      "path": "/api/news/status",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-status-unsorted.json",
+      "unseen": [
+        "first_run: always null"
+      ]
+    },
+    {
+      "name": "news-status-first-run",
+      "type": "NewsStatusOut",
+      "method": "GET",
+      "route": "/api/news/status",
+      "path": "/api/news/status",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-status-first-run.json",
+      "unseen": [
+        "down: always null"
+      ]
+    },
+    {
+      "name": "news-section-stale",
+      "type": "NewsSectionOut",
+      "method": "GET",
+      "route": "/api/news/sections/:section",
+      "path": "/api/news/sections/ai",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-section-stale.json",
+      "unseen": [
+        "stories[].lead.hazard: always null",
+        "stories[].expired_at: always null",
+        "upcoming: always empty"
+      ]
     }
   ],
   "events": [

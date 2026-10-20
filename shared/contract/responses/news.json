@@ -1,0 +1,557 @@
+{
+  "blocks": [
+    {
+      "section": "local",
+      "stories": [
+        {
+          "id": 1,
+          "headline": "Brush fire near the 210 grows to 400 acres",
+          "one_line": "Evacuation warnings for foothill homes; crews held the west flank overnight",
+          "sections": [
+            "local"
+          ],
+          "state": "updated",
+          "lead": {
+            "article_id": 1,
+            "outlet": "KTLA",
+            "outlet_short": "KTLA",
+            "more": 4,
+            "published_at": "2026-10-07T15:02:00.000Z",
+            "url": "https://ktla.example/news/brush-fire-near-the-210-explodes-overnight-prompting-warning",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 2,
+              "url": "/api/news/images/2",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 1,
+              "url": "/api/news/images/1",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "KTLA"
+          },
+          "first_reported_at": "2026-10-05T13:12:00.000Z",
+          "last_new_fact_at": "2026-10-07T15:40:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        },
+        {
+          "id": 2,
+          "headline": "Red Flag Warning for the valleys until Thu 6 PM",
+          "one_line": "Gusts to 50 mph, humidity under 10%",
+          "sections": [
+            "local"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 7,
+            "outlet": "NWS",
+            "outlet_short": "NWS",
+            "more": 0,
+            "published_at": "2026-10-07T13:12:00.000Z",
+            "url": "https://nws.example/news/red-flag-warning-issued-for-the-valleys",
+            "hazard": "nws"
+          },
+          "image": null,
+          "first_reported_at": "2026-10-07T13:12:00.000Z",
+          "last_new_fact_at": "2026-10-07T13:12:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 3,
+          "headline": "Man arrested after a stabbing outside a Metro station",
+          "one_line": "The victim is in stable condition",
+          "sections": [
+            "local"
+          ],
+          "state": "updated",
+          "lead": {
+            "article_id": 8,
+            "outlet": "NBC Los Angeles",
+            "outlet_short": "NBC LA",
+            "more": 2,
+            "published_at": "2026-10-07T11:12:00.000Z",
+            "url": "https://nbc-los-angeles.example/news/man-arrested-after-a-stabbing-outside-a-metro-station",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 6,
+              "url": "/api/news/images/6",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 5,
+              "url": "/api/news/images/5",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "NBC Los Angeles"
+          },
+          "first_reported_at": "2026-10-06T03:35:00.000Z",
+          "last_new_fact_at": "2026-10-07T14:55:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        },
+        {
+          "id": 4,
+          "headline": "Federal agents detain 9 at a car wash",
+          "one_line": "Neighbors gathered to film; two were released by evening",
+          "sections": [
+            "local"
+          ],
+          "state": "seen",
+          "lead": {
+            "article_id": 11,
+            "outlet": "LAist",
+            "outlet_short": "LAist",
+            "more": 3,
+            "published_at": "2026-10-06T22:20:00.000Z",
+            "url": "https://laist.example/news/federal-agents-detain-9-at-a-car-wash",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 8,
+              "url": "/api/news/images/8",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 7,
+              "url": "/api/news/images/7",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "LAist"
+          },
+          "first_reported_at": "2026-10-05T20:05:00.000Z",
+          "last_new_fact_at": "2026-10-06T02:30:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        },
+        {
+          "id": 5,
+          "headline": "Council approves a 120-unit housing project on a former parking lot",
+          "one_line": "Construction could start next spring",
+          "sections": [
+            "local"
+          ],
+          "state": "seen",
+          "lead": {
+            "article_id": 15,
+            "outlet": "Streetsblog LA",
+            "outlet_short": "Streetsblog LA",
+            "more": 0,
+            "published_at": "2026-10-05T19:40:00.000Z",
+            "url": "https://streetsblog-la.example/news/council-approves-a-120-unit-housing-project-on-a-former-park",
+            "hazard": null
+          },
+          "image": null,
+          "first_reported_at": "2026-10-05T19:40:00.000Z",
+          "last_new_fact_at": "2026-10-05T19:40:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        }
+      ],
+      "more": 12,
+      "upcoming": [],
+      "health": null
+    },
+    {
+      "section": "tech",
+      "stories": [
+        {
+          "id": 18,
+          "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+          "one_line": "From $349; preorders ship Friday",
+          "sections": [
+            "tech"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 43,
+            "outlet": "The Verge",
+            "outlet_short": "The Verge",
+            "more": 5,
+            "published_at": "2026-10-07T14:12:00.000Z",
+            "url": "https://the-verge.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 24,
+              "url": "/api/news/images/24",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 23,
+              "url": "/api/news/images/23",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "The Verge"
+          },
+          "first_reported_at": "2026-10-07T14:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T14:00:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 19,
+          "headline": "Samsung opens the One UI 9 beta to Galaxy S26 owners in the US",
+          "one_line": "Sign-ups open in the Members app today",
+          "sections": [
+            "tech"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 49,
+            "outlet": "9to5Google",
+            "outlet_short": "9to5Google",
+            "more": 2,
+            "published_at": "2026-10-07T10:12:00.000Z",
+            "url": "https://9to5google.example/news/samsung-opens-the-one-ui-9-beta-to-galaxy-s26-owners-in-the-",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 26,
+              "url": "/api/news/images/26",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 25,
+              "url": "/api/news/images/25",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "9to5Google"
+          },
+          "first_reported_at": "2026-10-07T10:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T10:00:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 20,
+          "headline": "Apple sends invites for an Oct 20 event",
+          "one_line": "Expected: new iPads and Macs",
+          "sections": [
+            "tech"
+          ],
+          "state": "seen",
+          "lead": {
+            "article_id": 52,
+            "outlet": "MacRumors",
+            "outlet_short": "MacRumors",
+            "more": 6,
+            "published_at": "2026-10-06T17:05:00.000Z",
+            "url": "https://macrumors.example/news/apple-sends-invites-for-an-oct-20-event",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 28,
+              "url": "/api/news/images/28",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 27,
+              "url": "/api/news/images/27",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "MacRumors"
+          },
+          "first_reported_at": "2026-10-06T03:15:00.000Z",
+          "last_new_fact_at": "2026-10-06T03:15:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        }
+      ],
+      "more": 7,
+      "upcoming": [
+        {
+          "id": 1,
+          "name": "Apple event",
+          "starts_at": "2026-10-20T17:00:00.000Z",
+          "all_day": false,
+          "section": "tech",
+          "story_id": 20,
+          "lead": {
+            "article_id": 52,
+            "outlet": "MacRumors",
+            "outlet_short": "MacRumors",
+            "more": 6,
+            "published_at": "2026-10-06T17:05:00.000Z",
+            "url": "https://macrumors.example/news/apple-sends-invites-for-an-oct-20-event",
+            "hazard": null
+          }
+        }
+      ],
+      "health": null
+    },
+    {
+      "section": "ai",
+      "stories": [
+        {
+          "id": 28,
+          "headline": "Anthropic releases Claude Haiku 5.5",
+          "one_line": "Faster and cheaper, available in the API and Claude apps today",
+          "sections": [
+            "ai"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 81,
+            "outlet": "Anthropic",
+            "outlet_short": "Anthropic",
+            "more": 8,
+            "published_at": "2026-10-07T14:12:00.000Z",
+            "url": "https://anthropic.example/news/anthropic-releases-claude-haiku-5-5",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 38,
+              "url": "/api/news/images/38",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 37,
+              "url": "/api/news/images/37",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "Anthropic"
+          },
+          "first_reported_at": "2026-10-07T14:05:00.000Z",
+          "last_new_fact_at": "2026-10-07T14:05:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 29,
+          "headline": "Fabrikam Hub resets every access token after a leak",
+          "one_line": "Tokens from Sep 28 to Oct 5 may be exposed",
+          "sections": [
+            "ai"
+          ],
+          "state": "updated",
+          "lead": {
+            "article_id": 90,
+            "outlet": "Ars Technica",
+            "outlet_short": "Ars Technica",
+            "more": 4,
+            "published_at": "2026-10-07T07:12:00.000Z",
+            "url": "https://ars-technica.example/news/fabrikam-hub-resets-every-access-token-after-a-leak",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 40,
+              "url": "/api/news/images/40",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 39,
+              "url": "/api/news/images/39",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "Ars Technica"
+          },
+          "first_reported_at": "2026-10-06T02:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T13:30:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        },
+        {
+          "id": 30,
+          "headline": "Gemini app adds scheduled tasks on Android",
+          "one_line": "Ask it to do something every morning",
+          "sections": [
+            "ai"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 95,
+            "outlet": "Google",
+            "outlet_short": "Google",
+            "more": 2,
+            "published_at": "2026-10-07T09:12:00.000Z",
+            "url": "https://google.example/news/gemini-app-adds-scheduled-tasks-on-android",
+            "hazard": null
+          },
+          "image": null,
+          "first_reported_at": "2026-10-07T09:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T09:00:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 31,
+          "headline": "OpenAI testifies before a Senate committee on AI safety",
+          "one_line": "Senators asked about testing before release",
+          "sections": [
+            "ai"
+          ],
+          "state": "seen",
+          "lead": {
+            "article_id": 98,
+            "outlet": "NPR",
+            "outlet_short": "NPR",
+            "more": 5,
+            "published_at": "2026-10-06T21:00:00.000Z",
+            "url": "https://npr.example/news/openai-testifies-before-a-senate-committee-on-ai-safety",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 42,
+              "url": "/api/news/images/42",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 41,
+              "url": "/api/news/images/41",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "NPR"
+          },
+          "first_reported_at": "2026-10-06T00:30:00.000Z",
+          "last_new_fact_at": "2026-10-06T04:45:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        }
+      ],
+      "more": 4,
+      "upcoming": [],
+      "health": null
+    },
+    {
+      "section": "general",
+      "stories": [
+        {
+          "id": 36,
+          "headline": "Hurricane Teresa makes landfall in the Florida Panhandle as a Category 3",
+          "one_line": "About 400,000 without power",
+          "sections": [
+            "general"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 118,
+            "outlet": "NPR",
+            "outlet_short": "NPR",
+            "more": 11,
+            "published_at": "2026-10-07T13:12:00.000Z",
+            "url": "https://npr.example/news/hurricane-teresa-makes-landfall-in-the-florida-panhandle-as-",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 50,
+              "url": "/api/news/images/50",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 49,
+              "url": "/api/news/images/49",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "NPR"
+          },
+          "first_reported_at": "2026-10-07T03:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T11:40:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 37,
+          "headline": "Federal judge blocks a rule ending work permits for asylum seekers",
+          "one_line": "The rule was to take effect Friday",
+          "sections": [
+            "general"
+          ],
+          "state": "new",
+          "lead": {
+            "article_id": 130,
+            "outlet": "Courthouse News",
+            "outlet_short": "Courthouse News",
+            "more": 4,
+            "published_at": "2026-10-07T10:12:00.000Z",
+            "url": "https://courthouse-news.example/news/federal-judge-blocks-a-rule-ending-work-permits-for-asylum-s",
+            "hazard": null
+          },
+          "image": null,
+          "first_reported_at": "2026-10-07T10:00:00.000Z",
+          "last_new_fact_at": "2026-10-07T10:00:00.000Z",
+          "seen_at": null,
+          "expired_at": null
+        },
+        {
+          "id": 38,
+          "headline": "Four killed in a warehouse shooting in Ohio; suspect in custody",
+          "one_line": "The shooting happened during a shift change",
+          "sections": [
+            "general"
+          ],
+          "state": "updated",
+          "lead": {
+            "article_id": 135,
+            "outlet": "ABC News",
+            "outlet_short": "ABC News",
+            "more": 7,
+            "published_at": "2026-10-07T08:12:00.000Z",
+            "url": "https://abc-news.example/news/four-killed-in-a-warehouse-shooting-in-ohio-suspect-in-custo",
+            "hazard": null
+          },
+          "image": {
+            "thumb": {
+              "id": 52,
+              "url": "/api/news/images/52",
+              "width": 144,
+              "height": 96
+            },
+            "large": {
+              "id": 51,
+              "url": "/api/news/images/51",
+              "width": 640,
+              "height": 360
+            },
+            "outlet": "ABC News"
+          },
+          "first_reported_at": "2026-10-06T01:30:00.000Z",
+          "last_new_fact_at": "2026-10-07T14:10:00.000Z",
+          "seen_at": "2026-10-06T05:40:00.000Z",
+          "expired_at": null
+        }
+      ],
+      "more": 9,
+      "upcoming": [],
+      "health": null
+    }
+  ],
+  "missed": {
+    "count": 14,
+    "since": "2026-10-06T05:40:00.000Z"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "unsorted": 12,
+  "down": {
+    "provider": "anthropic",
+    "cause": "unreachable",
+    "since": "2026-10-07T15:52:00.000Z",
+    "reason": "Anthropic didn't answer in time.",
+    "retrying": true
+  },
+  "first_run": null
+}

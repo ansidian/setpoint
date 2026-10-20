@@ -1,0 +1,29 @@
+{
+  "kind": "event",
+  "news_event_id": 1,
+  "story_id": 20,
+  "from_email": [
+    "title",
+    "date",
+    "time"
+  ],
+  "item": {
+    "kind": "event",
+    "calendar_id": 1,
+    "title": "Apple event",
+    "all_day": false,
+    "starts_at": "2026-10-20T17:00:00.000Z",
+    "ends_at": "2026-10-20T18:00:00.000Z",
+    "start_date": null,
+    "end_date": null,
+    "due_date": null,
+    "due_at": null,
+    "time_zone": "America/Los_Angeles",
+    "place": null,
+    "project": null
+  },
+  "conflict": {
+    "free": true,
+    "label": "Free that morning"
+  }
+}

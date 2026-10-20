@@ -3,6 +3,10 @@
     "gmail",
     "icloud"
   ],
+  "AI_PROVIDERS": [
+    "anthropic",
+    "openai"
+  ],
   "CALENDAR_MATCH_FIELDS": [
     "calendar",
     "date",
@@ -151,11 +155,33 @@
     "newsletter",
     "statement"
   ],
+  "NEWS_HAZARDS": [
+    "nws",
+    "usgs",
+    "cal_fire",
+    "airnow"
+  ],
+  "NEWS_SECTION_HEALTH": [
+    "stale",
+    "failing"
+  ],
   "NEWS_SECTIONS": [
     "local",
     "tech",
     "ai",
     "general"
+  ],
+  "NEWS_SORT_CAUSES": [
+    "no_key",
+    "unreachable",
+    "rate_limited",
+    "refused"
+  ],
+  "PROPOSAL_FIELDS": [
+    "title",
+    "date",
+    "time",
+    "place"
   ],
   "RECURRING_SCOPES": [
     "this",
@@ -186,6 +212,11 @@
     "google_calendar",
     "todoist",
     "weather"
+  ],
+  "STORY_STATES": [
+    "new",
+    "updated",
+    "seen"
   ],
   "STREAM_EVENTS": [
     "ready",

@@ -1,0 +1,279 @@
+{
+  "section": "ai",
+  "stories": [
+    {
+      "id": 28,
+      "headline": "Anthropic releases Claude Haiku 5.5",
+      "one_line": "Faster and cheaper, available in the API and Claude apps today",
+      "sections": [
+        "ai"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 81,
+        "outlet": "Anthropic",
+        "outlet_short": "Anthropic",
+        "more": 8,
+        "published_at": "2026-10-07T14:12:00.000Z",
+        "url": "https://anthropic.example/news/anthropic-releases-claude-haiku-5-5",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 38,
+          "url": "/api/news/images/38",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 37,
+          "url": "/api/news/images/37",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Anthropic"
+      },
+      "first_reported_at": "2026-10-07T14:05:00.000Z",
+      "last_new_fact_at": "2026-10-07T14:05:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 29,
+      "headline": "Fabrikam Hub resets every access token after a leak",
+      "one_line": "Tokens from Sep 28 to Oct 5 may be exposed",
+      "sections": [
+        "ai"
+      ],
+      "state": "updated",
+      "lead": {
+        "article_id": 90,
+        "outlet": "Ars Technica",
+        "outlet_short": "Ars Technica",
+        "more": 4,
+        "published_at": "2026-10-07T07:12:00.000Z",
+        "url": "https://ars-technica.example/news/fabrikam-hub-resets-every-access-token-after-a-leak",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 40,
+          "url": "/api/news/images/40",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 39,
+          "url": "/api/news/images/39",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Ars Technica"
+      },
+      "first_reported_at": "2026-10-06T02:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T13:30:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 30,
+      "headline": "Gemini app adds scheduled tasks on Android",
+      "one_line": "Ask it to do something every morning",
+      "sections": [
+        "ai"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 95,
+        "outlet": "Google",
+        "outlet_short": "Google",
+        "more": 2,
+        "published_at": "2026-10-07T09:12:00.000Z",
+        "url": "https://google.example/news/gemini-app-adds-scheduled-tasks-on-android",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T09:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T09:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 31,
+      "headline": "OpenAI testifies before a Senate committee on AI safety",
+      "one_line": "Senators asked about testing before release",
+      "sections": [
+        "ai"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 98,
+        "outlet": "NPR",
+        "outlet_short": "NPR",
+        "more": 5,
+        "published_at": "2026-10-06T21:00:00.000Z",
+        "url": "https://npr.example/news/openai-testifies-before-a-senate-committee-on-ai-safety",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 42,
+          "url": "/api/news/images/42",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 41,
+          "url": "/api/news/images/41",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "NPR"
+      },
+      "first_reported_at": "2026-10-06T00:30:00.000Z",
+      "last_new_fact_at": "2026-10-06T04:45:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 32,
+      "headline": "Hugging Face adds hosted inference for open video models",
+      "one_line": "Pay per second of video generated",
+      "sections": [
+        "ai"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 104,
+        "outlet": "Hugging Face",
+        "outlet_short": "Hugging Face",
+        "more": 1,
+        "published_at": "2026-10-06T16:00:00.000Z",
+        "url": "https://hugging-face.example/news/hugging-face-adds-hosted-inference-for-open-video-models",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 44,
+          "url": "/api/news/images/44",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 43,
+          "url": "/api/news/images/43",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Hugging Face"
+      },
+      "first_reported_at": "2026-10-06T16:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T16:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 33,
+      "headline": "OpenAI adds memory controls for ChatGPT teams",
+      "one_line": "Admins can turn memory off for a workspace",
+      "sections": [
+        "ai"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 106,
+        "outlet": "OpenAI",
+        "outlet_short": "OpenAI",
+        "more": 3,
+        "published_at": "2026-10-07T07:30:00.000Z",
+        "url": "https://openai.example/news/openai-adds-memory-controls-for-chatgpt-teams",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 46,
+          "url": "/api/news/images/46",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 45,
+          "url": "/api/news/images/45",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "OpenAI"
+      },
+      "first_reported_at": "2026-10-07T07:30:00.000Z",
+      "last_new_fact_at": "2026-10-07T07:30:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 34,
+      "headline": "A federal rule on AI chip exports takes effect",
+      "one_line": "Licenses now needed for sales to 40 more countries",
+      "sections": [
+        "ai",
+        "general"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 110,
+        "outlet": "Reuters",
+        "outlet_short": "Reuters",
+        "more": 4,
+        "published_at": "2026-10-07T04:00:00.000Z",
+        "url": "https://reuters.example/news/a-federal-rule-on-ai-chip-exports-takes-effect",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T04:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T04:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 35,
+      "headline": "Google DeepMind publishes a weather model that forecasts 15 days out",
+      "one_line": "Open weights for research use",
+      "sections": [
+        "ai"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 115,
+        "outlet": "Google DeepMind",
+        "outlet_short": "Google DeepMind",
+        "more": 2,
+        "published_at": "2026-10-05T22:30:00.000Z",
+        "url": "https://google-deepmind.example/news/google-deepmind-publishes-a-weather-model-that-forecasts-15-",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 48,
+          "url": "/api/news/images/48",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 47,
+          "url": "/api/news/images/47",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Google DeepMind"
+      },
+      "first_reported_at": "2026-10-05T22:30:00.000Z",
+      "last_new_fact_at": "2026-10-05T22:30:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    }
+  ],
+  "upcoming": [],
+  "health": {
+    "state": "stale",
+    "as_of": "2026-10-07T14:02:00.000Z"
+  }
+}

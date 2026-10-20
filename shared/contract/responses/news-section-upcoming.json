@@ -1,0 +1,353 @@
+{
+  "section": "tech",
+  "stories": [
+    {
+      "id": 18,
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "one_line": "From $349; preorders ship Friday",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 43,
+        "outlet": "The Verge",
+        "outlet_short": "The Verge",
+        "more": 5,
+        "published_at": "2026-10-07T14:12:00.000Z",
+        "url": "https://the-verge.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 24,
+          "url": "/api/news/images/24",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 23,
+          "url": "/api/news/images/23",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "The Verge"
+      },
+      "first_reported_at": "2026-10-07T14:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T14:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 19,
+      "headline": "Samsung opens the One UI 9 beta to Galaxy S26 owners in the US",
+      "one_line": "Sign-ups open in the Members app today",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 49,
+        "outlet": "9to5Google",
+        "outlet_short": "9to5Google",
+        "more": 2,
+        "published_at": "2026-10-07T10:12:00.000Z",
+        "url": "https://9to5google.example/news/samsung-opens-the-one-ui-9-beta-to-galaxy-s26-owners-in-the-",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 26,
+          "url": "/api/news/images/26",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 25,
+          "url": "/api/news/images/25",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "9to5Google"
+      },
+      "first_reported_at": "2026-10-07T10:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T10:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 20,
+      "headline": "Apple sends invites for an Oct 20 event",
+      "one_line": "Expected: new iPads and Macs",
+      "sections": [
+        "tech"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 52,
+        "outlet": "MacRumors",
+        "outlet_short": "MacRumors",
+        "more": 6,
+        "published_at": "2026-10-06T17:05:00.000Z",
+        "url": "https://macrumors.example/news/apple-sends-invites-for-an-oct-20-event",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 28,
+          "url": "/api/news/images/28",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 27,
+          "url": "/api/news/images/27",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "MacRumors"
+      },
+      "first_reported_at": "2026-10-06T03:15:00.000Z",
+      "last_new_fact_at": "2026-10-06T03:15:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 21,
+      "headline": "visionOS 26.1 brings shared Personas to group FaceTime calls",
+      "one_line": "Up to five people in one space",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 59,
+        "outlet": "MacRumors",
+        "outlet_short": "MacRumors",
+        "more": 4,
+        "published_at": "2026-10-07T12:30:00.000Z",
+        "url": "https://macrumors.example/news/visionos-26-1-brings-shared-personas-to-group-facetime-calls",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 30,
+          "url": "/api/news/images/30",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 29,
+          "url": "/api/news/images/29",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "MacRumors"
+      },
+      "first_reported_at": "2026-10-07T12:20:00.000Z",
+      "last_new_fact_at": "2026-10-07T12:20:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 22,
+      "headline": "Microsoft brings Copilot to Windows taskbar search for everyone",
+      "one_line": "Rolling out over the next two weeks",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 64,
+        "outlet": "Microsoft",
+        "outlet_short": "Microsoft",
+        "more": 3,
+        "published_at": "2026-10-07T08:30:00.000Z",
+        "url": "https://microsoft.example/news/microsoft-brings-copilot-to-windows-taskbar-search-for-every",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 32,
+          "url": "/api/news/images/32",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 31,
+          "url": "/api/news/images/31",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Microsoft"
+      },
+      "first_reported_at": "2026-10-07T08:30:00.000Z",
+      "last_new_fact_at": "2026-10-07T08:30:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 23,
+      "headline": "Chrome syncs tab groups to iPhone and iPad",
+      "one_line": "Groups made on a computer now show up on iOS",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 68,
+        "outlet": "Google",
+        "outlet_short": "Google",
+        "more": 1,
+        "published_at": "2026-10-06T23:00:00.000Z",
+        "url": "https://google.example/news/chrome-syncs-tab-groups-to-iphone-and-ipad",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-06T23:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T23:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 24,
+      "headline": "Apple releases iOS 26.0.2 with a fix for Wi-Fi drops",
+      "one_line": "Also fixes a Messages crash",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 70,
+        "outlet": "MacRumors",
+        "outlet_short": "MacRumors",
+        "more": 3,
+        "published_at": "2026-10-06T18:00:00.000Z",
+        "url": "https://macrumors.example/news/apple-releases-ios-26-0-2-with-a-fix-for-wi-fi-drops",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 34,
+          "url": "/api/news/images/34",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 33,
+          "url": "/api/news/images/33",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "MacRumors"
+      },
+      "first_reported_at": "2026-10-06T18:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T18:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 25,
+      "headline": "Galaxy Tab S11 FE goes on sale in the US",
+      "one_line": "From $499 with a pen in the box",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 74,
+        "outlet": "Samsung",
+        "outlet_short": "Samsung",
+        "more": 2,
+        "published_at": "2026-10-06T15:00:00.000Z",
+        "url": "https://samsung.example/news/galaxy-tab-s11-fe-goes-on-sale-in-the-us",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 36,
+          "url": "/api/news/images/36",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 35,
+          "url": "/api/news/images/35",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "Samsung"
+      },
+      "first_reported_at": "2026-10-06T15:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T15:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 26,
+      "headline": "Google Maps adds live lane guidance to more cars",
+      "one_line": "Cars with Google built-in from four more makers",
+      "sections": [
+        "tech"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 77,
+        "outlet": "9to5Google",
+        "outlet_short": "9to5Google",
+        "more": 1,
+        "published_at": "2026-10-06T01:00:00.000Z",
+        "url": "https://9to5google.example/news/google-maps-adds-live-lane-guidance-to-more-cars",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-06T01:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T01:00:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 27,
+      "headline": "Edge adds a password health check",
+      "one_line": "It flags reused and leaked passwords",
+      "sections": [
+        "tech"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 79,
+        "outlet": "The Verge",
+        "outlet_short": "The Verge",
+        "more": 1,
+        "published_at": "2026-10-06T20:00:00.000Z",
+        "url": "https://the-verge.example/news/edge-adds-a-password-health-check",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-06T20:00:00.000Z",
+      "last_new_fact_at": "2026-10-06T20:00:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    }
+  ],
+  "upcoming": [
+    {
+      "id": 1,
+      "name": "Apple event",
+      "starts_at": "2026-10-20T17:00:00.000Z",
+      "all_day": false,
+      "section": "tech",
+      "story_id": 20,
+      "lead": {
+        "article_id": 52,
+        "outlet": "MacRumors",
+        "outlet_short": "MacRumors",
+        "more": 6,
+        "published_at": "2026-10-06T17:05:00.000Z",
+        "url": "https://macrumors.example/news/apple-sends-invites-for-an-oct-20-event",
+        "hazard": null
+      }
+    }
+  ],
+  "health": null
+}

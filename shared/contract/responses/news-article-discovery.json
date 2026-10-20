@@ -1,0 +1,15 @@
+{
+  "id": 42,
+  "story_id": 17,
+  "outlet": "Daily News",
+  "outlet_short": "Daily News",
+  "byline": null,
+  "published_at": "2026-10-06T00:20:00.000Z",
+  "headline": "Four bus lines get more frequent service from Sunday",
+  "url": "https://daily-news.example/news/four-bus-lines-get-more-frequent-service-from-sunday",
+  "text": null,
+  "feed_summary": "Buses every 10 minutes at rush hour",
+  "summary_only": false,
+  "discovery": true,
+  "image": null
+}

@@ -1,0 +1,108 @@
+{
+  "id": 18,
+  "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+  "one_line": "From $349; preorders ship Friday",
+  "sections": [
+    "tech"
+  ],
+  "state": "new",
+  "lead": {
+    "article_id": 43,
+    "outlet": "The Verge",
+    "outlet_short": "The Verge",
+    "more": 5,
+    "published_at": "2026-10-07T14:12:00.000Z",
+    "url": "https://the-verge.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life",
+    "hazard": null
+  },
+  "image": {
+    "thumb": {
+      "id": 24,
+      "url": "/api/news/images/24",
+      "width": 144,
+      "height": 96
+    },
+    "large": {
+      "id": 23,
+      "url": "/api/news/images/23",
+      "width": 640,
+      "height": 360
+    },
+    "outlet": "The Verge"
+  },
+  "first_reported_at": "2026-10-07T14:00:00.000Z",
+  "last_new_fact_at": "2026-10-07T14:00:00.000Z",
+  "seen_at": null,
+  "expired_at": null,
+  "summary": "Google's Pixel Watch 5 is on sale from $349, with battery life Google puts at two days. Preorders ship Friday.",
+  "outlets": 6,
+  "facts": [
+    {
+      "at": "2026-10-07T14:00:00.000Z",
+      "text": "Pixel Watch 5 on sale from $349"
+    }
+  ],
+  "new_since": null,
+  "sources": [
+    {
+      "article_id": 43,
+      "outlet": "The Verge",
+      "outlet_short": "The Verge",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:12:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://the-verge.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    },
+    {
+      "article_id": 44,
+      "outlet": "9to5Google",
+      "outlet_short": "9to5Google",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:00:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://9to5google.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    },
+    {
+      "article_id": 45,
+      "outlet": "Engadget",
+      "outlet_short": "Engadget",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:00:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://engadget.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    },
+    {
+      "article_id": 46,
+      "outlet": "Google",
+      "outlet_short": "Google",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:00:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://google.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    },
+    {
+      "article_id": 47,
+      "outlet": "Android Authority",
+      "outlet_short": "Android Authority",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:00:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://android-authority.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    },
+    {
+      "article_id": 48,
+      "outlet": "TechCrunch",
+      "outlet_short": "TechCrunch",
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "published_at": "2026-10-07T14:00:00.000Z",
+      "summary_only": false,
+      "discovery": false,
+      "url": "https://techcrunch.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life"
+    }
+  ]
+}

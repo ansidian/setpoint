@@ -6,16 +6,19 @@
 // goldens`), and its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a
 // pinned setpoint-v2 commit, and its decoding tests read the same files.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {
-  CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, EVENT_COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
-  LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_SECTIONS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SESSION_METHODS,
-  SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
+  AI_PROVIDERS, CALENDAR_MATCH_FIELDS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, CALENDAR_PROVIDERS, COLOURS, EVENT_COLOURS, HEALTH_STATES, INBOX_GROUPS, ITEM_KINDS, KINDS,
+  LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SORT_CAUSES, PROPOSAL_FIELDS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS,
+  SEARCH_CHIP_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, STORY_STATES, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
-import type {ApiError, HighlightOut, MeOut, SearchOut} from '@setpoint/shared';
-import {describe, expect, test} from 'vitest';
+import type {ApiError, HighlightOut, MeOut, SearchOut, SectionHealthOut} from '@setpoint/shared';
+import {describe, expect, onTestFinished, test} from 'vitest';
+import type {AppOptions} from '../src/api/app.ts';
 import {confirmCommand, failCommand} from '../src/commands/index.ts';
+import {FIXTURES} from '../src/dev/fixtures/index.ts';
 import {devProvider} from '../src/providers/dev/index.ts';
 import {noteLive} from '../src/store.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
@@ -32,19 +35,21 @@ const RECORDING = process.env.SETPOINT_UPDATE_CONTRACT === '1';
 const SEARCH_ORDERS = ['newest', 'match'] as const satisfies readonly SearchOut['order'][];
 const HIGHLIGHT_FIELDS = ['from_name', 'organisation', 'subject', 'excerpt'] as const satisfies readonly HighlightOut['field'][];
 const ME_METHODS = [...SESSION_METHODS, 'device'] as const satisfies readonly MeOut['method'][];
+const NEWS_SECTION_HEALTH = ['stale', 'failing'] as const satisfies readonly SectionHealthOut['state'][];
 type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 export type ContractUnionsCheck = [
   Exactly<(typeof SEARCH_ORDERS)[number], SearchOut['order']>,
   Exactly<(typeof HIGHLIGHT_FIELDS)[number], HighlightOut['field']>,
   Exactly<(typeof ME_METHODS)[number], MeOut['method']>,
+  Exactly<(typeof NEWS_SECTION_HEALTH)[number], SectionHealthOut['state']>,
 ];
 
 /** Every fixed set a pinned response or event carries. */
 const ENUMS: Record<string, readonly string[]> = {
-  ACCOUNT_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, EVENT_COLOURS, HEALTH_STATES,
-  HIGHLIGHT_FIELDS, INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_SECTIONS, RECURRING_SCOPES,
-  REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES,
-  WEATHER_CONDITIONS,
+  ACCOUNT_PROVIDERS, AI_PROVIDERS, CALENDAR_MATCH_FIELDS, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES, COMMAND_TARGETS, EVENT_COLOURS, HEALTH_STATES,
+  HIGHLIGHT_FIELDS, INBOX_GROUPS, ITEM_KINDS, KINDS, LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, ME_METHODS, MESSAGE_TYPES, NEWS_HAZARDS, NEWS_SECTION_HEALTH,
+  NEWS_SECTIONS, NEWS_SORT_CAUSES, PROPOSAL_FIELDS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS, SEARCH_CHIP_KINDS, SEARCH_ORDERS, SOURCE_PROVIDERS, STORY_STATES,
+  STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, WEATHER_CONDITIONS,
 };
 
 interface Recorded {
@@ -57,6 +62,8 @@ interface Recorded {
   request?: unknown;
   status: number;
   content_type: string | null;
+  // Headers the app relies on beyond the content type (a News image's caching), pinned like a status.
+  headers?: Record<string, string>;
   body: unknown;
 }
 interface Event {
@@ -71,9 +78,8 @@ const FIXED_CODE = '0'.repeat(43);
 const fixedStreamId = (id: string) => id.replace(/^[0-9a-f]{8}-/, '00000000-');
 
 /** The app's requests: a bearer token and no cookie or Origin, as setpoint-ios sends them. */
-function phone(app: {request: (url: string, init: RequestInit) => Response | Promise<Response>}) {
+function phone(app: {request: (url: string, init: RequestInit) => Response | Promise<Response>}, recorded: Recorded[] = []) {
   let token: string | null = null;
-  const recorded: Recorded[] = [];
   const send = async (method: string, url: string, body?: unknown) => {
     const response = await app.request(url, {
       method,
@@ -82,29 +88,65 @@ function phone(app: {request: (url: string, init: RequestInit) => Response | Pro
     });
     const contentType = response.headers.get('content-type')?.split(';')[0] ?? null;
     const text = await response.text();
-    return {status: response.status, contentType, body: contentType === 'application/json' ? JSON.parse(text) : null};
+    return {status: response.status, contentType, headers: response.headers, body: contentType === 'application/json' ? JSON.parse(text) : null};
   };
   return {
     recorded,
     send,
+    get token() {
+      return token ?? '';
+    },
     set token(value: string) {
       token = value;
     },
-    /** Sends a request and keeps its answer as a fixture. */
-    async record(name: string, type: string, method: string, route: string, url: string, request?: unknown) {
+    /** Sends a request and keeps its answer as a fixture, with the `headers` named. */
+    async record(name: string, type: string, method: string, route: string, url: string, request?: unknown, headers?: readonly string[]) {
       const answer = await send(method, url, request);
-      recorded.push({name, type, method, route, path: url, ...(request === undefined ? {} : {request}), status: answer.status, content_type: answer.contentType, body: answer.body});
+      const kept = headers && Object.fromEntries(headers.map(header => [header, answer.headers.get(header) ?? '']));
+      recorded.push({
+        name, type, method, route, path: url, ...(request === undefined ? {} : {request}), status: answer.status, content_type: answer.contentType,
+        ...(kept ? {headers: kept} : {}), body: answer.body,
+      });
       return answer.body;
     },
   };
 }
 
+/** A data directory's news-images/ for one test, so the seed's News images are served as files. */
+function newsImages() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-contract-'));
+  onTestFinished(() => fs.rmSync(dir, {recursive: true, force: true}));
+  return dir;
+}
+
+/** The seed, signed in from the web, with an iPhone paired to it whose answers go into `recorded`. */
+async function pairedPhone(w: World, options: Partial<AppOptions> = {}, recorded: Recorded[] = []) {
+  const browser = await signedIn(w, options);
+  const app = phone(browser.app, recorded);
+  const {code} = (await browser.send('POST', '/api/security/pairing')).body;
+  app.token = (await app.send('POST', '/api/auth/pair', {code, name: 'iPhone 17 Pro'})).body.token;
+  return {browser, app};
+}
+
+/**
+ * News's states the seed itself doesn't hold, from the board fixtures layered on it (src/dev/fixtures/
+ * newsStates.ts, D3), each in a seeded world of its own so the rest stays as the seed has it.
+ */
+const NEWS_STATES = [
+  {fixture: 'news-ai-down', name: 'news-status-unsorted', type: 'NewsStatusOut', route: '/api/news/status', path: '/api/news/status'},
+  {fixture: 'news-first-run', name: 'news-status-first-run', type: 'NewsStatusOut', route: '/api/news/status', path: '/api/news/status'},
+  // A section's own line: every AI source last checked at 7:02 AM.
+  {fixture: 'news-stale-ai', name: 'news-section-stale', type: 'NewsSectionOut', route: '/api/news/sections/:section', path: '/api/news/sections/ai'},
+];
+
 /** Everything the app reads, from the seed at SEED_NOW, in one fixed order. */
-async function recordAll(w: World) {
+async function recordAll() {
+  const imagesDir = newsImages();
+  const w = world({seed: true, newsImagesDir: imagesDir});
   // The dev provider serves the seed's attachment bytes; nothing ticks the engine, so commands stay
   // as the steps below leave them.
   const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
-  const browser = await signedIn(w, {keepAliveMs: 20, engine});
+  const browser = await signedIn(w, {keepAliveMs: 20, engine, news: {imagesDir}});
   const app = phone(browser.app);
   const {code} = (await browser.send('POST', '/api/security/pairing')).body;
 
@@ -248,11 +290,43 @@ async function recordAll(w: World) {
   await app.record('error-item-when', 'ApiError', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 1, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z'});
   await app.record('error-item-nothing-to-change', 'ApiError', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {}});
 
+  // SV-104: News. All, with the Missed strip, a hazard's lead (Local's Red Flag Warning) and Tech's block
+  // holding Upcoming (the Apple event); a section with more than its block shows, and Tech's with Upcoming.
+  await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news');
+  await app.record('news-section', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/local');
+  await app.record('news-section-upcoming', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/tech');
+  // A new story, and the brush fire: seen Mon at 10:40 PM and given facts since, so it has new_since.
+  await app.record('news-story', 'StoryOut', 'GET', '/api/news/stories/:id', '/api/news/stories/18');
+  await app.record('news-story-updated', 'StoryOut', 'GET', '/api/news/stories/:id', '/api/news/stories/1');
+  // Its sources opened: NBC LA's text, KTLA's feed summary only, and one only Google News found.
+  await app.record('news-article', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/2');
+  await app.record('news-article-summary-only', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/1');
+  await app.record('news-article-discovery', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/42');
+  // Catch up: Tuesday's 14.
+  await app.record('news-missed', 'MissedOut', 'GET', '/api/news/missed', '/api/news/missed');
+  // Sorting as the seed has it: nothing waiting, no first run.
+  await app.record('news-status', 'NewsStatusOut', 'GET', '/api/news/status', '/api/news/status');
+  // Four stories, one already off the page.
+  await app.record('news-search', 'NewsSearchOut', 'GET', '/api/news/search', '/api/news/search?q=fire');
+  // A copy as the app's image loader gets it, with its bearer token (the web's cookie gets the same, below).
+  await app.record('news-image', 'image bytes', 'GET', '/api/news/images/:id', '/api/news/images/2', undefined, ['cache-control', 'content-security-policy', 'x-content-type-options']);
+  // Upcoming's Add to calendar: the event it would create, nothing created yet.
+  await app.record('news-proposal', 'NewsProposalOut', 'POST', '/api/news/events/:id/proposal', '/api/news/events/1/proposal');
+  // Last, as it changes their dots: the new story and the updated one seen.
+  await app.record('news-seen', 'NewsSeenOut', 'POST', '/api/news/seen', '/api/news/seen', {story_ids: [18, 1]});
+
   // Unpairing, and what every request gets after it.
   await app.record('device-unpair', '(no body)', 'DELETE', '/api/device', '/api/device');
   await app.record('error-unauthorized', 'ApiError', 'GET', '/api/mail/inbox', '/api/mail/inbox');
   app.token = '';
   await app.record('error-bad-pairing-code', 'ApiError', 'POST', '/api/auth/pair', '/api/auth/pair', {code: 'not-a-code'});
+
+  for (const state of NEWS_STATES) {
+    const other = world({seed: true});
+    FIXTURES[state.fixture]!.apply({sqlite: other.store.sqlite, db: other.store.db});
+    const {app: there} = await pairedPhone(other, {}, app.recorded);
+    await there.record(state.name, state.type, 'GET', state.route, state.path);
+  }
   return {responses: app.recorded, events};
 }
 
@@ -311,6 +385,10 @@ function compare({responses, events}: Awaited<ReturnType<typeof recordAll>>) {
     }
     if (entry.status !== pinned.status) found.push(`${entry.name}: answered ${entry.status}, was ${pinned.status}`);
     if (entry.content_type !== pinned.content_type) found.push(`${entry.name}: sent ${entry.content_type}, was ${pinned.content_type}`);
+    for (const [header, was] of Object.entries(pinned.headers ?? {})) {
+      const now = entry.headers?.[header];
+      if (now !== was) found.push(`${entry.name}: sent ${header} ${now ?? '(none)'}, was ${was}`);
+    }
     // A refusal's code is what the app branches on, so it's pinned like a status.
     if (entry.type === 'ApiError' && pinned.file) {
       const code = (entry.body as ApiError | null)?.error.code;
@@ -333,12 +411,32 @@ function compare({responses, events}: Awaited<ReturnType<typeof recordAll>>) {
 
 describe('the iPhone app\'s contract', () => {
   test.skipIf(RECORDING)('the API still answers the way the recorded fixtures say', async () => {
-    const found = compare(await recordAll(world({seed: true})));
+    const found = compare(await recordAll());
     expect(found, 'An installed iPhone app would fail on these. Keep the old field, status or value alongside the new one; or, once setpoint-ios handles it, npm run contract:record and pin the new commit there.').toEqual([]);
   });
 
   test.runIf(RECORDING)('records the fixtures', async () => {
-    write(await recordAll(world({seed: true})));
+    write(await recordAll());
+  });
+
+  // SV-104: the app's image loader sends the device's bearer token, never the web's cookie.
+  test('a News image answers a paired iPhone\'s bearer token as it answers the web\'s cookie', async () => {
+    const imagesDir = newsImages();
+    const w = world({seed: true, newsImagesDir: imagesDir});
+    const {browser, app} = await pairedPhone(w, {news: {imagesDir}});
+    const read = async (response: Response) => ({
+      status: response.status,
+      headers: Object.fromEntries([...response.headers].filter(([header]) => header !== 'set-cookie')),
+      bytes: Buffer.from(await response.arrayBuffer()),
+    });
+    const byCookie = await read(await browser.app.request('/api/news/images/2', {headers: {cookie: browser.cookie!}}));
+    const byToken = await read(await browser.app.request('/api/news/images/2', {headers: {authorization: `Bearer ${app.token}`}}));
+    expect(byCookie.status).toBe(200);
+    expect(byCookie.headers['content-type']).toBe('image/png');
+    expect(byToken).toEqual(byCookie);
+    // An unpaired token gets the app's 401, not the web's.
+    const unpaired = await browser.app.request('/api/news/images/2', {headers: {authorization: 'Bearer sp_device_unknown'}});
+    expect(unpaired.status).toBe(401);
   });
 });
 

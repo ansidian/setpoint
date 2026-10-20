@@ -25,7 +25,7 @@ export interface World {
   events: FeedEvent[];
 }
 
-export function world({seed = false, now = SEED_NOW}: {seed?: boolean; now?: string} = {}): World {
+export function world({seed = false, now = SEED_NOW, newsImagesDir = null}: {seed?: boolean; now?: string; newsImagesDir?: string | null} = {}): World {
   const {sqlite, db} = openDatabase(':memory:');
   onTestFinished(() => {
     sqlite.close();
@@ -35,7 +35,8 @@ export function world({seed = false, now = SEED_NOW}: {seed?: boolean; now?: str
   const events: FeedEvent[] = [];
   live.subscribe(event => events.push(event));
   const store: Store = {sqlite, db, timeZone: 'America/Los_Angeles', now: () => new Date(clock), live, keyring: keyringFrom(TEST_KEY)};
-  if (seed) seedSampleData({sqlite, db});
+  // News's images go to `newsImagesDir`; without one only their rows are kept.
+  if (seed) seedSampleData({sqlite, db}, {newsImagesDir});
   return {
     store, events,
     at: iso => (clock = Date.parse(iso)),

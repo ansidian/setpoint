@@ -1,0 +1,78 @@
+{
+  "stories": [
+    {
+      "id": 1,
+      "headline": "Brush fire near the 210 grows to 400 acres",
+      "one_line": "Evacuation warnings for foothill homes; crews held the west flank overnight",
+      "sections": [
+        "local"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 1,
+        "outlet": "KTLA",
+        "outlet_short": "KTLA",
+        "more": 4,
+        "published_at": "2026-10-07T15:02:00.000Z",
+        "url": "https://ktla.example/news/brush-fire-near-the-210-explodes-overnight-prompting-warning",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 2,
+          "url": "/api/news/images/2",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 1,
+          "url": "/api/news/images/1",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "KTLA"
+      },
+      "first_reported_at": "2026-10-05T13:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T15:40:00.000Z",
+      "seen_at": "2026-10-07T16:12:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 18,
+      "headline": "Pixel Watch 5 goes on sale with two-day battery life",
+      "one_line": "From $349; preorders ship Friday",
+      "sections": [
+        "tech"
+      ],
+      "state": "seen",
+      "lead": {
+        "article_id": 43,
+        "outlet": "The Verge",
+        "outlet_short": "The Verge",
+        "more": 5,
+        "published_at": "2026-10-07T14:12:00.000Z",
+        "url": "https://the-verge.example/news/pixel-watch-5-goes-on-sale-with-two-day-battery-life",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 24,
+          "url": "/api/news/images/24",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 23,
+          "url": "/api/news/images/23",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "The Verge"
+      },
+      "first_reported_at": "2026-10-07T14:00:00.000Z",
+      "last_new_fact_at": "2026-10-07T14:00:00.000Z",
+      "seen_at": "2026-10-07T16:12:00.000Z",
+      "expired_at": null
+    }
+  ]
+}

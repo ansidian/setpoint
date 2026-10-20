@@ -18,6 +18,7 @@
     },
     "reminders": true,
     "attention_mail": false,
+    "fyi_mail": false,
     "reconnect_alerts": true
   },
   "calendar": {

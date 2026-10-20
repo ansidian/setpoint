@@ -1,0 +1,20 @@
+{
+  "id": 1,
+  "story_id": 1,
+  "outlet": "KTLA",
+  "outlet_short": "KTLA",
+  "byline": null,
+  "published_at": "2026-10-07T15:02:00.000Z",
+  "headline": "Brush fire near the 210 explodes overnight, prompting warnings",
+  "url": "https://ktla.example/news/brush-fire-near-the-210-explodes-overnight-prompting-warning",
+  "text": null,
+  "feed_summary": "A brush fire burning above the 210 Freeway grew to roughly 400 acres overnight, forcing evacuation warnings for foothill neighborhoods as crews braced for gusty Red Flag conditions expected by noon Wednesday.",
+  "summary_only": true,
+  "discovery": false,
+  "image": {
+    "id": 1,
+    "url": "/api/news/images/1",
+    "width": 640,
+    "height": 360
+  }
+}

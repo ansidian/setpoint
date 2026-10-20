@@ -1,0 +1,126 @@
+{
+  "query": "fire",
+  "total": 4,
+  "stories": [
+    {
+      "id": 1,
+      "headline": "Brush fire near the 210 grows to 400 acres",
+      "one_line": "Evacuation warnings for foothill homes; crews held the west flank overnight",
+      "sections": [
+        "local"
+      ],
+      "state": "updated",
+      "lead": {
+        "article_id": 1,
+        "outlet": "KTLA",
+        "outlet_short": "KTLA",
+        "more": 4,
+        "published_at": "2026-10-07T15:02:00.000Z",
+        "url": "https://ktla.example/news/brush-fire-near-the-210-explodes-overnight-prompting-warning",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 2,
+          "url": "/api/news/images/2",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 1,
+          "url": "/api/news/images/1",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "KTLA"
+      },
+      "first_reported_at": "2026-10-05T13:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T15:40:00.000Z",
+      "seen_at": "2026-10-06T05:40:00.000Z",
+      "expired_at": null
+    },
+    {
+      "id": 2,
+      "headline": "Red Flag Warning for the valleys until Thu 6 PM",
+      "one_line": "Gusts to 50 mph, humidity under 10%",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 7,
+        "outlet": "NWS",
+        "outlet_short": "NWS",
+        "more": 0,
+        "published_at": "2026-10-07T13:12:00.000Z",
+        "url": "https://nws.example/news/red-flag-warning-issued-for-the-valleys",
+        "hazard": "nws"
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T13:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T13:12:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 8,
+      "headline": "Smoke advisory for the valleys through Thursday",
+      "one_line": "Air quality may reach unhealthy levels near the fire",
+      "sections": [
+        "local"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 23,
+        "outlet": "South Coast AQMD",
+        "outlet_short": "South Coast AQMD",
+        "more": 1,
+        "published_at": "2026-10-07T08:12:00.000Z",
+        "url": "https://south-coast-aqmd.example/news/smoke-advisory-for-the-valleys-through-thursday",
+        "hazard": null
+      },
+      "image": null,
+      "first_reported_at": "2026-10-07T08:12:00.000Z",
+      "last_new_fact_at": "2026-10-07T08:12:00.000Z",
+      "seen_at": null,
+      "expired_at": null
+    },
+    {
+      "id": 59,
+      "headline": "Chemical plant fire forces a shelter-in-place order in Louisiana",
+      "one_line": "The order was lifted after six hours",
+      "sections": [
+        "general"
+      ],
+      "state": "new",
+      "lead": {
+        "article_id": 234,
+        "outlet": "ABC News",
+        "outlet_short": "ABC News",
+        "more": 3,
+        "published_at": "2026-10-06T13:55:00.000Z",
+        "url": "https://abc-news.example/news/chemical-plant-fire-forces-a-shelter-in-place-order-in-louis",
+        "hazard": null
+      },
+      "image": {
+        "thumb": {
+          "id": 76,
+          "url": "/api/news/images/76",
+          "width": 144,
+          "height": 96
+        },
+        "large": {
+          "id": 75,
+          "url": "/api/news/images/75",
+          "width": 640,
+          "height": 360
+        },
+        "outlet": "ABC News"
+      },
+      "first_reported_at": "2026-10-05T03:45:00.000Z",
+      "last_new_fact_at": "2026-10-05T03:45:00.000Z",
+      "seen_at": null,
+      "expired_at": "2026-10-07T03:45:00.000Z"
+    }
+  ]
+}
