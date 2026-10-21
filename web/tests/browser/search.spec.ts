@@ -269,6 +269,22 @@ test('Alfred: ⌘Enter answers above the results with its source, a follow-up go
   }
 });
 
+test('Alfred: ⌘Enter asks the question as typed, though a chip formed in its middle and sits first', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await page.keyboard.type('When does northwind need my availability?');
+    await until('the organisation chipped', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind');
+    const asked = page.waitForRequest(request => request.url().endsWith('/api/alfred/ask'));
+    await page.keyboard.press('Meta+Enter');
+    assert.equal(JSON.parse((await asked).postData()!).question, 'When does northwind need my availability?');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
 /** Each row's account and age: one line each, the age not cut, the account clear of it, ends aligned. */
 async function rowEnds(page: Page, row: string, account: string) {
   return page.locator(row).evaluateAll((rows, account) => rows.map(element => {

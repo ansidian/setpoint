@@ -110,10 +110,20 @@ export const chipWords = (chip: SearchChip) => (chip.not ? `!${chip.label}` : ch
 export const queryParts = (chips: readonly SearchChip[], text: string) => [...chips.map(chipWords), ...(text.trim() ? [text.trim()] : [])];
 
 /**
- * What ⌘Enter asks Alfred: the words in the field. Chips go back as their words, which the grammar
- * reads as the same chips.
+ * What ⌘Enter asks Alfred: the words in the field, in the order they were typed when the field still
+ * knows it (`typed`), since a chip leaves the text where it formed and sits first. Without that order,
+ * chips go back first as their words, which the grammar reads as the same chips.
  */
-export const alfredQuestion = (chips: readonly SearchChip[], text: string) => queryParts(chips, text).join(' ');
+export const alfredQuestion = (chips: readonly SearchChip[], text: string, typed: string | null = null) =>
+  typed?.trim() ? typed.trim() : queryParts(chips, text).join(' ');
+
+/**
+ * The field's words as typed, after its text went from `before` to `after` while it holds chips.
+ * Typing on at the end keeps the order; any other edit loses it (null), and it stays lost until the
+ * field holds no chips again.
+ */
+export const typedAfter = (typed: string | null, before: string, after: string): string | null =>
+  typed !== null && after.startsWith(before) ? typed + after.slice(before.length) : null;
 
 /** Whether the field holds a search: chips, or words. */
 export const isSearching = (chips: readonly unknown[], text: string) => chips.length > 0 || text.trim().length > 0;

@@ -64,6 +64,23 @@ describe('parseQuery: chips', () => {
   });
 });
 
+describe('parseQuery: a question\'s own words never start an organisation', () => {
+  const ORGANISATIONS = [...VOCABULARY.organisations, 'Where Wild Things Grow', 'It Works Studio', 'I Love Contoso', 'Ask Proseware'];
+  const parseWith = (text: string) => {
+    const parsed = parseQuery(text, {...VOCABULARY, organisations: ORGANISATIONS, now: SEED_NOW, timeZone: TIME_ZONE});
+    return {chips: parsed.chips.map(show), text: parsed.text};
+  };
+  test.each<[string, string, string[], string]>([
+    ['a question word', 'where is my lease', [], 'where is my lease'],
+    ['"it"', 'put it on my calendar', [], 'put it on my calendar'],
+    ['"I"', 'when do I need to sign', [], 'when do I need to sign'],
+    ['the organisation, by more of its words', 'where wild things', ['Org Where Wild Things'], ''],
+    ['an organisation starting with a verb, by its words', 'ask proseware interview', ['Org Ask Proseware'], 'interview'],
+  ])('%s', (_, query, chips, text) => {
+    expect(parseWith(query)).toEqual({chips, text});
+  });
+});
+
 describe('parseQuery: "!" leaves out what a word names (SV-31)', () => {
   test.each<[string, string, string[], string]>([
     // name, query, chips, free text left

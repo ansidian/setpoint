@@ -42,8 +42,17 @@ const trimPunctuation = (word: string) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\
 /** A string's words, folded. */
 export const wordsOf = (value: string) => fold(value).match(/[\p{L}\p{N}]+/gu) ?? [];
 
-/** Words that never start an organisation chip on their own. */
-const FILLER = new Set(['the', 'a', 'an', 'of', 'and', 'from', 'to', 'in', 'on', 'at', 'for', 'my']);
+/**
+ * Words that never start an organisation chip on their own: filler, and the words a question to
+ * Alfred is made of, so "where" in a question doesn't become Where Wild Things Grow. The
+ * organisation still chips by more of its words ("where wild").
+ */
+const FILLER = new Set([
+  'the', 'a', 'an', 'of', 'and', 'or', 'from', 'to', 'in', 'on', 'at', 'for', 'with', 'by', 'about', 'my',
+  'i', 'me', 'it', 'this', 'that', 'you', 'your', 'we', 'our', 'they', 'their',
+  'who', 'what', 'when', 'where', 'which', 'why', 'how',
+  'is', 'are', 'was', 'were', 'be', 'am', 'do', 'does', 'did', 'can', 'could', 'will', 'would', 'should', 'have', 'has', 'had',
+]);
 
 const TYPE_WORDS: Record<string, MessageType> = {
   confirmation: 'confirmation', confirmations: 'confirmation',

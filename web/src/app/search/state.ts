@@ -11,7 +11,7 @@ import {useEffect, useRef, useState} from 'react';
 import {ApiFailure} from '../../api/client.ts';
 import {searchNews} from '../../api/news.ts';
 import {alfredStep, askAlfred, searchCalendar, searchMail, searchOpened} from '../../api/search.ts';
-import {alfredQuestion, finishedWords, isSearching, withStep} from '../../logic/search.ts';
+import {alfredQuestion, finishedWords, isSearching, typedAfter, withStep} from '../../logic/search.ts';
 
 const TYPING_MS = 120;
 const STEP_POLL_MS = 400;
@@ -43,6 +43,8 @@ export interface SearchFieldState<C, O, R> {
   loadMore: () => void;
   /** Changes the results shown, as the user acts on them. */
   update: (change: (results: R[]) => R[]) => void;
+  /** The field's words in the order typed, or null once an edit lost it (src/logic/search.ts › typedAfter). */
+  typed: () => string | null;
 }
 
 export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchResultOut> {
@@ -72,6 +74,8 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   useEffect(() => {
     field.current = {chips, text};
   });
+  // The words as typed: chips leave the text where they form, so Alfred is asked these instead.
+  const typed = useRef<string | null>('');
   const timer = useRef<number | undefined>(undefined);
   // The offset of the page on its way, so nearing the end twice asks for it once.
   const paging = useRef<number | null>(null);
@@ -134,6 +138,7 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   return {
     chips, text, active, out, results, error, pending: active && asked !== answered,
     setText(next) {
+      typed.current = chips.length === 0 ? next : typedAfter(typed.current, text, next);
       setTextState(next);
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => void run(chips, next, false), TYPING_MS);
@@ -141,19 +146,23 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
     settle: () => run(chips, text, true),
     removeChip(index) {
       const next = chips.filter((_, at) => at !== index);
+      typed.current = next.length === 0 ? text : null;
       setChips(next);
       void run(next, text, false);
     },
     clearText() {
+      typed.current = chips.length === 0 ? '' : null;
       setTextState('');
       void run(chips, '', false);
     },
     clear() {
+      typed.current = '';
       setChips([]);
       setTextState('');
       void run([], '', false);
     },
     update: change => setResults(change),
+    typed: () => typed.current,
     loadMore() {
       if (!out || out.next_offset === null || paging.current === out.next_offset) return;
       paging.current = out.next_offset;
@@ -180,7 +189,7 @@ export function useSearch(account: number | null, plain = false): Search {
       if (search.out && position >= 0) void searchOpened(search.out.search_id, id, position).catch(() => {});
     },
     mark: (id, change) => search.update(results => results.map(result => (result.id === id ? {...result, ...change} : result))),
-    question: () => alfredQuestion(search.chips, search.text),
+    question: () => alfredQuestion(search.chips, search.text, search.typed()),
   };
 }
 

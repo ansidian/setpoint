@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  alfredQuestion, alfredStepDone, alfredStepLine, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -131,6 +131,25 @@ describe('what the field asks', () => {
   ])('%s', (_name, given, text, parts, question) => {
     expect(queryParts(given, text)).toEqual(parts);
     expect(alfredQuestion(given, text)).toBe(question);
+  });
+
+  test('a question asks its words in the order typed, though a chip formed mid-sentence', () => {
+    expect(alfredQuestion(chips.slice(0, 1), 'when is my interview with ?', 'when is my interview with Northwind?')).toBe('when is my interview with Northwind?');
+  });
+
+  test('without the words as typed (an edit lost their order), chips come first as before', () => {
+    expect(alfredQuestion(chips.slice(0, 1), 'interview', null)).toBe('Northwind interview');
+  });
+});
+
+describe('typedAfter: the field\'s words as typed, while it holds chips', () => {
+  test.each<[string, string | null, string, string, string | null]>([
+    // name, typed so far, the field's text before, after, typed now
+    ['typing on at the end adds the new letters', 'when is my interview with Northwind ', 'when is my interview with ', 'when is my interview with ?', 'when is my interview with Northwind ?'],
+    ['an edit before the end loses the order', 'Northwind interview', 'interview', 'intrview', null],
+    ['once lost, it stays lost', null, 'interview', 'interview ', null],
+  ])('%s', (_name, typed, before, after, now) => {
+    expect(typedAfter(typed, before, after)).toBe(now);
   });
 });
 
