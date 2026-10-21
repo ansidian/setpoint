@@ -388,10 +388,16 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
     for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
       await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).click();
-      const frame = page.locator('iframe.mailframe');
       await page.frameLocator('iframe.mailframe').locator('body > *').first().waitFor();
-      assert.equal(await rested(() => style(frame, 'filter')), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
-      assert.equal(await rested(() => style(frame, 'boxShadow')), theme === 'night' ? 'rgba(0, 0, 0, 0) 0px 0px 0px 1px' : 'rgba(29, 30, 33, 0.1) 0px 0px 0px 1px', `${theme}: its edge`);
+      const card = page.locator('.mailframe-box');
+      assert.equal(await rested(() => style(card, 'filter')), theme === 'night' ? 'brightness(0.95)' : 'brightness(1)', `${theme}: the frame's brightness`);
+      assert.equal(await rested(() => style(card, 'boxShadow')), theme === 'night' ? 'rgba(0, 0, 0, 0) 0px 0px 0px 1px' : 'rgba(29, 30, 33, 0.1) 0px 0px 0px 1px', `${theme}: its edge`);
+      // The email sits 16 px from the card's top and bottom and up to 20 px from its sides, as much
+      // as leaves the frame 600 px (#254): 11.5 in the target's 623 px pane.
+      assert.deepEqual(await rested(() => card.evaluate(element => {
+        const [outer, inner] = [element.getBoundingClientRect(), element.querySelector('iframe')!.getBoundingClientRect()];
+        return [outer.width, inner.top - outer.top, inner.left - outer.left, outer.right - inner.right, outer.bottom - inner.bottom];
+      })), [623, 16, 11.5, 11.5, 16], `${theme}: the room around the email`);
       const ask = page.locator('.rd-acts .btn.out', {hasText: 'Ask about this email'});
       await page.mouse.move(1, 1);
       assert.equal(await rested(() => style(ask, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), `${theme}: an action's label`);

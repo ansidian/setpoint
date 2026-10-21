@@ -296,12 +296,13 @@ test('the reader draws the email\'s head from its row at once, and only its body
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     const box = page.locator('.mailframe-box');
     await box.waitFor();
-    assert.deepEqual(await rested(() => box.evaluate(element => [element.className, element.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity])),
+    assert.deepEqual(await rested(() => box.evaluate(element => [element.className, element.querySelector('iframe')!.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity])),
       ['mailframe-box measuring', 240, await rested(() => tokenColour(page, 'sub')), '0']);
     await release();
     await page.locator('.mailframe-box:not(.measuring)').waitFor();
     await until('the frame takes the email\'s height', () => box.evaluate(element => element.getBoundingClientRect().height), height => height > 300);
-    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)');
+    // Measured, the card turns white around the email (#254).
+    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgb(255, 255, 255)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -122,6 +122,9 @@
   .rd-meta .account { grid-column: 3; grid-row: 1; justify-self: end; }
   .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
   .rd-body { padding: 16px 20px 20px; }
+  /* The phone's email keeps the screen's whole width, with no room around it (D275 froze this layout). */
+  .mailframe-box { padding: 0; }
+  .mailframe { border-radius: var(--r-card); }
   .sk-head { padding: 10px 20px 0; gap: 16px; }
   .mailtext { font-size: 15px; }
   /* The actions share the width, 2, 3 or 4 of them (#137); Done leads, its label `ink` 500 and its

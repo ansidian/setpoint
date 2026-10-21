@@ -360,9 +360,11 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
   On Security and Noise mail, Add to calendar and Add as task move into the tools' **More** menu
   ([Decided while building](#decided-while-building) #4).
 - **Body:** plain text at 14 / 1.55, max 600 px; HTML in a sandboxed frame as wide as the reading
-  pane and as tall as the email, with radius 14 on white
-  ([Decided while building](#decided-while-building) #77), dimmed to 95% in Night and ringed with a
-  1 px `mailEdge` hairline in Light (#171). The body starts 12 px under the actions (#170).
+  pane and as tall as the email, on a white card of radius 14 that keeps it 16 px from the top and
+  bottom and up to 20 px from the sides, leaving it at least 600 px
+  ([Decided while building](#decided-while-building) #77, #254),
+  the card dimmed to 95% in Night and ringed with a 1 px `mailEdge` hairline in Light (#171). The
+  body starts 12 px under the actions (#170).
 - **Images:** remote content loads for a sender that passes DMARC and isn't Noise. Otherwise the
   **images-hidden bar** (34 px, radius 12, `sub`): "Images hidden · Show · Always show from
   contosocoffee.example" (trust per domain); each hidden image keeps its place as a hatched
@@ -2659,3 +2661,13 @@ it changes what's on screen.
     cut. Below 560 px for the seven heads, each stacks its weekday over its date, 1 px apart with
     6 px at the sides, inside the 48 px head; the weather is already gone under 96. At the design
     target and in the compact tier nothing changes. Board audit: no board draws the week at 1100.
+254. **An HTML email has room around it in the reader** (Andy, 2026-10-20, the amount left to Claude;
+    darma SV-107 D285): the email's frame sits on a white card of radius 14 that keeps it 16 px from
+    the card's top and bottom and up to 20 px from its sides, so a bare email's words no longer run
+    into the edge. The sides give way so the frame keeps 600 px, the width most emails are built
+    at, rather than zooming them down: 11.5 px a side in the design target's 623 px pane, 20 from a
+    640 px pane up. The room is the card's, outside the email's page, so an email's own
+    `body { padding: 0 }` can't take it away, and the page, its measuring script and the iPhone app's
+    body page don't change. Night's dim and Light's ring move from the frame to the card. The phone
+    keeps the frame at the screen's width with no room (D275). Board audit: boards that draw an
+    HTML email show it 11.5 px further in.

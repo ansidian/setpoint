@@ -512,13 +512,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .imgbar .sep { color: var(--ink3); }
 .imgbar .lnk { color: var(--ink); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; border-radius: 999px; white-space: nowrap; }
 @media (hover: hover) { .imgbar .lnk:hover { background: var(--sub2); } }
-/* An HTML email: a sandboxed frame as wide as the reading pane, radius 14 on white, as tall as its page says it is. */
-.mailframe { display: block; width: 100%; border: 0; border-radius: var(--r-card); background: #ffffff; flex: none; color-scheme: light; }
-/* Night takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow (#171). */
-.mailframe { filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge); }
+/* An HTML email: a sandboxed frame as wide as the reading pane, on a white card of radius 14, as tall as its page says it is. */
+.mailframe { display: block; width: 100%; border: 0; background: #ffffff; flex: none; color-scheme: light; }
+/* The card keeps the email 16 px from its top and bottom and up to 20 px from its sides (#254),
+   outside the email's page so its own styles can't take the room away. The sides give way so the
+   frame keeps 600 px, the width most emails are built at, rather than zooming them down. Night
+   takes the glare off its white (#f2f2f2), Light gives it a hairline ring, not a shadow (#171). */
+.mailframe-box { flex: none; border-radius: var(--r-card); padding: 16px clamp(0px, (100% - 600px) / 2, 20px); background: #ffffff; filter: brightness(var(--mailDim)); box-shadow: 0 0 0 1px var(--mailEdge);
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 /* Until its page says how tall it is (#229): 240 px held on `sub`, the frame unseen; then it fades in. */
-.mailframe-box { flex: none; border-radius: var(--r-card); }
-.mailframe-box.measuring { background: var(--sub); }
+.mailframe-box.measuring { background: var(--sub); filter: none; box-shadow: none; }
 .mailframe-box .mailframe { transition: opacity var(--dur-fast) var(--ease); }
 .mailframe-box.measuring .mailframe { opacity: 0; }
 /* Attachments: 44 px cards, radius 14, 280 wide or wider to show the whole name (board 10; Decided while building #61). */

@@ -729,14 +729,17 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     await openNoise(page);
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
-    // Hidden, the frame is as wide as the reading pane's body (the images bar's width), wider than
-    // the 622 px the email was built at, and exactly as tall as the email.
+    // Hidden, the frame's card is as wide as the reading pane's body (the images bar's width), wider
+    // than the 622 px the email was built at, and the frame exactly as tall as the email. The frame
+    // sits up to 20 px in from each side, but keeps 600 px (#254).
     await until('the hidden newsletter fits its frame', () => fit(page), fits);
     // Measured where the pane rests, once its content has slid in.
     await still(page);
     const width = (await rested(() => page.locator('.imgbar').boundingBox()))!.width;
     assert.ok(width > 622, `the images bar is ${width} px wide`);
-    assert.equal((await rested(() => element.boundingBox()))!.width, width);
+    assert.equal((await rested(() => page.locator('.mailframe-box').boundingBox()))!.width, width);
+    const inside = Math.max(width - 40, 600);
+    assert.equal((await rested(() => element.boundingBox()))!.width, inside);
 
     await page.locator('.imgbar').getByRole('button', {name: 'Show', exact: true}).click();
     await until('the pictures load', () => picturesLoaded(page), count => count === 4);
@@ -745,7 +748,7 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     await until('the newsletter fits its frame', () => fit(page), fits);
     const shown = (await rested(() => element.boundingBox()))!;
     assert.ok(shown.height > 1000, `the frame is ${shown.height} px tall`);
-    assert.equal(shown.width, width);
+    assert.equal(shown.width, inside);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
