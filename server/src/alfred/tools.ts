@@ -1,7 +1,8 @@
 // Alfred's tools, run for the model (BRIEF.md › Alfred: the same queries and commands the UI uses).
 // search_mail is the search field's own query (unlogged), get_email the reader's record, list_items
-// the calendar's range read, and propose_item builds the same proposal as Add to calendar / Add as
-// task. None of them changes anything.
+// the calendar's range read (an event's place and address as one location, the line Google keeps),
+// and propose_item builds the same proposal as Add to calendar / Add as task. None of them changes
+// anything.
 //
 // Harvested from v1's `alfred-tools` (SV-5): one result shape per tool as JSON, failures as a short
 // reason the model can act on (v1's `alfred-tool-errors`, without provider bodies), date ranges
@@ -13,6 +14,7 @@ import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {chipWords} from '../domain/searchChips.ts';
 import {addDays, daysBetween, localDay, localTime} from '../domain/time.ts';
+import {joinLocation} from '../providers/gcal/normalize.ts';
 import {itemsInRange} from '../queries/items.ts';
 import {searchMail} from '../search/search.ts';
 import type {Store} from '../store.ts';
@@ -125,7 +127,7 @@ function itemsTool(context: ToolContext, input: Record<string, unknown>): ToolOu
       date: item.starts_at ? localDay(item.starts_at, zone) : item.start_date ?? item.due_date,
       start: item.starts_at ? localTime(item.starts_at, zone) : item.due_at ? localTime(item.due_at, zone) : null,
       end: item.ends_at ? localTime(item.ends_at, zone) : null,
-      all_day: item.all_day, place: item.place, done: item.done,
+      all_day: item.all_day, location: joinLocation(item.place, item.address) || null, done: item.done,
     })),
   });
 }

@@ -282,4 +282,17 @@ describe('the tools on their own', () => {
     const items = JSON.parse(runTool(context, 'list_items', {from: '2026-10-09', to: '2026-10-09'}).output);
     expect(items.items.map((item: {title: string; start: string}) => `${item.start} ${item.title}`)).toEqual(['07:00 Gym', '18:30 Study group', '19:00 Dinner with Sam']);
   });
+
+  test('list_items gives an event\'s whole location, a street address with no place included', () => {
+    const w = world({seed: true});
+    // Google's "500 Oak Ave, …" syncs as an address with no place (splitLocation).
+    w.store.db.update(t.items).set({place: null, address: '500 Oak Ave, Springfield'}).where(eq(t.items.title, 'Study group')).run();
+    const context = {store: w.store, seen: new Set<number>(), read: [], searched: [], questions: ['Hi'], proposals: []};
+    const items = JSON.parse(runTool(context, 'list_items', {from: '2026-10-09', to: '2026-10-09'}).output);
+    expect(items.items.map((item: {title: string; location: string | null}) => [item.title, item.location])).toEqual([
+      ['Gym', null],
+      ['Study group', '500 Oak Ave, Springfield'],
+      ['Dinner with Sam', 'Blue Door, 2118 Sunset Blvd'],
+    ]);
+  });
 });
