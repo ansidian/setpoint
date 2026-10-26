@@ -714,3 +714,146 @@ describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
     expect(REMINDER_LINE_LIMITS).toEqual({minutes: REMINDER_LIMIT_MINUTES, count: 10});
   });
 });
+
+describe('SV-113: relative days (D294)', () => {
+  // The issue's Mon, Oct 26, 2026; a Saturday that is a month's last day; a Sunday; month ends.
+  const MON = '2026-10-26';
+  const SAT = '2026-10-31';
+  const SUN = '2026-11-01';
+  const on = (text: string, today: string) => parseTitle(text, today, CALENDARS);
+  const task = (text: string, today: string) => parseTitle(text, today, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
+  test.each([
+    ['in 3 days', MON, '2026-10-29'], ['in 1 day', MON, '2026-10-27'], ['in 2 weeks', MON, '2026-11-09'], ['in 1 week', MON, '2026-11-02'],
+    ['in 1 month', MON, '2026-11-26'], ['in 3 months', MON, '2027-01-26'],
+    ['next week', MON, '2026-11-02'], ['this weekend', MON, '2026-10-31'], ['weekend', MON, '2026-10-31'], ['next weekend', MON, '2026-11-07'],
+    ['end of week', MON, '2026-10-30'], ['end of the week', MON, '2026-10-30'], ['end of month', MON, '2026-10-31'], ['end of the month', MON, '2026-10-31'],
+    ['eom', MON, '2026-10-31'], ['end of next month', MON, '2026-11-30'], ['on end of month', MON, '2026-10-31'],
+    // A Saturday: this weekend is today; the week's end is the coming Friday; today is the month's last day.
+    ['this weekend', SAT, '2026-10-31'], ['next weekend', SAT, '2026-11-07'], ['next week', SAT, '2026-11-02'], ['end of week', SAT, '2026-11-06'],
+    ['end of month', SAT, '2026-10-31'], ['end of next month', SAT, '2026-11-30'], ['in 1 month', SAT, '2026-11-30'], ['in 4 months', SAT, '2027-02-28'],
+    // A Sunday: next week starts tomorrow, and the coming Saturday is six days on.
+    ['next week', SUN, '2026-11-02'], ['this weekend', SUN, '2026-11-07'], ['end of week', SUN, '2026-11-06'],
+    // A month to the same date, or that month's last day; a year's turn and a leap year.
+    ['in 1 month', '2027-01-31', '2027-02-28'], ['in 13 months', '2027-01-31', '2028-02-29'], ['end of next month', '2027-01-31', '2027-02-28'],
+    ['end of next month', '2026-12-15', '2027-01-31'], ['in 2 months', '2026-12-15', '2027-02-15'], ['end of month', '2028-02-03', '2028-02-29'],
+  ])('Lunch %s, today %s → %s', (phrase, today, date) => {
+    const parsed = task(`Lunch ${phrase}`, today);
+    expect(parsed).toMatchObject({title: 'Lunch', date, days: null});
+    expect(parsed.marks.map(mark => `Lunch ${phrase}`.slice(mark.start, mark.end))).toEqual([phrase]);
+  });
+  test('an event\'s weekend with no time is all day Saturday–Sunday; with a time, Saturday at it; a task\'s is due Saturday', () => {
+    expect(on('Hike this weekend', MON)).toMatchObject({title: 'Hike', date: '2026-10-31', days: 2, start: null, recurrence: null});
+    expect(on('Hike next weekend', MON)).toMatchObject({date: '2026-11-07', days: 2});
+    expect(on('Hike weekend', SAT)).toMatchObject({date: '2026-10-31', days: 2});
+    expect(on('Hike this weekend 9am', MON)).toMatchObject({date: '2026-10-31', days: null, start: h(9), recurrence: null});
+    expect(task('Clean garage this weekend', MON)).toMatchObject({title: 'Clean garage', date: '2026-10-31', days: null, start: null});
+  });
+  test('times and other phrases read beside them', () => {
+    expect(on('Review in 3 days 2pm @Blue Door', MON)).toMatchObject({title: 'Review', date: '2026-10-29', start: h(14), place: 'Blue Door'});
+    expect(on('Plan next week 9-10am', MON)).toMatchObject({date: '2026-11-02', start: h(9), end: h(10)});
+  });
+  test.each([
+    'Lunch in 3 hours', 'Lunch in 0 days', 'Lunch in three days', 'Lunch in 2 wks', 'Lunch end of year', 'Lunch next weeks',
+  ])('%s stays words', text => expect(on(text, MON)).toMatchObject({title: text, date: null, days: null}));
+  test('the Date field takes them, an event\'s weekend as its Saturday', () => {
+    expect(parseDay('next week', MON)).toBe('2026-11-02');
+    expect(parseDay('this weekend', MON)).toBe('2026-10-31');
+    expect(parseDay('eom', MON)).toBe('2026-10-31');
+    expect(parseDays('next week to end of week', SAT)).toEqual({from: '2026-11-02', to: '2026-11-06'});
+  });
+  test('a span reads them as its days', () => {
+    expect(on('Trip fri to end of month', MON)).toMatchObject({date: '2026-10-30', days: 2});
+  });
+});
+
+describe('SV-113: when a repeat ends (D294), only after one', () => {
+  const MON = '2026-10-26';
+  const on = (text: string, today = MON) => parseTitle(text, today, CALENDARS);
+  const task = (text: string, today = MON) => parseTitle(text, today, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
+  test.each<[string, string | null, string, string]>([
+    ['Standup every mon until dec 15', '2026-10-26', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261215', 'every mon until dec 15'],
+    ['Standup every mon 9am until dec 15', '2026-10-26', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261215', 'every mon 9am until dec 15'],
+    ['Gym daily until fri', null, 'RRULE:FREQ=DAILY;UNTIL=20261030', 'daily until fri'],
+    ['Gym every day until end of month', null, 'RRULE:FREQ=DAILY;UNTIL=20261031', 'every day until end of month'],
+    ['Gym every day until next week', null, 'RRULE:FREQ=DAILY;UNTIL=20261102', 'every day until next week'],
+    ['Gym every day until in 2 weeks', null, 'RRULE:FREQ=DAILY;UNTIL=20261109', 'every day until in 2 weeks'],
+    ['Class every tue and thu until 12/10', '2026-10-27', 'RRULE:FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261210', 'every tue and thu until 12/10'],
+    ['Gym every day 6 times', null, 'RRULE:FREQ=DAILY;COUNT=6', 'every day 6 times'],
+    ['Gym every day for 6 times', null, 'RRULE:FREQ=DAILY;COUNT=6', 'every day for 6 times'],
+    ['Gym weekly 1 time', null, 'RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=1', 'weekly 1 time'],
+    // "for N days/weeks/months" lasts that long from the first occurrence, its last day the one before first + N.
+    ['Gym every day for 2 weeks', '2026-10-26', 'RRULE:FREQ=DAILY;UNTIL=20261108', 'every day for 2 weeks'],
+    ['Gym every day for 3 days', '2026-10-26', 'RRULE:FREQ=DAILY;UNTIL=20261028', 'every day for 3 days'],
+    ['Gym every mon for 4 weeks', '2026-10-26', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261122', 'every mon for 4 weeks'],
+    ['Rent monthly for 3 months', '2026-10-26', 'RRULE:FREQ=MONTHLY;UNTIL=20270125', 'monthly for 3 months'],
+    ['Gym every fri 7am for 2 weeks', '2026-10-30', 'RRULE:FREQ=WEEKLY;BYDAY=FR;UNTIL=20261112', 'every fri 7am for 2 weeks'],
+    ['Rent monthly nov 30 for 3 months', '2026-11-30', 'RRULE:FREQ=MONTHLY;UNTIL=20270227', 'monthly nov 30 for 3 months'],
+  ])('%s', (text, date, recurrence, when) => {
+    const parsed = on(text);
+    expect(parsed).toMatchObject({date, recurrence, length: null, days: null});
+    expect(parsed.title).toBe(text.split(' ')[0]);
+    expect(parsed.marks.map(mark => `${mark.kind}:${text.slice(mark.start, mark.end)}`)).toEqual([`when:${when}`]);
+  });
+  test('the "for 2 weeks" bug: after a repeat it\'s the repeat\'s end, not the event\'s length', () => {
+    expect(on('Gym every day for 2 weeks')).toMatchObject({start: null, end: null, length: null, days: null, recurrence: 'RRULE:FREQ=DAILY;UNTIL=20261108'});
+    // A length in hours after a repeat is still a length.
+    expect(on('Gym every day 7am for 1h')).toMatchObject({start: h(7), end: h(8), length: 60, recurrence: 'RRULE:FREQ=DAILY'});
+  });
+  test.each([
+    ['no repeat', 'Party until dec 15', 'Party until dec 15', null, null],
+    ['no repeat, a count', 'Stretch 6 times', 'Stretch 6 times', null, null],
+    ['no repeat, for a count', 'Stretch for 6 times', 'Stretch for 6 times', null, null],
+    ['no repeat, months', 'Trip for 2 months', 'Trip for 2 months', null, null],
+    ['a repeat after it', 'Gym until dec 15 every mon', 'Gym until dec 15', 'RRULE:FREQ=WEEKLY;BYDAY=MO', '2026-10-26'],
+    ['an end before the first', 'Gym every fri until thu', 'Gym until thu', 'RRULE:FREQ=WEEKLY;BYDAY=FR', '2026-10-30'],
+    ['a second end', 'Gym every day 3 times until fri', 'Gym until fri', 'RRULE:FREQ=DAILY;COUNT=3', null],
+    ['no times', 'Gym every day 0 times', 'Gym 0 times', 'RRULE:FREQ=DAILY', null],
+  ])('stays words: %s', (_, text, title, recurrence, date) => expect(on(text)).toMatchObject({title, recurrence, date}));
+  test('the Repeat row says the end', () => {
+    expect(describeRule('RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261215', MON)).toBe('Weekly on Monday, until Tue, Dec 15');
+    expect(describeRule('RRULE:FREQ=DAILY;COUNT=6', MON)).toBe('Daily, 6 times');
+    expect(describeRule('RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=1', MON)).toBe('Weekly on Mon, Wed, once');
+    expect(describeRule('RRULE:FREQ=MONTHLY;INTERVAL=2;COUNT=3', MON)).toBe('Every 2 months on day 26, 3 times');
+  });
+  test.each<[string, string | null, string, string]>([
+    // A task's end goes to Todoist as "until" a date, which it documents; a count, which it doesn't, stays words.
+    ['Water plants every mon until dec 15', 'every mon until 2026-12-15', 'Water plants', 'Every Monday, until Tue, Dec 15'],
+    ['Vitamins every day for 2 weeks', 'every day until 2026-11-08', 'Vitamins', 'Every day, until Sun, Nov 8'],
+    ['Water plants every mon until end of next month', 'every mon until 2026-11-30', 'Water plants', 'Every Monday, until Mon, Nov 30'],
+    ['Vitamins every day 6 times', 'every day', 'Vitamins 6 times', 'Every day'],
+    ['Vitamins every day for 6 times', 'every day', 'Vitamins for 6 times', 'Every day'],
+  ])('a task: %s', (text, repeat, title, label) => {
+    const parsed = task(text);
+    expect(parsed.title).toBe(title);
+    expect(taskRepeat(parsed.recurrence)).toBe(repeat);
+    expect(describeTaskRepeat(repeat)).toBe(label);
+  });
+  test('a count reaches no task\'s repeat', () => expect(taskRepeat('RRULE:FREQ=DAILY;COUNT=3')).toBeNull());
+  test('an edit\'s "for 2 weeks" counts from the item\'s day', () => {
+    expect(parseTitle('Gym daily for 2 weeks', MON, CALENDARS, null, null, {before: 'Gym', day: '2026-11-03'}))
+      .toMatchObject({date: '2026-11-03', recurrence: 'RRULE:FREQ=DAILY;UNTIL=20261116'});
+  });
+});
+
+describe('SV-113: a length in days with no time is all day over them (D298)', () => {
+  const MON = '2026-10-26';
+  const on = (text: string) => parseTitle(text, MON, CALENDARS);
+  test.each<[string, string | null, number, string]>([
+    ['Trip fri for 3 days', '2026-10-30', 3, 'fri for 3 days'],
+    ['Trip fri for 1 day', '2026-10-30', 1, 'fri for 1 day'],
+    ['Trip fri for 2d', '2026-10-30', 2, 'fri for 2d'],
+    ['Retreat for 1 week', null, 7, 'for 1 week'],
+    ['Retreat sat for 1 week 2 days', '2026-10-31', 9, 'sat for 1 week 2 days'],
+    ['Camp this weekend for 3 days', '2026-10-31', 3, 'this weekend for 3 days'],
+  ])('%s', (text, date, days, when) => {
+    expect(on(text)).toMatchObject({date, days, start: null, end: null, length: null});
+    expect(on(text).marks.map(mark => text.slice(mark.start, mark.end))).toEqual([when]);
+  });
+  test.each<[string, number | null, number | null, number]>([
+    // Hours, part days and a time typed keep SV-111's timed length.
+    ['Trip fri for 1.5 days', null, null, 2160],
+    ['Trip fri for 1 day 3h', null, null, 1620],
+    ['Trip fri 9am for 2 days', h(9), h(9) + 2880, 2880],
+    ['Lunch fri for 2h', null, null, 120],
+  ])('%s stays timed', (text, start, end, length) => expect(on(text)).toMatchObject({start, end, length, days: null}));
+});

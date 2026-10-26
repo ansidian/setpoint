@@ -8,7 +8,11 @@
 // What it reads, anywhere in the title:
 // - a day: today, tonight, tomorrow (tmr, tmrw); a weekday (the next one, today counting; "next
 //   fri" the one after); "oct 12", "12 oct", "10/12", "10/12/26", "2026-10-12" (a month and day
-//   already past this year is next year's); "on" before any of them.
+//   already past this year is next year's); "on" before any of them. Days counted from today (SV-113,
+//   D294): "in 3 days", "in 2 weeks", "in 1 month" (that month's last day when it's shorter); "next
+//   week", its Monday; "this weekend" or "weekend", the coming Saturday (today on one), "next weekend"
+//   the one after, an event's all day Saturday–Sunday with no time; "end of week", the coming Friday;
+//   "end of month", "eom", "end of next month", the month's last day.
 // - a time: "7pm", "7:30 pm", "19:00", "noon", "midnight", "at" before any of them; a range "7-9pm",
 //   "7pm - 9pm", "11-1pm", "from 9 to 5pm" (a bare hour is a time only with am/pm or minutes, so
 //   "Gym 7" stays a title); No end, the end at the start, for the same time twice ("2pm to 2pm") or
@@ -16,7 +20,8 @@
 // - an event's length after "for" (SV-111, D291, D292): "for 15 min", "for 1.5h", "for 1 hour 20mins",
 //   "for 1h30"; digits only, in min(s)/minute(s), h/hr(s)/hour(s), d/day(s) and week(s). It ends the
 //   event that long after its start; with no time typed, `length` alone says it, for the reader's
-//   default start. The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
+//   default start, but a length in whole days or weeks is all day over them ("Trip fri for 3 days" is
+//   Fri–Sun, D298). The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
 // - an event's span of days (SV-111, D292), as the Date field takes them: "oct 23–25", "oct 23 to 25",
 //   "oct 30 – nov 2", "fri to sun", "fri through sun", "from fri to sun", the last day read from the
 //   first ("fri to mon" runs into next week); a backwards one stays words. With no time it's all day
@@ -32,7 +37,10 @@
 //   no date) every such phrase does. "remind" and a day with no time stays words too.
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
-//   every month.
+//   every month. After one, when it ends (SV-113, D294): "until <day>", any day above, as UNTIL; "6
+//   times" or "for 6 times" as COUNT (an event's only: Todoist documents no count); "for 2 weeks"
+//   (days, weeks, months) as UNTIL the day before the first occurrence plus that, the first then the
+//   item's day. Without a repeat before them they stay words, and "for 2 days" is a length.
 // - "@Blue Door": a place, up to the next time, day, repeat or calendar (two letters at least), or
 //   just its picked text once a Places suggestion was picked for it, a link up to the next space,
 //   or up to a comma, which goes with it (darma SV-27).
@@ -91,10 +99,12 @@ export interface ParsedTitle {
   recurrence: string | null;
   // A known project by its own name ("#home" is "Home"), else as typed.
   project: string | null;
-  // An all-day span's days, its first and last counting ("oct 23–25" is 3); null for no span (SV-111).
+  // An all-day event's days, its first and last counting: a span's ("oct 23–25" is 3; SV-111), a
+  // weekend's 2, or a length's in whole days with no time ("for 3 days"; SV-113, D298); else null.
   days: number | null;
   // Minutes a "for" length read ("for 1.5h" is 90), the end already counting it when a start was
-  // read; with none, the event starts at the default start and lasts this long (SV-111).
+  // read; with none, the event starts at the default start and lasts this long (SV-111). Null when
+  // a length in whole days made `days` instead (D298).
   length: number | null;
   // The reminders the line read, in order, the same one once; null for none (SV-112).
   reminders: ReminderRead[] | null;
@@ -108,6 +118,9 @@ const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', '
 // A phrase ends at a space, punctuation or the end.
 const END = '(?=$|[\\s,.;!?])';
 const TIME = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a|p)?';
+// Days counted from today (SV-113, D294): "in 3 days", "next week", "this weekend", "end of month".
+const RELATIVE = 'in\\s+\\d{1,3}\\s*(?:days?|d|weeks?|months?)(?![a-z])|(?:(?:this|next)\\s+)?weekend(?![a-z])|next\\s+week(?![a-z])'
+  + '|end\\s+of\\s+(?:the\\s+)?(?:week|month|next\\s+month)(?![a-z])|eom(?![a-z])';
 const ORDINALS: Record<string, number> = {first: 1, '1st': 1, second: 2, '2nd': 2, third: 3, '3rd': 3, fourth: 4, '4th': 4, last: -1};
 
 /** Monday 0 … Sunday 6 for a weekday word. */
@@ -195,10 +208,17 @@ interface State {
   remind: ReminderBase | null;
   // Each reminder phrase read, where it starts; a moment's null day is the item's own.
   reminders: {start: number; reads: ({minutes: number} | {date: string | null; time: number})[]}[];
+  // A weekend read as the day: an event's is all day Saturday–Sunday with no time (SV-113).
+  weekend: boolean;
+  // A length's units were only days and weeks, so with no time it's all day over them (D298).
+  wholeDays: boolean;
+  // When the repeat ends (SV-113), where its phrase starts: a last day, a count, or a length from
+  // the first occurrence.
+  ending: {start: number; until?: string; count?: number; length?: {value: number; unit: 'd' | 'w' | 'm'}} | null;
 }
 
 const fresh = (event: boolean, remind: ReminderBase | null = null): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null,
-  weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null, remind, reminders: []});
+  weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null, remind, reminders: [], weekend: false, wholeDays: false, ending: null});
 
 interface Matcher {
   kind: MarkKind;
@@ -209,6 +229,9 @@ interface Matcher {
 }
 
 const sticky = (source: string) => new RegExp(source, 'iy');
+
+/** A day as RRULE writes a date-only UNTIL ("2026-10-25" is 20261025). */
+const compact = (date: string) => date.replace(/-/g, '');
 
 function rule(state: State, body: string, weeklyNeedsDay = false): boolean {
   if (state.recurrence) return false;
@@ -289,6 +312,7 @@ const LENGTH: Matcher = {
     const minutes = minutesIn(m[1]!);
     if (minutes === null || minutes < 1) return false;
     s.length = minutes;
+    s.wholeDays = minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1]!);
     return true;
   },
 };
@@ -307,7 +331,7 @@ function minutesIn(text: string): number | null {
 }
 
 // The days a span runs between, as the date matchers read them (a bare day only last: "oct 23–25").
-const DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
+const DAY_TEXT = `(?:${RELATIVE}|today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
   + `|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
 // A bare day isn't an hour ("oct 3 to 5pm" is a time).
 const LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
@@ -333,7 +357,7 @@ const SPAN: Matcher = {
   pattern: sticky(`(?:(?:on|from)\\s+)?(${DAY_TEXT})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?(?:\\s*[-–—]\\s*|\\s+(?:to|through|thru)\\s+)(${LAST_DAY})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?${END}`),
   apply: (m, s, today) => {
     if (!s.event) return 'words';
-    if (s.date) return false;
+    if (s.date || s.ending) return false;
     const from = parseDay(m[1]!, today);
     if (from === null) return false;
     const to = lastDay(m[3]!, from);
@@ -355,6 +379,34 @@ const SPAN: Matcher = {
     return true;
   },
 };
+
+// ---------- When a repeat ends (SV-113) ----------
+
+/**
+ * When a repeat ends (SV-113, D294), only once one is read; the first ending wins. Without a repeat
+ * "until …" and a count stay words, and "for N days/weeks" is left to the length.
+ */
+function ending(s: State, start: number, found: Omit<NonNullable<State['ending']>, 'start'>, orLength = false): boolean | 'words' {
+  if (!s.recurrence) return orLength ? false : 'words';
+  if (s.ending || s.last) return 'words';
+  s.ending = {start, ...found};
+  return true;
+}
+
+const ENDINGS: Matcher[] = [
+  {kind: 'when', pattern: sticky(`until\\s+(${DAY_TEXT})${END}`), apply: (m, s, today) => {
+    const until = parseDay(m[1]!, today);
+    return until ? ending(s, m.index, {until}) : false;
+  }},
+  // Todoist documents no count, so a task's stays words.
+  {kind: 'when', pattern: sticky(`(?:for\\s+)?(\\d{1,3})\\s+times?${END}`),
+    apply: (m, s) => (!s.event || Number(m[1]) < 1 ? 'words' : ending(s, m.index, {count: Number(m[1])}))},
+  {kind: 'when', pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?)${END}`), apply: (m, s) => {
+    const value = Number(m[1]);
+    if (value < 1) return false;
+    return ending(s, m.index, {length: {value, unit: m[2]![0]!.toLowerCase() as 'd' | 'w' | 'm'}}, true);
+  }},
+];
 
 // ---------- Reminders (SV-112, D293) ----------
 
@@ -445,7 +497,44 @@ function resolveReminders(state: State, days: number | null): {reminders: Remind
   return {reminders: kept.size ? [...kept.values()] : null, words};
 }
 
+/** A month's last day. */
+const lastOfMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+
+/** `months` after `date`: the same day of the month, or that month's last day when it's shorter. */
+function addMonths(date: string, months: number): string {
+  const index = Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1 + months;
+  const [year, month] = [Math.floor(index / 12), (index % 12) + 1];
+  return day(year, month, Number(date.slice(8))) ?? lastOfMonth(year, month);
+}
+
+/**
+ * A day counted from today (D294): "in N days/weeks/months" today plus N; "next week" Monday of next
+ * week; "this weekend" or "weekend" the coming Saturday, today on a Saturday, "next weekend" the one
+ * after; "end of week" the coming Friday (this week's, but next week's at the weekend); "end of month"
+ * and "eom" this month's last day, "end of next month" next month's. Null when it isn't one.
+ */
+function relativeDay(text: string, today: string): string | null {
+  const words = text.toLowerCase().replace(/\s+/g, ' ');
+  const weekday = weekdayOf(today);
+  const counted = /^in (\d+) ?([a-z])/.exec(words);
+  if (counted) {
+    const n = Number(counted[1]);
+    if (n < 1) return null;
+    return counted[2] === 'm' ? addMonths(today, n) : addDays(today, n * (counted[2] === 'w' ? 7 : 1));
+  }
+  if (/weekend$/.test(words)) return addDays(today, (5 - weekday + 7) % 7 + (words.startsWith('next') ? 7 : 0));
+  if (words === 'next week') return addDays(today, 7 - weekday);
+  if (/week$/.test(words)) return addDays(today, (4 - weekday + 7) % 7);
+  const month = addMonths(`${today.slice(0, 8)}01`, words.includes('next') ? 1 : 0);
+  return lastOfMonth(Number(month.slice(0, 4)), Number(month.slice(5, 7)));
+}
+
 const DATES: Matcher[] = [
+  {kind: 'when', pattern: sticky(`(?:on\\s+)?(${RELATIVE})${END}`), apply: (m, s, today) => {
+    if (!setDate(s, relativeDay(m[1]!, today))) return false;
+    s.weekend = /weekend$/i.test(m[1]!);
+    return true;
+  }},
   {kind: 'when', pattern: sticky(`(?:on\\s+)?(today|tonight|tomorrow|tmrw|tmr)${END}`),
     apply: (m, s, today) => setDate(s, m[1]!.toLowerCase().startsWith('to') && m[1]!.toLowerCase() !== 'tomorrow' ? today : addDays(today, 1))},
   {kind: 'when', pattern: sticky(`(?:on\\s+)?(?:(next|this)\\s+)?(${WEEKDAY})${END}`), apply: (m, s, today) => {
@@ -567,7 +656,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   edit: {before: string; day: string} | null = null, remind: ReminderBase | null = null): ParsedTitle {
   const state = fresh(hash?.kind !== 'project', remind);
   // Reminders before the days and times, so "remind sun 8pm" doesn't move the item (SV-112).
-  const phrases = [...calendarMatchers(calendars), ...REMINDERS, ...REPEATS, ...TIMES, LENGTH, SPAN, ...DATES];
+  const phrases = [...calendarMatchers(calendars), ...REMINDERS, ...REPEATS, ...ENDINGS, ...TIMES, LENGTH, SPAN, ...DATES];
   let marks: Mark[] = [];
   // An edit's phrases start and end in what it typed: the text is read only to its end.
   const typed = edit ? typedSpan(edit.before, text) : {start: 0, end: text.length};
@@ -623,15 +712,33 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   const first = edit?.day ?? today;
   if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map(index => (index - weekdayOf(first) + 7) % 7)));
   if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
+  // The repeat's end (SV-113, D294), from its first occurrence, the item's day: "for N weeks" lasts that
+  // long, its last day the one before the first plus N, and pins the day it counts from; a last day
+  // before the first stays words.
+  const endWords = new Set<number>();
+  if (state.ending) {
+    const {start, until, count, length} = state.ending;
+    if (length) {
+      state.date ??= first;
+      const after = length.unit === 'm' ? addMonths(state.date, length.value) : addDays(state.date, length.value * (length.unit === 'w' ? 7 : 1));
+      state.recurrence += `;UNTIL=${compact(addDays(after, -1))}`;
+    } else if (until !== undefined) {
+      if (until < (state.date ?? first)) endWords.add(start);
+      else state.recurrence += `;UNTIL=${compact(until)}`;
+    } else state.recurrence += `;COUNT=${count}`;
+  }
   // A span with no time is all day over its days; with one time or a length, that each day until its
-  // last, the repeat typed or a daily one (SV-111, D292).
+  // last, the repeat typed or a daily one (SV-111, D292). A length in whole days with no time is all
+  // day over them (D298), and an event's weekend with neither is Saturday–Sunday (D294).
   let days: number | null = null;
   if (state.last && state.start === null && state.length === null) days = daysBetween(state.date!, state.last) + 1;
-  else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${state.last.replace(/-/g, '')}`;
+  else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${compact(state.last)}`;
+  else if (state.event && state.start === null && state.length !== null && state.wholeDays) [days, state.length] = [state.length / 1440, null];
+  else if (state.event && state.start === null && state.length === null && state.weekend) days = 2;
   if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
   // A reminder phrase the item can't take stays words (SV-112).
   const {reminders, words: remindWords} = resolveReminders(state, days);
-  marks = marks.filter(mark => mark.kind !== 'reminder' || !remindWords.has(mark.start));
+  marks = marks.filter(mark => (mark.kind !== 'reminder' || !remindWords.has(mark.start)) && !endWords.has(mark.start));
 
   // A day, time or repeat next to another reads as one ("fri 7-9pm").
   const merged: Mark[] = [];
@@ -672,8 +779,9 @@ export function lineWithTitle(text: string, marks: Mark[], title: string): strin
 
 /** A typed day for the date field ("fri", "oct 12", "10/12"), or null. */
 export function parseDay(text: string, today: string): string | null {
-  // "Fri, Oct 12" as the field shows it: the date, not the weekday.
-  const parsed = parseTitle(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, 'i'), ''), today);
+  // "Fri, Oct 12" as the field shows it: the date, not the weekday. Read as a task's line, so a
+  // weekend is its Saturday rather than an event's two days (SV-113).
+  const parsed = parseTitle(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, 'i'), ''), today, [], null, {kind: 'project', names: [], picked: null});
   return parsed.title === '' && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
 }
 
@@ -848,16 +956,24 @@ const ORDINAL_NAMES: Record<string, string> = {'1': 'first', '2': 'second', '3':
 
 const ruleParts = (rule: string) => new Map(rule.replace(/^RRULE:/, '').split(';').filter(Boolean).map(part => part.split('=') as [string, string]));
 
+/** "Tue, Dec 15" for a day, as a repeat's last day is said. */
+const shortDay = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'});
+
 /**
  * A rule as the repeat field says it: "Weekly on Mon, Wed, Fri", "Every 2 weeks on Mon", "Monthly on
- * the first Mon"; a last day, as the line writes it, after it ("Daily, until Sun, Oct 25"; SV-111).
+ * the first Mon"; its end, as the line writes it, after it: a last day ("Daily, until Sun, Oct 25";
+ * SV-111) or a count ("Daily, 6 times", "…, once"; SV-113).
  */
 export function describeRule(rule: string | null, date: string): string {
   if (!rule) return 'Does not repeat';
+  const parts = ruleParts(rule);
   // An UNTIL with a time is an instant in UTC, whose local day this can't tell; it's left unsaid.
-  const until = /^(\d{4})(\d{2})(\d{2})$/.exec(ruleParts(rule).get('UNTIL') ?? '');
+  const until = /^(\d{4})(\d{2})(\d{2})$/.exec(parts.get('UNTIL') ?? '');
+  const count = Number(parts.get('COUNT') ?? 0);
   const said = describeRepeat(rule, date);
-  return until && said !== 'Custom repeat' ? `${said}, until ${new Date(`${until[1]}-${until[2]}-${until[3]}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})}` : said;
+  if (said === 'Custom repeat') return said;
+  if (until) return `${said}, until ${shortDay(`${until[1]}-${until[2]}-${until[3]}`)}`;
+  return count > 0 ? `${said}, ${count === 1 ? 'once' : `${count} times`}` : said;
 }
 
 function describeRepeat(rule: string, date: string): string {
@@ -900,18 +1016,32 @@ export function repeatChoices(date: string, current: string | null): {rule: stri
  */
 export function describeTaskRepeat(repeat: string | null): string {
   if (!repeat) return 'Does not repeat';
+  // A last day the line sent ("until 2026-12-15", SV-113) is said as an event's is.
+  const until = /\s+until\s+(\d{4}-\d{2}-\d{2})$/i.exec(repeat);
+  const words = until ? repeat.slice(0, until.index) : repeat;
   const days = new RegExp(`\\b(?:${WEEKDAY})\\b`, 'gi');
-  const one = (repeat.match(days) ?? []).length === 1;
-  const named = repeat.replace(days, word => (one ? FULL_DAY_NAMES[weekdayIndex(word)]! : `${word[0]!.toUpperCase()}${word.slice(1).toLowerCase()}`));
-  return `${named[0]!.toUpperCase()}${named.slice(1)}`;
+  const one = (words.match(days) ?? []).length === 1;
+  const named = words.replace(days, word => (one ? FULL_DAY_NAMES[weekdayIndex(word)]! : `${word[0]!.toUpperCase()}${word.slice(1).toLowerCase()}`));
+  return `${named[0]!.toUpperCase()}${named.slice(1)}${until ? `, until ${shortDay(until[1]!)}` : ''}`;
 }
 
 const ORDINAL_WORDS: Record<string, string> = {'1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '-1': 'last'};
 
-/** A rule the line read, as a task's repeat in Todoist's words ("every mon, wed", "every other fri"), as `taskRepeatChoices` words them. */
+/**
+ * A rule the line read, as a task's repeat in Todoist's words ("every mon, wed", "every other fri"), as
+ * `taskRepeatChoices` words them; a last day as "until 2026-12-15", a form Todoist documents (SV-113).
+ * Todoist documents no count, so a rule with one has no words.
+ */
 export function taskRepeat(rule: string | null): string | null {
   if (!rule) return null;
   const parts = ruleParts(rule);
+  if (parts.has('COUNT')) return null;
+  const until = /^(\d{4})(\d{2})(\d{2})$/.exec(parts.get('UNTIL') ?? '');
+  const words = taskRepeatWords(parts);
+  return words && until ? `${words} until ${until[1]}-${until[2]}-${until[3]}` : words;
+}
+
+function taskRepeatWords(parts: Map<string, string>): string | null {
   const interval = Number(parts.get('INTERVAL') ?? 1);
   const days = (parts.get('BYDAY') ?? '').split(',').filter(Boolean);
   const unit = {DAILY: 'day', WEEKLY: 'week', MONTHLY: 'month', YEARLY: 'year'}[parts.get('FREQ') ?? ''];

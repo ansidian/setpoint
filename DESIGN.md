@@ -527,8 +527,11 @@ The card's side is chosen first and may flip on landing (board 12c).
 
 In the right pane (board 13): the **line** parses as you type ("Dinner with Sam fri 7-9pm
 @Blue Door" → date, time and end, place, calendar, each parsed token marked; an event's length
-after "for" and its span of days too, #256; reminders after "remind", "remind me" or "reminder",
-an offset or a moment ("remind me 1h before", "reminder sun 8pm"), in a tint of their own, #258; a
+after "for" and its span of days too, #256, a length in whole days with no time all day over
+them; days counted from today, "in 3 days", "next week", "this weekend", "end of month", and after
+a repeat when it ends, "until dec 15", "6 times", "for 2 weeks", #259; reminders after "remind",
+"remind me" or "reminder", an offset or a moment ("remind me 1h before", "reminder sun 8pm"), in a
+tint of their own, #258; a
 line longer than the field shows where it's typed,
 the cut side fading, #110). A new item is that one line, as an edited one is: its title is the
 words left unlit, with no Title field under it, and a click on a lit phrase (or ⌥⌫ inside it)
@@ -2747,3 +2750,24 @@ it changes what's on screen.
     as do "remind" alone, "reminder email", "remind 1 wk before" and "remind" with a day and no time
     ("remind sun"). The iPhone app gets the same through the compose bundle's `reminders`. Board
     audit: no board draws a reminder typed in the line.
+259. **The line reads days counted from today, and when a repeat ends** (the user, 2026-10-26;
+    darma SV-113, D294, D298, D301). Days, wherever a day is read (the line, a span's ends, the Date
+    field, "until", a reminder's moment): "in 3 days", "in 2 weeks", "in 1 month" (the same date,
+    or that month's last day when it's shorter); "next week", its Monday; "this weekend" or
+    "weekend", the coming Saturday (today on a Saturday), "next weekend" the one after; "end of
+    week", the coming Friday (next week's at the weekend); "end of month", "eom" and "end of next
+    month", the month's last day. An event's weekend with no time is all day Saturday–Sunday, with
+    a time Saturday at it; a task's is due Saturday. A length in whole days or weeks with no time is
+    all day over them ("Trip fri for 3 days" is Fri–Sun, D298); "for 1.5 days" or with a time stays
+    timed (#256). After a repeat, and only then (before one, they stay words): "until <day>", any
+    of the days above, ends it on that day (`UNTIL=20261215`); "6 times" or "for 6 times" after
+    that many (`COUNT=6`); "for 2 weeks" (days, weeks, months) lasts that long from the first
+    occurrence, its last day the one before the first plus 2 weeks, so "Gym every day for 2 weeks"
+    is 14 mornings at the default start, not one event two weeks long (D301). Repeat says the end:
+    "Weekly on Monday, until Tue, Dec 15", "Daily, 6 times", "…, once". A second end, or a last day
+    before the first, stays words. A task's end goes to Todoist as "every mon until 2026-12-15",
+    written `every mon at 09:00 from 2026-10-12 until 2026-12-15` as Todoist documents it ("everyday
+    from 10 May until 20 May"), and its Repeat says "Every Monday, until Tue, Dec 15"; Todoist
+    documents no count, so "6 times" stays words in a task's line. The iPhone app gets the same
+    through the compose bundle. Board audit: no board draws a relative day or a repeat's end typed
+    in the line.

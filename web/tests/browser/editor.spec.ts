@@ -1599,3 +1599,84 @@ test('SV-90: a title that already ends in "@" and a letter opens with no menu; o
     await setpoint.stop();
   }
 });
+
+test('SV-113: "next week" is next Monday, and "Trip fri for 3 days" is all day Friday to Sunday (D294, D298)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const date = page.getByLabel('Date', {exact: true});
+    await line.pressSequentially('Plan sprint next week');
+    await page.locator('.nl .tok-d', {hasText: 'next week'}).waitFor();
+    assert.deepEqual([await titleWords(page), await date.inputValue()], ['Plan sprint', 'Mon, Oct 12']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-12');
+    assert.ok((await titles(setpoint, '2026-10-12')).includes('Plan sprint 9:00 AM'));
+
+    // A length in whole days with no time: all day over them.
+    await page.keyboard.press('c');
+    await line.pressSequentially('Trip fri for 3 days');
+    await page.locator('.nl .tok-d', {hasText: 'fri for 3 days'}).waitFor();
+    await page.getByRole('button', {name: 'All day · Add a time'}).waitFor();
+    assert.deepEqual([await titleWords(page), await date.inputValue(), await page.getByLabel('Start', {exact: true}).count()], ['Trip', 'Fri, Oct 9 – Sun, Oct 11', 0]);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const trip = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-12')).items.find(item => item.title === 'Trip')!;
+    assert.deepEqual([trip.all_day, trip.start_date, trip.end_date], [true, '2026-10-09', '2026-10-12']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-113: "every mon until dec 15" ends the repeat there, as Repeat says, its Mondays on the calendar and none after', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Standup every mon 9am until dec 15');
+    await page.locator('.nl .tok-d', {hasText: 'every mon 9am until dec 15'}).waitFor();
+    await page.getByRole('button', {name: 'Repeat'}).filter({hasText: 'Weekly on Monday, until Tue, Dec 15'}).waitFor();
+    assert.deepEqual([await titleWords(page), await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue()],
+      ['Standup', 'Mon, Oct 12', '9:00 AM']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-12');
+    // Its Mondays show on the month, and the series stops at its last day.
+    for (const monday of ['2026-10-12', '2026-10-19', '2026-10-26']) await chip(page, monday, 'Standup').waitFor();
+    const standups = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.title === 'Standup');
+    assert.deepEqual(standups.map(item => item.starts_at), ['2026-12-07T17:00:00.000Z', '2026-12-14T17:00:00.000Z']);
+    assert.equal(standups[0]!.recurrence, 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261215');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-113: "Gym every day for 2 weeks" repeats daily for two weeks, an hour each, not one event two weeks long', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Gym every day for 2 weeks');
+    await page.locator('.nl .tok-d', {hasText: 'every day for 2 weeks'}).waitFor();
+    await page.getByRole('button', {name: 'Repeat'}).filter({hasText: 'Daily, until Tue, Oct 20'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue()],
+      ['Wed, Oct 7', '9:00 AM', '10:00 AM']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-07');
+    const gym = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-25')).items.filter(item => item.title === 'Gym' && item.recurrence?.includes('UNTIL=20261020'));
+    assert.equal(gym.length, 14);
+    assert.deepEqual([gym[0]!.starts_at, gym[0]!.ends_at, gym.at(-1)!.starts_at], ['2026-10-07T16:00:00.000Z', '2026-10-07T17:00:00.000Z', '2026-10-20T16:00:00.000Z']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -33,9 +33,14 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"|"reminder"}], date, start, end,
 //        place, calendar, recurrence, project, days, length, reminders}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
-//     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
-//      "for" length read, else null, the end already counting it when a start was read, and with
-//      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
+//     (days: an event's all-day days, first and last counting, else null: a span's, a weekend's 2
+//      ("this weekend" with no time), or a length's in whole days with no time ("fri for 3 days",
+//      D298); length: minutes a "for" length read, else null, the end already counting it when a
+//      start was read, and with none the event starts at the default start, the slot's else 9:00 AM;
+//      null when it made days instead; SV-111, SV-113)
+//     (recurrence: an RFC 5545 rule, its end the line read after it, a date-only UNTIL=YYYYMMDD
+//      (the last local day) or, an event's only, COUNT=N; a task's goes to Todoist as words, its
+//      UNTIL as "until YYYY-MM-DD" after the repeat, a form Todoist documents; SV-113, D294)
 //     (remind: what the item's reminders count from when the line names no day or time: its day, and
 //      its moment in minutes after midnight (an event's start, the slot's else 9:00 AM, an all-day
 //      one's 0; a task's due time, else Settings' task time, 9:00 AM at None; an edited item's own),
@@ -67,6 +72,8 @@ const line = (text: string, kind: Kind = 'event', picked: {pickedPlace?: string;
 // SV-112: a new item today at 9:00 AM, what the line's reminders count from when it names no day or time.
 const REMIND = {day: TODAY, time: 540};
 const remind = (text: string, kind: Kind = 'event', given: Remind = REMIND): Case => line(text, kind, {remind: given});
+// SV-113: a line read on another day (the issue's Mon, Oct 26, a Saturday that ends a month, a Sunday, month ends).
+const lineOn = (text: string, today: string, kind: Kind = 'event'): Case => ({fn: 'parseTitle', input: {text, kind, today, calendars: CALENDARS, projects: PROJECTS}});
 // SV-90: the item edited is on Wed, Oct 14.
 const edited = (before: string, text: string, kind: Kind = 'event'): Case => line(text, kind, {edit: {before, day: '2026-10-14'}});
 
@@ -191,6 +198,24 @@ const CASE_LIST: Case[] = [
   // Without remind, as an app that doesn't read them yet: the phrase stays words, its day not the item's.
   line('Call mom remind sun 8pm'),
   line('Work remind 1h before', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
+  // SV-113, D294: days counted from today, on a Monday, a Saturday that ends a month, a Sunday and month ends.
+  ...['in 3 days', 'in 2 weeks', 'in 1 month', 'next week', 'this weekend', 'weekend', 'next weekend', 'end of week', 'end of the month',
+    'eom', 'end of next month', 'on end of month', 'in 3 hours', 'in 0 days'].map(phrase => lineOn(`Lunch ${phrase}`, '2026-10-26', 'task')),
+  ...['this weekend', 'next weekend', 'next week', 'end of week', 'end of month', 'in 1 month'].map(phrase => lineOn(`Lunch ${phrase}`, '2026-10-31', 'task')),
+  ...['next week', 'this weekend', 'end of week'].map(phrase => lineOn(`Lunch ${phrase}`, '2026-11-01', 'task')),
+  lineOn('Lunch in 1 month', '2027-01-31', 'task'),
+  lineOn('Lunch end of next month', '2026-12-15', 'task'),
+  // An event's weekend is all day Saturday–Sunday with no time, Saturday at a time typed.
+  ...['Hike this weekend', 'Hike this weekend 9am', 'Hike next weekend', 'Review in 3 days 2pm', 'Trip fri to end of month'].map(text => lineOn(text, '2026-10-26')),
+  // When a repeat ends: until a day, a count (an event's), for a while from the first; without a repeat, words.
+  ...['Standup every mon until dec 15', 'Standup every mon 9am until dec 15', 'Gym daily until fri', 'Gym every day until end of month',
+    'Gym every day until next week', 'Class every tue and thu until 12/10', 'Gym every day 6 times', 'Gym every day for 6 times',
+    'Gym every day for 2 weeks', 'Gym every mon for 4 weeks', 'Rent monthly for 3 months', 'Gym every fri 7am for 2 weeks', 'Gym every day 7am for 1h',
+    'Party until dec 15', 'Stretch 6 times', 'Trip for 2 months', 'Gym until dec 15 every mon', 'Gym every fri until thu', 'Gym every day 3 times until fri'].map(text => lineOn(text, '2026-10-26')),
+  ...['Water plants every mon until dec 15', 'Vitamins every day for 2 weeks', 'Vitamins every day 6 times'].map(text => lineOn(text, '2026-10-26', 'task')),
+  line('Gym daily for 2 weeks', 'event', {edit: {before: 'Gym', day: '2026-10-14'}}),
+  // D298: a length in whole days with no time is all day over them; hours, part days and a time stay timed.
+  ...['Trip fri for 3 days', 'Retreat for 1 week', 'Camp this weekend for 3 days', 'Trip fri for 1.5 days', 'Trip fri for 1 day 3h'].map(text => lineOn(text, '2026-10-26')),
   line('Work remind at 8am', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
   line('Call remind 1h before fri', 'event', {edit: {before: 'Call remind 1h before', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
 ];

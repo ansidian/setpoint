@@ -7,9 +7,14 @@
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"|"reminder"}], date, start, end,
 //        place, calendar, recurrence, project, days, length, reminders}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
-//     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
-//      "for" length read, else null, the end already counting it when a start was read, and with
-//      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
+//     (days: an event's all-day days, first and last counting, else null: a span's, a weekend's 2
+//      ("this weekend" with no time), or a length's in whole days with no time ("fri for 3 days",
+//      D298); length: minutes a "for" length read, else null, the end already counting it when a
+//      start was read, and with none the event starts at the default start, the slot's else 9:00 AM;
+//      null when it made days instead; SV-111, SV-113)
+//     (recurrence: an RFC 5545 rule, its end the line read after it, a date-only UNTIL=YYYYMMDD
+//      (the last local day) or, an event's only, COUNT=N; a task's goes to Todoist as words, its
+//      UNTIL as "until YYYY-MM-DD" after the repeat, a form Todoist documents; SV-113, D294)
 //     (remind: what the item's reminders count from when the line names no day or time: its day, and
 //      its moment in minutes after midnight (an event's start, the slot's else 9:00 AM, an all-day
 //      one's 0; a task's due time, else Settings' task time, 9:00 AM at None; an edited item's own),
@@ -75,6 +80,7 @@ var SetpointCompose = (function(exports) {
 	];
 	var END = "(?=$|[\\s,.;!?])";
 	var TIME = "(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a|p)?";
+	var RELATIVE = "in\\s+\\d{1,3}\\s*(?:days?|d|weeks?|months?)(?![a-z])|(?:(?:this|next)\\s+)?weekend(?![a-z])|next\\s+week(?![a-z])|end\\s+of\\s+(?:the\\s+)?(?:week|month|next\\s+month)(?![a-z])|eom(?![a-z])";
 	var ORDINALS = {
 		first: 1,
 		"1st": 1,
@@ -167,9 +173,14 @@ var SetpointCompose = (function(exports) {
 		length: null,
 		last: null,
 		remind,
-		reminders: []
+		reminders: [],
+		weekend: false,
+		wholeDays: false,
+		ending: null
 	});
 	var sticky = (source) => new RegExp(source, "iy");
+	/** A day as RRULE writes a date-only UNTIL ("2026-10-25" is 20261025). */
+	var compact = (date) => date.replace(/-/g, "");
 	function rule(state, body, weeklyNeedsDay = false) {
 		if (state.recurrence) return false;
 		state.recurrence = `RRULE:${body}`;
@@ -291,6 +302,7 @@ var SetpointCompose = (function(exports) {
 			const minutes = minutesIn(m[1]);
 			if (minutes === null || minutes < 1) return false;
 			s.length = minutes;
+			s.wholeDays = minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1]);
 			return true;
 		}
 	};
@@ -305,7 +317,7 @@ var SetpointCompose = (function(exports) {
 		}
 		return Math.round(minutes);
 	}
-	var DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
+	var DAY_TEXT = `(?:${RELATIVE}|today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
 	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
 	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
 	/**
@@ -324,7 +336,7 @@ var SetpointCompose = (function(exports) {
 		pattern: sticky(`(?:(?:on|from)\\s+)?(${DAY_TEXT})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?(?:\\s*[-–—]\\s*|\\s+(?:to|through|thru)\\s+)(${LAST_DAY})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?${END}`),
 		apply: (m, s, today) => {
 			if (!s.event) return "words";
-			if (s.date) return false;
+			if (s.date || s.ending) return false;
 			const from = parseDay(m[1], today);
 			if (from === null) return false;
 			const to = lastDay(m[3], from);
@@ -349,6 +361,46 @@ var SetpointCompose = (function(exports) {
 			return true;
 		}
 	};
+	/**
+	* When a repeat ends (SV-113, D294), only once one is read; the first ending wins. Without a repeat
+	* "until …" and a count stay words, and "for N days/weeks" is left to the length.
+	*/
+	function ending(s, start, found, orLength = false) {
+		if (!s.recurrence) return orLength ? false : "words";
+		if (s.ending || s.last) return "words";
+		s.ending = {
+			start,
+			...found
+		};
+		return true;
+	}
+	var ENDINGS = [
+		{
+			kind: "when",
+			pattern: sticky(`until\\s+(${DAY_TEXT})${END}`),
+			apply: (m, s, today) => {
+				const until = parseDay(m[1], today);
+				return until ? ending(s, m.index, { until }) : false;
+			}
+		},
+		{
+			kind: "when",
+			pattern: sticky(`(?:for\\s+)?(\\d{1,3})\\s+times?${END}`),
+			apply: (m, s) => !s.event || Number(m[1]) < 1 ? "words" : ending(s, m.index, { count: Number(m[1]) })
+		},
+		{
+			kind: "when",
+			pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?)${END}`),
+			apply: (m, s) => {
+				const value = Number(m[1]);
+				if (value < 1) return false;
+				return ending(s, m.index, { length: {
+					value,
+					unit: m[2][0].toLowerCase()
+				} }, true);
+			}
+		}
+	];
 	var DURATION = `${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?`;
 	var JOIN = "(?:\\s*,\\s*(?:and\\s+)?|\\s+and\\s+)";
 	var AT_START = "at\\s+(?:the\\s+)?start(?![a-z])";
@@ -453,7 +505,45 @@ var SetpointCompose = (function(exports) {
 			words
 		};
 	}
+	/** A month's last day. */
+	var lastOfMonth = (year, month) => new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+	/** `months` after `date`: the same day of the month, or that month's last day when it's shorter. */
+	function addMonths(date, months) {
+		const index = Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1 + months;
+		const [year, month] = [Math.floor(index / 12), index % 12 + 1];
+		return day(year, month, Number(date.slice(8))) ?? lastOfMonth(year, month);
+	}
+	/**
+	* A day counted from today (D294): "in N days/weeks/months" today plus N; "next week" Monday of next
+	* week; "this weekend" or "weekend" the coming Saturday, today on a Saturday, "next weekend" the one
+	* after; "end of week" the coming Friday (this week's, but next week's at the weekend); "end of month"
+	* and "eom" this month's last day, "end of next month" next month's. Null when it isn't one.
+	*/
+	function relativeDay(text, today) {
+		const words = text.toLowerCase().replace(/\s+/g, " ");
+		const weekday = weekdayOf(today);
+		const counted = /^in (\d+) ?([a-z])/.exec(words);
+		if (counted) {
+			const n = Number(counted[1]);
+			if (n < 1) return null;
+			return counted[2] === "m" ? addMonths(today, n) : addDays(today, n * (counted[2] === "w" ? 7 : 1));
+		}
+		if (/weekend$/.test(words)) return addDays(today, (5 - weekday + 7) % 7 + (words.startsWith("next") ? 7 : 0));
+		if (words === "next week") return addDays(today, 7 - weekday);
+		if (/week$/.test(words)) return addDays(today, (4 - weekday + 7) % 7);
+		const month = addMonths(`${today.slice(0, 8)}01`, words.includes("next") ? 1 : 0);
+		return lastOfMonth(Number(month.slice(0, 4)), Number(month.slice(5, 7)));
+	}
 	var DATES = [
+		{
+			kind: "when",
+			pattern: sticky(`(?:on\\s+)?(${RELATIVE})${END}`),
+			apply: (m, s, today) => {
+				if (!setDate(s, relativeDay(m[1], today))) return false;
+				s.weekend = /weekend$/i.test(m[1]);
+				return true;
+			}
+		},
 		{
 			kind: "when",
 			pattern: sticky(`(?:on\\s+)?(today|tonight|tomorrow|tmrw|tmr)${END}`),
@@ -599,6 +689,7 @@ var SetpointCompose = (function(exports) {
 			...calendarMatchers(calendars),
 			...REMINDERS,
 			...REPEATS,
+			...ENDINGS,
 			...TIMES,
 			LENGTH,
 			SPAN,
@@ -656,12 +747,26 @@ var SetpointCompose = (function(exports) {
 		const first = edit?.day ?? today;
 		if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map((index) => (index - weekdayOf(first) + 7) % 7)));
 		if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
+		const endWords = /* @__PURE__ */ new Set();
+		if (state.ending) {
+			const { start, until, count, length } = state.ending;
+			if (length) {
+				state.date ?? (state.date = first);
+				const after = length.unit === "m" ? addMonths(state.date, length.value) : addDays(state.date, length.value * (length.unit === "w" ? 7 : 1));
+				state.recurrence += `;UNTIL=${compact(addDays(after, -1))}`;
+			} else if (until !== void 0) {
+				if (until < (state.date ?? first)) endWords.add(start);
+				else state.recurrence += `;UNTIL=${compact(until)}`;
+			} else state.recurrence += `;COUNT=${count}`;
+		}
 		let days = null;
 		if (state.last && state.start === null && state.length === null) days = daysBetween(state.date, state.last) + 1;
-		else if (state.last) state.recurrence = `${state.recurrence ?? "RRULE:FREQ=DAILY"};UNTIL=${state.last.replace(/-/g, "")}`;
+		else if (state.last) state.recurrence = `${state.recurrence ?? "RRULE:FREQ=DAILY"};UNTIL=${compact(state.last)}`;
+		else if (state.event && state.start === null && state.length !== null && state.wholeDays) [days, state.length] = [state.length / 1440, null];
+		else if (state.event && state.start === null && state.length === null && state.weekend) days = 2;
 		if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
 		const { reminders, words: remindWords } = resolveReminders(state, days);
-		marks = marks.filter((mark) => mark.kind !== "reminder" || !remindWords.has(mark.start));
+		marks = marks.filter((mark) => (mark.kind !== "reminder" || !remindWords.has(mark.start)) && !endWords.has(mark.start));
 		const merged = [];
 		for (const mark of marks) {
 			const last = merged.at(-1);
@@ -705,7 +810,11 @@ var SetpointCompose = (function(exports) {
 	}
 	/** A typed day for the date field ("fri", "oct 12", "10/12"), or null. */
 	function parseDay(text, today) {
-		const parsed = parseTitle$1(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, "i"), ""), today);
+		const parsed = parseTitle$1(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, "i"), ""), today, [], null, {
+			kind: "project",
+			names: [],
+			picked: null
+		});
 		return parsed.title === "" && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
 	}
 	/**
