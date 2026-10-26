@@ -91,6 +91,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `mailEdge` | `transparent` | `rgba(29,30,33,.1)` | the HTML email frame's ring |
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
+| `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled (#258) |
 
 - **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
@@ -526,7 +527,9 @@ The card's side is chosen first and may flip on landing (board 12c).
 
 In the right pane (board 13): the **line** parses as you type ("Dinner with Sam fri 7-9pm
 @Blue Door" → date, time and end, place, calendar, each parsed token marked; an event's length
-after "for" and its span of days too, #256; a line longer than the field shows where it's typed,
+after "for" and its span of days too, #256; reminders after "remind", "remind me" or "reminder",
+an offset or a moment ("remind me 1h before", "reminder sun 8pm"), in a tint of their own, #258; a
+line longer than the field shows where it's typed,
 the cut side fading, #110). A new item is that one line, as an edited one is: its title is the
 words left unlit, with no Title field under it, and a click on a lit phrase (or ⌥⌫ inside it)
 keeps it as words (#257). Then **Places**
@@ -2728,3 +2731,19 @@ it changes what's on screen.
     selects the line's title words only, its first run of them, so typing renames the item and keeps
     "fri 7pm @Blue Door"; with no title words, the caret goes to the line's start. Board audit:
     board 13 draws the Title field under the line, so the rows below sit 42 px higher than drawn.
+258. **The line sets reminders** (the user, 2026-10-26; darma SV-112, D293). A phrase starts with
+    **remind**, **remind me** or **reminder**, no other words, then an offset ("1h before", "30 mins
+    before", "2 hours after", "at start") in D291's units, or a moment ("sun 8pm", "tomorrow 9am",
+    "at 6pm" on the item's own day); several join with "and" or commas ("remind 1 day and 10 mins
+    before"). It's read before the day and time, so "sun 8pm" there isn't the item's day. Its mark
+    is `remind`'s tint (a rose of its own, Night `oklch(0.8 0.11 345)`, Light `oklch(0.55 0.14
+    345)`), not the when's, as it doesn't move the item, and the Reminders row's glyph takes it. A
+    moment is kept as its offset from the item's moment (D287), counted from the item as the line
+    leaves it. On a new item the line's reminders replace Settings' default; one ticked in the
+    editor sits beside them, and taking the phrase out takes out only what it set (taking one of its
+    chips out sets the reminders by hand, as the row then shows them; a click on the phrase keeps it
+    as words and drops them, #257). On an edited item a phrase typed adds to its reminders. A phrase
+    past 4 weeks either side, past 10 with the item's others, or on a task with no date stays words,
+    as do "remind" alone, "reminder email", "remind 1 wk before" and "remind" with a day and no time
+    ("remind sun"). The iPhone app gets the same through the compose bundle's `reminders`. Board
+    audit: no board draws a reminder typed in the line.

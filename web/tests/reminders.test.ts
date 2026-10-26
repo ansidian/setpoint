@@ -4,7 +4,7 @@
 import type {ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {customProblem, inOrder, offsetAt, reminderAnchor, reminderLines, reminderMoment, reminderWords, relativeLine} from '../src/logic/reminders.ts';
+import {customProblem, inOrder, lineOffsets, offsetAt, reminderAnchor, reminderLines, reminderMoment, reminderWords, relativeLine, rowReminders, withLine} from '../src/logic/reminders.ts';
 
 const zone = SEED_TIME_ZONE;
 const at = (date: string, time: string) => new Date(Date.parse(`${date}T${time}:00-07:00`)).toISOString();
@@ -68,4 +68,37 @@ describe('4 weeks either side', () => {
     [40_321, 'That\'s more than 4 weeks before: a reminder goes within 4 weeks either side.'],
     [-40_321, 'That\'s more than 4 weeks after: a reminder goes within 4 weeks either side.'],
   ])('%i min', (minutes, problem) => expect(customProblem(minutes)).toBe(problem));
+});
+
+describe('SV-112: the line\'s reminders (D293)', () => {
+  const anchor = ms('2026-10-27', '14:00');
+  test('an offset is itself; a moment is its offset from the item\'s moment', () => {
+    expect(lineOffsets([{minutes: 60}, {date: '2026-10-25', time: 20 * 60}, {date: '2026-10-27', time: 16 * 60}], anchor, zone)).toEqual([60, 2520, -120]);
+  });
+  test('a moment counts real minutes across a change of clocks, and past 4 weeks that way it goes', () => {
+    // Clocks go back on Sun, Nov 1, 2026: Sat, Oct 31, 9:00 AM is 49 hours before Mon, Nov 2, 9:00 AM.
+    expect(lineOffsets([{date: '2026-10-31', time: 9 * 60}], Date.parse('2026-11-02T09:00:00-08:00'), zone)).toEqual([2940]);
+    // 28 days on the clock, but 40,380 minutes.
+    expect(lineOffsets([{date: '2026-10-31', time: 9 * 60}], Date.parse('2026-11-28T09:00:00-08:00'), zone)).toEqual([]);
+  });
+  test('the same reminder twice is one; with no anchor there are none', () => {
+    expect(lineOffsets([{minutes: 2520}, {date: '2026-10-25', time: 20 * 60}], anchor, zone)).toEqual([2520]);
+    expect(lineOffsets([{minutes: 60}], null, zone)).toEqual([]);
+  });
+
+  test.each<[string, number[] | null, number[], number[] | null]>([
+    ['no line: what was picked', [10], [], [10]],
+    ['no line and nothing picked: Settings\' default', null, [], null],
+    ['a new item\'s line replaces the default', null, [60], [60]],
+    ['what\'s ticked sits beside the line\'s', [10], [60], [10, 60]],
+    ['an edited item\'s line adds to its own', [10, 1440], [60, 10], [10, 60, 1440]],
+    ['10 at most, what\'s picked first', [1, 2, 3, 4, 5, 6, 7, 8, 9], [60, 120], [1, 2, 3, 4, 5, 6, 7, 8, 9, 60]],
+  ])('%s', (_, picked, line, reminders) => expect(withLine(picked, line)).toEqual(reminders));
+
+  test.each<[string, number[], number[] | null, number[], {reminders: number[] | null; byHand: boolean}]>([
+    ['a reminder ticked beside the line\'s is picked', [10, 60], null, [60], {reminders: [10], byHand: false}],
+    ['one picked taken out', [60], [10], [60], {reminders: [], byHand: false}],
+    ['one the item had and the line says too stays the item\'s', [60, 1440], [60], [60], {reminders: [60, 1440], byHand: false}],
+    ['one the line set taken out: the reminders are set by hand', [10], [10], [60], {reminders: [10], byHand: true}],
+  ])('the row: %s', (_, list, picked, line, result) => expect(rowReminders(list, picked, line)).toEqual(result));
 });

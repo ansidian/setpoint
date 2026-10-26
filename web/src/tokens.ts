@@ -60,6 +60,8 @@ export const colour = {
   // The month's weekends and the days outside the shown month, and the week's weekend columns (#160).
   dayOff: 'rgba(255,255,255,.02)',
   dayOut: 'rgba(255,255,255,.035)',
+  // The line's reminder phrase (#258): a hue of its own, so it doesn't read as moving the item.
+  remind: 'oklch(0.8 0.11 345)',
 } as const;
 
 export type ColourToken = keyof typeof colour;
@@ -111,6 +113,7 @@ export const lightColour: Record<ColourToken, string> = {
   switchKnobOn: 'var(--onInk)',
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
+  remind: 'oklch(0.55 0.14 345)',
 };
 
 /** Overlay shadows; shadows only on overlays. */

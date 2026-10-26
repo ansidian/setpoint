@@ -45,8 +45,8 @@ const OVERRIDES: {theme: Theme; variable: string; exported: string; ours: string
 /** Override 4: the done glyph is `good`; the export's `.ring.done` fills with `--comf`. */
 const DONE_GLYPH = {exported: 'comf', ours: 'good'};
 
-/** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #157–#156, and the scrollbar's). */
-const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--mailEdge', '--hl', '--edgeFocus', '--sunGlyph', '--switchOn', '--switchKnobOn', '--dayOff', '--dayOut', '--evhover', '--evland', '--scrollbar-thumb', '--tintL', '--attTint', '--mailDim', '--ringMin', '--ringMax'];
+/** Theme variables tokens.ts adds that the export doesn't define (the polish audit's, DESIGN.md #157–#156, the line's reminder mark #258, and the scrollbar's). */
+const NOT_IN_EXPORT = ['--sub4', '--accent', '--navOn', '--navOnEdge', '--mailEdge', '--hl', '--edgeFocus', '--sunGlyph', '--switchOn', '--switchKnobOn', '--dayOff', '--dayOut', '--remind', '--evhover', '--evland', '--scrollbar-thumb', '--tintL', '--attTint', '--mailDim', '--ringMin', '--ringMax'];
 
 const squash = (value: string) => value.replace(/\s+/g, ' ').replace(/\s*([{}:;(),])\s*/g, '$1').trim();
 

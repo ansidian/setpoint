@@ -4,10 +4,15 @@
 // task's Settings' task time on its day (9:00 AM at None); a task with no date has none. A preset's
 // offset keeps its words ("10 min before"); any other reads as the moment it goes off, the offset
 // quiet beside it ("Sun, Oct 25, 8:00 PM" · "1 day 18 hrs before").
+//
+// The line's reminders (SV-112, D293) become offsets here, a moment counted in real minutes from the
+// item's in its time zone. On a new item they replace Settings' default and sit beside what's ticked
+// in the editor; on an edited item they add to its own. Taking the phrase out takes out only them.
 import type {ItemOut} from '@setpoint/shared';
 import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import {dayTitle} from './calendar.ts';
 import {remindersLine} from './detail.ts';
+import type {ReminderRead} from './compose.ts';
 import {clockTime, instantAt, localDate} from './format.ts';
 
 const MINUTE = 60_000;
@@ -90,4 +95,29 @@ export function reminderLines(reminders: number[], anchor: number | null, timeZo
     return {text, quiet};
   });
   return [...(presets ? [{text: presets, quiet: null}] : []), ...others];
+}
+
+/** The line's reminders as offsets from `anchor`, the same one once; past 4 weeks they go, and with no anchor all do. */
+export function lineOffsets(reads: ReminderRead[], anchor: number | null, timeZone: string): number[] {
+  if (anchor === null) return [];
+  const offsets = reads.map(read => ('minutes' in read ? read.minutes : offsetAt(anchor, Date.parse(instantAt(read.date, read.time, timeZone)))));
+  return [...new Set(offsets.filter(minutes => customProblem(minutes) === null))];
+}
+
+/**
+ * An item's reminders with the line's: what was picked (null, Settings' default) and the line's
+ * beside it, 10 at most, what was picked first; with none from the line, what was picked.
+ */
+export function withLine(picked: number[] | null, line: number[]): number[] | null {
+  if (!line.length) return picked;
+  return inOrder([...new Set([...(picked ?? []), ...line])].slice(0, REMINDER_MAX));
+}
+
+/**
+ * The Reminders row changed to `list` while the line set `line`: what's picked beside the line's (one
+ * the item had stays its own). Taking out one the line set sets them all by hand, as `list`.
+ */
+export function rowReminders(list: number[], picked: number[] | null, line: number[]): {reminders: number[] | null; byHand: boolean} {
+  if (line.some(minutes => !list.includes(minutes))) return {reminders: list, byHand: true};
+  return {reminders: list.filter(minutes => !line.includes(minutes) || (picked ?? []).includes(minutes)), byHand: false};
 }

@@ -23,6 +23,13 @@
 //   over its `days`; with a time at each end ("fri 7pm to sun 3pm") one event across them; with one
 //   time or range ("oct 23–25 9am–5pm") that time each day, repeating daily until the last day.
 //   A task's line keeps lengths and spans as words.
+// - reminders (SV-112, D293), after "remind", "remind me" or "reminder" and no other words: an offset
+//   ("1h before", "30 mins before", "2 hours after", "at start"; D291's units) or a moment ("sun 8pm",
+//   "tomorrow 9am", "at 6pm" on the item's own day), several joined by "and" or commas ("remind 1 day
+//   and 10 mins before"). Read before the days and times, so "sun 8pm" there isn't the item's day.
+//   Given what the item counts from (`remind`), each phrase is checked against it: past 4 weeks
+//   either side, or past 10 with what the item keeps, it stays words; with none given (a task with
+//   no date) every such phrase does. "remind" and a day with no time stays words too.
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
 //   every month.
@@ -39,7 +46,29 @@
 // stay title words.
 import {addDays, daysBetween} from './format.ts';
 
-export type MarkKind = 'when' | 'place' | 'calendar' | 'project';
+export type MarkKind = 'when' | 'place' | 'calendar' | 'project' | 'reminder';
+
+/**
+ * A reminder the line read (SV-112): minutes before the item's moment (negative after it), or a
+ * moment, a local day and minutes after its midnight, which becomes an offset once the item's moment
+ * is known in its time zone (`lineOffsets` in reminders.ts).
+ */
+export type ReminderRead = {minutes: number} | {date: string; time: number};
+
+/**
+ * What the line's reminders count from when it reads no day or time of its own (SV-112): the item's
+ * day, and the minutes after midnight its moment falls at (an event's start, the slot's else 9:00 AM;
+ * an all-day event's 0; a task's due time, else Settings' task time or 9:00 AM). `kept` is how many
+ * reminders the item keeps beside the line's (picked in the editor, or an edited item's own).
+ */
+export interface ReminderBase {
+  day: string;
+  time: number;
+  kept?: number;
+}
+
+/** The API's limits on an item's reminders: 4 weeks either side, and 10 (shared's REMINDER_LIMIT_MINUTES). */
+export const REMINDER_LINE_LIMITS = {minutes: 4 * 7 * 1440, count: 10};
 
 /** A parsed part of the text, `end` exclusive (UTF-16 offsets). */
 export interface Mark {
@@ -67,6 +96,8 @@ export interface ParsedTitle {
   // Minutes a "for" length read ("for 1.5h" is 90), the end already counting it when a start was
   // read; with none, the event starts at the default start and lasts this long (SV-111).
   length: number | null;
+  // The reminders the line read, in order, the same one once; null for none (SV-112).
+  reminders: ReminderRead[] | null;
 }
 
 const RRULE_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const;
@@ -160,9 +191,14 @@ interface State {
   // A span's last day, when it's all day or repeats each day; a span across days with a time at
   // each end is just its date, start and end.
   last: string | null;
+  // What reminder phrases count from; null, and they stay words (SV-112).
+  remind: ReminderBase | null;
+  // Each reminder phrase read, where it starts; a moment's null day is the item's own.
+  reminders: {start: number; reads: ({minutes: number} | {date: string | null; time: number})[]}[];
 }
 
-const fresh = (event: boolean): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null, weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null});
+const fresh = (event: boolean, remind: ReminderBase | null = null): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null,
+  weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null, remind, reminders: []});
 
 interface Matcher {
   kind: MarkKind;
@@ -250,19 +286,25 @@ const LENGTH: Matcher = {
   kind: 'when', pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`), apply: (m, s) => {
     // A task's line keeps it as words, and the first of a length or an end wins (D292).
     if (!s.event || s.length !== null || s.end !== null) return false;
-    let minutes = 0;
-    let last = '';
-    for (const [, value, word] of m[1]!.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
-      // "1h30": minutes after hours, with no unit of their own.
-      if (!word && (last !== 'h' || Number(value) > 59)) return false;
-      last = word ? word[0]!.toLowerCase() : 'm';
-      minutes += Number(value) * UNIT_MINUTES[last]!;
-    }
-    if (Math.round(minutes) < 1) return false;
-    s.length = Math.round(minutes);
+    const minutes = minutesIn(m[1]!);
+    if (minutes === null || minutes < 1) return false;
+    s.length = minutes;
     return true;
   },
 };
+
+/** A length's minutes ("1 hour 20mins" is 80, "1h30" 90), rounded; null when it isn't one. */
+function minutesIn(text: string): number | null {
+  let minutes = 0;
+  let last = '';
+  for (const [, value, word] of text.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
+    // "1h30": minutes after hours, with no unit of their own.
+    if (!word && (last !== 'h' || Number(value) > 59)) return null;
+    last = word ? word[0]!.toLowerCase() : 'm';
+    minutes += Number(value) * UNIT_MINUTES[last]!;
+  }
+  return Math.round(minutes);
+}
 
 // The days a span runs between, as the date matchers read them (a bare day only last: "oct 23–25").
 const DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
@@ -313,6 +355,95 @@ const SPAN: Matcher = {
     return true;
   },
 };
+
+// ---------- Reminders (SV-112, D293) ----------
+
+const DURATION = `${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?`;
+// Between a phrase's reminders: "and", a comma, or both.
+const JOIN = '(?:\\s*,\\s*(?:and\\s+)?|\\s+and\\s+)';
+const AT_START = 'at\\s+(?:the\\s+)?start(?![a-z])';
+// Lengths sharing one "before" or "after" ("1 day and 10 mins before").
+const OFFSETS = `(${DURATION}(?:${JOIN}${DURATION})*)\\s+(before|after)(?![a-z])`;
+const MOMENT = `(?:(?:on\\s+)?(${DAY_TEXT})\\s+)?(?:at\\s+)?(${SPAN_TIME})`;
+const REMIND_ITEM = `(?:${AT_START}|${OFFSETS}|${MOMENT})`.replace(/\((?!\?)/g, '(?:');
+const REMIND = '(?:remind(?:\\s+me)?|reminder)\\s+';
+const REMIND_PARTS = {join: sticky(JOIN), start: sticky(AT_START), offsets: sticky(OFFSETS), moment: sticky(MOMENT)};
+
+/** A reminder phrase's reminders, after its "remind": null when one isn't one. */
+function remindersIn(body: string, today: string): State['reminders'][number]['reads'] | null {
+  const reads: State['reminders'][number]['reads'] = [];
+  const at = (pattern: RegExp, index: number) => {
+    pattern.lastIndex = index;
+    return pattern.exec(body);
+  };
+  let index = 0;
+  while (index < body.length) {
+    if (reads.length) {
+      const join = at(REMIND_PARTS.join, index);
+      if (!join) return null;
+      index += join[0].length;
+    }
+    const start = at(REMIND_PARTS.start, index);
+    const offsets = start ? null : at(REMIND_PARTS.offsets, index);
+    const moment = start || offsets ? null : at(REMIND_PARTS.moment, index);
+    const found = start ?? offsets ?? moment;
+    if (!found) return null;
+    if (start) reads.push({minutes: 0});
+    if (offsets) {
+      const sign = offsets[2]!.toLowerCase() === 'after' ? -1 : 1;
+      for (const part of offsets[1]!.split(new RegExp(JOIN, 'i'))) {
+        const minutes = minutesIn(part);
+        if (minutes === null) return null;
+        reads.push({minutes: minutes === 0 ? 0 : sign * minutes});
+      }
+    }
+    if (moment) {
+      const date = moment[1] ? parseDay(moment[1], today) : null;
+      const time = parseClock(moment[2]!);
+      if ((moment[1] && date === null) || time === null) return null;
+      reads.push({date, time});
+    }
+    index += found[0].length;
+  }
+  return reads;
+}
+
+const REMINDERS: Matcher[] = [
+  {kind: 'reminder', pattern: sticky(`${REMIND}(${REMIND_ITEM}(?:${JOIN}${REMIND_ITEM})*)${END}`), apply: (m, s, today) => {
+    // Nothing to count from (a task with no date): the phrase stays words.
+    if (!s.remind) return 'words';
+    const reads = remindersIn(m[1]!, today);
+    if (!reads) return false;
+    s.reminders.push({start: m.index, reads});
+    return true;
+  }},
+  // "remind" and a day with no time: words, the day not the item's.
+  {kind: 'reminder', pattern: sticky(`${REMIND}(?:on\\s+)?${DAY_TEXT}${END}`), apply: () => 'words'},
+];
+
+/**
+ * The reminders the phrases read, each checked against the item's moment once the whole line is
+ * read: a phrase with one past 4 weeks either side, or one too many with what the item keeps, stays
+ * words. Approximate in minutes on the clock; reminders.ts turns them into exact offsets.
+ */
+function resolveReminders(state: State, days: number | null): {reminders: ReminderRead[] | null; words: Set<number>} {
+  const words = new Set<number>();
+  if (!state.reminders.length || !state.remind) return {reminders: null, words};
+  const day = state.date ?? state.remind.day;
+  const time = state.start ?? (days !== null ? 0 : state.remind.time);
+  const kept = new Map<string, ReminderRead>();
+  for (const phrase of state.reminders) {
+    const reads: ReminderRead[] = phrase.reads.map(read => ('minutes' in read ? read : {date: read.date ?? day, time: read.time}));
+    const offset = (read: ReminderRead) => ('minutes' in read ? read.minutes : daysBetween(read.date, day) * 1440 + time - read.time);
+    const added = new Map(reads.map(read => [JSON.stringify(read), read] as const).filter(([key]) => !kept.has(key)));
+    if (reads.some(read => Math.abs(offset(read)) > REMINDER_LINE_LIMITS.minutes) || kept.size + added.size + (state.remind.kept ?? 0) > REMINDER_LINE_LIMITS.count) {
+      words.add(phrase.start);
+      continue;
+    }
+    for (const [key, read] of added) kept.set(key, read);
+  }
+  return {reminders: kept.size ? [...kept.values()] : null, words};
+}
 
 const DATES: Matcher[] = [
   {kind: 'when', pattern: sticky(`(?:on\\s+)?(today|tonight|tomorrow|tmrw|tmr)${END}`),
@@ -427,13 +558,17 @@ export function typedSpan(before: string, after: string): {start: number; end: n
  * typed, spaces and all; phrases that leave no words keep the title as it was.
  *
  * A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
+ *
+ * `remind` is what the item's reminders count from when the line names no day or time (SV-112); with
+ * none, reminder phrases stay words.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
   hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
-  edit: {before: string; day: string} | null = null): ParsedTitle {
-  const state = fresh(hash?.kind !== 'project');
-  const phrases = [...calendarMatchers(calendars), ...REPEATS, ...TIMES, LENGTH, SPAN, ...DATES];
-  const marks: Mark[] = [];
+  edit: {before: string; day: string} | null = null, remind: ReminderBase | null = null): ParsedTitle {
+  const state = fresh(hash?.kind !== 'project', remind);
+  // Reminders before the days and times, so "remind sun 8pm" doesn't move the item (SV-112).
+  const phrases = [...calendarMatchers(calendars), ...REMINDERS, ...REPEATS, ...TIMES, LENGTH, SPAN, ...DATES];
+  let marks: Mark[] = [];
   // An edit's phrases start and end in what it typed: the text is read only to its end.
   const typed = edit ? typedSpan(edit.before, text) : {start: 0, end: text.length};
   const line = text.slice(0, typed.end);
@@ -484,14 +619,6 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     while (w + 1 < words.length && words[w + 1]! < index + found.length) w += 1;
   }
 
-  // A day, time or repeat next to another reads as one ("fri 7-9pm").
-  const merged: Mark[] = [];
-  for (const mark of marks) {
-    const last = merged.at(-1);
-    if (last && last.kind === 'when' && mark.kind === 'when' && /^\s*$/.test(text.slice(last.end, mark.start))) last.end = mark.end;
-    else merged.push({...mark});
-  }
-
   // A weekly repeat with no date starts on its next day, today (an edited item's day) counting.
   const first = edit?.day ?? today;
   if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map(index => (index - weekdayOf(first) + 7) % 7)));
@@ -502,6 +629,18 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   if (state.last && state.start === null && state.length === null) days = daysBetween(state.date!, state.last) + 1;
   else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${state.last.replace(/-/g, '')}`;
   if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
+  // A reminder phrase the item can't take stays words (SV-112).
+  const {reminders, words: remindWords} = resolveReminders(state, days);
+  marks = marks.filter(mark => mark.kind !== 'reminder' || !remindWords.has(mark.start));
+
+  // A day, time or repeat next to another reads as one ("fri 7-9pm").
+  const merged: Mark[] = [];
+  for (const mark of marks) {
+    const last = merged.at(-1);
+    if (last && last.kind === 'when' && mark.kind === 'when' && /^\s*$/.test(text.slice(last.end, mark.start))) last.end = mark.end;
+    else merged.push({...mark});
+  }
+
 
   let title = '';
   let from = 0;
@@ -515,7 +654,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   return {
     title,
     marks: merged, date: state.date, start: state.start, end: state.end, place: state.place, calendar: state.calendar, recurrence: state.recurrence,
-    project: state.project, days, length: state.length,
+    project: state.project, days, length: state.length, reminders,
   };
 }
 

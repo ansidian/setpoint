@@ -1011,6 +1011,115 @@ test('SV-111: a length after "for" sets End from the start, and with no time typ
   }
 });
 
+/** The editor's reminder chips as they read, Time to Leave's aside. */
+const reminderChips = (page: Page) => page.locator('.editor .prow.reminders .qchip:not(.ttl)').allTextContents();
+
+test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' default, a reminder ticked sits beside it, and its mark has a tint of its own in Night and Light', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    await until('Settings\' default', () => reminderChips(page), list => list.join() === '10 min before');
+    await line.pressSequentially('Call Sam fri 2pm remind me 1h before');
+    await page.locator('.nl .tok-r', {hasText: 'remind me 1h before'}).waitFor();
+    await page.locator('.nl .tok-d', {hasText: 'fri 2pm'}).waitFor();
+    await until('the line\'s reminder in place of the default', () => reminderChips(page), list => list.join() === '1 hour before');
+
+    // Its mark and the Reminders row's glyph aren't the when's, in either theme.
+    for (const theme of ['night', 'light'] as const) {
+      await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
+      await until(`${theme} is on`, () => page.evaluate(() => document.documentElement.dataset.theme), shown => shown === theme);
+      const [when, reminder, whenGlyph, reminderGlyph] = await rested(() => Promise.all([
+        page.locator('.nl .tok-d').evaluate(mark => getComputedStyle(mark).backgroundColor),
+        page.locator('.nl .tok-r').evaluate(mark => getComputedStyle(mark).backgroundColor),
+        page.locator('.editor .eg > .icon.from-when').evaluate(glyph => getComputedStyle(glyph).color),
+        page.locator('.editor .eg > .icon.from-remind').evaluate(glyph => getComputedStyle(glyph).color),
+      ]));
+      assert.notEqual(reminder, when, `${theme}: the reminder's mark has its own tint`);
+      assert.notEqual(reminderGlyph, whenGlyph, `${theme}: so has the glyph of the row it filled`);
+    }
+
+    // Ticked beside the line's; taking the phrase out takes only what it set.
+    await page.getByRole('button', {name: 'Add reminder'}).click();
+    await page.getByRole('menuitem', {name: '30 min before'}).click();
+    await until('the one ticked beside it', () => reminderChips(page), list => list.join() === '30 min before,1 hour before');
+    await line.fill('Call Sam fri 2pm');
+    await until('only the line\'s goes', () => reminderChips(page), list => list.join() === '30 min before');
+    await line.fill('Call Sam fri 2pm remind me 1h before');
+    await until('the line\'s back beside it', () => reminderChips(page), list => list.join() === '30 min before,1 hour before');
+    await page.locator('.editor .qchip', {hasText: '30 min before'}).getByRole('button', {name: 'Remove reminder'}).click();
+    await until('the ticked one gone', () => reminderChips(page), list => list.join() === '1 hour before');
+    await line.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const call = (await day(setpoint, '2026-10-09')).find(item => item.title === 'Call Sam');
+    assert.deepEqual(call?.reminders, [60]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-112: a moment in the line, "reminder fri 8pm", is the reminder\'s and not the event\'s day, kept as its offset; kept as words, it drops it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    await line.pressSequentially('Office hours sat 3pm reminder fri 8pm');
+    await page.locator('.nl .tok-r', {hasText: 'reminder fri 8pm'}).waitFor();
+    await until('the chip at its moment, the offset beside it', () => reminderChips(page), list => list.join() === 'Fri, Oct 9, 8:00 PM19 hrs before');
+    assert.match(await page.getByLabel('Date', {exact: true}).inputValue(), /Oct 10/);
+    // Kept as words (⌥⌫ inside it, D290), the phrase drops its reminder for Settings' default; typed into again, it's back.
+    await line.press('ArrowLeft');
+    await line.press('Alt+Backspace');
+    await page.locator('.nl .tok-r').waitFor({state: 'detached'});
+    await until('Settings\' default again', () => reminderChips(page), list => list.join() === '10 min before');
+    await line.press('End');
+    await line.press('Backspace');
+    await line.pressSequentially('m');
+    await page.locator('.nl .tok-r', {hasText: 'reminder fri 8pm'}).waitFor();
+    await until('the line\'s again', () => reminderChips(page), list => list.join() === 'Fri, Oct 9, 8:00 PM19 hrs before');
+    await line.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-10');
+    const office = (await day(setpoint, '2026-10-10')).find(item => item.title === 'Office hours');
+    assert.deepEqual([office?.at, office?.reminders], ['3:00 PM', [1140]]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-112: a reminder phrase typed into an edited item\'s Title adds to its reminders', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await chip(page, '2026-10-07', 'Dentist').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    await until('its own reminder', () => reminderChips(page), list => list.join() === '30 min before');
+    const title = page.locator('.editor input[aria-label="Title"]');
+    await title.press('End');
+    await title.pressSequentially(' remind 1 day before');
+    await page.locator('.nl .tok-r', {hasText: 'remind 1 day before'}).waitFor();
+    await until('the phrase\'s beside its own', () => reminderChips(page), list => list.join() === '30 min before,1 day before');
+    await title.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-07');
+    const dentist = (await day(setpoint, '2026-10-07')).find(item => item.title === 'Dentist');
+    assert.deepEqual(dentist?.reminders, [30, 1440]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new task and changed on an existing one', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

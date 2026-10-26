@@ -28,13 +28,25 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 // (npm run compose:record) for the iPhone app's JavaScriptCore: one script, no module loader, no DOM.
 // Generated; don't edit. It defines the global SetpointCompose with:
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
-//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
-//     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
-//        place, calendar, recurrence, project, days, length}
+//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null,
+//     remind?: {day: "YYYY-MM-DD", time, kept?}|null})
+//     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"|"reminder"}], date, start, end,
+//        place, calendar, recurrence, project, days, length, reminders}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
 //     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
 //      "for" length read, else null, the end already counting it when a start was read, and with
 //      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
+//     (remind: what the item's reminders count from when the line names no day or time: its day, and
+//      its moment in minutes after midnight (an event's start, the slot's else 9:00 AM, an all-day
+//      one's 0; a task's due time, else Settings' task time, 9:00 AM at None; an edited item's own),
+//      and kept, how many reminders it keeps beside the line's. Null or left out (a task with no
+//      date): "remind …" phrases stay words. SV-112)
+//     (reminders: what "remind", "remind me" or "reminder" phrases read, in order, the same one once,
+//      else null: [{minutes}] before the item's moment, negative after it, or [{date: "YYYY-MM-DD",
+//      time}] a moment, which the app turns into minutes from the item's moment in its time zone.
+//      A phrase with one past 4 weeks either side, or one past 10 with kept, stays words. On a new
+//      item they replace Settings' default, beside reminders picked by hand; on an edited item they
+//      add to its own. SV-112, D293)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
@@ -49,8 +61,12 @@ type Case = {fn: keyof typeof FUNCTIONS; input: Record<string, unknown>};
 
 const FUNCTIONS = {parseTitle: app.parseTitle, bareToken: app.bareToken, completeToken: app.completeToken, lineWithTitle: app.lineWithTitle, typedSpan: app.typedSpan, editedWhen: app.editedWhen};
 
-const line = (text: string, kind: Kind = 'event', picked: {pickedPlace?: string; pickedHash?: string; edit?: {before: string; day: string}} = {}): Case =>
+type Remind = {day: string; time: number; kept?: number} | null;
+const line = (text: string, kind: Kind = 'event', picked: {pickedPlace?: string; pickedHash?: string; edit?: {before: string; day: string}; remind?: Remind} = {}): Case =>
   ({fn: 'parseTitle', input: {text, kind, today: TODAY, calendars: CALENDARS, projects: PROJECTS, ...picked}});
+// SV-112: a new item today at 9:00 AM, what the line's reminders count from when it names no day or time.
+const REMIND = {day: TODAY, time: 540};
+const remind = (text: string, kind: Kind = 'event', given: Remind = REMIND): Case => line(text, kind, {remind: given});
 // SV-90: the item edited is on Wed, Oct 14.
 const edited = (before: string, text: string, kind: Kind = 'event'): Case => line(text, kind, {edit: {before, day: '2026-10-14'}});
 
@@ -152,6 +168,31 @@ const CASE_LIST: Case[] = [
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: '2026-10-23', start: null, end: null, days: 3, length: null}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: null, start: null, end: null, days: null, length: 60}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: null, end: null, days: 2}, read: {date: null, start: null, end: null, days: null, length: 90}, kind: 'event'}},
+  // SV-112, D293: reminder phrases after "remind", "remind me" or "reminder": offsets in D291's units,
+  // several joined, and moments, read before the item's day; past 4 weeks, past 10, a task with no
+  // date and other words stay words.
+  ...['Call mom remind me 1h before', 'Call mom remind 30 mins before', 'Call mom reminder 2 hours after', 'Call mom remind at start',
+    'Call mom remind 1 day and 10 mins before', 'Call mom remind 1 day, 1h and 10 min before', 'Call mom remind 1h before and 30 min after',
+    'Call mom remind 1.5h before', 'Call mom remind 1 hour 20mins before', 'Call mom remind 1h30 before', 'Call mom remind 2 hrs before',
+    'Call mom remind 2d before', 'Call mom remind 1 week before', 'Call mom remind 4 weeks after', 'Call mom remind sun 8pm',
+    'Trip fri remind tomorrow 9am', 'Dinner fri 7pm remind at 6pm', 'Dinner remind me 6pm fri 7pm', 'Dinner oct 20 7pm remind on oct 19 at 8:30pm',
+    'Exam fri 3pm remind 1 day before and fri 2pm', 'Call remind 1h before remind me 2 hours after', 'Coffee @Blue Door remind 1h before',
+    'Trip nov 10–12 remind oct 13 1am', 'Call remind nov 4 9am',
+    'Call remind', 'Call remind me', 'Send reminder email', 'remind me to call Sam', 'Call remember 1h before', 'Call remind 1h',
+    'Call remind one hour before', 'Call remind 1 wk before', 'Call remind 5 weeks before', 'Call remind 4 weeks 1 min after',
+    'Call remind 1h and 5 weeks before', 'Call remind sun', 'Trip dec 20 remind sun 8pm', 'Trip nov 10–12 remind oct 12 11pm', 'Call remind nov 4 9:01am',
+    `Call remind ${Array.from({length: 11}, (_, index) => `${index + 1} min`).join(', ')} before`].map(text => remind(text)),
+  remind('Call remind 1h before remind 2h before', 'event', {...REMIND, kept: 9}),
+  remind('Call nov 4 remind oct 7 8am', 'event', {day: TODAY, time: 420}),
+  remind('Pay rent fri remind 1h before', 'task'),
+  remind('Pay rent fri remind 1h before', 'task', {day: TODAY, time: 1080}),
+  remind('Pay rent remind 1h before', 'task', null),
+  remind('Pay rent remind sun 8pm', 'task', null),
+  // Without remind, as an app that doesn't read them yet: the phrase stays words, its day not the item's.
+  line('Call mom remind sun 8pm'),
+  line('Work remind 1h before', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
+  line('Work remind at 8am', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
+  line('Call remind 1h before fri', 'event', {edit: {before: 'Call remind 1h before', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
 ];
 
 async function bundle(): Promise<string> {

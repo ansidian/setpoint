@@ -1,8 +1,9 @@
 // The editor's title parsing as tables (DESIGN.md › Editor; board 13), with v1's
 // `parseCalendarTitle.test.ts` cases carried over through the harvest gate (darma SV-15). Today is
 // the seed's Wed, Oct 7, 2026.
+import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../src/logic/compose.ts';
+import {REMINDER_LINE_LIMITS, bareToken, clockLabel, completeToken, lineWithTitle, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, parseClock, parseDay, parseDays, parseEnd, parseTitle, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../src/logic/compose.ts';
 
 const TODAY = '2026-10-07';
 const CALENDARS = ['Personal', 'Classes', 'Jobs'];
@@ -596,4 +597,120 @@ describe('SV-111: an edited event\'s when, from a span or a length', () => {
     ['an all-day event given a length starts at 9:00 AM', {date: '2026-10-14', start: null, end: null, days: 2}, {...none, days: null, length: 90}, 'event', {date: '2026-10-14', start: h(9), end: h(10, 30), days: 1}],
     ['a task has neither', {date: '2026-10-14', start: h(17), end: null, days: 1}, {...none, days: 3, length: 60}, 'task', {date: '2026-10-14', start: h(17), end: null, days: 1}],
   ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
+});
+
+describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
+  const PROJECTS = ['Inbox', 'School', 'Home'];
+  // A new event's moment, when the line reads no day or time: today at 9:00 AM.
+  const base = {day: TODAY, time: h(9)};
+  const read = (text: string, remind: Parameters<typeof parseTitle>[6] = base) => parseTitle(text, TODAY, CALENDARS, null, null, null, remind);
+  const task = (text: string, remind: Parameters<typeof parseTitle>[6] = base) => parseTitle(text, TODAY, CALENDARS, null, {kind: 'project', names: PROJECTS, picked: null}, null, remind);
+  const kinds = (text: string, remind: Parameters<typeof parseTitle>[6] = base) => read(text, remind).marks.map(mark => `${mark.kind}:${text.slice(mark.start, mark.end)}`);
+
+  test.each<[string, string, string, {minutes: number}[]]>([
+    ['remind me', 'Call mom remind me 1h before', 'remind me 1h before', [{minutes: 60}]],
+    ['remind', 'Call mom remind 30 mins before', 'remind 30 mins before', [{minutes: 30}]],
+    ['reminder', 'Call mom reminder 2 hours after', 'reminder 2 hours after', [{minutes: -120}]],
+    ['at start', 'Call mom remind at start', 'remind at start', [{minutes: 0}]],
+    ['at the start', 'Call mom remind me at the start', 'remind me at the start', [{minutes: 0}]],
+    ['two joined, one before', 'Call mom remind 1 day and 10 mins before', 'remind 1 day and 10 mins before', [{minutes: 1440}, {minutes: 10}]],
+    ['a comma and and', 'Call mom remind 1 day, 1h and 10 min before', 'remind 1 day, 1h and 10 min before', [{minutes: 1440}, {minutes: 60}, {minutes: 10}]],
+    ['before and after', 'Call mom remind 1h before and 30 min after', 'remind 1h before and 30 min after', [{minutes: 60}, {minutes: -30}]],
+    ['a decimal', 'Call mom remind 1.5h before', 'remind 1.5h before', [{minutes: 90}]],
+    ['a compound', 'Call mom remind 1 hour 20mins before', 'remind 1 hour 20mins before', [{minutes: 80}]],
+    ['hours and bare minutes', 'Call mom remind 1h30 before', 'remind 1h30 before', [{minutes: 90}]],
+    ['hrs', 'Call mom remind 2 hrs before', 'remind 2 hrs before', [{minutes: 120}]],
+    ['d', 'Call mom remind 2d before', 'remind 2d before', [{minutes: 2880}]],
+    ['a week', 'Call mom remind 1 week before', 'remind 1 week before', [{minutes: 10080}]],
+    ['4 weeks, the most', 'Call mom remind 4 weeks after', 'remind 4 weeks after', [{minutes: -40320}]],
+    ['the same twice is once', 'Call mom remind 1h and 60 min before', 'remind 1h and 60 min before', [{minutes: 60}]],
+  ])('an offset, %s: %s', (_, text, phrase, reminders) => {
+    expect(read(text)).toMatchObject({title: 'Call mom', reminders, date: null, start: null});
+    expect(kinds(text)).toEqual([`reminder:${phrase}`]);
+  });
+
+  test.each<[string, string, string, {date: string; time: number}[], string | null, number | null]>([
+    // "sun 8pm" is the reminder's, not the item's day (read before the dates and times).
+    ['a day and time', 'Call mom remind sun 8pm', 'Call mom', [{date: '2026-10-11', time: h(20)}], null, null],
+    ['tomorrow', 'Trip fri remind tomorrow 9am', 'Trip', [{date: '2026-10-08', time: h(9)}], '2026-10-09', null],
+    ['"at" on the item\'s own day', 'Dinner fri 7pm remind at 6pm', 'Dinner', [{date: '2026-10-09', time: h(18)}], '2026-10-09', h(19)],
+    ['a time alone on the item\'s day, read later', 'Dinner remind me 6pm fri 7pm', 'Dinner', [{date: '2026-10-09', time: h(18)}], '2026-10-09', h(19)],
+    ['on a day with "at"', 'Dinner oct 20 7pm remind on oct 19 at 8:30pm', 'Dinner', [{date: '2026-10-19', time: h(20, 30)}], '2026-10-20', h(19)],
+    ['noon', 'Call mom remind fri noon', 'Call mom', [{date: '2026-10-09', time: h(12)}], null, null],
+  ])('a moment, %s: %s', (_, text, title, reminders, date, start) => {
+    expect(read(text)).toMatchObject({title, reminders, date, start});
+  });
+
+  test('offsets and moments join', () => {
+    expect(read('Exam fri 3pm remind 1 day before and fri 2pm')).toMatchObject({
+      title: 'Exam', date: '2026-10-09', start: h(15), reminders: [{minutes: 1440}, {date: '2026-10-09', time: h(14)}],
+    });
+    expect(kinds('Exam fri 3pm remind 1 day before and fri 2pm')).toEqual(['when:fri 3pm', 'reminder:remind 1 day before and fri 2pm']);
+  });
+  test('two phrases each read', () => {
+    expect(read('Call remind 1h before remind me 2 hours after').reminders).toEqual([{minutes: 60}, {minutes: -120}]);
+  });
+  test('a mark of its own beside the when, and a place stops before it', () => {
+    expect(kinds('Call fri 3pm remind 1h before')).toEqual(['when:fri 3pm', 'reminder:remind 1h before']);
+    expect(read('Coffee @Blue Door remind 1h before')).toMatchObject({title: 'Coffee', place: 'Blue Door', reminders: [{minutes: 60}]});
+  });
+  test('a dated task\'s line reads them too', () => {
+    expect(task('Pay rent fri remind 1h before')).toMatchObject({title: 'Pay rent', date: '2026-10-09', reminders: [{minutes: 60}]});
+  });
+
+  test.each<[string, string, Parameters<typeof parseTitle>[6]?]>([
+    ['"remind" alone', 'Call remind'],
+    ['"remind me" alone', 'Call remind me'],
+    ['"reminder email"', 'Send reminder email'],
+    ['a reminder to do something', 'remind me to call Sam'],
+    ['other words', 'Call remember 1h before'],
+    ['"reminds"', 'Call reminds 1h before'],
+    ['an offset with no before or after', 'Call remind 1h'],
+    ['a number word', 'Call remind one hour before'],
+    ['"wk"', 'Call remind 1 wk before'],
+    ['past 4 weeks', 'Call remind 5 weeks before'],
+    ['past 4 weeks by a minute', 'Call remind 4 weeks 1 min after'],
+    ['one of them past 4 weeks', 'Call remind 1h and 5 weeks before'],
+    ['a day with no time', 'Call remind sun'],
+    ['a task with no date', 'Call remind 1h before', null],
+  ])('stays words, %s: %s', (_, text, remind) => {
+    const parsed = read(text, remind === undefined ? base : remind);
+    expect(parsed).toMatchObject({title: text, reminders: null, date: null, start: null});
+    expect(parsed.marks).toEqual([]);
+  });
+
+  test('a moment past 4 weeks from the item stays words, its day not the item\'s', () => {
+    expect(read('Trip dec 20 remind sun 8pm')).toMatchObject({title: 'Trip remind sun 8pm', date: '2026-12-20', reminders: null});
+    expect(read('Trip nov 20 remind tomorrow 9am')).toMatchObject({title: 'Trip remind tomorrow 9am', date: '2026-11-20', reminders: null});
+    // 4 weeks to the minute is still one: Wed, Nov 4, 9:00 AM from Wed, Oct 7, 9:00 AM.
+    expect(read('Call remind nov 4 9am').reminders).toEqual([{date: '2026-11-04', time: h(9)}]);
+    expect(read('Call remind nov 4 9:01am').reminders).toBeNull();
+  });
+  test('a task with no date keeps a moment as words, its day not the task\'s', () => {
+    expect(task('Pay rent remind sun 8pm', null)).toMatchObject({title: 'Pay rent remind sun 8pm', date: null, start: null, reminders: null});
+  });
+  test('past 10, counting what the item keeps besides the line, a phrase stays words', () => {
+    const many = `Call remind ${Array.from({length: 11}, (_, index) => `${index + 1} min`).join(', ')} before`;
+    expect(read(many)).toMatchObject({title: many, reminders: null});
+    expect(read(`Call remind ${Array.from({length: 10}, (_, index) => `${index + 1} min`).join(', ')} before`).reminders).toHaveLength(10);
+    expect(read('Call remind 1h before remind 2h before', {...base, kept: 9})).toMatchObject({title: 'Call remind 2h before', reminders: [{minutes: 60}]});
+    expect(read('Call remind 1h and 2h before', {...base, kept: 9})).toMatchObject({title: 'Call remind 1h and 2h before', reminders: null});
+  });
+  test('an untimed item counts from the time given; a span of days from its midnight', () => {
+    // 4 weeks before Wed, Nov 4 at 7:00 AM is Wed, Oct 7 at 7:00 AM; at 9:00 AM, 8:00 AM is past it.
+    expect(read('Call nov 4 remind oct 7 8am', {day: TODAY, time: h(7)}).reminders).toEqual([{date: '2026-10-07', time: h(8)}]);
+    expect(read('Call nov 4 remind oct 7 8am', {day: TODAY, time: h(9)}).reminders).toBeNull();
+    // An all-day span counts from its first midnight, Tue, Nov 10: 4 weeks before is Tue, Oct 13.
+    expect(read('Trip nov 10–12 remind oct 13 1am')).toMatchObject({days: 3, reminders: [{date: '2026-10-13', time: h(1)}]});
+    expect(read('Trip nov 10–12 remind oct 12 11pm')).toMatchObject({days: 3, reminders: null});
+  });
+  test('an edit reads only a phrase it typed', () => {
+    const edit = (before: string, text: string) => parseTitle(text, TODAY, CALENDARS, null, null, {before, day: '2026-10-14'}, {day: '2026-10-14', time: h(9)});
+    expect(edit('Work', 'Work remind 1h before')).toMatchObject({title: 'Work', reminders: [{minutes: 60}]});
+    expect(edit('Work', 'Work remind at 8am')).toMatchObject({title: 'Work', reminders: [{date: '2026-10-14', time: h(8)}]});
+    expect(edit('Call remind 1h before', 'Call remind 1h before fri')).toMatchObject({title: 'Call remind 1h before', reminders: null, date: '2026-10-09'});
+  });
+  test('the limits are the API\'s', () => {
+    expect(REMINDER_LINE_LIMITS).toEqual({minutes: REMINDER_LIMIT_MINUTES, count: 10});
+  });
 });

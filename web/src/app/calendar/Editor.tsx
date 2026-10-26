@@ -21,7 +21,7 @@ import {newsProposal} from '../../api/news.ts';
 import {findPlace} from '../../api/settings.ts';
 import {dayTitle, timeRange} from '../../logic/calendar.ts';
 import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, NO_END, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../../logic/compose.ts';
-import type {Mark, ParsedTitle} from '../../logic/compose.ts';
+import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
@@ -29,7 +29,7 @@ import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
-import {taskTimeMinutes} from '../../logic/reminders.ts';
+import {lineOffsets, rowReminders, taskTimeMinutes, withLine} from '../../logic/reminders.ts';
 import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -69,7 +69,7 @@ export interface KeptDrafts {
   kind: ItemKind;
 }
 
-type Manual = 'date' | 'time' | 'place' | 'calendar' | 'recurrence' | 'labels' | 'project';
+type Manual = 'date' | 'time' | 'place' | 'calendar' | 'recurrence' | 'labels' | 'project' | 'reminders';
 
 interface Draft {
   id: number;
@@ -101,8 +101,12 @@ interface Draft {
   picked: string | null;
   // Null: the first calendar shown (events).
   calendarId: number | null;
-  // Null: Settings › Notifications' default (override 8), which the server applies too.
+  // Null: Settings › Notifications' default (override 8), which the server applies too. Picked in
+  // the editor (or an edited item's own); the line's sit beside them.
   reminders: number[] | null;
+  // The line's reminder phrases (SV-112, D293): they replace the default and sit beside what's
+  // picked, as offsets from the item's moment as it stands (`remindersOf`).
+  lineReminders: ReminderRead[];
   // SV-31: Time to Leave, added from the reminder menu; never by default.
   leaveReminder: boolean;
   recurrence: string | null;
@@ -148,13 +152,38 @@ function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Dra
   return {
     id: nextDraft++, kind, text: '', title: '', plain: [], date, undated: false, day: date, slot: at,
     start: at ? at.start : kind === 'event' ? DEFAULT_START : null, end: at ? at.end : kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH : null, days: at?.days ?? 1,
-    place: '', address: null, picked: null, calendarId: null, reminders: null, leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, fromEmail: [], manual: [],
+    place: '', address: null, picked: null, calendarId: null, reminders: null, lineReminders: [], leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, fromEmail: [], manual: [],
   };
 }
 
-/** A draft with its defaults filled in: the first calendar shown, Settings' reminder. */
-const withDefaults = (draft: Draft, calendar: number | null, reminders: number[]): Draft & {reminders: number[]} => ({
-  ...draft, calendarId: draft.calendarId ?? (draft.kind === 'event' ? calendar : null), reminders: draft.reminders ?? (draft.kind === 'event' ? reminders : []),
+/**
+ * The instant a draft's reminders count from (D288): its start or due time, an all-day event's
+ * midnight, or a dated task's Settings' task time (`taskTime`, minutes); a task with no date has none.
+ */
+const anchorOf = (draft: Draft, taskTime: number, timeZone: string) => (draft.kind === 'task' && draft.undated ? null
+  : Date.parse(instantAt(draft.date, draft.start ?? (draft.kind === 'task' ? taskTime : 0), timeZone)));
+
+/** A draft's reminders with its line's (SV-112): null while Settings' default. */
+const remindersOf = (draft: Draft, taskTime: number, timeZone: string) =>
+  withLine(draft.reminders, lineOffsets(draft.lineReminders, anchorOf(draft, taskTime, timeZone), timeZone));
+
+/**
+ * What the line's reminder phrases count from when it names no day or time (SV-112): the item's day
+ * and its start, the slot's or 9:00 AM for a new event, an all-day one's midnight, a task's Settings'
+ * task time; an edited item's own. A task with no date has none, so its phrases stay words.
+ */
+function reminderBase(draft: Draft, original: Draft | null, taskTime: number): ReminderBase | null {
+  if (draft.kind === 'task' && draft.undated) return null;
+  const day = draft.manual.includes('date') ? draft.date : original ? original.date : draft.day;
+  const start = draft.manual.includes('time') ? draft.start : original ? original.start
+    : draft.kind === 'event' ? (draft.slot ? draft.slot.start : DEFAULT_START) : null;
+  return {day, time: start ?? (draft.kind === 'task' ? taskTime : 0), kept: (draft.reminders ?? []).length};
+}
+
+/** A draft with its defaults filled in: the first calendar shown, Settings' reminder, unless the line sets some. */
+const withDefaults = (draft: Draft, calendar: number | null, reminders: number[], taskTime: number, timeZone: string): Draft & {reminders: number[]} => ({
+  ...draft, calendarId: draft.calendarId ?? (draft.kind === 'event' ? calendar : null),
+  reminders: remindersOf(draft, taskTime, timeZone) ?? (draft.kind === 'event' ? reminders : []),
 });
 
 /** An item as the editor's fields. */
@@ -166,7 +195,7 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   return {
     id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
-    calendarId: item.calendar_id, reminders: item.reminders, leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
+    calendarId: item.calendar_id, reminders: item.reminders, lineReminders: [], leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     fromEmail: [], manual: [],
   };
 }
@@ -180,10 +209,10 @@ const lineHash = (draft: Draft, projects: string[], calendars: CalendarOut[]) =>
  * A draft's line as parsed; an edited item's (`original`) reads only what the edit typed (SV-90).
  * Its plain phrases are hidden from the parser and come back as title words (D290).
  */
-function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null): ParsedTitle {
+function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null, taskTime: number): ParsedTitle {
   const hidden = masked(text, draft.plain);
   const parsed = parseTitle(hidden.text, today, calendars.map(calendar => calendar.name), draft.picked, lineHash(draft, projects, calendars),
-    original ? {before: original.title, day: original.date} : null);
+    original ? {before: original.title, day: original.date} : null, reminderBase(draft, original, taskTime));
   if (!hidden.words.length) return parsed;
   const back = (value: string | null) => (value === null ? null : unmasked(value, hidden.words));
   return {...parsed, title: unmasked(parsed.title, hidden.words), place: back(parsed.place), calendar: back(parsed.calendar), project: back(parsed.project)};
@@ -192,13 +221,15 @@ function readLine(draft: Draft, text: string, today: string, calendars: Calendar
 /**
  * The Title typed into an edited item (SV-90): what the edit typed changes the item's own fields,
  * as on a new item's line, and a phrase taken out again puts back what the item had. Fields set by
- * hand stay; a time typed after the date was set by hand keeps the days picked.
+ * hand stay; a time typed after the date was set by hand keeps the days picked. A reminder phrase
+ * typed adds to the item's reminders (SV-112, D293).
  */
-function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[]): Draft {
+function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
   const plain = retyped(draft.plain, draft.text, text);
-  const parsed = readLine({...draft, plain}, text, today, calendars, projects, original);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, original, taskTime);
   const next = {...draft, text, plain, title: parsed.title};
   const by = (field: Manual) => !draft.manual.includes(field);
+  if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
     // A span of days (all day) needs both its day and time; a length only its time (SV-111).
@@ -222,11 +253,13 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
 }
 
 /** The line typed into a draft: its title words are the title, and its phrases fill the fields not set by hand. */
-function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[]): Draft {
+function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], taskTime: number): Draft {
   const plain = retyped(draft.plain, draft.text, text);
-  const parsed = readLine({...draft, plain}, text, today, calendars, projects, null);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, null, taskTime);
   const next = {...draft, text, plain, title: parsed.title};
   const by = (field: Manual) => !draft.manual.includes(field);
+  // The line's reminders replace Settings' default, beside what's picked (SV-112, D293).
+  if (by('reminders')) next.lineReminders = parsed.reminders ?? [];
   if (by('date')) next.date = parsed.date ?? draft.day;
   if (by('time')) {
     // Days picked by hand stay: the end moves to its last day (SV-29).
@@ -347,7 +380,7 @@ const accepts = (event: ReactKeyboardEvent) => event.key === 'Tab' && !event.shi
 
 // ---------- The marked line ----------
 
-const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', calendar: 'tok-c', project: 'tok-j'};
+const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', calendar: 'tok-c', project: 'tok-j', reminder: 'tok-r'};
 
 /**
  * The line's text with its marks: a #calendar in its calendar's colour, a #project in its project's
@@ -470,6 +503,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const leaveTitle = settings && !settings.time_to_leave.enabled ? 'Time to Leave is off in Settings › Notifications'
     : `Leave by live routes from Home, with a ${settings?.time_to_leave.buffer_minutes ?? 5} min buffer`;
   const defaultReminders = useMemo(() => (open.kind === 'event' && eventDefault !== null ? [eventDefault] : []), [open.kind, eventDefault]);
+  // What a dated task without a time counts its reminders from (D288).
+  const taskTime = taskTimeMinutes(settings?.reminders.task_time ?? null);
   const editing = open.item ?? null;
   // An event moves only between the calendars of its own Google account (Google's events.move).
   const accountOf = editing ? (calendars ?? []).find(one => one.id === editing.calendar_id)?.account_id : undefined;
@@ -494,8 +529,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const line = useRef<HTMLInputElement>(null);
   const lineMarks = useRef<HTMLSpanElement>(null);
   const form = useRef<HTMLFormElement>(null);
-  const filled = useMemo(() => drafts.map(one => withDefaults(one, fallbackCalendar, defaultReminders)), [drafts, fallbackCalendar, defaultReminders]);
+  const filled = useMemo(() => drafts.map(one => withDefaults(one, fallbackCalendar, defaultReminders, taskTime, timeZone)), [drafts, fallbackCalendar, defaultReminders, taskTime, timeZone]);
   const draft = filled.find(one => one.id === active) ?? filled[0]!;
+  // The draft as typed and picked, its reminders not yet filled in.
+  const raw = drafts.find(one => one.id === draft.id)!;
 
   // From an email: the proposal card's fields fill the first draft, else the email's proposal. From
   // News's Upcoming: the keynote's proposal (N3), its name, day and time and the calendar an email's
@@ -559,8 +596,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const placesOpen = !!places && places.query === placeQuery && places.list.length > 0;
 
   // An edited item's line names only the calendars it can move to (SV-90).
-  const parsed = useMemo(() => readLine(draft, draft.text, today, calendarChoices, projectNames, original),
-    [draft, today, calendarChoices, projectNames, original]);
+  const parsed = useMemo(() => readLine(raw, raw.text, today, calendarChoices, projectNames, original, taskTime),
+    [raw, today, calendarChoices, projectNames, original, taskTime]);
   // A #project (a task) or #calendar (an event, D57) typed in the line shows its field's menu until
   // one is picked, the line has none, or Esc.
   const hashMark = parsed.marks.find(mark => draft.text[mark.start] === '#');
@@ -642,7 +679,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // An edited item's Title is its line (SV-90), and so is a new item's (D290): its title words
   // changed lose the email's mark.
   const reread = (one: Draft, text: string) => {
-    const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames) : retype(one, text, today, google, projectNames);
+    const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames, taskTime) : retype(one, text, today, google, projectNames, taskTime);
     return next.title === one.title ? next : {...next, fromEmail: next.fromEmail.filter(field => field !== 'title')};
   };
   const typeLine = (text: string) => setDrafts(list => list.map(one => (one.id === draft.id ? reread(one, text) : one)));
@@ -714,7 +751,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const switchKind = (next: ItemKind) => {
     if (next === kind || editing) return;
     setKind(next);
-    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id, plain: one.plain}, one.text, today, google, projectNames)));
+    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id, plain: one.plain}, one.text, today, google, projectNames, taskTime)));
   };
 
   const addAnother = () => {
@@ -748,7 +785,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   useEffect(() => onDirty?.(dirty), [dirty, onDirty]);
 
   const inputs = filled.map(one => {
-    const input = createInput({...one, reminders: drafts.find(raw => raw.id === one.id)!.reminders}, timeZone, todoist);
+    const input = createInput({...one, reminders: remindersOf(drafts.find(own => own.id === one.id)!, taskTime, timeZone)}, timeZone, todoist);
     if (input?.kind !== 'task') return input;
     // A task's project by Todoist's own name, made only when New project was picked.
     const chosen = projectChoice(one.project ?? '', projects ?? [], one.newProject);
@@ -827,6 +864,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     place: fromLine('place', 'place') ? 'from-place' : undefined,
     calendar: fromLine('calendar', 'calendar') ? 'from-cal' : undefined,
     project: fromLine('project', 'project') ? 'from-proj' : undefined,
+    reminder: fromLine('reminder', 'reminders') ? 'from-remind' : undefined,
   };
   const liveMark = placesOpen ? parsed.marks.find(one => one.kind === 'place')?.start ?? null : lineOpen ? lineMark?.start ?? null : null;
   // A field changed by another's change flashes: the Date when the End runs into the next day, the address a picked place fills in.
@@ -845,8 +883,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // What the reminders count from (D288): the start or due time, an all-day event's midnight, or a
   // dated task's Settings' task time (9:00 AM at None); a task with no date has none.
   const untimedTask = kind === 'task' && !draft.undated && draft.start === null;
-  const reminderFrom = kind === 'task' && draft.undated ? null
-    : Date.parse(instantAt(draft.date, draft.start ?? (kind === 'task' ? taskTimeMinutes(settings?.reminders.task_time ?? null) : 0), timeZone));
+  const reminderFrom = anchorOf(draft, taskTime, timeZone);
   const countsFrom = untimedTask && reminderFrom !== null ? `Counts from ${clockTime(reminderFrom, timeZone)}` : null;
 
   return (
@@ -1086,8 +1123,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today}
-            menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)} onChange={reminders => change({reminders})}
+          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today} glyph={echo.reminder}
+            menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)}
+            onChange={list => {
+              // Ticked beside the line's they're picked; one the line set taken out sets them by hand (SV-112).
+              const {reminders, byHand} = rowReminders(list, raw.reminders, lineOffsets(raw.lineReminders, reminderFrom, timeZone));
+              change(byHand ? {reminders, lineReminders: []} : {reminders}, byHand ? ['reminders'] : []);
+            }}
             chips={kind === 'event' && draft.leaveReminder && (
               <span className="qchip ttl" title={leaveTitle}>
                 <Icon name="directions_car" size={14} />Time to Leave

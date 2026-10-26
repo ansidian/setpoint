@@ -27,6 +27,8 @@ export interface RemindersRowProps {
   onChange: (reminders: number[]) => void;
   // Time to Leave's chip and its menu item, an event's (SV-31).
   chips?: ReactNode;
+  // The glyph's class: the line's reminder tint when the line set some (SV-112).
+  glyph?: string;
   menuItems?: ReactNode;
 }
 
@@ -37,7 +39,7 @@ interface Picking {
   minutes: number;
 }
 
-export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, menuOpen, menuRef, onMenu, onChange, chips, menuItems}: RemindersRowProps) {
+export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, menuOpen, menuRef, onMenu, onChange, chips, menuItems, glyph}: RemindersRowProps) {
   const [picking, setPicking] = useState<Picking | null>(null);
   const dateField = useRef<HTMLDivElement>(null);
   const addButton = useRef<HTMLButtonElement>(null);
@@ -78,7 +80,7 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
 
   return (
     <>
-      <Icon name="notifications" size={17} />
+      <Icon name="notifications" size={17} className={glyph} />
       <div className="prow reminders">
         {inOrder(reminders).map(minutes => {
           const words = reminderWords(minutes, anchor, timeZone);

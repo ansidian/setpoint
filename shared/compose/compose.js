@@ -2,13 +2,25 @@
 // (npm run compose:record) for the iPhone app's JavaScriptCore: one script, no module loader, no DOM.
 // Generated; don't edit. It defines the global SetpointCompose with:
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
-//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
-//     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
-//        place, calendar, recurrence, project, days, length}
+//     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null,
+//     remind?: {day: "YYYY-MM-DD", time, kept?}|null})
+//     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"|"reminder"}], date, start, end,
+//        place, calendar, recurrence, project, days, length, reminders}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
 //     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
 //      "for" length read, else null, the end already counting it when a start was read, and with
 //      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
+//     (remind: what the item's reminders count from when the line names no day or time: its day, and
+//      its moment in minutes after midnight (an event's start, the slot's else 9:00 AM, an all-day
+//      one's 0; a task's due time, else Settings' task time, 9:00 AM at None; an edited item's own),
+//      and kept, how many reminders it keeps beside the line's. Null or left out (a task with no
+//      date): "remind …" phrases stay words. SV-112)
+//     (reminders: what "remind", "remind me" or "reminder" phrases read, in order, the same one once,
+//      else null: [{minutes}] before the item's moment, negative after it, or [{date: "YYYY-MM-DD",
+//      time}] a moment, which the app turns into minutes from the item's moment in its time zone.
+//      A phrase with one past 4 weeks either side, or one past 10 with kept, stays words. On a new
+//      item they replace Settings' default, beside reminders picked by hand; on an edited item they
+//      add to its own. SV-112, D293)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
@@ -31,6 +43,11 @@ var SetpointCompose = (function(exports) {
 	}
 	//#endregion
 	//#region web/src/logic/compose.ts
+	/** The API's limits on an item's reminders: 4 weeks either side, and 10 (shared's REMINDER_LIMIT_MINUTES). */
+	var REMINDER_LINE_LIMITS = {
+		minutes: 40320,
+		count: 10
+	};
 	var RRULE_DAYS = [
 		"MO",
 		"TU",
@@ -136,7 +153,7 @@ var SetpointCompose = (function(exports) {
 	}
 	/** "every mon, wed and fri" → MO,WE,FR in the week's order. */
 	var byDays = (text) => [...new Set([...text.matchAll(new RegExp(WEEKDAY, "gi"))].map((found) => weekdayIndex(found[0])))].sort((a, b) => a - b).map((index) => RRULE_DAYS[index]).join(",");
-	var fresh = (event) => ({
+	var fresh = (event, remind = null) => ({
 		date: null,
 		start: null,
 		end: null,
@@ -148,7 +165,9 @@ var SetpointCompose = (function(exports) {
 		repeatDays: [],
 		event,
 		length: null,
-		last: null
+		last: null,
+		remind,
+		reminders: []
 	});
 	var sticky = (source) => new RegExp(source, "iy");
 	function rule(state, body, weeklyNeedsDay = false) {
@@ -269,18 +288,23 @@ var SetpointCompose = (function(exports) {
 		pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`),
 		apply: (m, s) => {
 			if (!s.event || s.length !== null || s.end !== null) return false;
-			let minutes = 0;
-			let last = "";
-			for (const [, value, word] of m[1].matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
-				if (!word && (last !== "h" || Number(value) > 59)) return false;
-				last = word ? word[0].toLowerCase() : "m";
-				minutes += Number(value) * UNIT_MINUTES[last];
-			}
-			if (Math.round(minutes) < 1) return false;
-			s.length = Math.round(minutes);
+			const minutes = minutesIn(m[1]);
+			if (minutes === null || minutes < 1) return false;
+			s.length = minutes;
 			return true;
 		}
 	};
+	/** A length's minutes ("1 hour 20mins" is 80, "1h30" 90), rounded; null when it isn't one. */
+	function minutesIn(text) {
+		let minutes = 0;
+		let last = "";
+		for (const [, value, word] of text.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
+			if (!word && (last !== "h" || Number(value) > 59)) return null;
+			last = word ? word[0].toLowerCase() : "m";
+			minutes += Number(value) * UNIT_MINUTES[last];
+		}
+		return Math.round(minutes);
+	}
 	var DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
 	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
 	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
@@ -325,6 +349,110 @@ var SetpointCompose = (function(exports) {
 			return true;
 		}
 	};
+	var DURATION = `${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?`;
+	var JOIN = "(?:\\s*,\\s*(?:and\\s+)?|\\s+and\\s+)";
+	var AT_START = "at\\s+(?:the\\s+)?start(?![a-z])";
+	var OFFSETS = `(${DURATION}(?:${JOIN}${DURATION})*)\\s+(before|after)(?![a-z])`;
+	var MOMENT = `(?:(?:on\\s+)?(${DAY_TEXT})\\s+)?(?:at\\s+)?(${SPAN_TIME})`;
+	var REMIND_ITEM = `(?:${AT_START}|${OFFSETS}|${MOMENT})`.replace(/\((?!\?)/g, "(?:");
+	var REMIND = "(?:remind(?:\\s+me)?|reminder)\\s+";
+	var REMIND_PARTS = {
+		join: sticky(JOIN),
+		start: sticky(AT_START),
+		offsets: sticky(OFFSETS),
+		moment: sticky(MOMENT)
+	};
+	/** A reminder phrase's reminders, after its "remind": null when one isn't one. */
+	function remindersIn(body, today) {
+		const reads = [];
+		const at = (pattern, index) => {
+			pattern.lastIndex = index;
+			return pattern.exec(body);
+		};
+		let index = 0;
+		while (index < body.length) {
+			if (reads.length) {
+				const join = at(REMIND_PARTS.join, index);
+				if (!join) return null;
+				index += join[0].length;
+			}
+			const start = at(REMIND_PARTS.start, index);
+			const offsets = start ? null : at(REMIND_PARTS.offsets, index);
+			const moment = start || offsets ? null : at(REMIND_PARTS.moment, index);
+			const found = start ?? offsets ?? moment;
+			if (!found) return null;
+			if (start) reads.push({ minutes: 0 });
+			if (offsets) {
+				const sign = offsets[2].toLowerCase() === "after" ? -1 : 1;
+				for (const part of offsets[1].split(new RegExp(JOIN, "i"))) {
+					const minutes = minutesIn(part);
+					if (minutes === null) return null;
+					reads.push({ minutes: minutes === 0 ? 0 : sign * minutes });
+				}
+			}
+			if (moment) {
+				const date = moment[1] ? parseDay(moment[1], today) : null;
+				const time = parseClock(moment[2]);
+				if (moment[1] && date === null || time === null) return null;
+				reads.push({
+					date,
+					time
+				});
+			}
+			index += found[0].length;
+		}
+		return reads;
+	}
+	var REMINDERS = [{
+		kind: "reminder",
+		pattern: sticky(`${REMIND}(${REMIND_ITEM}(?:${JOIN}${REMIND_ITEM})*)${END}`),
+		apply: (m, s, today) => {
+			if (!s.remind) return "words";
+			const reads = remindersIn(m[1], today);
+			if (!reads) return false;
+			s.reminders.push({
+				start: m.index,
+				reads
+			});
+			return true;
+		}
+	}, {
+		kind: "reminder",
+		pattern: sticky(`${REMIND}(?:on\\s+)?${DAY_TEXT}${END}`),
+		apply: () => "words"
+	}];
+	/**
+	* The reminders the phrases read, each checked against the item's moment once the whole line is
+	* read: a phrase with one past 4 weeks either side, or one too many with what the item keeps, stays
+	* words. Approximate in minutes on the clock; reminders.ts turns them into exact offsets.
+	*/
+	function resolveReminders(state, days) {
+		const words = /* @__PURE__ */ new Set();
+		if (!state.reminders.length || !state.remind) return {
+			reminders: null,
+			words
+		};
+		const day = state.date ?? state.remind.day;
+		const time = state.start ?? (days !== null ? 0 : state.remind.time);
+		const kept = /* @__PURE__ */ new Map();
+		for (const phrase of state.reminders) {
+			const reads = phrase.reads.map((read) => "minutes" in read ? read : {
+				date: read.date ?? day,
+				time: read.time
+			});
+			const offset = (read) => "minutes" in read ? read.minutes : daysBetween(read.date, day) * 1440 + time - read.time;
+			const added = new Map(reads.map((read) => [JSON.stringify(read), read]).filter(([key]) => !kept.has(key)));
+			if (reads.some((read) => Math.abs(offset(read)) > REMINDER_LINE_LIMITS.minutes) || kept.size + added.size + (state.remind.kept ?? 0) > REMINDER_LINE_LIMITS.count) {
+				words.add(phrase.start);
+				continue;
+			}
+			for (const [key, read] of added) kept.set(key, read);
+		}
+		return {
+			reminders: kept.size ? [...kept.values()] : null,
+			words
+		};
+	}
 	var DATES = [
 		{
 			kind: "when",
@@ -461,18 +589,22 @@ var SetpointCompose = (function(exports) {
 	* typed, spaces and all; phrases that leave no words keep the title as it was.
 	*
 	* A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
+	*
+	* `remind` is what the item's reminders count from when the line names no day or time (SV-112); with
+	* none, reminder phrases stay words.
 	*/
-	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null) {
-		const state = fresh(hash?.kind !== "project");
+	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null, remind = null) {
+		const state = fresh(hash?.kind !== "project", remind);
 		const phrases = [
 			...calendarMatchers(calendars),
+			...REMINDERS,
 			...REPEATS,
 			...TIMES,
 			LENGTH,
 			SPAN,
 			...DATES
 		];
-		const marks = [];
+		let marks = [];
 		const typed = edit ? typedSpan$1(edit.before, text) : {
 			start: 0,
 			end: text.length
@@ -521,12 +653,6 @@ var SetpointCompose = (function(exports) {
 			});
 			while (w + 1 < words.length && words[w + 1] < index + found.length) w += 1;
 		}
-		const merged = [];
-		for (const mark of marks) {
-			const last = merged.at(-1);
-			if (last && last.kind === "when" && mark.kind === "when" && /^\s*$/.test(text.slice(last.end, mark.start))) last.end = mark.end;
-			else merged.push({ ...mark });
-		}
 		const first = edit?.day ?? today;
 		if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map((index) => (index - weekdayOf(first) + 7) % 7)));
 		if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
@@ -534,6 +660,14 @@ var SetpointCompose = (function(exports) {
 		if (state.last && state.start === null && state.length === null) days = daysBetween(state.date, state.last) + 1;
 		else if (state.last) state.recurrence = `${state.recurrence ?? "RRULE:FREQ=DAILY"};UNTIL=${state.last.replace(/-/g, "")}`;
 		if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
+		const { reminders, words: remindWords } = resolveReminders(state, days);
+		marks = marks.filter((mark) => mark.kind !== "reminder" || !remindWords.has(mark.start));
+		const merged = [];
+		for (const mark of marks) {
+			const last = merged.at(-1);
+			if (last && last.kind === "when" && mark.kind === "when" && /^\s*$/.test(text.slice(last.end, mark.start))) last.end = mark.end;
+			else merged.push({ ...mark });
+		}
 		let title = "";
 		let from = 0;
 		for (const mark of merged) {
@@ -554,7 +688,8 @@ var SetpointCompose = (function(exports) {
 			recurrence: state.recurrence,
 			project: state.project,
 			days,
-			length: state.length
+			length: state.length,
+			reminders
 		};
 	}
 	/**
@@ -646,7 +781,7 @@ var SetpointCompose = (function(exports) {
 			kind: input.kind === "task" ? "project" : "calendar",
 			names,
 			picked: input.pickedHash ?? null
-		}, input.edit ?? null);
+		}, input.edit ?? null, input.remind ?? null);
 	}
 	/** What an edit typed into a title: the text from `start` to `end` of `after`. */
 	function typedSpan(input) {

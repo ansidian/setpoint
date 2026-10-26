@@ -7,7 +7,7 @@
 // Each function takes one plain-JSON object and returns plain JSON, and `call` does the same with
 // JSON text, for Swift's Codable. Offsets (`start`, `end`, a mark's) are UTF-16 code units.
 import {bareToken as bare, completeToken as complete, editedWhen as whenEdited, lineWithTitle as withTitle, parseTitle as parse, typedSpan as span} from './compose.ts';
-import type {Mark, ParsedTitle, When} from './compose.ts';
+import type {Mark, ParsedTitle, ReminderBase, When} from './compose.ts';
 
 export interface ParseTitleInput {
   text: string;
@@ -25,13 +25,17 @@ export interface ParseTitleInput {
   // Editing an item (SV-90): its title before the edit and its day, "2026-10-14". Only what the
   // edit typed is read, and a repeat with no day counts from the item's day.
   edit?: {before: string; day: string} | null;
+  // What reminder phrases count from (SV-112): the item's day and its moment's minutes after midnight
+  // when the line names neither, and how many reminders it keeps beside the line's. Without it (a task
+  // with no date) a reminder phrase stays words.
+  remind?: ReminderBase | null;
 }
 
 /** The line as the web's editor reads it: "#…" is a task's project or an event's calendar. */
 export function parseTitle(input: ParseTitleInput): ParsedTitle {
   const names = input.kind === 'task' ? input.projects : input.calendars;
   return parse(input.text, input.today, input.calendars, input.pickedPlace ?? null,
-    {kind: input.kind === 'task' ? 'project' : 'calendar', names, picked: input.pickedHash ?? null}, input.edit ?? null);
+    {kind: input.kind === 'task' ? 'project' : 'calendar', names, picked: input.pickedHash ?? null}, input.edit ?? null, input.remind ?? null);
 }
 
 /** What an edit typed into a title: the text from `start` to `end` of `after`. */
