@@ -874,6 +874,41 @@ test('SV-78: No end in the End list makes an event that ends as it starts; it sa
   }
 });
 
+test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit with the time; saved, it ends as it starts and opens as No end', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
+    await line.pressSequentially('Call Sam fri 2pm no end');
+    await page.locator('.nl .tok-d', {hasText: 'fri 2pm no end'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')],
+      ['Call Sam', '2:00 PM', '', 'No end']);
+    // The same time twice is No end too, not a day long.
+    await line.fill('Call Sam fri 2pm to 2pm');
+    await page.locator('.nl .tok-d', {hasText: 'fri 2pm to 2pm'}).waitFor();
+    assert.deepEqual([await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')], ['2:00 PM', '', 'No end']);
+    assert.equal(await page.locator('.editor .later').count(), 0, 'no +1 day');
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const call = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Call Sam')!;
+    assert.equal(call.ends_at, call.starts_at);
+    // Opened again, its End reads No end, as the line had it.
+    await page.goto(`${setpoint.base}/calendar/2026-10-09`);
+    await chip(page, '2026-10-09', 'Call Sam').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    assert.deepEqual([await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')], ['2:00 PM', '', 'No end']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new task and changed on an existing one', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

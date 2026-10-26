@@ -39,7 +39,7 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 //   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
-// over 1440). shared/compose/cases.json records what each returns.`;
+// over 1440, an end at the start No end). shared/compose/cases.json records what each returns.`;
 
 type Kind = 'event' | 'task';
 type Case = {fn: keyof typeof FUNCTIONS; input: Record<string, unknown>};
@@ -64,6 +64,8 @@ const CASE_LIST: Case[] = [
     '11-1pm', '9am-5', '9:00-10:30', '13-15', '11pm-1am', 'at 7'].map(phrase => line(`Call ${phrase}`)),
   line('Gym sat 9am'),
   line('Dinner tmr at 7:30pm'),
+  // An end at its start, and "no end" by a time, are No end (SV-108); only an end before it is the next day's.
+  ...['event at 2pm to 2pm', 'Call 2-2pm', 'Call 14:00–14:00', 'Call Sam 2pm no end', 'Call Sam no end 2pm', 'Call Sam no end'].map(text => line(text)),
   // Repeats.
   ...['daily', 'weekly', 'monthly', 'yearly', 'annually', 'biweekly', 'every day', 'every week', 'every month', 'every year', 'every 2 weeks',
     'every 3 days', 'every other mon', 'every mon, wed and fri', 'every tue and thu', 'every weekday', 'every weekend',

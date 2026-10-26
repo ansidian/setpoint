@@ -11,7 +11,8 @@
 //   already past this year is next year's); "on" before any of them.
 // - a time: "7pm", "7:30 pm", "19:00", "noon", "midnight", "at" before any of them; a range "7-9pm",
 //   "7pm - 9pm", "11-1pm", "from 9 to 5pm" (a bare hour is a time only with am/pm or minutes, so
-//   "Gym 7" stays a title).
+//   "Gym 7" stays a title); No end, the end at the start, for the same time twice ("2pm to 2pm") or
+//   "no end" by a time ("2pm no end", "no end 2pm"; SV-108).
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
 //   every month.
@@ -97,7 +98,8 @@ const meridiemOf = (text: string | undefined) => (text ? (text[0]!.toLowerCase()
 /**
  * A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
  * 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
- * 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15").
+ * 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
+ * same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start (SV-78, SV-108).
  */
 function range(match: RegExpExecArray): {start: number; end: number} | null {
   const [, h1, m1, a1, h2, m2, a2] = match;
@@ -112,13 +114,13 @@ function range(match: RegExpExecArray): {start: number; end: number} | null {
     start = clock(startHour, startMinute, null);
     end = clock(endHour, endMinute, null);
   } else if (!startMer && end !== null) {
-    start = readings(startHour, startMinute).filter(value => value < end!).at(-1) ?? clock(startHour, startMinute, endMer);
+    start = readings(startHour, startMinute).filter(value => value <= end!).at(-1) ?? clock(startHour, startMinute, endMer);
   } else if (!endMer && start !== null) {
-    end = readings(endHour, endMinute).find(value => value > start!) ?? clock(endHour, endMinute, startMer);
+    end = readings(endHour, endMinute).find(value => value >= start!) ?? clock(endHour, endMinute, startMer);
   }
   if (start === null || end === null) return null;
   // "11pm-1am" ends the next day.
-  return {start, end: end <= start ? end + 1440 : end};
+  return {start, end: end < start ? end + 1440 : end};
 }
 
 /** "every mon, wed and fri" → MO,WE,FR in the week's order. */
@@ -192,16 +194,16 @@ const TIMES: Matcher[] = [
     [s.start, s.end] = [found.start, found.end];
     return true;
   }},
-  {kind: 'when', pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`), apply: (m, s) => {
+  // A time, with "no end" before or after it for No end (SV-108).
+  {kind: 'when', pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`), apply: (m, s) => {
     if (s.start !== null) return false;
-    if (m[1]) {
-      s.start = m[1].toLowerCase() === 'noon' ? 720 : 0;
-      return true;
-    }
-    if (!m[3] && !m[4]) return false;
-    const found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
+    let found: number | null;
+    if (m[1]) found = m[1].toLowerCase() === 'noon' ? 720 : 0;
+    else if (!m[3] && !m[4]) return false;
+    else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
     if (found === null) return false;
     s.start = found;
+    if (/no\s+end/i.test(m[0])) s.end = found;
     return true;
   }},
 ];

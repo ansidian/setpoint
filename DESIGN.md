@@ -2528,7 +2528,10 @@ it changes what's on screen.
     height. It takes no time, so it overlaps nothing and nothing overlaps it: no Overlaps line, and
     the editor's preview says No conflicts. Once its start has gone it's past (Andy, 2026-10-15;
     darma SV-78). Board audit: no board draws an event with no end; board 13's End field still
-    reads "9:00 PM", so it's unchanged (13 1.56%).
+    reads "9:00 PM", so it's unchanged (13 1.56%). The line reads No end too: the same time twice ("2pm to 2pm",
+    "2-2pm"), or "no end" before or after a time ("2pm no end"), lit with the time. Only an end
+    before the start is the next day's ("11pm-1am"), and a bare time still gets its hour (Andy,
+    2026-10-26; darma SV-108, D286).
 247. **A create says nothing** (amending #76 and #244): creating an event or a task, from the
     editor or an email's proposal card, raises no toast on success, since a toast read as an error
     every time. The item on the grid, or the card closing, is the answer. ⌘Z still takes back a

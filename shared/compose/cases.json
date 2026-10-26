@@ -1798,6 +1798,210 @@
     {
       "fn": "parseTitle",
       "input": {
+        "text": "event at 2pm to 2pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "event",
+        "marks": [
+          {
+            "start": 6,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 840,
+        "end": 840,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 2-2pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 840,
+        "end": 840,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 14:00–14:00",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 16,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 840,
+        "end": 840,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call Sam 2pm no end",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call Sam",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 840,
+        "end": 840,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call Sam no end 2pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call Sam",
+        "marks": [
+          {
+            "start": 9,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 840,
+        "end": 840,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call Sam no end",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call Sam no end",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
         "text": "Practice daily",
         "kind": "event",
         "today": "2026-10-07",

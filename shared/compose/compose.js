@@ -13,7 +13,7 @@
 //   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
-// over 1440). shared/compose/cases.json records what each returns.
+// over 1440, an end at the start No end). shared/compose/cases.json records what each returns.
 var SetpointCompose = (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 	//#region web/src/logic/format.ts
@@ -99,7 +99,8 @@ var SetpointCompose = (function(exports) {
 	/**
 	* A range's two ends. An end missing its am/pm takes the first reading after the start ("9am-5" is
 	* 5 PM); a start missing its own takes the last reading before the end ("7-9pm" is 7 PM, "11-1pm"
-	* 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15").
+	* 11 AM). With am/pm on neither, both need minutes or a 24-hour hour ("9:00-10:30", "13-15"). The
+	* same time twice ("2-2pm", "14:00–14:00") is No end, the end at the start (SV-78, SV-108).
 	*/
 	function range(match) {
 		const [, h1, m1, a1, h2, m2, a2] = match;
@@ -118,12 +119,12 @@ var SetpointCompose = (function(exports) {
 		if (!startMer && !endMer) {
 			start = clock(startHour, startMinute, null);
 			end = clock(endHour, endMinute, null);
-		} else if (!startMer && end !== null) start = readings(startHour, startMinute).filter((value) => value < end).at(-1) ?? clock(startHour, startMinute, endMer);
-		else if (!endMer && start !== null) end = readings(endHour, endMinute).find((value) => value > start) ?? clock(endHour, endMinute, startMer);
+		} else if (!startMer && end !== null) start = readings(startHour, startMinute).filter((value) => value <= end).at(-1) ?? clock(startHour, startMinute, endMer);
+		else if (!endMer && start !== null) end = readings(endHour, endMinute).find((value) => value >= start) ?? clock(endHour, endMinute, startMer);
 		if (start === null || end === null) return null;
 		return {
 			start,
-			end: end <= start ? end + 1440 : end
+			end: end < start ? end + 1440 : end
 		};
 	}
 	/** "every mon, wed and fri" → MO,WE,FR in the week's order. */
@@ -209,17 +210,16 @@ var SetpointCompose = (function(exports) {
 		}
 	}, {
 		kind: "when",
-		pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`),
+		pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`),
 		apply: (m, s) => {
 			if (s.start !== null) return false;
-			if (m[1]) {
-				s.start = m[1].toLowerCase() === "noon" ? 720 : 0;
-				return true;
-			}
-			if (!m[3] && !m[4]) return false;
-			const found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
+			let found;
+			if (m[1]) found = m[1].toLowerCase() === "noon" ? 720 : 0;
+			else if (!m[3] && !m[4]) return false;
+			else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
 			if (found === null) return false;
 			s.start = found;
+			if (/no\s+end/i.test(m[0])) s.end = found;
 			return true;
 		}
 	}];

@@ -61,6 +61,10 @@ describe('times', () => {
     ['11-1pm', h(11), h(13)], ['9am-5', h(9), h(17)], ['10:30-11:15am', h(10, 30), h(11, 15)], ['9:00-10:30', h(9), h(10, 30)], ['13-15', h(13), h(15)],
     // Past midnight: the next day's.
     ['11pm-1am', h(23), h(25)],
+    // An end at the start is No end (SV-78), not the next day's (SV-108, D286).
+    ['2pm to 2pm', h(14), h(14)], ['at 2pm to 2pm', h(14), h(14)], ['2-2pm', h(14), h(14)], ['2pm-2', h(14), h(14)], ['14:00–14:00', h(14), h(14)],
+    // "no end" by a time, either side of it (SV-108).
+    ['2pm no end', h(14), h(14)], ['no end 2pm', h(14), h(14)], ['no end at 2pm', h(14), h(14)], ['noon No End', h(12), h(12)],
   ])('Meet %s', (phrase, start, end) => {
     const parsed = parse(`Meet ${phrase}`);
     expect([parsed.start, parsed.end]).toEqual([start, end]);
@@ -68,6 +72,19 @@ describe('times', () => {
   });
   test.each(['Meet 7-9', 'Meet 13pm', 'Meet 7:75pm', 'Meet at 7'])('%s holds no time', text => expect(parse(text).start).toBeNull());
   test('a bare time keeps no date (the editor gives it the selected day, as v1 did)', () => expect(parse('Standup 9am')).toMatchObject({date: null, start: h(9)}));
+  test.each([
+    ['Call Sam 2pm no end', 'Call Sam', ['when:2pm no end']],
+    ['Call Sam no end 2pm fri', 'Call Sam', ['when:no end 2pm fri']],
+    ['event at 2pm to 2pm', 'event', ['when:at 2pm to 2pm']],
+  ])('SV-108: %s is No end, lit with its time', (text, title, marks) => {
+    expect(parse(text)).toMatchObject({title, start: h(14), end: h(14)});
+    expect(marked(text)).toEqual(marks);
+  });
+  test.each([
+    // Only the phrase itself, and only by a time: otherwise it's the title's.
+    ['Call Sam no end', null, null], ['Fix the no end bug', null, null], ['Call no ending 2pm', h(14), null], ['Call 2pm noend', h(14), null],
+    ['Call 2pm, no end', h(14), null],
+  ])('SV-108: %s reads no No end', (text, start, end) => expect([parse(text).start, parse(text).end]).toEqual([start, end]));
 });
 
 describe('places (v1: @ starts a place, up to the next phrase)', () => {
