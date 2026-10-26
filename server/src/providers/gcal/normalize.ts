@@ -63,6 +63,11 @@ export function remindersOf(event: GoogleEvent, calendarDefaults: number[]): num
   return (event.reminders.overrides ?? []).flatMap(reminder => (typeof reminder.minutes === 'number' ? [reminder.minutes] : [])).sort((a, b) => a - b);
 }
 
+/** Google's before-reminders with the row's own after-ones, which Google never holds (D287). */
+export function withOwnAfter(fromGoogle: number[], row: Pick<ItemRow, 'reminders'> | undefined): number[] {
+  return [...fromGoogle.filter(minutes => minutes >= 0), ...(row?.reminders ?? []).filter(minutes => minutes < 0)];
+}
+
 export function attendeesOf(event: GoogleEvent): string[] {
   return (event.attendees ?? []).filter(person => person.email && !person.resource && !person.self).map(person => person.displayName || person.email!);
 }
@@ -124,7 +129,8 @@ export function eventBody(item: ItemRow, fallbackZone: string): Partial<GoogleEv
     summary: item.title,
     location: joinLocation(item.place, item.address),
     ...eventTimes(item, fallbackZone),
-    reminders: {useDefault: false, overrides: (item.reminders ?? []).map(minutes => ({method: 'popup', minutes}))},
+    // Google has no reminder after the start: only the before-ones go, the after-ones stay Setpoint's (D287).
+    reminders: {useDefault: false, overrides: (item.reminders ?? []).filter(minutes => minutes >= 0).map(minutes => ({method: 'popup', minutes}))},
     // "off" rather than nothing: a patch merges private properties, so leaving it out would keep "on".
     extendedProperties: {private: {[LEAVE_PROPERTY]: item.leaveReminder ? 'on' : 'off'}},
   };

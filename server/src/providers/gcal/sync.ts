@@ -18,7 +18,7 @@ import type {Store} from '../../store.ts';
 import type {SourceRow} from '../../sync/adapter.ts';
 import {isSyncTokenGone} from './api.ts';
 import type {GoogleCalendarApi, GoogleCalendarEntry, GoogleEvent} from './api.ts';
-import {cancelledOccurrence, eventColumns, originalStartOf} from './normalize.ts';
+import {cancelledOccurrence, eventColumns, originalStartOf, withOwnAfter} from './normalize.ts';
 
 const DAY = 86_400_000;
 // How far back a full read goes; series reach further on their own.
@@ -166,7 +166,9 @@ function applyEvents(store: Store, calendar: CalendarRow, fetched: Fetched, sour
       if (found) {
         seen.add(found.id);
         if (held.has(found.id)) return found;
-        const updated = store.db.update(t.items).set(values).where(eq(t.items.id, found.id)).returning().get()!;
+        // A sync from Google keeps Setpoint's after-reminders (D287).
+        const set = values.reminders ? {...values, reminders: withOwnAfter(values.reminders, found)} : values;
+        const updated = store.db.update(t.items).set(set).where(eq(t.items.id, found.id)).returning().get()!;
         if (JSON.stringify({...found}) !== JSON.stringify({...updated})) touched.add(found.id);
         byProviderId.set(providerId, updated);
         return updated;

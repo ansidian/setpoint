@@ -164,6 +164,30 @@ describe('changes through the command layer', () => {
     expect(titles('2026-10-08')).toEqual(['Coffee with Priya 10:00 AM']);
   });
 
+  test('SV-109 (D287): Google is written only the before-reminders; a sync keeps the after-ones and brings Google\'s before-ones', async () => {
+    const {w, google, run, item, day, command} = await calendarWorld();
+    await run();
+    const changed = updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {reminders: [-120, 30]}}));
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'dinner')!.reminders).toEqual({useDefault: false, overrides: [{method: 'popup', minutes: 30}]});
+    const dinner = () => day('2026-10-09').find(entry => entry.title === 'Dinner with Sam')!;
+    // A full read gives Google's 30 back and keeps the 2 hrs after.
+    w.advance(25 * 3600_000);
+    await run();
+    expect(dinner().reminders).toEqual([30, -120]);
+    // Changed in Google: its before-reminders arrive, the after-one stays.
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, reminders: {useDefault: false, overrides: [{method: 'popup', minutes: 15}, {method: 'popup', minutes: 1440}]}});
+    w.advance(16 * 60_000);
+    await run();
+    expect(dinner().reminders).toEqual([15, 1440, -120]);
+    // Back to the calendar's default: its 10, still with the after-one.
+    google.put(PERSONAL, {...google.event(PERSONAL, 'dinner')!, reminders: {useDefault: true}});
+    w.advance(16 * 60_000);
+    await run();
+    expect(dinner().reminders).toEqual([10, -120]);
+  });
+
   test('a recurring move, This event: Wednesday\'s Gym moves to Thursday at Google as an exception', async () => {
     const {w, google, run, item, titles, command} = await calendarWorld();
     await run();

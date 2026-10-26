@@ -31,6 +31,7 @@ export function todoistCalendar(store: Store) {
   return store.db.insert(t.calendars).values({provider: 'todoist', providerId: 'todoist', name: 'Todoist', colour: null, position}).returning().get();
 }
 
+/** A task's columns from Todoist; its reminders are Setpoint's own, which Todoist never holds (SV-109). */
 function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone: string): Partial<ItemRow> | null {
   const due = task.due ? readDue(task.due, timeZone) : null;
   // Undated tasks aren't on the calendar (v1's choice too).
@@ -38,7 +39,7 @@ function taskColumns(task: TodoistTask, projects: Map<string, string>, timeZone:
   return {
     kind: 'task', title: task.content, allDay: true, startsAt: null, endsAt: null, startDate: null, endDate: null,
     dueDate: due.dueDate, dueAt: due.dueAt, dueString: task.due?.string ?? null, dueRecurring: Boolean(task.due?.is_recurring),
-    project: (task.project_id && projects.get(task.project_id)) || null, reminders: [], recurrence: null, labels: task.labels ?? [],
+    project: (task.project_id && projects.get(task.project_id)) || null, recurrence: null, labels: task.labels ?? [],
   };
 }
 
@@ -116,7 +117,7 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean) {
         const updated = store.db.update(t.items).set({...columns, doneAt}).where(eq(t.items.id, found.id)).returning().get()!;
         if (JSON.stringify(found) !== JSON.stringify(updated)) touched.add(found.id);
       } else {
-        const row = store.db.insert(t.items).values({calendarId: calendar.id, providerId: task.id, ...columns, doneAt} as typeof t.items.$inferInsert).returning().get();
+        const row = store.db.insert(t.items).values({calendarId: calendar.id, providerId: task.id, ...columns, reminders: [], doneAt} as typeof t.items.$inferInsert).returning().get();
         seen.add(row.id);
         touched.add(row.id);
       }

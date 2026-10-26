@@ -183,6 +183,20 @@ describe('changes through the command layer', () => {
     expect(w.store.db.select().from(t.items).where(eq(t.items.title, 'Learn guitar')).get()).toBeUndefined();
   });
 
+  test('SV-109: a task\'s reminders are Setpoint\'s own: Todoist isn\'t asked, and its syncs keep them', async () => {
+    const {w, todoist, run, command, task} = await todoistWorld();
+    await run();
+    const before = todoist.requests.length;
+    const changed = updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {reminders: [60, -30]}}));
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(todoist.requests.slice(before).filter(request => request.path.startsWith('/api/v1/tasks'))).toEqual([]);
+    todoist.put({...todoist.task('t-rent')!, content: 'Pay October rent'});
+    w.advance(5 * 60_000);
+    await run();
+    expect(task('t-rent')).toMatchObject({title: 'Pay October rent', reminders: [60, -30]});
+  });
+
   test('create with a new project (SV-24, D50): Todoist makes the project first, the task goes in it, and the project list has it at once', async () => {
     const {w, todoist, run, command, calendarId, tasks} = await todoistWorld();
     await run();
