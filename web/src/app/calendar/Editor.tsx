@@ -187,7 +187,9 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
   const by = (field: Manual) => !draft.manual.includes(field);
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
-    {date: by('date') ? parsed.date : null, start: by('time') ? parsed.start : null, end: by('time') ? parsed.end : null}, draft.kind));
+    // A span of days (all day) needs both its day and time; a length only its time (SV-111).
+    {date: by('date') ? parsed.date : null, start: by('time') ? parsed.start : null, end: by('time') ? parsed.end : null,
+      days: by('date') && by('time') ? parsed.days : null, length: by('time') ? parsed.length : null}, draft.kind));
   if (by('place') && draft.kind === 'event') {
     if (parsed.place === null) Object.assign(next, {place: original.place, address: original.address, picked: null});
     else if (draft.picked === null ? parsed.place !== draft.place : parsed.place !== draft.picked) Object.assign(next, {place: parsed.place, address: null, picked: null});
@@ -215,9 +217,16 @@ function retype(draft: Draft, text: string, today: string, calendars: CalendarOu
   if (by('time')) {
     // Days picked by hand stay: the end moves to its last day (SV-29).
     const later = draft.manual.includes('date') ? extraDays(draft.start, draft.end, draft.days) * 1440 : 0;
-    if (parsed.start !== null) {
+    if (draft.kind === 'event' && parsed.days !== null && by('date')) {
+      // A span of days with no time is all day over them (SV-111).
+      Object.assign(next, {start: null, end: null, days: parsed.days});
+    } else if (parsed.start !== null) {
       next.start = parsed.start;
       next.end = draft.kind === 'event' ? (parsed.end ?? parsed.start + DEFAULT_LENGTH) + later : null;
+    } else if (draft.kind === 'event' && parsed.length !== null) {
+      // A length with no time starts at the default start, the slot's else 9:00 AM (SV-111, D292).
+      next.start = draft.slot?.start ?? DEFAULT_START;
+      next.end = next.start + parsed.length + later;
     } else if (draft.kind === 'event' && draft.slot) {
       next.start = draft.slot.start;
       next.end = draft.slot.end === null ? null : draft.slot.end + later;

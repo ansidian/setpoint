@@ -525,8 +525,9 @@ The card's side is chosen first and may flip on landing (board 12c).
 ### Editor
 
 In the right pane (board 13): the **title field** parses as you type ("Dinner with Sam fri 7-9pm
-@Blue Door" → date, time and end, place, calendar, each parsed token marked; a line longer than the
-field shows where it's typed, the cut side fading, #110), **Places**
+@Blue Door" → date, time and end, place, calendar, each parsed token marked; an event's length
+after "for" and its span of days too, #256; a line longer than the field shows where it's typed,
+the cut side fading, #110), **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
 #255) with **Time to Leave** added from the same menu, never by default (#86), and the
@@ -2692,3 +2693,21 @@ it changes what's on screen.
     "Reminders need a date". An all-day event still counts from its midnight. Google is written only
     the before-reminders, and a sync from Google keeps the after-ones; Todoist never holds a task's.
     Board audit: no board draws Custom… or a custom reminder.
+256. **The line reads an event's length and its span of days** (the user, 2026-10-26; darma SV-111,
+    D291, D292). A length is read only after "for", in digits, decimals and compounds included
+    ("for 15 min", "for 1.5h", "for 1 hour 20mins", "for 1h30"), in min, mins, minute(s), h, hr(s),
+    hour(s), d, day(s) and week(s); no number words and no "wk" (D291). A bare length stays words
+    ("30 min run"). It sets End that long after the start, past midnight if it gets there, lit with
+    the when; with no time typed ("Lunch fri for 1h") it starts at the default start, the slot's
+    else 9:00 AM, and an edited event at its own start. The first of a length or an end wins ("2–3pm
+    for 2h" and "2pm no end for 1h" keep "for …" as words; "for 1h 2-3pm" keeps the range as words).
+    A span of days takes the Date field's forms: "oct 23–25", "oct 23 to 25", "oct 30 – nov 2", "fri
+    to sun", "fri through sun", "from fri to sun", the last day read from the first ("fri to mon"
+    runs into next week, "dec 30 – jan 2" into next year). One that runs backwards ("oct 25–23",
+    "oct 25 – oct 23", "fri 7pm to fri 3pm") stays words, its first day too. With no time it's all
+    day over those days, both counting; with a time at each end ("fri 7pm to sun 3pm") one event
+    across them; with one time, a range or a length ("oct 23–25 9am–5pm") that each day, a daily
+    repeat until the last day (`FREQ=DAILY;UNTIL=20261025`, a repeat typed with it taking the
+    UNTIL instead), Repeat saying "Daily, until Sun, Oct 25" (D292). A task's line keeps lengths and
+    spans as words. The iPhone app gets the same through the compose bundle's `days` and `length`.
+    Board audit: no board draws a length or a span typed in the line.

@@ -496,3 +496,104 @@ describe('SV-90: an edited item\'s when', () => {
     ['a task\'s day keeps its time', {date: '2026-10-14', start: h(17), end: null, days: 1}, {...none, date: '2026-10-09'}, 'task', {date: '2026-10-09', start: h(17), end: null, days: 1}],
   ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
 });
+
+describe('SV-111: a length after "for" (D291, D292), events only', () => {
+  const task = (text: string) => parseTitle(text, TODAY, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
+  test.each<[string, string, number | null, number | null, number | null, string]>([
+    ['minutes', 'Run fri 7am for 15 min', h(7), h(7, 15), 15, 'fri 7am for 15 min'],
+    ['a decimal', 'Call 2pm for 1.5h', h(14), h(15, 30), 90, '2pm for 1.5h'],
+    ['a compound', 'Meeting 2pm for 1 hour 20mins', h(14), h(15, 20), 80, '2pm for 1 hour 20mins'],
+    ['hours and bare minutes', 'Meeting 2pm for 1h30', h(14), h(15, 30), 90, '2pm for 1h30'],
+    ['hr and minute', 'Meeting 2pm for 1 hr 1 minute', h(14), h(15, 1), 61, '2pm for 1 hr 1 minute'],
+    ['past midnight', 'Party 11pm for 2 hours', h(23), h(25), 120, '11pm for 2 hours'],
+    ['days', 'Trip fri 9am for 2 days', h(9), h(9) + 2 * 1440, 2880, 'fri 9am for 2 days'],
+    ['a week', 'Retreat sat 9am for 1 week', h(9), h(9) + 7 * 1440, 7 * 1440, 'sat 9am for 1 week'],
+    ['d', 'Trip 9am for 1d', h(9), h(9) + 1440, 1440, '9am for 1d'],
+    ['before the time', 'Shift for 90 minutes 3pm', h(15), h(16, 30), 90, 'for 90 minutes 3pm'],
+    ['no time: the default start is the reader\'s', 'Lunch fri for 1h', null, null, 60, 'fri for 1h'],
+  ])('%s: %s', (_, text, start, end, length, when) => {
+    expect(parse(text)).toMatchObject({start, end, length});
+    expect(marked(text)).toEqual([`when:${when}`]);
+  });
+  test.each<[string, string, string, number | null, number | null]>([
+    ['a bare length', '30 min run', '30 min run', null, null],
+    ['a number word', 'Run for one hour', 'Run for one hour', null, null],
+    ['wk', 'Run for 1 wk', 'Run for 1 wk', null, null],
+    ['no unit', 'Run for 2 dogs', 'Run for 2 dogs', null, null],
+    ['nothing long', 'Run for 0 min', 'Run for 0 min', null, null],
+    // The first of a length or an end wins; the later stays words.
+    ['a range first', 'Call 2-3pm for 2h', 'Call for 2h', h(14), h(15)],
+    ['no end first', 'Call 2pm no end for 1h', 'Call for 1h', h(14), h(14)],
+    ['a length first', 'Call for 1h 2-3pm', 'Call 2-3pm', null, null],
+    ['a length first, then "no end"', 'Call for 1h 2pm no end', 'Call no end', h(14), h(15)],
+  ])('%s: %s', (_, text, title, start, end) => expect(parse(text)).toMatchObject({title, start, end}));
+  test('in a task\'s line it stays words', () => {
+    expect(task('Study fri 3pm for 1h')).toMatchObject({title: 'Study for 1h', date: '2026-10-09', start: h(15), end: null, length: null});
+  });
+});
+
+describe('SV-111: a span of days (D292), events only', () => {
+  const task = (text: string) => parseTitle(text, TODAY, CALENDARS, null, {kind: 'project', names: ['Inbox', 'School', 'Home'], picked: null});
+  test.each<[string, string, string, number, string]>([
+    ['a dash', 'Trip oct 23–25', '2026-10-23', 3, 'oct 23–25'],
+    ['"to" a day', 'Trip oct 23 to 25', '2026-10-23', 3, 'oct 23 to 25'],
+    ['across months', 'Trip oct 30 – nov 2', '2026-10-30', 4, 'oct 30 – nov 2'],
+    ['across years', 'Trip dec 30 - jan 2', '2026-12-30', 4, 'dec 30 - jan 2'],
+    ['weekdays', 'Trip fri to sun', '2026-10-09', 3, 'fri to sun'],
+    ['through', 'Trip fri through sun', '2026-10-09', 3, 'fri through sun'],
+    ['from', 'Trip from fri to sun', '2026-10-09', 3, 'from fri to sun'],
+    ['into next week', 'Trip fri to mon', '2026-10-09', 4, 'fri to mon'],
+    ['numbers', 'Trip 10/23 - 10/25', '2026-10-23', 3, '10/23 - 10/25'],
+  ])('all day with no time, %s: %s', (_, text, date, days, when) => {
+    expect(parse(text)).toMatchObject({title: 'Trip', date, days, start: null, end: null, recurrence: null});
+    expect(marked(text)).toEqual([`when:${when}`]);
+  });
+  test('a time at each end is one event across the days', () => {
+    expect(parse('Trip fri 7pm to sun 3pm')).toMatchObject({title: 'Trip', date: '2026-10-09', start: h(19), end: 2 * 1440 + h(15), days: null, recurrence: null});
+    expect(marked('Trip fri 7pm to sun 3pm')).toEqual(['when:fri 7pm to sun 3pm']);
+  });
+  test.each<[string, string, string, number | null, number | null, number | null, string]>([
+    ['a time range', 'Conference oct 23–25 9am–5pm', '2026-10-23', h(9), h(17), null, 'RRULE:FREQ=DAILY;UNTIL=20261025'],
+    ['one time after', 'Camp fri to sun 9am', '2026-10-09', h(9), null, null, 'RRULE:FREQ=DAILY;UNTIL=20261011'],
+    ['one time inside', 'Camp fri 9am to sun', '2026-10-09', h(9), null, null, 'RRULE:FREQ=DAILY;UNTIL=20261011'],
+    ['a length, from the default start', 'Camp oct 23–25 for 2h', '2026-10-23', null, null, 120, 'RRULE:FREQ=DAILY;UNTIL=20261025'],
+    ['a repeat typed is the one that ends', 'Standup weekly nov 2 to nov 30 9am', '2026-11-02', h(9), null, null, 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261130'],
+  ])('one time each day is a daily repeat until the last day, %s: %s', (_, text, date, start, end, length, recurrence) => {
+    expect(parse(text)).toMatchObject({date, start, end, length, days: null, recurrence});
+  });
+  test.each([
+    ['a backwards day', 'Trip oct 25–23'],
+    ['a backwards month day', 'Trip oct 25 – oct 23'],
+    ['a backwards year', 'Trip 10/25/2026 - 10/23/2026'],
+    ['a backwards time', 'Trip fri 7pm to fri 3pm'],
+  ])('%s stays words: %s', (_, text) => {
+    expect(parse(text)).toMatchObject({title: text, date: null, start: null, days: null});
+    expect(parse(text).marks).toEqual([]);
+  });
+  test.each([
+    'Meet oct 3 to 5pm', 'Dinner fri 7-9pm', 'Dinner fri 7pm to 9pm', 'Lunch 10/12 - 2pm',
+  ])('a time range after a day is not a span: %s', text => expect(parse(text).days).toBeNull());
+  test('in a task\'s line it stays words', () => {
+    expect(task('Pack fri to sun')).toMatchObject({title: 'Pack fri to sun', date: null, days: null});
+    expect(task('Pack fri 7pm to sun 3pm')).toMatchObject({title: 'Pack fri 7pm to sun 3pm', date: null, start: null});
+  });
+  test('a lone day has no days, and the Date field reads no span as one day', () => {
+    expect(parse('Lunch fri').days).toBeNull();
+    expect(parseDay('fri to sun', TODAY)).toBeNull();
+  });
+  test('the Repeat row says the last day', () => {
+    expect(describeRule('RRULE:FREQ=DAILY;UNTIL=20261025', '2026-10-23')).toBe('Daily, until Sun, Oct 25');
+    expect(describeRule('RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261130', '2026-11-02')).toBe('Weekly on Monday, until Mon, Nov 30');
+  });
+});
+
+describe('SV-111: an edited event\'s when, from a span or a length', () => {
+  const timed = {date: '2026-10-14', start: h(3), end: h(8), days: 1};
+  const none = {date: null, start: null, end: null};
+  test.each<[string, Parameters<typeof editedWhen>[0], Parameters<typeof editedWhen>[1], 'event' | 'task', ReturnType<typeof editedWhen>]>([
+    ['a span is all day over its days', timed, {date: '2026-10-23', start: null, end: null, days: 3, length: null}, 'event', {date: '2026-10-23', start: null, end: null, days: 3}],
+    ['a length with no time keeps the start', timed, {...none, days: null, length: 60}, 'event', {date: '2026-10-14', start: h(3), end: h(4), days: 1}],
+    ['an all-day event given a length starts at 9:00 AM', {date: '2026-10-14', start: null, end: null, days: 2}, {...none, days: null, length: 90}, 'event', {date: '2026-10-14', start: h(9), end: h(10, 30), days: 1}],
+    ['a task has neither', {date: '2026-10-14', start: h(17), end: null, days: 1}, {...none, days: 3, length: 60}, 'task', {date: '2026-10-14', start: h(17), end: null, days: 1}],
+  ])('%s', (_name, item, read, kind, when) => expect(editedWhen(item, read, kind)).toEqual(when));
+});

@@ -909,6 +909,103 @@ test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit 
   }
 });
 
+test('SV-111: the line\'s span of days: "oct 23–25" is all day over them, "fri 7pm to sun 3pm" one event across them', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const date = page.getByLabel('Date', {exact: true});
+    const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
+    await line.pressSequentially('Retreat oct 23–25');
+    await page.locator('.nl .tok-d', {hasText: 'oct 23–25'}).waitFor();
+    await page.getByRole('button', {name: 'All day · Add a time'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await date.inputValue(), await start!.count()], ['Retreat', 'Fri, Oct 23 – Sun, Oct 25', 0]);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-23');
+    const retreat = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-23&to=2026-10-26')).items.find(item => item.title === 'Retreat')!;
+    assert.deepEqual([retreat.all_day, retreat.start_date, retreat.end_date, retreat.recurrence], [true, '2026-10-23', '2026-10-26', null]);
+
+    // A time at each end: one timed event from Friday evening to Sunday afternoon.
+    await page.keyboard.press('c');
+    await line.pressSequentially('Trip fri 7pm to sun 3pm');
+    await page.locator('.nl .tok-d', {hasText: 'fri 7pm to sun 3pm'}).waitFor();
+    assert.deepEqual([await date.inputValue(), await start!.inputValue(), await end!.inputValue(), await page.locator('.editor .later').textContent()],
+      ['Fri, Oct 9 – Sun, Oct 11', '7:00 PM', '3:00 PM', '+2']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const trip = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-12')).items.find(item => item.title === 'Trip')!;
+    assert.deepEqual([trip.starts_at, trip.ends_at, trip.recurrence], ['2026-10-10T02:00:00.000Z', '2026-10-11T22:00:00.000Z', null]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-111: a span of days with one time range repeats it daily until the last day, as Repeat says', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Conference oct 23–25 9am–5pm');
+    await page.locator('.nl .tok-d', {hasText: 'oct 23–25 9am–5pm'}).waitFor();
+    const repeat = page.getByRole('button', {name: 'Repeat'});
+    await repeat.filter({hasText: 'Daily, until Sun, Oct 25'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue()],
+      ['Fri, Oct 23', '9:00 AM', '5:00 PM']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-23');
+    // Each day from the first to the last, and none after.
+    const conference = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-22&to=2026-10-28')).items.filter(item => item.title === 'Conference');
+    assert.deepEqual(conference.map(item => item.starts_at), ['2026-10-23T16:00:00.000Z', '2026-10-24T16:00:00.000Z', '2026-10-25T16:00:00.000Z']);
+    assert.deepEqual([conference[0]!.ends_at, conference[0]!.recurrence], ['2026-10-24T00:00:00.000Z', 'RRULE:FREQ=DAILY;UNTIL=20261025']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-111: a length after "for" sets End from the start, and with no time typed from 9:00 AM', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
+    await line.pressSequentially('Call Sam fri 2pm for 1.5h');
+    await page.locator('.nl .tok-d', {hasText: 'fri 2pm for 1.5h'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue()], ['Call Sam', '2:00 PM', '3:30 PM']);
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const call = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Call Sam')!;
+    assert.deepEqual([call.starts_at, call.ends_at], ['2026-10-09T21:00:00.000Z', '2026-10-09T22:30:00.000Z']);
+
+    // No time typed: it starts at the default start and lasts the length.
+    await page.keyboard.press('c');
+    await line.pressSequentially('Lunch fri for 1h');
+    await page.locator('.nl .tok-d', {hasText: 'fri for 1h'}).waitFor();
+    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue()], ['Lunch', '9:00 AM', '10:00 AM']);
+    await line.fill('Lunch fri for 2 hours');
+    await page.locator('.nl .tok-d', {hasText: 'fri for 2 hours'}).waitFor();
+    assert.equal(await end!.inputValue(), '11:00 AM');
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-09');
+    const lunch = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-09&to=2026-10-10')).items.find(item => item.title === 'Lunch')!;
+    assert.deepEqual([lunch.starts_at, lunch.ends_at], ['2026-10-09T16:00:00.000Z', '2026-10-09T18:00:00.000Z']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('F6b: a task\'s labels and repeat: picked from Todoist\'s, set on a new task and changed on an existing one', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

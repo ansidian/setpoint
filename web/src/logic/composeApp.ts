@@ -39,8 +39,11 @@ export function typedSpan(input: {before: string; after: string}): {start: numbe
   return span(input.before, input.after);
 }
 
-/** An edited item's when once its typed day and time are read (its `date`, `start`, `end` from parseTitle). */
-export function editedWhen(input: {item: When; read: {date: string | null; start: number | null; end: number | null}; kind: 'event' | 'task'}): When {
+/**
+ * An edited item's when once its typed day and time are read (its `date`, `start`, `end`, and an
+ * event's `days` and `length` from parseTitle, SV-111; without the last two, as before).
+ */
+export function editedWhen(input: {item: When; read: {date: string | null; start: number | null; end: number | null; days?: number | null; length?: number | null}; kind: 'event' | 'task'}): When {
   return whenEdited(input.item, input.read, input.kind);
 }
 

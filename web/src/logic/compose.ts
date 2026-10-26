@@ -13,6 +13,16 @@
 //   "7pm - 9pm", "11-1pm", "from 9 to 5pm" (a bare hour is a time only with am/pm or minutes, so
 //   "Gym 7" stays a title); No end, the end at the start, for the same time twice ("2pm to 2pm") or
 //   "no end" by a time ("2pm no end", "no end 2pm"; SV-108).
+// - an event's length after "for" (SV-111, D291, D292): "for 15 min", "for 1.5h", "for 1 hour 20mins",
+//   "for 1h30"; digits only, in min(s)/minute(s), h/hr(s)/hour(s), d/day(s) and week(s). It ends the
+//   event that long after its start; with no time typed, `length` alone says it, for the reader's
+//   default start. The first of a length or an end wins ("2-3pm for 2h" keeps "for 2h" as words).
+// - an event's span of days (SV-111, D292), as the Date field takes them: "oct 23–25", "oct 23 to 25",
+//   "oct 30 – nov 2", "fri to sun", "fri through sun", "from fri to sun", the last day read from the
+//   first ("fri to mon" runs into next week); a backwards one stays words. With no time it's all day
+//   over its `days`; with a time at each end ("fri 7pm to sun 3pm") one event across them; with one
+//   time or range ("oct 23–25 9am–5pm") that time each day, repeating daily until the last day.
+//   A task's line keeps lengths and spans as words.
 // - repeats: daily, weekly, monthly, yearly, annually, biweekly; every day / week / month / year;
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
 //   every month.
@@ -52,6 +62,11 @@ export interface ParsedTitle {
   recurrence: string | null;
   // A known project by its own name ("#home" is "Home"), else as typed.
   project: string | null;
+  // An all-day span's days, its first and last counting ("oct 23–25" is 3); null for no span (SV-111).
+  days: number | null;
+  // Minutes a "for" length read ("for 1.5h" is 90), the end already counting it when a start was
+  // read; with none, the event starts at the default start and lasts this long (SV-111).
+  length: number | null;
 }
 
 const RRULE_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const;
@@ -139,13 +154,22 @@ interface State {
   weeklyNeedsDay: boolean;
   // The weekdays a repeat names (Monday 0), for its first day when no date is given.
   repeatDays: number[];
+  // An event's line reads lengths and spans; a task's doesn't (SV-111).
+  event: boolean;
+  length: number | null;
+  // A span's last day, when it's all day or repeats each day; a span across days with a time at
+  // each end is just its date, start and end.
+  last: string | null;
 }
+
+const fresh = (event: boolean): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null, weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null});
 
 interface Matcher {
   kind: MarkKind;
   pattern: RegExp;
-  // False when the match isn't one after all; `state` is changed only when it is.
-  apply: (match: RegExpExecArray, state: State, today: string) => boolean;
+  // False when the match isn't one after all; `state` is changed only when it is. 'words' when it's
+  // a phrase that stays words whole (a backwards span, a task's span), read no further.
+  apply: (match: RegExpExecArray, state: State, today: string) => boolean | 'words';
 }
 
 const sticky = (source: string) => new RegExp(source, 'iy');
@@ -187,26 +211,108 @@ const REPEATS: Matcher[] = [
   }},
 ];
 
+/** A time on its own; "no end" by it is No end (SV-108), unless a length came first (SV-111). */
+function single(m: RegExpExecArray, s: State): boolean {
+  if (s.start !== null) return false;
+  const noEnd = /no\s+end/i.test(m[0]);
+  if (noEnd && s.length !== null) return false;
+  let found: number | null;
+  if (m[1]) found = m[1].toLowerCase() === 'noon' ? 720 : 0;
+  else if (!m[3] && !m[4]) return false;
+  else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
+  if (found === null) return false;
+  s.start = found;
+  if (noEnd) s.end = found;
+  return true;
+}
+
 const TIMES: Matcher[] = [
   {kind: 'when', pattern: sticky(`(?:(?:at|from)\\s+)?${TIME}\\s*(?:-|–|to|until)\\s*${TIME}${END}`), apply: (m, s) => {
     const found = range(m);
-    if (!found || s.start !== null) return false;
+    // A length read first wins over an end (SV-111).
+    if (!found || s.start !== null || s.length !== null) return false;
     [s.start, s.end] = [found.start, found.end];
     return true;
   }},
-  // A time, with "no end" before or after it for No end (SV-108).
-  {kind: 'when', pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`), apply: (m, s) => {
-    if (s.start !== null) return false;
-    let found: number | null;
-    if (m[1]) found = m[1].toLowerCase() === 'noon' ? 720 : 0;
-    else if (!m[3] && !m[4]) return false;
-    else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
-    if (found === null) return false;
-    s.start = found;
-    if (/no\s+end/i.test(m[0])) s.end = found;
-    return true;
-  }},
+  // A time, with "no end" before or after it for No end (SV-108); without it, once a length is read.
+  {kind: 'when', pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`), apply: single},
+  {kind: 'when', pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`), apply: single},
 ];
+
+// ---------- Lengths and spans (SV-111) ----------
+
+// A length's units (D291): min(s)/minute(s), h/hr(s)/hour(s), d/day(s), week(s); no "wk".
+const UNIT = '(?:minutes?|mins?|hours?|hrs?|h|days?|d|weeks?)(?![a-z])';
+const NUMBER = '\\d+(?:\\.\\d+)?';
+const UNIT_MINUTES: Record<string, number> = {m: 1, h: 60, d: 1440, w: 10080};
+
+const LENGTH: Matcher = {
+  kind: 'when', pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`), apply: (m, s) => {
+    // A task's line keeps it as words, and the first of a length or an end wins (D292).
+    if (!s.event || s.length !== null || s.end !== null) return false;
+    let minutes = 0;
+    let last = '';
+    for (const [, value, word] of m[1]!.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
+      // "1h30": minutes after hours, with no unit of their own.
+      if (!word && (last !== 'h' || Number(value) > 59)) return false;
+      last = word ? word[0]!.toLowerCase() : 'm';
+      minutes += Number(value) * UNIT_MINUTES[last]!;
+    }
+    if (Math.round(minutes) < 1) return false;
+    s.length = Math.round(minutes);
+    return true;
+  },
+};
+
+// The days a span runs between, as the date matchers read them (a bare day only last: "oct 23–25").
+const DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
+  + `|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
+// A bare day isn't an hour ("oct 3 to 5pm" is a time).
+const LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
+// A time by a span's end: am/pm or minutes, noon or midnight, as a lone time.
+const SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
+
+/**
+ * A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its
+ * month, a month and day past it next year's when its month is earlier ("dec 30 – jan 2"). Null
+ * when it's backwards: before the first, or a month and day earlier in the first's own month.
+ */
+function lastDay(text: string, from: string): string | null {
+  const bare = /^(\d{1,2})(?:st|nd|rd|th)?$/i.exec(text);
+  const to = bare ? day(Number(from.slice(0, 4)), Number(from.slice(5, 7)), Number(bare[1])) : parseDay(text, from);
+  if (to === null || to < from) return null;
+  // Read from the first without a year of its own, the same month earlier would be a year on.
+  const rolled = to.slice(0, 4) > from.slice(0, 4) && to.slice(5, 7) >= from.slice(5, 7);
+  return rolled && !/\d{4}|\/\d{1,2}\/\d{2}$/.test(text) ? null : to;
+}
+
+const SPAN: Matcher = {
+  kind: 'when',
+  pattern: sticky(`(?:(?:on|from)\\s+)?(${DAY_TEXT})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?(?:\\s*[-–—]\\s*|\\s+(?:to|through|thru)\\s+)(${LAST_DAY})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?${END}`),
+  apply: (m, s, today) => {
+    if (!s.event) return 'words';
+    if (s.date) return false;
+    const from = parseDay(m[1]!, today);
+    if (from === null) return false;
+    const to = lastDay(m[3]!, from);
+    if (to === null) return 'words';
+    const [first, second] = [m[2] ? parseClock(m[2]) : null, m[4] ? parseClock(m[4]) : null];
+    if ((m[2] && first === null) || (m[4] && second === null)) return false;
+    if (first !== null && second !== null) {
+      // A time at each end: one event across the days.
+      const end = daysBetween(from, to) * 1440 + second;
+      if (s.start !== null || s.length !== null) return false;
+      if (end <= first) return 'words';
+      [s.date, s.start, s.end] = [from, first, end];
+      return true;
+    }
+    const time = first ?? second;
+    if (time !== null && s.start !== null) return false;
+    [s.date, s.last] = [from, to];
+    if (time !== null) s.start = time;
+    return true;
+  },
+};
 
 const DATES: Matcher[] = [
   {kind: 'when', pattern: sticky(`(?:on\\s+)?(today|tonight|tomorrow|tmrw|tmr)${END}`),
@@ -239,11 +345,13 @@ function calendarMatchers(calendars: string[]): Matcher[] {
 }
 
 /** Tries each matcher at `index`; the first that matches and applies wins. */
-function matchAt(text: string, index: number, matchers: Matcher[], state: State, today: string): {length: number; kind: MarkKind} | null {
+function matchAt(text: string, index: number, matchers: Matcher[], state: State, today: string): {length: number; kind: MarkKind; words?: true} | null {
   for (const matcher of matchers) {
     matcher.pattern.lastIndex = index;
     const match = matcher.pattern.exec(text);
-    if (match && match[0].length && matcher.apply(match, state, today)) return {length: match[0].length, kind: matcher.kind};
+    const applied = match && match[0].length ? matcher.apply(match, state, today) : false;
+    if (applied === 'words') return {length: match![0].length, kind: matcher.kind, words: true};
+    if (applied) return {length: match![0].length, kind: matcher.kind};
   }
   return null;
 }
@@ -252,9 +360,9 @@ function matchAt(text: string, index: number, matchers: Matcher[], state: State,
 const BOUNDARY_WORDS = /^(?:at|on|from|to)$/i;
 
 /** Whether a phrase other than a place starts at `index` (a place stops there); `#` too while projects or calendars are read. */
-function phraseStarts(text: string, index: number, matchers: Matcher[], today: string, hash: boolean): boolean {
+function phraseStarts(text: string, index: number, matchers: Matcher[], today: string, hash: boolean, event: boolean): boolean {
   if (BOUNDARY_WORDS.test(/^\S+/.exec(text.slice(index))![0])) return true;
-  const probe: State = {date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null, weeklyNeedsDay: false, repeatDays: []};
+  const probe = fresh(event);
   return text[index] === '@' || (hash && text[index] === '#') || matchAt(text, index, matchers, probe, today) !== null;
 }
 
@@ -317,12 +425,14 @@ export function typedSpan(before: string, after: string): {start: number; end: n
  * phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
  * own counts from the item's day rather than today. With no phrase read the title is the text as
  * typed, spaces and all; phrases that leave no words keep the title as it was.
+ *
+ * A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
  */
 export function parseTitle(text: string, today: string, calendars: string[] = [], picked: string | null = null,
   hash: {kind: 'project' | 'calendar'; names: string[]; picked: string | null} | null = null,
   edit: {before: string; day: string} | null = null): ParsedTitle {
-  const state: State = {date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null, weeklyNeedsDay: false, repeatDays: []};
-  const phrases = [...calendarMatchers(calendars), ...REPEATS, ...TIMES, ...DATES];
+  const state = fresh(hash?.kind !== 'project');
+  const phrases = [...calendarMatchers(calendars), ...REPEATS, ...TIMES, LENGTH, SPAN, ...DATES];
   const marks: Mark[] = [];
   // An edit's phrases start and end in what it typed: the text is read only to its end.
   const typed = edit ? typedSpan(edit.before, text) : {start: 0, end: text.length};
@@ -330,7 +440,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   const words = [...line.matchAll(/\S+/g)].map(word => word.index).filter(index => index >= typed.start);
   for (let w = 0; w < words.length; w += 1) {
     const index = words[w]!;
-    let found: {length: number; kind: MarkKind} | null = null;
+    let found: {length: number; kind: MarkKind; words?: true} | null = null;
     const place = line[index] === '@' && state.place === null;
     if (place || (line[index] === '#' && hash && state[hash.kind] === null)) {
       // The place or project runs to the next phrase, or stops at what a pick was made for.
@@ -339,7 +449,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
       const lower = (name: string) => name.toLowerCase();
       const ends = (at: number) => new RegExp(`^${END}`).test(line.slice(at));
       let next = w + 1;
-      while (next < words.length && !phraseStarts(line, words[next]!, phrases, today, !!hash)) next += 1;
+      while (next < words.length && !phraseStarts(line, words[next]!, phrases, today, !!hash, state.event)) next += 1;
       const stopsAtPick = pick !== null && line.startsWith(pick, from) && ends(from + pick.length);
       const url = place ? PLACE_URL.exec(line.slice(from)) : null;
       // A project stops at the longest name it starts with.
@@ -369,7 +479,8 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
       found = matchAt(line, index, phrases, state, today);
     }
     if (!found) continue;
-    marks.push({start: index, end: index + found.length, kind: found.kind});
+    // A phrase that stays words is passed over whole.
+    if (!found.words) marks.push({start: index, end: index + found.length, kind: found.kind});
     while (w + 1 < words.length && words[w + 1]! < index + found.length) w += 1;
   }
 
@@ -385,6 +496,12 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   const first = edit?.day ?? today;
   if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map(index => (index - weekdayOf(first) + 7) % 7)));
   if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
+  // A span with no time is all day over its days; with one time or a length, that each day until its
+  // last, the repeat typed or a daily one (SV-111, D292).
+  let days: number | null = null;
+  if (state.last && state.start === null && state.length === null) days = daysBetween(state.date!, state.last) + 1;
+  else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${state.last.replace(/-/g, '')}`;
+  if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
 
   let title = '';
   let from = 0;
@@ -398,7 +515,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
   return {
     title,
     marks: merged, date: state.date, start: state.start, end: state.end, place: state.place, calendar: state.calendar, recurrence: state.recurrence,
-    project: state.project,
+    project: state.project, days, length: state.length,
   };
 }
 
@@ -418,7 +535,7 @@ export function lineWithTitle(text: string, marks: Mark[], title: string): strin
 export function parseDay(text: string, today: string): string | null {
   // "Fri, Oct 12" as the field shows it: the date, not the weekday.
   const parsed = parseTitle(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, 'i'), ''), today);
-  return parsed.title === '' && parsed.start === null && parsed.date ? parsed.date : null;
+  return parsed.title === '' && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
 }
 
 /**
@@ -507,9 +624,17 @@ export interface When {
  * the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
  * An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
  * task's time is its due time, with no end. With neither, it's as it was.
+ *
+ * An event's span of days (`days`) makes it all day over them, and a length with no time lasts that
+ * long from its own start, an all-day one's 9:00 AM (SV-111).
  */
-export function editedWhen(item: When, read: {date: string | null; start: number | null; end: number | null}, kind: 'event' | 'task'): When {
+export function editedWhen(item: When, read: {date: string | null; start: number | null; end: number | null; days?: number | null; length?: number | null}, kind: 'event' | 'task'): When {
   const date = read.date ?? item.date;
+  if (kind === 'event' && read.days != null) return {date, start: null, end: null, days: read.days};
+  if (kind === 'event' && read.start === null && read.length != null) {
+    const start = item.start ?? 9 * 60;
+    return {date, start, end: start + read.length, days: 1};
+  }
   if (read.start === null) return {...item, date};
   if (kind === 'task') return {date, start: read.start, end: null, days: 1};
   const length = item.start === null || item.end === null ? (item.days - 1) * 1440 + 60 : item.end - item.start;
@@ -584,9 +709,19 @@ const ORDINAL_NAMES: Record<string, string> = {'1': 'first', '2': 'second', '3':
 
 const ruleParts = (rule: string) => new Map(rule.replace(/^RRULE:/, '').split(';').filter(Boolean).map(part => part.split('=') as [string, string]));
 
-/** A rule as the repeat field says it: "Weekly on Mon, Wed, Fri", "Every 2 weeks on Mon", "Monthly on the first Mon". */
+/**
+ * A rule as the repeat field says it: "Weekly on Mon, Wed, Fri", "Every 2 weeks on Mon", "Monthly on
+ * the first Mon"; a last day, as the line writes it, after it ("Daily, until Sun, Oct 25"; SV-111).
+ */
 export function describeRule(rule: string | null, date: string): string {
   if (!rule) return 'Does not repeat';
+  // An UNTIL with a time is an instant in UTC, whose local day this can't tell; it's left unsaid.
+  const until = /^(\d{4})(\d{2})(\d{2})$/.exec(ruleParts(rule).get('UNTIL') ?? '');
+  const said = describeRepeat(rule, date);
+  return until && said !== 'Custom repeat' ? `${said}, until ${new Date(`${until[1]}-${until[2]}-${until[3]}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})}` : said;
+}
+
+function describeRepeat(rule: string, date: string): string {
   const parts = ruleParts(rule);
   const interval = Number(parts.get('INTERVAL') ?? 1);
   const days = parts.get('BYDAY');

@@ -30,13 +30,16 @@ const HEADER = `// Setpoint's title parser (web/src/logic/compose.ts), built by 
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
 //     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
-//        place, calendar, recurrence, project}
+//        place, calendar, recurrence, project, days, length}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
+//     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
+//      "for" length read, else null, the end already counting it when a start was read, and with
+//      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
 //   typedSpan({before, after}) → {start, end}, what an edit typed
-//   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
+//   editedWhen({item: {date, start, end, days}, read: {date, start, end, days?, length?}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
 // over 1440, an end at the start No end). shared/compose/cases.json records what each returns.`;
@@ -66,6 +69,21 @@ const CASE_LIST: Case[] = [
   line('Dinner tmr at 7:30pm'),
   // An end at its start, and "no end" by a time, are No end (SV-108); only an end before it is the next day's.
   ...['event at 2pm to 2pm', 'Call 2-2pm', 'Call 14:00–14:00', 'Call Sam 2pm no end', 'Call Sam no end 2pm', 'Call Sam no end'].map(text => line(text)),
+  // An event's length after "for" (SV-111, D291, D292): digits, decimals and compounds; with no time,
+  // `length` alone; the first of a length or an end wins; bare lengths, number words and "wk" stay.
+  ...['Run fri 7am for 15 min', 'Call 2pm for 1.5h', 'Meeting 2pm for 1 hour 20mins', 'Meeting 2pm for 1h30', 'Meeting 2pm for 1 hr 1 minute',
+    'Party 11pm for 2 hours', 'Trip fri 9am for 2 days', 'Retreat sat 9am for 1 week', 'Trip 9am for 1d', 'Shift for 90 minutes 3pm', 'Lunch fri for 1h',
+    '30 min run', 'Run for one hour', 'Run for 1 wk', 'Run for 2 dogs', 'Run for 0 min', 'Call 2-3pm for 2h', 'Call 2pm no end for 1h',
+    'Call for 1h 2-3pm', 'Call for 1h 2pm no end'].map(text => line(text)),
+  line('Study fri 3pm for 1h', 'task'),
+  // An event's span of days (SV-111, D292): all day with no time, one event with a time at each end,
+  // a daily repeat until the last day with one time; backwards stays words, and a task's line keeps it.
+  ...['Trip oct 23–25', 'Trip oct 23 to 25', 'Trip oct 30 – nov 2', 'Trip dec 30 - jan 2', 'Trip fri to sun', 'Trip fri through sun', 'Trip from fri to sun',
+    'Trip fri to mon', 'Trip 10/23 - 10/25', 'Trip fri 7pm to sun 3pm', 'Conference oct 23–25 9am–5pm', 'Camp fri to sun 9am', 'Camp fri 9am to sun',
+    'Camp oct 23–25 for 2h', 'Standup weekly nov 2 to nov 30 9am', 'Trip oct 25–23', 'Trip oct 25 – oct 23', 'Trip 10/25/2026 - 10/23/2026',
+    'Trip fri 7pm to fri 3pm', 'Meet oct 3 to 5pm', 'Dinner fri 7pm to 9pm'].map(text => line(text)),
+  line('Pack fri to sun', 'task'),
+  line('Pack fri 7pm to sun 3pm', 'task'),
   // Repeats.
   ...['daily', 'weekly', 'monthly', 'yearly', 'annually', 'biweekly', 'every day', 'every week', 'every month', 'every year', 'every 2 weeks',
     'every 3 days', 'every other mon', 'every mon, wed and fri', 'every tue and thu', 'every weekday', 'every weekend',
@@ -128,6 +146,12 @@ const CASE_LIST: Case[] = [
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: '2026-10-16', start: null, end: null}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: null, end: null, days: 2}, read: {date: null, start: 540, end: null}, kind: 'event'}},
   {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 1020, end: null, days: 1}, read: {date: '2026-10-09', start: null, end: null}, kind: 'task'}},
+  // SV-111: a span typed into an edit is all day over its days; a length with no time keeps the start.
+  edited('Work', 'Work oct 23–25'),
+  edited('Work', 'Work for 2h'),
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: '2026-10-23', start: null, end: null, days: 3, length: null}, kind: 'event'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: 180, end: 480, days: 1}, read: {date: null, start: null, end: null, days: null, length: 60}, kind: 'event'}},
+  {fn: 'editedWhen', input: {item: {date: '2026-10-14', start: null, end: null, days: 2}, read: {date: null, start: null, end: null, days: null, length: 90}, kind: 'event'}},
 ];
 
 async function bundle(): Promise<string> {

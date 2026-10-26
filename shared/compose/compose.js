@@ -4,13 +4,16 @@
 //   parseTitle({text, kind: "event"|"task", today: "YYYY-MM-DD", calendars: [name], projects: [name],
 //     pickedPlace?: string|null, pickedHash?: string|null, edit?: {before, day: "YYYY-MM-DD"}|null})
 //     → {title, marks: [{start, end, kind: "when"|"place"|"calendar"|"project"}], date, start, end,
-//        place, calendar, recurrence, project}
+//        place, calendar, recurrence, project, days, length}
 //     (edit: an item's title before it was edited, and its day; only what the edit typed is read)
+//     (days: an event's all-day span of days, first and last counting, else null; length: minutes a
+//      "for" length read, else null, the end already counting it when a start was read, and with
+//      none the event starts at the default start, the slot's else 9:00 AM; SV-111)
 //   bareToken({text, trigger: "#"|"@"}) → {start, query} | null
 //   completeToken({text, start, end, name}) → {text, caret}
 //   lineWithTitle({text, marks, title}) → string
 //   typedSpan({before, after}) → {start, end}, what an edit typed
-//   editedWhen({item: {date, start, end, days}, read: {date, start, end}, kind}) → {date, start, end, days}
+//   editedWhen({item: {date, start, end, days}, read: {date, start, end, days?, length?}, kind}) → {date, start, end, days}
 //   call(name, inputJSON) → resultJSON, the same with JSON text
 // Offsets are UTF-16 code units; start and end are minutes after midnight (an end past midnight is
 // over 1440, an end at the start No end). shared/compose/cases.json records what each returns.
@@ -21,6 +24,10 @@ var SetpointCompose = (function(exports) {
 	/** A local day `days` after `date` ("2026-10-07" + 1 → "2026-10-08"). */
 	function addDays(date, days) {
 		return new Date(Date.parse(`${date}T12:00:00Z`) + days * DAY).toISOString().slice(0, 10);
+	}
+	/** Whole days from `from` to `to`, both local days. */
+	function daysBetween(from, to) {
+		return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / DAY);
 	}
 	//#endregion
 	//#region web/src/logic/compose.ts
@@ -129,6 +136,20 @@ var SetpointCompose = (function(exports) {
 	}
 	/** "every mon, wed and fri" → MO,WE,FR in the week's order. */
 	var byDays = (text) => [...new Set([...text.matchAll(new RegExp(WEEKDAY, "gi"))].map((found) => weekdayIndex(found[0])))].sort((a, b) => a - b).map((index) => RRULE_DAYS[index]).join(",");
+	var fresh = (event) => ({
+		date: null,
+		start: null,
+		end: null,
+		place: null,
+		calendar: null,
+		recurrence: null,
+		project: null,
+		weeklyNeedsDay: false,
+		repeatDays: [],
+		event,
+		length: null,
+		last: null
+	});
 	var sticky = (source) => new RegExp(source, "iy");
 	function rule(state, body, weeklyNeedsDay = false) {
 		if (state.recurrence) return false;
@@ -199,30 +220,111 @@ var SetpointCompose = (function(exports) {
 			}
 		}
 	];
-	var TIMES = [{
+	/** A time on its own; "no end" by it is No end (SV-108), unless a length came first (SV-111). */
+	function single(m, s) {
+		if (s.start !== null) return false;
+		const noEnd = /no\s+end/i.test(m[0]);
+		if (noEnd && s.length !== null) return false;
+		let found;
+		if (m[1]) found = m[1].toLowerCase() === "noon" ? 720 : 0;
+		else if (!m[3] && !m[4]) return false;
+		else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
+		if (found === null) return false;
+		s.start = found;
+		if (noEnd) s.end = found;
+		return true;
+	}
+	var TIMES = [
+		{
+			kind: "when",
+			pattern: sticky(`(?:(?:at|from)\\s+)?${TIME}\\s*(?:-|–|to|until)\\s*${TIME}${END}`),
+			apply: (m, s) => {
+				const found = range(m);
+				if (!found || s.start !== null || s.length !== null) return false;
+				[s.start, s.end] = [found.start, found.end];
+				return true;
+			}
+		},
+		{
+			kind: "when",
+			pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`),
+			apply: single
+		},
+		{
+			kind: "when",
+			pattern: sticky(`(?:at\\s+)?(?:(noon|midnight)|${TIME})${END}`),
+			apply: single
+		}
+	];
+	var UNIT = "(?:minutes?|mins?|hours?|hrs?|h|days?|d|weeks?)(?![a-z])";
+	var NUMBER = "\\d+(?:\\.\\d+)?";
+	var UNIT_MINUTES = {
+		m: 1,
+		h: 60,
+		d: 1440,
+		w: 10080
+	};
+	var LENGTH = {
 		kind: "when",
-		pattern: sticky(`(?:(?:at|from)\\s+)?${TIME}\\s*(?:-|–|to|until)\\s*${TIME}${END}`),
+		pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`),
 		apply: (m, s) => {
-			const found = range(m);
-			if (!found || s.start !== null) return false;
-			[s.start, s.end] = [found.start, found.end];
+			if (!s.event || s.length !== null || s.end !== null) return false;
+			let minutes = 0;
+			let last = "";
+			for (const [, value, word] of m[1].matchAll(/(\d+(?:\.\d+)?)\s*([a-z]*)/gi)) {
+				if (!word && (last !== "h" || Number(value) > 59)) return false;
+				last = word ? word[0].toLowerCase() : "m";
+				minutes += Number(value) * UNIT_MINUTES[last];
+			}
+			if (Math.round(minutes) < 1) return false;
+			s.length = Math.round(minutes);
 			return true;
 		}
-	}, {
+	};
+	var DAY_TEXT = `(?:today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
+	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
+	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
+	/**
+	* A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its
+	* month, a month and day past it next year's when its month is earlier ("dec 30 – jan 2"). Null
+	* when it's backwards: before the first, or a month and day earlier in the first's own month.
+	*/
+	function lastDay(text, from) {
+		const bare = /^(\d{1,2})(?:st|nd|rd|th)?$/i.exec(text);
+		const to = bare ? day(Number(from.slice(0, 4)), Number(from.slice(5, 7)), Number(bare[1])) : parseDay(text, from);
+		if (to === null || to < from) return null;
+		return to.slice(0, 4) > from.slice(0, 4) && to.slice(5, 7) >= from.slice(5, 7) && !/\d{4}|\/\d{1,2}\/\d{2}$/.test(text) ? null : to;
+	}
+	var SPAN = {
 		kind: "when",
-		pattern: sticky(`(?:no\\s+end\\s+)?(?:at\\s+)?(?:(noon|midnight)|${TIME})(?:\\s+no\\s+end)?${END}`),
-		apply: (m, s) => {
-			if (s.start !== null) return false;
-			let found;
-			if (m[1]) found = m[1].toLowerCase() === "noon" ? 720 : 0;
-			else if (!m[3] && !m[4]) return false;
-			else found = clock(Number(m[2]), Number(m[3] ?? 0), meridiemOf(m[4]));
-			if (found === null) return false;
-			s.start = found;
-			if (/no\s+end/i.test(m[0])) s.end = found;
+		pattern: sticky(`(?:(?:on|from)\\s+)?(${DAY_TEXT})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?(?:\\s*[-–—]\\s*|\\s+(?:to|through|thru)\\s+)(${LAST_DAY})(?:\\s+(?:at\\s+)?(${SPAN_TIME}))?${END}`),
+		apply: (m, s, today) => {
+			if (!s.event) return "words";
+			if (s.date) return false;
+			const from = parseDay(m[1], today);
+			if (from === null) return false;
+			const to = lastDay(m[3], from);
+			if (to === null) return "words";
+			const [first, second] = [m[2] ? parseClock(m[2]) : null, m[4] ? parseClock(m[4]) : null];
+			if (m[2] && first === null || m[4] && second === null) return false;
+			if (first !== null && second !== null) {
+				const end = daysBetween(from, to) * 1440 + second;
+				if (s.start !== null || s.length !== null) return false;
+				if (end <= first) return "words";
+				[s.date, s.start, s.end] = [
+					from,
+					first,
+					end
+				];
+				return true;
+			}
+			const time = first ?? second;
+			if (time !== null && s.start !== null) return false;
+			[s.date, s.last] = [from, to];
+			if (time !== null) s.start = time;
 			return true;
 		}
-	}];
+	};
 	var DATES = [
 		{
 			kind: "when",
@@ -274,7 +376,13 @@ var SetpointCompose = (function(exports) {
 		for (const matcher of matchers) {
 			matcher.pattern.lastIndex = index;
 			const match = matcher.pattern.exec(text);
-			if (match && match[0].length && matcher.apply(match, state, today)) return {
+			const applied = match && match[0].length ? matcher.apply(match, state, today) : false;
+			if (applied === "words") return {
+				length: match[0].length,
+				kind: matcher.kind,
+				words: true
+			};
+			if (applied) return {
 				length: match[0].length,
 				kind: matcher.kind
 			};
@@ -283,19 +391,10 @@ var SetpointCompose = (function(exports) {
 	}
 	var BOUNDARY_WORDS = /^(?:at|on|from|to)$/i;
 	/** Whether a phrase other than a place starts at `index` (a place stops there); `#` too while projects or calendars are read. */
-	function phraseStarts(text, index, matchers, today, hash) {
+	function phraseStarts(text, index, matchers, today, hash, event) {
 		if (BOUNDARY_WORDS.test(/^\S+/.exec(text.slice(index))[0])) return true;
-		return text[index] === "@" || hash && text[index] === "#" || matchAt(text, index, matchers, {
-			date: null,
-			start: null,
-			end: null,
-			place: null,
-			calendar: null,
-			recurrence: null,
-			project: null,
-			weeklyNeedsDay: false,
-			repeatDays: []
-		}, today) !== null;
+		const probe = fresh(event);
+		return text[index] === "@" || hash && text[index] === "#" || matchAt(text, index, matchers, probe, today) !== null;
 	}
 	/** A link as a place ("https://zoom.us/j/1"), without punctuation after it. */
 	var PLACE_URL = /^(?:https?:\/\/|www\.)\S+?(?=[.,;!?]*(?:\s|$))/i;
@@ -360,23 +459,17 @@ var SetpointCompose = (function(exports) {
 	* phrases wholly inside what the edit typed are read (`typedSpan`), and a repeat with no day of its
 	* own counts from the item's day rather than today. With no phrase read the title is the text as
 	* typed, spaces and all; phrases that leave no words keep the title as it was.
+	*
+	* A task's line (`hash` its projects) reads no lengths or spans of days; any other, an event's, does.
 	*/
 	function parseTitle$1(text, today, calendars = [], picked = null, hash = null, edit = null) {
-		const state = {
-			date: null,
-			start: null,
-			end: null,
-			place: null,
-			calendar: null,
-			recurrence: null,
-			project: null,
-			weeklyNeedsDay: false,
-			repeatDays: []
-		};
+		const state = fresh(hash?.kind !== "project");
 		const phrases = [
 			...calendarMatchers(calendars),
 			...REPEATS,
 			...TIMES,
+			LENGTH,
+			SPAN,
 			...DATES
 		];
 		const marks = [];
@@ -396,7 +489,7 @@ var SetpointCompose = (function(exports) {
 				const lower = (name) => name.toLowerCase();
 				const ends = (at) => new RegExp(`^${END}`).test(line.slice(at));
 				let next = w + 1;
-				while (next < words.length && !phraseStarts(line, words[next], phrases, today, !!hash)) next += 1;
+				while (next < words.length && !phraseStarts(line, words[next], phrases, today, !!hash, state.event)) next += 1;
 				const stopsAtPick = pick !== null && line.startsWith(pick, from) && ends(from + pick.length);
 				const url = place ? PLACE_URL.exec(line.slice(from)) : null;
 				const known = hash?.kind !== "project" ? void 0 : hash.names.filter((name) => lower(line.slice(from, from + name.length)) === lower(name) && ends(from + name.length)).sort((a, b) => b.length - a.length)[0];
@@ -421,7 +514,7 @@ var SetpointCompose = (function(exports) {
 				}
 			} else found = matchAt(line, index, phrases, state, today);
 			if (!found) continue;
-			marks.push({
+			if (!found.words) marks.push({
 				start: index,
 				end: index + found.length,
 				kind: found.kind
@@ -437,6 +530,10 @@ var SetpointCompose = (function(exports) {
 		const first = edit?.day ?? today;
 		if (!state.date && state.repeatDays.length) state.date = addDays(first, Math.min(...state.repeatDays.map((index) => (index - weekdayOf(first) + 7) % 7)));
 		if (state.recurrence && state.weeklyNeedsDay) state.recurrence += `;BYDAY=${RRULE_DAYS[weekdayOf(state.date ?? first)]}`;
+		let days = null;
+		if (state.last && state.start === null && state.length === null) days = daysBetween(state.date, state.last) + 1;
+		else if (state.last) state.recurrence = `${state.recurrence ?? "RRULE:FREQ=DAILY"};UNTIL=${state.last.replace(/-/g, "")}`;
+		if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
 		let title = "";
 		let from = 0;
 		for (const mark of merged) {
@@ -455,7 +552,9 @@ var SetpointCompose = (function(exports) {
 			place: state.place,
 			calendar: state.calendar,
 			recurrence: state.recurrence,
-			project: state.project
+			project: state.project,
+			days,
+			length: state.length
 		};
 	}
 	/**
@@ -469,15 +568,57 @@ var SetpointCompose = (function(exports) {
 		if (!rest) return title;
 		return /\s$/.test(title) ? `${title}${rest}` : `${title} ${rest}`;
 	}
+	/** A typed day for the date field ("fri", "oct 12", "10/12"), or null. */
+	function parseDay(text, today) {
+		const parsed = parseTitle$1(text.trim().replace(new RegExp(`^(?:${WEEKDAY}),?\\s+(?=\\S)`, "i"), ""), today);
+		return parsed.title === "" && parsed.start === null && parsed.days === null && parsed.date ? parsed.date : null;
+	}
+	/**
+	* A typed time for a time field ("7pm", "7:30 PM", "19:00", and SV-25's shorthand "3p", "330p",
+	* "2130"; "7" or "930" keep `meridiemFrom`'s half), or null.
+	*/
+	function parseClock(text, meridiemFrom = null) {
+		const typed = /^\s*(\d{1,2})(?::?(\d{2}))?\s*(?:([ap])\.?m?\.?)?\s*$/i.exec(text);
+		if (typed) {
+			const [hour, minute, meridiem] = [
+				Number(typed[1]),
+				Number(typed[2] ?? 0),
+				typed[3]?.toLowerCase()
+			];
+			if (meridiem) return clock(hour, minute, meridiem);
+			if (meridiemFrom !== null && hour <= 12) return clock(hour, minute, meridiemFrom >= 720 ? "p" : "a");
+			return typed[2] ? clock(hour, minute, null) : null;
+		}
+		const parsed = parseTitle$1(text.trim(), "2000-01-01");
+		return parsed.title === "" && parsed.start !== null && parsed.end === null ? parsed.start : null;
+	}
 	/**
 	* An edited item's when, once its title's typed day and time are read (SV-90): a day moves it,
 	* keeping its time and length (an all-day event its days); a time moves its start on its own day,
 	* the end keeping the length ("Work" 3:00 – 8:00 AM at 3:45a ends 8:45 AM); a range sets both ends.
 	* An all-day event given a time ends an hour later on its last day, as Add a time makes it. A
 	* task's time is its due time, with no end. With neither, it's as it was.
+	*
+	* An event's span of days (`days`) makes it all day over them, and a length with no time lasts that
+	* long from its own start, an all-day one's 9:00 AM (SV-111).
 	*/
 	function editedWhen$1(item, read, kind) {
 		const date = read.date ?? item.date;
+		if (kind === "event" && read.days != null) return {
+			date,
+			start: null,
+			end: null,
+			days: read.days
+		};
+		if (kind === "event" && read.start === null && read.length != null) {
+			const start = item.start ?? 540;
+			return {
+				date,
+				start,
+				end: start + read.length,
+				days: 1
+			};
+		}
 		if (read.start === null) return {
 			...item,
 			date
@@ -511,7 +652,10 @@ var SetpointCompose = (function(exports) {
 	function typedSpan(input) {
 		return typedSpan$1(input.before, input.after);
 	}
-	/** An edited item's when once its typed day and time are read (its `date`, `start`, `end` from parseTitle). */
+	/**
+	* An edited item's when once its typed day and time are read (its `date`, `start`, `end`, and an
+	* event's `days` and `length` from parseTitle, SV-111; without the last two, as before).
+	*/
 	function editedWhen(input) {
 		return editedWhen$1(input.item, input.read, input.kind);
 	}
