@@ -1349,9 +1349,22 @@ test('/calendar/new: the proposal card\'s More options opens the editor pre-fill
     const expected = ['title', 'date', 'place'].filter(field => proposal.from_email.includes(field) || (field === 'date' && proposal.from_email.includes('time')));
     assert.ok(expected.includes('title'), `the seed's proposal gives a title (${proposal.from_email.join(', ')})`);
     await until('the marks', marked, found => found.join() === expected.join());
-    // At the line's right end, the line's text stopping before it.
-    const [mark, field, input] = await rested(() => Promise.all(['.ed-line .nl > .srcm', '.ed-line .nl', '.ed-line .nl-input'].map(selector => page.locator(selector).evaluate(element => element.getBoundingClientRect().toJSON() as DOMRect))));
-    assert.ok(mark!.right <= field!.right && field!.right - mark!.right < 16 && input!.right <= mark!.left, `the mark at ${mark!.left}–${mark!.right}, the line ${field!.right}, its text to ${input!.right}`);
+    // At the line's right end, before its ? (SV-114), the line's text stopping before both.
+    const [mark, field, input, question] = await rested(() => Promise.all(['.ed-line .nl > .srcm', '.ed-line .nl', '.ed-line .nl-input', '.ed-line .lr-q']
+      .map(selector => page.locator(selector).evaluate(element => element.getBoundingClientRect().toJSON() as DOMRect))));
+    assert.ok(question!.right <= field!.right && field!.right - question!.right < 16, `the ? at ${question!.left}–${question!.right}, the line ${field!.right}`);
+    assert.ok(question!.top >= field!.top && question!.bottom <= field!.bottom, `the ? at ${question!.top}–${question!.bottom}, inside the line's ${field!.top}–${field!.bottom}`);
+    assert.ok(mark!.right <= question!.left && input!.right <= mark!.left, `the mark at ${mark!.left}–${mark!.right}, the ? from ${question!.left}, the text to ${input!.right}`);
+    // SV-114 (D295): the ? opens What the line reads under it, its right edge on the line's; Esc
+    // closes it, not the editor (the rest is in components/lineReference.test.tsx).
+    await page.getByRole('button', {name: 'What the line reads'}).click();
+    const reference = page.getByRole('dialog', {name: 'What the line reads'});
+    await reference.getByText('Standup 9am for 15 mins').waitFor();
+    const card = await rested(() => reference.evaluate(element => element.getBoundingClientRect().toJSON() as DOMRect));
+    assert.ok(card.top >= field!.bottom && Math.abs(card.right - field!.right) < 1, `the reference at ${card.top}, right ${card.right}; the line's foot ${field!.bottom}, right ${field!.right}`);
+    await page.keyboard.press('Escape');
+    await reference.waitFor({state: 'detached'});
+    assert.equal(await page.locator('.editor').count(), 1, 'the editor stays');
     await page.locator('.ed-foot .legend', {hasText: 'From the email'}).waitFor();
     // It stays inside the footer's padding, however narrow the editor (UX #23).
     const [legend, foot] = await page.locator('.ed-foot').evaluate(element => [element.querySelector('.legend')!.getBoundingClientRect().right, element.getBoundingClientRect().right]);

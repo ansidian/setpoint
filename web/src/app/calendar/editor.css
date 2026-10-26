@@ -23,8 +23,8 @@
 /* The line that parses as it's typed: the text shows through a mirror holding the marks, under an
    input whose own text is clear, so the caret stays on its letter. */
 .editor .nl { position: relative; display: block; line-height: 48px; white-space: pre; overflow: hidden; }
-.editor .nl-marks { position: absolute; left: 12px; right: 12px; top: 0; bottom: 0; font-size: 16px; font-weight: 500; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
-.editor .nl .nl-input { position: absolute; left: 12px; right: 12px; top: 0; width: calc(100% - 24px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
+.editor .nl-marks { position: absolute; left: 12px; right: 40px; top: 0; bottom: 0; font-size: 16px; font-weight: 500; color: var(--ink); white-space: pre; overflow: hidden; pointer-events: none; }
+.editor .nl .nl-input { position: absolute; left: 12px; right: 40px; top: 0; width: calc(100% - 52px); height: 48px; color: transparent; caret-color: var(--ink); font-size: 16px; font-weight: 500; }
 .editor .nl .nl-input::placeholder { color: var(--ink3); }
 .editor .nl .nl-input::selection { color: transparent; background: color-mix(in oklch, var(--accent) 30%, transparent); }
 /* SV-56: a line longer than the field scrolls inside the input, and the marks move with it
@@ -33,11 +33,33 @@
 .editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
-/* D290: a new item's title is the line's, so an email's title mark sits at its trailing edge, the
-   text stopping 8 px before it; a mark under the pointer, which a click makes words, deepens. */
-.editor .nl.src .nl-marks { right: 34px; }
-.editor .nl.src .nl-input { right: 34px; width: calc(100% - 46px); }
-.editor .nl > .srcm { position: absolute; right: 12px; top: 0; bottom: 0; align-content: center; }
+/* D290: a new item's title is the line's, so an email's title mark sits at its trailing edge, before
+   the ? (SV-114), the text stopping 8 px before it; a mark under the pointer, which a click makes
+   words, deepens. */
+.editor .nl.src .nl-marks { right: 62px; }
+.editor .nl.src .nl-input { right: 62px; width: calc(100% - 74px); }
+.editor .nl > .srcm { position: absolute; right: 40px; top: 0; bottom: 0; align-content: center; }
+/* SV-114 (D295): the ? at the line's trailing edge, 8 px in from it, and What the line reads under it,
+   its right edge on the line's. */
+.editor .ed-line { position: relative; }
+.editor .line-ref { position: absolute; right: 28px; top: 0; height: 48px; display: grid; align-content: center; }
+.editor .lr-q { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); font-size: 13px; font-weight: 600;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.editor .lr-q:focus-visible, .editor .lr-q[aria-expanded="true"] { background: var(--sub2); color: var(--ink); }
+@media (hover: hover) { .editor .lr-q:hover { background: var(--sub2); color: var(--ink); } }
+.editor .lr-pop { position: absolute; right: -8px; top: calc(100% + 4px); z-index: 6; width: min(360px, calc(100vw - 40px));
+  max-height: min(440px, calc(100dvh - 160px)); overflow-y: auto; padding: 12px 14px 14px; outline: none; }
+.editor .lr-pop[data-up] { top: auto; bottom: calc(100% + 4px); }
+.editor .lr-head { font-size: 13px; font-weight: 500; color: var(--ink); }
+.editor .lr-sec { margin-top: 12px; }
+.editor .lr-title { font-size: 12px; font-weight: 500; color: var(--ink3); margin-bottom: 4px; }
+.editor .lr-note { font-size: 12.5px; color: var(--ink3); margin-bottom: 4px; }
+.editor .lr-sec ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 6px; row-gap: 4px; }
+/* Each row is the example, an arrow, and what it reads, the three lined up down the section. */
+.editor .lr-sec li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; font-size: 13px; line-height: 18px; color: var(--ink); }
+.editor .lr-to { color: var(--ink3); }
+.editor .lr-reads { color: var(--ink2); }
+.editor .lr-kept { text-decoration: underline dotted var(--ink3); text-underline-offset: 3px; }
 .editor .nl.over .nl-input { cursor: pointer; }
 /* A mark draws 2 px either side of its text without moving it. */
 .editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j, .editor .tok-r { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }

@@ -535,7 +535,8 @@ tint of their own, #258; a
 line longer than the field shows where it's typed,
 the cut side fading, #110). A new item is that one line, as an edited one is: its title is the
 words left unlit, with no Title field under it, and a click on a lit phrase (or ⌥⌫ inside it)
-keeps it as words (#257). Then **Places**
+keeps it as words (#257). A small **?** at the line's trailing edge opens **What the line reads**
+under it, one example of each kind of phrase and what it reads (#260). Then **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
 #255) with **Time to Leave** added from the same menu, never by default (#86), and the
@@ -2771,3 +2772,24 @@ it changes what's on screen.
     documents no count, so "6 times" stays words in a task's line. The iPhone app gets the same
     through the compose bundle. Board audit: no board draws a relative day or a repeat's end typed
     in the line.
+260. **What the line reads, from a ? at the line's end** (the user, 2026-10-26; darma SV-114, D295).
+    The phrases should need no learning; this is the backup. A small `?` (24 px, `ink3`, `sub2`
+    behind it on hover, focus or while open) sits 8 px in from the line's trailing edge, the text
+    stopping 8 px before it, and an email's "From the email" mark (#257) sits before it. It's a tab
+    stop after the line. It opens a popover under it, its right edge on the line's, as wide as the
+    line (360 px, the phone's width less 40 px), up to 440 px tall and scrolling inside: "What the
+    line reads", then a section per kind of phrase, each row an example, an arrow and what it reads
+    in the editor's own words, lined up down the section: Days ("Lunch fri → Fri, Oct 9", "Review
+    in 3 days → Sat, Oct 10"), Times ("Call 2-3pm → 2:00 – 3:00 PM", "Call 2pm no end → 2:00 PM, No
+    end"), Lengths and spans ("Standup 9am for 15 mins → 9:00 – 9:15 AM", "Trip fri to sun → Fri,
+    Oct 9 – Sun, Oct 11, all day"), Repeats ("Gym every mon → Mon, Oct 12 · Weekly on Monday", "Gym
+    daily until fri → Daily, until Fri, Oct 9"), Reminders ("Call mom remind me 1h before → a reminder 1 hour before"), Places,
+    calendars and projects ("Coffee @Blue Door → at Blue Door", "Lecture #classes → the Classes
+    calendar", "Pay rent #home → the Home project") and Keeping a phrase as words, under "Click a
+    lit phrase, or press ⌥⌫ inside it, and it stays words." ("Lunch with May 12 fri", May 12
+    underlined dotted, → "“Lunch with May 12” · Fri, Oct 9"). Opened, it takes focus; Esc closes
+    it and not the editor, focus going back to the `?`, and a press outside it, the `?` again or
+    focus leaving it closes it too. Its words live in `shared/compose/reference.json`, beside the
+    parse table, so the iPhone shows the same ones from its ⓘ (SI-52); every example is run through
+    the parser on the seed's Wed, Oct 7, and a row that doesn't read what it says fails `npm test`.
+    The placeholders stay as they are. Board audit: board 13 draws no `?` on the line.

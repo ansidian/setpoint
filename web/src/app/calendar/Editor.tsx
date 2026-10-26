@@ -36,6 +36,7 @@ import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar} from '../accounts.ts';
+import {LineReference} from './LineReference.tsx';
 import {DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
@@ -941,6 +942,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               }} />
             {titleMark}
           </label>
+          <LineReference />
         </div>
 
         <div className="eg">
