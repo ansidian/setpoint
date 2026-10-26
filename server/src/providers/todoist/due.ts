@@ -36,11 +36,15 @@ export function readDue(due: TodoistDue, timeZone: string): {dueDate: string; du
  * A task's due as Todoist's write fields: a day, an instant (UTC, so Todoist keeps it fixed), or,
  * for a repeating task, one due string holding the repeat, the time and the day it starts from
  * ("every mon at 09:00 starting 2026-10-12"). Todoist reads a bare date as the end of a repeat, so
- * the repeat always travels with the date (F6b; B5 refused the date change instead, D16).
+ * the repeat always travels with the date (F6b; B5 refused the date change instead, D16). A repeat
+ * with a last day ("every mon until 2026-12-15", SV-113) puts it after the first, in the form Todoist
+ * documents ("everyday from 10 May until 20 May"): "every mon at 09:00 from 2026-10-12 until 2026-12-15".
  */
 export function writeDue(task: {dueDate: string | null; dueAt: string | null; repeat?: string | null}, timeZone: string): {due_date?: string; due_datetime?: string; due_string?: string} {
   if (task.repeat && task.dueDate) {
     const at = task.dueAt ? ` at ${localTime(task.dueAt, timeZone)}` : '';
+    const ending = ENDING_CLAUSE.exec(task.repeat);
+    if (ending) return {due_string: `${task.repeat.slice(0, ending.index)}${at} from ${task.dueDate} ${ending[0].trim()}`};
     return {due_string: `${task.repeat}${at} starting ${task.dueDate}`};
   }
   if (task.dueAt) return {due_datetime: new Date(task.dueAt).toISOString().replace(/\.\d{3}Z$/, 'Z')};
@@ -51,16 +55,23 @@ export function writeDue(task: {dueDate: string | null; dueAt: string | null; re
 // "… starting oct 12", "… from 2026-10-12", "… at 9am", "… @ 21:00": what Todoist adds to a repeat.
 const START_CLAUSE = /\s+(?:starting|from)\s+.*$/i;
 const TIME_CLAUSE = /\s+(?:at|@)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?$/i;
+// "… until dec 15", "… ending aug 3": a repeat's last day (SV-113), up to a start after it or the end.
+const ENDING_CLAUSE = /\s+(?:until|ending)\s+.+?(?=\s+(?:starting|from)\s+|$)/i;
 
 /**
  * The repeat in a repeating task's due string, without the time or the start Todoist keeps in it
  * ("every mon at 9am starting oct 12" → "every mon"); null when there are no words to keep.
  * shortcut: only trailing "at <time>" and "starting/from <day>" clauses are taken off; a time inside
- * the repeat ("every mon 9am, wed 5pm") stays in it, and Todoist reads it the same way again.
+ * the repeat ("every mon 9am, wed 5pm") stays in it, and Todoist reads it the same way again. A last
+ * day ("until …", "ending …") is kept, after the repeat ("every mon from oct 12 until dec 15" →
+ * "every mon until dec 15"; SV-113).
  */
 export function repeatOf(dueString: string | null): string | null {
-  const words = (dueString ?? '').trim().replace(START_CLAUSE, '').replace(TIME_CLAUSE, '').trim();
-  return words || null;
+  const text = (dueString ?? '').trim();
+  const ending = ENDING_CLAUSE.exec(text);
+  const rest = ending ? `${text.slice(0, ending.index)}${text.slice(ending.index + ending[0].length)}` : text;
+  const words = rest.replace(START_CLAUSE, '').replace(TIME_CLAUSE, '').trim();
+  return words ? `${words}${ending ? ` ${ending[0].trim()}` : ''}` : null;
 }
 
 /**

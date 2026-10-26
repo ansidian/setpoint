@@ -46,6 +46,10 @@ describe('F6b: a repeat travels with its date (D16 revisited)', () => {
     ['a repeat starts on its day', {dueDate: '2026-10-09', dueAt: null, repeat: 'every wed'}, {due_string: 'every wed starting 2026-10-09'}],
     ['a repeat keeps its time, in the user\'s zone', {dueDate: '2026-10-09', dueAt: '2026-10-09T16:30:00.000Z', repeat: 'every wed'}, {due_string: 'every wed at 09:30 starting 2026-10-09'}],
     ['no repeat any more is a plain day', {dueDate: '2026-10-09', dueAt: null, repeat: null}, {due_date: '2026-10-09'}],
+    // SV-113: a repeat's last day goes after its first, as Todoist documents "everyday from 10 May until 20 May".
+    ['a repeat\'s last day after its first', {dueDate: '2026-10-12', dueAt: null, repeat: 'every mon until 2026-12-15'}, {due_string: 'every mon from 2026-10-12 until 2026-12-15'}],
+    ['a repeat\'s last day, with its time', {dueDate: '2026-10-12', dueAt: '2026-10-12T16:30:00.000Z', repeat: 'every mon until 2026-12-15'}, {due_string: 'every mon at 09:30 from 2026-10-12 until 2026-12-15'}],
+    ['Todoist\'s own "ending"', {dueDate: '2026-10-12', dueAt: null, repeat: 'every day ending aug 3'}, {due_string: 'every day from 2026-10-12 ending aug 3'}],
   ])('writes %s', (_, task, expected) => {
     expect(writeDue(task, ZONE)).toEqual(expected);
   });
@@ -57,6 +61,12 @@ describe('F6b: a repeat travels with its date (D16 revisited)', () => {
     ['every day from oct 12', 'every day'],
     ['every! 3 days', 'every! 3 days'],
     ['every other fri @ 5pm', 'every other fri'],
+    // SV-113: the last day stays with the repeat, wherever Todoist keeps it.
+    ['every mon at 09:30 from 2026-10-12 until 2026-12-15', 'every mon until 2026-12-15'],
+    ['every mon from 2026-10-12 until 2026-12-15', 'every mon until 2026-12-15'],
+    ['everyday from 10 May until 20 May', 'everyday until 20 May'],
+    ['every day ending aug 3 starting 2026-10-12', 'every day ending aug 3'],
+    ['every day until aug 3', 'every day until aug 3'],
     ['', null],
     [null, null],
   ])('reads the repeat in "%s"', (words, expected) => {
@@ -166,6 +176,25 @@ describe('changes through the command layer', () => {
     w.advance(5 * 60_000);
     await run();
     expect(tasks('2026-10-09')).toEqual(['○ CS 101 lab report']);
+  });
+
+  test('SV-113: a repeat with a last day reaches Todoist after its first, and reads back with it, so a new date keeps it', async () => {
+    const {w, todoist, run, command, calendarId, task, day} = await todoistWorld();
+    await run();
+    const created = createItem(w.store, itemCreateInput.parse({kind: 'task', calendar_id: calendarId(), title: 'Water ferns', due_date: '2026-10-12', project: 'Home', repeat: 'every mon until 2026-12-15'}));
+    await run();
+    expect(command(created.id).state).toBe('confirmed');
+    const sent = todoist.requests.find(request => request.method === 'POST' && request.path === '/api/v1/tasks')!;
+    expect(sent.body).toMatchObject({content: 'Water ferns', due_string: 'every mon from 2026-10-12 until 2026-12-15'});
+    w.advance(5 * 60_000);
+    await run();
+    expect(day('2026-10-12').find(item => item.title === 'Water ferns')).toMatchObject({recurring: true, repeat: 'every mon until 2026-12-15'});
+    const ferns = task(w.store.db.select().from(t.items).where(eq(t.items.title, 'Water ferns')).get()!.providerId!);
+    const moved = updateItem(w.store, ferns.id, itemUpdateInput.parse({changes: {due_date: '2026-10-19', due_at: null}}));
+    await run();
+    expect(command(moved.id).state).toBe('confirmed');
+    expect(todoist.requests.at(-1)!.body).toEqual({due_string: 'every mon from 2026-10-19 until 2026-12-15', due_lang: 'en'});
+    expect(day('2026-10-19').find(item => item.title === 'Water ferns')).toMatchObject({repeat: 'every mon until 2026-12-15'});
   });
 
   test('SV-74: create with no date: Todoist gets its "no date", and once it confirms the task leaves the mirror, as an undated task isn\'t on the calendar', async () => {
