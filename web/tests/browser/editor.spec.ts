@@ -3,7 +3,8 @@
 // fixture, D3; board 13 also takes one of the release's page screenshots, pages.ts), then the flows:
 // creating the board's two events at once, an edit asking which occurrences (This event, then All
 // events), a Todoist task from the same editor, the editor opened from an email's proposal at
-// /calendar/new, and an edited item's Title read as a line (SV-90).
+// /calendar/new, an edited item's Title read as a line (SV-90), and a new item's one line, its lit
+// phrases made title words again by a click or ⌥⌫ (D290).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
@@ -30,6 +31,10 @@ async function settled(setpoint: Setpoint, date: string) {
   return until(`${date}'s changes confirmed`, () => day(setpoint, date), items => items.every(item => item.state === null), 8000);
 }
 
+/** The line's title words as it shows them: its text outside the lit phrases (D290). */
+const titleWords = (page: Page) => page.locator('.editor .nl-text').evaluate(text => [...text.childNodes].filter(node => node.nodeType === Node.TEXT_NODE)
+  .map(node => node.textContent).join(' ').replace(/\s+/g, ' ').trim());
+
 const chip = (page: Page, date: string, title: string) => page.locator(`.cell[data-date="${date}"] .ev`, {hasText: title});
 
 async function openCalendar(page: Page, base: string) {
@@ -46,14 +51,14 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('c');
     const line = page.getByLabel('Describe the event');
     await line.waitFor();
-    // Before anything is typed, the Title field says what it's for and no conflict line warns about an empty draft.
-    assert.equal(await page.getByLabel('Title', {exact: true}).getAttribute('placeholder'), 'Title');
+    // A new item is its one line, with no Title field under it (D290), and no conflict line warns about an empty draft.
+    assert.equal(await page.locator('.editor').getByLabel('Title', {exact: true}).count(), 0, 'no Title field');
     assert.equal(await page.locator('.editor .conflict').count(), 0, 'no conflict preview for an empty draft');
     await line.pressSequentially('Dinner with Sam fri 7-9pm @Blue Door');
     // Each parsed part is marked; the fields follow the line.
     await page.locator('.nl .tok-d', {hasText: 'fri 7-9pm'}).waitFor();
     await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
-    assert.equal(await page.getByLabel('Title', {exact: true}).inputValue(), 'Dinner with Sam');
+    assert.equal(await titleWords(page), 'Dinner with Sam');
     assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue(), await page.getByLabel('Place', {exact: true}).inputValue()],
       ['Fri, Oct 9', '7:00 PM', '9:00 PM', 'Blue Door']);
     await page.locator('.verdict', {hasText: 'Overlaps Study group · 1h 30m'}).waitFor();
@@ -118,7 +123,7 @@ test('SV-27: a picked place stops the place, so what\'s typed after it is the ti
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Describe the event');
     await line.pressSequentially('with Sam');
     await page.locator('.nl .tok-p', {hasText: /^@Blue Door Coffee$/}).waitFor();
-    assert.equal(await page.getByLabel('Title', {exact: true}).inputValue(), 'Lunch with Sam');
+    assert.equal(await titleWords(page), 'Lunch with Sam');
     assert.equal(await page.getByLabel('Place', {exact: true}).inputValue(), 'Blue Door Coffee');
     // The address in full from Place Details, not the suggestion's shorter second line.
     await page.locator('.eg > .place-address', {hasText: '77 Elm Ave, Glendale, CA 91203'}).waitFor();
@@ -552,7 +557,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     // The line reads the project's name, then a space (SV-29).
     assert.equal(await line.inputValue(), 'Pay bills #Home ');
     await line.pressSequentially('fri');
-    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await project.inputValue(), await page.getByLabel('Due date', {exact: true}).inputValue()],
+    assert.deepEqual([await titleWords(page), await project.inputValue(), await page.getByLabel('Due date', {exact: true}).inputValue()],
       ['Pay bills', 'Home', 'Fri, Oct 9']);
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
@@ -749,7 +754,7 @@ test('D57: an event\'s #calendar in the line filters the Calendar menu; typing a
     assert.equal(await line.inputValue(), 'Lab review fri 3pm #Classes ');
     // A pick ends it: what follows is the title's, and "#1" names no calendar.
     await line.pressSequentially('notes #1 prep');
-    assert.equal(await page.getByLabel('Title', {exact: true}).inputValue(), 'Lab review notes #1 prep');
+    assert.equal(await titleWords(page), 'Lab review notes #1 prep');
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
     await settled(setpoint, '2026-10-09');
@@ -884,7 +889,7 @@ test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit 
     const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
     await line.pressSequentially('Call Sam fri 2pm no end');
     await page.locator('.nl .tok-d', {hasText: 'fri 2pm no end'}).waitFor();
-    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')],
+    assert.deepEqual([await titleWords(page), await start!.inputValue(), await end!.inputValue(), await end!.getAttribute('placeholder')],
       ['Call Sam', '2:00 PM', '', 'No end']);
     // The same time twice is No end too, not a day long.
     await line.fill('Call Sam fri 2pm to 2pm');
@@ -921,7 +926,7 @@ test('SV-111: the line\'s span of days: "oct 23–25" is all day over them, "fri
     await line.pressSequentially('Retreat oct 23–25');
     await page.locator('.nl .tok-d', {hasText: 'oct 23–25'}).waitFor();
     await page.getByRole('button', {name: 'All day · Add a time'}).waitFor();
-    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await date.inputValue(), await start!.count()], ['Retreat', 'Fri, Oct 23 – Sun, Oct 25', 0]);
+    assert.deepEqual([await titleWords(page), await date.inputValue(), await start!.count()], ['Retreat', 'Fri, Oct 23 – Sun, Oct 25', 0]);
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
     await settled(setpoint, '2026-10-23');
@@ -980,7 +985,7 @@ test('SV-111: a length after "for" sets End from the start, and with no time typ
     const [start, end] = ['Start', 'End'].map(label => page.getByLabel(label, {exact: true}));
     await line.pressSequentially('Call Sam fri 2pm for 1.5h');
     await page.locator('.nl .tok-d', {hasText: 'fri 2pm for 1.5h'}).waitFor();
-    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue()], ['Call Sam', '2:00 PM', '3:30 PM']);
+    assert.deepEqual([await titleWords(page), await start!.inputValue(), await end!.inputValue()], ['Call Sam', '2:00 PM', '3:30 PM']);
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
     await settled(setpoint, '2026-10-09');
@@ -991,7 +996,7 @@ test('SV-111: a length after "for" sets End from the start, and with no time typ
     await page.keyboard.press('c');
     await line.pressSequentially('Lunch fri for 1h');
     await page.locator('.nl .tok-d', {hasText: 'fri for 1h'}).waitFor();
-    assert.deepEqual([await page.getByLabel('Title', {exact: true}).inputValue(), await start!.inputValue(), await end!.inputValue()], ['Lunch', '9:00 AM', '10:00 AM']);
+    assert.deepEqual([await titleWords(page), await start!.inputValue(), await end!.inputValue()], ['Lunch', '9:00 AM', '10:00 AM']);
     await line.fill('Lunch fri for 2 hours');
     await page.locator('.nl .tok-d', {hasText: 'fri for 2 hours'}).waitFor();
     assert.equal(await end!.inputValue(), '11:00 AM');
@@ -1218,13 +1223,16 @@ test('/calendar/new: the proposal card\'s More options opens the editor pre-fill
     const sam = all.days.flatMap(group => group.rows).find(row => row.subject === 'Dinner Friday?')!;
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/new?kind=event&message=${sam.id}`);
-    const title = page.getByLabel('Title', {exact: true});
-    await until('the proposal fills the editor', () => title.inputValue(), value => value.length > 0);
+    // The proposal's title goes into the line, its words read as words only (D290).
+    const line = page.getByLabel('Describe the event');
+    await until('the proposal fills the editor', () => line.inputValue(), value => value.length > 0);
     const proposal = await setpoint.api<{item: {title: string}; from_email: string[]}>('POST', '/proposals/from-message', {message_id: sam.id, kind: 'event'});
-    assert.equal(await title.inputValue(), proposal.item.title);
-    // F6b: the fields the email gave carry the card's "from the email" mark, until they're changed.
+    assert.equal(await line.inputValue(), proposal.item.title);
+    assert.equal(await page.locator('.nl [data-start]').count(), 0, 'nothing in the title lit');
+    // F6b: the fields the email gave carry the card's "from the email" mark, until they're changed;
+    // the title's sits at the line's trailing edge (D290).
     const marked = async () => {
-      const rows = {title: '.eg label.field:has(input[aria-label="Title"])', date: '.eg .prow:has(input[aria-label="Date"])', place: '.eg label.field:has(input[aria-label="Place"])'};
+      const rows = {title: '.ed-line .nl', date: '.eg .prow:has(input[aria-label="Date"])', place: '.eg label.field:has(input[aria-label="Place"])'};
       const found: string[] = [];
       for (const [field, selector] of Object.entries(rows)) if (await page.locator(`${selector} .srcm`).count()) found.push(field);
       return found;
@@ -1232,11 +1240,14 @@ test('/calendar/new: the proposal card\'s More options opens the editor pre-fill
     const expected = ['title', 'date', 'place'].filter(field => proposal.from_email.includes(field) || (field === 'date' && proposal.from_email.includes('time')));
     assert.ok(expected.includes('title'), `the seed's proposal gives a title (${proposal.from_email.join(', ')})`);
     await until('the marks', marked, found => found.join() === expected.join());
+    // At the line's right end, the line's text stopping before it.
+    const [mark, field, input] = await rested(() => Promise.all(['.ed-line .nl > .srcm', '.ed-line .nl', '.ed-line .nl-input'].map(selector => page.locator(selector).evaluate(element => element.getBoundingClientRect().toJSON() as DOMRect))));
+    assert.ok(mark!.right <= field!.right && field!.right - mark!.right < 16 && input!.right <= mark!.left, `the mark at ${mark!.left}–${mark!.right}, the line ${field!.right}, its text to ${input!.right}`);
     await page.locator('.ed-foot .legend', {hasText: 'From the email'}).waitFor();
     // It stays inside the footer's padding, however narrow the editor (UX #23).
     const [legend, foot] = await page.locator('.ed-foot').evaluate(element => [element.querySelector('.legend')!.getBoundingClientRect().right, element.getBoundingClientRect().right]);
     assert.ok(legend! <= foot! - 16, `the legend ends at ${legend}, the footer at ${foot}`);
-    await title.fill('Dinner with Sam at Blue Door');
+    await line.fill('Dinner with Sam at Blue Door');
     assert.deepEqual(await marked(), expected.filter(field => field !== 'title'));
     // Cancel leaves /calendar/new.
     await page.keyboard.press('Escape');
@@ -1291,26 +1302,82 @@ test('UX #7: E opens the editor with its Title focused and selected, so typing r
   }
 });
 
-test('UX #8: a Title typed by hand rewrites the line\'s title words, so the two never disagree', async () => {
+test('D290: a click on a lit phrase, or ⌥⌫ inside it, makes it title words, and what it set goes, until it\'s typed into again', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
+    await openCalendar(page, setpoint.base);
     await page.keyboard.press('c');
-    const line = page.locator('.editor .nl-input');
-    const title = page.locator('.editor input[aria-label="Title"]');
-    await line.waitFor();
-    await page.keyboard.type('Coffee fri');
-    await title.fill('Coffee with Ana');
-    assert.equal(await line.inputValue(), 'Coffee with Ana fri');
+    const line = page.getByLabel('Describe the event');
+    const date = page.getByLabel('Date', {exact: true});
+    const start = page.getByLabel('Start', {exact: true});
+    await line.pressSequentially('Lunch with May 12');
+    const may = page.locator('.nl .tok-d', {hasText: 'May 12'});
+    await may.waitFor();
+    await until('the date is May 12', () => date.inputValue(), value => /May 12/.test(value));
+    // The click that focuses the line only focuses it.
+    await page.locator('.editor .ed-title').click();
+    const box = (await rested(() => may.boundingBox()))!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await until('the line focused', () => line.evaluate(input => input === document.activeElement), focused => focused);
+    assert.equal(await may.count(), 1, 'May 12 still lit');
+    // Over the lit phrase, the focused line says what a click does.
+    await page.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
+    await until('the tooltip', () => line.getAttribute('title'), title => title === 'Click to keep as words');
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await may.waitFor({state: 'detached'});
+    // The title has May in it, and the draft is back on the day it opened on.
+    assert.deepEqual([await titleWords(page), await date.inputValue()], ['Lunch with May 12', 'Wed, Oct 7']);
+    assert.equal(await line.getAttribute('title'), null);
+    // It stays words as the line goes on; a phrase typed after it lights.
     await line.press('End');
-    await line.pressSequentially(' 3pm');
-    assert.equal(await line.inputValue(), 'Coffee with Ana fri 3pm');
-    assert.equal(await title.inputValue(), 'Coffee with Ana');
-    // The line's title words, changed there, are the Title's again.
-    await line.fill('Coffee with Ana and Jo fri 3pm');
-    assert.equal(await title.inputValue(), 'Coffee with Ana and Jo');
+    await line.pressSequentially(' fri 1pm');
+    await page.locator('.nl .tok-d', {hasText: 'fri 1pm'}).waitFor();
+    assert.deepEqual([await page.locator('.nl [data-start]').allTextContents(), await titleWords(page), await start.inputValue()], [['fri 1pm'], 'Lunch with May 12', '1:00 PM']);
+    // ⌥⌫ with the caret inside "fri 1pm" makes it words too, its day and time gone.
+    await line.press('ArrowLeft');
+    await line.press('Alt+Backspace');
+    await page.locator('.nl .tok-d').waitFor({state: 'detached'});
+    assert.deepEqual([await line.inputValue(), await date.inputValue(), await start.inputValue()], ['Lunch with May 12 fri 1pm', 'Wed, Oct 7', '9:00 AM']);
+    // Typed into again, it's read again.
+    await line.press('End');
+    await line.press('Backspace');
+    await line.pressSequentially('m');
+    await page.locator('.nl .tok-d', {hasText: 'fri 1pm'}).waitFor();
+    await line.press('ArrowLeft');
+    await line.press('Alt+Backspace');
+    await page.locator('.nl .tok-d').waitFor({state: 'detached'});
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-07');
+    assert.ok((await titles(setpoint, '2026-10-07')).includes('Lunch with May 12 fri 1pm 9:00 AM'));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('D290: E on an edit with phrases typed selects only its title words, so typing renames it and the phrases stay', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const title = page.locator('.editor input[aria-label="Title"]');
+    await chip(page, '2026-10-15', 'Career fair').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await title.press('End');
+    await title.pressSequentially(' fri 7pm @Blue Door');
+    await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
+    // Left and come back to, the edit opens again as E does: its title words selected, not its phrases.
+    await page.locator('.sb').getByText('Inbox', {exact: true}).click();
+    await page.locator('.list .row').first().waitFor();
+    await page.goBack();
+    await title.waitFor();
+    await until('the title words selected', () => title.evaluate((input: HTMLInputElement) => (input === document.activeElement ? input.value.slice(input.selectionStart!, input.selectionEnd!) : null)), selected => selected === 'Career fair');
+    await page.keyboard.type('Expo');
+    assert.equal(await title.inputValue(), 'Expo fri 7pm @Blue Door');
+    await page.locator('.nl .tok-d', {hasText: 'fri 7pm'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

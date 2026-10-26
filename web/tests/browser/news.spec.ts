@@ -661,7 +661,7 @@ test('Upcoming\'s Add to calendar opens Calendar\'s editor on the Apple event, T
     const proposal = await (await proposed).json() as {item: {calendar_id: number | null}; from_email: string[]};
     await page.waitForURL(/\/calendar\/new\?kind=event&upcoming=\d+$/);
     const editor = page.locator('.editor');
-    await until('the keynote in the editor', () => editor.getByLabel('Title', {exact: true}).inputValue(), value => value === 'Apple event');
+    await until('the keynote in the editor', () => editor.getByLabel('Describe the event').inputValue(), value => value === 'Apple event');
     assert.deepEqual([await editor.getByLabel('Date', {exact: true}).inputValue(), await editor.getByLabel('Start', {exact: true}).inputValue(), await editor.getByLabel('End', {exact: true}).inputValue()],
       ['Tue, Oct 20', '10:00 AM', '11:00 AM']);
     assert.deepEqual(proposal.from_email, ['title', 'date', 'time']);

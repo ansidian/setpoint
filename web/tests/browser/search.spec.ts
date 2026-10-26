@@ -571,10 +571,10 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     const exam = await idOf(setpoint, 'Final exam schedule');
     await until('the editor\'s address', async () => page.url(), url => url.endsWith(`/calendar/new?kind=task&message=${exam}`));
     const editor = page.locator('.editor');
-    await until('the card\'s title in the editor', () => editor.getByLabel('Title', {exact: true}).inputValue(), value => value === 'Study for the final');
+    await until('the card\'s title in the editor\'s line', () => editor.getByLabel('Describe the task').inputValue(), value => value === 'Study for the final');
     assert.deepEqual([await editor.getByLabel('Due date', {exact: true}).inputValue(), await editor.getByLabel('Project', {exact: true}).inputValue()], ['Tue, Dec 8', 'Finals']);
     await editor.locator('.field .tag', {hasText: 'New'}).waitFor();
-    assert.equal(await editor.locator('label.field:has(input[aria-label="Title"]) .srcm').count(), 0);
+    assert.equal(await editor.locator('.nl .srcm').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -524,10 +524,12 @@ The card's side is chosen first and may flip on landing (board 12c).
 
 ### Editor
 
-In the right pane (board 13): the **title field** parses as you type ("Dinner with Sam fri 7-9pm
+In the right pane (board 13): the **line** parses as you type ("Dinner with Sam fri 7-9pm
 @Blue Door" → date, time and end, place, calendar, each parsed token marked; an event's length
 after "for" and its span of days too, #256; a line longer than the field shows where it's typed,
-the cut side fading, #110), **Places**
+the cut side fading, #110). A new item is that one line, as an edited one is: its title is the
+words left unlit, with no Title field under it, and a click on a lit phrase (or ⌥⌫ inside it)
+keeps it as words (#257). Then **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
 Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
 #255) with **Time to Leave** added from the same menu, never by default (#86), and the
@@ -1319,8 +1321,8 @@ it changes what's on screen.
     Enter chips it too (Andy, 2026-10-09; polish audit #2).
 57. ~~**Week reads as not built yet:** the header's Week is `ink3` at .5 beside Month, and still
     doesn't answer the pointer (Andy, 2026-10-09; polish audit #3).~~ Retired by #81: Week is built.
-58. **The new-event editor's Title field says "Title"** until the line gives it one (Andy,
-    2026-10-09; polish audit #4).
+58. ~~**The new-event editor's Title field says "Title"** until the line gives it one (Andy,
+    2026-10-09; polish audit #4).~~ Retired by #257 (D290): a new item has no Title field.
 59. **The conflict preview waits for a draft:** a new event shows it once it has a line, a title or
     a time set by hand, not on C alone (Andy, 2026-10-09; polish audit #9).
 60. **A fact's label holds one line:** "What happened" no longer wraps in the facts card's 112 px
@@ -1380,9 +1382,10 @@ it changes what's on screen.
       brings the editor back as it was, line, fields and ghost.
     - **The open editor's draft day comes into view** on the grid, so More options for a December
       exam shows December.
-    - **E focuses the Title, selected;** in a new item, a Title typed by hand rewrites the line's
-      title words ("Coffee fri" titled "Coffee with Ana" reads "Coffee with Ana fri"), and the
-      line goes on giving the title.
+    - **E focuses the Title, selected** (its title words only since #257, D290)~~; in a new item, a
+      Title typed by hand rewrites the line's title words ("Coffee fri" titled "Coffee with Ana"
+      reads "Coffee with Ana fri"), and the line goes on giving the title.~~ The Title rule is
+      retired by #257 (D290): a new item has no Title field, its line's title words being its title.
     - **With an email open, J and K open the next and previous,** as the reader's arrows do, so H,
       E and P never act on a different email from the highlighted one.
     - **Mark all as read leaves Security unread** (amending BRIEF.md › The Inbox), so a live code or
@@ -2711,3 +2714,17 @@ it changes what's on screen.
     UNTIL instead), Repeat saying "Daily, until Sun, Oct 25" (D292). A task's line keeps lengths and
     spans as words. The iPhone app gets the same through the compose bundle's `days` and `length`.
     Board audit: no board draws a length or a span typed in the line.
+257. **A new item is one line, and a click on a lit phrase makes it words again** (the user,
+    2026-10-26; darma SV-110 D290, retiring #58 and UX #8's Title rule): the new item's Title field
+    goes, so a new item is its line alone, as an edited one is (#251) and as the iPhone's is; its
+    title is the words the line leaves unlit. A click on a lit phrase in the focused line (the click
+    that focuses the line only focuses it, so a click to start typing changes nothing), or ⌥⌫ with
+    the caret inside one, turns it into title words and drops what it set ("Lunch with May 12", May
+    12 clicked, is titled with it and stays on its day); it stays words while the line goes on,
+    until it's typed into again, as the iPhone's tap does. Over a lit phrase the focused line's
+    tooltip says "Click to keep as words" and the phrase deepens. ⌥⌫ at a phrase's edge deletes a
+    word, as ever. An email's proposal puts its title in the line as words only, none of them read,
+    and its "From the email" mark sits at the line's trailing edge, the text stopping before it. E
+    selects the line's title words only, its first run of them, so typing renames the item and keeps
+    "fri 7pm @Blue Door"; with no title words, the caret goes to the line's start. Board audit:
+    board 13 draws the Title field under the line, so the rows below sit 42 px higher than drawn.

@@ -20,8 +20,10 @@ import {placeSuggestions, proposalFrom, RECENT_PLACES_PATH, SETTINGS_PATH, TODOI
 import {newsProposal} from '../../api/news.ts';
 import {findPlace} from '../../api/settings.ts';
 import {dayTitle, timeRange} from '../../logic/calendar.ts';
-import {bareToken, clockLabel, completeToken, describeRule, lineWithTitle, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, NO_END, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../../logic/compose.ts';
-import type {Mark} from '../../logic/compose.ts';
+import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, NO_END, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../../logic/compose.ts';
+import type {Mark, ParsedTitle} from '../../logic/compose.ts';
+import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
+import type {Span} from '../../logic/plain.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
@@ -67,14 +69,17 @@ export interface KeptDrafts {
   kind: ItemKind;
 }
 
-type Manual = 'title' | 'date' | 'time' | 'place' | 'calendar' | 'recurrence' | 'labels' | 'project';
+type Manual = 'date' | 'time' | 'place' | 'calendar' | 'recurrence' | 'labels' | 'project';
 
 interface Draft {
   id: number;
   kind: ItemKind;
-  // The line as typed (new items only).
+  // The line as typed (an edited item's title as it's edited, SV-90).
   text: string;
+  // The line's title words: what it reads once its phrases are taken out (D290).
   title: string;
+  // Phrases clicked back to title words (D290), which the line no longer reads until they're typed into.
+  plain: Span[];
   date: string;
   // SV-74: a new task's date taken off with its ×; `date` stays, for a day picked again.
   undated: boolean;
@@ -141,7 +146,7 @@ export const handProposal = (next: Handed) => {
 function emptyDraft(kind: ItemKind, date: string, slot: Slot | null = null): Draft {
   const at = kind === 'event' ? slot : null;
   return {
-    id: nextDraft++, kind, text: '', title: '', date, undated: false, day: date, slot: at,
+    id: nextDraft++, kind, text: '', title: '', plain: [], date, undated: false, day: date, slot: at,
     start: at ? at.start : kind === 'event' ? DEFAULT_START : null, end: at ? at.end : kind === 'event' ? DEFAULT_START + DEFAULT_LENGTH : null, days: at?.days ?? 1,
     place: '', address: null, picked: null, calendarId: null, reminders: null, leaveReminder: false, recurrence: null, project: null, newProject: false, pickedProject: null, pickedCalendar: null, labels: [], repeat: null, fromEmail: [], manual: [],
   };
@@ -160,7 +165,7 @@ function fromItem(item: ItemOut, timeZone: string): Draft {
   const end = item.kind === 'event' && timed ? start! + Math.round((Date.parse(item.ends_at!) - Date.parse(item.starts_at!)) / 60_000) : null;
   const days = item.kind === 'event' && !timed && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1;
   return {
-    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
+    id: nextDraft++, kind: item.kind, text: item.title, title: item.title, plain: [], date, undated: false, day: date, slot: null, start, end, days, place: item.place ?? placeName(item) ?? '', address: item.address, picked: null,
     calendarId: item.calendar_id, reminders: item.reminders, leaveReminder: item.leave_reminder, recurrence: item.recurrence, project: item.project, newProject: false, pickedProject: null, pickedCalendar: null, labels: item.labels, repeat: item.repeat,
     fromEmail: [], manual: [],
   };
@@ -171,10 +176,18 @@ const lineHash = (draft: Draft, projects: string[], calendars: CalendarOut[]) =>
   ? {kind: 'project' as const, names: projects, picked: draft.pickedProject}
   : {kind: 'calendar' as const, names: calendars.map(calendar => calendar.name), picked: draft.pickedCalendar});
 
-/** A draft's line as parsed; an edited item's (`original`) reads only what the edit typed (SV-90). */
-const readLine = (draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null) =>
-  parseTitle(text, today, calendars.map(calendar => calendar.name), draft.picked, lineHash(draft, projects, calendars),
+/**
+ * A draft's line as parsed; an edited item's (`original`) reads only what the edit typed (SV-90).
+ * Its plain phrases are hidden from the parser and come back as title words (D290).
+ */
+function readLine(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[], original: Draft | null): ParsedTitle {
+  const hidden = masked(text, draft.plain);
+  const parsed = parseTitle(hidden.text, today, calendars.map(calendar => calendar.name), draft.picked, lineHash(draft, projects, calendars),
     original ? {before: original.title, day: original.date} : null);
+  if (!hidden.words.length) return parsed;
+  const back = (value: string | null) => (value === null ? null : unmasked(value, hidden.words));
+  return {...parsed, title: unmasked(parsed.title, hidden.words), place: back(parsed.place), calendar: back(parsed.calendar), project: back(parsed.project)};
+}
 
 /**
  * The Title typed into an edited item (SV-90): what the edit typed changes the item's own fields,
@@ -182,8 +195,9 @@ const readLine = (draft: Draft, text: string, today: string, calendars: Calendar
  * hand stay; a time typed after the date was set by hand keeps the days picked.
  */
 function retypeEdit(draft: Draft, text: string, original: Draft, today: string, calendars: CalendarOut[], projects: string[]): Draft {
-  const parsed = readLine(draft, text, today, calendars, projects, original);
-  const next = {...draft, text, title: parsed.title};
+  const plain = retyped(draft.plain, draft.text, text);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, original);
+  const next = {...draft, text, plain, title: parsed.title};
   const by = (field: Manual) => !draft.manual.includes(field);
   const base = by('date') && by('time') ? original : draft;
   Object.assign(next, editedWhen({date: by('date') ? original.date : draft.date, start: base.start, end: base.end, days: base.days},
@@ -207,12 +221,12 @@ function retypeEdit(draft: Draft, text: string, original: Draft, today: string, 
   return next;
 }
 
-/** The line typed into a draft: what it parses to fills the fields not set by hand. */
+/** The line typed into a draft: its title words are the title, and its phrases fill the fields not set by hand. */
 function retype(draft: Draft, text: string, today: string, calendars: CalendarOut[], projects: string[]): Draft {
-  const parsed = readLine(draft, text, today, calendars, projects, null);
-  const next = {...draft, text};
+  const plain = retyped(draft.plain, draft.text, text);
+  const parsed = readLine({...draft, plain}, text, today, calendars, projects, null);
+  const next = {...draft, text, plain, title: parsed.title};
   const by = (field: Manual) => !draft.manual.includes(field);
-  if (by('title')) next.title = parsed.title;
   if (by('date')) next.date = parsed.date ?? draft.day;
   if (by('time')) {
     // Days picked by hand stay: the end moves to its last day (SV-29).
@@ -341,7 +355,7 @@ const markClass: Record<Mark['kind'], string> = {when: 'tok-d', place: 'tok-p', 
  * open, is `live`, only a dashed underline; the one just picked lands, its tint brightening once
  * (polish audit calflows-06).
  */
-function Marked({text, marks, calendarColour, projectColour, live = null, landed = null}: {
+function Marked({text, marks, calendarColour, projectColour, live = null, landed = null, over = null}: {
   text: string;
   marks: Mark[];
   calendarColour?: Colour | null;
@@ -349,14 +363,16 @@ function Marked({text, marks, calendarColour, projectColour, live = null, landed
   // Where the live mark and the one just picked start.
   live?: number | null;
   landed?: number | null;
+  // Where the mark under the pointer starts, which a click makes title words (D290).
+  over?: number | null;
 }) {
   const parts: ReactNode[] = [];
   let at = 0;
   for (const mark of marks) {
     if (mark.start > at) parts.push(text.slice(at, mark.start));
     const colour = mark.kind === 'calendar' ? colourVar(calendarColour ?? undefined) : mark.kind === 'project' && projectColour ? projectColour : null;
-    const state = mark.start === live ? ' live' : mark.start === landed ? ' landed' : '';
-    parts.push(<span key={mark.start} className={`${markClass[mark.kind]}${state}`} style={colour ? {'--c': colour} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
+    const state = `${mark.start === live ? ' live' : mark.start === landed ? ' landed' : ''}${mark.start === over ? ' over' : ''}`;
+    parts.push(<span key={mark.start} data-start={mark.start} className={`${markClass[mark.kind]}${state}`} style={colour ? {'--c': colour} as CSSProperties : undefined}>{text.slice(mark.start, mark.end)}</span>);
     at = mark.end;
   }
   parts.push(text.slice(at));
@@ -499,12 +515,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       const item = proposal.item;
       const date = item.kind === 'task' ? item.due_date : item.start_date ?? (item.starts_at ? localDate(item.starts_at, timeZone) : null);
       setDrafts(list => list.map((one, index) => (index ? one : {
-        ...one, text: item.title, title: item.title, date: date ?? one.date,
+        // The title goes into the line as words only, none of them read (D290), as the iPhone's typeTitle.
+        ...one, text: item.title, title: item.title, plain: wordSpans(item.title), date: date ?? one.date,
         start: item.starts_at ? minutesOf(item.starts_at, timeZone) : item.due_at ? minutesOf(item.due_at, timeZone) : item.all_day && item.kind === 'event' ? null : one.start,
         end: item.starts_at && item.ends_at ? minutesOf(item.starts_at, timeZone) + Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : item.all_day && item.kind === 'event' ? null : one.end,
         days: item.kind === 'event' && item.all_day && item.start_date && item.end_date ? Math.max(1, daysBetween(item.start_date, item.end_date)) : 1,
         place: item.place ?? '', calendarId: item.calendar_id ?? one.calendarId, project: item.project, newProject, reminders: reminders ?? one.reminders,
-        manual: ['title', 'date', 'time', 'place', 'calendar', 'project'],
+        manual: ['date', 'time', 'place', 'calendar', 'project'],
         fromEmail: proposal.from_email,
       })));
     }).catch(() => {});
@@ -587,11 +604,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   useEffect(() => {
     if (!editing) line.current?.focus();
   }, [editing, active]);
-  // E on an item focuses its Title, selected, so typing renames it rather than reaching the calendar's keys (UX #7).
+  // E on an item focuses its line with its title words selected, so typing renames it rather than
+  // reaching the calendar's keys (UX #7), and the phrases typed stay (D290).
+  const opening = useRef(titleRun(draft.text, parsed.marks));
   useEffect(() => {
     if (!editing) return;
     line.current?.focus();
-    line.current?.select();
+    line.current?.setSelectionRange(opening.current.start, opening.current.end);
   }, [editing]);
 
   // A pick removes the menu item that had focus: focus goes back to the field that opened the menu
@@ -618,17 +637,30 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   };
   const mark = (...fields: ProposalField[]) => (fields.some(field => draft.fromEmail.includes(field))
     ? <span className="srcm" title="From the email" aria-label="From the email"><Icon name="mail" size={14} /></span> : null);
-  // A Title typed by hand rewrites the line's title words, so the two never disagree, and the line
-  // goes on giving the title (UX #8).
-  const retitle = (title: string) => {
-    const text = lineWithTitle(draft.text, parsed.marks, title);
-    setDrafts(list => list.map(one => (one.id === draft.id
-      ? {...one, title, text, manual: one.manual.filter(field => field !== 'title'), fromEmail: one.fromEmail.filter(field => field !== 'title')}
-      : one)));
+  // The email's title is the line's, so its mark sits at the line's trailing edge (D290).
+  const titleMark = mark('title');
+  // An edited item's Title is its line (SV-90), and so is a new item's (D290): its title words
+  // changed lose the email's mark.
+  const reread = (one: Draft, text: string) => {
+    const next = original ? retypeEdit(one, text, original, today, calendarChoices, projectNames) : retype(one, text, today, google, projectNames);
+    return next.title === one.title ? next : {...next, fromEmail: next.fromEmail.filter(field => field !== 'title')};
   };
-  // An edited item's Title is its line (SV-90).
-  const reread = (one: Draft, text: string) => (original ? retypeEdit(one, text, original, today, calendarChoices, projectNames) : retype(one, text, today, google, projectNames));
   const typeLine = (text: string) => setDrafts(list => list.map(one => (one.id === draft.id ? reread(one, text) : one)));
+  // D290: a lit phrase clicked, or ⌥⌫ with the caret inside it, is title words again, and what it set goes.
+  const makePlain = (mark: Mark) => setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: [...one.plain, {start: mark.start, end: mark.end}]}, one.text) : one)));
+  // The marks are drawn behind the line's input, so the pointer finds one by where its letters are.
+  const markAt = (x: number, y: number): Mark | null => {
+    for (const shown of lineMarks.current?.querySelectorAll<HTMLElement>('[data-start]') ?? []) {
+      if (![...shown.getClientRects()].some(box => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom)) continue;
+      return parsed.marks.find(one => one.start === Number(shown.dataset.start)) ?? null;
+    }
+    return null;
+  };
+  const [over, setOver] = useState<number | null>(null);
+  // Whether the line had focus as the pointer went down: the click that focuses it only focuses it.
+  const focusedAtPress = useRef(false);
+  const [lineFocused, setLineFocused] = useState(false);
+  const overMark = lineFocused && parsed.marks.some(one => one.start === over) ? over : null;
   // Where the line's caret goes once a pick has rewritten it.
   const caret = useRef<number | null>(null);
   useEffect(() => {
@@ -682,7 +714,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const switchKind = (next: ItemKind) => {
     if (next === kind || editing) return;
     setKind(next);
-    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id}, one.text, today, google, projectNames)));
+    setDrafts(list => list.map(one => retype({...emptyDraft(next, one.day), id: one.id, plain: one.plain}, one.text, today, google, projectNames)));
   };
 
   const addAnother = () => {
@@ -743,6 +775,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       submit();
+    } else if (event.key === 'Backspace' && event.altKey && !event.metaKey && !event.ctrlKey && event.target === line.current && line.current.selectionStart === line.current.selectionEnd) {
+      // ⌥⌫ inside a lit phrase makes it words (D290); at its edge it deletes a word, as ever.
+      const inside = markInside(parsed.marks, line.current.selectionStart ?? 0);
+      if (inside) {
+        event.preventDefault();
+        makePlain(inside);
+      }
     } else if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -838,26 +877,36 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
       <div className="ed-scroll">
         <div className="ed-line">
-          {/* An edited item's Title is a line too, reading only what's typed into it (SV-90). */}
-          <label className="field big nl">
+          {/* An edited item's Title is a line too, reading only what's typed into it (SV-90); a new item's
+              title is its line's title words, with no Title field under it (D290). */}
+          <label className={`field big nl${titleMark ? ' src' : ''}${overMark !== null ? ' over' : ''}`}>
             <span ref={lineMarks} className="nl-marks" aria-hidden="true">
               <span className="nl-text"><Marked text={draft.text} marks={parsed.marks} calendarColour={calendar?.colour} projectColour={projectTodoist ? TODOIST_COLOURS[projectTodoist] : null}
-                live={liveMark} landed={landed?.start ?? null} key={landed?.seq ?? 0} /></span>
+                live={liveMark} landed={landed?.start ?? null} over={overMark} key={landed?.seq ?? 0} /></span>
             </span>
             <input ref={line} className="nl-input" aria-label={editing ? 'Title' : `Describe the ${noun}`} value={draft.text} spellCheck={false} autoComplete="off"
               placeholder={editing ? undefined : kind === 'event' ? 'Dinner with Sam fri 7-9pm @Blue Door' : 'Pay rent fri'}
-              onChange={event => typeLine(event.target.value)} />
+              title={overMark !== null ? 'Click to keep as words' : undefined}
+              onChange={event => typeLine(event.target.value)} onFocus={() => setLineFocused(true)} onBlur={() => setLineFocused(false)}
+              onMouseMove={event => setOver(markAt(event.clientX, event.clientY)?.start ?? null)} onMouseLeave={() => setOver(null)}
+              onMouseDown={event => {
+                focusedAtPress.current = event.currentTarget === document.activeElement;
+              }}
+              onClick={event => {
+                // A plain click in the line already focused: not the click that focuses it, a drag's
+                // selection or a double-click's word.
+                const input = event.currentTarget;
+                if (!focusedAtPress.current || event.detail !== 1 || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey || input.selectionStart !== input.selectionEnd) return;
+                const hit = markAt(event.clientX, event.clientY);
+                if (!hit) return;
+                makePlain(hit);
+                setOver(null);
+              }} />
+            {titleMark}
           </label>
         </div>
 
         <div className="eg">
-          {!editing && (
-            <>
-              <span />
-              <label className="field"><input className="grow" aria-label="Title" placeholder="Title" value={draft.title} onChange={event => retitle(event.target.value)} />{mark('title')}</label>
-            </>
-          )}
-
           <Icon name="schedule" size={17} className={echo.when} />
           <div className={`prow${lastDay !== draft.date ? ' days' : ''}`}>
             <DateField className={`date${changed('date') || (!!original && draft.days !== original.days) ? ' changed' : ''}${flashDate ? ' flash' : ''}`} label={kind === 'task' ? 'Due date' : 'Date'}
@@ -1060,7 +1109,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         </div>
 
         {/* An empty new draft has nothing to conflict yet: the preview waits for a title or a time. */}
-        {kind === 'event' && draft.start !== null && lastDay === draft.date && (editing || draft.text.trim() !== '' || draft.title.trim() !== '' || draft.manual.includes('time')) && (
+        {kind === 'event' && draft.start !== null && lastDay === draft.date && (editing || draft.text.trim() !== '' || draft.manual.includes('time')) && (
           <ConflictPreview draft={draft} items={dayItems(draft.date)} except={editing?.key ?? null} title={draft.title || draft.text} colour={calendar?.colour ?? null}
             calendarColour={id => (calendars ?? []).find(one => one.id === id)?.colour ?? null} isNew={!editing} timeZone={timeZone} />
         )}

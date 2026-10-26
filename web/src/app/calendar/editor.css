@@ -33,6 +33,12 @@
 .editor .nl-marks[data-clip-left] { mask-image: linear-gradient(to right, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-right] { mask-image: linear-gradient(to left, transparent 0, #000 14px); }
 .editor .nl-marks[data-clip-left][data-clip-right] { mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%); }
+/* D290: a new item's title is the line's, so an email's title mark sits at its trailing edge, the
+   text stopping 8 px before it; a mark under the pointer, which a click makes words, deepens. */
+.editor .nl.src .nl-marks { right: 34px; }
+.editor .nl.src .nl-input { right: 34px; width: calc(100% - 46px); }
+.editor .nl > .srcm { position: absolute; right: 12px; top: 0; bottom: 0; align-content: center; }
+.editor .nl.over .nl-input { cursor: pointer; }
 /* A mark draws 2 px either side of its text without moving it. */
 .editor .tok-d, .editor .tok-p, .editor .tok-c, .editor .tok-j { border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
 .editor .tok-d { background: color-mix(in oklch, var(--cool) 18%, transparent); box-shadow: inset 0 -1.5px 0 color-mix(in oklch, var(--cool) 60%, transparent); }
@@ -59,6 +65,7 @@
 .editor .tok-j { --tok: var(--c-shown); }
 .editor .nl-text .live { background: linear-gradient(to right, color-mix(in oklch, var(--tok) 70%, transparent) 50%, transparent 50%) 0 100% / 6px 1.5px repeat-x; box-shadow: none; }
 .editor .nl-text .landed { animation: tok-in var(--dur-slow) var(--ease); }
+.editor .nl-text .over { background-color: color-mix(in oklch, var(--tok) 30%, transparent); }
 @keyframes tok-in { from { background-color: color-mix(in oklch, var(--tok) 36%, transparent); } }
 .editor .field.flash, .editor .place-address.flash { animation: side-flash 600ms var(--ease); }
 @keyframes side-flash { from { background-color: var(--cardOn); } }
