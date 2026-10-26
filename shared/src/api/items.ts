@@ -90,6 +90,9 @@ const when = {
   due_date: localDate.nullable(),
   due_at: instant.nullable(),
 };
+/** How far from the item's moment a reminder can be, either side: 4 weeks (D287). */
+export const REMINDER_LIMIT_MINUTES = 40_320;
+
 const editable = {
   calendar_id: id,
   title: z.string().trim().min(1).max(500),
@@ -99,7 +102,8 @@ const editable = {
   place: z.string().max(300).nullable(),
   address: z.string().max(500).nullable(),
   attendees: z.array(z.string().min(1).max(200)).max(100),
-  reminders: z.array(z.int().min(0).max(40_320)).max(10),
+  // Minutes before the item's moment; a negative one is after it, 4 weeks either side (D287).
+  reminders: z.array(z.int().min(-REMINDER_LIMIT_MINUTES).max(REMINDER_LIMIT_MINUTES)).max(10),
   // SV-31: an event's Time to Leave, sent while Settings › Notifications has it on. Tasks have none.
   leave_reminder: z.boolean(),
   project: z.string().min(1).max(200).nullable(),

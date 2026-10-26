@@ -9,6 +9,7 @@
 //    an item moved into the past doesn't fire.
 // Harvested from v1's `reminder-scheduler` and `time-to-leave-refresh-service` (see SV-6); v1's
 // per-reminder rows, Discord sender and wake-time SQL aren't ported.
+import {REMINDER_LIMIT_MINUTES} from '@setpoint/shared';
 import type {ItemOut} from '@setpoint/shared';
 import {and, eq, gte, like, lt} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
@@ -77,7 +78,8 @@ export class ReminderScheduler {
     const lastPass = this.lastPass(now);
     const settings = getSettings(store);
     const nowMs = Date.parse(now);
-    const items = itemsInRange(store, addDays(localDay(nowMs - REMINDER_GRACE_MS, store.timeZone), -1), addDays(localDay(nowMs, store.timeZone), 30)).items;
+    // An after-reminder can go up to 4 weeks after its item (D287), so the items read go back that far.
+    const items = itemsInRange(store, addDays(localDay(nowMs - REMINDER_GRACE_MS, store.timeZone), -1 - REMINDER_LIMIT_MINUTES / 1440), addDays(localDay(nowMs, store.timeZone), 30)).items;
 
     await this.timeToLeave(items, now);
 

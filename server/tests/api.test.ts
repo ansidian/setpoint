@@ -72,6 +72,19 @@ describe('commands over the API', () => {
   });
 });
 
+describe('reminders (SV-109, D287)', () => {
+  test('signed minutes from the item\'s moment, 4 weeks either side, 10 at most', async () => {
+    const w = world({seed: true});
+    const c = await signedIn(w);
+    const change = (reminders: number[]) => c.send('PATCH', '/api/items/3', {body: {changes: {reminders}}});
+    expect((await change([40_321])).status).toBe(400);
+    expect((await change([-40_321])).status).toBe(400);
+    expect((await change(Array.from({length: 11}, (_, index) => index))).status).toBe(400);
+    expect((await change([40_320, -40_320, -120, 10])).body).toMatchObject({kind: 'item_update', state: 'pending'});
+    expect((await c.send('GET', '/api/items/3')).body.reminders).toEqual([40_320, -40_320, -120, 10]);
+  });
+});
+
 describe('reads', () => {
   test('the month\'s items, calendars and weather', async () => {
     const w = world({seed: true});

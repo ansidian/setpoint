@@ -10,6 +10,8 @@
 // - all-day events count from local midnight (v1 497ea1af); a dated task reminds at Settings' time
 //   on its day, a timed one at its time (and never at a UTC instant read as wall-clock time); with
 //   Settings' task time at None, a task reminds only at the reminders it has itself.
+// SV-109: an offset may be negative, after the item's moment (D287), and a dated task's own
+// reminders count from Settings' time on its day, or 9:00 AM at None (D288).
 import {zonedInstant} from './time.ts';
 
 const MINUTE = 60_000;
@@ -38,21 +40,23 @@ export interface Reminder {
   minutes: number;
 }
 
-/** Every reminder an item (or occurrence) has, at its moment. */
+/** A dated task without a time counts from this when Settings' task time is None (D288). */
+export const UNTIMED_TASK_ANCHOR = '09:00';
+
+/** Every reminder an item (or occurrence) has, at its moment; a negative offset is after it (D287). */
 export function remindersOf(item: ReminderItem, settings: {taskTime: string | null; timeZone: string}): Reminder[] {
+  const at = (anchor: string, minutes: number) => new Date(Date.parse(anchor) - minutes * MINUTE).toISOString();
+  const fromAnchor = (anchor: string, offsets: number[]) => offsets.map(minutes => ({at: at(anchor, minutes), key: `reminder:${item.id}@${anchor}:${minutes}`, minutes}));
   if (item.kind === 'task') {
     if (item.done || !item.due_date) return [];
-    if (item.due_at) {
-      const offsets = item.reminders.length || settings.taskTime === null ? item.reminders : [0];
-      return offsets.map(minutes => ({at: new Date(Date.parse(item.due_at!) - minutes * MINUTE).toISOString(), key: `reminder:${item.id}@${item.due_at}:${minutes}`, minutes}));
-    }
+    if (item.due_at) return fromAnchor(item.due_at, item.reminders.length || settings.taskTime === null ? item.reminders : [0]);
+    // D288: its own reminders count from Settings' time on its day (9:00 AM at None), in place of that one.
+    if (item.reminders.length) return fromAnchor(zonedInstant(item.due_date, settings.taskTime ?? UNTIMED_TASK_ANCHOR, settings.timeZone), item.reminders);
     if (settings.taskTime === null) return [];
-    const at = zonedInstant(item.due_date, settings.taskTime, settings.timeZone);
-    return [{at, key: `reminder:${item.id}@${item.due_date}T${settings.taskTime}`, minutes: 0}];
+    return [{at: zonedInstant(item.due_date, settings.taskTime, settings.timeZone), key: `reminder:${item.id}@${item.due_date}T${settings.taskTime}`, minutes: 0}];
   }
   const anchor = item.all_day ? (item.start_date ? zonedInstant(item.start_date, '00:00', settings.timeZone) : null) : item.starts_at;
-  if (!anchor) return [];
-  return item.reminders.map(minutes => ({at: new Date(Date.parse(anchor) - minutes * MINUTE).toISOString(), key: `reminder:${item.id}@${anchor}:${minutes}`, minutes}));
+  return anchor ? fromAnchor(anchor, item.reminders) : [];
 }
 
 /** Whether a reminder goes now: its moment has come since the last pass, within the grace. */

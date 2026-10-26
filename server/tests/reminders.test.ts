@@ -31,6 +31,15 @@ describe('when reminders go off', () => {
     ['a dated task: Settings\' time on its day', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: []}, [[zoned('2026-10-08', '09:00'), 'reminder:2@2026-10-08T09:00']]],
     ['a timed task: at its time', {kind: 'task', starts_at: null, due_date: '2026-10-07', due_at: zoned('2026-10-07', '19:00'), reminders: []}, [[zoned('2026-10-07', '19:00'), `reminder:2@${zoned('2026-10-07', '19:00')}:0`]]],
     ['a done task: nothing', {kind: 'task', starts_at: null, due_date: '2026-10-08', done: true}, []],
+    // SV-109 (D287): a negative offset is after the item's moment.
+    ['an event: after its start too', {reminders: [-120]}, [[zoned('2026-10-07', '16:30'), `reminder:2@${zoned('2026-10-07', '14:30')}:-120`]]],
+    ['an all-day event: after its midnight', {all_day: true, starts_at: null, start_date: '2026-10-12', reminders: [-480]}, [[zoned('2026-10-12', '08:00'), `reminder:2@${zoned('2026-10-12', '00:00')}:-480`]]],
+    ['a timed task: after its time', {kind: 'task', starts_at: null, due_date: '2026-10-07', due_at: zoned('2026-10-07', '19:00'), reminders: [-30]}, [[zoned('2026-10-07', '19:30'), `reminder:2@${zoned('2026-10-07', '19:00')}:-30`]]],
+    // D288: a dated task's own reminders count from Settings' time on its day, in place of that one.
+    ['a dated task\'s own reminders: from Settings\' time, before and after', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: [60, -60]},
+      [[zoned('2026-10-08', '08:00'), `reminder:2@${zoned('2026-10-08', '09:00')}:60`], [zoned('2026-10-08', '10:00'), `reminder:2@${zoned('2026-10-08', '09:00')}:-60`]]],
+    ['a done task with its own reminders: nothing', {kind: 'task', starts_at: null, due_date: '2026-10-08', done: true, reminders: [10, -10]}, []],
+    ['a task with no date: nothing, its reminders too', {kind: 'task', starts_at: null, due_date: null, reminders: [10, -10]}, []],
   ])('%s', (_, change, expected) => {
     expect(remindersOf({...base, ...change}, settings).map(reminder => [reminder.at, reminder.key])).toEqual(expected);
   });
@@ -40,8 +49,17 @@ describe('when reminders go off', () => {
     ['a dated task: nothing', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: []}, []],
     ['a timed task: nothing', {kind: 'task', starts_at: null, due_date: '2026-10-07', due_at: zoned('2026-10-07', '19:00'), reminders: []}, []],
     ['a timed task with its own reminder keeps it', {kind: 'task', starts_at: null, due_date: '2026-10-07', due_at: zoned('2026-10-07', '19:00'), reminders: [15]}, [[zoned('2026-10-07', '18:45'), `reminder:2@${zoned('2026-10-07', '19:00')}:15`]]],
+    // D288: with no task time, a dated task's own reminders count from 9:00 AM.
+    ['a dated task with its own reminders counts from 9:00 AM', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: [30, -90]},
+      [[zoned('2026-10-08', '08:30'), `reminder:2@${zoned('2026-10-08', '09:00')}:30`], [zoned('2026-10-08', '10:30'), `reminder:2@${zoned('2026-10-08', '09:00')}:-90`]]],
+    ['a task with no date: nothing', {kind: 'task', starts_at: null, due_date: null, reminders: [30]}, []],
   ])('task reminders at None, %s', (_, change, expected) => {
     expect(remindersOf({...base, ...change}, {...settings, taskTime: null}).map(reminder => [reminder.at, reminder.key])).toEqual(expected);
+  });
+
+  test('Settings\' task time moves a dated task\'s own reminders with it (D288)', () => {
+    const task = {...base, kind: 'task' as const, starts_at: null, due_date: '2026-10-08', reminders: [60]};
+    expect(remindersOf(task, {...settings, taskTime: '18:00'}).map(reminder => reminder.at)).toEqual([zoned('2026-10-08', '17:00')]);
   });
 
   test.each([
@@ -144,6 +162,18 @@ describe('reminders through notify() to ntfy', () => {
     updateItem(w.store, item('Study group').id, itemUpdateInput.parse({changes: {starts_at: zoned('2026-10-07', '16:10'), ends_at: zoned('2026-10-07', '17:00')}}));
     await at('2026-10-07', '15:50');
     expect(sent()).toHaveLength(1);
+  });
+
+  test('an after-reminder two weeks on goes then, once (SV-109)', async () => {
+    const {w, at, sent, item} = await reminderWorld();
+    await at('2026-10-07', '09:12');
+    updateItem(w.store, item('Dentist').id, itemUpdateInput.parse({changes: {reminders: [-20_160]}}));
+    await at('2026-10-21', '14:00');
+    expect(sent()).not.toContainEqual(['Dentist', '2:30 PM · Smile Dental']);
+    await at('2026-10-21', '14:30', 20);
+    await at('2026-10-21', '14:31');
+    await at('2026-10-21', '14:40');
+    expect(sent().filter(([title]) => title === 'Dentist')).toEqual([['Dentist', '2:30 PM · Smile Dental']]);
   });
 
   test('a send that failed is tried again on the next pass, then sent once', async () => {
