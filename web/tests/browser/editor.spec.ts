@@ -997,6 +997,59 @@ test('F6b: an event moves to another calendar of its account; a repeating one go
   }
 });
 
+// The row's own behaviour (Custom…'s fields, the 4 weeks, a chip reopening it) is in
+// web/tests/components/reminders.test.tsx; this is the journey to the API and the detail.
+test('SV-109: Custom… picks a moment after the start, which the event keeps and its card reads as that moment; a task without a time counts from 9:00 AM', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Office hours sat 3pm');
+    await page.getByRole('button', {name: 'Add reminder'}).click();
+    await page.getByRole('menuitem', {name: 'Custom…'}).click();
+    const time = page.getByRole('textbox', {name: 'Reminder time'});
+    await time.click();
+    await time.fill('5pm');
+    await time.press('Enter');
+    await page.locator('.editor .field-note', {hasText: '2 hrs after'}).waitFor();
+    await page.getByRole('button', {name: 'Add', exact: true}).click();
+    await page.locator('.editor .qchip', {hasText: 'Sat, Oct 10, 5:00 PM'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-10');
+    const created = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-10&to=2026-10-11')).items.find(item => item.title === 'Office hours')!;
+    assert.deepEqual(created.reminders, [10, -120]);
+    // Its card: the preset in its words, the custom one at its moment with the offset beside it.
+    await page.goto(`${setpoint.base}/calendar/item/${created.id}`);
+    const reminders = page.getByRole('dialog', {name: 'Office hours'}).locator('.fd-reminders > span');
+    await until('the card\'s reminders', () => reminders.allTextContents(), lines => lines.length === 2);
+    assert.deepEqual(await reminders.allTextContents(), ['10 min before', 'Sat, Oct 10, 5:00 PM2 hrs after']);
+
+    // A task with a day and no time: Custom… counts from 9:00 AM, and the task keeps what's picked.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('d');
+    await page.getByLabel('Describe the task').pressSequentially('Return forms sat');
+    await page.getByRole('button', {name: 'Add reminder'}).click();
+    const custom = page.getByRole('menuitem', {name: /^Custom…/});
+    assert.equal(await custom.textContent(), 'Custom…Counts from 9:00 AM');
+    await custom.click();
+    await time.click();
+    await time.fill('7:30am');
+    await time.press('Enter');
+    await page.getByRole('button', {name: 'Add', exact: true}).click();
+    await page.locator('.editor .qchip', {hasText: 'Sat, Oct 10, 7:30 AM'}).waitFor();
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-10');
+    const task = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-10&to=2026-10-11')).items.find(item => item.title === 'Return forms')!;
+    assert.deepEqual(task.reminders, [90]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc closes a menu, then the editor', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

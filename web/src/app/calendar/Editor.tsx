@@ -2,7 +2,7 @@
 // from one line that parses as it's typed ("Dinner with Sam fri 7-9pm @Blue Door": date, time and
 // end, place, calendar, each parsed part marked), with the fields under it to check or change: the
 // title, the date and times, the place with Places suggestions, the calendar, reminders (Settings ›
-// Notifications' default, override 8), the repeat, then the conflict preview, a small timeline of
+// Notifications' default, override 8; presets and Custom…, Reminders.tsx), the repeat, then the conflict preview, a small timeline of
 // the day. Batch drafts add more events ("Create 2 events ⌘Enter"). A Todoist task uses the same
 // editor with its due date, project, labels and repeat (F6b: Todoist's words, sent with the date).
 // Opened from an email (the proposal card's More options), the fields hold what the card held, and
@@ -24,10 +24,10 @@ import {bareToken, clockLabel, completeToken, describeRule, lineWithTitle, descr
 import type {Mark} from '../../logic/compose.ts';
 import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {placeName} from '../../logic/place.ts';
-import {remindersLine} from '../../logic/detail.ts';
-import {addDays, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
+import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';
 import {calendarMoveChoices, DEFAULT_SCOPE, scopeChoices} from '../../logic/scope.ts';
+import {taskTimeMinutes} from '../../logic/reminders.ts';
 import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -35,6 +35,7 @@ import {segThumb} from '../../ui/seg.ts';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar} from '../accounts.ts';
 import {DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
+import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import './editor.css';
 
@@ -121,7 +122,6 @@ const MENU_OPENERS = {calendar: 'Calendar', repeat: 'Repeat', reminder: 'Add rem
 
 const DEFAULT_START = 9 * 60;
 const DEFAULT_LENGTH = 60;
-const REMINDER_CHOICES = [0, 5, 10, 15, 30, 60, 120, 1440];
 
 let nextDraft = 1;
 
@@ -261,7 +261,7 @@ function createInput(draft: Draft, timeZone: string, todoist: number | null): It
     return {
       kind: 'task', calendar_id: todoist, title: draft.title.trim(), all_day: true, starts_at: null, ends_at: null, start_date: null, end_date: null,
       due_date: dated ? draft.date : null, due_at: dated && draft.start !== null ? instantAt(draft.date, draft.start, timeZone) : null, time_zone: null, recurrence: null,
-      place: null, address: null, attendees: [], leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null,
+      place: null, address: null, attendees: [], ...(draft.reminders ? {reminders: draft.reminders} : {}), leave_reminder: false, project: draft.project, colour: null, labels: draft.labels, repeat: dated ? draft.repeat : null,
     };
   }
   if (draft.calendarId === null) return null;
@@ -794,6 +794,13 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     ? `Was ${draft.date !== original.date ? `${dayTitle(original.date)} · ` : ''}${timeRange(editing, timeZone)}`
     : null;
 
+  // What the reminders count from (D288): the start or due time, an all-day event's midnight, or a
+  // dated task's Settings' task time (9:00 AM at None); a task with no date has none.
+  const untimedTask = kind === 'task' && !draft.undated && draft.start === null;
+  const reminderFrom = kind === 'task' && draft.undated ? null
+    : Date.parse(instantAt(draft.date, draft.start ?? (kind === 'task' ? taskTimeMinutes(settings?.reminders.task_time ?? null) : 0), timeZone));
+  const countsFrom = untimedTask && reminderFrom !== null ? `Counts from ${clockTime(reminderFrom, timeZone)}` : null;
+
   return (
     <form ref={form} tabIndex={-1} className={`rpane editor${handed ? ' handed' : ''}`} aria-label={editing ? `Edit ${noun}` : `New ${noun}`} onKeyDown={onKeyDown}
       onSubmit={event => {
@@ -1021,45 +1028,21 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </>
           )}
 
-          {kind === 'event' && (
-            <>
-              <Icon name="notifications" size={17} />
-              <div className="prow">
-                {draft.reminders.map(minutes => (
-                  <span key={minutes} className="qchip">
-                    <span className="num">{remindersLine([minutes])}</span>
-                    <button type="button" className="x" aria-label="Remove reminder" onClick={() => change({reminders: draft.reminders.filter(one => one !== minutes)})}><Icon name="close" size={14} /></button>
-                  </span>
-                ))}
-                {draft.leaveReminder && (
-                  <span className="qchip ttl" title={leaveTitle}>
-                    <Icon name="directions_car" size={14} />Time to Leave
-                    <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
-                  </span>
-                )}
-                <span className="menu-host">
-                  <button type="button" className="ibtn sm" aria-label="Add reminder" aria-expanded={menu === 'reminder'} onClick={() => setMenu(menu === 'reminder' ? null : 'reminder')}><Icon name="add" size={16} /></button>
-                  {menu === 'reminder' && (
-                    <div ref={menuRef} className="pop menu" role="menu">
-                      {REMINDER_CHOICES.filter(minutes => !draft.reminders.includes(minutes)).map(minutes => (
-                        <button key={minutes} type="button" role="menuitem" className="menu-i" onClick={() => {
-                          change({reminders: [...draft.reminders, minutes].sort((a, b) => a - b)});
-                          setMenu(null);
-                        }}>{remindersLine([minutes])}</button>
-                      ))}
-                      {/* SV-31: an event with a time and a place can have Time to Leave, with Settings' buffer, while Settings has it on. */}
-                      {!draft.leaveReminder && draft.start !== null && draft.place.trim() && settings?.time_to_leave.enabled && (
-                        <button type="button" role="menuitem" className="menu-i" onClick={() => {
-                          change({leaveReminder: true});
-                          setMenu(null);
-                        }}><Icon name="directions_car" size={16} />Time to Leave{' '}<span className="ink3 num">{settings.time_to_leave.buffer_minutes} min buffer</span></button>
-                      )}
-                    </div>
-                  )}
-                </span>
-              </div>
-            </>
-          )}
+          <RemindersRow reminders={draft.reminders} anchor={reminderFrom} countsFrom={countsFrom} timeZone={timeZone} today={today}
+            menuOpen={menu === 'reminder'} menuRef={menuRef} onMenu={open => setMenu(open ? 'reminder' : null)} onChange={reminders => change({reminders})}
+            chips={kind === 'event' && draft.leaveReminder && (
+              <span className="qchip ttl" title={leaveTitle}>
+                <Icon name="directions_car" size={14} />Time to Leave
+                <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
+              </span>
+            )}
+            // SV-31: an event with a time and a place can have Time to Leave, with Settings' buffer, while Settings has it on.
+            menuItems={kind === 'event' && !draft.leaveReminder && draft.start !== null && draft.place.trim() && settings?.time_to_leave.enabled && (
+              <button type="button" role="menuitem" className="menu-i" onClick={() => {
+                change({leaveReminder: true});
+                setMenu(null);
+              }}><Icon name="directions_car" size={16} />Time to Leave{' '}<span className="ink3 num">{settings.time_to_leave.buffer_minutes} min buffer</span></button>
+            )} />
 
           {kind === 'event' && !editing && <RepeatRow draft={draft} open={menu === 'repeat'} menuRef={menuRef} onToggle={() => setMenu(menu === 'repeat' ? null : 'repeat')} onPick={recurrence => {
             change({recurrence}, ['recurrence']);

@@ -7,13 +7,16 @@
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
 // can carry out and Open in Calendar; the others aren't drawn.
-import type {CalendarOut, EventColour, ItemOut} from '@setpoint/shared';
+import type {CalendarOut, EventColour, ItemOut, Settings} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {describeTaskRepeat} from '../../../logic/compose.ts';
-import {attendeesLine, detailWhen, leaveBy, remindersLine, repeatLine} from '../../../logic/detail.ts';
+import {useResource} from '../../../api/client.ts';
+import {SETTINGS_PATH} from '../../../api/items.ts';
+import {attendeesLine, detailWhen, leaveBy, repeatLine} from '../../../logic/detail.ts';
 import {placeLines, placeLink} from '../../../logic/place.ts';
+import {reminderAnchor, reminderLines} from '../../../logic/reminders.ts';
 import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
 import {colourVar} from '../../accounts.ts';
@@ -65,7 +68,9 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !actions || !!actions[action];
   const leave = leaveBy(item, timeZone, now);
   const attendees = attendeesLine(item.attendees);
-  const reminders = remindersLine(item.reminders);
+  // A dated task without a time counts its reminders from Settings' task time (D288), read only for one.
+  const {data: settings} = useResource<Settings>(item.kind === 'task' && !item.due_at && item.reminders.length ? SETTINGS_PATH : null);
+  const reminders = reminderLines(item.reminders, reminderAnchor(item, settings?.reminders.task_time ?? null, timeZone), timeZone);
   const place = placeLines(item.place, item.address);
   const link = item.kind === 'event' ? placeLink(item) : null;
   const repeat = repeatLine(item, timeZone);
@@ -106,7 +111,13 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           <div className="fact project"><span className="fact-dot"><span className="dot" style={ring(item.project)} /></span><span>{item.project}</span></div>
         )}
         {item.due_string && item.recurring && <Fact icon="repeat"><span>{describeTaskRepeat(item.due_string)}</span></Fact>}
-        {reminders && <Fact icon="notifications"><span>{reminders}</span></Fact>}
+        {reminders.length > 0 && (
+          <Fact icon="notifications">
+            <span className="fd-reminders">
+              {reminders.map(line => <span key={line.text} className="num">{line.text}{line.quiet && <span className="ink3 fd-offset">{line.quiet}</span>}</span>)}
+            </span>
+          </Fact>
+        )}
         <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
       </div>
       <div className="card-acts">

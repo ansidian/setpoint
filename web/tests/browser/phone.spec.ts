@@ -317,6 +317,30 @@ test('the agenda: today and the next 7 days, empty days folded, an item\'s detai
   }
 });
 
+test('SV-109: a task\'s custom reminder on the phone reads as its moment, the offset beside it, inside the card', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const {items} = await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-08');
+    const rent = items.find(item => item.title === 'Pay rent')!;
+    await setpoint.api('PATCH', `/items/${rent.id}`, {changes: {reminders: [30, -90]}});
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/calendar/item/${rent.id}`);
+    await page.locator('.ph-detail .fd-title', {hasText: 'Pay rent'}).waitFor();
+    // Pay rent has no time: its reminders count from Settings' 9:00 AM.
+    const lines = page.locator('.ph-detail .fd-reminders > span');
+    await until('its reminders', () => lines.allTextContents(), texts => texts.length === 2);
+    assert.deepEqual(await lines.allTextContents(), ['30 min before', 'Wed, Oct 7, 10:30 AM1 hr 30 min after']);
+    const card = (await rested(() => page.locator('.ph-detail .card').boundingBox()))!;
+    for (const line of await lines.all()) {
+      const box = (await rested(() => line.boundingBox()))!;
+      assert.ok(box.x >= card.x && box.x + box.width <= card.x + card.width, 'the line sits inside the card');
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('an empty day with a forecast keeps its own line to show it, "No events" beside its date', async () => {
   const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['weekend-forecast']});
   try {

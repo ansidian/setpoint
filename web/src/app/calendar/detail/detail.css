@@ -41,6 +41,9 @@
 /* SV-76: a fact's words shrink to the card and a long link or address breaks anywhere, rather than
    running out under the card's clip. */
 .fd .fact > span { min-width: 0; overflow-wrap: anywhere; }
+/* SV-109: the presets in one line, then each other reminder at its moment, its offset quiet beside it. */
+.fd .fd-reminders { display: flex; flex-direction: column; }
+.fd .fd-reminders .fd-offset { margin-left: 6px; }
 .fd-place { display: block; }
 /* SV-77: Open sits at the end of the place's first line, its 26 px riding over the line's 20. */
 .fd .fd-open { margin: -3px -2px -3px 0; padding: 0 10px 0 8px; gap: 4px; text-decoration: none; }

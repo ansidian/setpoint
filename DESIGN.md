@@ -488,7 +488,8 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
   at the top. Content (board 12a): colour dot and title, date and time, place and address (a link
   as its host with Open, #245), Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
-  Fri", #126), reminder, calendar (its glyph in the item's colour, #126); then **Edit E** and icon
+  Fri", #126), reminders (the presets in one line, then each other one at its moment, #255),
+  calendar (its glyph in the item's colour, #126); then **Edit E** and icon
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
   its project as a 9 px dot in it, has no Colour, and is struck through once done (#186). Delete stands apart after a `hair` divider and turns
   `alert` under the pointer, a task's Complete `good` (#169).
@@ -527,7 +528,8 @@ In the right pane (board 13): the **title field** parses as you type ("Dinner wi
 @Blue Door" → date, time and end, place, calendar, each parsed token marked; a line longer than the
 field shows where it's typed, the cut side fading, #110), **Places**
 suggestions under the place, the calendar picker, recurrence, reminders (default from Settings ›
-Notifications) with **Time to Leave** added from the same menu, never by default (#86), and the
+Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
+#255) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
 1h 30m"). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
 menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
@@ -2674,3 +2676,19 @@ it changes what's on screen.
     body page don't change. Night's dim and Light's ring move from the frame to the card. The phone
     keeps the frame at the screen's width with no room (D275). Board audit: boards that draw an
     HTML email show it 11.5 px further in.
+255. **A reminder can go off at any moment picked, before or after the start, through Custom…**
+    (the user, 2026-10-26; darma SV-109 D287, D288, D289): Add reminder's menu keeps its presets
+    (At the start, 5, 10, 15 and 30 min, 1 and 2 hours, 1 day before) and gains **Custom…** last, opening a
+    date and a time under the row, with Add and an ×; the line under them says how far that is from
+    the item's moment ("2 hrs after"). The moment is kept as minutes from the item's, negative after
+    it (D287), so it moves with the item; past 4 weeks either side it's refused, Add off and the line
+    in `alert` saying why. A reminder whose offset is a preset's keeps its words ("10 min before");
+    any other reads as the moment it goes off, "Sun, Oct 25, 8:00 PM", with "1 day 18 hrs before" or
+    "2 hrs after" in `ink3` beside it, in the editor's chip and on the floating detail (and the
+    phone's), where the presets share one line and each other one has its own. A click on a custom
+    chip reopens the picker at its moment, with Done. Tasks get the same row: a timed one counts
+    from its due time, a dated one without a time from Settings' task time on its day, or 9:00 AM at
+    None (D288), Custom… saying "Counts from 9:00 AM"; a task with no date has no Custom… and says
+    "Reminders need a date". An all-day event still counts from its midnight. Google is written only
+    the before-reminders, and a sync from Google keeps the after-ones; Todoist never holds a task's.
+    Board audit: no board draws Custom… or a custom reminder.

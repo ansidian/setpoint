@@ -77,6 +77,11 @@
 .editor .qchip .icon { color: var(--ink2); }
 .editor .qchip .x { width: 16px; height: 16px; border-radius: 999px; display: grid; place-items: center; color: var(--ink3); }
 .editor .qchip .x:hover { background: var(--sub3); color: var(--ink); }
+/* SV-109: reminders wrap when a custom one runs long; a custom chip reopens its picker, its offset quiet. */
+.editor .prow.reminders { flex-wrap: wrap; row-gap: 6px; }
+.editor .qchip-open { display: inline-flex; align-items: center; gap: 6px; height: 100%; }
+.editor .custom-reminder .custom-date { display: contents; }
+.editor .eg > .field-note.alert { color: var(--alert); }
 
 /* Menus under a field: places, calendars, repeats, reminders, projects. */
 .editor .menu-host { position: relative; display: block; min-width: 0; }
