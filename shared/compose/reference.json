@@ -1,0 +1,53 @@
+{
+  "about": "What the line reads (DESIGN.md #260, darma SV-114, D295): one example of each kind of phrase and what it reads, shown from the web editor's ? and the iPhone's. Written by hand; web/tests/lineReference.test.ts runs each example through parseTitle (today the seed's Wed, Oct 7, 2026, its calendars and projects, reminders counting from today at 9:00 AM) and fails when a reads isn't what the editor's fields would say. kind is the item it's typed into, event or task; plain, when there, is the phrase in the example kept as words (clicked, ⌥⌫ or tapped).",
+  "sections": [
+    {
+      "title": "Days",
+      "rows": [
+        {"example": "Lunch fri", "kind": "event", "reads": "Fri, Oct 9"},
+        {"example": "Review in 3 days", "kind": "event", "reads": "Sat, Oct 10"}
+      ]
+    },
+    {
+      "title": "Times",
+      "rows": [
+        {"example": "Call 2-3pm", "kind": "event", "reads": "2:00 – 3:00 PM"},
+        {"example": "Call 2pm no end", "kind": "event", "reads": "2:00 PM, No end"}
+      ]
+    },
+    {
+      "title": "Lengths and spans",
+      "rows": [
+        {"example": "Standup 9am for 15 mins", "kind": "event", "reads": "9:00 – 9:15 AM"},
+        {"example": "Trip fri to sun", "kind": "event", "reads": "Fri, Oct 9 – Sun, Oct 11, all day"}
+      ]
+    },
+    {
+      "title": "Repeats",
+      "rows": [
+        {"example": "Gym every mon", "kind": "event", "reads": "Mon, Oct 12 · Weekly on Monday"},
+        {"example": "Gym daily until fri", "kind": "event", "reads": "Daily, until Fri, Oct 9"}
+      ]
+    },
+    {
+      "title": "Reminders",
+      "rows": [
+        {"example": "Call mom remind me 1h before", "kind": "event", "reads": "a reminder 1 hour before"}
+      ]
+    },
+    {
+      "title": "Places, calendars and projects",
+      "rows": [
+        {"example": "Coffee @Blue Door", "kind": "event", "reads": "at Blue Door"},
+        {"example": "Lecture #classes", "kind": "event", "reads": "the Classes calendar"},
+        {"example": "Pay rent #home", "kind": "task", "reads": "the Home project"}
+      ]
+    },
+    {
+      "title": "Keeping a phrase as words",
+      "rows": [
+        {"example": "Lunch with May 12 fri", "kind": "event", "plain": "May 12", "reads": "“Lunch with May 12” · Fri, Oct 9"}
+      ]
+    }
+  ]
+}

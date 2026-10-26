@@ -12,6 +12,7 @@ import {build} from 'vite';
 import type {Rolldown} from 'vite';
 import {describe, expect, test} from 'vitest';
 import * as app from '../src/logic/composeApp.ts';
+import {LINE_REFERENCE} from '../src/logic/lineReference.ts';
 
 const WEB = fileURLToPath(new URL('../', import.meta.url));
 const DIR = fileURLToPath(new URL('../../shared/compose/', import.meta.url));
@@ -218,6 +219,9 @@ const CASE_LIST: Case[] = [
   ...['Trip fri for 3 days', 'Retreat for 1 week', 'Camp this weekend for 3 days', 'Trip fri for 1.5 days', 'Trip fri for 1 day 3h'].map(text => lineOn(text, '2026-10-26')),
   line('Work remind at 8am', 'event', {edit: {before: 'Work', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
   line('Call remind 1h before fri', 'event', {edit: {before: 'Call remind 1h before', day: '2026-10-14'}, remind: {day: '2026-10-14', time: 540}}),
+  // SV-114: What the line reads (reference.json), each example as lineReference.test.ts reads it; a
+  // row with a phrase kept as words needs the client's own hiding of it, so it isn't a case here.
+  ...LINE_REFERENCE.flatMap(section => section.rows).filter(row => !row.plain).map(row => remind(row.example, row.kind)),
 ];
 
 async function bundle(): Promise<string> {
