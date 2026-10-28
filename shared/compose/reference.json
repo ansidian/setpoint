@@ -12,6 +12,7 @@
       "title": "Times",
       "rows": [
         {"example": "Call 2-3pm", "kind": "event", "reads": "2:00 – 3:00 PM"},
+        {"example": "Run 745a", "kind": "event", "reads": "7:45 AM"},
         {"example": "Call 2pm no end", "kind": "event", "reads": "2:00 PM, No end"}
       ]
     },

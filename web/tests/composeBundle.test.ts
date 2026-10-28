@@ -89,6 +89,11 @@ const CASE_LIST: Case[] = [
   // Times and ranges.
   ...['7pm', '7:30 PM', 'at 7pm', '19:00', '7:30', 'noon', 'midnight', '12am', '9a', '7-9pm', '7pm - 9pm', '7 to 9pm', 'from 9 to 5pm',
     '11-1pm', '9am-5', '9:00-10:30', '13-15', '11pm-1am', 'at 7'].map(phrase => line(`Call ${phrase}`)),
+  // Minutes with no colon (SV-116): with am/pm, or in a range with it at either end; otherwise words.
+  ...['345am', '345a', '745p', '745 pm', '0745a', '1230p', '1245a', '930-1030am', '1-230pm', '930am-1030', '1345pm', '045am', '345 p', '930-1030']
+    .map(phrase => line(`Call ${phrase}`)),
+  ...['Room 1245', 'Read pages 101-105', 'Take pills 2 a day', 'Room 210a', 'Trip fri 745p to sun 1030a'].map(text => line(text)),
+  remind('Call mom remind fri 745p'),
   line('Gym sat 9am'),
   line('Dinner tmr at 7:30pm'),
   // An end at its start, and "no end" by a time, are No end (SV-108); only an end before it is the next day's.

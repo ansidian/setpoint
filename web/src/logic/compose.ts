@@ -15,7 +15,9 @@
 //   "end of month", "eom", "end of next month", the month's last day.
 // - a time: "7pm", "7:30 pm", "19:00", "noon", "midnight", "at" before any of them; a range "7-9pm",
 //   "7pm - 9pm", "11-1pm", "from 9 to 5pm" (a bare hour is a time only with am/pm or minutes, so
-//   "Gym 7" stays a title); No end, the end at the start, for the same time twice ("2pm to 2pm") or
+//   "Gym 7" stays a title); minutes with no colon with am/pm, "345am", "745p", "1230 pm", or in a
+//   range with am/pm at either end, "930-1030am" (SV-116; "Room 1245" and "pages 101-105" stay
+//   words); a lone a or p only against the digits, so "2 a day" stays words; No end, the end at the start, for the same time twice ("2pm to 2pm") or
 //   "no end" by a time ("2pm no end", "no end 2pm"; SV-108).
 // - an event's length after "for" (SV-111, D291, D292): "for 15 min", "for 1.5h", "for 1 hour 20mins",
 //   "for 1h30"; digits only, in min(s)/minute(s), h/hr(s)/hour(s), d/day(s) and week(s). It ends the
@@ -117,7 +119,16 @@ const MONTH = 'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 // A phrase ends at a space, punctuation or the end.
 const END = '(?=$|[\\s,.;!?])';
-const TIME = '(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a|p)?';
+// am/pm, or a lone a or p only against the digits: "2 a day" isn't 2 AM (SV-116).
+const MERIDIEM = '(?:\\s*(?:am|pm)|[ap])(?![a-z])';
+// An hour, its minutes after a colon or with none ("345am"), and its am/pm. `compact` is what has to
+// follow minutes with no colon.
+const clockPattern = (compact: string) =>
+  `(\\d{1,2})(?:(?::|(?=\\d{2}${compact}))(\\d{2}))?(?:\\s+(?=(?:am|pm)(?![a-z])))?(am|pm|a|p)?`;
+// A time on its own: minutes with no colon only with its own am/pm ("345a", "1230 pm"; SV-116).
+const TIME = clockPattern(MERIDIEM);
+// A range's end: one with no colon may take its am/pm from the other ("930-1030am"); range() refuses one on neither.
+const RANGE_TIME = clockPattern('(?!\\d)');
 // Days counted from today (SV-113, D294): "in 3 days", "next week", "this weekend", "end of month".
 const RELATIVE = 'in\\s+\\d{1,3}\\s*(?:days?|d|weeks?|months?)(?![a-z])|(?:(?:this|next)\\s+)?weekend(?![a-z])|next\\s+week(?![a-z])'
   + '|end\\s+of\\s+(?:the\\s+)?(?:week|month|next\\s+month)(?![a-z])|eom(?![a-z])';
@@ -165,7 +176,7 @@ function range(match: RegExpExecArray): {start: number; end: number} | null {
   const [startHour, startMinute, endHour, endMinute] = [Number(h1), Number(m1 ?? 0), Number(h2), Number(m2 ?? 0)];
   const startMer = meridiemOf(a1);
   const endMer = meridiemOf(a2);
-  if (!startMer && !endMer && !(m1 || m2 || startHour > 12 || endHour > 12)) return null;
+  if (!startMer && !endMer && (/\d{3}/.test(match[0]) || !(m1 || m2 || startHour > 12 || endHour > 12))) return null;
   const readings = (hour: number, minute: number) => [clock(hour, minute, 'a'), clock(hour, minute, 'p')].filter((value): value is number => value !== null);
   let start = startMer ? clock(startHour, startMinute, startMer) : null;
   let end = endMer ? clock(endHour, endMinute, endMer) : null;
@@ -286,7 +297,7 @@ function single(m: RegExpExecArray, s: State): boolean {
 }
 
 const TIMES: Matcher[] = [
-  {kind: 'when', pattern: sticky(`(?:(?:at|from)\\s+)?${TIME}\\s*(?:-|–|to|until)\\s*${TIME}${END}`), apply: (m, s) => {
+  {kind: 'when', pattern: sticky(`(?:(?:at|from)\\s+)?${RANGE_TIME}\\s*(?:-|–|to|until)\\s*${RANGE_TIME}${END}`), apply: (m, s) => {
     const found = range(m);
     // A length read first wins over an end (SV-111).
     if (!found || s.start !== null || s.length !== null) return false;
@@ -334,9 +345,9 @@ function minutesIn(text: string): number | null {
 const DAY_TEXT = `(?:${RELATIVE}|today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?`
   + `|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
 // A bare day isn't an hour ("oct 3 to 5pm" is a time).
-const LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
+const LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*:|${MERIDIEM}))`;
 // A time by a span's end: am/pm or minutes, noon or midnight, as a lone time.
-const SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
+const SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::?\\d{2})?${MERIDIEM}|\\d{1,2}:\\d{2})`;
 
 /**
  * A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its

@@ -66,12 +66,26 @@ describe('times', () => {
     ['2pm to 2pm', h(14), h(14)], ['at 2pm to 2pm', h(14), h(14)], ['2-2pm', h(14), h(14)], ['2pm-2', h(14), h(14)], ['14:00–14:00', h(14), h(14)],
     // "no end" by a time, either side of it (SV-108).
     ['2pm no end', h(14), h(14)], ['no end 2pm', h(14), h(14)], ['no end at 2pm', h(14), h(14)], ['noon No End', h(12), h(12)],
+    // Minutes with no colon, with am/pm (SV-116): the last two digits the minutes.
+    ['345am', h(3, 45), null], ['345a', h(3, 45), null], ['745p', h(19, 45), null], ['745 PM', h(19, 45), null], ['0745a', h(7, 45), null],
+    ['1230pm', h(12, 30), null], ['1230p', h(12, 30), null], ['1245a', 45, null], ['at 1015am', h(10, 15), null], ['2 am', h(2), null], ['2a', h(2), null],
+    // In a range, am/pm at either end will do.
+    ['930-1030am', h(9, 30), h(10, 30)], ['1-230pm', h(13), h(14, 30)], ['930am-1030', h(9, 30), h(10, 30)], ['1130pm-1230am', h(23, 30), h(24, 30)],
+    ['10:30-1130am', h(10, 30), h(11, 30)],
   ])('Meet %s', (phrase, start, end) => {
     const parsed = parse(`Meet ${phrase}`);
     expect([parsed.start, parsed.end]).toEqual([start, end]);
     expect(parsed.title).toBe('Meet');
   });
   test.each(['Meet 7-9', 'Meet 13pm', 'Meet 7:75pm', 'Meet at 7'])('%s holds no time', text => expect(parse(text).start).toBeNull());
+  // SV-116: digits with no am/pm, a lone a or p after a space, and impossible clocks stay words.
+  test.each(['Room 1245', 'Flight 345', 'Read pages 101-105', 'Meet 930-1030', 'Meet 345 p', 'Take pills 2 a day', 'Meet 7 p', 'Meet 1345pm',
+    'Meet 775pm', 'Meet 045am', 'Meet 12345am', 'Meet 345amazing'])('%s stays words', text => {
+    expect(parse(text)).toMatchObject({title: text, start: null, end: null});
+    expect(marked(text)).toEqual([]);
+  });
+  test('a room number with a or p reads as a time, as "Seat 12a" does (kept as words by a click)', () =>
+    expect(parse('Room 210a')).toMatchObject({title: 'Room', start: h(2, 10)}));
   test('a bare time keeps no date (the editor gives it the selected day, as v1 did)', () => expect(parse('Standup 9am')).toMatchObject({date: null, start: h(9)}));
   test.each([
     ['Call Sam 2pm no end', 'Call Sam', ['when:2pm no end']],
@@ -552,6 +566,7 @@ describe('SV-111: a span of days (D292), events only', () => {
   test('a time at each end is one event across the days', () => {
     expect(parse('Trip fri 7pm to sun 3pm')).toMatchObject({title: 'Trip', date: '2026-10-09', start: h(19), end: 2 * 1440 + h(15), days: null, recurrence: null});
     expect(marked('Trip fri 7pm to sun 3pm')).toEqual(['when:fri 7pm to sun 3pm']);
+    expect(parse('Trip fri 745p to sun 1030a')).toMatchObject({title: 'Trip', date: '2026-10-09', start: h(19, 45), end: 2 * 1440 + h(10, 30)});
   });
   test.each<[string, string, string, number | null, number | null, number | null, string]>([
     ['a time range', 'Conference oct 23–25 9am–5pm', '2026-10-23', h(9), h(17), null, 'RRULE:FREQ=DAILY;UNTIL=20261025'],
@@ -637,6 +652,7 @@ describe('SV-112: reminder phrases (D293), with D291\'s units', () => {
     ['a time alone on the item\'s day, read later', 'Dinner remind me 6pm fri 7pm', 'Dinner', [{date: '2026-10-09', time: h(18)}], '2026-10-09', h(19)],
     ['on a day with "at"', 'Dinner oct 20 7pm remind on oct 19 at 8:30pm', 'Dinner', [{date: '2026-10-19', time: h(20, 30)}], '2026-10-20', h(19)],
     ['noon', 'Call mom remind fri noon', 'Call mom', [{date: '2026-10-09', time: h(12)}], null, null],
+    ['minutes with no colon (SV-116)', 'Call mom remind fri 745p', 'Call mom', [{date: '2026-10-09', time: h(19, 45)}], null, null],
   ])('a moment, %s: %s', (_, text, title, reminders, date, start) => {
     expect(read(text)).toMatchObject({title, reminders, date, start});
   });

@@ -79,7 +79,10 @@ var SetpointCompose = (function(exports) {
 		"dec"
 	];
 	var END = "(?=$|[\\s,.;!?])";
-	var TIME = "(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a|p)?";
+	var MERIDIEM = "(?:\\s*(?:am|pm)|[ap])(?![a-z])";
+	var clockPattern = (compact) => `(\\d{1,2})(?:(?::|(?=\\d{2}${compact}))(\\d{2}))?(?:\\s+(?=(?:am|pm)(?![a-z])))?(am|pm|a|p)?`;
+	var TIME = clockPattern(MERIDIEM);
+	var RANGE_TIME = clockPattern("(?!\\d)");
 	var RELATIVE = "in\\s+\\d{1,3}\\s*(?:days?|d|weeks?|months?)(?![a-z])|(?:(?:this|next)\\s+)?weekend(?![a-z])|next\\s+week(?![a-z])|end\\s+of\\s+(?:the\\s+)?(?:week|month|next\\s+month)(?![a-z])|eom(?![a-z])";
 	var ORDINALS = {
 		first: 1,
@@ -142,7 +145,7 @@ var SetpointCompose = (function(exports) {
 		];
 		const startMer = meridiemOf(a1);
 		const endMer = meridiemOf(a2);
-		if (!startMer && !endMer && !(m1 || m2 || startHour > 12 || endHour > 12)) return null;
+		if (!startMer && !endMer && (/\d{3}/.test(match[0]) || !(m1 || m2 || startHour > 12 || endHour > 12))) return null;
 		const readings = (hour, minute) => [clock(hour, minute, "a"), clock(hour, minute, "p")].filter((value) => value !== null);
 		let start = startMer ? clock(startHour, startMinute, startMer) : null;
 		let end = endMer ? clock(endHour, endMinute, endMer) : null;
@@ -267,7 +270,7 @@ var SetpointCompose = (function(exports) {
 	var TIMES = [
 		{
 			kind: "when",
-			pattern: sticky(`(?:(?:at|from)\\s+)?${TIME}\\s*(?:-|–|to|until)\\s*${TIME}${END}`),
+			pattern: sticky(`(?:(?:at|from)\\s+)?${RANGE_TIME}\\s*(?:-|–|to|until)\\s*${RANGE_TIME}${END}`),
 			apply: (m, s) => {
 				const found = range(m);
 				if (!found || s.start !== null || s.length !== null) return false;
@@ -318,8 +321,8 @@ var SetpointCompose = (function(exports) {
 		return Math.round(minutes);
 	}
 	var DAY_TEXT = `(?:${RELATIVE}|today|tonight|tomorrow|tmrw|tmr|(?:(?:next|this)\\s+)?(?:${WEEKDAY})|(?:${MONTH})\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?|\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${MONTH})(?:\\s+\\d{4})?|\\d{1,2}/\\d{1,2}(?:/(?:\\d{4}|\\d{2}))?|\\d{4}-\\d{2}-\\d{2})`;
-	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*(?::|(?:am|pm|a|p)(?![a-z]))))`;
-	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a|p)(?![a-z])|\\d{1,2}:\\d{2})`;
+	var LAST_DAY = `(?:${DAY_TEXT}|\\d{1,2}(?:st|nd|rd|th)?(?!\\s*:|${MERIDIEM}))`;
+	var SPAN_TIME = `(?:noon|midnight|\\d{1,2}(?::?\\d{2})?${MERIDIEM}|\\d{1,2}:\\d{2})`;
 	/**
 	* A span's last day, read from its first (D292): a weekday the next on or after it, a bare day in its
 	* month, a month and day past it next year's when its month is earlier ("dec 30 – jan 2"). Null

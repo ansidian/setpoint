@@ -1881,6 +1881,733 @@
     {
       "fn": "parseTitle",
       "input": {
+        "text": "Call 345am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 225,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 345a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 225,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 745p",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1185,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 745 pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 11,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 1185,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 0745a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 465,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 1230p",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 750,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 1245a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 10,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 45,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 930-1030am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 570,
+        "end": 630,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 1-230pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 12,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 780,
+        "end": 870,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 930am-1030",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call",
+        "marks": [
+          {
+            "start": 5,
+            "end": 15,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 570,
+        "end": 630,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 1345pm",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call 1345pm",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 045am",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call 045am",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 345 p",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call 345 p",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call 930-1030",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Call 930-1030",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Room 1245",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Room 1245",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Read pages 101-105",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Read pages 101-105",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Take pills 2 a day",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Take pills 2 a day",
+        "marks": [],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Room 210a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Room",
+        "marks": [
+          {
+            "start": 5,
+            "end": 9,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 130,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Trip fri 745p to sun 1030a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Trip",
+        "marks": [
+          {
+            "start": 5,
+            "end": 26,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-09",
+        "start": 1185,
+        "end": 3510,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Call mom remind fri 745p",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "remind": {
+          "day": "2026-10-07",
+          "time": 540
+        }
+      },
+      "output": {
+        "title": "Call mom",
+        "marks": [
+          {
+            "start": 9,
+            "end": 24,
+            "kind": "reminder"
+          }
+        ],
+        "date": null,
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": [
+          {
+            "date": "2026-10-09",
+            "time": 1185
+          }
+        ]
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
         "text": "Gym sat 9am",
         "kind": "event",
         "today": "2026-10-07",
@@ -11098,6 +11825,48 @@
         "date": null,
         "start": 840,
         "end": 900,
+        "place": null,
+        "calendar": null,
+        "recurrence": null,
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Run 745a",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ],
+        "remind": {
+          "day": "2026-10-07",
+          "time": 540
+        }
+      },
+      "output": {
+        "title": "Run",
+        "marks": [
+          {
+            "start": 4,
+            "end": 8,
+            "kind": "when"
+          }
+        ],
+        "date": null,
+        "start": 465,
+        "end": null,
         "place": null,
         "calendar": null,
         "recurrence": null,
