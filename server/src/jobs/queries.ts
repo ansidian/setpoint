@@ -1,12 +1,12 @@
 // Jobs's reads (J1): the page (its two numbers, Needs you, From history, the rows, and J4's history
-// pass) and an
-// application's detail, shaped as `@setpoint/shared`'s jobs/api.ts. Ghosted comes from the clock
-// here, never from a stored status (rules.ts).
+// pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; J5's search and
+// the shell's item. Ghosted comes from the clock here, never from a stored status (rules.ts).
 import type {
-  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsPageOut, NeedsYouItemOut, PostingOut,
+  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsNavOut, JobsPageOut, JobsSearchOut, NeedsYouItemOut,
+  PostingOut,
 } from '@setpoint/shared';
 import {isQuietJobEvent} from '@setpoint/shared';
-import {asc, eq, isNull} from 'drizzle-orm';
+import {and, asc, eq, isNull} from 'drizzle-orm';
 import {localDay} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {isoNow} from '../store.ts';
@@ -17,6 +17,7 @@ import {existingMessages} from './mail.ts';
 import {readingStatus} from './readerState.ts';
 import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
 import * as j from './schema.ts';
+import {searchApplications} from './search.ts';
 
 type Application = typeof j.jobsApplications.$inferSelect;
 type Candidate = typeof j.jobsJdCandidates.$inferSelect;
@@ -132,4 +133,25 @@ export function applicationDetail(store: Store, id: number): ApplicationOut {
     also_at: alsoAt.map(link),
     hand_set: db.select().from(j.jobsHandSet).where(eq(j.jobsHandSet.applicationId, id)).all().map(row => ({field: row.field, set_at: row.setAt})),
   };
+}
+
+/** GET /api/jobs/search?q=…: company or role first, then a match only in a JD's text, with its line (D316). */
+export function jobsSearch(store: Store, q: string): JobsSearchOut {
+  const {applications, byId, postings, rowOf} = loadRows(store);
+  const found = searchApplications(applications.map(application => ({
+    id: application.id, company: application.company, title: application.title, appliedAt: application.appliedAt,
+    fullText: postings.get(application.id)?.fullText ?? null,
+  })), q);
+  return {
+    query: q,
+    company_or_role: found.companyOrRole.map(id => rowOf(byId.get(id)!)),
+    in_jd: found.inJd.map(({id, line}) => ({row: rowOf(byId.get(id)!), line})),
+  };
+}
+
+/** GET /api/jobs/nav: whether Jobs is on, and today's Needs you count, for the shell. */
+export function jobsNav(store: Store): JobsNavOut {
+  const waiting = jobsDb(store.sqlite).select({id: j.jobsNeedsYou.id}).from(j.jobsNeedsYou)
+    .where(and(isNull(j.jobsNeedsYou.resolvedAt), eq(j.jobsNeedsYou.fromHistory, false))).all();
+  return {enabled: jobsEnabled(store), needs_you: waiting.length};
 }

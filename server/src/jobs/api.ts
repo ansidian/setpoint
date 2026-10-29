@@ -1,18 +1,18 @@
 // Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
 // application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
 // Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
-// its Undo (J4). Mounted under /api behind the session by server.ts, a wiring point, through
+// its Undo (J4); search and the shell's item (J5). Mounted under /api behind the session by server.ts, a wiring point, through
 // createApp's `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
-import {jobsSettingsPatchInput, jobsUndoDismissInput} from '@setpoint/shared';
+import {jobsSearchInput, jobsSettingsPatchInput, jobsUndoDismissInput} from '@setpoint/shared';
 import type {JobsDismissedOut} from '@setpoint/shared';
 import {conflict, invalid, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup} from './lookup.ts';
 import {dismissFromHistory, undoDismissFromHistory} from './needsYou.ts';
-import {applicationDetail, jobsPage} from './queries.ts';
+import {applicationDetail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
@@ -28,6 +28,9 @@ async function body(c: Context): Promise<unknown> {
 export function jobsApi(store: Store) {
   const api = new Hono();
   api.get('/jobs', c => c.json(jobsPage(store)));
+  api.get('/jobs/nav', c => c.json(jobsNav(store)));
+  // Jobs's own search, never mail's or ⌘K's (D316).
+  api.get('/jobs/search', c => c.json(jobsSearch(store, parse(jobsSearchInput, {q: c.req.query('q') ?? ''}).q)));
   api.get('/jobs/applications/:id', c => c.json(applicationDetail(store, id(c.req.param('id')))));
   // Look it up: the application's JD looked up again, open or closed. It answers at once with the
   // detail, its JD `looking`; the lookup runs on Jobs's worker and its end comes as a `jobs` event.

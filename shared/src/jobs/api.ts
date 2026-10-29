@@ -8,10 +8,8 @@
 //   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (J4: turning Jobs on starts the history pass)
 //   POST /api/jobs/from-history/dismiss  JobsDismissedOut (J4: Dismiss all, the same as ignoring each item)
 //   POST /api/jobs/from-history/undo     jobsUndoDismissInput → JobsDismissedOut (J4: the toast's Undo)
-//
-// Later slices add, with these shapes:
-//
 //   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
+//   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
 //
 // Every change goes out as a `jobs` live event (JobsLiveEvent). Ages are instants and dates are
 // local; the page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in the
@@ -249,7 +247,11 @@ export const applicationSchema = applicationRowSchema.extend({
 });
 export type ApplicationOut = z.infer<typeof applicationSchema>;
 
-/** J5's search (D316): company or role first, then a match only in a JD's text, with its line. */
+/**
+ * J5's search (D316): company or role first (best first, then newest), then a match only in a JD's
+ * text, newest first, with the line it matched quoted ("…our services run on Kubernetes across two
+ * regions…").
+ */
 export const jobsSearchInput = z.strictObject({q: z.string().trim().min(1).max(200)});
 export const jobsSearchSchema = z.strictObject({
   query: z.string(),
@@ -257,6 +259,13 @@ export const jobsSearchSchema = z.strictObject({
   in_jd: z.array(z.strictObject({row: applicationRowSchema, line: z.string()})),
 });
 export type JobsSearchOut = z.infer<typeof jobsSearchSchema>;
+
+/**
+ * GET /api/jobs/nav: what the shell draws of Jobs on every page (J5): whether it's on (no item while
+ * it's off, D310) and the Needs you count beside it (today's, not From history's; gone at zero, D313).
+ */
+export const jobsNavSchema = z.strictObject({enabled: z.boolean(), needs_you: z.int().nonnegative()});
+export type JobsNavOut = z.infer<typeof jobsNavSchema>;
 
 /** An account Jobs reads and how (decision 56); an account not listed is off. */
 export const jobsReadAccountSchema = z.strictObject({account_id: id, reads: z.enum(JOB_READ_MODES)});

@@ -150,6 +150,21 @@ the lint rule still refuses an import of Jobs from triage.
   as `dismissed`, the same as ignoring each ([`needsYou.ts`](needsYou.ts)), and answers their ids;
   `POST /api/jobs/from-history/undo {needs_you: [ids]}` brings back those still dismissed.
 
+## Search (J5)
+
+- **What:** `GET /api/jobs/search?q=…` ([`search.ts`](search.ts), run over the store by `queries.ts`
+  `jobsSearch`): company or role first, then an application whose JD's text alone matched, with the
+  line it matched (D316, decision 62). Jobs's own: mail's search and ⌘K never see it.
+- **Company or role** ranks best first, then newest: the query's words start the company's name in
+  order, the last perhaps unfinished ("wide world", "humon"); they start words of the company; of the
+  role; of the two together. Case and punctuation never count, as companies match elsewhere.
+- **In a JD:** each query word starts a word of the saved posting's text; the line is quoted from the
+  first word's match, up to six words back (stopping at a clause's start) and eleven on (stopping at a
+  sentence's end), with an ellipsis at each end. Newest first.
+- **The shell's item:** `GET /api/jobs/nav` answers whether Jobs is on and today's Needs you count,
+  for the sidebar, the rail, ⌘K's Go to and `4` on every page; it's under `/jobs`, so the `jobs`
+  event refreshes it.
+
 ## The lint rule
 
 `module-boundary/jobs` in [`eslint.config.js`](../../../eslint.config.js) refuses an import of
