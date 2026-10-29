@@ -6,6 +6,8 @@
 //   POST /api/jobs/applications/:id/lookup  ApplicationOut, 202 (J3: Look it up)
 //   GET  /api/jobs/settings              JobsSettingsOut (J4, drawn in J8: Settings › Jobs)
 //   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (J4: turning Jobs on starts the history pass)
+//   POST /api/jobs/from-history/dismiss  JobsDismissedOut (J4: Dismiss all, the same as ignoring each item)
+//   POST /api/jobs/from-history/undo     jobsUndoDismissInput → JobsDismissedOut (J4: the toast's Undo)
 //
 // Later slices add, with these shapes:
 //
@@ -281,6 +283,14 @@ export const jobsSettingsPatchInput = z.strictObject({
   accounts: z.array(jobsReadAccountSchema).refine(list => new Set(list.map(each => each.account_id)).size === list.length, 'Each account once.').optional(),
 });
 export type JobsSettingsPatch = z.infer<typeof jobsSettingsPatchInput>;
+
+/** Dismiss all's answer, and Undo's: the From history items it dismissed, or brought back. */
+export const jobsDismissedSchema = z.strictObject({needs_you: z.array(id)});
+export type JobsDismissedOut = z.infer<typeof jobsDismissedSchema>;
+
+/** Undo of Dismiss all: the items it dismissed, as its answer named them. */
+export const jobsUndoDismissInput = z.strictObject({needs_you: z.array(id).min(1).max(10_000)});
+export type JobsUndoDismiss = z.infer<typeof jobsUndoDismissInput>;
 
 /**
  * The `jobs` live event: `applications` changed (a row lands or moves, settling from `sub2`) and

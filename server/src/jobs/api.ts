@@ -1,14 +1,17 @@
 // Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
 // application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
-// Settings › Jobs, where turning Jobs on starts the history pass (J4). Mounted under /api behind the session by server.ts, a wiring point, through
+// Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
+// its Undo (J4). Mounted under /api behind the session by server.ts, a wiring point, through
 // createApp's `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
-import {jobsSettingsPatchInput} from '@setpoint/shared';
+import {jobsSettingsPatchInput, jobsUndoDismissInput} from '@setpoint/shared';
+import type {JobsDismissedOut} from '@setpoint/shared';
 import {conflict, invalid, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup} from './lookup.ts';
+import {dismissFromHistory, undoDismissFromHistory} from './needsYou.ts';
 import {applicationDetail, jobsPage} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
 
@@ -36,5 +39,11 @@ export function jobsApi(store: Store) {
   api.get('/jobs/settings', c => c.json(jobsSettings(store)));
   // On starts the history pass (once: it never reads an email twice); off stops reading.
   api.patch('/jobs/settings', async c => c.json(updateJobsSettings(store, parse(jobsSettingsPatchInput, await body(c)))));
+  // Dismiss all: the same as ignoring each From history item (D324). Its answer names them for Undo.
+  api.post('/jobs/from-history/dismiss', c => c.json({needs_you: dismissFromHistory(store)} satisfies JobsDismissedOut));
+  api.post('/jobs/from-history/undo', async c => {
+    const {needs_you: ids} = parse(jobsUndoDismissInput, await body(c));
+    return c.json({needs_you: undoDismissFromHistory(store, ids)} satisfies JobsDismissedOut);
+  });
   return api;
 }

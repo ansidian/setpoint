@@ -20,7 +20,8 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   APIs and posting pages ([`web.ts`](web.ts)), markdown cleaning ([`markdown.ts`](markdown.ts)) and
   its prompts ([`jdPrompt.ts`](jdPrompt.ts)). J4 adds the history pass: starting, resuming and
   ending it ([`history.ts`](history.ts)), its state and progress ([`historyState.ts`](historyState.ts)),
-  Settings › Jobs's turning on and off ([`settings.ts`](settings.ts)); the reader reads it.
+  Settings › Jobs's turning on and off ([`settings.ts`](settings.ts)) and From history's Dismiss all
+  ([`needsYou.ts`](needsYou.ts)); the reader reads it.
 - `shared/src/jobs/`: its enums, API schemas and types, and the `jobs` live event (D328: the contract
   needs a third folder, since `web/` can't import server code).
 - `web/src/app/jobs/`: the page, pane, slots and styles (J5 onwards; not there yet).
@@ -142,6 +143,9 @@ the lint rule still refuses an import of Jobs from triage.
   (each email it reads, its start and end, the AI going down). While it runs, `read` counts
   jobs_emails_read rows read since it started for mail from before its cutoff; once done it's kept.
   `state` is `waiting` while it runs and the reader is down.
+- **From history:** `POST /api/jobs/from-history/dismiss` resolves every waiting From history item
+  as `dismissed`, the same as ignoring each ([`needsYou.ts`](needsYou.ts)), and answers their ids;
+  `POST /api/jobs/from-history/undo {needs_you: [ids]}` brings back those still dismissed.
 
 ## The lint rule
 

@@ -4,10 +4,10 @@
 // on through its route. The Done-when list: the history makes the expected applications, updates
 // finding the confirmations read before them, closed ones without JDs, old silent ones Ghosted and
 // the unsure in From history; a pass stopped halfway goes on after a restart, reading and charging
-// nothing twice; a second turn-on reads nothing; the progress counts.
-import {jobsPageSchema, jobsSettingsSchema} from '@setpoint/shared';
+// nothing twice; a second turn-on reads nothing; the progress counts; Dismiss all and its Undo.
+import {jobsDismissedSchema, jobsPageSchema, jobsSettingsSchema} from '@setpoint/shared';
 import type {JobsHistoryOut} from '@setpoint/shared';
-import {and, asc, eq, like, lte} from 'drizzle-orm';
+import {and, asc, eq, isNull, like, lte} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import {FAKE_KEYS, fakeModels} from '../../../tests/fakeModels.ts';
 import type {FakeAnswer, FakeRequest} from '../../../tests/fakeModels.ts';
@@ -22,6 +22,7 @@ import {jobsApi} from '../api.ts';
 import {jobsDb, migrateJobs} from '../db.ts';
 import {HISTORY_KEY} from '../history.ts';
 import {requestLookup} from '../lookup.ts';
+import {jobsPage} from '../queries.ts';
 import {JobsReader} from '../reader.ts';
 import * as j from '../schema.ts';
 import {fakeWeb, serveFixtures} from './fakeWeb.ts';
@@ -449,6 +450,52 @@ describe('turning Jobs on and off (Settings › Jobs)', () => {
       enabled: false, accounts: [], history: {state: 'not_started', read: 0, total: 0, started_at: null, finished_at: null}, from_history: 0, applications: 0,
     });
     expect(s.models.requests).toEqual([]);
+  });
+});
+
+describe('Dismiss all and its Undo (D324)', () => {
+  test('clears From history, the same as ignoring each item, and Undo brings back what it dismissed', async () => {
+    const s = await setup();
+    await runPass(s);
+    const before = await s.page();
+    const reads = s.db.select().from(j.jobsEmailsRead).orderBy(asc(j.jobsEmailsRead.messageId)).all();
+    const events = liveEvents(s.w).length;
+
+    const dismissed = await s.c.send('POST', '/api/jobs/from-history/dismiss');
+    expect(dismissed.status).toBe(200);
+    const {needs_you: ids} = jobsDismissedSchema.parse(dismissed.body);
+    expect(ids.sort()).toEqual(before.from_history.map(item => item.id).sort());
+    let page = await s.page();
+    expect(page.from_history).toEqual([]);
+    // Those emails make nothing: no application, event or read changes, and today's is untouched.
+    expect(page.rows).toEqual(before.rows);
+    expect(page.needs_you).toEqual(before.needs_you);
+    expect(s.db.select().from(j.jobsEmailsRead).orderBy(asc(j.jobsEmailsRead.messageId)).all()).toEqual(reads);
+    expect(s.db.select().from(j.jobsNeedsYou).where(isNull(j.jobsNeedsYou.resolvedAt)).all()).toEqual([]);
+    expect(liveEvents(s.w).slice(events)).toEqual([{type: 'jobs', applications: [], needs_you: ids}]);
+    expect(jobsSettingsSchema.parse((await s.c.send('GET', '/api/jobs/settings')).body).from_history).toBe(0);
+    // Again, nothing's left to dismiss.
+    expect((await s.c.send('POST', '/api/jobs/from-history/dismiss')).body).toEqual({needs_you: []});
+
+    const undone = await s.c.send('POST', '/api/jobs/from-history/undo', {body: {needs_you: ids}});
+    expect(undone.status).toBe(200);
+    expect(jobsDismissedSchema.parse(undone.body).needs_you.sort()).toEqual(ids);
+    page = await s.page();
+    expect(page.from_history).toEqual(before.from_history);
+    // Only what Dismiss all dismissed comes back, once.
+    expect((await s.c.send('POST', '/api/jobs/from-history/undo', {body: {needs_you: ids}})).body).toEqual({needs_you: []});
+    expect((await s.c.send('POST', '/api/jobs/from-history/undo', {body: {needs_you: []}})).status).toBe(400);
+  });
+
+  test('on the seed: six dismissed, today\'s three stay, and Undo brings the six back', async () => {
+    const w = world({seed: true});
+    const c = await signedIn(w, {routes: [jobsApi(w.store)]});
+    const {needs_you: ids} = jobsDismissedSchema.parse((await c.send('POST', '/api/jobs/from-history/dismiss')).body);
+    expect(ids).toHaveLength(6);
+    expect(jobsPage(w.store)).toMatchObject({from_history: [], needs_you: [{}, {}, {}], counts: {all: 62}});
+    await c.send('POST', '/api/jobs/from-history/undo', {body: {needs_you: ids}});
+    expect(jobsPage(w.store).from_history).toHaveLength(6);
+    expect((await client(w, {routes: [jobsApi(w.store)]}).send('POST', '/api/jobs/from-history/dismiss')).status).toBe(401);
   });
 });
 
