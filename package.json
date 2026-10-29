@@ -40,10 +40,13 @@
     "globals": "17.12.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   },
   "overrides": {
-    "vite": "8.3.0",
-    "tldts-core": "7.4.15"
+    "vite": "8.3.5",
+    "tldts-core": "7.4.15",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.28.2"
+    }
   }
 }

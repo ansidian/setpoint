@@ -36,7 +36,7 @@
 // over 1440, an end at the start No end). shared/compose/cases.json records what each returns.
 var SetpointCompose = (function(exports) {
 	Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
-	//#region web/src/logic/format.ts
+	// web/src/logic/format.ts
 	var DAY = 864e5;
 	/** A local day `days` after `date` ("2026-10-07" + 1 → "2026-10-08"). */
 	function addDays(date, days) {
@@ -46,8 +46,7 @@ var SetpointCompose = (function(exports) {
 	function daysBetween(from, to) {
 		return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / DAY);
 	}
-	//#endregion
-	//#region web/src/logic/compose.ts
+	// web/src/logic/compose.ts
 	/** The API's limits on an item's reminders: 4 weeks either side, and 10 (shared's REMINDER_LIMIT_MINUTES). */
 	var REMINDER_LINE_LIMITS = {
 		minutes: 40320,
@@ -884,8 +883,7 @@ var SetpointCompose = (function(exports) {
 			days: 1
 		};
 	}
-	//#endregion
-	//#region web/src/logic/composeApp.ts
+	// web/src/logic/composeApp.ts
 	/** The line as the web's editor reads it: "#…" is a task's project or an event's calendar. */
 	function parseTitle(input) {
 		const names = input.kind === "task" ? input.projects : input.calendars;
@@ -932,7 +930,6 @@ var SetpointCompose = (function(exports) {
 		if (!run) throw new Error(`No such function: ${name}`);
 		return JSON.stringify(run(JSON.parse(json)));
 	}
-	//#endregion
 	exports.bareToken = bareToken;
 	exports.call = call;
 	exports.completeToken = completeToken;
