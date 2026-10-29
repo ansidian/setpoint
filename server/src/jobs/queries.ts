@@ -12,7 +12,7 @@ import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
 import {existingMessages} from './mail.ts';
-import {companyKey, countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, weeklyCounts} from './rules.ts';
+import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
 import * as j from './schema.ts';
 
 type Application = typeof j.jobsApplications.$inferSelect;
@@ -116,8 +116,7 @@ export function applicationDetail(store: Store, id: number): ApplicationOut {
     id: event.id, at: event.at, kind: event.kind, quiet: isQuietJobEvent(event.kind), sender: event.sender, subject: event.subject, line: event.line,
     message_id: event.messageId !== null && present.has(event.messageId) ? event.messageId : null, first_seen: event.firstSeen,
   }));
-  const company = companyKey(application.company);
-  const {appliedBefore, alsoAt} = relatedApplications(application, applications.filter(other => companyKey(other.company) === company));
+  const {appliedBefore, alsoAt} = relatedApplications(application, applications.filter(other => sameCompany(other.company, application.company)));
   const posting = postings.get(id);
   return {
     ...rowOf(application),

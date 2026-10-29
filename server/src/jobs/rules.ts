@@ -1,9 +1,12 @@
-// Jobs's pure rules (J1), tested as tables (tests/rules.test.ts): Ghosted, the per-week buckets, the
-// counts by status, which of a company's other applications are Applied before, and the keys
-// applications match on. No database, no clock: the caller passes now and the zone.
-import {GHOSTED_AFTER_DAYS, JOB_STATUSES, JOB_WEEKS} from '@setpoint/shared';
-import type {JobCountsOut, JobStatus, JobWeekOut} from '@setpoint/shared';
+// Jobs's pure rules, tested as tables (tests/rules.test.ts, tests/reading.test.ts): Ghosted, the
+// per-week buckets, the counts by status, which of a company's other applications are Applied before
+// (J1); and what each email does (J2): the keys and loose company names applications match on, a
+// confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked emails. No
+// database, no clock: the caller passes now and the zone.
+import {GHOSTED_AFTER_DAYS, isQuietJobEvent, JOB_STATUSES, JOB_WEEKS, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
+import type {JobCountsOut, JobEventKind, JobReadMode, JobStatus, JobWeekOut, Kind, NeedsYouReason} from '@setpoint/shared';
 import {addDays, daysBetween, localDay, weekday} from '../domain/time.ts';
+import type {JobEmailEvent} from './prompt.ts';
 
 /** Whole local days from an application's last email (or its Applied date, with none) to now. */
 export function daysWithoutEmail(lastEmailAt: string, now: string, timeZone: string): number {
@@ -77,7 +80,222 @@ export function titleKey(title: string): string {
     .trim();
 }
 
-/** A company as Jobs groups applications by: case and punctuation ignored. J2 loosens it ("Fabrikam Labs"). */
+/** A company with case and punctuation ignored. */
 export function companyKey(company: string): string {
   return company.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+// Words a company's name may carry or drop without being another company.
+const COMPANY_SUFFIXES = new Set(['the', 'inc', 'incorporated', 'llc', 'ltd', 'limited', 'corp', 'corporation', 'co', 'company', 'plc', 'gmbh']);
+
+const companyWords = (company: string) => companyKey(company).split(' ').filter(word => word && !COMPANY_SUFFIXES.has(word));
+
+/**
+ * Companies match loosely (decision 51, D305): case, punctuation and "Inc." ignored, and one name may
+ * be the start of the other, word by word. "Fabrikam Labs" is "Fabrikam", and "wide world" is "Wide
+ * World Importers"; "Northwind Talent" isn't "Northwind Traders", and "Fabrikam" isn't "Fabrikamco".
+ */
+export function sameCompany(a: string, b: string): boolean {
+  const [short, long] = [companyWords(a), companyWords(b)].sort((x, y) => x.length - y.length) as [string[], string[]];
+  return short.length > 0 && short.every((word, index) => long[index] === word);
+}
+
+/** A requisition ID as it's compared: case, spaces and dashes ignored ("R-2026-118" is "r2026118"). */
+export function requisitionKey(id: string): string {
+  return id.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+// ---- Reading mail into applications (J2, decisions 50, 51, 55, 56, 67, 68) ----
+
+/** Which mail an account Jobs lists is read (decision 56): all of it, or only triage's Career. */
+export const readsEmail = (mode: JobReadMode | null, kind: Kind | null) => mode === 'every' || (mode === 'career' && kind === 'career');
+
+/** A role as an email or application names it: its requisition ID wins over its title (decision 51). */
+export interface Role {
+  titleKey: string | null;
+  requisitionId: string | null;
+}
+
+/** Two roles are one: by requisition ID when both have one, else by normalised title. */
+export function sameRole(a: Role, b: Role): boolean {
+  if (a.requisitionId && b.requisitionId) return requisitionKey(a.requisitionId) === requisitionKey(b.requisitionId);
+  return !!a.titleKey && a.titleKey === b.titleKey;
+}
+
+const namesRole = (role: Role) => !!role.titleKey || !!role.requisitionId;
+
+/** What the rules know of an application. */
+export interface KnownApplication extends Role {
+  id: number;
+  company: string;
+  status: JobStatus;
+  statusSetAt: string;
+  appliedAt: string;
+  // A company-less confirmation waiting for its Indeed pair.
+  companyUnknown: boolean;
+}
+
+export type Match =
+  | {match: KnownApplication}
+  | {several: NeedsYouReason}
+  | {none: 'no_company' | 'no_role' | NeedsYouReason};
+
+const newestFirst = (a: KnownApplication, b: KnownApplication) => b.appliedAt.localeCompare(a.appliedAt) || b.id - a.id;
+
+/**
+ * A confident match (decision 51): a role (requisition ID or normalised title) that matches exactly
+ * one of the company's applications, or the one that's still open when it matches a closed one and
+ * its re-application; or, for an email naming no role, the company's only open application.
+ * Otherwise it might match (two or more, or a role the company's applications don't have) or matches
+ * nothing (no application at the company, or none open for an email naming no role).
+ */
+export function matchApplication(applications: KnownApplication[], company: string, role: Role): Match {
+  const atCompany = applications.filter(application => !application.companyUnknown && sameCompany(application.company, company));
+  if (!atCompany.length) return {none: 'no_company'};
+  const open = atCompany.filter(application => !isClosed(application.status));
+  if (!namesRole(role)) {
+    if (open.length === 1) return {match: open[0]!};
+    return open.length ? {several: 'names_no_role'} : {none: 'no_role'};
+  }
+  const roles = atCompany.filter(application => sameRole(application, role)).sort(newestFirst);
+  if (roles.length === 1) return {match: roles[0]!};
+  if (!roles.length) return {none: 'names_other_role'};
+  const openRoles = roles.filter(application => !isClosed(application.status));
+  return openRoles.length === 1 ? {match: openRoles[0]!} : {several: 'matches_several'};
+}
+
+/**
+ * The status an event moves its application to (decisions 55, 68), or null: only an event that sets
+ * one, and only when it's no older than the status it replaces, so an email read late never undoes a
+ * newer one. A status set by hand gives way to a later email that sets one; a quiet email never moves it.
+ */
+export function statusAfter(application: Pick<KnownApplication, 'statusSetAt'>, kind: JobEventKind, at: string): JobStatus | null {
+  if (isQuietJobEvent(kind)) return null;
+  if (at < application.statusSetAt) return null;
+  return STATUS_OF_JOB_EVENT[kind];
+}
+
+/** An email blocked by Not an application (decision 67, D321), as the rules see it. */
+export interface BlockedEmail extends Role {
+  messageId: number;
+  company: string | null;
+}
+
+/**
+ * Whether an email is one of a blocked application's (D321): it's blocked itself, or it names the
+ * same company and the same role as a blocked email. One naming no role isn't recognised by role.
+ */
+export function isBlocked(blocked: BlockedEmail[], messageId: number, company: string, role: Role): boolean {
+  return blocked.some(email => email.messageId === messageId
+    || (email.company !== null && namesRole(role) && sameCompany(email.company, company) && sameRole(email, role)));
+}
+
+/** A job board's match email Jobs has read ("<title> @ <company>"), for Indeed's pairs. */
+export interface ReadMatchEmail {
+  messageId: number;
+  at: string;
+  company: string;
+  titleKey: string;
+  applicationId: number | null;
+}
+
+/** An Indeed confirmation and its match email pair within this many days of each other. */
+export const PAIR_WITHIN_DAYS = 30;
+
+const withinDays = (a: string, b: string, days: number) => Math.abs(Date.parse(a) - Date.parse(b)) <= days * 86_400_000;
+const nearest = (at: string) => <T extends {at: string}>(a: T, b: T) => Math.abs(Date.parse(a.at) - Date.parse(at)) - Math.abs(Date.parse(b.at) - Date.parse(at));
+
+/**
+ * Indeed's pairs (decision 51): a confirmation naming no company ("Indeed Application: <title>") takes
+ * the company of the unpaired match email with its title nearest it in time, within 30 days.
+ */
+export function pairForConfirmation(matches: ReadMatchEmail[], titleKey: string | null, at: string): ReadMatchEmail | null {
+  if (!titleKey) return null;
+  return matches.filter(match => match.applicationId === null && match.titleKey === titleKey && withinDays(match.at, at, PAIR_WITHIN_DAYS))
+    .sort(nearest(at))[0] ?? null;
+}
+
+/** And the other way: a match email names the company of the company-less application with its title nearest it. */
+export function pairForMatch(applications: KnownApplication[], titleKey: string | null, at: string): KnownApplication | null {
+  if (!titleKey) return null;
+  return applications.filter(application => application.companyUnknown && application.titleKey === titleKey && withinDays(application.appliedAt, at, PAIR_WITHIN_DAYS))
+    .map(application => ({...application, at: application.appliedAt})).sort(nearest(at))[0] ?? null;
+}
+
+/** An email as the rules take it: what the model read, the company it's about, and when it came. */
+export interface IncomingEmail {
+  messageId: number;
+  at: string;
+  event: JobEmailEvent;
+  // The company the email names, else triage's organisation (the platform, for Indeed's).
+  company: string;
+  // Whether the email itself named the company.
+  companyNamed: boolean;
+  role: Role;
+}
+
+/** What one email does (decision 50). */
+export type Plan =
+  | {do: 'ignore'; why: 'out' | 'blocked' | 'rejection_matches_nothing' | 'quiet_matches_nothing' | 'match_email'}
+  | {do: 'create'; company: string; companyUnknown: boolean; reappliedFrom: number | null; pairedWith: ReadMatchEmail | null}
+  | {do: 'event'; applicationId: number; kind: JobEventKind; status: JobStatus | null}
+  | {do: 'pair'; applicationId: number; company: string}
+  | {do: 'needs_you'; kind: 'update_to_assign' | 'email_to_track'; reason: NeedsYouReason};
+
+export const EVENT_OF_EMAIL = {
+  confirmation: 'applied', assessment: 'assessment', interview: 'interview', offer: 'offer', rejection: 'rejection',
+  account: 'account', verification: 'verification', next_step: 'next_step', form: 'form', match: 'match', other: 'other',
+} as const satisfies Record<Exclude<JobEmailEvent, 'recruiter' | 'unrelated'>, JobEventKind>;
+
+/**
+ * What an email does, given the applications so far, the blocked emails and the match emails read
+ * (decisions 50, 51, 55, 67, 68):
+ * - a recruiter's cold email and mail that isn't about an application are out; a blocked one too
+ * - a confirmation makes an application, unless it matches an open one (a duplicate, quiet) or only
+ *   a closed one (a re-application, linked); naming no company, it takes its Indeed pair's
+ * - an assessment, interview, offer or rejection matching one becomes its event, moving the status;
+ *   one that might match waits to be assigned; a rejection matching nothing is ignored, and the rest
+ *   matching nothing wait as Track this
+ * - quiet mail becomes a quiet event when it matches, and is otherwise ignored; a job board's match
+ *   email only joins an application as its Indeed pair
+ */
+export function planEmail(email: IncomingEmail, applications: KnownApplication[], blocked: BlockedEmail[], matches: ReadMatchEmail[]): Plan {
+  if (email.event === 'recruiter' || email.event === 'unrelated') return {do: 'ignore', why: 'out'};
+  if (isBlocked(blocked, email.messageId, email.company, email.role)) return {do: 'ignore', why: 'blocked'};
+  const kind = EVENT_OF_EMAIL[email.event];
+
+  if (email.event === 'match') {
+    const waiting = email.companyNamed ? pairForMatch(applications, email.role.titleKey, email.at) : null;
+    return waiting ? {do: 'pair', applicationId: waiting.id, company: email.company} : {do: 'ignore', why: 'match_email'};
+  }
+
+  if (email.event === 'confirmation') {
+    const pair = email.companyNamed ? null : pairForConfirmation(matches, email.role.titleKey, email.at);
+    const company = pair?.company ?? email.company;
+    const unknown = !email.companyNamed && !pair;
+    const found = unknown ? {none: 'no_company'} as const : matchApplication(applications, company, email.role);
+    if ('match' in found) {
+      if (!isClosed(found.match.status)) return {do: 'event', applicationId: found.match.id, kind: 'duplicate', status: null};
+      return {do: 'create', company, companyUnknown: false, reappliedFrom: found.match.id, pairedWith: pair};
+    }
+    if ('several' in found && namesRole(email.role)) {
+      // A role several applications share (none of them told apart by requisition ID): a duplicate on
+      // the newest open one, else a re-application of the newest closed one.
+      const roles = applications.filter(application => !application.companyUnknown && sameCompany(application.company, company)
+        && sameRole(application, email.role)).sort(newestFirst);
+      const open = roles.find(application => !isClosed(application.status));
+      if (open) return {do: 'event', applicationId: open.id, kind: 'duplicate', status: null};
+      return {do: 'create', company, companyUnknown: false, reappliedFrom: roles[0]?.id ?? null, pairedWith: pair};
+    }
+    // Naming no role with two or more open there, or a role it has no application for: a new one.
+    return {do: 'create', company, companyUnknown: unknown, reappliedFrom: null, pairedWith: pair};
+  }
+
+  const found = matchApplication(applications, email.company, email.role);
+  if ('match' in found) return {do: 'event', applicationId: found.match.id, kind, status: statusAfter(found.match, kind, email.at)};
+  if (isQuietJobEvent(kind)) return {do: 'ignore', why: 'quiet_matches_nothing'};
+  if ('several' in found) return {do: 'needs_you', kind: 'update_to_assign', reason: found.several};
+  if (found.none === 'names_other_role') return {do: 'needs_you', kind: 'update_to_assign', reason: 'names_other_role'};
+  if (kind === 'rejection') return {do: 'ignore', why: 'rejection_matches_nothing'};
+  return {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'};
 }
