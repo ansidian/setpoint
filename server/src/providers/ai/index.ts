@@ -18,6 +18,10 @@
 // `thinking: disabled` and turns thinking off with `between_tools` instead; Opus 5.5 and the Fable
 // and Mythos models can't turn thinking off at all, so it's left out. Haiku 5.5 and older models keep
 // v1's forced tool with thinking off.
+//
+// A call may also allow Claude's web search (Jobs's JD lookup, J3): the server tool goes beside the
+// answer's tool, the model chooses when to answer (`auto`), a turn the API pauses (`pause_turn`) is
+// sent back to go on, and the searches are counted for the ledger, which prices them.
 import type {AiProvider} from '@setpoint/shared';
 import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 
@@ -46,6 +50,10 @@ export interface ModelRequest {
   // How long Anthropic keeps the marked prefix: five minutes by default, or an hour for a prompt asked
   // hourly (News's ranking, N3), whose cache writes cost 2× input rather than 1.25×.
   cacheTtl?: '5m' | '1h';
+  // Anthropic only: Claude's web search (a server tool) beside the answer's tool, searching at most
+  // this many times. The model then chooses when to answer (`auto`), and a turn the API pauses is
+  // resumed until it does.
+  webSearch?: {maxUses: number};
   signal?: AbortSignal;
 }
 
@@ -55,6 +63,8 @@ export interface ModelUsage {
   outputTokens: number;
   cachedTokens: number;
   cacheWriteTokens: number;
+  // Web searches run (billed per search, src/domain/aiCost.ts); only on a call that allowed them.
+  webSearches?: number;
 }
 
 export interface ModelAnswer {
@@ -145,33 +155,59 @@ export function anthropicToolShape(model: string, tool: string): {tool_choice: R
   return {tool_choice, thinking: /^claude-sonnet-5-5\b/.test(model) ? {type: 'between_tools'} : {type: 'disabled'}};
 }
 
+/** Claude's web search, as the claude-api skill has it (2026-10): the version with dynamic filtering. */
+export const WEB_SEARCH_TOOL = 'web_search_20260209';
+// A paused turn (stop_reason `pause_turn`, the server's own loop running long) is sent back to go on,
+// at most this many times.
+const MAX_RESUMES = 4;
+
 /** Anthropic's Messages API with the tool (forced where the model allows), thinking off where it can be, and the system and tool marked cacheable. */
 export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ModelClient {
   return {
     provider: 'anthropic',
     async call(request) {
       const cache = request.cacheTtl === '1h' ? {type: 'ephemeral', ttl: '1h'} : {type: 'ephemeral'};
-      const response = await post('anthropic', `${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
-        model: request.model,
-        max_tokens: request.maxOutputTokens,
-        system: [{type: 'text', text: request.system, cache_control: cache}],
-        tools: [{name: request.tool.name, description: request.tool.description, input_schema: request.tool.schema, cache_control: cache}],
-        ...anthropicToolShape(request.model, request.tool.name),
-        messages: [{role: 'user', content: request.input}],
-      }, timeoutMs, request.signal);
-      if (!response.ok) throw await refusal('anthropic', response);
-      const body = await json('anthropic', response);
-      const usage = isRecord(body.usage) ? body.usage : {};
-      const cachedTokens = count(usage.cache_read_input_tokens);
-      const cacheWriteTokens = count(usage.cache_creation_input_tokens);
-      const block = (Array.isArray(body.content) ? body.content : []).find(item => isRecord(item) && item.type === 'tool_use' && item.name === request.tool.name);
-      return {
-        provider: 'anthropic',
-        model: typeof body.model === 'string' ? body.model : request.model,
-        toolInput: isRecord(block) && isRecord(block.input) ? block.input : null,
+      const shape = anthropicToolShape(request.model, request.tool.name);
+      const search = request.webSearch;
+      const tool = {name: request.tool.name, description: request.tool.description, input_schema: request.tool.schema, cache_control: cache};
+      const messages: unknown[] = [{role: 'user', content: request.input}];
+      const total = {inputTokens: 0, outputTokens: 0, cachedTokens: 0, cacheWriteTokens: 0, webSearches: 0};
+      for (let turn = 0; ; turn += 1) {
+        const response = await post('anthropic', `${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
+          model: request.model,
+          max_tokens: request.maxOutputTokens,
+          system: [{type: 'text', text: request.system, cache_control: cache}],
+          // With web search the model searches first, so it can't be made to answer at once.
+          ...(search
+            ? {tools: [{type: WEB_SEARCH_TOOL, name: 'web_search', max_uses: search.maxUses}, tool], tool_choice: {type: 'auto'}, ...(shape.thinking ? {thinking: shape.thinking} : {})}
+            : {tools: [tool], ...shape}),
+          messages,
+        }, timeoutMs, request.signal);
+        if (!response.ok) throw await refusal('anthropic', response);
+        const body = await json('anthropic', response);
+        const usage = isRecord(body.usage) ? body.usage : {};
+        const cachedTokens = count(usage.cache_read_input_tokens);
+        const cacheWriteTokens = count(usage.cache_creation_input_tokens);
         // Anthropic's input_tokens leaves out cache reads and writes; count them all as input.
-        usage: {inputTokens: count(usage.input_tokens) + cachedTokens + cacheWriteTokens, outputTokens: count(usage.output_tokens), cachedTokens, cacheWriteTokens},
-      };
+        total.inputTokens += count(usage.input_tokens) + cachedTokens + cacheWriteTokens;
+        total.outputTokens += count(usage.output_tokens);
+        total.cachedTokens += cachedTokens;
+        total.cacheWriteTokens += cacheWriteTokens;
+        total.webSearches += count(isRecord(usage.server_tool_use) ? usage.server_tool_use.web_search_requests : 0);
+        const content = Array.isArray(body.content) ? body.content : [];
+        if (search && body.stop_reason === 'pause_turn' && turn < MAX_RESUMES) {
+          messages.push({role: 'assistant', content});
+          continue;
+        }
+        const block = content.find(item => isRecord(item) && item.type === 'tool_use' && item.name === request.tool.name);
+        const {webSearches, ...tokens} = total;
+        return {
+          provider: 'anthropic',
+          model: typeof body.model === 'string' ? body.model : request.model,
+          toolInput: isRecord(block) && isRecord(block.input) ? block.input : null,
+          usage: search ? {...tokens, webSearches} : tokens,
+        };
+      }
     },
   };
 }

@@ -97,6 +97,59 @@ describe('anthropicClient', () => {
   });
 });
 
+describe('anthropicClient with web search', () => {
+  const SEARCH_TOOL = {name: 'submit_search', description: 'Submit what was found.', schema: {type: 'object', properties: {found: {type: 'string'}}, required: ['found']}};
+  // Claude's answer in the web search tool's real shape (the claude-api skill, 2026-10): its query, the
+  // results (encrypted, to send back), then the answer's tool; searches billed in server_tool_use.
+  const searched = (stop: string, content: unknown[], searches: number) => ({status: 200, body: {
+    id: `msg_${stop}`, type: 'message', role: 'assistant', model: 'claude-sonnet-5-5', stop_reason: stop, stop_sequence: null, content,
+    usage: {input_tokens: 3000, output_tokens: 200, cache_read_input_tokens: 500, cache_creation_input_tokens: 0, server_tool_use: {web_search_requests: searches}},
+  }});
+  const query = [
+    {type: 'text', text: 'I\'ll search for it.'},
+    {type: 'server_tool_use', id: 'srvtoolu_01', name: 'web_search', input: {query: 'Fabrikam data analyst Atlanta'}},
+    {type: 'web_search_tool_result', tool_use_id: 'srvtoolu_01', content: [
+      {type: 'web_search_result', url: 'https://fabrikam.example/careers/data-analyst-2291', title: 'Data Analyst | Fabrikam', encrypted_content: 'EqgfCioIARgB', page_age: 'September 29, 2026'},
+    ]},
+  ];
+
+  test('asks with the web search tool beside the answer\'s, the model choosing, and resumes a paused turn', async () => {
+    const fake = await fakeModels();
+    let turn = 0;
+    fake.answer(() => {
+      turn += 1;
+      return turn === 1
+        ? searched('pause_turn', query, 1)
+        : searched('tool_use', [{type: 'text', text: 'Found it.'}, {type: 'tool_use', id: 'toolu_02', name: 'submit_search', input: {found: 'yes'}}], 1);
+    });
+    const answer = await anthropicClient({apiKey: FAKE_KEYS.anthropic, baseUrl: fake.endpoints.anthropic}).call(request({
+      model: 'claude-sonnet-5-5', tool: SEARCH_TOOL, maxOutputTokens: 2000, webSearch: {maxUses: 5},
+    }));
+    expect(fake.requests[0]!.body).toMatchObject({
+      tools: [{type: 'web_search_20260209', name: 'web_search', max_uses: 5}, {name: 'submit_search', input_schema: SEARCH_TOOL.schema}],
+      tool_choice: {type: 'auto'}, thinking: {type: 'between_tools'},
+      messages: [{role: 'user', content: 'From: Woodgrove Bank <no-reply@woodgrovebank.example>'}],
+    });
+    // The paused turn goes back exactly as it came, to go on.
+    expect(fake.requests[1]!.body.messages).toEqual([{role: 'user', content: 'From: Woodgrove Bank <no-reply@woodgrovebank.example>'}, {role: 'assistant', content: query}]);
+    expect(answer).toEqual({
+      provider: 'anthropic', model: 'claude-sonnet-5-5', toolInput: {found: 'yes'},
+      usage: {inputTokens: 7000, outputTokens: 400, cachedTokens: 1000, cacheWriteTokens: 0, webSearches: 2},
+    });
+  });
+
+  test('a turn that keeps pausing ends after four resumes, with no answer', async () => {
+    const fake = await fakeModels();
+    fake.answer(() => searched('pause_turn', query, 1));
+    const answer = await anthropicClient({apiKey: FAKE_KEYS.anthropic, baseUrl: fake.endpoints.anthropic}).call(request({
+      model: 'claude-sonnet-5-5', tool: SEARCH_TOOL, maxOutputTokens: 2000, webSearch: {maxUses: 5},
+    }));
+    expect(fake.requests).toHaveLength(5);
+    expect(answer.toolInput).toBeNull();
+    expect(answer.usage.webSearches).toBe(5);
+  });
+});
+
 describe('openaiClient', () => {
   test('asks the Responses API with a forced function, unstored, with a 24-hour prompt cache key', async () => {
     const fake = await fakeModels();
@@ -159,5 +212,9 @@ describe('costMicros', () => {
     ['an unknown model has no cost', 'anthropic', 'claude-future-9', [1000, 200, 0, 0], null],
   ])('%s', (_, provider, model, [inputTokens, outputTokens, cachedTokens, cacheWriteTokens], micros) => {
     expect(costMicros(provider, model, {inputTokens, outputTokens, cachedTokens, cacheWriteTokens})).toBe(micros);
+  });
+
+  test('web searches add $10 per 1,000 to the tokens', () => {
+    expect(costMicros('anthropic', 'claude-sonnet-5-5', {inputTokens: 3000, outputTokens: 100, cachedTokens: 0, cacheWriteTokens: 0, webSearches: 3})).toBe(6000 + 1000 + 30_000);
   });
 });

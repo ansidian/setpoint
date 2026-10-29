@@ -55,7 +55,12 @@ export interface Tokens {
   outputTokens: number;
   cachedTokens: number;
   cacheWriteTokens: number;
+  // Claude's web searches, $10 per 1,000 on top of the tokens (the claude-api skill, 2026-10).
+  webSearches?: number;
 }
+
+/** One web search, in millionths of a dollar. */
+export const WEB_SEARCH_MICROS = 10_000;
 
 /** The call's cost in millionths of a dollar, or null for a model without a known rate. */
 export function costMicros(provider: AiProvider, model: string, tokens: Tokens, cacheTtl: '5m' | '1h' = '5m'): number | null {
@@ -67,5 +72,6 @@ export function costMicros(provider: AiProvider, model: string, tokens: Tokens, 
   const premium = provider === 'anthropic' && baseModel(provider, model) === 'claude-haiku-5-5' && tokens.inputTokens > 100_000 ? 5 : 1;
   // Rates are dollars per million tokens, which is micro-dollars per token.
   const write = cacheTtl === '1h' ? 2 : 1.25;
-  return Math.round((plain * rate.input + cached * rate.cached + writes * rate.input * write + tokens.outputTokens * rate.output) * premium);
+  const searches = provider === 'anthropic' ? (tokens.webSearches ?? 0) * WEB_SEARCH_MICROS : 0;
+  return Math.round((plain * rate.input + cached * rate.cached + writes * rate.input * write + tokens.outputTokens * rate.output) * premium) + searches;
 }
