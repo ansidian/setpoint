@@ -1,0 +1,130 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://greenhouse.example/lucernepublishing/jobs/5520391",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "internal_job_id": 4410227,
+      "location": {
+        "name": "New York, NY"
+      },
+      "metadata": null,
+      "id": 5520391,
+      "updated_at": "2026-10-06T09:12:44-04:00",
+      "requisition_id": "LP-0412",
+      "title": "Junior Developer",
+      "company_name": "Lucerne Publishing",
+      "first_published": "2026-09-28T10:00:00-04:00",
+      "content": "&lt;h2&gt;About Lucerne Publishing&lt;/h2&gt;\n&lt;p&gt;Lucerne Publishing makes reading apps for schools and libraries. Our digital team builds the apps teachers and students open every day, and the services behind them.&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;What you&#x27;ll do&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;Build features in TypeScript and React with a senior engineer beside you&lt;/li&gt;\n&lt;li&gt;Write tests for what you ship, and fix what they find&lt;/li&gt;\n&lt;li&gt;Join planning and design reviews from your first week&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;strong&gt;What you&#x27;ll need&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;JavaScript or TypeScript, from work, school or your own projects&lt;/li&gt;\n&lt;li&gt;Comfort with Git and code review&lt;/li&gt;\n&lt;li&gt;A degree in computer science or equivalent experience&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&lt;strong&gt;Nice to have&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;&lt;li&gt;React Native&lt;/li&gt;&lt;li&gt;Accessibility work&lt;/li&gt;&lt;/ul&gt;\n&lt;p&gt;This role is hybrid, three days a week in our New York, NY office. The salary range is $80,000&amp;ndash;$95,000.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4011007,
+          "name": "Digital",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "offices": [
+        {
+          "id": 4022001,
+          "name": "New York, NY",
+          "location": "New York, NY",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://greenhouse.example/lucernepublishing/jobs/5520412",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "internal_job_id": 4410233,
+      "location": {
+        "name": "Remote"
+      },
+      "metadata": null,
+      "id": 5520412,
+      "updated_at": "2026-10-02T16:40:10-04:00",
+      "requisition_id": "LP-0415",
+      "title": "Junior Developer, Digital",
+      "company_name": "Lucerne Publishing",
+      "first_published": "2026-09-20T11:30:00-04:00",
+      "content": "&lt;p&gt;Lucerne Publishing&#x27;s digital marketing team is looking for a junior developer to build landing pages and email templates.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;HTML and CSS&lt;/li&gt;&lt;li&gt;Some JavaScript&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Fully remote in the United States.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4011007,
+          "name": "Marketing",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "offices": [
+        {
+          "id": 4022001,
+          "name": "Remote",
+          "location": "Remote",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://greenhouse.example/lucernepublishing/jobs/5519870",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "internal_job_id": 4409961,
+      "location": {
+        "name": "New York, NY"
+      },
+      "metadata": null,
+      "id": 5519870,
+      "updated_at": "2026-09-30T08:05:00-04:00",
+      "requisition_id": "LP-0398",
+      "title": "Senior Editor",
+      "company_name": "Lucerne Publishing",
+      "first_published": "2026-09-01T09:00:00-04:00",
+      "content": "&lt;p&gt;Edit our children&#x27;s fiction list. Five years of editing experience.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 4011007,
+          "name": "Editorial",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "offices": [
+        {
+          "id": 4022001,
+          "name": "New York, NY",
+          "location": "New York, NY",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "total": 3
+  }
+}

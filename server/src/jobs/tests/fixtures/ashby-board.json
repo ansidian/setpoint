@@ -1,0 +1,67 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "3f6e2a10-91c4-4b7e-a2d5-0c8f61e7b934",
+      "title": "QA Engineer",
+      "department": "Engineering",
+      "team": "Quality",
+      "employmentType": "FullTime",
+      "location": "Raleigh, NC",
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-24T15:02:11.204+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "North Carolina",
+          "addressCountry": "United States",
+          "addressLocality": "Raleigh"
+        }
+      },
+      "jobUrl": "https://ashby.example/litware/3f6e2a10-91c4-4b7e-a2d5-0c8f61e7b934",
+      "applyUrl": "https://ashby.example/litware/3f6e2a10-91c4-4b7e-a2d5-0c8f61e7b934/application",
+      "descriptionHtml": "<h3>About Litware</h3><p>Litware makes the scheduling software clinics use to book patients. Our QA team owns the test plans and the automation behind every release.</p><h3>Responsibilities</h3><ul><li>Write and run test plans for each release</li><li>Grow our Playwright suite</li><li>Track bugs to the fix with the engineers</li></ul><h3>Requirements</h3><ul><li>1 or more years in QA or testing</li><li>Some scripting in JavaScript or Python</li></ul><h3>Preferred</h3><ul><li>Healthcare software</li></ul>",
+      "descriptionPlain": "About Litware\nLitware makes the scheduling software clinics use.",
+      "shouldDisplayCompensationOnJobPostings": true,
+      "compensation": {
+        "compensationTierSummary": "$76K – $90K",
+        "scrapeableCompensationSalarySummary": "$76K - $90K",
+        "compensationTiers": [],
+        "summaryComponents": []
+      }
+    },
+    {
+      "id": "8b1d07c3-2e5f-4a96-b0d4-6c7e93f2a118",
+      "title": "Office Manager",
+      "department": "Operations",
+      "team": "Operations",
+      "employmentType": "FullTime",
+      "location": "Raleigh, NC",
+      "secondaryLocations": [],
+      "publishedAt": "2026-08-12T13:40:00.000+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "North Carolina",
+          "addressCountry": "United States",
+          "addressLocality": "Raleigh"
+        }
+      },
+      "jobUrl": "https://ashby.example/litware/8b1d07c3-2e5f-4a96-b0d4-6c7e93f2a118",
+      "applyUrl": "https://ashby.example/litware/8b1d07c3-2e5f-4a96-b0d4-6c7e93f2a118/application",
+      "descriptionHtml": "<p>Keep the Raleigh office running.</p>",
+      "descriptionPlain": "Keep the Raleigh office running.",
+      "shouldDisplayCompensationOnJobPostings": false,
+      "compensation": {
+        "compensationTierSummary": null,
+        "scrapeableCompensationSalarySummary": null,
+        "compensationTiers": [],
+        "summaryComponents": []
+      }
+    }
+  ]
+}

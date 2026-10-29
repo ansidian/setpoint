@@ -1,0 +1,77 @@
+[
+  {
+    "additional": "<div>We hire from anywhere in the United States and meet in person twice a year.</div>",
+    "additionalPlain": "We hire from anywhere in the United States and meet in person twice a year.",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "Remote, US",
+      "team": "Platform",
+      "allLocations": [
+        "Remote, US"
+      ]
+    },
+    "createdAt": 1789488000000,
+    "descriptionPlain": "Proseware builds project tools for small engineering firms. The platform team keeps the API, the job queue and the database fast and up.",
+    "description": "<div><b>Proseware</b> builds project tools for small engineering firms. The platform team keeps the API, the job queue and the database fast and up.</div>",
+    "descriptionBody": "<div><b>Proseware</b> builds project tools for small engineering firms. The platform team keeps the API, the job queue and the database fast and up.</div>",
+    "descriptionBodyPlain": "Proseware builds project tools for small engineering firms.",
+    "id": "9a41c7e2-5d0b-4f1e-8c3a-2b7d90e1f4a6",
+    "lists": [
+      {
+        "text": "What you'll do",
+        "content": "<li>Own services in Go and TypeScript, from design to on-call</li><li>Make deploys boring: CI, canaries and rollbacks</li><li>Pair with the product teams on what they need from the platform</li>"
+      },
+      {
+        "text": "What you'll bring",
+        "content": "<li>3 or more years building backend services</li><li>Postgres in production</li><li>Kubernetes or another container platform</li>"
+      },
+      {
+        "text": "Bonus points",
+        "content": "<li>Terraform</li><li>Work on a small team</li>"
+      }
+    ],
+    "text": "Software Engineer, Platform",
+    "country": "US",
+    "workplaceType": "remote",
+    "opening": "",
+    "openingPlain": "",
+    "hostedUrl": "https://lever.example/proseware/9a41c7e2-5d0b-4f1e-8c3a-2b7d90e1f4a6",
+    "applyUrl": "https://lever.example/proseware/9a41c7e2-5d0b-4f1e-8c3a-2b7d90e1f4a6/apply",
+    "salaryRange": {
+      "currency": "USD",
+      "interval": "per-year-salary",
+      "min": 105000,
+      "max": 125000
+    },
+    "salaryDescription": "",
+    "salaryDescriptionPlain": ""
+  },
+  {
+    "additional": "",
+    "additionalPlain": "",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Design",
+      "location": "Seattle, WA",
+      "team": "Product",
+      "allLocations": [
+        "Seattle, WA"
+      ]
+    },
+    "createdAt": 1788278400000,
+    "descriptionPlain": "Design the screens our customers use all day.",
+    "description": "<div>Design the screens our customers use all day.</div>",
+    "descriptionBody": "<div>Design the screens our customers use all day.</div>",
+    "descriptionBodyPlain": "Design the screens our customers use all day.",
+    "id": "4c2d18f0-77ab-4e0c-9d51-a3f6e2b8c901",
+    "lists": [],
+    "text": "Product Designer",
+    "country": "US",
+    "workplaceType": "onsite",
+    "opening": "",
+    "openingPlain": "",
+    "hostedUrl": "https://lever.example/proseware/4c2d18f0-77ab-4e0c-9d51-a3f6e2b8c901",
+    "applyUrl": "https://lever.example/proseware/4c2d18f0-77ab-4e0c-9d51-a3f6e2b8c901/apply"
+  }
+]
