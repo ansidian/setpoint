@@ -1,6 +1,7 @@
 // The visual net without baselines (SV-99), beside the release's nine page screenshots (pages.ts,
 // D281): the main pages (the Inbox with an email open, the calendar's month and week, the editor, News
-// with a story open, every Settings page, the phone's Inbox) in Night and Light, at the design target,
+// with a story open, Jobs with an application open, every Settings page, the phone's Inbox; Jobs isn't
+// on the phone, decision 49) in Night and Light, at the design target,
 // 1100 and 820 wide and on the phone. On each, at rest: nothing scrolls sideways, no text is cut by an
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
@@ -8,7 +9,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
-import type {InboxOut, NewsSectionOut} from '@setpoint/shared';
+import type {InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -157,6 +158,8 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
   const email = inbox.groups.flatMap(group => group.rows).find(row => row.subject.startsWith('Interview availability'))!.id;
   const {stories} = await setpoint.api<NewsSectionOut>('GET', '/news/sections/local');
   const story = stories.find(one => one.headline.startsWith('Brush fire near the 210'))!.id;
+  const {rows} = await setpoint.api<JobsPageOut>('GET', '/jobs');
+  const application = rows.find(row => row.company === 'Northwind Talent' && row.title === 'Software Engineer I')!.id;
   return [
     {name: 'the Inbox, an email open', path: `/inbox/${email}`, shows: '.rd-subj'},
     {name: 'the calendar\'s month', path: '/calendar', shows: '.cal-month'},
@@ -164,6 +167,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
     {name: 'the editor', path: '/calendar/new?kind=event', shows: '.editor'},
     {name: 'the calendar\'s week', path: '/calendar?view=week', shows: '.cal-week'},
     {name: 'News, a story open', path: `/news/story/${story}`, shows: '.pane .rd-subj'},
+    {name: 'Jobs, an application open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want'},
     ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on'})),
   ];
 }
