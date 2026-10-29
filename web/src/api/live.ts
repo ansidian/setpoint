@@ -8,6 +8,7 @@
 // at once rather than queued (client.ts), and if it's still down after a 2 s grace the pill says since
 // when and the page dims, still readable (the polish audit's states-05), so a laptop waking or a
 // Wi-Fi handoff never cries wolf. Retry now reconnects at once.
+import {LIVE_EVENT_TYPES} from '@setpoint/shared';
 import type {LiveEvent} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {pathsForEvent} from '../logic/live.ts';
@@ -74,7 +75,7 @@ function connect() {
     note(event);
     setOffline(false);
   });
-  for (const type of ['mail', 'items', 'health', 'news'] as const) {
+  for (const type of LIVE_EVENT_TYPES) {
     stream.addEventListener(type, event => {
       note(event);
       let live: LiveEvent;

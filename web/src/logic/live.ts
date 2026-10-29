@@ -44,5 +44,8 @@ export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): str
       return mounted.filter(path => (lists && (path === '/news' || under('/news/sections')(path) || path === '/news/missed'))
         || named.has(path) || (event.sources.length > 0 && path === '/news/sources') || path === '/news/status' || path === '/news/unsorted');
     }
+    // Jobs (after News, J1): its page and detail, once J5 draws them.
+    case 'jobs':
+      return mounted.filter(under('/jobs'));
   }
 }

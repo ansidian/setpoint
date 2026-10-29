@@ -208,9 +208,11 @@ async function recordAll() {
   // A task done, so the agenda has a change waiting too.
   await app.send('POST', '/api/items/8/complete', {done: true});
 
-  // What only the server's own work sends: a source's health, and News.
+  // What only the server's own work sends: a source's health, News, and Jobs (which the app doesn't
+  // show; it ignores an event type it doesn't handle).
   noteLive(w.store, {type: 'health', sources: [1]});
   noteLive(w.store, {type: 'news', stories: [1], sections: ['local'], sources: [1]});
+  noteLive(w.store, {type: 'jobs', applications: [1], needs_you: [1]});
   const live = await reading;
   // A reconnect from an id this process can't account for.
   const again = await browser.app.request('/api/events', {headers: {authorization: `Bearer ${token}`, 'last-event-id': 'deadbeef-12'}});

@@ -13,3 +13,4 @@ export * from './api/links.ts';
 export * from './api/status.ts';
 export * from './api/triage.ts';
 export * from './api/news.ts';
+export * from './jobs/index.ts';

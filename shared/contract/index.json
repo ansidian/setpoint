@@ -1409,6 +1409,11 @@
       "file": "events/news.json"
     },
     {
+      "name": "jobs",
+      "type": "LiveEvent",
+      "file": "events/jobs.json"
+    },
+    {
       "name": "ping",
       "type": "{}",
       "file": "events/ping.json"

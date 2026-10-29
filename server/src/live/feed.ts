@@ -1,5 +1,5 @@
-// The typed live events (BRIEF.md › Decided elsewhere): one stream of `mail`, `items`, `health` and
-// `news` events, each naming what changed. A write notes what it touched while its transaction runs,
+// The typed live events (BRIEF.md › Decided elsewhere): one stream of `mail`, `items`, `health`,
+// `news` and `jobs` events, each naming what changed. A write notes what it touched while its transaction runs,
 // and the event goes out only once the outermost transaction commits, so a refused write sends
 // nothing (darma's change feed). Events in one transaction merge into one per type.
 import {randomBytes} from 'node:crypto';
@@ -25,6 +25,7 @@ function merge(a: LiveEvent, b: LiveEvent): LiveEvent {
   if (a.type === 'news' && b.type === 'news') {
     return {type: 'news', stories: union(a.stories, b.stories), sections: NEWS_SECTIONS.filter(section => a.sections.includes(section) || b.sections.includes(section)), sources: union(a.sources, b.sources)};
   }
+  if (a.type === 'jobs' && b.type === 'jobs') return {type: 'jobs', applications: union(a.applications, b.applications), needs_you: union(a.needs_you, b.needs_you)};
   throw new Error('Only events of one type merge.');
 }
 

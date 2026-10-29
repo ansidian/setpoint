@@ -64,8 +64,8 @@ export type HealthState = (typeof HEALTH_STATES)[number];
 export const RECURRING_SCOPES = ['this', 'following', 'all'] as const;
 export type RecurringScope = (typeof RECURRING_SCOPES)[number];
 
-/** The typed live events, one stream (BRIEF.md › Decided elsewhere); `news` after 2.0 (N1). */
-export const LIVE_EVENT_TYPES = ['mail', 'items', 'health', 'news'] as const;
+/** The typed live events, one stream (BRIEF.md › Decided elsewhere); `news` after 2.0 (N1), `jobs` after News (J1). */
+export const LIVE_EVENT_TYPES = ['mail', 'items', 'health', 'news', 'jobs'] as const;
 export type LiveEventType = (typeof LIVE_EVENT_TYPES)[number];
 
 /**

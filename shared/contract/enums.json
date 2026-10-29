@@ -123,7 +123,8 @@
     "mail",
     "items",
     "health",
-    "news"
+    "news",
+    "jobs"
   ],
   "MATCH_FIELDS": [
     "organisation",
