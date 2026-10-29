@@ -255,7 +255,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
 An iPad or a half-width window keeps the shell's parts and stops squeezing them
 ([Decided while building](#decided-while-building) #140):
 
-- **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News and Settings as 40 × 40
+- **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on) and Settings as 40 × 40
   icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166;
   Inbox stays current while an account filters it, as the rail has no accounts). Inbox's attention pill is a 16 px badge on its icon (2 px from its
   top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
@@ -813,11 +813,425 @@ Board 28 replaces All's list.
   summary in place; everything else waits for the pill.
 - **Thumbnails** are Setpoint's copies and expire with their story. Never an AI-generated image.
 
+## Jobs (after News)
+
+[BRIEF.md › Jobs](BRIEF.md#jobs-after-20) owns what Jobs reads, what makes an application, how a JD
+is found and kept, and what it costs (darma D303–D327). The screen comes from design round 4:
+[design-export/jobs/](design-export/jobs/README.md), boards 32–40 plus 32b, 34c and the states
+strip, drawn 2026-10-29 and signed off by Andy (darma SV-118). Each board's motion, with its values,
+is in [`motion.md`](design-export/jobs/motion.md), and Jobs's components in
+[`jobs.css`](design-export/jobs/jobs.css), which adds no tokens. Jobs is built after News, desktop
+only (D303). Below 640 px it isn't in the navigation; a narrow window (640–1099 px) is still the
+desktop and keeps it (D325).
+
+### Shell
+
+- **Sidebar:** a **Jobs** item (`work`) under News. Its count is the Needs you count, in `ink2` 12,
+  never `caution`, and gone at zero; its tooltip "Jobs · 3 need you". Jobs informs and never nags
+  (D313). The lower section shows **Today**, as on mail pages.
+- **Header:** "Jobs"; the **status filter**; a spacer; **Per week**; the 380 × 32 search field,
+  "Search jobs" with its `/` hint. There's no primary action. The status filter and Per week are the
+  page's two numbers, and there are no others (D314).
+- **The status filter** is the segmented control, holding the counts by status: "All 62", "Applied
+  31", "In process 3", "Offer 1", "Rejected 25", "Withdrawn 2", each count `ink3` 12, tabular, and
+  `ink2` on the segment turned on. So a count is also the filter. A segment never wraps. Ghosted
+  counts under Applied (18 of its 31) and has no segment.
+- **Per week** (32 px, padding 0 10, radius 10, `ink3` 12; `sub` under the pointer):
+  - "Per week", then the last 12 weeks oldest first as bars: 5 px wide, 3 apart, the busiest week 20
+    px tall and the rest in proportion, radius 1.5 at the top, `ink3` at 70%. A week with none is a
+    1 px stub at 35%.
+  - This week's bar is an outline (a 1 px `ink3` inset ring), since the week isn't over. It counts
+    what the table shows, Track this included (D318).
+  - Then "**3** this week", the count in `ink2`.
+  - A bar under the pointer turns `ink` and names its week in a tip (26 px, radius 8, `cardOn`, an
+    `edgeOn` ring, the pill shadow, 12): "Sep 27 – Oct 3 · 8 applications". It has no press: it's
+    information.
+- **Content:** Needs you, then the table, in one column that scrolls under the header. The
+  **detail** sits where the reading pane does (680 px, `hair` left border) and collapses when
+  nothing is open.
+- **Tab title:** "Jobs", or "Software Engineer I · Northwind Talent" with an application open. No
+  count, ever.
+- **A narrow window** (32b, D325):
+  - **Rail:** Jobs's 40 × 40 slot comes after News, named in its tooltip. Its Needs you count is a
+    16 px badge placed as the Inbox's (10.5 / 600, a 2 px `panel` ring), but neutral: `sub4` with
+    `ink` text, not `caution`.
+  - **The detail** lies over the table under the header (`page`, no left border), its tools led by
+    Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the table. It arrives 12 px
+    from the right over 180 ms, and Back slides it off the same way.
+  - **Header:** both numbers stay. The search field gives way first (180 px at 1024), then the "Per
+    week" label; the chart keeps its bars and count.
+
+### Needs you
+
+- **The band** (D308, D311) sits above the table under a group header (mail's: 30 px, `panel`, 11.5
+  uppercase): the 14 px `pending_actions` in `ink3`, "Needs you", and its count in `ink2`.
+  Attention's place, without `caution` (D313). Empty on a good day, and then gone.
+- **An item** (34a):
+  - Layout: a grid of 12 | 18 | text | right, 10 apart and 7 between its lines, padding 10 16 11 12,
+    `hair` below, `ink2`.
+  - Its kind's 16 px glyph in `ink3`: `description` a JD to confirm, `alt_route` an update to
+    assign, `bookmark_add` an email to track.
+  - Line one (18 px): what it's about in `ink` 500, ellipsis, then "· Is this the posting?" or the
+    sender ("· Humongous Insurance via iCIMS") in `ink3`. On the right in `ink3` 12, the account's
+    dot and the email's age ("Yesterday", "1h"), or "Applied Oct 5" on a JD.
+  - Line two: why it's here in `ink2` 12.5, then its actions as 28 px small buttons.
+  - Hover `sub`. J / K reach the items before the table, the cursor `sub2`. The item isn't a button;
+    its actions are.
+- **A JD to confirm** ("Lucerne Publishing · Junior Developer · Is this the posting?"):
+  - The candidates as a `sub` group (radius 12, at most 560 px wide) of 32 px rows, padding 0 6 0
+    12, 10 apart: `radio_button_unchecked` 16 in `ink3`; "Junior Developer" in `ink` and "· New
+    York, NY · Greenhouse" in `ink3`; and a 26 px `open_in_new` icon button that opens the posting
+    in a new tab without picking it. The last row is **None of these**, after `block`, in `ink2`.
+  - A row under the pointer or the cursor takes `sub2` and its radio `ink2`; pressed, `sub3` and
+    `radio_button_checked` in `ink`. ↑ ↓ choose and Enter picks.
+  - Picked, the group takes `good` at 10% with a 35% `good` ring, and the row reads `check_circle`
+    in `good`, "Junior Developer · JD saved".
+- **An update to assign** ("Thank you for your interest in the Software Engineer II role · Humongous
+  Insurance via iCIMS"):
+  - "A rejection · it could be either Humongous application", then an outline small **Assign to…**
+    (`move_item`, and `expand_more` in `ink3`, turning while open, the button `sub2` with an
+    `edgeOn` ring), and a quiet **Not about a job**.
+  - Assign to… (312 wide) grows from the button's bottom-left corner: the company as a label
+    ("HUMONGOUS INSURANCE", 26 px, 11.5 uppercase `ink3`), its applications as 44 px items with
+    `work` and two lines ("Software Engineer II, Claims" over "Applied Sep 30 · Applied" in `ink3`
+    12), a divider, **Another application…** (`search`) and **Not about a job** (`block`). A pick or
+    Esc closes it at once.
+- **An email to track** ("Can we set up a call this week? · Wide World Importers"): "An interview
+  request with no application", then **Track this** (`add`), a solid small button, the page's only
+  one, and a quiet **Not about a job**.
+- **Answered** (34b, as the Today block's task, #106): the press lands, and line two crossfades to
+  the outcome (120 ms out, 120 in): a 16 px filled `check_circle` in `good` and "JD saved" in `ink`
+  12.5, then "· Junior Developer · New York, NY · Greenhouse" in `ink3` ("Tracked · Wide World
+  Importers" for Track this). At 360 ms the item folds away (height over 180 ms, opacity over 120)
+  and what's below rides up; the band's count and the sidebar's change as the fold starts. The toast
+  says what happened, with Undo: "JD saved for Lucerne Publishing · Undo", "Tracking Wide World
+  Importers · Undo"; Undo folds the item back. The row its answer changed settles in from `sub2`
+  over 900 ms.
+- **The last item** leaving folds the whole band, header and all, over 180 ms.
+- **From history** (D311, D324):
+  - Folded, a 36 px line under the items (padding 0 16 0 34, `hair` below, `ink2` 12.5):
+    `chevron_right` 16 in `ink3`, "From history" with its count in `ink3`, then "· what the history
+    pass wasn't sure of" in `ink3`. Under the pointer `sub` and `ink`. With nothing else waiting, it
+    stays on its own.
+  - Unfolded, its chevron turns 90° and its rows unfold over 180 ms; **Dismiss all**, a quiet small
+    button (26 px), sits at the line's right, its tooltip "The same as ignoring each one: those
+    emails make nothing".
+  - Each row is 36 px: a grid of 18 | text | date | actions, 10 apart, padding 0 16 0 34, `panel` at
+    50% behind it, `ink2` 12.5. Its kind's 16 px glyph in `ink3`, then the email's subject in `ink`
+    and why in `ink2` ("**Thanks for your interest in the Support Specialist role** · Relecloud ·
+    names a role neither application has"; "**Margie's Travel · Associate Developer** · Is this the
+    posting? · 3 candidates"); the date in `ink3` 12 ("Aug 30", "Applied Jun 2"); and two 24 px
+    buttons at 12: outline **Assign to…**, **Choose…** or **Track this**, and quiet **Not about a
+    job** or **None of these**.
+  - Dismiss all folds the rows away together (180 ms), then the line, and says "Dismissed 6 from
+    history · Undo" (D324).
+
+### The table
+
+- **Columns,** with the detail closed (34a): a 12 px gutter | Company 220 | Role | Platform 120 |
+  Applied 72 | Status 300 | JD 128, 12 apart, padding 0 16 0 12.
+- **Beside the detail** (32): Platform drops and JD is a glyph alone, as mail drops its chips beside
+  the reader: 12 | 156 | Role | 60 | 214 | 18. It re-lays in the frame the pane opens, with no width
+  tween, and Platform comes back in the frame it closes.
+- **The header row** (30 px, `panel`, `hair` above and below, 11.5 uppercase .08em `ink3`): each
+  label is a 22 px target (padding 0 6, radius 6; `sub` and `ink2` under the pointer, `sub3`
+  pressed). A click sorts by it and a second flips it; the sorted label is `ink2` with a 14 px
+  `arrow_downward` or `arrow_upward`. Newest first by Applied, by default (D314). JD's tooltip is
+  "Job description".
+- **A row** is 36 px, `hair` below:
+  - Company in `ink`, Role in `ink2`, Platform in `ink3` 12.5, Applied in `ink2` 12.5 tabular
+    ("Today", "Oct 6", "Feb 9"), each ending in an ellipsis. The 12 px gutter stays empty.
+  - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
+    its left edge.
+- **Status** (D309): a 7 px mark, the status, then its step in `ink3` (an ellipsis when it's long).
+  Existing colours only:
+
+  | Status | Mark | Label | Step |
+  | --- | --- | --- | --- |
+  | Applied | a 1.5 px `ink2` ring | `ink2` | "· Re-applied" beside the detail, "· Re-applied, rejected Sep 2" without it |
+  | In process | an `ink` disc | `ink` 500 | the latest step in `ink2`: "· Interview Tue Oct 13, 2:00 PM", "· Case study due Oct 12" |
+  | Offer | a `good` disc | `good` 500 | "· Oct 6" |
+  | Rejected | an `ink3` disc | `ink3` | "· Oct 5" |
+  | Withdrawn | a 1.5 px `ink3` ring | `ink3` | "· Sep 10" |
+  | Ghosted | an 8 px dashed `ink3` ring (1.2 px) | `ink3` | "· no email in 48 days" |
+
+  - Ghosted is a flag on Applied after 30 days without an email, and it never moves an application
+    to Rejected. It appears on the next draw after the 30 days, without motion.
+  - **Set by hand** (D322): a 14 px `edit` in `ink3` after the step (`ink` under the pointer), its
+    tip "Set by you on Sep 10 · only an email that sets a status changes it".
+- **Closed rows** (Rejected, Withdrawn) and **Ghosted** rows step down: Company `ink2`, Role `ink3`.
+  Never a lower opacity, which means a change waiting for its provider.
+- **JD** in `ink3` 12.5, its 16 px glyph in `ink3`, then how it was found, or a glyph alone with
+  that as its tooltip beside the detail:
+  - `description` with "Search", "Greenhouse", "The email's link" (tooltip "Search · found 7h ago",
+    "Greenhouse · found Oct 1")
+  - `pending` "In Needs you" (tooltip "2 candidates in Needs you")
+  - `remove` "No JD found"
+  - `progress_activity` "Looking it up…" while it's looked up (tooltip "Looking for the posting")
+  - nothing for a closed application from history, which isn't looked up (D311).
+- **Arrivals:** an application that lands (a confirmation, Track this, the history pass) takes its
+  place by the sort and settles in from `sub2` over 900 ms, the arrival rule News uses (#131). A row
+  an email moves on (Applied → In process) crossfades its status cell (120 ms out, 120 in) and
+  settles the same way. In a filtered view a row stays put until the next visit, as News holds its
+  order; a row that's landed moves only by a sort.
+- **A re-application** (D305) is its own row, Applied with "· Re-applied"; the earlier one keeps its
+  own closed row at its date (Relecloud, Oct 6 and Jul 22).
+
+### The application's detail
+
+- **Tools** (48 px): **Open posting** `O` (`open_in_new`, the JD's link), then a spacer, previous,
+  next and More (30 px icon buttons). With no posting link there's no Open posting: 34c draws **Open
+  email** (`mail`) there while the JD is looked up, and 38b nothing once none was found.
+- **Opening** (32): the pane takes its 680 px at once and its content slides in 12 px from the right
+  over 180 ms; the open row takes `sub3` and its bar at once. J / K or another row swaps the content
+  at once, the old row's fill going back over 120 ms. Esc or the open row again fades the content
+  over 120 ms, then the pane goes.
+- **Head** (padding 20 28 16, 10 apart):
+  - A 20 px line in `ink3` 13: the company in `ink2` 500, "· via Greenhouse", and at the right in
+    12.5 the account's dot, "Jobs" in `ink2` and "· Applied Oct 1".
+  - The title (20 / 500, the reader's subject). Under the pointer it takes a `sub` fill (radius 8, 4
+    px beyond the text) and a 16 px `edit` in `ink3` after it, fading in over 120 ms.
+  - The status line: the **status chip** (28 px, `chip`, an `edge` ring, padding 0 6 0 11, 12.5
+    `ink`: the 7 px mark, the status, `expand_more` 16 in `ink3`; `sub` with an `edgeHover` ring
+    under the pointer, `sub2` and .97 pressed, `sub2` with an `edgeOn` ring and `expand_less` while
+    open). One click on it sets the status by hand (D309). Then the latest step in `ink2` and its
+    age in `ink3` 12.5 ("Pick a 30-minute interview slot this week · 2h"), or "No reply yet" in
+    `ink3`.
+- **Body** (padding 6 28 28, 22 apart), the JD first (D307):
+  - **What they want:** the label (11.5 uppercase `ink3`, 18 px), then the summary at 14 / 1.6 in
+    `ink`, max 600, 8 px under it.
+  - **Facts:** one line in `ink2` (6 / 18 apart), each after a 16 px glyph in `ink3`: `location_on`
+    "Irvine, CA", `home_work` "Hybrid, 3 days", `payments` "$95,000–$115,000". With no salary
+    stated, "Salary not stated" in `ink3`.
+  - **Must-haves** and **Nice-to-haves** in two columns, 28 apart, max 624, each label with its
+    count in `ink2` ("MUST-HAVES 4"). Items 6 apart at 13 / 1.45 in a 14 px hanging column:
+    must-haves in `ink` after a 5 px `ink2` dot, nice-to-haves in `ink2` after a 5 px `ink3` ring.
+  - **Full posting:** a 44 px row (radius 12, `sub`, padding 0 6 0 14): `article` 17 in `ink3`,
+    "Full posting" in `ink` 500, how it was found in `ink3` 12.5 ("· Found on Greenhouse · Oct 1,
+    10:41 AM", "· Found by search · Sep 30, 2:18 PM"), then two 30 px tools: the link's host
+    (`link`, "greenhouse.example"), which opens it, and **Show** with `expand_more`. `sub2` under
+    the pointer, `sub3` pressed.
+  - **Timeline** (D317), with its count, oldest first; each event opens its email:
+    - A grid of 52 | 14 | text | ···, 10 apart, at least 38 px, radius 10, padding 0 6 0 8, reaching
+      8 px past the body on each side.
+    - The date in `ink2` 12.5 ("Oct 1"; "Today" in `ink`).
+    - The node: a 7 px `ink2` dot (`ink` on an In process event) on a 1 px `hair` line through the
+      events, ringed in `page` to break it; a **quiet** event's is a 5 px `ink3` ring.
+    - What it was in `ink3` 12 ("Applied", "Interview"), then the email's subject in `ink`; a quiet
+      event ("Verify your email", "Your candidate account is ready") has no kind and its subject is
+      `ink3` 12.5.
+    - Hover `sub`, its 26 px ··· showing; with its menu open, `sub2` and the ··· `sub3` in `ink`.
+    - An event whose email Gmail has purged keeps its line and opens nothing (D317).
+  - **Applied before at Northwind Talent** (D306): a label, then one 44 px card per earlier
+    application there (radius 12, an `edge` ring, padding 0 8 0 14): `history` 17 in `ink3`, "Junior
+    Developer" in `ink`, "· Applied Feb 9" in `ink3`, its status mark and "Rejected Mar 14", and an
+    18 px `chevron_right` at the right. Under the pointer `sub` with an `edgeHover` ring; pressed
+    `sub2`. It opens that application. Another open application at the company shows the same way
+    under **Also at Humongous Insurance**, with `work` (35a); a re-application's earlier one is here
+    too.
+- **The full posting** (33, D307) unfolds in place under the lists, rather than replacing them:
+  - Show, or Space on its row, turns the row into the section's sticky head (44 px, `sub2`, radius
+    12): `article` 16, "Full posting" in `ink` 500, "· Software Engineer I · Northwind Talent" in
+    `ink3`, and a quiet small **Collapse** with `expand_less`.
+  - Under it, a line in `ink3` 12.5 (6 / 14 apart): `travel_explore` "Found on Greenhouse · Oct 1,
+    10:41 AM", `link` and the whole link in `ink2`, and `lock_clock` "Kept as it was on Oct 1".
+  - The text at 14 / 1.62 in `ink`, max 600: its headings 13 / 600, 18 above and 6 below; paragraphs
+    and lists 12 apart, list items 4, their markers `ink3`. It's the posting's own words, cleaned to
+    markdown and never rewritten (D307).
+  - The text unfolds over 260 ms (a clip from the top), its paragraphs fading in over 180 ms from 60
+    ms, while the pane scrolls the head up under the tools, so the summary and lists slide away
+    rather than the text appearing off screen. Collapse, the head or Esc folds it back over 180 ms
+    and scrolls back to the row. The body is 14 apart while it's open.
+  - `O` still opens the original, which may be gone; the kept text never changes.
+- **No JD found** (38b, D320): under a **Job description** label, a 44 px card (radius 12, an `edge`
+  ring, padding 0 14, `ink3`): `search_off` 16, "No JD found" in `ink2`, "· Breezy and a web search
+  had nothing for it on Oct 1", and a quiet small **Look it up** (`search`). Jobs never retries on
+  its own; a lookup that errored is retried and never shows this.
+- **Looking it up** (34c): the Full posting row outlined instead of filled (an `edge` ring): the
+  shared spinner (`progress_activity` 16 in `ink3`, 900 ms a turn), "Looking for the posting…" in
+  `ink2`, "· LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
+  four 10 px bars in `sub2` (92%, 86%, 54% and 38% wide, 9 apart, the last 10 further down),
+  breathing as every skeleton does (#225). What comes fades in over 120 ms.
+- **First seen in this email** (34c, D323): an application Track this made is dated by its email, so
+  its head adds a line in `ink3` 12.5 under the status, after a 16 px `info`: "First seen in this
+  email, so Applied is its date", and its first event carries a **First seen** tag. Tracked, it
+  lands at its date, settles from `sub2`, opens, and starts its lookup; the numbers move with it
+  (All 63, In process 4, this week 4) and Needs you drops to 2.
+
+### Corrections
+
+Out of sight until wanted (D312): the pane's More, a pencil on the title, and a ··· on each event.
+Every correction sticks: no email, re-run or lookup undoes one. Each says what it did in the toast,
+with Undo for 6 seconds and #147's glyph (override 36).
+
+- **The title in place** (35a): a click on it swaps the text for a field on the same baseline, with
+  no jump (34 px, radius 10, `cardOn`, the `edgeFocus` ring arriving over 120 ms, 20 / 500, padding
+  0 6 0 10), with "Enter to save · Esc" under it in `ink3` 12. Enter saves and Esc cancels, both at
+  once. The company edits the same way from More.
+- **More** (35b, 300 wide) grows from its top-right corner:
+  - **Edit company** (`edit`), **Edit title** (`edit_note`), **Set status** (`radio_button_checked`)
+    and **Merge with…** (`merge`), the last two with a `chevron_right` submenu
+  - a divider, then **Not this posting** (`link_off`) and **Look up the JD again** (`manage_search`)
+  - a divider, then the two that remove it, 44 px with a line saying how they differ (D321): **Not
+    an application** (`visibility_off`), "Hides it · its emails never make one again"; and
+    **Delete** (`delete`), "Forgets it · a later email can make it again". Delete is `ink2` at rest
+    and `alert` on a 14% `alert` wash under the pointer.
+- **Merge with…** (330 wide) opens to More's left at its item, its field focused (32 px, `cardOn`,
+  an `edgeFocus` ring, "Search applications"), then the company's other applications under its name,
+  then **Recent**, each a 44 px item with `work` and two lines ("Fabrikam · Data Analyst" over
+  "Applied today · Applied"). Merged, the other row folds out of the table (180 ms), this timeline
+  gains its emails, each settling from `sub2` over 900 ms, and the toast says "Merged · Undo".
+- **Not an application** and **Delete:** the row folds away (180 ms), the pane closes (its 120 ms
+  fade), and the toast offers Undo.
+- **Not this posting:** the JD section crossfades (120 / 120 ms) to "Is this the posting?" with the
+  other candidates, as Needs you shows them, or to No JD found when there are none.
+- **An event's ···** (220 wide) grows from the button's top-right corner: **Open email** (`mail`),
+  **Move to…** (`move_item`, a submenu) and **Not about this** (`undo`). Move to… (300 wide) opens
+  to the left at its item's height: the company's other applications under its name, a divider, and
+  **Another application…** (`search`). Moved, the event folds out of the timeline (180 ms) and the
+  toast says "Moved to Software Engineer II (Java) · Undo"; Not about this folds it out and into
+  Needs you.
+- **Set status** (not drawn, nor the status chip's menu) offers the five statuses; a status set by
+  hand gives way only to an email that sets one (an assessment, interview, offer or rejection),
+  never to a quiet one (D322).
+
+### Search
+
+- `/` or a click turns the header into **Search** (36a, D316): the title crossfades to "Search" over
+  120 ms; the status filter and Per week go; the field widens from 380 to 520 over 180 ms and takes
+  focus (`edgeFocus` border, `cardOn` fill, its hint `Esc`). Needs you folds away (180 ms) while a
+  query is in.
+- **Results** replace the table's rows as Andy types, at once, with no motion per keystroke; the
+  column header stays. J / K, Enter and the detail work as on the table. Matches are highlighted in
+  `hl`, drawn with the rows.
+- **Company or role** first, under a group header with `business` ("COMPANY OR ROLE 2"); company
+  names match loosely ("wide world" finds Wide World Importers, "humongous" both Humongous
+  applications).
+- **In a job description** next, under its own header with `description`: a match only in a JD's
+  text is a 56 px row (padding 9 at the top) whose second line, from Company to the row's end in
+  `ink3` 12.5, gives "Full posting · " and the line it matched, quoted, with an ellipsis at each
+  end: “…our services run on **Kubernetes** across two regions, so you’ll pick it up from day one…”
+  (36b). "Which one asked for Kubernetes?" answers itself without opening anything.
+- **No match in company or role:** a 36 px line in `ink3` 12.5 above the JD matches (padding 0 16 0
+  24), `search_off` 16, "No company or role matches “kubernetes”".
+- **Esc** clears the query; a second Esc brings back the header and the table at their scroll, Needs
+  you unfolding over 180 ms.
+- Jobs stays out of mail's search and ⌘K (D316).
+
+### In mail
+
+Jobs fills two slots in mail's reader and list; the mail code doesn't know Jobs (D303). With Jobs
+off, or removed, both stay empty. The Inbox's counts never change for them (D313).
+
+- **The JD chip** (37a), in the reader's head under the sender's line and above the actions, on any
+  email that belongs to an application:
+  - 28 px, `chip`, an `edge` ring, padding 0 8 0 10, `ink2` 12.5: `work` 16 in `ink3`, the role in
+    `ink`, "· Applied Oct 1 · In process", and `expand_more` 16 in `ink3`. Its tooltip "The job
+    description you applied to".
+  - `sub` with an `edgeHover` ring under the pointer (120 ms), `sub2` and .97 pressed; it draws with
+    the head, with no entrance of its own.
+- **Its popover** (37b, 460 wide, the popover's look) grows from the chip's bottom-left corner over
+  180 ms, 8 px under it; the chip takes `sub2` with an `edgeOn` ring and its chevron turns 180°:
+  - The head (padding 14 16 10): "Northwind Talent · via Greenhouse" in `ink3` 12.5 (the company
+    `ink2` 500), the title at 15 / 500, then the status mark, "In process" and "· Applied Oct 1".
+  - The body (padding 2 16 14, 12 apart): What they want at 13 / 1.5, the facts at 12.5, and the two
+    lists at 12.5 / 1.4, 18 apart.
+  - The foot (padding 8 8 8 16, `hair` above, `ink3` 12): "Found on Greenhouse · Oct 1" (the full
+    time in its tooltip), then quiet small **Full posting** (`article`) and **Open in Jobs** with
+    `arrow_forward`.
+  - Esc, a click away or the chip closes it at once. Open in Jobs goes to Jobs with the application
+    open, the pane simply there, with no slide: it's arriving, not opening.
+- **Applied before** (37c, D306), on job-match emails only ("Associate Software Engineer @ Contoso
+  Pharmaceuticals"), when the company matches an application, a Noise row too:
+  - **On the row:** a 20 px badge after the subject (`chip`, an `edge` ring, padding 0 7 0 6, `ink2`
+    11.5 tabular), `history` 14 in `ink3`, "Applied Sep 16 · Rejected Oct 5"; its tooltip "Open Jobs
+    searched for Contoso Pharmaceuticals".
+  - **In the reader:** the same badge at 26 px (padding 0 10 0 8, 12.5, its glyph 16) where the JD
+    chip sits; its tip "Open in Jobs · every application at Contoso Pharmaceuticals".
+  - Both answer the pointer as the chip does and open Jobs searched for the company ("contoso
+    pharmaceuticals"), showing every application there.
+
+### States
+
+- **The history pass** (38a, D311, D326), a muted line at the top of the column (32 px, `ink3` 12.5,
+  `hair` below): the shared spinner, then "Reading history · 140 of 330 emails · showing what’s read
+  so far".
+  - Its progress runs along its foot: a 2 px `sub2` track filling in `ink3` (radius 0 2 2 0), its
+    width easing over 260 ms as each count comes; the counts change in place, tabular, unanimated.
+  - The pass reads oldest first, so the newest applications are still to come: three skeleton rows
+    hold the table's top (#225), and each application lands at its date's place as it's made,
+    settling from `sub2` over 900 ms. The numbers in the header count what's landed.
+  - What the pass is unsure of gathers in From history as it goes.
+  - Done: the line shows a `good` check and "Read 330 emails" for 1.2 s, then folds away (180 ms).
+- **The AI is down** (38b): a failing line at the top of the column (32 px, `caution` 12.5, led by
+  `warning`, #218): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying". It folds
+  in as it comes and out when the AI's back, showing a `good` check for 1.2 s first, as mail's
+  health lines do. Nothing is lost.
+- **No JD found**, **Ghosted** and **a status set by hand** are drawn above (The table, The
+  application's detail), never animated.
+- **Jobs off** (38c): the header is "Jobs" alone; the page is the one-line empty state (#124), the
+  20 px `work` in `ink3` over "Jobs is off · Turn on", Turn on an `ink` link (a 26 px pill, `sub2`
+  under the pointer). Turn on opens Settings › Jobs (its own 260 ms entrance) with the switch
+  focused, so turning it on is a choice made where the accounts it reads are listed. While off, Jobs
+  has no item in the sidebar or the rail and `4` opens this page; 38c draws the item there, current.
+
+### Jobs in Settings
+
+- The nav adds **Jobs** (`work`) between News and AI.
+- **Jobs** (39a): the header adds "62 applications" in `ink3` 12.5.
+  - A first group, one row: **Jobs**, "Builds applications from their confirmation emails and keeps
+    each JD as it was", and its switch (the knob travelling 120 ms, stretching while pressed, #151).
+    Turning it on starts the history pass, and Jobs folds into the sidebar under News (180 ms).
+  - **Reads** (D310): a 48 px row per account, its dot and label, then a select: Jobs "Every email",
+    Business "Career mail only", Personal, Work and iCloud "Off". Under the group: "Career mail is
+    what triage sorts as Career. Jobs never changes how mail itself is sorted."
+  - **History:** **History pass**, "Read 330 emails once, when Jobs was turned on · finished Oct 1,
+    8:14 PM", with a 7 px `good` dot and "Done" (while it runs, 38a's line and progress instead);
+    and **From history**, "6 waiting in Needs you, what the pass wasn't sure of", with an outline
+    small **Show**.
+- **AI** (39b) adds a **Jobs** group after News's (D315):
+  - **Each email** ("Role title, requisition ID, the event, the match"), Claude Haiku 5.5; **Finding
+    the JD** ("When the email's link and the platforms miss"), Claude Sonnet 5.5 with web search;
+    **Reading the JD** ("Summary, must-haves and nice-to-haves, salary and setting"), Claude Haiku
+    5.5. Names, not selects, as News's are (override 26).
+  - **This month** ("No cap: a JD is worth finding while the posting is up"), "$3.85" in `ink` 12.5.
+    No cap, so no meter.
+  - **Usage this month** adds a Jobs row broken into its three parts, as News's is: "Emails $0.62 ·
+    finding JDs $2.71 · reading JDs $0.52", $3.85; the label's total takes it in ($25.20).
+
+### Light
+
+Board 40 is board 32 in Light, and Jobs has no Light values of its own: its components take the
+theme's tokens (Light `page`, `ink2`, `cardOn` and `navOn` with its hairline, and Light `good` for
+Offer). A theme switch fades every colour over 180 ms, as everywhere.
+
+### Keys and behaviour
+
+- **Keys:** `4` Jobs; `J` / `K` move, through Needs you's items and then the table's rows; Enter
+  opens the application; ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
+  it; `/` searches Jobs; `O` opens the posting's link. Esc goes from the title's field, a menu, the
+  full posting or (in a narrow window) the detail back a step, then closes the pane; in search, it
+  clears the query, then leaves search.
+- **Passive** (D313): Jobs sends no notifications, adds nothing to mail's, and never touches the
+  calendar or the Inbox's counts. Its one signal is the Needs you count, in `ink2`.
+- **Motion:** [`motion.md`](design-export/jobs/motion.md) holds each board's values. In short: 80 ms
+  for a press, 120 for fills and fades, 180 for menus, popovers, panes and folds, 260 for the full
+  posting unfolding, the progress track and Settings, and 900 for an arrival settling from `sub2`.
+  Rows and menu items never scale on a press, they only take the fill step; pills press to .97 and
+  icon buttons to .92.
+- **Icons:** the boards load the full icon font; the build adds these to `glyphs/icons.json` at the
+  same settings as the rest (override 34): `arrow_downward`, `article`, `block`, `bookmark_add`,
+  `business`, `edit_note`, `home_work`, `link`, `link_off`, `lock_clock`, `manage_search`, `merge`,
+  `move_item`, `pending_actions`, `radio_button_checked`, `radio_button_unchecked`, and
+  `check_circle-fill`. The rest Jobs uses (`work`, `alt_route`, `travel_explore`,
+  `progress_activity`, `pending`, `description`, `remove`, `search_off`, `payments`) are already
+  there.
+
 ## ⌘K
 
 The palette (board 20, about 637 px wide, radius 18) runs commands, not search. On an open email it
 lists **This email** (Done H on Attention mail, Trash E, Pin P, Open in Gmail O, Add to calendar, Add as task, Ask about
-this email, Mark unread), **Go to** (Inbox 1, Calendar 2, News 3 after 2.0, Settings ⌘,) and **Appearance** (System,
+this email, Mark unread), **Go to** (Inbox 1, Calendar 2, News 3 after 2.0, Jobs 4 after News, Settings ⌘,) and **Appearance** (System,
 Light, Night, the current one ticked). As in darma, typing also finds every other command that has a
 key (New event, New task, Mark all as read).
 
@@ -830,7 +1244,7 @@ stretching toward its travel as it's pressed (#151). A reconnect link opens it a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
 section's label stays under the title (#132).
 
-- **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), AI, Appearance, Security.
+- **Nav:** Accounts, Calendar, Todoist, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), Jobs (after News, [Jobs in Settings](#jobs-in-settings)), AI, Appearance, Security.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
   drag handle, icon, label, address, how it syncs ("Gmail · Push", "iCloud · IMAP every 2 min") and
   its state, led by its glyph (#219): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
@@ -1043,6 +1457,17 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     Pinned shelf, then the days, so the audit compares them as they are and expects the list to
     differ.
 
+**Jobs** (design round 4, boards 32–40, 32b, 34c and the states strip; darma SV-118).
+
+34. **Jobs's icons are drawn from `glyphs/icons.json`**, not the full icon font the boards load from
+    the network; the build adds the ones it lacks, listed under Jobs's Keys and behaviour.
+35. **Jobs's glyphs keep Glyphs' sizes per role** (#123): where the boards draw 15 px (the table's
+    JD glyph, From history's rows, the JD chip, the reader's Applied before badge) the app draws 16,
+    and where they draw 13 (the row's Applied before badge, the set-by-hand mark) 14.
+36. **Jobs's toasts lead with #147's glyphs:** `check` in `good` for a thing done ("JD saved for
+    Lucerne Publishing", "Merged"), where 34b draws `check_circle`; `delete` in `ink3` for one taken
+    away (Dismiss all, Not an application, Delete), which no board draws.
+
 ## Not designed yet
 
 - Reply and compose (a reserved place in the reader's tools).
@@ -1052,6 +1477,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 - Settings › Calendar, Todoist, AI, Appearance and Security in detail (rows per the brief).
 - Empty states beyond the Inbox and search (an empty day, a source with nothing yet).
 - News's tuning round (muting, "less like this", choosing sources) and News on the phone.
+- Jobs on the phone and in the iPhone app (decision 49).
 
 ## Decided while building
 
