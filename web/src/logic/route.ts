@@ -9,6 +9,7 @@
 // /calendar/new?kind=event&upcoming=4 opens it on News's Upcoming keynote 4 (its Add to calendar).
 // News (after 2.0): /news is All, /news/local a section, /news/missed Catch up; /story/18 after any of
 // them opens a story in the pane, and /article/2 after that one of its sources.
+// Jobs (after News): /jobs is the page, /jobs/12 with application 12 open in its detail.
 import {ITEM_KINDS, NEWS_SECTIONS} from '@setpoint/shared';
 import type {ItemKind, NewsSection} from '@setpoint/shared';
 
@@ -25,7 +26,8 @@ export type Route =
   | {page: 'inbox'; account: number | null; open: number | null}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
   | {page: 'settings'; section: SettingsPage}
-  | {page: 'news'; view: NewsView; story: number | null; article: number | null};
+  | {page: 'news'; view: NewsView; story: number | null; article: number | null}
+  | {page: 'jobs'; open: number | null};
 
 const positive = (value: string | null | undefined) => (value && /^[1-9]\d{0,9}$/.test(value) ? Number(value) : null);
 
@@ -51,6 +53,7 @@ export function parseRoute(pathname: string, search = ''): Route {
     const article = story && parts[2] === 'article' ? positive(parts[3]) : null;
     return {page: 'news', view, story, article};
   }
+  if (first === 'jobs') return {page: 'jobs', open: positive(second)};
   if (first === 'settings') {
     return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
   }
@@ -76,6 +79,8 @@ export function routePath(route: Route): string {
     }
     case 'settings':
       return `/settings/${route.section}`;
+    case 'jobs':
+      return `/jobs${route.open ? `/${route.open}` : ''}`;
     case 'news':
       return `/news${route.view === 'all' ? '' : `/${route.view}`}${route.story ? `/story/${route.story}${route.article ? `/article/${route.article}` : ''}` : ''}`;
   }

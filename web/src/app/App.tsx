@@ -1,9 +1,9 @@
 // The shell (DESIGN.md › Layout): the sidebar, then the page under its header, with the offline
 // pill over it while Setpoint's live stream is down, and the one toast (ToastPill.tsx) above it all,
 // Settings included. The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search,
-// ⌘K the palette, ⌘, Settings. Settings is a modal over the page, not in the address bar: /settings/<page>
+// ⌘K the palette, ⌘, Settings, and `4` Jobs while it's on (jobs/, a wiring point). Settings is a modal over the page, not in the address bar: /settings/<page>
 // opens it over the Inbox. Below 640 px the phone's shell (Phone.tsx) takes the sidebar's place,
-// Calendar is the agenda, and Settings, ⌘K and News stay on the desktop (a News address opens the Inbox).
+// Calendar is the agenda, and Settings, ⌘K, News and Jobs stay on the desktop (their addresses open the Inbox).
 import {useEffect} from 'react';
 import {useDown, useOfflineSince} from '../api/live.ts';
 import {connectFailed, connectNote} from '../logic/settings.ts';
@@ -11,6 +11,7 @@ import {isTyping, plainKey} from '../ui/keys.ts';
 import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
 import {InboxPage} from './InboxPage.tsx';
+import {goToJobs, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
@@ -44,8 +45,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
     navigate(toInbox(), {replace: true});
   }, [settingsLink]);
 
-  // Below 640 px News isn't in the navigation (D85): its address opens the Inbox.
-  const phoneNews = phone && route.page === 'news';
+  // Below 640 px News and Jobs aren't in the navigation (D85, D303): their addresses open the Inbox.
+  const phoneNews = phone && (route.page === 'news' || route.page === 'jobs');
   useEffect(() => {
     if (phoneNews) navigate(toInbox(), {replace: true});
   }, [phoneNews]);
@@ -74,6 +75,8 @@ export function App({arrive = false}: {arrive?: boolean}) {
       } else if (plainKey(event, '3') && !isPhone()) {
         event.preventDefault();
         navigate({page: 'news', view: 'all', story: null, article: null});
+      } else if (plainKey(event, '4') && !isPhone()) {
+        if (goToJobs()) event.preventDefault();
       } else if (plainKey(event, '/') && selectSearch()) {
         event.preventDefault();
       }
@@ -89,6 +92,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
         {route.page === 'inbox' ? <InboxPage key={route.account ?? 'all'} route={route} />
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
+              : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)
               : phone ? <PhoneSettings /> : null}
         <OfflinePill />
         <ToastPill />

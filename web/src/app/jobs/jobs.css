@@ -1,0 +1,308 @@
+/* Jobs (DESIGN.md › Jobs; boards 32–36, 40 and the states strip, design-export/jobs/jobs.css, whose
+   class names these keep without `.sp`). Jobs adds no tokens: Light is the theme's own (board 40). */
+
+/* ---------- The shell's item: Needs you's count in ink2, never caution (D313) ---------- */
+.sb .nav.jobs > .cnt { color: var(--ink2); }
+/* The rail: the count as a 16 px badge placed as the Inbox's, but neutral (32b). */
+@media (min-width: 640px) and (max-width: 1099px) {
+  .sb .nav.jobs > .cnt { display: grid; place-items: center; position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: var(--sub4); color: var(--ink); font-size: 10.5px; font-weight: 600; box-shadow: 0 0 0 2px var(--panel); }
+}
+
+/* ---------- Header: the two numbers and search ---------- */
+.jb-hd .hd-title { animation: jb-fade var(--dur-fast) var(--ease); }
+@keyframes jb-fade { from { opacity: 0; } }
+/* Counts by status are the segmented control (D314); a count is ink3, ink2 on the segment turned on. */
+.jb-status > * { white-space: nowrap; flex: none; }
+.jb-status .n { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; transition: color var(--dur-fast) var(--ease); }
+.jb-status > .on .n { color: var(--ink2); }
+/* Per week: the last 12 weeks, oldest first; this week's bar an outline, since it isn't over (D318). */
+.jb-week { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 10px; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none;
+  transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-week:hover { background: var(--sub); } }
+.jb-week .bars { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.jb-week .bars > i { display: block; width: 5px; border-radius: 1.5px 1.5px 0 0; background: var(--ink3); opacity: .7; transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.jb-week .bars > i.none { opacity: .35; }
+.jb-week .bars > i.now { background: transparent; box-shadow: inset 0 0 0 1px var(--ink3); opacity: 1; }
+.jb-week .bars > i.hov { background: var(--ink); opacity: 1; }
+.jb-week .bars > i.now.hov { box-shadow: inset 0 0 0 1px var(--ink); background: transparent; }
+.jb-week .v { color: var(--ink2); font-variant-numeric: tabular-nums; }
+/* A bar names its week in a tip under the chart, as the header leaves no room above it. */
+.jb-tip { position: absolute; top: calc(100% + 6px); z-index: 6; height: 26px; display: inline-flex; align-items: center; gap: 4px; padding: 0 10px; border-radius: 8px; background: var(--cardOn);
+  box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; transform: translateX(-50%); pointer-events: none;
+  animation: jb-fade var(--dur-fast) var(--ease); }
+.jb-tip .ink3 { color: var(--ink3); }
+/* The search field widens to 520 for Search (36a) over 180 ms. */
+.jb-hd > .search { transition: width var(--dur-medium) var(--ease), flex-basis var(--dur-medium) var(--ease), background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+.jb-hd > .search > .icon { flex: none; }
+.jb-hd > .search .glass { display: grid; flex: none; }
+
+/* ---------- The column: Needs you, then the table, scrolling under the header ---------- */
+.jb-col { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; container: jbcol / inline-size; }
+.jb-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
+.jb-col .gh > .icon { color: var(--ink3); }
+
+/* Needs you (D308, D311): one band above the table, its count ink2. It folds away while a search holds a query. */
+.jb-band { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
+.jb-band.folded { grid-template-rows: 0fr; }
+.jb-band > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.jb-need { display: grid; grid-template-columns: 12px 18px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 7px; padding: 10px 16px 11px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none;
+  transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-need:hover { background: var(--sub); } }
+.jb-need.cur { background: var(--sub2); }
+.jb-need > .g { grid-column: 2; grid-row: 1; height: 18px; display: grid; place-items: center; color: var(--ink3); }
+.jb-need .l1 { grid-column: 3; display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
+.jb-need .l1 .what { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-need .l1 .from { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.jb-need .r1 { grid-column: 4; display: flex; align-items: center; gap: 8px; height: 18px; color: var(--ink3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.jb-need .acts { grid-column: 3 / 5; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.jb-need .acts.cands { flex-direction: column; align-items: stretch; gap: 0; max-width: 560px; }
+.jb-need .line { color: var(--ink2); font-size: 12.5px; margin-right: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-need .acts .btn.sm { height: 28px; }
+.jb-need .acts .btn .icon.after { color: var(--ink3); margin-right: -4px; }
+/* A JD to confirm's candidates: a sub group of 32 px rows, the last None of these. */
+.jb-cands { border-radius: 12px; background: var(--sub); overflow: hidden; }
+.jb-cand { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 6px 0 12px; color: var(--ink2); font-size: 13px; }
+.jb-cand > .icon { color: var(--ink3); }
+.jb-cand .t { color: var(--ink); }
+.jb-cand .ell { flex: 1 1 auto; }
+/* Drawn here as the boards draw them; J6 makes them answer (D-numbered on SV-123). */
+.jb-inert { pointer-events: none; }
+
+/* From history (D311, D324), folded under the items. */
+.jb-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; cursor: default;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-fold:hover { background: var(--sub); color: var(--ink); } }
+.jb-fold-t { display: flex; align-items: center; gap: 10px; height: 100%; flex: 1 1 auto; min-width: 0; text-align: left; color: inherit; }
+.jb-fold-t > span { white-space: nowrap; flex: none; }
+.jb-fold-t > .icon { color: var(--ink3); transition: transform var(--dur-medium) var(--ease); }
+.jb-fold-t[aria-expanded="true"] > .icon { transform: rotate(90deg); }
+.jb-fold .n { color: var(--ink3); font-variant-numeric: tabular-nums; }
+.jb-fold-t > .why { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+.jb-fold .btn { height: 26px; margin-right: -8px; }
+.jb-hist-wrap { display: grid; grid-template-rows: 0fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
+.jb-hist-wrap.open { grid-template-rows: 1fr; }
+.jb-hist-wrap > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.jb-hist { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; column-gap: 10px; align-items: center; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2);
+  font-size: 12.5px; flex: none; background: color-mix(in srgb, var(--panel) 50%, transparent); transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-hist:hover { background: var(--sub); } }
+.jb-hist > .icon { color: var(--ink3); }
+.jb-hist .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-hist .what b { color: var(--ink); font-weight: 400; }
+.jb-hist .when { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jb-hist .acts { display: flex; gap: 4px; }
+.jb-hist .acts .btn { height: 24px; font-size: 12px; padding: 0 9px; }
+
+/* ---------- The table (D309, D314) ---------- */
+/* Its columns with the detail closed (34a); a table narrower than they need (beside the detail, as at
+   board 32, or a narrow window) drops Platform and draws JD as a glyph, as mail drops its chips beside
+   the reader. It re-lays in the frame the pane opens, with no width tween. */
+.jb-tbl { --cols: 12px 220px minmax(0, 1fr) 120px 72px 300px 128px; --gap: 12px; }
+@container jbcol (max-width: 1099.98px) {
+  .jb-tbl { --cols: 12px 156px minmax(0, 1fr) 60px 214px 18px; }
+  .jb-tbl :is(.jb-th, .jb-tr) > .c-plat, .jb-tr .jd .t { display: none; }
+}
+@container jbcol (max-width: 599.98px) {
+  .jb-tbl { --cols: 12px minmax(0, 1fr) minmax(0, 1fr) 52px minmax(0, 1.2fr) 18px; --gap: 10px; }
+  .jb-th .h { max-width: calc(100% + 6px); overflow: hidden; text-overflow: ellipsis; }
+}
+.jb-th, .jb-tr { display: grid; grid-template-columns: var(--cols); column-gap: var(--gap); align-items: center; padding: 0 16px 0 12px; flex: none; }
+.jb-th { height: 30px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3);
+  position: sticky; top: 0; z-index: 2; }
+.jb-th.first { border-top: 0; }
+.jb-th .h { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px; margin-left: -6px; border-radius: 6px; justify-self: start; white-space: nowrap; text-transform: inherit; letter-spacing: inherit; color: inherit; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-th .h:hover { background: var(--sub); color: var(--ink2); } }
+.jb-th .h:active { background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
+.jb-th .h.on { color: var(--ink2); }
+.jb-tr { height: 36px; border-bottom: 1px solid var(--hair); color: var(--ink2); position: relative; cursor: default; transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-tr:hover { background: var(--sub); } }
+.jb-tr.cur { background: var(--sub2); }
+.jb-tr:active { background: var(--sub3); transition-duration: var(--dur-press); }
+.jb-tr.open { background: var(--sub3); transition: none; }
+.jb-tr.open::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+/* An arrival (a confirmation, Track this, the history pass) or a row an email moved on settles in from
+   sub2 over 900 ms, the arrival rule News uses (#131); its status cell crossfades as it moves (38a). */
+.jb-tr.landed { animation: jb-landed var(--news-landed) var(--ease); }
+@keyframes jb-landed { from { background: var(--sub2); } }
+.jb-tr.moved .st { animation: jb-swap calc(var(--dur-fast) * 2) var(--ease); }
+@keyframes jb-swap { 0%, 50% { opacity: 0; } }
+.jb-tr > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-tr .co { color: var(--ink); }
+.jb-tr .ro { color: var(--ink2); }
+.jb-tr .ro.none { color: var(--ink3); }
+.jb-tr .pl { color: var(--ink3); font-size: 12.5px; }
+.jb-tr .ap { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.jb-tr .jd { color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+.jb-tr .jd > .icon, .jb-tr .jd > .spin .icon { color: var(--ink3); }
+.jb-tr .jd > .spin { margin-left: 0; vertical-align: 0; }
+.jb-tr .jd .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Closed (Rejected, Withdrawn) and Ghosted rows step down: ink2 / ink3, never opacity, which means pending. */
+.jb-tr.recedes .co { color: var(--ink2); }
+.jb-tr.recedes .ro { color: var(--ink3); }
+/* Search's: a match only in a JD's text is a 56 px row with the line it matched (36b). */
+.jb-tr.two { height: 56px; align-items: start; padding-top: 9px; }
+.jb-tr.two > .snip { grid-column: 2 / -1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
+.jb-none { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); flex: none; }
+.jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-scroll .gh.sr { border-top: 0; }
+
+/* Status: a 7 px mark, the label, then the step. Existing colours only (D309). */
+.st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.st .sl { flex: none; }
+.st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
+.st.proc .step { color: var(--ink2); }
+.st .by { color: var(--ink3); flex: none; transition: color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .st .by:hover { color: var(--ink); } }
+.sd { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+.sd.applied { box-shadow: inset 0 0 0 1.5px var(--ink2); }
+.sd.proc { background: var(--ink); }
+.sd.offer { background: var(--good); }
+.sd.rej { background: var(--ink3); }
+.sd.wd { box-shadow: inset 0 0 0 1.5px var(--ink3); }
+.sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--ink3); }
+.sl.applied { color: var(--ink2); }
+.sl.proc { color: var(--ink); font-weight: 500; }
+.sl.offer { color: var(--good); font-weight: 500; }
+.sl.rej, .sl.wd, .sl.ghost { color: var(--ink3); }
+
+/* ---------- The detail (680, where the reading pane sits) ---------- */
+.jb-pane.leaving > :not(.pane-edge) { animation: jb-leave var(--dur-fast) var(--ease) forwards; }
+@keyframes jb-leave { to { opacity: 0; } }
+.jb-pane .rd-scroll { scroll-behavior: auto; }
+.jb-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.jb-co { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 13px; min-height: 20px; min-width: 0; white-space: nowrap; }
+.jb-co .name { color: var(--ink2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-co .right { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; }
+.jb-title .rd-subj.none { color: var(--ink3); }
+.jb-stat { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.jb-stchip { height: 28px; display: inline-flex; align-items: center; gap: 8px; padding: 0 6px 0 11px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 12.5px; color: var(--ink);
+  flex: none; white-space: nowrap; }
+.jb-stchip > .icon { color: var(--ink3); }
+.jb-stat .step { color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-stat .step.quiet { color: var(--ink3); }
+.jb-stat .age { color: var(--ink3); font-size: 12.5px; flex: none; font-variant-numeric: tabular-nums; }
+.jb-first { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; }
+.jb-body { padding: 6px 28px 28px; display: flex; flex-direction: column; gap: 22px; min-height: 0; flex: none; }
+/* The body closes up to 14 apart while the posting is unfolded, in the same frame, so its scroll lands true. */
+.jb-body:has(> .jb-posting) { gap: 14px; }
+.jb-body > * { max-width: 624px; }
+.jb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); display: flex; align-items: center; gap: 8px; min-height: 18px; margin: 0; font-weight: 400; }
+.jb-label .n { letter-spacing: 0; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.jb-want { margin: 8px 0 0; color: var(--ink); font-size: 14px; line-height: 1.6; max-width: 600px; user-select: text; -webkit-user-select: text; }
+.jb-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.jb-facts > span, .jb-facts > a { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; min-width: 0; max-width: 100%; }
+.jb-facts .icon { color: var(--ink3); }
+.jb-facts .quiet { color: var(--ink3); }
+.jb-lists { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; max-width: 624px; }
+.jb-lists ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.jb-lists li { display: grid; grid-template-columns: 14px minmax(0, 1fr); color: var(--ink); font-size: 13px; line-height: 1.45; }
+.jb-lists li::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: var(--ink2); margin-top: 7px; }
+.jb-lists .nice li { color: var(--ink2); }
+.jb-lists .nice li::before { background: transparent; box-shadow: inset 0 0 0 1.2px var(--ink3); }
+/* The full posting, one step away (D307). */
+.jb-src { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px 0 14px; border-radius: 12px; background: var(--sub); color: var(--ink2); transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-src.can:hover { background: var(--sub2); } }
+.jb-src.can:active:not(:has(.tool:active)) { background: var(--sub3); transition-duration: var(--dur-press); }
+.jb-src > .icon { color: var(--ink3); }
+.jb-src .t { color: var(--ink); font-weight: 500; white-space: nowrap; flex: none; }
+.jb-src .how { color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; flex: 1 1 auto; }
+.jb-src .tool { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 999px; color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; min-width: 0;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.jb-src .tool .icon { color: var(--ink3); }
+@media (hover: hover) { .jb-src .tool:hover { background: var(--sub2); color: var(--ink); } }
+.jb-src .tool:active { background: var(--sub3); color: var(--ink); transform: scale(.97); transition-duration: var(--dur-press); }
+.jb-src .tool.host { overflow: hidden; }
+.jb-src .tool.host > span { overflow: hidden; text-overflow: ellipsis; }
+/* A lookup under way (34c): the row outlined, the shared spinner, and the summary's skeleton breathing. */
+.jb-src.looking { background: transparent; box-shadow: inset 0 0 0 1px var(--edge); }
+.jb-src.looking .t { color: var(--ink2); font-weight: 400; }
+.jb-src.looking .spin { margin-left: 0; vertical-align: 0; color: var(--ink3); }
+.jb-skel { display: flex; flex-direction: column; gap: 9px; max-width: 600px; }
+.jb-skel .sk-bar:last-child { margin-top: 10px; }
+.jb-arrive { animation: jb-fade var(--dur-fast) var(--ease); }
+/* No JD found (38b), and the other ways a JD can stand without one. */
+.jb-nojd { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); margin-top: 8px; }
+.jb-nojd > .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jb-nojd .ink2 { color: var(--ink2); }
+/* Unfolded in place (33): the row becomes the section's sticky head, the text unfolding under it. */
+.jb-fullhead { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 12px; color: var(--ink2); flex: none;
+  /* sub2 laid on the page, so the text scrolling under the sticky head doesn't show through. */
+  background: linear-gradient(var(--sub2), var(--sub2)), var(--page);
+  position: sticky; top: 0; z-index: 2; cursor: default; }
+.jb-fullhead > .icon { color: var(--ink3); }
+.jb-fullhead .t { color: var(--ink); font-weight: 500; white-space: nowrap; flex: none; }
+.jb-fullhead .ell { color: var(--ink3); flex: 1 1 auto; }
+.jb-fullhead .btn .icon { color: var(--ink3); margin-right: -4px; }
+.jb-unfold { display: flex; flex-direction: column; gap: 14px; animation: jb-unfold var(--dur-slow) var(--ease); }
+.jb-unfold.folding { animation: jb-refold var(--dur-medium) var(--ease) forwards; }
+@keyframes jb-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes jb-refold { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 100% 0); opacity: 0; } }
+.jb-unfold .jb-facts { font-size: 12.5px; color: var(--ink3); gap: 6px 14px; padding: 0 2px; }
+.jb-unfold .jb-facts a { color: var(--ink2); overflow: hidden; }
+.jb-unfold .jb-facts a > span { overflow: hidden; text-overflow: ellipsis; }
+.jb-full { color: var(--ink); font-size: 14px; line-height: 1.62; max-width: 600px; padding: 2px 2px 0; user-select: text; -webkit-user-select: text; }
+.jb-full > * { animation: jb-fade var(--dur-medium) var(--ease) 60ms backwards; }
+.jb-full h3 { font-size: 13px; font-weight: 600; margin: 18px 0 6px; color: var(--ink); letter-spacing: 0; line-height: 1.62; }
+.jb-full h3:first-child { margin-top: 4px; }
+.jb-full p { margin: 0 0 12px; }
+.jb-full ul, .jb-full ol { margin: 0 0 12px; padding-left: 18px; }
+.jb-full li { margin: 0 0 4px; }
+.jb-full li::marker { color: var(--ink3); }
+/* The timeline (D317), oldest first: each event opens its email. */
+.jb-tl { display: flex; flex-direction: column; margin: 6px -8px 0; }
+.jb-ev { display: grid; grid-template-columns: 52px 14px minmax(0, 1fr); column-gap: 10px; align-items: center; min-height: 38px; padding: 0 6px 0 8px; border-radius: 10px; color: var(--ink); position: relative;
+  width: 100%; text-align: left; transition: background-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { button.jb-ev:hover { background: var(--sub); } }
+button.jb-ev:active { background: var(--sub3); transition-duration: var(--dur-press); }
+.jb-ev .d { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.jb-ev .d.now { color: var(--ink); }
+.jb-ev .node { position: relative; height: 38px; display: grid; place-items: center; }
+.jb-ev .node::before { content: ""; position: absolute; left: 6.5px; width: 1px; top: 0; bottom: 0; background: var(--hair); }
+.jb-ev.first .node::before { top: 50%; }
+.jb-ev.last .node::before { bottom: 50%; }
+.jb-ev.first.last .node::before { display: none; }
+.jb-ev .node i { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--ink2); box-shadow: 0 0 0 3px var(--page); }
+.jb-ev.quiet .node i { width: 5px; height: 5px; background: var(--page); box-shadow: inset 0 0 0 1.2px var(--ink3), 0 0 0 3px var(--page); }
+.jb-ev.proc .node i { background: var(--ink); }
+.jb-ev .t { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.jb-ev .t .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-ev.quiet .t .s { color: var(--ink3); font-size: 12.5px; }
+.jb-ev .t .k { font-size: 12px; color: var(--ink3); flex: none; }
+/* Applied before at this company (D306), and its other applications. */
+.jb-before { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink2); width: 100%; text-align: left;
+  margin-top: 8px; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.jb-before + .jb-before { margin-top: 6px; }
+@media (hover: hover) { .jb-before:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
+.jb-before:active { background: var(--sub2); transition-duration: var(--dur-press); }
+.jb-before > .icon { color: var(--ink3); }
+.jb-before .t { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.jb-before .ink3 { white-space: nowrap; }
+.jb-before .st { margin-left: 6px; }
+.jb-before .chev { color: var(--ink3); margin-left: auto; }
+
+/* ---------- A narrow window, 640 to 1099 px (32b, D325) ---------- */
+/* The detail lies over the table, led by Back; it arrives 12 px from the right and Back slides it off
+   the same way. The header keeps both numbers: the search field gives way first, then Per week's label. */
+@keyframes jb-slide-off { to { opacity: 0; transform: translateX(12px); } }
+@media (min-width: 640px) and (max-width: 1099px) {
+  .jb-pane.leaving > :not(.pane-edge) { animation-name: jb-slide-off; animation-duration: var(--dur-medium); }
+}
+
+/* The header keeps both numbers on a narrower window (32b): the search field gives way first, to 180
+   (as at 1024), then Per week's label; where even that won't fit, the field is its glass alone until
+   `/` or a click opens Search, and the chart keeps its bars and its count. By the header's own width,
+   so it holds beside the sidebar as beside the rail. */
+.jb-hd { container: jbhd / inline-size; }
+.jb-hd > .search:not(.active) { width: auto; flex: 0 1 var(--mailSearch); min-width: 180px; }
+@container jbhd (max-width: 1019.98px) {
+  .jb-hd > .search:not(.active) { flex-basis: 180px; min-width: 120px; }
+  .jb-week .lbl { display: none; }
+}
+@container jbhd (max-width: 891.98px) {
+  .jb-hd > .search:not(.active) { flex: none; width: 32px; min-width: 0; padding: 0; justify-content: center; }
+  .jb-hd > .search:not(.active) > :not(.glass) { display: none; }
+  .jb-week { padding: 0 6px; }
+  .jb-week .words { display: none; }
+}
+
+.jb-empty { flex: 1 1 auto; }

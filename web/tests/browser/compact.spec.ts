@@ -31,15 +31,15 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
       const page = await setpoint.page({width, height: HEIGHT});
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
-      // The rail: the mark, then Inbox, Calendar, News and Settings, 40 × 40 icons named in their
-      // tooltips; no accounts and no Today.
+      // The rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on; its rail is
+      // jobs.spec.ts's) and Settings, 40 × 40 icons named in their tooltips; no accounts and no Today.
       const rail = (await page.locator('aside.sb').boundingBox())!;
       assert.deepEqual([rail.x, rail.width], [0, layout.rail], `${width}: the rail`);
       const items = await rested(() => page.locator('.sb .nav').evaluateAll(links => links.map(link => {
         const box = link.getBoundingClientRect();
         return [link.getAttribute('title'), box.width, box.height, (link.querySelector('.grow') as HTMLElement).offsetWidth];
       })));
-      assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
+      assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Jobs · 3 need you', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
       // The attention pill as a 16 px badge on Inbox's icon: 2 px from its top, 2 px past its right,
       // 10.5 / 600, in a 2 px `panel` ring.

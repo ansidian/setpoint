@@ -1,7 +1,7 @@
 // The sidebar (DESIGN.md › Layout › Shell): the mark and Setpoint; Inbox with the attention pill
 // (not-Done attention, read or not) and the unread count; each account with its dot, label and
 // unread count, filtering the Inbox (not on Calendar, board 11); Calendar; News, with no count ever
-// (D87); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
+// (D87); Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
 // Settings pinned to the bottom.
 // Counts left out at 0, as board 04 draws them.
 //
@@ -29,6 +29,7 @@ import {AccountsSkeleton} from './states/Skeletons.tsx';
 import {reconnectFrom} from './states/States.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
 import {dotStyle} from './accounts.ts';
+import {JobsNavItem} from './jobs/index.ts';
 import {offered} from './palette/commands.ts';
 import {currentRoute, navigate} from './router.ts';
 import {openSettings} from './settings/store.ts';
@@ -167,6 +168,7 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
         <Icon name="newspaper" />
         <span className="grow">News</span>
       </Link>
+      <JobsNavItem current={route.page === 'jobs'} frame={frame} />
       {!rail && (route.page === 'calendar' ? !frame && <CalendarSidebar route={route} /> : <TodayBlock frame={frame} />)}
       <div className="sb-foot">
         {/* Settings opens over the page (settings/store.ts); its address still works in a new tab. */}

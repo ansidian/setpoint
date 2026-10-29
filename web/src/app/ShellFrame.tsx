@@ -43,7 +43,7 @@ export function ShellFrame() {
     );
   }
 
-  const title = route.page === 'inbox' ? 'Inbox' : route.page === 'news' ? 'News' : route.page === 'settings' ? 'Inbox' : '';
+  const title = route.page === 'inbox' ? 'Inbox' : route.page === 'news' ? 'News' : route.page === 'jobs' ? 'Jobs' : route.page === 'settings' ? 'Inbox' : '';
   return (
     <div className="app" data-frame>
       <Sidebar route={route} frame />

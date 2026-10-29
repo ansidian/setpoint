@@ -3219,3 +3219,27 @@ it changes what's on screen.
     parse table, so the iPhone shows the same ones from its ⓘ (SI-52); every example is run through
     the parser on the seed's Wed, Oct 7, and a row that doesn't read what it says fails `npm test`.
     The placeholders stay as they are. Board audit: board 13 draws no `?` on the line.
+261. **The 900 ms settle from `sub2` marks what reaches a list without the user doing it just now**
+    (Andy left small gaps to Claude, 2026-10-29; darma SV-123, D361): #131 kept it "only for
+    arrivals"; Jobs widens it, as its table and board 38a ask, to an application that lands (a
+    confirmation, Track this, the history pass) and to one an email moves on (Applied → In process).
+    The moved row's status cell fades its new words in over the second 120 ms of its crossfade, the
+    old ones gone at once, since the row keeps no copy of its old status. It reuses
+    `news.landedMs`. Board audit: 38a draws the moment, not the motion.
+262. **Jobs's table and header lay out by their own width** (Andy left small gaps to Claude,
+    2026-10-29; darma SV-123, D359): a table under 1100 px wide takes the beside-the-detail columns
+    (Platform dropped, JD a glyph), as board 32 draws them, whether the detail or the window narrows
+    it; under 600 px (the detail open at 1100) company, role and status share the room. The header
+    gives way by its width: the search field to 180, then Per week's label, then, under 892 px, the
+    field is its glass alone until `/` or a click opens Search, and Per week keeps its bars and count
+    without "this week". Per week's tip sits under the chart. Below about 800 px wide the two numbers
+    can't both fit; nothing narrower gives way yet. Board audit: 32b stops at 1024.
+263. **Jobs before J6** (Andy left small gaps to Claude, 2026-10-29; darma SV-123, D357, D358, D360):
+    Needs you's actions and the detail's status chip are drawn as the boards draw them but inert
+    (no pointer, no focus) until J6 wires them; a candidate's arrow already opens its posting. More,
+    the title's pencil and each event's ··· aren't drawn until J6 brings their menus. A role-less
+    application reads "No role named" in `ink3`, its tab the company alone. A JD without a posting
+    says where it stands under "Job description": No JD found (38b), "Is this the posting? · 2
+    candidates in Needs you", or "Not looked up", the last two with Look it up where it can run.
+    Search with no match anywhere is one line, "No application matches “x”". Board audit: the boards
+    draw the buttons live and More, the pencil and the ··· on hover.

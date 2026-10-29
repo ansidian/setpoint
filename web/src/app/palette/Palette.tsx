@@ -13,6 +13,7 @@ import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {useExit, useFocusReturn} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle, useAccounts} from '../accounts.ts';
+import {jobsCommands} from '../jobs/index.ts';
 import type {SettingsPage} from '../../logic/route.ts';
 import {currentRoute, navigate} from '../router.ts';
 import {openSettings} from '../settings/store.ts';
@@ -49,6 +50,7 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: Account
     {id: 'inbox', section: 'goto', label: 'Inbox', icon: 'inbox', hint: '1', run: () => navigate(toInbox())},
     {id: 'calendar', section: 'goto', label: 'Calendar', icon: 'calendar_month', hint: '2', run: () => navigate({page: 'calendar', date: null, item: null, at: null})},
     {id: 'news', section: 'goto', label: 'News', icon: 'newspaper', hint: '3', run: () => navigate({page: 'news', view: 'all', story: null, article: null})},
+    ...jobsCommands(),
     {id: 'settings', section: 'goto', label: 'Settings', icon: 'settings', hint: '⌘,', run: () => openSettings('accounts')},
     ...THEME_CHOICES.map((choice): Command => ({
       id: `theme-${choice}`, section: 'appearance', label: THEME_LABELS[choice], icon: THEME_ICONS[choice], ticked: theme === choice,

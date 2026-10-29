@@ -166,7 +166,10 @@ const browserChecks = {
 // resolved, so `../jobs/…` from mail is refused wherever it's written.
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const JOBS_FOLDERS = ['server/src/jobs/', 'web/src/app/jobs/', 'shared/src/jobs/'];
-const JOBS_WIRING = ['server/src/server.ts', 'server/src/dev/sample.ts', 'shared/src/index.ts', 'shared/src/api/live.ts'];
+const JOBS_WIRING = [
+  'server/src/server.ts', 'server/src/dev/sample.ts', 'shared/src/index.ts', 'shared/src/api/live.ts',
+  'web/src/app/App.tsx', 'web/src/app/Sidebar.tsx', 'web/src/app/palette/Palette.tsx', 'web/tests/components/jobs.test.tsx',
+];
 const moduleBoundary = {
   rules: {
     jobs: {

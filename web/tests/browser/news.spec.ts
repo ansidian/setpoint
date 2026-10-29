@@ -115,8 +115,8 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
     await row(page, 'Brush fire near the 210 grows to 400 acres').waitFor();
     await page.locator('.today-row').first().waitFor();
     assert.equal(await page.title(), 'News');
-    // The shell: News under Calendar, current, with no count.
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Settings⌘,']);
+    // The shell: News under Calendar, current, with no count (Jobs under it).
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');

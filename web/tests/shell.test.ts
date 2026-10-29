@@ -147,6 +147,9 @@ describe('routes', () => {
     ['/news/ai/story/28/article/40', '', {page: 'news', view: 'ai', story: 28, article: 40}],
     ['/news/sports/story/3', '', {page: 'news', view: 'all', story: null, article: null}],
     ['/news/story/nope/article/4', '', {page: 'news', view: 'all', story: null, article: null}],
+    ['/jobs', '', {page: 'jobs', open: null}],
+    ['/jobs/12', '', {page: 'jobs', open: 12}],
+    ['/jobs/nope', '', {page: 'jobs', open: null}],
     ['/somewhere', '', {page: 'inbox', account: null, open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
@@ -208,6 +211,13 @@ describe('live events refresh only what they name', () => {
   ] as [string, LiveEvent, string[]][])('news: %s', (_name, event, expected) => {
     expect(pathsForEvent(event, news)).toEqual(expected);
   });
+
+  // Jobs (J5): every event refreshes what's on screen under /jobs: the page, the shell's item, an open
+  // application and a search, so a row lands, moves or changes its JD in place.
+  test('jobs: everything mounted under /jobs, nothing else', () => {
+    const mounted = ['/jobs', '/jobs/nav', '/jobs/applications/4', '/jobs/search?q=humongous', '/jobsearch', '/mail/inbox'];
+    expect(pathsForEvent({type: 'jobs', applications: [4], needs_you: []}, mounted)).toEqual(['/jobs', '/jobs/nav', '/jobs/applications/4', '/jobs/search?q=humongous']);
+  });
 });
 
 // The polish audit's states-05: offline, the keys that change something are refused; reading goes on.
@@ -218,7 +228,7 @@ describe('the keys offline refuses', () => {
     ['Delete', key('Delete'), true], ['Backspace', key('Backspace'), true], ['⇧I (Mark all as read)', key('I', {shiftKey: true}), true], ['⇧U (Mark unread)', key('U', {shiftKey: true}), true],
     ['⌘Z (Undo)', key('z', {metaKey: true}), true], ['Ctrl-Z', key('z', {ctrlKey: true}), true],
     ['J', key('j'), false], ['K', key('k'), false], ['Enter', key('Enter'), false], ['Esc', key('Escape'), false], ['/', key('/'), false],
-    ['1', key('1'), false], ['3', key('3'), false], ['←', key('ArrowLeft'), false], ['→', key('ArrowRight'), false], ['U (Unread or All)', key('u'), false],
+    ['1', key('1'), false], ['3', key('3'), false], ['4 (Jobs)', key('4'), false], ['←', key('ArrowLeft'), false], ['→', key('ArrowRight'), false], ['U (Unread or All)', key('u'), false],
     ['O (Open in Gmail)', key('o'), false], ['M', key('m'), false], ['T', key('t'), false], ['N', key('n'), false],
     ['⌘K', key('k', {metaKey: true}), false], ['⌘,', key(',', {metaKey: true}), false], ['⇧H is no change', key('H', {shiftKey: true}), false],
   ])('%s: refused %s', (_name, event, refused) => expect(offlineRefuses(event)).toBe(refused));
