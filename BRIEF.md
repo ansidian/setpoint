@@ -25,7 +25,7 @@ listing the day's biggest stories, grouped across outlets, sorted and summarized
 News tab back. That tab was raw feeds with no deduplication, no filtering, no local coverage and no
 summaries, so it was never opened.
 
-**Then [Jobs](#jobs-after-20)** (Andy, 2026-10-29, decisions 49–63): a fourth page that tracks his
+**Then [Jobs](#jobs-after-20)** (Andy, 2026-10-29, decisions 49–63, darma D303–D317, SV-118): a fourth page that tracks his
 job applications from the mail they send, with each posting's description kept beside it, so a reply
 weeks later is one click from what the role asked for. A tracker kept by hand stopped being
 updated within weeks, so this one fills itself.
@@ -1242,7 +1242,7 @@ From design round 2's review (2026-10-07, Andy):
 48. **Counts follow the rules on every board**: opening an email changes the unread counts, not the
     attention pill.
 
-From the Jobs interview (2026-10-29, Andy). "Prod data" is Setpoint's own database, read-only:
+From the Jobs interview (2026-10-29, Andy; darma D303–D317 in order, on SV-118). "Prod data" is Setpoint's own database, read-only:
 about 330 emails in the Jobs account since May, and Business's Career mail.
 
 49. **Jobs is a fourth page after News,** `4`, desktop web only: no phone layout and no native
