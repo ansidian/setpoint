@@ -11,14 +11,14 @@ import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {keyOf} from '../triage/models.ts';
 
-export const JOBS_MODELS = {emails: 'claude-haiku-5-5'} as const;
+export const JOBS_MODELS = {emails: 'claude-haiku-5-5', finding: 'claude-sonnet-5-5', reading: 'claude-haiku-5-5'} as const;
 
 export const JOBS_PURPOSES = ['jobs_emails', 'jobs_finding_jds', 'jobs_reading_jds'] as const satisfies readonly AiPurpose[];
 export type JobsPurpose = (typeof JOBS_PURPOSES)[number];
 
 export const NO_JOBS_KEY = 'Jobs needs an Anthropic key in Settings › AI.';
 
-/** Writes a Jobs model call to the AI usage ledger, with the email it read. */
+/** Writes a Jobs model call to the AI usage ledger, with the email it read; a search's cost takes in its web searches. */
 export function recordJobsUsage(store: Store, answer: ModelAnswer, purpose: JobsPurpose, messageId: number | null) {
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
@@ -27,9 +27,12 @@ export function recordJobsUsage(store: Store, answer: ModelAnswer, purpose: Jobs
   }).run();
 }
 
-/** The client for reading emails with the Anthropic key; null without one. */
-export function jobsEmailClient(store: Store, endpoints: AiEndpoints, timeoutMs?: number): {client: ModelClient; model: string} | null {
+/** The client for one of Jobs's models with the Anthropic key; null without one. */
+export function jobsModelClient(store: Store, endpoints: AiEndpoints, work: keyof typeof JOBS_MODELS, timeoutMs?: number): {client: ModelClient; model: string} | null {
   const apiKey = keyOf(store, 'anthropic');
   if (!apiKey) return null;
-  return {client: modelClient('anthropic', {apiKey, baseUrl: endpoints.anthropic, timeoutMs}), model: JOBS_MODELS.emails};
+  return {client: modelClient('anthropic', {apiKey, baseUrl: endpoints.anthropic, timeoutMs}), model: JOBS_MODELS[work]};
 }
+
+/** The client for reading emails with the Anthropic key; null without one. */
+export const jobsEmailClient = (store: Store, endpoints: AiEndpoints, timeoutMs?: number) => jobsModelClient(store, endpoints, 'emails', timeoutMs);

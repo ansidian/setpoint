@@ -31,10 +31,12 @@ import type {JobsEmail, ReadWindow} from './mail.ts';
 import {jobsEmailClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import {emailReadingOf, JOBS_MAX_OUTPUT_TOKENS, JOBS_PROMPT_VERSION, JOBS_SYSTEM, JOBS_TOOL, jobsPromptInput} from './prompt.ts';
 import type {EmailReading} from './prompt.ts';
+import {LOOKUP_KEY_PREFIX, lookUpJd, queueDueLookups} from './lookup.ts';
 import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts';
 import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail} from './rules.ts';
 import * as j from './schema.ts';
+import type {JobsWeb} from './web.ts';
 
 export const JOBS_READ_KEY = 'jobs_read';
 
@@ -211,19 +213,28 @@ export interface JobsReaderOptions {
   rescanEveryMs?: number;
   // One model call's limit.
   timeoutMs?: number;
+  // The web the JD lookup reads (J3): production's platforms and posting pages, a fake in tests. A
+  // dev run has none, so it never reaches a real host: its lookups stay `looking` and aren't run.
+  web?: JobsWeb;
 }
 
-/** Jobs's reading worker on the sync engine: the one `jobs_read` job, queued by a nudge or the rescan. */
+/**
+ * Jobs's worker on the sync engine. Its `jobs_read` jobs are the one reading of mail (key
+ * `jobs_read`), queued by a nudge or the rescan, and each application's JD lookup (key
+ * `jobs_jd:<id>`, ./lookup.ts), queued after reading, by the rescan, or by `requestLookup`.
+ */
 export class JobsReader implements JobWorker {
   readonly kind = 'jobs_read' as const;
   private readonly store: Store;
   private readonly endpoints: AiEndpoints;
   private readonly rescanEveryMs: number;
   private readonly timeoutMs: number | undefined;
+  private readonly web: JobsWeb | null;
   private lastRescanAt = Number.NEGATIVE_INFINITY;
 
-  constructor({store, endpoints = AI_ENDPOINTS, rescanEveryMs = 5 * 60_000, timeoutMs}: JobsReaderOptions) {
+  constructor({store, endpoints = AI_ENDPOINTS, rescanEveryMs = 5 * 60_000, timeoutMs, web}: JobsReaderOptions) {
     this.store = store;
+    this.web = web ?? null;
     this.endpoints = endpoints;
     this.rescanEveryMs = rescanEveryMs;
     this.timeoutMs = timeoutMs;
@@ -245,9 +256,16 @@ export class JobsReader implements JobWorker {
     if (now - this.lastRescanAt < this.rescanEveryMs) return;
     this.lastRescanAt = now;
     this.nudge();
+    this.queueLookups();
+  }
+
+  /** Queues the JD lookups that are due, while Jobs is on and there's a web to look on. */
+  private queueLookups() {
+    if (this.web && readWindow(this.store)) queueDueLookups(this.store);
   }
 
   async run(job: Job, signal: AbortSignal) {
+    if (job.key.startsWith(LOOKUP_KEY_PREFIX)) return this.lookUp(job, signal);
     const store = this.store;
     const window = readWindow(store);
     if (!window) return finishJob(store, job.id);
@@ -265,9 +283,26 @@ export class JobsReader implements JobWorker {
       return;
     }
     finishJob(store, job.id);
+    // A confirmation just read wants its JD while the posting is up (decision 54).
+    this.queueLookups();
     // An email sorted while this job was finishing found it still running: look once more, leaving
     // what was passed over to the rescan.
     if (emailsToRead(store, window, isoNow(store), 1 + passed.size).some(id => !passed.has(id))) enqueueJob(store, {kind: 'jobs_read', key: JOBS_READ_KEY});
+  }
+
+  /** One application's JD lookup: done, or failed by the one retry policy (never "No JD found"). */
+  private async lookUp(job: Job, signal: AbortSignal) {
+    const store = this.store;
+    if (!this.web) return finishJob(store, job.id);
+    const applicationId = Number(job.key.slice(LOOKUP_KEY_PREFIX.length));
+    try {
+      await lookUpJd(store, applicationId, {web: this.web, endpoints: this.endpoints, timeoutMs: this.timeoutMs, signal});
+      finishJob(store, job.id);
+    } catch (caught) {
+      const error = asProviderError(caught);
+      console.error(`Jobs couldn't look up application ${applicationId}'s JD, ${error.message}`);
+      failJob(store, job, error);
+    }
   }
 }
 

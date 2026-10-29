@@ -32,7 +32,7 @@ import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
-import {JobsReader, jobsApi, migrateJobs} from './jobs/index.ts';
+import {JobsReader, jobsApi, jobsWeb, migrateJobs} from './jobs/index.ts';
 import {TriageWorker} from './triage/worker.ts';
 
 const config = loadConfig();
@@ -62,7 +62,8 @@ const adapters = new Adapters({
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
 const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl, openai: config.devAiUrl} : AI_ENDPOINTS;
 // Jobs reads what triage sorts in the accounts it lists (J2): triage's onSorted nudges its worker.
-const jobsReader = new JobsReader({store, endpoints: aiEndpoints});
+// Its JD lookups (J3) read the hiring platforms and posting pages only in production.
+const jobsReader = new JobsReader({store, endpoints: aiEndpoints, ...(config.production ? {web: jobsWeb()} : {})});
 const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier, onSorted: () => jobsReader.nudge()});
 // And, once backfills are done and a key is set, the one-time model pass over history (D20).
 const history = new HistoryExtractor({store, endpoints: aiEndpoints});

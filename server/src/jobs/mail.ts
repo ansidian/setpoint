@@ -57,6 +57,13 @@ export function jobsEmail(store: MailReader, messageId: number): JobsEmail | nul
   return {...email, body: bodyText.trim() || snippet};
 }
 
+/** An email as the JD lookup reads it for links (J3): its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */
+export function lookupEmail(store: MailReader, messageId: number): {fromAddress: string; text: string; html: string | null} | null {
+  const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet})
+    .from(t.messages).where(eq(t.messages.id, messageId)).get();
+  return row ? {fromAddress: row.fromAddress, text: row.bodyText.trim() || row.snippet, html: row.bodyHtml} : null;
+}
+
 /** Which emails Jobs reads (decision 56): received in this window, in the accounts it lists, not read yet. */
 export interface ReadWindow {
   accounts: JobsReadAccount[];

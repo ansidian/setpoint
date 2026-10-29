@@ -15,7 +15,10 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   drop migration ([`drop.sql`](drop.sql)) and its tests ([`tests/`](tests)). J2 adds reading mail:
   the worker and one email's read ([`reader.ts`](reader.ts)), its state and health
   ([`readerState.ts`](readerState.ts)), Haiku's prompt ([`prompt.ts`](prompt.ts)) and models and
-  ledger ([`models.ts`](models.ts)). Later slices add the lookups (J3) and the history pass (J4).
+  ledger ([`models.ts`](models.ts)). J3 adds the JD lookup: its run and what it keeps
+  ([`lookup.ts`](lookup.ts)), its pure rules ([`lookupRules.ts`](lookupRules.ts)), the platforms'
+  APIs and posting pages ([`web.ts`](web.ts)), markdown cleaning ([`markdown.ts`](markdown.ts)) and
+  its prompts ([`jdPrompt.ts`](jdPrompt.ts)). J4 adds the history pass.
 - `shared/src/jobs/`: its enums, API schemas and types, and the `jobs` live event (D328: the contract
   needs a third folder, since `web/` can't import server code).
 - `web/src/app/jobs/`: the page, pane, slots and styles (J5 onwards; not there yet).
@@ -38,10 +41,13 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
-| `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` job on the sync engine |
+| `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, and each JD lookup (J3) |
+| `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts, given only in production |
 | `server/src/triage/worker.ts`, the `onSorted` option (J2) | the generic hook the line above uses: told after each email is sorted; it names no module, so it can stay |
 | `server/src/db/schema.ts`, `JOB_KINDS`, and `server/drizzle/0021_jobs_reading.sql` (J2) | `'jobs_read'` is a kind of engine job (the migration rebuilds `jobs` for its CHECK) |
 | `shared/src/enums.ts`, `AI_PURPOSES`, and the same migration (J2) | Jobs's three parts of the AI usage ledger: `jobs_emails` (J2), `jobs_finding_jds` and `jobs_reading_jds` (J3) |
+| `server/src/providers/ai/index.ts`, `ModelRequest.webSearch` (J3) | the generic hook Jobs's search uses: Claude's web search beside a call's tool, a paused turn resumed, searches counted; it names no module, so it can stay |
+| `server/src/domain/aiCost.ts`, `webSearches` (J3) | web searches priced in the ledger at $10 per 1,000; generic, so it can stay |
 | `server/src/api/app.ts`, `routes` in `AppOptions` and its mount after News's | the generic hook the line above uses; it names no module, so it can stay |
 | `server/src/dev/sample.ts`, the `../jobs/index.ts` import (*imports*) | brings in `seedJobs` |
 | `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds |
@@ -82,6 +88,28 @@ the lint rule still refuses an import of Jobs from triage.
 - **J4's feed:** `readWindowEmails(store, askHaiku(store, jobsEmailClient(…)), {accounts, before:
   enabledAt}, {fromHistory: true})` reads the older mail oldest first through the same rules, or
   `readEmail` one id at a time. Each is read once whichever reads it first.
+
+## The JD lookup (J3)
+
+- **When:** J2's confirmation leaves its application at `jd_lookup = 'looking'` (D341). After each
+  reading run and on the five-minute rescan, `queueDueLookups` queues a lookup for each one still
+  open; one closed before its lookup started goes back to `none` (decision 57). Look it up
+  (`POST /api/jobs/applications/:id/lookup`, any application, open or closed), J6's Track this and
+  J4's history pass call `requestLookup(store, id)`, which marks it `looking` at once, answers its
+  waiting JD to confirm and queues the job; a saved JD answers `saved` (409 on the route) and is
+  never replaced.
+- **How it runs:** each lookup is a `jobs_read` job keyed `jobs_jd:<application>` on Jobs's own
+  worker, so no new engine kind and no main migration; one that fails waits out its own backoff by the
+  one retry policy. Six failures end the job; the rescan queues it again an hour later
+  (`LOOKUP_COOL_OFF_MS`), so it stays `looking` and is never "No JD found". Without a web (any
+  non-production run) lookups aren't queued, and one requested by hand finishes doing nothing.
+- **Where, in order:** the emails' posting links (a platform's posting, Indeed's view-job link, a
+  careers page), then Greenhouse, Lever and Ashby's public APIs by board name, then Sonnet 5.5 with
+  web search only when those cleanly missed. Haiku checks what a link or a platform found; Sonnet's
+  search judges its own. Confident is saved with Haiku's reading; unsure offers up to three
+  candidates as a JD to confirm; nothing is `not_found`.
+- **While it runs** the row's `jd` is `{state: 'looking', looked_at: <when it began>}`; its end comes as
+  a `jobs` event naming the application (and any Needs you item).
 
 ## The lint rule
 
