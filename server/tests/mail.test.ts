@@ -199,7 +199,8 @@ describe('All and an email', () => {
     const next = allMail(w.store, {limit: 200, before: page.next_before!});
     expect(next.days.map(day => day.date).slice(0, 3)).toEqual(['2026-10-06', '2026-10-05', '2026-10-04']);
     expect(next.next_before).toBeNull();
-    expect(page.days[0]!.rows.length + next.days.reduce((sum, day) => sum + day.rows.length, 0)).toBe(32);
+    // The brief's 32, and Jobs's Indeed match email (round 4).
+    expect(page.days[0]!.rows.length + next.days.reduce((sum, day) => sum + day.rows.length, 0)).toBe(33);
   });
 
   test('the Parkside email, with its attachment; reading it doesn\'t mark it read', () => {

@@ -15,6 +15,8 @@ import {DEFAULT_SCHEDULES} from '../domain/sources.ts';
 import {zonedInstant} from '../domain/time.ts';
 import * as t from '../db/schema.ts';
 import {seedNews} from './news.ts';
+// Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
+import {seedJobs} from '../jobs/index.ts';
 import {loadNewsSnapshot} from './newsSnapshot.ts';
 
 const MINUTE = 60_000;
@@ -132,6 +134,18 @@ const COFFEE_HTML = `<table role="presentation" width="600" cellpadding="0" cell
 <tr><td style="padding:16px 28px"><b>Roasting this month</b><br>Huila La Esperanza · $19 · 12 oz<br>Ethiopia Guji · $21 · 12 oz<br>House Espresso · $17 · 12 oz</td></tr>
 <tr><td style="padding:20px 28px;font-size:11px;color:#8a8e94">You're receiving the Contoso Coffee Journal because you joined our list at contosocoffee.example.<br>Unsubscribe · Email preferences · View in browser · Contoso Coffee Roasters, Seattle, WA</td></tr>
 </table><img src="https://cdn.contosocoffee.example/open.gif?m=2026-10" width="1" height="1" alt="">`;
+
+const INDEED_MATCH = `A new job that matches your alert
+
+Associate Software Engineer
+Contoso Pharmaceuticals · Hybrid
+$78,000–$92,000 a year
+
+Build and maintain the internal tools our lab teams use every day, working with a small team on the web app and its services.
+
+View job: https://indeed.example/viewjob?jk=5f2c80d1e3a7
+
+You're receiving this because of your job alert for software engineer.`;
 
 /**
  * Every email: the brief's Inbox, then what the boards add, newest first. Board 09's history (four
@@ -252,6 +266,12 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     subject: 'Your application for Data Engineer Intern',
     body: 'Thank you for applying to Northwind. Unfortunately, we won\'t be moving forward with your application for the Data Engineer Intern role.',
     unread: false, lane: 'fyi', kind: 'career', type: 'rejection'},
+  // Jobs (round 4): Indeed's match email for the role Jobs's Contoso Pharmaceuticals application is
+  // (board 37c's Applied before), read and in All only. Last, so the emails above keep their ids, and
+  // dated before the application so it sits below the Inbox's first screen (board 37c dates it today).
+  {account: 'Jobs', at: ['2026-09-15', '06:05'], from: ['Indeed', 'alert@indeed.example'], organisation: 'Indeed',
+    subject: 'Associate Software Engineer @ Contoso Pharmaceuticals', summary: '$78,000–$92,000 · Hybrid', body: INDEED_MATCH,
+    unread: false, lane: 'noise', type: 'newsletter'},
 ];
 
 const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'todoist'; name: string; provider: 'google' | 'todoist'; colour: Colour | null; account: AccountLabel | null}[] = [
@@ -407,6 +427,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
   const store = {sqlite, db, timeZone: SEED_TIME_ZONE, now: () => new Date(SEED_NOW), keyring: null};
   const {stories} = newsSnapshot ? snapshotOrSample(store, newsSnapshot, newsImagesDir) : seedNews(store, newsImagesDir);
   if (usage) db.insert(t.aiUsage).values(sampleUsage()).run();
+  seedJobs({sqlite, db});
   return {now: SEED_NOW, emails: SAMPLE_EMAILS.length, items: SAMPLE_ITEMS.length, stories};
 }
 

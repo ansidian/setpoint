@@ -31,10 +31,13 @@ import type {Store} from './store.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
 import {HistoryExtractor} from './triage/history.ts';
+// Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
+import {jobsApi, migrateJobs} from './jobs/index.ts';
 import {TriageWorker} from './triage/worker.ts';
 
 const config = loadConfig();
 const {sqlite, db} = openDatabase(config.databasePath);
+migrateJobs(sqlite);
 const {keyring, from: keyFrom} = loadKeyring(process.env, config.dataDir);
 const live = new LiveFeed();
 const store: Store = {sqlite, db, timeZone: config.timeZone, ...storeClock(config.clock), live, keyring};
@@ -75,6 +78,7 @@ const reminders = new ReminderScheduler({store, notifier});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
+  routes: [jobsApi(store)],
 });
 // Gmail's push: pulls v2's own Pub/Sub subscription and queues each account's sync.
 const puller = pubsub ? new GmailPushPuller({store, settings: pubsub, endpoints: GOOGLE_ENDPOINTS, onPush: sourceId => engine.pushed(sourceId)}) : null;

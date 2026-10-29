@@ -237,6 +237,33 @@
       ]
     },
     {
+      "date": "2026-09-15",
+      "rows": [
+        {
+          "id": 33,
+          "account_id": 4,
+          "from_name": "Indeed",
+          "from_address": "alert@indeed.example",
+          "organisation": "Indeed",
+          "via": null,
+          "subject": "Associate Software Engineer @ Contoso Pharmaceuticals",
+          "summary": "$78,000–$92,000 · Hybrid",
+          "received_at": "2026-09-15T13:05:00.000Z",
+          "unread": false,
+          "lane": "noise",
+          "kind": null,
+          "type": "newsletter",
+          "protected": false,
+          "pinned": false,
+          "done": false,
+          "fact": null,
+          "code": null,
+          "attachment_count": 0,
+          "command": null
+        }
+      ]
+    },
+    {
       "date": "2026-08-22",
       "rows": [
         {

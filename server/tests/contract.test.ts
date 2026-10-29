@@ -228,7 +228,7 @@ async function recordAll() {
   // The lists, with those changes in them.
   await app.record('mail-inbox', 'InboxOut', 'GET', '/api/mail/inbox', '/api/mail/inbox');
   await app.record('mail-counts', 'MailCountsOut', 'GET', '/api/mail/counts', '/api/mail/counts');
-  // The one list's days in pages of 20 of the seed's 32 emails: the first ends partway through a
+  // The one list's days in pages of 20 of the seed's 33 emails: the first ends partway through a
   // day with a real cursor, and the page from that cursor ends the list.
   const all = await app.record('mail-all', 'AllOut', 'GET', '/api/mail/all', '/api/mail/all?limit=20') as {next_before: string};
   await app.record('mail-all-before', 'AllOut', 'GET', '/api/mail/all', `/api/mail/all?limit=20&before=${encodeURIComponent(all.next_before)}`);

@@ -1,5 +1,7 @@
 // One flat config for every workspace, with React's hook rules for web/ and the boundaries
 // BUILD-PLAN.md › Stack and layout asks the lint to enforce.
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
@@ -159,6 +161,39 @@ const browserChecks = {
   },
 };
 
+// Jobs (after News) is a module that can be removed whole (D303): nothing outside its three folders
+// imports them but its wiring points, the files server/src/jobs/README.md lists. Relative imports are
+// resolved, so `../jobs/…` from mail is refused wherever it's written.
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const JOBS_FOLDERS = ['server/src/jobs/', 'web/src/app/jobs/', 'shared/src/jobs/'];
+const JOBS_WIRING = ['server/src/server.ts', 'server/src/dev/sample.ts', 'shared/src/index.ts', 'shared/src/api/live.ts'];
+const moduleBoundary = {
+  rules: {
+    jobs: {
+      meta: {
+        type: 'problem',
+        schema: [],
+        messages: {outside: 'Only Jobs\'s wiring points import it (server/src/jobs/README.md); mail never imports Jobs (D303).'},
+      },
+      create(context) {
+        const check = (node, source) => {
+          if (typeof source !== 'string') return;
+          let target = null;
+          if (source.startsWith('.')) target = path.relative(ROOT, path.resolve(path.dirname(context.filename), source)).split(path.sep).join('/');
+          else if (/^@setpoint\/(server|web|shared)\//.test(source)) target = source.replace(/^@setpoint\//, '');
+          if (target !== null && JOBS_FOLDERS.some(folder => `${target}/`.startsWith(folder))) context.report({node, messageId: 'outside'});
+        };
+        return {
+          ImportDeclaration(node) { check(node, node.source.value); },
+          ExportAllDeclaration(node) { check(node, node.source.value); },
+          ExportNamedDeclaration(node) { if (node.source) check(node, node.source.value); },
+          ImportExpression(node) { if (node.source.type === 'Literal') check(node, node.source.value); },
+        };
+      },
+    },
+  },
+};
+
 export default tseslint.config(
   {ignores: ['**/node_modules/', '**/dist/', '**/data/', 'server/drizzle/meta/', 'design-export/', 'reviews/', '.claude/', 'shared/compose/compose.js']},
   js.configs.recommended,
@@ -210,6 +245,12 @@ export default tseslint.config(
   {
     files: ['web/src/api/**/*.{ts,tsx}'],
     rules: {'no-restricted-imports': ['error', {patterns: [serverCode]}]},
+  },
+  {
+    files: ['**/*.{js,ts,tsx}'],
+    ignores: [...JOBS_FOLDERS.map(folder => `${folder}**`), ...JOBS_WIRING],
+    plugins: {'module-boundary': moduleBoundary},
+    rules: {'module-boundary/jobs': 'error'},
   },
   {
     files: ['web/tests/browser/**/*.ts'],

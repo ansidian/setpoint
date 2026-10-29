@@ -129,6 +129,9 @@ export interface AppOptions {
   news?: NewsApiOptions;
   // N3: told when the AI keys or settings change, so articles waiting Unsorted are sorted at once.
   newsSort?: Pick<NewsSortWorker, 'configurationChanged'> | null;
+  // A removable module's routes (Jobs, from server.ts), mounted under /api behind the session after
+  // the app's own, so the app never names the module.
+  routes?: Hono[];
 }
 
 const MAX_STREAMS = 20;
@@ -150,7 +153,7 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, news = {}, newsSort = null}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, news = {}, newsSort = null, routes = []}: AppOptions) {
   const app = new Hono<Env>();
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
   const origin = (c: Context) => publicUrl ?? new URL(c.req.url).origin;
@@ -680,6 +683,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   // ---- News (after 2.0, N1): its pages, Settings › News and stories seen (src/api/news.ts) ----
 
   app.route('/api', newsApi(store, news));
+
+  // ---- A removable module's routes (Jobs, after News): whatever server.ts passes ----
+
+  for (const module of routes) app.route('/api', module);
 
   // ---- Commands: Try again and Move back ----
 
