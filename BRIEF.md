@@ -25,6 +25,11 @@ listing the day's biggest stories, grouped across outlets, sorted and summarized
 News tab back. That tab was raw feeds with no deduplication, no filtering, no local coverage and no
 summaries, so it was never opened.
 
+**Then [Jobs](#jobs-after-20)** (Andy, 2026-10-29, decisions 49–63): a fourth page that tracks his
+job applications from the mail they send, with each posting's description kept beside it, so a reply
+weeks later is one click from what the role asked for. A tracker kept by hand stopped being
+updated within weeks, so this one fills itself.
+
 ### Why a rebuild, not a refactor
 
 - v1 grew one feature at a time, so each feature brought its own pipeline: four sync mechanisms,
@@ -47,7 +52,9 @@ summaries, so it was never opened.
 - **The AI sorts and pre-fills; it never adds to a list Andy trusts.** It may choose a lane, a
   kind and a group, pre-fill a proposal Andy reviews, and answer a question with its sources. It
   never puts a guessed deadline, task or event anywhere unprompted. In News it picks, groups, ranks
-  and summarizes stories, always with their sources one click away.
+  and summarizes stories, always with their sources one click away. **Jobs is the one list it fills
+  itself** (decision 50), and only from what an email states: a confirmation makes an application,
+  and anything it's unsure of waits in Needs you for Andy.
 - **Fail visibly, never silently.** Unsorted mail stays in view, a failed change stays in place
   with the provider's own message, a stale source says "as of". Nothing that failed looks like it
   worked.
@@ -77,6 +84,11 @@ summaries, so it was never opened.
 | **Story** | In News: the articles about one event, grouped across outlets, with one summary. The unit of the page. |
 | **Section** | In News: Local, Tech, AI or General. A story can be in more than one. |
 | **Missed** | In News: stories that left the page before Andy saw them, to catch up on. |
+| **Application** | In Jobs: one role Andy applied to, made from its confirmation email, with its events and its JD. |
+| **Event** | In Jobs: one email's part in an application: applied, assessment, interview, offer, rejection, or a quiet one (account created, a form). |
+| **JD** | In Jobs: the job description as it was when Andy applied, kept in Setpoint, never just a link. |
+| **Needs you** | In Jobs: the few things it couldn't decide alone: a JD to confirm, an update to assign, an email to track. |
+| **Ghosted** | In Jobs: an application still at Applied after 30 days with no email. A flag, not a status. |
 
 Retired from v1: snapshot, briefing, Needs You, dashboard, snooze, dismiss for today, notes, v1's
 News tab, finances.
@@ -108,6 +120,7 @@ News tab, finances.
 - Matching "Setpoint was granted access" security mail to a reconnect Andy just did.
 - **[News](#news-after-20)**, desktop only (D85), as its own slices once 2.0 has cut over.
 - News tuning: muting topics, "less like this", choosing sources in Settings.
+- **[Jobs](#jobs-after-20)**, desktop only (decision 49), as its own slices after News.
 
 **Not in v2**
 
@@ -496,6 +509,192 @@ in Settings › AI. News has its own row in the AI usage ledger.
 - **An article that can't be extracted** isn't an error. It falls back to its feed summary and the
   link.
 
+## Jobs (after 2.0)
+
+Andy's job applications, tracked from the mail they send, so that:
+- a recruiter's reply weeks later is one click from the job description he applied to, kept as it
+  was, even after the posting comes down
+- he can check before applying whether he has applied to that company and role before, and how it
+  went
+- nothing needs typing in: no forms, no copying links
+
+**Passive and informational** (decision 59). Jobs sends no notifications, adds nothing to mail's,
+and never touches the calendar. Its only signal is the Needs you count beside Jobs in the sidebar.
+Mail keeps handling the emails themselves exactly as before.
+
+Desktop web only (decision 49). It isn't in the phone's navigation, it has no phone layout, and the
+native iPhone app doesn't show it. Porting is a later decision.
+
+### Where it reads (decision 56)
+
+- **Settings › Jobs lists the accounts it reads:** Jobs and Business.
+  - In **Jobs**, every email is a candidate. Triage's kind isn't reliable enough to filter by there:
+    prod data (2026-10-29) had about twice as many application confirmations typed Other as
+    Career.
+  - In any other listed account, only mail triage typed as **Career** is read, so the rest of
+    Business mail never reaches Jobs.
+- Jobs reads mail as triage leaves it, reusing its organisation, platform (`via`), type and
+  summary, and adds what triage doesn't keep: the role title, the requisition ID and the event.
+
+### What makes an application (decisions 50, 51)
+
+| Email | What happens |
+| --- | --- |
+| **A confirmation** ("Thank you for applying", "Application received") | Makes an application, unless it matches one (below). |
+| **An update** (assessment, interview, offer, rejection) that confidently matches one application | Added to it as an event. The status moves. |
+| **An update that might match** (two applications at that company, or the role doesn't match even normalised) | Waits in Needs you, to assign. |
+| **A rejection that matches nothing** | Ignored. There's nothing worth tracking about a role already closed. |
+| **An interview, assessment or offer that matches nothing** (an Easy Apply that never confirmed) | Waits in Needs you with **Track this**, which makes the application from that email, looks up its JD and puts it straight into In process. |
+| **The rest**: account created, verification codes, "one final step", EEO and screening forms, job-board matches | Never makes an application. Added as a quiet event when it matches one; otherwise ignored. |
+| **A recruiter's cold email** | Out. Andy didn't apply. |
+
+- **An application is a company and a role:** the requisition ID when the email gives one, else the
+  title **normalised** (case, anything in brackets, tags like "remote" or "hybrid" ignored), so
+  "Software Engineer II (Java) (2026-1042)" and "Software Engineer II" are one role.
+- **A confident match** is a requisition ID or normalised title that matches exactly one of that
+  company's applications, or an update naming no role from a company with exactly one open
+  application. Company names match loosely ("Fabrikam Labs" and "Fabrikam").
+- **A second confirmation for an open application** is a duplicate: an event on it. **One for a
+  closed application** (rejected or withdrawn) is a new application, linked as **re-applied**.
+- **The same title under two requisition IDs** is two applications.
+- Job boards send pairs: Indeed's "Indeed Application: <title>" names no company, and its
+  match email "<title> @ <company>" (which triage types as a newsletter) does, with salary and
+  setting. Jobs pairs them.
+
+### Applied before? (decision 52)
+
+The tracker learns from the confirmation, which comes after Andy has applied, so the check has to
+be where he looks before applying:
+- **Jobs search** (below): a few letters of the company show every application there, with role,
+  date and outcome.
+- **A badge on job-match emails** in mail, on the row and in the reader, when the company matches:
+  "Applied Sep 24 · Rejected Oct 5".
+
+Not now: a browser extension on the posting itself, or a badge in other apps. Either could use a
+read-only check endpoint later.
+
+### The JD (decisions 53, 54)
+
+**Looked up within minutes of the confirmation**, while the posting is still live. Postings close
+before recruiters reply, so searching later fails exactly when the JD is needed.
+
+1. **The email's own link** where there is one (Indeed's view-job link).
+2. **The hiring platform's public job API:** Greenhouse, Lever and Ashby. Exact and free.
+3. **Claude web search**, only when those miss.
+
+The model checks each candidate against the company, normalised title, location and date:
+- **Confident:** saved silently.
+- **Unsure:** nothing is saved; up to three candidates wait in Needs you as "Is this the posting?",
+  with "None of these".
+- **Not found:** the application says "No JD found". No retry, no paste field. A lookup that
+  *failed* (network, rate limit) isn't a "not found": it's retried.
+
+**A saved JD holds:**
+- the posting's full text, cleaned to readable markdown, never overwritten
+- where it came from (the link), when it was found, and how (the email's link, the platform, search)
+- pulled from the text: location and setting (on-site, hybrid, remote), the salary range if
+  stated, **must-haves** and **nice-to-haves** as two short lists, and a three-line **what they
+  want** summary for the minute before a call
+
+Not now: matching it against Andy's résumé.
+
+### Statuses (decision 55)
+
+| Status | Set by |
+| --- | --- |
+| **Applied** | The confirmation. |
+| **In process** | An assessment, a scheduling request or an interview. It shows its **latest step** as the email states it: "Interview Tue Oct 13, 2:00 PM", "Case study due Oct 12". |
+| **Offer** | An offer. |
+| **Rejected** | A rejection. |
+| **Withdrawn** | Andy only; it can't be detected. |
+
+- **Ghosted** flags an application still at Applied after **30 days** with no email. It never moves
+  it to Rejected.
+- **Andy can set a status** in one click, for news that came by phone or LinkedIn. **A later email
+  always wins** over a status set by hand.
+- The latest step is text from the email, shown in Jobs only. It isn't a deadline anywhere else
+  (decision 16 stands).
+
+### Needs you (decisions 50, 54, 57)
+
+One queue at the top of the page, with its count in the sidebar. Empty on a good day.
+- **A JD to confirm:** the candidates, one tap to pick, or None of these.
+- **An update to assign:** the email, and **Assign to…** (that company's applications first) or
+  **Not about a job**.
+- **An email to track:** an unmatched interview, assessment or offer, with **Track this**.
+- **From history**, collapsed: what the history pass was unsure of, so an old backlog never buries
+  today's. Ignoring it costs nothing.
+
+### Corrections (decision 58)
+
+The first history pass will need some, so each is a click or two on the application:
+- **Edit** the company or title in place.
+- **Merge with…** another application: one, with all their emails.
+- On each event, **Move to…** another application, or **Not about this** (back to Needs you).
+- **Not an application:** hidden, and its emails never make one again.
+- **Not this posting:** the JD goes, and its other candidates, if any, are offered.
+- **Delete**, for a real mistake.
+
+**Every correction sticks.** A new email, a re-run or a lookup never overwrites a field Andy set,
+never undoes a merge or a move. Corrections don't train anything: at around 150 applications a
+learned rule would rarely fire.
+
+### The page (decisions 60, 62)
+
+Laid out by Claude Design. What it has to hold:
+- **A table** of every application: company, role, platform, applied date, status (with Ghosted
+  and the latest step), and whether it has a JD. Sortable, newest first by default.
+- **Two numbers:** counts by status, and applications per week over the last 12 weeks. Nothing
+  else (no response rates, no funnels).
+- **Needs you**, above the table.
+- **An application's detail:** the JD's what-they-want summary, must-haves and nice-to-haves first,
+  the full text one step away, its link and how it was found; then the **timeline** of its events,
+  each opening its email; the re-applied link if any; and the corrections.
+- **Search** (`/` on Jobs) over company, title and JD text: company and title first, then JD text
+  ("which one asked for Kubernetes?"). Loose on company names ("wide world" finds "Wide World
+  Importers"). Jobs stays out of mail's search and ⌘K.
+- **In mail,** the JD chip on any email that belongs to an application, in the reader, opening its
+  JD; and the Applied before badge on job-match emails.
+
+### History (decision 57)
+
+- **Once, when Jobs is turned on,** over all the mail Setpoint holds for its accounts (about 330
+  emails in Jobs since May, and Business's Career mail). Each email is read once and never charged
+  for again, as `triage-history` does.
+- **JDs are looked up only for applications still open** (Applied, In process, Offer). An
+  application from August that was rejected doesn't need one, and its posting is likely gone. A
+  lookup can still be started by hand on any application.
+- **Ghosted applies to history,** so most old applications without a reply start Ghosted.
+- What it's unsure of goes to **From history**.
+
+### Keeping the record (decision 63)
+
+- **An event keeps its own copy** of what it shows: date, kind, sender, subject and its one line
+  ("Interview Tue Oct 13, 2:00 PM"). It links to the email while the email exists; once Gmail
+  purges it, the event stays without the link. The JD is kept apart and never affected.
+- **Applications are kept for good.** Nothing expires.
+
+### Models and cost (decision 61)
+
+| Work | Model |
+| --- | --- |
+| Each email: role title, requisition ID, the event, the match | Haiku 5.5 |
+| Finding the JD when the email's link and the platforms miss | Sonnet 5.5 with web search |
+| The JD's summary, lists, salary and setting | Haiku 5.5 |
+
+A few dollars a month at a handful of applications a day, plus the one-time history pass.
+**No cap** (Andy, 2026-10-29): pausing search at a cap would read as a failure, not a pause, and the
+JD is worth its cost. Jobs has its own row in the AI usage ledger and in Settings › AI. This is the
+first use of Claude web search in Setpoint; News still has none.
+
+### When things break
+
+- **The AI is down:** emails wait, and a line at the top of Jobs says "5 emails not read yet". Nothing
+  is lost; they're read when it's back.
+- **A lookup errors:** retried, never shown as "No JD found".
+- **The history pass is running:** a line with its progress, "Reading history · 140 of 330", and the
+  table filling as it goes.
+
 ## The sidebar's Today block (Inbox)
 
 Confirmed data only. No guessed deadlines.
@@ -522,6 +721,7 @@ later is layout work only.
 - Plain search box (no chips yet). No calendar editing, no Alfred, Settings only to sign in.
 - ntfy notifications open the exact email or item.
 - No News (D85): it's left out of the phone's navigation until it proves it's used on the desktop.
+- No Jobs (decision 49), for the same reason; the layout sweep's phone pass skips it.
 
 ## Notifications and mantel
 
@@ -593,9 +793,11 @@ the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to 
 - **Notifications:** ntfy server and topics, reminder defaults, Time to Leave.
 - **Mail:** rules (written and learned), trusted remote-content domains, the code expiry.
 - **AI:** Anthropic and OpenAI keys (write-only), the triage and Alfred models; after 2.0, News's
-  models, its monthly cap and this month's spend.
+  models, its monthly cap and this month's spend; then Jobs' models and this month's spend (no cap).
 - **News** (after 2.0): the sources by section, each with its health. Read-only until the tuning
   round.
+- **Jobs** (after News): on or off, the accounts it reads (Jobs and Business), and the history
+  pass's progress.
 - **Appearance:** System, Light or Night (per browser).
 - **Security:** password, passkeys, paired iPhones (SV-84, the native app of D275), recovery codes, sign out.
 
@@ -606,7 +808,7 @@ darma's shell, unchanged where it can be.
 - **Sidebar** (248 px, `panel`): Setpoint's mark with search; **Inbox** with the attention pill
   (a `caution` count, like darma's Reviews due) and the unread count; each account under it with its
   colour dot and unread count (each filters the Inbox); **Calendar**; after 2.0, **News**, with no
-  count; the page's lower section (Today on Inbox and News, mini-month and calendars on Calendar);
+  count; then **Jobs**, with the Needs you count when there is one; the page's lower section (Today on Inbox and News, mini-month and calendars on Calendar);
   **Settings** pinned to the bottom.
 - **Header** (56 px): the view's title, its segmented control (Unread | All; Month | Week; All |
   Local | Tech | AI | General), a spacer, search on mail pages and News, and the primary action
@@ -614,7 +816,8 @@ darma's shell, unchanged where it can be.
 - **Content** scrolls under the header. **Panes** (the reading pane, Calendar's right pane) sit
   under the header with a `hair` left border.
 - **Tab title:** "(2) Inbox" while attention mail is waiting; the email's subject when one is
-  open; "October 2026 · Calendar"; "News", or the story's headline when one is open.
+  open; "October 2026 · Calendar"; "News", or the story's headline when one is open; "Jobs", or
+  "Role · Company" when an application is open.
 - **Wide screens:** darma's rule, 1.25× from 2200 px.
 - Design target **1677 × 1050** (MacBook with Arc's sidebar open), holding at 1728 × 1117.
 
@@ -622,10 +825,11 @@ darma's shell, unchanged where it can be.
 
 | Where | Keys |
 | --- | --- |
-| Everywhere | ⌘K palette · `1` Inbox · `2` Calendar · `3` News (after 2.0) · `/` search · ⌘, Settings · Esc closes the topmost thing |
+| Everywhere | ⌘K palette · `1` Inbox · `2` Calendar · `3` News (after 2.0) · `4` Jobs (after News) · `/` search · ⌘, Settings · Esc closes the topmost thing |
 | Mail | `J`/`K` move · Enter open (marks read) · `H` Done · `E` trash (Undo) · `P` pin · `O` open in Gmail · ⇧I mark all as read · ⌘Enter ask Alfred |
 | Calendar | ←/→ or `P`/`N` page · `T` today · `C` new event · `D` new task · `E` edit · Delete · `M`/`W` month or week · Enter · Esc |
 | News | `J`/`K` move · Enter open the story · `O` open the original article · `N` take the new stories (the pill) · Esc back, then close |
+| Jobs | `J`/`K` move · Enter open the application · `/` search Jobs · `O` open the posting's link · Esc back, then close |
 
 v1's mail keys are kept where they existed (`E` was already trash, `H` handled, `P` pin) so muscle
 memory carries over. `S` (snooze) and `D` (dismiss) in mail are gone.
@@ -769,6 +973,60 @@ Todoist: "CS 101 lab report" due Oct 7, "Pay rent" due Oct 7, "Renew car registr
   - A stale section: "AI, as of 7:02 AM".
   - A section with nothing new: "Nothing new in AI since Mon".
 
+**Jobs (round 4).** Same morning. Every company and role is invented. Jobs reads Jobs and
+Business. The Northwind and Fabrikam emails are the Inbox's own.
+
+| Company | Role | Platform | Account | Applied | Status | JD |
+| --- | --- | --- | --- | --- | --- | --- |
+| Northwind Talent | Software Engineer I | Greenhouse | Jobs | Sep 24 | In process · "Pick a 30-minute interview slot this week" (2h) | Greenhouse · found Sep 24 |
+| Fabrikam | Data Analyst | Workday | Jobs | Today | Applied | Search · found 7h ago |
+| Relecloud | Support Engineer | Greenhouse | Jobs | Oct 6 | Applied · re-applied (rejected Sep 2) | Greenhouse |
+| Lucerne Publishing | Junior Developer | Greenhouse | Jobs | Oct 5 | Applied | In Needs you: 2 candidates |
+| Tailspin Toys | Full Stack Developer | Indeed | Jobs | Oct 2 | Applied | The email's link · $85,000–$105,000 · Hybrid |
+| Trey Research | Data Engineer I | Breezy | Jobs | Oct 1 | Applied | No JD found |
+| Humongous Insurance | Software Engineer II, Claims | iCIMS | Jobs | Sep 30 | Applied | Search |
+| Humongous Insurance | Software Engineer II (Java) | iCIMS | Jobs | Sep 28 | Applied | Search |
+| Litware | QA Engineer | Ashby | Jobs | Sep 21 | In process · "Case study due Oct 12" | Ashby |
+| Contoso Pharmaceuticals | Associate Software Engineer | iCIMS | Jobs | Sep 16 | Rejected · Oct 5 | Search |
+| City Power & Light | IT Technician II | GovernmentJobs | Business | Sep 14 | In process · "Interview Tue Oct 13, 2:00 PM" | Search |
+| Woodgrove Bank | Application Developer | Workday | Jobs | Aug 31 | Offer · Oct 6 | Search (mentions Kubernetes) |
+| Alpine Ski House | Web Developer | Workable | Jobs | Aug 27 | Withdrawn · set by Andy Sep 10 | Search |
+| Proseware | Software Engineer, Platform | Lever | Jobs | Aug 20 | Applied · Ghosted | Lever |
+| Relecloud | Support Engineer | Greenhouse | Jobs | Jul 22 | Rejected · Sep 2 | none (history, closed) |
+| Fourth Coffee | Software Developer | SuccessFactors | Jobs | Jul 8 | Rejected · Jul 29 | none (history, closed) |
+| Northwind Talent | Junior Developer | Greenhouse | Jobs | Feb 9 | Rejected · Mar 14 | none (history, closed) |
+
+- **The numbers:** 62 applications. Applied 31 (18 of them Ghosted), In process 3, Offer 1, Rejected
+  25, Withdrawn 2. Per week over the last 12, oldest first: 3, 5, 4, 6, 2, 4, 7, 5, 3, 6, 8, and 2
+  so far this week.
+- **Needs you: 3** (the sidebar's Jobs 3), and From history 6, collapsed.
+  - **JD to confirm:** Lucerne Publishing · Junior Developer. Candidates: "Junior Developer ·
+    New York, NY · Greenhouse" and "Junior Developer, Digital · Remote · LinkedIn".
+  - **Update to assign:** "Thank you for your interest in the Software Engineer II role" ·
+    Humongous Insurance (via iCIMS) · Yesterday, a rejection that could be either Humongous
+    application.
+  - **Track this:** "Can we set up a call this week?" · Wide World Importers · Jobs · 1h. An
+    interview request with no application (an Easy Apply that never confirmed).
+- **Northwind's detail:**
+  - What they want: "A new-grad engineer for the hiring-platform team, shipping TypeScript features
+    end to end. Most of the work is the candidate-facing web app and its API. Shipped side projects
+    count for more than coursework."
+  - Irvine, CA · Hybrid, 3 days · $95,000–$115,000.
+  - Must-haves: TypeScript and React · an API you built · SQL · a CS degree or equivalent
+    experience.
+  - Nice-to-haves: Node.js on the server · tests in CI · hiring or HR software.
+  - Found on Greenhouse, Sep 24 at 10:41 AM, with its link.
+  - Timeline: Sep 24 Applied, "Thank you for applying to Northwind Talent" · Sep 24, "Verify your
+    email" (quiet) · Today, "Interview availability for Software Engineer I", In process.
+  - Applied before: Junior Developer, rejected Mar 14.
+- **In mail:** the Northwind interview email in the reader shows the JD chip. A read Indeed match
+  email in All, "Associate Software Engineer @ Contoso Pharmaceuticals", carries "Applied Sep 16 ·
+  Rejected Oct 5". The Inbox's counts don't change.
+- **Search:** `humongous` → both Humongous applications. `kubernetes` → Woodgrove Bank, by its JD.
+- **States:** "Reading history · 140 of 330"; "5 emails not read yet"; Trey Research's "No JD
+  found"; Proseware's Ghosted; Alpine Ski House's status set by hand; Jobs off ("Jobs is off · Turn
+  on").
+
 ## Boards to draw
 
 1. **Inbox, a typical morning** (the sample data), the reading pane open on the Northwind email.
@@ -817,6 +1075,25 @@ Todoist: "CS 101 lab report" due Oct 7, "Pay rent" due Oct 7, "Renew car registr
     models, cap and spend.
 31. A **Light** version of board 25.
 
+**Round 4: Jobs** (2026-10-29). Draw it in the existing app shell and components: the export's
+`setpoint.css`, with DESIGN.md winning over it. Use the Jobs sample above. Desktop only.
+
+32. **Jobs, a typical morning:** the two numbers, Needs you with its three items and From history
+    collapsed, the table, and Northwind's application open (summary, both lists, timeline, Applied
+    before).
+33. **The JD's full text,** from Northwind's detail, with its link and how it was found.
+34. **Needs you, each kind:** Lucerne's candidates, Humongous's Assign to…, Wide World's Track this;
+    then From history expanded.
+35. **Corrections:** a title edited in place, Merge with…, an event's Move to…, Not an application,
+    Not this posting.
+36. **Search on Jobs:** `humongous`, then `kubernetes` matching a JD's text.
+37. **In mail:** the Northwind interview email in the reader with the JD chip, and the chip opening
+    its JD; the Contoso Pharmaceuticals match email's row and reader with Applied before.
+38. **States:** the history pass running, "5 emails not read yet", No JD found, a Ghosted row, a
+    status set by hand, Jobs off.
+39. **Settings › Jobs,** and **Settings › AI** with Jobs' models and spend.
+40. A **Light** version of board 32.
+
 ## Decided elsewhere (not part of the design)
 
 - **Architecture** (designed with the whole feature set in mind):
@@ -841,6 +1118,21 @@ Todoist: "CS 101 lab report" due Oct 7, "Pay rent" due Oct 7, "Renew car registr
     - Stories get their own typed live event, `news`.
     - Images and extracted text are kept in the data directory and expire with their story.
     - The local feed list is seeded into the data directory, not committed.
+  - **Jobs (after News) is a module that can be removed whole** (decision 49):
+    - Everything lives in `server/src/jobs/` and `web/src/app/jobs/`: its tables, migration,
+      worker, lookups, prompts, routes, page, styles and tests.
+    - Its tables are prefixed `jobs_` (applications, events, postings) and point at mail by message
+      id only.
+    - Jobs reads mail; mail never imports Jobs. The server tells Jobs when an email in a read account
+      is stored or triaged, and Jobs reads it through one small read-only function.
+    - It's wired in at a few points of a line or two each: its routes in `server.ts`; the page, the
+      sidebar entry and `4`; and a slot on the reader and the row where Jobs adds the JD chip and
+      the Applied before badge, so mail code never knows Jobs exists.
+    - A lint rule refuses any import into the Jobs folders from outside them, except those points.
+    - Removing it is deleting the two folders and those lines, and one migration that drops the
+      `jobs_` tables. Mail is untouched.
+    - Its own typed live event, `jobs`, keeps the page current. Lookups send an honest, named
+      User-Agent.
 - **Stack:** darma's. npm workspaces (`shared`, `server`, `web`), Hono, better-sqlite3 with
   Drizzle, Zod, React 19 and Vite 8 with no UI library, Geist and Material Symbols bundled, Node
   running TypeScript directly.
@@ -949,3 +1241,41 @@ From design round 2's review (2026-10-07, Andy):
 47. **The glide's overshoot clamps at the grid's edges**: it never crosses into the right pane.
 48. **Counts follow the rules on every board**: opening an email changes the unread counts, not the
     attention pill.
+
+From the Jobs interview (2026-10-29, Andy). "Prod data" is Setpoint's own database, read-only:
+about 330 emails in the Jobs account since May, and Business's Career mail.
+
+49. **Jobs is a fourth page after News,** `4`, desktop web only: no phone layout and no native
+    iPhone work until it proves itself. It's a module that can be removed whole: two folders,
+    `jobs_` tables, mail never imports it.
+50. **A confirmation makes an application;** nothing else does on its own. An update that might
+    match waits in Needs you; a rejection matching nothing is ignored; an interview, assessment or
+    offer matching nothing offers Track this. Account, code, form and job-board mail never makes
+    one. Prod data: 7 of 29 rejections had no earlier confirmation under the same company name.
+51. **An application is a company and a role,** by requisition ID or normalised title. A second
+    confirmation is a duplicate while the application is open, and a re-application once it's
+    closed. Prod data had both: a role re-applied to after a rejection, and one confirmed twice.
+52. **Applied before** is checked where Andy looks before applying: Jobs search and a badge on
+    job-match emails. The point is not applying twice, above all after a rejection.
+53. **The JD is kept as it was:** full text, source and date, a what-they-want summary, location and
+    setting, salary, must-haves and nice-to-haves. No résumé matching. Prod data: confirmations
+    almost never link to the posting, and some don't name the role.
+54. **The JD is found at confirmation time,** by the email's link, then the platform's API, then
+    Claude web search. Confident is saved, unsure waits in Needs you, not found says so with no
+    retry. One Needs you queue holds every kind.
+55. **Statuses are Applied, In process, Offer, Rejected and Withdrawn,** with **Ghosted** as a flag
+    after 30 days at Applied. A status set by hand gives way to the next email.
+56. **Jobs reads two accounts:** Jobs in full, and Business's Career mail. Prod data: government
+    applications go to Business.
+57. **The history pass runs once,** looks up JDs only for open applications, and keeps what it's
+    unsure of in a collapsed From history.
+58. **Corrections are clicks on the application,** stick for good, and don't train anything.
+59. **Jobs is passive:** no notifications, nothing added to mail's, no calendar changes.
+60. **The page shows two numbers:** counts by status and applications per week. The rest of the
+    layout is Claude Design's.
+61. **Haiku 5.5 reads, Sonnet 5.5 searches, with no cap.** A cap that stopped search would read as a
+    failure; the JD is worth its cost. Jobs has its own row in the ledger.
+62. **Jobs search covers company, title and JD text,** loose on company names, and stays out of
+    mail's search and ⌘K.
+63. **Events keep their own copy,** so history outlives purged mail. Applications are kept for good,
+    with Delete for mistakes.
