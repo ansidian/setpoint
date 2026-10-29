@@ -7,7 +7,7 @@
 // the tests compare against anyway.
 import {occurrenceDates, parseRule} from '../../src/domain/recurrence.ts';
 import {localDay, localTime, zonedInstant} from '../../src/domain/time.ts';
-import type {GoogleCalendarEntry, GoogleEvent} from '../../src/providers/gcal/api.ts';
+import type {EventTime, GoogleCalendarEntry, GoogleEvent} from '../../src/providers/gcal/api.ts';
 import {fakeServer, on} from './server.ts';
 import type {FakeRequest, FakeResponse} from './server.ts';
 
@@ -16,6 +16,23 @@ const googleError = (code: number, message: string, reason: string, status?: str
 });
 
 /** Google's compact instance suffix: 20261007T140000Z, or 20261007 for a day. */
+/**
+ * A start or end as events.patch leaves it: merged field by field into what it was, a null clearing
+ * its field (SV-117).
+ */
+const patchedTime = (was: EventTime | undefined, change: EventTime | undefined): EventTime | undefined => {
+  if (change === undefined) return was;
+  return Object.fromEntries(Object.entries({...was, ...change}).filter(([, value]) => value !== null && value !== undefined)) as EventTime;
+};
+
+/** Google's refusal of a start or end that's both a date and a dateTime, or neither. */
+const timeRefusal = (event: GoogleEvent): FakeResponse | null => {
+  for (const [name, time] of [['start', event.start], ['end', event.end]] as const) {
+    if (time && Boolean(time.date) === Boolean(time.dateTime)) return googleError(400, `Invalid ${name} time.`, 'invalid');
+  }
+  return null;
+};
+
 const compact = (originalStart: string) => (originalStart.includes('T') ? new Date(originalStart).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '') : originalStart.replace(/-/g, ''));
 
 /** A few days either side of one occurrence (a date or an instant), so finding it doesn't expand a century. */
@@ -195,7 +212,10 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       if (body.id && !/^[0-9a-v]{5,1024}$/.test(body.id)) return googleError(400, 'Invalid resource id value.', 'invalid');
       const id = body.id ?? `gen${(seq + 1).toString(32)}x`;
       if (calendarEvents(calendarId).has(id)) return googleError(409, 'The requested identifier already exists.', 'duplicate');
-      return {status: 200, body: publicEvent(store(calendarId, {...body, id}))};
+      const inserted = {...body, id, start: patchedTime(undefined, body.start), end: patchedTime(undefined, body.end)};
+      const invalid = timeRefusal(inserted);
+      if (invalid) return invalid;
+      return {status: 200, body: publicEvent(store(calendarId, inserted))};
     }),
     on('PATCH', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/([^/]+)$/, (request, match) => {
       if (!authorized(request)) return unauthorized();
@@ -204,7 +224,11 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       if (!event) return googleError(404, 'Not Found', 'notFound');
       const refused = ifMatch(request, event);
       if (refused) return refused;
-      return {status: 200, body: publicEvent(store(calendarId, {...publicEvent(event), ...(request.body as GoogleEvent)}))};
+      const body = request.body as GoogleEvent;
+      const patched = {...publicEvent(event), ...body, start: patchedTime(event.start, body.start), end: patchedTime(event.end, body.end)};
+      const invalid = timeRefusal(patched);
+      if (invalid) return invalid;
+      return {status: 200, body: publicEvent(store(calendarId, patched))};
     }),
     on('DELETE', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/([^/]+)$/, (request, match) => {
       if (!authorized(request)) return unauthorized();

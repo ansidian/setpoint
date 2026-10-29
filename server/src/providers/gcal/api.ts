@@ -12,7 +12,8 @@ import type {HttpOptions, Refusal} from '../http.ts';
 export const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 export const CALENDAR_TIMEOUT_MS = 30_000;
 
-export type EventTime = {dateTime?: string; date?: string; timeZone?: string};
+// null clears a field in a patch: Google merges start and end into what they were (SV-117).
+export type EventTime = {dateTime?: string | null; date?: string | null; timeZone?: string | null};
 
 /** The parts of Google's Event resource Setpoint reads and writes. */
 export interface GoogleEvent {

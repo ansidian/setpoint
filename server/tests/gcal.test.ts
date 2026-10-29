@@ -270,6 +270,30 @@ describe('changes through the command layer', () => {
     expect(titles('2026-10-10')).toEqual(['Dinner with Sam 7:00 PM']);
   });
 
+  test('SV-117: all day to timed and back clears the other kind of time at Google, which a patch would otherwise merge in and refuse', async () => {
+    const {w, google, run, command, day} = await calendarWorld();
+    google.put(PERSONAL, {id: 'exilecon', summary: 'ExileCon 2026', start: {date: '2026-10-09'}, end: {date: '2026-10-11'}});
+    await run();
+    const exilecon = () => day('2026-10-09').find(entry => entry.title === 'ExileCon 2026')!;
+    const timed = updateItem(w.store, exilecon().id, itemUpdateInput.parse({
+      changes: {all_day: false, start_date: null, end_date: null, starts_at: zoned('2026-10-09', '12:30'), ends_at: zoned('2026-10-09', '15:00')},
+    }));
+    await run();
+    expect(command(timed.id)).toMatchObject({state: 'confirmed', providerMessage: null});
+    expect(google.event(PERSONAL, 'exilecon')).toMatchObject({
+      start: {dateTime: zoned('2026-10-09', '12:30'), timeZone: 'America/Los_Angeles'}, end: {dateTime: zoned('2026-10-09', '15:00'), timeZone: 'America/Los_Angeles'},
+    });
+    expect(google.event(PERSONAL, 'exilecon')!.start).not.toHaveProperty('date');
+    const allDay = updateItem(w.store, exilecon().id, itemUpdateInput.parse({
+      changes: {all_day: true, starts_at: null, ends_at: null, start_date: '2026-10-09', end_date: '2026-10-11'},
+    }));
+    await run();
+    expect(command(allDay.id)).toMatchObject({state: 'confirmed', providerMessage: null});
+    expect(google.event(PERSONAL, 'exilecon')).toMatchObject({start: {date: '2026-10-09'}, end: {date: '2026-10-11'}});
+    expect(google.event(PERSONAL, 'exilecon')!.start).not.toHaveProperty('dateTime');
+    expect(google.event(PERSONAL, 'exilecon')!.start).not.toHaveProperty('timeZone');
+  });
+
   test('an event changed in Google since Setpoint saw it is refused (412), not overwritten', async () => {
     const {w, google, run, item, command} = await calendarWorld();
     await run();

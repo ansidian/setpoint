@@ -109,11 +109,16 @@ export function cancelledOccurrence(originalStart: string, master: Pick<ItemRow,
   return {allDay: false, startsAt: originalStart, endsAt: new Date(Date.parse(originalStart) + length).toISOString(), startDate: null, endDate: null};
 }
 
-/** An item's when, as Google's start and end: an all-day date pair, or instants in the item's zone. */
+/**
+ * An item's when, as Google's start and end: an all-day date pair, or instants in the item's zone.
+ * The other kind's fields go as null: a patch merges start and end into what they were, so an all-day
+ * event made timed would otherwise keep its date beside the new dateTime, which Google refuses as
+ * "Invalid start time" (SV-117).
+ */
 export function eventTimes(item: Pick<ItemRow, 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone'>, fallbackZone: string): {start: EventTime; end: EventTime} {
-  if (item.allDay) return {start: {date: item.startDate!}, end: {date: item.endDate!}};
+  if (item.allDay) return {start: {date: item.startDate!, dateTime: null, timeZone: null}, end: {date: item.endDate!, dateTime: null, timeZone: null}};
   const timeZone = item.timeZone ?? fallbackZone;
-  return {start: {dateTime: item.startsAt!, timeZone}, end: {dateTime: item.endsAt!, timeZone}};
+  return {start: {date: null, dateTime: item.startsAt!, timeZone}, end: {date: null, dateTime: item.endsAt!, timeZone}};
 }
 
 /**
