@@ -2,7 +2,7 @@
 // and From history, the rows the table gives, Northwind's detail, and that mail's Inbox is as it was.
 import {SEED_NOW} from '@setpoint/shared';
 import type {ApplicationOut, ApplicationRowOut} from '@setpoint/shared';
-import {applicationSchema, jobsPageSchema} from '@setpoint/shared';
+import {applicationSchema, jobsPageSchema, jobsSettingsSchema} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {signedIn, world} from '../../../tests/helpers.ts';
@@ -30,7 +30,7 @@ async function seeded() {
     if (!found) throw new Error(`No row for ${company} · ${title}`);
     return found;
   };
-  return {w, page, detail, row};
+  return {w, c, page, detail, row};
 }
 
 describe('the two numbers (D314)', () => {
@@ -75,6 +75,19 @@ describe('Needs you and From history (34a, 34b)', () => {
     ]);
     expect(page.from_history.every(item => item.from_history)).toBe(true);
     expect(page.from_history.find(item => item.company === 'Margie\'s Travel')!.candidates).toHaveLength(3);
+  });
+});
+
+describe('the history pass (39a, J4)', () => {
+  test('Jobs is on with no pass running: it read 330 emails and finished Oct 1, 8:14 PM, through the page and Settings › Jobs', async () => {
+    const {w, c, page} = await seeded();
+    const done = {state: 'done', read: 330, total: 330, started_at: '2026-10-02T01:02:00.000Z', finished_at: '2026-10-02T03:14:00.000Z'};
+    expect(page.history).toEqual(done);
+    const settings = jobsSettingsSchema.parse((await c.send('GET', '/api/jobs/settings')).body);
+    expect(settings).toMatchObject({enabled: true, history: done, from_history: 6, applications: 62});
+    expect(settings.accounts.map(account => account.reads)).toEqual(['every', 'career']);
+    // Nothing queued: no pass, reading or lookup waits on the seed.
+    expect(w.store.db.select().from(t.jobs).where(eq(t.jobs.kind, 'jobs_read')).all()).toEqual([]);
   });
 });
 

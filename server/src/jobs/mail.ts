@@ -1,6 +1,6 @@
 // Jobs's one window on mail: small, read-only functions over mail's tables (D303). Mail never
-// imports Jobs; Jobs reads mail only through here: J1's lookups, and J2's email as triage left it and
-// the emails waiting to be read.
+// imports Jobs; Jobs reads mail only through here: J1's lookups, J2's email as triage left it and
+// the emails waiting to be read, and J4's history pass: what's left for it, sorted or not.
 import type {JobsReadAccount, Kind, MessageType} from '@setpoint/shared';
 import {and, asc, count, eq, gte, inArray, isNotNull, isNull, lt, or, sql} from 'drizzle-orm';
 import type {SQL} from 'drizzle-orm';
@@ -119,4 +119,25 @@ export function emailsToRead(store: MailReader, window: ReadWindow, now: string,
 export function emailsWaiting(store: MailReader, window: ReadWindow): number {
   if (!window.accounts.length) return 0;
   return store.db.select({n: count()}).from(t.messages).where(and(windowWhere(window), isNotNull(t.messages.lane), unread)).get()?.n ?? 0;
+}
+
+/**
+ * What the history pass (J4) has left in its window: emails it can read now (sorted by triage, as
+ * `emailsWaiting` counts them), and emails triage hasn't sorted yet in any account it lists, which it
+ * waits for, since only triage's kind says whether a Career-only account's email is one to read.
+ */
+export function historyLeft(store: MailReader, window: ReadWindow): {sorted: number; unsorted: number} {
+  const accounts = window.accounts.map(account => account.account_id);
+  if (!accounts.length) return {sorted: 0, unsorted: 0};
+  const unsorted = store.db.select({n: count()}).from(t.messages).where(and(
+    inArray(t.messages.accountId, accounts), isNull(t.messages.lane), unread,
+    window.from ? gte(t.messages.receivedAt, window.from) : undefined, window.before ? lt(t.messages.receivedAt, window.before) : undefined,
+  )).get()?.n ?? 0;
+  return {sorted: emailsWaiting(store, window), unsorted};
+}
+
+/** Which of these are mail's accounts. */
+export function existingAccounts(store: MailReader, ids: number[]): Set<number> {
+  if (!ids.length) return new Set();
+  return new Set(store.db.select({id: t.accounts.id}).from(t.accounts).where(inArray(t.accounts.id, ids)).all().map(row => row.id));
 }

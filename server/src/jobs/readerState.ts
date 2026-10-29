@@ -28,6 +28,9 @@ function row(store: Store): Row {
 
 const isDown = (health: Row) => health.lastFailureAt !== null && (health.lastSuccessAt === null || health.lastFailureAt > health.lastSuccessAt);
 
+/** Reading is down: its last model call failed, or there was no key to call with. */
+export const readerIsDown = (store: Store) => isDown(row(store));
+
 function save(store: Store, values: Partial<Row>) {
   jobsDb(store.sqlite).insert(j.jobsReader).values({id: 1, ...values}).onConflictDoUpdate({target: j.jobsReader.id, set: values}).run();
 }

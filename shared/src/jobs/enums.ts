@@ -87,8 +87,11 @@ export type JobHandField = (typeof JOB_HAND_FIELDS)[number];
 export const JOB_READ_MODES = ['every', 'career'] as const;
 export type JobReadMode = (typeof JOB_READ_MODES)[number];
 
-/** The history pass (decision 57): once, when Jobs is turned on. */
-export const JOB_HISTORY_STATES = ['not_started', 'running', 'done'] as const;
+/**
+ * The history pass (decision 57): once, when Jobs is turned on. `waiting` is a pass under way that
+ * waits for the AI (down, or no key), as the page's reading line does; it goes on once it's back.
+ */
+export const JOB_HISTORY_STATES = ['not_started', 'running', 'waiting', 'done'] as const;
 export type JobHistoryState = (typeof JOB_HISTORY_STATES)[number];
 
 /** Ghosted: still at Applied this many days after its last email (decision 55). */

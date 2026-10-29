@@ -7,8 +7,9 @@
 //   nothing, and every five minutes it looks again anyway.
 // - What it reads: emails triage has sorted in the accounts Jobs lists (all of the Jobs account, only
 //   Career elsewhere), received since Jobs was turned on, not in jobs_emails_read, oldest first, one
-//   at a time, so a confirmation is read before its update. Older mail is J4's history pass, which
-//   feeds `readEmail` the same way with its own window and `fromHistory`.
+//   at a time, so a confirmation is read before its update. Older mail is J4's history pass
+//   (./history.ts), which this worker reads the same way, keyed `jobs_history`, with its own window
+//   and `fromHistory`.
 // - Each email is read once by Haiku 5.5 (./prompt.ts), written to the ledger as Jobs's "emails", and
 //   never charged for again. The rules (./rules.ts planEmail) decide what it does.
 // - The AI down: the job fails by the one retry policy and the emails wait, counted on the page; a
@@ -31,6 +32,8 @@ import type {JobsEmail, ReadWindow} from './mail.ts';
 import {jobsEmailClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import {emailReadingOf, JOBS_MAX_OUTPUT_TOKENS, JOBS_PROMPT_VERSION, JOBS_SYSTEM, JOBS_TOOL, jobsPromptInput} from './prompt.ts';
 import type {EmailReading} from './prompt.ts';
+import {announceHistory, finishHistory, HISTORY_KEY, resumeHistory} from './history.ts';
+import {historyRow, historyStatus, historyWindow} from './historyState.ts';
 import {LOOKUP_KEY_PREFIX, lookUpJd, queueDueLookups} from './lookup.ts';
 import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts';
 import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
@@ -44,7 +47,8 @@ export const JOBS_READ_KEY = 'jobs_read';
 export type AskJobs = (email: JobsEmail) => Promise<EmailReading | null>;
 
 export interface ReadOptions {
-  // The history pass (J4): what it's unsure of goes to From history (decision 57).
+  // The history pass (J4): what it's unsure of goes to From history (decision 57), and the
+  // applications it makes wait for its end for their JD.
   fromHistory?: boolean;
 }
 
@@ -133,8 +137,9 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
           company: plan.company, title: reading!.title ?? '', titleKey: key ?? '', requisitionId: role.requisitionId,
           platform: platformOf(email, plan.company), accountId: email.accountId, appliedAt: at, status: 'applied', statusSetBy: 'email', statusSetAt: at,
           reappliedFromId: plan.reappliedFrom, companyUnknown: plan.companyUnknown,
-          // J3's seam: its JD lookup is due (decision 54).
-          jdLookup: 'looking', jdLookupAt: now, createdAt: now, updatedAt: now,
+          // J3's seam: its JD lookup is due (decision 54); the history pass's waits for its end,
+          // when only the ones still open are looked up (decision 57).
+          jdLookup: fromHistory ? 'none' : 'looking', jdLookupAt: fromHistory ? null : now, createdAt: now, updatedAt: now,
         }).returning({id: j.jobsApplications.id}).get();
         addEvent(row.id, 'applied', {at, sender, subject: email.subject, line: reading!.line, messageId: email.id});
         if (plan.pairedWith) joinMatch(row.id, plan.pairedWith.messageId, null);
@@ -186,8 +191,8 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
       messageId: email.id, readAt: now, outcome, at, event: reading?.event ?? null, company: reading?.company ?? null, title: reading?.title ?? null,
       titleKey: key, requisitionId: role.requisitionId, line: reading?.line ?? null, applicationId,
     }).run();
-    // Even an email that made nothing changes how many wait.
-    noteLive(store, {type: 'jobs', applications, needs_you: needsYou});
+    // Even an email that made nothing changes how many wait, and how far the history pass has got.
+    noteLive(store, {type: 'jobs', applications, needs_you: needsYou, ...(fromHistory ? {history: historyStatus(store)} : {})});
     return true;
   });
 }
@@ -245,6 +250,8 @@ export class JobsReader implements JobWorker {
    * email waits. A job already queued or running takes it; one waiting out a retry keeps its time.
    */
   nudge() {
+    // The history pass may have been waiting for this email's triage.
+    resumeHistory(this.store);
     const window = readWindow(this.store);
     if (!window || !emailsToRead(this.store, window, isoNow(this.store), 1).length) return;
     if (!enqueueJob(this.store, {kind: 'jobs_read', key: JOBS_READ_KEY})) announce(this.store);
@@ -266,6 +273,7 @@ export class JobsReader implements JobWorker {
 
   async run(job: Job, signal: AbortSignal) {
     if (job.key.startsWith(LOOKUP_KEY_PREFIX)) return this.lookUp(job, signal);
+    if (job.key === HISTORY_KEY) return this.readHistory(job, signal);
     const store = this.store;
     const window = readWindow(store);
     if (!window) return finishJob(store, job.id);
@@ -288,6 +296,32 @@ export class JobsReader implements JobWorker {
     // An email sorted while this job was finishing found it still running: look once more, leaving
     // what was passed over to the rescan.
     if (emailsToRead(store, window, isoNow(store), 1 + passed.size).some(id => !passed.has(id))) enqueueJob(store, {kind: 'jobs_read', key: JOBS_READ_KEY});
+  }
+
+  /**
+   * The history pass (./history.ts): reads what's left of it, oldest first, then ends it and looks
+   * up the open applications' JDs; the AI down fails the job by the one retry policy, and the pass
+   * waits. Turned off, or replaced by a new pass, it stops where it is.
+   */
+  private async readHistory(job: Job, signal: AbortSignal) {
+    const store = this.store;
+    const pass = historyRow(store);
+    if (!historyWindow(store, pass)) return finishJob(store, job.id);
+    const chosen = jobsEmailClient(store, this.endpoints, this.timeoutMs);
+    if (!chosen) {
+      if (recordReadFailure(store, 'auth', NO_JOBS_KEY)) announceHistory(store);
+      failJob(store, job, new ProviderError('auth', NO_JOBS_KEY));
+      return;
+    }
+    const startedAt = pass!.startedAt;
+    const {failed, passed} = await readHistoryEmails(store, askHaiku(store, chosen, signal), startedAt);
+    if (failed) {
+      if (recordReadFailure(store, failed.kind, failed.message)) announceHistory(store);
+      failJob(store, job, failed);
+      return;
+    }
+    finishJob(store, job.id);
+    if (finishHistory(store, startedAt, passed)?.length) this.queueLookups();
   }
 
   /** One application's JD lookup: done, or failed by the one retry policy (never "No JD found"). */
@@ -323,6 +357,36 @@ export async function readWindowEmails(store: Store, ask: AskJobs, window: ReadW
         const error = asProviderError(caught);
         if (error.kind !== 'permanent') return {failed: error, passed};
         console.error(`Jobs couldn't read email ${id}, ${error.message}`);
+        passed.add(id);
+      }
+    }
+  }
+}
+
+/**
+ * Reads what's left of the history pass that started at `startedAt`, oldest first, while Jobs is on
+ * and that pass runs, checking before each email so turning Jobs off (or a new pass) stops it at
+ * once. Returns as `readWindowEmails` does.
+ */
+export async function readHistoryEmails(store: Store, ask: AskJobs, startedAt: string): Promise<{failed: ProviderError | null; passed: Set<number>}> {
+  const passed = new Set<number>();
+  const current = () => {
+    const pass = historyRow(store);
+    return pass?.startedAt === startedAt ? historyWindow(store, pass) : null;
+  };
+  for (;;) {
+    const window = current();
+    if (!window) return {failed: null, passed};
+    const ids = emailsToRead(store, window, isoNow(store), 20 + passed.size).filter(id => !passed.has(id));
+    if (!ids.length) return {failed: null, passed};
+    for (const id of ids) {
+      if (!current()) return {failed: null, passed};
+      try {
+        await readEmail(store, ask, id, {fromHistory: true});
+      } catch (caught) {
+        const error = asProviderError(caught);
+        if (error.kind !== 'permanent') return {failed: error, passed};
+        console.error(`Jobs couldn't read email ${id} from history, ${error.message}`);
         passed.add(id);
       }
     }

@@ -21,15 +21,16 @@ test('Jobs\'s tables come from its own migrations, in its own migrations table, 
   migrateJobs(w.store.sqlite);
   migrateJobs(w.store.sqlite);
   expect(tables(w).filter(name => name.startsWith('jobs_'))).toEqual([
-    'jobs_applications', 'jobs_blocked_emails', 'jobs_emails_read', 'jobs_events', 'jobs_hand_set', 'jobs_jd_candidates', 'jobs_migrations',
+    'jobs_applications', 'jobs_blocked_emails', 'jobs_emails_read', 'jobs_events', 'jobs_hand_set', 'jobs_history', 'jobs_jd_candidates', 'jobs_migrations',
     'jobs_needs_you', 'jobs_postings', 'jobs_reader', 'jobs_settings',
   ]);
-  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual({n: 2});
+  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual({n: 3});
   const appMigrations = w.store.sqlite.prepare('SELECT count(*) AS n FROM __drizzle_migrations').get() as {n: number};
   expect(appMigrations.n).toBeGreaterThan(1);
   // Off until the user turns it on, reading nothing, with nothing to show.
   expect(jobsEnabled(w.store)).toBe(false);
-  expect(jobsPage(w.store)).toMatchObject({enabled: false, reading: {waiting: 0, state: 'healthy'}, counts: {all: 0}, needs_you: [], from_history: [], rows: []});
+  expect(jobsPage(w.store)).toMatchObject({enabled: false, reading: {waiting: 0, state: 'healthy'}, counts: {all: 0}, needs_you: [], from_history: [], rows: [],
+    history: {state: 'not_started', read: 0, total: 0, started_at: null, finished_at: null}});
 });
 
 test('an application with its events and posting round-trips to its detail', () => {

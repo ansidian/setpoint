@@ -11,4 +11,5 @@ DROP TABLE IF EXISTS `jobs_applications`;
 DROP TABLE IF EXISTS `jobs_blocked_emails`;
 DROP TABLE IF EXISTS `jobs_settings`;
 DROP TABLE IF EXISTS `jobs_reader`;
+DROP TABLE IF EXISTS `jobs_history`;
 DROP TABLE IF EXISTS `jobs_migrations`;

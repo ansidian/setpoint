@@ -52,6 +52,8 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   // Where its JD lookup stands; a saved posting is `found` (jobs_postings).
   jdLookup: text('jd_lookup', {enum: JD_LOOKUPS}).notNull().default('none'),
   jdLookupAt: text('jd_lookup_at'),
+  // Its lookup was started by the history pass's end (J4): what it's unsure of goes to From history.
+  jdLookupFromHistory: integer('jd_lookup_from_history', {mode: 'boolean'}).notNull().default(false),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, table => [
@@ -209,6 +211,26 @@ export const jobsSettings = sqliteTable('jobs_settings', {
   updatedAt: text('updated_at').notNull(),
 }, table => [
   check('jobs_settings_one', sql`${table.id} = 1`),
+]);
+
+/**
+ * The history pass (J4, decisions 57 and 72), one row: the last one started. It reads, oldest first,
+ * what Jobs hasn't read in the accounts it lists from before `before` (when Jobs was turned on).
+ * `total` is fixed when it starts; while it runs, what it has read is counted from jobs_emails_read
+ * (read since `started_at`, received before `before`), and `read` is kept once it's done. No row is a
+ * pass not started yet.
+ */
+export const jobsHistory = sqliteTable('jobs_history', {
+  id: integer('id').primaryKey(),
+  state: text('state', {enum: ['running', 'done']}).notNull(),
+  before: text('before').notNull(),
+  startedAt: text('started_at').notNull(),
+  total: integer('total').notNull(),
+  read: integer('read'),
+  finishedAt: text('finished_at'),
+}, table => [
+  check('jobs_history_one', sql`${table.id} = 1`),
+  check('jobs_history_state', sql`${table.state} in ('running', 'done')`),
 ]);
 
 /**

@@ -2,8 +2,10 @@
 //
 // - When: J2's confirmation leaves its application at `jd_lookup = 'looking'` (D341), and Jobs's
 //   worker queues a durable lookup for each one still open, right after reading and on its
-//   five-minute rescan (`queueDueLookups`). Look it up by hand, Track this (J6) and the history pass
-//   (J4) call `requestLookup`, which looks on any application, open or closed, whoever asks. Each
+//   five-minute rescan (`queueDueLookups`). The history pass's applications wait for its end, when
+//   the open ones are marked `looking` with their unsure candidates bound for From history (J4).
+//   Look it up by hand and Track this (J6) call `requestLookup`, which looks on any application,
+//   open or closed, whoever asks. Each
 //   lookup is its own `jobs_read` job on the sync engine, keyed `jobs_jd:<application>`, so one
 //   that fails waits out its own backoff.
 // - Where, in order: the email's own links, then Greenhouse, Lever and Ashby's public job APIs,
@@ -77,7 +79,7 @@ function queueLookup(store: Store, applicationId: number) {
 
 /**
  * Starts a lookup on any application, open or closed, whoever asks (D320's Look it up, J6's Track
- * this, J4's history pass): it's `looking` at once, its unanswered candidates go, and the job runs as
+ * this): it's `looking` at once, its unanswered candidates go, and the job runs as
  * soon as the engine takes it. A saved JD is never replaced (decision 53): Not this posting (J6)
  * comes first, so this answers `saved` and changes nothing.
  */
@@ -90,7 +92,9 @@ export function requestLookup(store: Store, applicationId: number): 'looking' | 
     const now = isoNow(store);
     const answered = answerJdItems(store, applicationId, 'looked_up_again', now);
     db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
-    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
+    // Asked for now, so what it's unsure of is today's, whoever made the application.
+    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupFromHistory: false, updatedAt: now})
+      .where(eq(j.jobsApplications.id, applicationId)).run();
     queueLookup(store, applicationId);
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
     return 'looking';
@@ -326,7 +330,10 @@ function savePosting(store: Store, applicationId: number, found: FoundPosting, s
   });
 }
 
-/** Unsure (decision 54): nothing saved; up to three candidates wait in Needs you as a JD to confirm. */
+/**
+ * Unsure (decision 54): nothing saved; up to three candidates wait in Needs you as a JD to confirm,
+ * in From history when the history pass's end started the lookup (J4, decision 57).
+ */
 function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
   const db = jobsDb(store.sqlite);
   transaction(store, () => {
@@ -339,7 +346,7 @@ function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
       applicationId, title: offer.title, location: offer.location, platform: offer.site, link: offer.link, position, foundAt: now,
     }).onConflictDoNothing().run());
     const item = db.insert(j.jobsNeedsYou).values({
-      kind: 'jd_to_confirm', reason: 'unsure_posting', applicationId, company: application.company, title: application.title || null,
+      kind: 'jd_to_confirm', reason: 'unsure_posting', fromHistory: application.jdLookupFromHistory, applicationId, company: application.company, title: application.title || null,
       platform: application.platform, accountId: application.accountId, at: application.appliedAt, createdAt: now,
     }).returning({id: j.jobsNeedsYou.id}).get();
     db.update(j.jobsApplications).set({jdLookup: 'candidates', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();

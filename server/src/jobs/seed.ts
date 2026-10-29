@@ -474,6 +474,9 @@ export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: S
       id: 1, enabled: true, enabledAt: turnedOn, updatedAt: turnedOn,
       accounts: [{account_id: accounts.get('Jobs')!, reads: 'every'}, {account_id: accounts.get('Business')!, reads: 'career'}],
     }).run();
+    // The history pass ran when Jobs was turned on and finished at 8:14 PM (board 39a), over the 330
+    // emails the brief counts in the Jobs account since May; the sample keeps only what it made.
+    db.insert(j.jobsHistory).values({id: 1, state: 'done', before: turnedOn, startedAt: turnedOn, total: 330, read: 330, finishedAt: at('10-01', '20:14')}).run();
 
     // Oldest first, so a re-application's earlier one is there to link to.
     const ordered = [...SEED_APPLICATIONS].sort((a, b) => at(...a.events[0]!.at).localeCompare(at(...b.events[0]!.at)));

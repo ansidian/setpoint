@@ -1,4 +1,5 @@
-// Jobs's reads (J1): the page (its two numbers, Needs you, From history and the rows) and an
+// Jobs's reads (J1): the page (its two numbers, Needs you, From history, the rows, and J4's history
+// pass) and an
 // application's detail, shaped as `@setpoint/shared`'s jobs/api.ts. Ghosted comes from the clock
 // here, never from a stored status (rules.ts).
 import type {
@@ -11,6 +12,7 @@ import {notFound} from '../errors.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
+import {historyStatus} from './historyState.ts';
 import {existingMessages} from './mail.ts';
 import {readingStatus} from './readerState.ts';
 import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
@@ -93,6 +95,7 @@ export function jobsPage(store: Store): JobsPageOut {
   return {
     enabled: jobsEnabled(store),
     reading: readingStatus(store),
+    history: historyStatus(store),
     counts: countsByStatus(rows),
     weeks: weeklyCounts(applications.map(application => application.appliedAt), now, store.timeZone),
     needs_you: today.map(itemOf),

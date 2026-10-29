@@ -1,14 +1,26 @@
 // Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
-// application's detail (J1), and Look it up (J3, D320), which starts a JD lookup on any application. Mounted under /api behind the session by server.ts, a wiring
-// point, through createApp's `routes`, so the app itself never names Jobs.
+// application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
+// Settings › Jobs, where turning Jobs on starts the history pass (J4). Mounted under /api behind the session by server.ts, a wiring point, through
+// createApp's `routes`, so the app itself never names Jobs.
+import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
-import {conflict, parse} from '../errors.ts';
+import {jobsSettingsPatchInput} from '@setpoint/shared';
+import {conflict, invalid, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup} from './lookup.ts';
 import {applicationDetail, jobsPage} from './queries.ts';
+import {jobsSettings, updateJobsSettings} from './settings.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
+
+async function body(c: Context): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    throw invalid('The body must be JSON.');
+  }
+}
 
 export function jobsApi(store: Store) {
   const api = new Hono();
@@ -21,5 +33,8 @@ export function jobsApi(store: Store) {
     if (requestLookup(store, applicationId) === 'saved') throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
     return c.json(applicationDetail(store, applicationId), 202);
   });
+  api.get('/jobs/settings', c => c.json(jobsSettings(store)));
+  // On starts the history pass (once: it never reads an email twice); off stops reading.
+  api.patch('/jobs/settings', async c => c.json(updateJobsSettings(store, parse(jobsSettingsPatchInput, await body(c)))));
   return api;
 }

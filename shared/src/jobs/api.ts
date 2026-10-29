@@ -3,12 +3,13 @@
 //
 //   GET  /api/jobs                       JobsPageOut (the two numbers, Needs you, From history, the rows)
 //   GET  /api/jobs/applications/:id      ApplicationOut (the detail: its JD, timeline, Applied before)
+//   POST /api/jobs/applications/:id/lookup  ApplicationOut, 202 (J3: Look it up)
+//   GET  /api/jobs/settings              JobsSettingsOut (J4, drawn in J8: Settings › Jobs)
+//   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (J4: turning Jobs on starts the history pass)
 //
 // Later slices add, with these shapes:
 //
 //   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
-//   GET  /api/jobs/settings              JobsSettingsOut (J8: Settings › Jobs)
-//   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut
 //
 // Every change goes out as a `jobs` live event (JobsLiveEvent). Ages are instants and dates are
 // local; the page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in the
@@ -156,12 +157,30 @@ export const jobsReadingSchema = z.strictObject({
 export type JobsReadingOut = z.infer<typeof jobsReadingSchema>;
 
 /**
+ * The history pass (J4; decisions 57, 72; board 38a and Settings › Jobs, drawn in J8): "Reading history
+ * · 140 of 330 emails" while it runs, "Read 330 emails once, when Jobs was turned on · finished Oct 1,
+ * 8:14 PM" once it's done. `total` is fixed when it starts (mail arriving meanwhile is the live
+ * reader's); `read` counts what it has read so far. `waiting` is a pass held while the AI is down or
+ * has no key (the page's `reading` says why and since when).
+ */
+export const jobsHistorySchema = z.strictObject({
+  state: z.enum(JOB_HISTORY_STATES),
+  read: z.int().nonnegative(),
+  total: z.int().nonnegative(),
+  // When the pass began and ended; null before it has.
+  started_at: instant.nullable(),
+  finished_at: instant.nullable(),
+});
+export type JobsHistoryOut = z.infer<typeof jobsHistorySchema>;
+
+/**
  * GET /api/jobs: the page's two numbers and nothing else (D314), Needs you (oldest first, as they
  * came) and From history (newest first), and every application, newest first by Applied.
  */
 export const jobsPageSchema = z.strictObject({
   enabled: z.boolean(),
   reading: jobsReadingSchema,
+  history: jobsHistorySchema,
   counts: jobCountsSchema,
   weeks: z.array(jobWeekSchema),
   needs_you: z.array(needsYouItemSchema),
@@ -245,30 +264,33 @@ export type JobsReadAccount = z.infer<typeof jobsReadAccountSchema>;
 export const jobsSettingsSchema = z.strictObject({
   enabled: z.boolean(),
   accounts: z.array(jobsReadAccountSchema),
-  history: z.strictObject({
-    state: z.enum(JOB_HISTORY_STATES),
-    read: z.int().nonnegative(),
-    total: z.int().nonnegative(),
-    finished_at: instant.nullable(),
-  }),
+  history: jobsHistorySchema,
+  // From history's items still waiting: "6 waiting in Needs you, what the pass wasn't sure of".
   from_history: z.int().nonnegative(),
   applications: z.int().nonnegative(),
 });
 export type JobsSettingsOut = z.infer<typeof jobsSettingsSchema>;
 
+/**
+ * PATCH /api/jobs/settings. Turning Jobs on sets when it was turned on and starts the history pass
+ * over what it hasn't read from before then; off stops reading. Accounts changed while it's on start
+ * the pass again over what the new list hasn't had read. Each account once, and only mail's own.
+ */
 export const jobsSettingsPatchInput = z.strictObject({
   enabled: z.boolean().optional(),
-  accounts: z.array(jobsReadAccountSchema).optional(),
+  accounts: z.array(jobsReadAccountSchema).refine(list => new Set(list.map(each => each.account_id)).size === list.length, 'Each account once.').optional(),
 });
 export type JobsSettingsPatch = z.infer<typeof jobsSettingsPatchInput>;
 
 /**
  * The `jobs` live event: `applications` changed (a row lands or moves, settling from `sub2`) and
  * `needs_you` items came or went. One naming nothing means Jobs's own state changed (turned on or
- * off, the history pass, emails waiting for the AI): GET /api/jobs again.
+ * off, the history pass, emails waiting for the AI): GET /api/jobs again. `history` is the history
+ * pass's progress as it stands, on each event the pass sends (J4: "Reading history · 140 of 330").
  */
 export interface JobsLiveEvent {
   type: 'jobs';
   applications: number[];
   needs_you: number[];
+  history?: JobsHistoryOut;
 }
