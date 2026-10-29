@@ -516,6 +516,218 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   - The browser checks cover each state, both Settings pages and Light.
   - The board audit is clean or has its differences listed in DESIGN.md.
 
+### Jobs (after News)
+
+> **Added 2026-10-29 (Andy, darma SV-118, D303–D327):** eight slices for
+> [BRIEF.md › Jobs](BRIEF.md#jobs-after-20) and [DESIGN.md › Jobs](DESIGN.md#jobs-after-news),
+> boards 32–40 in [design-export/jobs/](design-export/jobs/README.md). Desktop web only (decision
+> 49). Built one slice at a time by a subagent each, with Andy's sign-off between slices. Tracked
+> as SV-119 to SV-126 (J1 to J8), each blocked by the one before.
+
+**The module boundary** (BRIEF › Decided elsewhere › the Jobs module) holds in every slice:
+- **Three folders:** `server/src/jobs/` (tables, migrations, workers, lookups, prompts, routes,
+  tests), `web/src/app/jobs/` (page, pane, slots, styles, its API calls through `web/src/api/client.ts`)
+  and `shared/src/jobs/` (its schemas, enums and API types). The brief names two; the contract needs
+  the third, since `web/` can't import server code.
+- **Tables are `jobs_`** (applications, events, postings and what the slices add), with their own
+  Drizzle schema and migrations folder in `server/src/jobs/`, run from Jobs's wiring point with their
+  own migrations table. They point at mail by message id only; nothing in mail's tables points back.
+- **Mail never imports Jobs.** The server tells Jobs when an email in a read account is stored or
+  triaged, and Jobs reads it through one small read-only function in its own folder.
+- **The wiring points**, a line or two each and listed in `server/src/jobs/README.md`: the routes and
+  worker in `server.ts`; the export from `@setpoint/shared`; the `jobs` live event type; the page,
+  the sidebar entry and `4`; Jobs's row in Settings and in the AI ledger; and a slot on the reader
+  and on the row that mail renders without knowing what fills it.
+- **A lint rule** refuses any import of the Jobs folders from outside them except the wiring points,
+  and a test proves it refuses one.
+- **Removal** is deleting the three folders and the wiring lines, and one migration that drops the
+  `jobs_` tables (`server/src/jobs/drop.sql`, applied by a test to an ephemeral database holding
+  Jobs and mail: the `jobs_` tables go, mail is untouched).
+- **Faked at the HTTP boundary:** Anthropic (Haiku, Sonnet and its web search), Greenhouse, Lever,
+  Ashby and any posting page. No test, seed or dev run reaches a real provider, job platform or
+  model. Fixtures are invented in each API's real shape, on example domains.
+
+### J1. Jobs contract, module and store
+
+- **Contract** (`shared/src/jobs/`): statuses (Applied, In process, Offer, Rejected, Withdrawn),
+  event kinds (applied, assessment, interview, offer, rejection, and the quiet ones), how a JD was
+  found (the email's link, the platform, search), the Needs you kinds, the API types for the page,
+  an application, search and Settings › Jobs, and a typed `jobs` live event.
+- **Store** (`jobs_` tables): applications (company, role, requisition ID, normalised title,
+  platform, account, applied date, status and who set it, the latest step, re-applied link, "first
+  seen in this email"), events (each keeping its own copy of date, kind, sender, subject and line,
+  with the message id while the email exists, decision 63), postings (full text, source, link, found
+  at, how, setting, location, salary, must-haves, nice-to-haves, summary), JD candidates, Needs you
+  items, emails read (read once, never charged twice), and blocked emails (Not an application).
+  Which fields Andy set by hand is stored, so later slices can keep them (decision 58).
+- **Settings:** Jobs on or off (off by default), and the accounts it reads.
+- **API:** the page (counts by status, per week over 12 weeks, Needs you, the rows), an
+  application's detail, all read-only for now; the `jobs` live event.
+- **The module boundary** above: the folders, the migrations, the wiring points, the lint rule, the
+  drop migration and its test.
+- **Seed:** BRIEF.md › Sample data › Jobs (round 4) in `npm run seed` and `npm run try`: the 17 rows
+  and 45 older ones that make the totals (62; Applied 31 with 18 Ghosted, In process 3, Offer 1,
+  Rejected 25, Withdrawn 2; 3, 5, 4, 6, 2, 4, 7, 5, 3, 6, 8 and 3 a week), Needs you's three items
+  and From history's six, Northwind's detail, and the Indeed match email. The Inbox's counts and the
+  nine page screenshots don't change.
+- **Done when:**
+  - Persistence tests run against an ephemeral database: an application with its events and
+    posting round-trips; an event keeps its copy after its email is gone; the counts and per-week
+    numbers come out as the seed's.
+  - The lint test refuses an import of Jobs from mail, and the drop migration's test passes.
+  - The `jobs` event's addition to `LIVE_EVENT_TYPES` is recorded in `shared/contract/` only once
+    setpoint-ios is known to ignore an event type it doesn't know (ask Andy if it doesn't).
+  - The seed loads the sample, and the API answers with its numbers.
+
+### J2. Reading mail and matching
+
+- **The hook:** the wiring point tells Jobs when an email in a read account is stored or triaged.
+  In Jobs every email is a candidate; in any other listed account, only triage's Career (decision
+  56). Jobs reuses triage's organisation, platform, type and summary.
+- **Each email (Haiku 5.5):** the role title, the requisition ID, the event and its line ("Interview
+  Tue Oct 13, 2:00 PM"), through a durable job like triage's, read once (decision 61). Jobs's row in
+  the AI ledger counts it as "emails".
+- **The rules, pure and tested as tables** (decisions 50, 51, 55, 68):
+  - a confirmation makes an application unless it matches one; an update that confidently matches
+    becomes an event and moves the status; one that might match waits in Needs you as an update to
+    assign; a rejection matching nothing is ignored; an interview, assessment or offer matching
+    nothing waits as Track this; account, code, form and job-board mail never makes one; a
+    recruiter's cold email is out
+  - an application is a company and a role, by requisition ID, else the normalised title (case,
+    brackets, "remote" and "hybrid" ignored); companies match loosely ("Fabrikam Labs", "Fabrikam")
+  - a confident match; a second confirmation is a duplicate while open, a re-application once
+    closed; the same title under two requisition IDs is two applications
+  - Indeed's "Indeed Application: <title>" pairs with its "<title> @ <company>" match email
+  - statuses and the latest step; Ghosted after 30 days at Applied with no email; a status set by
+    hand gives way only to an email that sets one, never to a quiet one
+  - an email blocked by Not an application never makes one again
+- **The AI down:** emails wait and are counted ("5 emails not read yet"), and are read once it's
+  back. Nothing is lost.
+- **Passive** (decision 59): no notification, nothing added to mail's, nothing in the calendar.
+- **Done when:**
+  - The rules pass as tables, with prod's shapes invented over: Indeed pairs, a re-application after
+    a rejection, a confirmation twice, the same title under two IDs, a rejection with no
+    confirmation, a Business email that isn't Career.
+  - A recorded set of invented emails, with Haiku faked at the HTTP boundary, makes the expected
+    applications, events and Needs you items, and a second pass reads nothing again.
+  - The AI-down test holds emails and reads them once it's back.
+
+### J3. The JD lookup
+
+- **When:** within minutes of a confirmation (and of Track this, J6), and by hand from Look it up on
+  any application (decision 66). Jobs never retries a "not found" on its own.
+- **Where, in order** (decision 54): the email's own link (Indeed's view-job link); Greenhouse,
+  Lever and Ashby's public job APIs; then Sonnet 5.5 with Claude web search, only when those miss.
+  Every request carries an honest, named User-Agent.
+- **The check:** the model weighs each candidate against the company, normalised title, location
+  and date. Confident is saved silently; unsure saves nothing and offers up to three candidates as a
+  JD to confirm in Needs you; not found says "No JD found". A lookup that *failed* (network, 429,
+  timeout) is retried with backoff and never shown as not found.
+- **The saved JD** (decision 53): the full text cleaned to readable markdown, never overwritten;
+  its link, when and how it was found; and, by Haiku 5.5, location and setting, salary if stated,
+  must-haves, nice-to-haves and the three-line what-they-want summary.
+- **Cost:** no cap (decision 61). The ledger splits Jobs into emails, finding JDs and reading JDs.
+- **Done when:**
+  - Each platform's fixture (invented, in Greenhouse's, Lever's and Ashby's real shapes) and a
+    posting page parse, faked at the HTTP boundary.
+  - Tables cover confident, unsure (three candidates at most), not found and failed, and that a
+    failed lookup retries while a not-found one doesn't.
+  - A saved JD is never overwritten by a second lookup, and markdown cleaning passes as a table.
+
+### J4. The history pass
+
+- **Once, when Jobs is turned on** (decision 57), oldest first (decision 72), over all the mail
+  Setpoint holds for the read accounts, through J2's reader: each email read once and never charged
+  for again, as `triage-history` does. It survives a restart and goes on where it was.
+- **JDs** are looked up only for applications still open; Ghosted applies to history.
+- **From history:** what the pass is unsure of goes there, apart from today's Needs you, and
+  Dismiss all clears it, the same as ignoring each item (decision 70).
+- **Progress:** "Reading history · 140 of 330", in the API and the `jobs` event, for J5 and J8.
+- **Done when:**
+  - A recorded invented history (a few dozen emails over months) makes the expected applications,
+    with updates finding confirmations read before them, closed ones without JDs, old silent ones
+    Ghosted and the unsure in From history.
+  - A pass stopped halfway goes on from there after a restart; a second turn-on reads nothing.
+
+### J5. The Jobs page
+
+- **The page:** boards 32, 32b, 33 and 36 as DESIGN.md › Jobs has them.
+  - the sidebar item with its Needs you count, `4`, the compact rail's slot and the tab title
+  - the header: the status segmented control with its counts (a filter), the 12-week chart, search
+  - the table: sortable, newest first; status with Ghosted and the latest step; Platform dropping
+    and JD becoming a glyph while the detail is open
+  - the detail: the JD's summary, setting and salary, both lists, its link and how it was found,
+    the full text unfolding in place; the timeline, each event opening its email; Applied before
+    and re-applied; "No JD found" with Look it up; "First seen in this email"
+  - Needs you drawn read-only here (its actions come in J6)
+  - narrow windows (640–1099): the detail over the table, Back and Esc
+  - **search** (`/`): company and title first, then JD text with its matched line; loose on
+    company names; out of mail's search and ⌘K (decision 62)
+  - the keys: `J`/`K`, Enter, `/`, `O`, Esc
+- **Live updates:** `jobs` events update rows in place; an arrival settles from `sub2` over 900 ms.
+- **Icons:** the new ones join `design-export/glyphs/icons.json` (design-export/jobs/README.md lists
+  them).
+- **Done when:**
+  - Search's ranking and loose company matching pass as tables.
+  - Component tests cover the chart, the status control and the JD's unfolding.
+  - The browser checks drive opening, J/K, the full text, search (`humongous`, `kubernetes`, `wide
+    world`), the filter and the narrow window against the seed; the layout sweep visits Jobs at
+    1677, 1100 and 820 (not the phone).
+
+### J6. Needs you and corrections
+
+- **Needs you** (boards 34a–34c): a JD to confirm (pick, or None of these); an update to assign
+  (Assign to…, that company's applications first, or Not about a job); Track this, which makes the
+  application from its email, Applied that day and "First seen in this email" (decision 69), looks
+  up its JD and puts it in In process; From history with Dismiss all. An item resolving folds away
+  with a toast and Undo.
+- **Corrections** (boards 35a, 35b, decision 58): edit the company or title in place; Merge with…;
+  an event's Move to… and Not about this (back to Needs you); Not an application (hidden, its emails
+  blocked) and Delete (forgotten, so a later email can make it again) as the menu says (decision
+  67); Not this posting (the JD goes, its other candidates are offered); set a status by hand.
+  Each with Undo.
+- **Every correction sticks:** a new email, a re-run or a lookup never overwrites a field Andy set,
+  undoes a merge or a move.
+- **Done when:**
+  - Persistence tests: each correction, then a new email, a history re-run and a lookup, and the
+    correction stands; Undo restores what was there.
+  - The browser checks drive each Needs you kind and each correction against the seed.
+
+### J7. Jobs in mail
+
+- **The slots** (decision 52): the reader's head and the row each render a slot that Jobs fills;
+  mail's code imports nothing from Jobs.
+  - The **JD chip** on any email that belongs to an application, in the reader, opening its JD in a
+    popover with Open in Jobs (boards 37a, 37b).
+  - **Applied before** on job-match emails whose company matches, on the row and in the reader
+    ("Applied Sep 16 · Rejected Oct 5"), including a quieted Noise row, opening Jobs searched for
+    the company (board 37c).
+- One request answers a page of rows, not one per row. The Inbox's counts never change.
+- **Done when:**
+  - Applied before's company match passes as a table.
+  - The browser checks open the Northwind email with its chip and popover, Open in Jobs arriving
+    with the application open, and the Contoso Pharmaceuticals match email's badge on its row and
+    in the reader, against the seed. Mail's existing spec files still pass.
+
+### J8. Jobs states, Settings and Light
+
+- **States** (boards 38a–38c): the history pass running with the table filling; "5 emails not read
+  yet"; No JD found; a Ghosted row; a status set by hand with its tooltip; Jobs off, its Turn on
+  opening Settings › Jobs.
+- **Settings:** Settings › Jobs (on or off, the accounts it reads, the history pass's progress or
+  when it finished; turning it on starts the pass and brings Jobs into the sidebar) and Settings ›
+  AI's Jobs group (three models, this month's spend with no meter, Usage this month's Jobs row in
+  three parts), boards 39a and 39b.
+- **Light:** board 40.
+- **Page screenshots:** Jobs (Night) joins `web/tests/browser/pages.ts` and
+  `npm run audit:boards` takes in `design-export/jobs/boards/`; its golden goes to Andy before it's
+  committed.
+- **A removal rehearsal**, once, in a scratch worktree: delete the folders and wiring lines, apply
+  the drop migration, and `npm test` passes. Its result goes in the issue.
+- **Done when:**
+  - The browser checks cover each state, both Settings pages and Light.
+  - The board audit is clean or has its differences listed in DESIGN.md.
+
 ## Order and parallelism
 
 ```
@@ -527,10 +739,15 @@ B0 ──► B1 ──┬──► B2 ──► B3 ──► B4 ──┐
 
 After B8 (News): N1 ──┬──► N2 ──► N3 ──┐
                       └──► N4 ─────────┴──► N5
+
+After News (Jobs): J1 ──► J2 ──► J3 ──► J4 ──► J5 ──► J6 ──► J7 ──► J8
 ```
 
 - **News waits for the cutover** and doesn't hold up any 2.0 slice. N4 builds against N1's seed while
   N2 and N3 build ingest and sorting. N5 needs both lanes.
+- **Jobs runs one slice at a time** (Andy, 2026-10-29): one writer, the machine's one browser lock,
+  and Andy's sign-off between slices. Each slice lands working: the page (J5) could build on J1's
+  seed alone, but it waits so that its checks also see real reading, lookups and the history pass.
 
 - **The contract comes first.** B1 writes `shared/`'s API types and schemas for B2–B5 before they
   start, so the backend and frontend run in parallel against it. The frontend uses the seed through
@@ -548,3 +765,5 @@ After B8 (News): N1 ──┬──► N2 ──► N3 ──┐
 - Reply and compose, ntfy action buttons, full phone parity, the real mark.
 - Matching a security email to a reconnect Andy just did.
 - News's tuning round (muting topics, "less like this", choosing sources) and News on the phone.
+- Jobs on the phone and in the iPhone app; a browser extension or a read-only check endpoint for
+  Applied before; matching a JD against a résumé (BRIEF › Jobs).
