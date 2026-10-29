@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1677">
+<title>States hover, press, cursor, selected · Setpoint Jobs</title>
+<!-- Board States hover, press, cursor, selected · 1677 × 1180 · design round 4, drawn 2026-10-29 -->
+<link rel="stylesheet" href="../../styles/setpoint.css">
+<link rel="stylesheet" href="../../styles/fonts.css">
+<link rel="stylesheet" href="../jobs.css">
+<!-- The bundled icon subset lacks Jobs' icons, so this round loads the full icon font, as round 3 does. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0..1,0&amp;display=block">
+<style>
+body{margin:0;background:#050506}
+a{color:#ecebe7}a:hover{color:#ffffff}
+.sp .spec-row { min-height: 44px; }
+.sp .spec-row + .spec-row { border-top: 1px solid var(--hair); padding-top: 8px; }
+.sp .spec-row > .na { color: var(--ink3); font-size: 12px; }
+.sp .mini-row { --cols: 0px 108px minmax(0,1fr); padding: 0 10px; border-top: 1px solid var(--hair); }
+.sp .mini-group { border-radius: 12px; background: var(--sub); overflow: hidden; }
+.sp .mini-cand { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 6px 0 12px; color: var(--ink2); font-size: 13px; white-space: nowrap; overflow: hidden; }
+.sp .mini-cand .ms { font-size: 16px; color: var(--ink3); }
+.sp .mini-cand b { font-weight: 400; color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="sp" style="width: 1677px; height: 1180px">
+<div class="spec">
+  <div>
+    <h1>Hover and state</h1>
+    <div class="sub">Every control on Jobs, in Night. Fills and borders change over 120 ms cubic-bezier(.2,0,0,1); a press goes in over 80 ms and lets go over 120 ms. The keyboard cursor and selection are fills, never rings.</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <div class="spec-head"><span>Element</span><span>Rest</span><span>Hover</span><span>Press</span><span>Keyboard cursor</span><span>Selected or open</span></div>
+
+    <div class="spec-row">
+      <div class="nm">Table row<span class="ink3">J / K move · Enter opens</span></div>
+      <div class="jb-tr mini-row"><span></span><span class="co">Litware</span><span class="st proc"><i class="sd proc"></i><span class="sl proc">In process</span><span class="step">· Case study due Oct 12</span></span></div>
+      <div class="jb-tr mini-row hov"><span></span><span class="co">Litware</span><span class="st proc"><i class="sd proc"></i><span class="sl proc">In process</span><span class="step">· Case study due Oct 12</span></span></div>
+      <div class="jb-tr mini-row press"><span></span><span class="co">Litware</span><span class="st proc"><i class="sd proc"></i><span class="sl proc">In process</span><span class="step">· Case study due Oct 12</span></span></div>
+      <div class="jb-tr mini-row cur"><span></span><span class="co">Litware</span><span class="st proc"><i class="sd proc"></i><span class="sl proc">In process</span><span class="step">· Case study due Oct 12</span></span></div>
+      <div class="jb-tr mini-row open"><span></span><span class="co">Litware</span><span class="st proc"><i class="sd proc"></i><span class="sl proc">In process</span><span class="step">· Case study due Oct 12</span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Sortable header<span class="ink3">a click sorts; again flips it</span></div>
+      <div class="jb-th" style="--cols: 1fr; padding: 0 10px; border-radius: 0"><span class="h">Company</span></div>
+      <div class="jb-th" style="--cols: 1fr; padding: 0 10px"><span class="h hov">Company</span></div>
+      <div class="jb-th" style="--cols: 1fr; padding: 0 10px"><span class="h press">Company</span></div>
+      <div class="na">Not on the keyboard path</div>
+      <div class="jb-th" style="--cols: 1fr 1fr; padding: 0 10px"><span class="h on">Applied<span class="ms">arrow_downward</span></span><span class="h on">Applied<span class="ms">arrow_upward</span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Status filter<span class="ink3">counts by status, in the header</span></div>
+      <div><span class="seg"><span>Applied <span class="n">31</span></span></span></div>
+      <div><span class="seg"><span class="hov">Applied <span class="n">31</span></span></span></div>
+      <div><span class="seg"><span class="press">Applied <span class="n">31</span></span></span></div>
+      <div class="na">Not on the keyboard path</div>
+      <div><span class="seg"><span>All <span class="n">62</span></span><span class="on">Applied <span class="n">31</span></span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Per week<span class="ink3">each bar names its week</span></div>
+      <div><span class="jb-week" style="padding-left: 0"><span class="bars"><i style="height: 8px"></i><i style="height: 13px"></i><i style="height: 10px"></i><i style="height: 15px"></i><i style="height: 5px"></i><i style="height: 10px"></i><i style="height: 18px"></i><i style="height: 13px"></i><i style="height: 8px"></i><i style="height: 15px"></i><i style="height: 20px"></i><i class="now" style="height: 8px"></i></span><span><span class="v">3</span> this week</span></span></div>
+      <div style="position: relative; height: 44px"><span class="jb-week hov" style="position: absolute; left: 0; top: 6px"><span class="bars"><i style="height: 8px"></i><i style="height: 13px"></i><i style="height: 10px"></i><i style="height: 15px"></i><i style="height: 5px"></i><i style="height: 10px"></i><i style="height: 18px"></i><i style="height: 13px"></i><i style="height: 8px"></i><i style="height: 15px"></i><i class="hov" style="height: 20px"></i><i class="now" style="height: 8px"></i></span><span><span class="v">3</span> this week</span></span><span class="jb-tip" style="left: 96px; top: -24px">Sep 27 – Oct 3 <span class="ink3">· 8 applications</span></span></div>
+      <div class="na">No press: it's information</div>
+      <div class="na">—</div>
+      <div class="na">—</div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Needs you item<span class="ink3">J / K reach it before the table</span></div>
+      <div class="jb-need" style="border: 0; padding: 6px 10px 6px 0; grid-template-columns: 0 18px minmax(0,1fr) auto"><span class="g ms">bookmark_add</span><div class="l1"><span class="what">Can we set up a call…</span></div><div class="r1">1h</div></div>
+      <div class="jb-need hov" style="border: 0; padding: 6px 10px 6px 0; grid-template-columns: 0 18px minmax(0,1fr) auto; border-radius: 10px"><span class="g ms">bookmark_add</span><div class="l1"><span class="what">Can we set up a call…</span></div><div class="r1">1h</div></div>
+      <div class="na">The item isn't a button; its actions are</div>
+      <div class="jb-need cur" style="border: 0; padding: 6px 10px 6px 0; grid-template-columns: 0 18px minmax(0,1fr) auto; border-radius: 10px"><span class="g ms">bookmark_add</span><div class="l1"><span class="what">Can we set up a call…</span></div><div class="r1">1h</div></div>
+      <div class="cell-demo"><span class="jb-done"><span class="ms">check</span>Tracked · Wide World Importers</span><span class="cap">answered: 360 ms, then folds 180 ms</span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">A candidate<span class="ink3">↑ ↓ choose · Enter picks</span></div>
+      <div class="mini-group"><div class="mini-cand"><span class="ms">radio_button_unchecked</span><span class="ell grow"><b>Junior Developer</b> <span class="ink3">· New York, NY</span></span><span class="ibtn sm"><span class="ms s16">open_in_new</span></span></div></div>
+      <div class="mini-group"><div class="mini-cand" style="background: var(--sub2)"><span class="ms" style="color: var(--ink2)">radio_button_unchecked</span><span class="ell grow"><b>Junior Developer</b> <span class="ink3">· New York, NY</span></span><span class="ibtn sm"><span class="ms s16">open_in_new</span></span></div></div>
+      <div class="mini-group"><div class="mini-cand" style="background: var(--sub3)"><span class="ms" style="color: var(--ink)">radio_button_checked</span><span class="ell grow"><b>Junior Developer</b> <span class="ink3">· New York, NY</span></span><span class="ibtn sm"><span class="ms s16">open_in_new</span></span></div></div>
+      <div class="mini-group"><div class="mini-cand" style="background: var(--sub2)"><span class="ms" style="color: var(--ink2)">radio_button_unchecked</span><span class="ell grow"><b>Junior Developer</b> <span class="ink3">· New York, NY</span></span><span class="ibtn sm"><span class="ms s16">open_in_new</span></span></div></div>
+      <div class="mini-group" style="background: color-mix(in oklch, var(--good) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--good) 35%, transparent)"><div class="mini-cand"><span class="ms" style="color: var(--good)">check_circle</span><span class="ell grow"><b>Junior Developer</b> <span class="ink3">· JD saved</span></span></div></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Look at a candidate first<span class="ink3">the arrow, apart from the pick</span></div>
+      <div><span class="ibtn sm"><span class="ms s16">open_in_new</span></span></div>
+      <div><span class="ibtn sm hov"><span class="ms s16">open_in_new</span></span></div>
+      <div><span class="ibtn sm press"><span class="ms s16">open_in_new</span></span></div>
+      <div class="na">—</div>
+      <div class="na">Opens the posting in a new tab</div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Assign to…<span class="ink3">outline · opens a menu</span></div>
+      <div><button class="btn out sm"><span class="ms s16">move_item</span>Assign to…<span class="ms s16" style="color: var(--ink3); margin-right: -4px">expand_more</span></button></div>
+      <div><button class="btn out sm hov"><span class="ms s16">move_item</span>Assign to…<span class="ms s16" style="color: var(--ink3); margin-right: -4px">expand_more</span></button></div>
+      <div><button class="btn out sm press"><span class="ms s16">move_item</span>Assign to…<span class="ms s16" style="color: var(--ink3); margin-right: -4px">expand_more</span></button></div>
+      <div class="na">—</div>
+      <div><button class="btn out sm" style="background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn)"><span class="ms s16">move_item</span>Assign to…<span class="ms s16" style="color: var(--ink3); margin-right: -4px">expand_less</span></button></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Track this · Not about a job<span class="ink3">the page's one solid button · quiet</span></div>
+      <div style="display: flex; gap: 6px"><button class="btn sm solid"><span class="ms s16">add</span>Track this</button><button class="btn quiet sm">Not about a job</button></div>
+      <div style="display: flex; gap: 6px"><button class="btn sm solid hov"><span class="ms s16">add</span>Track this</button><button class="btn quiet sm hov">Not about a job</button></div>
+      <div style="display: flex; gap: 6px"><button class="btn sm solid press"><span class="ms s16">add</span>Track this</button><button class="btn quiet sm press">Not about a job</button></div>
+      <div class="na">—</div>
+      <div class="na">—</div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Status<span class="ink3">one click sets it by hand</span></div>
+      <div><button class="jb-stchip"><i class="sd proc"></i>In process<span class="ms">expand_more</span></button></div>
+      <div><button class="jb-stchip hov"><i class="sd proc"></i>In process<span class="ms">expand_more</span></button></div>
+      <div><button class="jb-stchip" style="background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeHover); transform: scale(.97)"><i class="sd proc"></i>In process<span class="ms">expand_more</span></button></div>
+      <div class="na">—</div>
+      <div><button class="jb-stchip open"><i class="sd proc"></i>In process<span class="ms">expand_less</span></button></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Title and company<span class="ink3">edit in place</span></div>
+      <div class="jb-title"><span style="font-size: 16px; font-weight: 500">Software Engineer II, Claims</span><span class="ms pen">edit</span></div>
+      <div class="jb-title hov"><span style="font-size: 16px; font-weight: 500; background: var(--sub); border-radius: 8px; box-shadow: 0 0 0 4px var(--sub)">Software Engineer II, Claims</span><span class="ms pen">edit</span></div>
+      <div class="na">A click is the edit</div>
+      <div class="na">—</div>
+      <div class="jb-edit" style="font-size: 16px; height: 30px; margin-left: 0">Software Engineer II, Claims<span class="caret" style="height: 18px; margin-left: 0"></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Timeline event<span class="ink3">a click opens its email</span></div>
+      <div class="jb-ev" style="grid-template-columns: 44px 14px minmax(0,1fr) auto"><span class="d">Oct 1</span><span class="node"><i></i></span><span class="t"><span class="s">Thank you for applying</span></span><span class="go"><span class="ibtn sm"><span class="ms s16">more_horiz</span></span></span></div>
+      <div class="jb-ev hov" style="grid-template-columns: 44px 14px minmax(0,1fr) auto"><span class="d">Oct 1</span><span class="node"><i></i></span><span class="t"><span class="s">Thank you for applying</span></span><span class="go"><span class="ibtn sm"><span class="ms s16">more_horiz</span></span></span></div>
+      <div class="jb-ev hov" style="grid-template-columns: 44px 14px minmax(0,1fr) auto; background: var(--sub3)"><span class="d">Oct 1</span><span class="node"><i></i></span><span class="t"><span class="s">Thank you for applying</span></span><span class="go"><span class="ibtn sm"><span class="ms s16">more_horiz</span></span></span></div>
+      <div class="na">Tab reaches it in the pane</div>
+      <div class="jb-ev menu" style="grid-template-columns: 44px 14px minmax(0,1fr) auto"><span class="d">Oct 1</span><span class="node"><i></i></span><span class="t"><span class="s">Thank you for applying</span></span><span class="go"><span class="ibtn sm" style="background: var(--sub3); color: var(--ink)"><span class="ms s16">more_horiz</span></span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Full posting<span class="ink3">Space or a click unfolds it</span></div>
+      <div class="jb-src" style="min-height: 36px"><span class="ms">article</span><span class="t">Full posting</span><span class="grow"></span><span class="tool" style="height: 26px">Show<span class="ms">expand_more</span></span></div>
+      <div class="jb-src hov" style="min-height: 36px"><span class="ms">article</span><span class="t">Full posting</span><span class="grow"></span><span class="tool" style="height: 26px">Show<span class="ms">expand_more</span></span></div>
+      <div class="jb-src" style="min-height: 36px; background: var(--sub3)"><span class="ms">article</span><span class="t">Full posting</span><span class="grow"></span><span class="tool" style="height: 26px">Show<span class="ms">expand_more</span></span></div>
+      <div class="na">—</div>
+      <div class="jb-fullhead" style="height: 36px"><span class="ms s16" style="color: var(--ink3)">article</span><span style="color: var(--ink); font-weight: 500">Full posting</span><span class="grow"></span><span class="tool" style="height: 26px; display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; padding: 0 8px">Collapse<span class="ms s16" style="color: var(--ink3)">expand_less</span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Applied before<span class="ink3">opens that application</span></div>
+      <div class="jb-before" style="min-height: 36px"><span class="ms">history</span><span class="t">Junior Developer</span><span class="ink3 num">· Mar 14</span><span class="ms chev">chevron_right</span></div>
+      <div class="jb-before hov" style="min-height: 36px"><span class="ms">history</span><span class="t">Junior Developer</span><span class="ink3 num">· Mar 14</span><span class="ms chev">chevron_right</span></div>
+      <div class="jb-before" style="min-height: 36px; background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeHover)"><span class="ms">history</span><span class="t">Junior Developer</span><span class="ink3 num">· Mar 14</span><span class="ms chev">chevron_right</span></div>
+      <div class="na">—</div>
+      <div class="na">—</div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">JD chip<span class="ink3">in mail's reader</span></div>
+      <div><span class="jb-chip"><span class="ms">work</span><span class="t">Software Engineer I</span><span>· In process</span><span class="ms chev">expand_more</span></span></div>
+      <div><span class="jb-chip hov"><span class="ms">work</span><span class="t">Software Engineer I</span><span>· In process</span><span class="ms chev">expand_more</span></span></div>
+      <div><span class="jb-chip hov" style="background: var(--sub2); transform: scale(.97)"><span class="ms">work</span><span class="t">Software Engineer I</span><span>· In process</span><span class="ms chev">expand_more</span></span></div>
+      <div class="na">—</div>
+      <div><span class="jb-chip open"><span class="ms">work</span><span class="t">Software Engineer I</span><span>· In process</span><span class="ms chev">expand_more</span></span></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Applied before badge<span class="ink3">on a job-match row and in its reader</span></div>
+      <div><span class="jb-badge"><span class="ms">history</span>Applied Sep 16 · Rejected Oct 5</span></div>
+      <div><span class="jb-badge hov"><span class="ms">history</span>Applied Sep 16 · Rejected Oct 5</span></div>
+      <div><span class="jb-badge hov" style="background: var(--sub2)"><span class="ms">history</span>Applied Sep 16 · Rejected Oct 5</span></div>
+      <div class="na">—</div>
+      <div class="na">Opens Jobs, searched for the company</div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Search<span class="ink3">/ on Jobs</span></div>
+      <div><label class="search" style="width: 240px"><span class="ms s16">search</span><span class="grow">Search jobs</span><span class="kbd">/</span></label></div>
+      <div><label class="search hov" style="width: 240px"><span class="ms s16">search</span><span class="grow">Search jobs</span><span class="kbd">/</span></label></div>
+      <div class="na">—</div>
+      <div><label class="search focus" style="width: 240px"><span class="ms s16">search</span><span class="grow ink3" style="display: flex; align-items: center"><span style="width: 1.5px; height: 15px; background: var(--ink); margin-right: 2px"></span>Search jobs</span><span class="kbd">Esc</span></label></div>
+      <div><label class="search focus" style="width: 240px"><span class="ms s16">search</span><span class="grow" style="color: var(--ink)">humongous</span><span class="kbd">Esc</span></label></div>
+    </div>
+
+    <div class="spec-row">
+      <div class="nm">Jobs in the sidebar<span class="ink3">4 · its count is Needs you</span></div>
+      <div><a class="nav" href="#"><span class="ms">work</span><span class="grow">Jobs</span><span class="cnt num">3</span></a></div>
+      <div><a class="nav hov" href="#"><span class="ms">work</span><span class="grow">Jobs</span><span class="cnt num">3</span></a></div>
+      <div><a class="nav" href="#" style="background: var(--sub3)"><span class="ms">work</span><span class="grow">Jobs</span><span class="cnt num">3</span></a></div>
+      <div class="na">—</div>
+      <div><a class="nav on" href="#"><span class="ms">work</span><span class="grow">Jobs</span><span class="cnt num">3</span></a></div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 40px; color: var(--ink3); font-size: 12.5px">
+    <span><span class="ink2">Statuses</span> · <i class="sd applied" style="display: inline-block; margin: 0 4px"></i>Applied ink2 · <i class="sd proc" style="display: inline-block; margin: 0 4px"></i>In process ink, 500 · <i class="sd offer" style="display: inline-block; margin: 0 4px"></i>Offer good · <i class="sd rej" style="display: inline-block; margin: 0 4px"></i>Rejected ink3 · <i class="sd wd" style="display: inline-block; margin: 0 4px"></i>Withdrawn ink3 · <i class="sd ghost" style="display: inline-block; margin: 0 4px; vertical-align: -1px"></i>Ghosted ink3, its row a step quieter</span>
+    <span>No opacity on any status: .5 already means a change waiting for its provider.</span>
+  </div>
+</div>
+</div>
+</body>
+</html>

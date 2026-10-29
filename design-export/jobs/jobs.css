@@ -1,0 +1,322 @@
+/* Setpoint v2 · Jobs (design round 4, boards 32–40). Loads after setpoint.css.
+   DESIGN.md wins over the export: the first block carries the overrides and the tokens the round-2
+   stylesheet predates, at the values web/src/tokens.ts ships. No new tokens. */
+
+/* ---------- DESIGN.md overrides the export doesn't carry ---------- */
+.sp {
+  --panel: #0b0c0e; --ink3: #7d7f84; --cyan: oklch(0.86 0.11 182);               /* override 31 */
+  --sub4: rgba(255,255,255,.17);
+  --accent: oklch(0.8 0.11 235);
+  --navOn: rgba(255,255,255,.10); --navOnEdge: rgba(255,255,255,.07);
+  --edgeFocus: rgba(255,255,255,.2);
+  --hl: color-mix(in oklch, var(--sun) 26%, transparent);
+  --switchOn: color-mix(in oklch, var(--good) 58%, var(--modal)); --switchKnobOn: var(--ink);
+  --fast: 120ms; --med: 180ms; --slow: 260ms; --press: 80ms;
+}
+.sp.light {
+  --page: #f6f6f4; --ink2: #4b4d52; --cardOn: #ffffff; --cyan: oklch(0.58 0.1 182); /* overrides 5, 31 */
+  --sub4: rgba(29,30,33,.15);
+  --accent: oklch(0.54 0.12 235);
+  --navOn: #ffffff; --navOnEdge: rgba(29,30,33,.10);
+  --edgeFocus: rgba(29,30,33,.3);
+  --hl: oklch(0.92 0.12 96);
+  --switchOn: var(--good); --switchKnobOn: var(--onInk);
+}
+.sp .ring.done, .sp .tk.done .ring { background: var(--good); }                     /* override 4 */
+.sp .today-row .when { margin-left: auto; color: var(--ink3); font-size: 12px; }
+.sp .nav.on { background: var(--navOn); box-shadow: inset 0 0 0 1px var(--navOnEdge); }  /* #166 */
+.sp .nav.on .ms { color: var(--accent); }
+.sp .switch.on { background: var(--switchOn); }                                       /* #176 */
+.sp .switch.on::after { background: var(--switchKnobOn); }
+.sp mark.hl { background: var(--hl); }
+.sp .search.focus { border-color: var(--edgeFocus); }
+.sp .menu-i.danger { color: var(--ink2); }
+.sp .menu-i .sub { margin-left: auto; color: var(--ink3); font-size: 12px; }
+
+/* ---------- States, as the boards draw them (the app reaches them with :hover and :active) ----------
+   .hov is the pointer, .cur the keyboard cursor (a fill, never a ring), .press a press held,
+   .open what the pane shows. Fills and borders change over 120 ms; a press goes in over 80 ms. */
+.sp .nav.hov, .sp .acct.hov { background: var(--sub); }
+.sp .btn.out.hov { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.sp .btn.out.press { background: var(--sub2); transform: scale(.97); }
+.sp .btn.quiet.hov { background: var(--sub); color: var(--ink); }
+.sp .btn.quiet.press { background: var(--sub3); color: var(--ink); transform: scale(.97); }
+.sp .btn.ghost.hov { background: var(--sub3); }
+.sp .btn.ghost.press { background: var(--sub4); transform: scale(.97); }
+.sp .btn.solid.hov { background: color-mix(in srgb, var(--ink) 86%, var(--page)); }
+.sp .btn.solid.press { background: color-mix(in oklch, var(--ink) 78%, var(--page)); transform: scale(.97); }
+.sp .ibtn.press { background: var(--sub3); color: var(--ink); transform: scale(.92); }
+.sp .search.hov { border-color: var(--edgeHover); }
+.sp .menu-i.hov { background: var(--sub2); color: var(--ink); }
+.sp .menu-i.hov .ms { color: var(--ink); }
+.sp .menu-i.danger.hov { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
+.sp .menu-i.danger.hov .ms { color: var(--alert); }
+.sp .rd-tools .tool.hov { background: var(--sub2); color: var(--ink); }
+
+/* ---------- Header: the two numbers ---------- */
+/* Counts by status are the header's segmented control, so each count is also the filter. */
+.sp .seg > span .n { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sp .seg > span.on .n { color: var(--ink2); }
+.sp .seg > span.hov { background: var(--sub); color: var(--ink); }
+.sp .seg > span.press { background: var(--sub3); color: var(--ink); transform: scale(.97); }
+/* Applications per week, the last 12, oldest first. This week's bar is an outline: it isn't done. */
+.sp .jb-week { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 10px; color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.sp .jb-week.hov { background: var(--sub); }
+.sp .jb-week .bars { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.sp .jb-week .bars > i { display: block; width: 5px; border-radius: 1.5px 1.5px 0 0; background: var(--ink3); opacity: .7; }
+.sp .jb-week .bars > i.now { background: transparent; box-shadow: inset 0 0 0 1px var(--ink3); opacity: 1; }
+.sp .jb-week .bars > i.hov { background: var(--ink); opacity: 1; }
+.sp .jb-week .v { color: var(--ink2); font-variant-numeric: tabular-nums; }
+.sp .jb-tip { position: absolute; z-index: 6; height: 26px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 8px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sp .jb-tip .ink3 { color: var(--ink3); }
+
+/* ---------- The list column ---------- */
+.sp .jb-col { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.sp .gh .ms { font-size: 14px; color: var(--ink3); }
+.sp .gh .lnk { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); }
+
+/* Needs you: one queue above the table. Its count is ink2, not caution: Jobs informs, never nags (D313). */
+.sp .jb-need { display: grid; grid-template-columns: 12px 18px minmax(0,1fr) auto; column-gap: 10px; row-gap: 7px; padding: 10px 16px 11px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none; position: relative; }
+.sp .jb-need.hov { background: var(--sub); }
+.sp .jb-need.cur { background: var(--sub2); }
+.sp .jb-need > .g { grid-column: 2; grid-row: 1; height: 18px; display: grid; place-items: center; color: var(--ink3); font-size: 16px; }
+.sp .jb-need .l1 { grid-column: 3; display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
+.sp .jb-need .l1 .what { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-need .l1 .from { color: var(--ink3); white-space: nowrap; flex: none; }
+.sp .jb-need .r1 { grid-column: 4; display: flex; align-items: center; gap: 8px; height: 18px; color: var(--ink3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sp .jb-need .acts { grid-column: 3 / 5; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sp .jb-need .q { color: var(--ink2); font-size: 12.5px; margin-right: 4px; white-space: nowrap; }
+.sp .jb-need .acts .btn.sm { height: 28px; }
+/* A candidate: pick it (left), or look at it first (the arrow) */
+.sp .jb-cand { display: inline-flex; align-items: stretch; height: 28px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--edgeOn); flex: 0 1 auto; min-width: 0; font-size: 12.5px; }
+.sp .jb-cand .pick { display: inline-flex; align-items: center; gap: 4px; padding: 0 10px 0 12px; border-radius: 999px 0 0 999px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-cand .pick .ink3 { color: var(--ink3); }
+.sp .jb-cand .peek { display: grid; place-items: center; width: 30px; border-radius: 0 999px 999px 0; color: var(--ink3); box-shadow: inset 1px 0 0 var(--edge); flex: none; }
+.sp .jb-cand .peek .ms { font-size: 14px; }
+.sp .jb-cand.hov { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.sp .jb-cand .pick.hov { background: var(--sub); }
+.sp .jb-cand .pick.press { background: var(--sub2); }
+.sp .jb-cand .peek.hov { background: var(--sub); color: var(--ink); }
+.sp .jb-cand.picked { box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--good) 45%, transparent); background: color-mix(in oklch, var(--good) 10%, transparent); }
+/* An item that's been answered: its outcome for 360 ms, then it folds away */
+.sp .jb-done { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-size: 12.5px; }
+.sp .jb-done .ms { color: var(--good); font-size: 16px; }
+.sp .jb-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; }
+.sp .jb-fold .ms { font-size: 16px; color: var(--ink3); }
+.sp .jb-fold .n { color: var(--ink3); font-variant-numeric: tabular-nums; }
+.sp .jb-fold.hov { background: var(--sub); color: var(--ink); }
+.sp .jb-hist { display: grid; grid-template-columns: 18px minmax(0,1fr) auto auto; column-gap: 10px; align-items: center; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; background: color-mix(in srgb, var(--panel) 50%, transparent); }
+.sp .jb-hist > .ms { font-size: 15px; color: var(--ink3); }
+.sp .jb-hist .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-hist .what b { color: var(--ink); font-weight: 400; }
+.sp .jb-hist .when { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sp .jb-hist .acts { display: flex; gap: 4px; }
+.sp .jb-hist .acts .btn { height: 24px; font-size: 12px; padding: 0 9px; }
+.sp .jb-hist.hov { background: var(--sub); }
+
+/* ---------- The table ---------- */
+.sp .jb-list { --cols: 12px 220px minmax(0,1fr) 120px 72px 300px 128px; }
+.sp .jb-list.narrow { --cols: 12px 156px minmax(0,1fr) 60px 214px 18px; }
+.sp .jb-list.narrow .c-plat { display: none; }
+.sp .jb-th, .sp .jb-tr { display: grid; grid-template-columns: var(--cols); column-gap: 12px; align-items: center; padding: 0 16px 0 12px; flex: none; }
+.sp .jb-th { height: 30px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.sp .jb-th.first { border-top: 0; }
+.sp .jb-th .h { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 6px; margin-left: -6px; border-radius: 6px; justify-self: start; white-space: nowrap; }
+.sp .jb-th .h .ms { font-size: 14px; }
+.sp .jb-th .h.on { color: var(--ink2); }
+.sp .jb-th .h.hov { background: var(--sub); color: var(--ink2); }
+.sp .jb-th .h.press { background: var(--sub3); color: var(--ink); }
+.sp .jb-tr { height: 36px; border-bottom: 1px solid var(--hair); color: var(--ink2); position: relative; }
+.sp .jb-tr.hov { background: var(--sub); }
+.sp .jb-tr.cur { background: var(--sub2); }
+.sp .jb-tr.press { background: var(--sub3); }
+.sp .jb-tr.open { background: var(--sub3); }
+.sp .jb-tr.open::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+.sp .jb-tr.land { background: var(--sub2); }
+.sp .jb-tr > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-tr .co { color: var(--ink); }
+.sp .jb-tr .ro { color: var(--ink2); }
+.sp .jb-tr .pl { color: var(--ink3); font-size: 12.5px; }
+.sp .jb-tr .ap { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sp .jb-tr .jd { color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+.sp .jb-tr .jd .ms { font-size: 15px; color: var(--ink3); }
+.sp .jb-tr .jd.none { color: var(--ink3); }
+/* Closed (Rejected, Withdrawn) and Ghosted rows recede a step: ink2 / ink3. Never opacity, which means pending. */
+.sp .jb-tr.closed .co, .sp .jb-tr.ghost .co { color: var(--ink2); }
+.sp .jb-tr.closed .ro, .sp .jb-tr.ghost .ro { color: var(--ink3); }
+.sp .jb-tr .snip { color: var(--ink3); font-size: 12.5px; }
+.sp .jb-tr.two { height: 56px; align-items: start; padding-top: 9px; }
+.sp .jb-tr.two > .snipline { grid-column: 2 / -1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
+
+/* Status: a 7 px mark, the label, then the latest step. Colours from the existing tokens only. */
+.sp .st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.sp .st .sl { flex: none; }
+.sp .st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
+.sp .st .by { font-size: 13px; color: var(--ink3); flex: none; }
+.sp .sd { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+.sp .sd.applied { box-shadow: inset 0 0 0 1.5px var(--ink2); }
+.sp .sd.proc { background: var(--ink); }
+.sp .sd.offer { background: var(--good); }
+.sp .sd.rej { background: var(--ink3); }
+.sp .sd.wd { box-shadow: inset 0 0 0 1.5px var(--ink3); }
+.sp .sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--ink3); }
+.sp .sl.applied { color: var(--ink2); }
+.sp .sl.proc { color: var(--ink); font-weight: 500; }
+.sp .sl.offer { color: var(--good); font-weight: 500; }
+.sp .sl.rej, .sp .sl.wd, .sp .sl.ghost { color: var(--ink3); }
+.sp .st.proc .step { color: var(--ink2); }
+
+/* ---------- The detail pane (680, where the reading pane sits) ---------- */
+.sp .jb-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.sp .jb-co { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 13px; min-height: 20px; }
+.sp .jb-co .name { color: var(--ink2); font-weight: 500; }
+.sp .jb-co .right { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sp .jb-title { display: flex; align-items: center; gap: 8px; }
+.sp .jb-title .rd-subj { flex: 0 1 auto; }
+.sp .jb-title .pen { color: var(--ink3); font-size: 16px; opacity: 0; }
+.sp .jb-title.hov .pen { opacity: 1; }
+.sp .jb-title .rd-subj.hov { background: var(--sub); border-radius: 8px; box-shadow: 0 0 0 4px var(--sub); }
+.sp .jb-edit { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; margin-left: -11px; border-radius: 10px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeFocus); font-size: 20px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); flex: 1 1 auto; }
+.sp .jb-edit .caret { width: 1.5px; height: 22px; background: var(--ink); margin-left: -6px; }
+.sp .jb-stat { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sp .jb-stchip { height: 28px; display: inline-flex; align-items: center; gap: 8px; padding: 0 6px 0 11px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 12.5px; color: var(--ink); flex: none; white-space: nowrap; }
+.sp .jb-stchip .ms { font-size: 16px; color: var(--ink3); }
+.sp .jb-stchip.hov { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.sp .jb-stchip.open { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.sp .jb-stat .step { color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-stat .age { color: var(--ink3); font-size: 12.5px; flex: none; font-variant-numeric: tabular-nums; }
+.sp .jb-body { padding: 6px 28px 28px; display: flex; flex-direction: column; gap: 22px; min-height: 0; }
+.sp .jb-label { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); display: flex; align-items: center; gap: 8px; height: 18px; }
+.sp .jb-label .n { letter-spacing: 0; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.sp .jb-label .right { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.sp .jb-want { margin: 8px 0 0; color: var(--ink); font-size: 14px; line-height: 1.6; max-width: 600px; }
+.sp .jb-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.sp .jb-facts > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sp .jb-facts .ms { font-size: 16px; color: var(--ink3); }
+.sp .jb-lists { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 28px; max-width: 624px; }
+.sp .jb-lists ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sp .jb-lists li { display: grid; grid-template-columns: 14px minmax(0,1fr); color: var(--ink); line-height: 1.45; }
+.sp .jb-lists li::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: var(--ink2); margin-top: 7px; }
+.sp .jb-lists .nice li { color: var(--ink2); }
+.sp .jb-lists .nice li::before { background: transparent; box-shadow: inset 0 0 0 1.2px var(--ink3); }
+/* The full posting, one step away */
+.sp .jb-src { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px 0 14px; border-radius: 12px; background: var(--sub); color: var(--ink2); }
+.sp .jb-src > .ms { color: var(--ink3); font-size: 17px; }
+.sp .jb-src .t { color: var(--ink); font-weight: 500; white-space: nowrap; flex: none; }
+.sp .jb-src .how { color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
+.sp .jb-src.hov { background: var(--sub2); }
+.sp .jb-src .tool { height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 999px; color: var(--ink2); font-size: 12.5px; white-space: nowrap; flex: none; }
+.sp .jb-src .tool .ms { font-size: 16px; color: var(--ink3); }
+.sp .jb-src .tool.hov { background: var(--sub2); color: var(--ink); }
+.sp .jb-nojd { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); }
+.sp .jb-nojd .ms { font-size: 16px; }
+/* The full text, unfolded in place */
+.sp .jb-fullhead { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 12px; background: var(--sub2); color: var(--ink2); flex: none; }
+.sp .jb-full { color: var(--ink); font-size: 14px; line-height: 1.62; max-width: 600px; }
+.sp .jb-full h3 { font-size: 13px; font-weight: 600; margin: 18px 0 6px; color: var(--ink); letter-spacing: 0; }
+.sp .jb-full p { margin: 0 0 12px; }
+.sp .jb-full ul { margin: 0 0 12px; padding-left: 18px; }
+.sp .jb-full li { margin: 0 0 4px; }
+.sp .jb-full li::marker { color: var(--ink3); }
+.sp .jb-full .kept { color: var(--ink3); font-size: 12.5px; }
+
+/* Timeline: oldest first, each event opening its email */
+.sp .jb-tl { display: flex; flex-direction: column; margin: 6px -8px 0; }
+.sp .jb-ev { display: grid; grid-template-columns: 52px 14px minmax(0,1fr) auto; column-gap: 10px; align-items: center; min-height: 38px; padding: 0 6px 0 8px; border-radius: 10px; color: var(--ink); position: relative; }
+.sp .jb-ev .d { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.sp .jb-ev .d.now { color: var(--ink); }
+.sp .jb-ev .node { position: relative; height: 38px; display: grid; place-items: center; }
+.sp .jb-ev .node::before { content: ""; position: absolute; left: 6.5px; width: 1px; top: 0; bottom: 0; background: var(--hair); }
+.sp .jb-ev.first .node::before { top: 50%; }
+.sp .jb-ev.last .node::before { bottom: 50%; }
+.sp .jb-ev .node i { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--ink2); box-shadow: 0 0 0 3px var(--page); }
+.sp .jb-ev.quiet .node i { width: 5px; height: 5px; background: var(--page); box-shadow: inset 0 0 0 1.2px var(--ink3), 0 0 0 3px var(--page); }
+.sp .jb-ev.proc .node i { background: var(--ink); }
+.sp .jb-ev .t { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sp .jb-ev .t .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sp .jb-ev.quiet .t .s { color: var(--ink3); font-size: 12.5px; }
+.sp .jb-ev .t .k { font-size: 12px; color: var(--ink3); flex: none; }
+.sp .jb-ev .go { display: flex; align-items: center; gap: 2px; opacity: 0; }
+.sp .jb-ev.hov { background: var(--sub); }
+.sp .jb-ev.hov .node i { box-shadow: 0 0 0 3px color-mix(in srgb, var(--page) 100%, transparent); }
+.sp .jb-ev.hov .go, .sp .jb-ev.menu .go { opacity: 1; }
+.sp .jb-ev.menu { background: var(--sub2); }
+.sp .jb-ev .gone { color: var(--ink3); font-size: 12px; }
+/* Applied before at this company */
+.sp .jb-before { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink2); }
+.sp .jb-before > .ms { color: var(--ink3); font-size: 17px; }
+.sp .jb-before .t { color: var(--ink); }
+.sp .jb-before.hov { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.sp .jb-before .chev { color: var(--ink3); font-size: 18px; margin-left: auto; }
+
+/* ---------- Menus ---------- */
+.sp .jb-menu { position: absolute; z-index: 8; padding: 6px; display: flex; flex-direction: column; gap: 1px; }
+.sp .jb-menu .sep { height: 1px; background: var(--hair); margin: 5px 6px; }
+.sp .jb-menu .lab { height: 26px; display: flex; align-items: center; padding: 0 12px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.sp .jb-menu .menu-i { font-size: 13px; }
+.sp .jb-menu .menu-i .two { display: flex; flex-direction: column; gap: 0; min-width: 0; line-height: 1.25; }
+.sp .jb-menu .menu-i .two .s { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sp .jb-menu .menu-i.tall { height: 44px; }
+.sp .jb-menu .field { height: 32px; margin: 0 0 4px; }
+
+/* ---------- In mail: the JD chip and the Applied before badge ---------- */
+.sp .jb-chip { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink2); font-size: 12.5px; white-space: nowrap; align-self: flex-start; }
+.sp .jb-chip > .ms { font-size: 15px; color: var(--ink3); }
+.sp .jb-chip .t { color: var(--ink); }
+.sp .jb-chip .chev { font-size: 16px; color: var(--ink3); }
+.sp .jb-chip.hov { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }
+.sp .jb-chip.open { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.sp .jb-chip.open .chev { transform: rotate(180deg); }
+.sp .jb-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px 0 6px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+.sp .jb-badge .ms { font-size: 13px; color: var(--ink3); }
+.sp .jb-badge.hov { box-shadow: inset 0 0 0 1px var(--edgeHover); color: var(--ink); background: var(--sub); }
+.sp .jb-badge.lg { height: 26px; padding: 0 10px 0 8px; font-size: 12.5px; gap: 6px; }
+.sp .jb-badge.lg .ms { font-size: 15px; }
+/* The JD popover the chip opens */
+.sp .jb-pop { position: absolute; z-index: 7; width: 460px; display: flex; flex-direction: column; overflow: hidden; }
+.sp .jb-pop .ph-head { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+.sp .jb-pop .co { color: var(--ink3); font-size: 12.5px; display: flex; gap: 6px; align-items: center; }
+.sp .jb-pop .ti { color: var(--ink); font-size: 15px; font-weight: 500; letter-spacing: -.005em; }
+.sp .jb-pop .bd { padding: 2px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.sp .jb-pop .want { color: var(--ink); font-size: 13px; line-height: 1.5; margin: 0; }
+.sp .jb-pop .jb-facts { font-size: 12.5px; gap: 4px 14px; }
+.sp .jb-pop .jb-lists { gap: 18px; }
+.sp .jb-pop .jb-lists li { font-size: 12.5px; line-height: 1.4; }
+.sp .jb-pop .jb-lists li::before { margin-top: 6px; }
+.sp .jb-pop .ft { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 16px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* ---------- States ---------- */
+.sp .bar .prog { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--sub2); }
+.sp .bar .prog > i { display: block; height: 100%; background: var(--ink3); border-radius: 0 2px 2px 0; }
+.sp .bar { position: relative; }
+.sp .skel { height: 10px; border-radius: 999px; background: var(--sub2); display: block; }
+.sp .jb-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink3); padding-bottom: 80px; }
+.sp .jb-empty .line { display: flex; align-items: center; gap: 12px; color: var(--ink2); }
+.sp .jb-empty .line .ms { font-size: 20px; color: var(--ink3); }
+.sp .jb-empty .lnk { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -4px; }
+.sp .jb-empty .lnk.hov { background: var(--sub2); }
+
+/* ---------- Spec sheets (the states strip) ---------- */
+.sp .spec { padding: 40px 48px; display: flex; flex-direction: column; gap: 26px; width: 100%; height: 100%; overflow: hidden; }
+.sp .spec h1 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
+.sp .spec .sub { color: var(--ink3); margin-top: 4px; }
+.sp .spec-row { display: grid; grid-template-columns: 180px repeat(5, minmax(0,1fr)); column-gap: 20px; align-items: center; }
+.sp .spec-row > .nm { color: var(--ink2); font-size: 12.5px; line-height: 1.35; }
+.sp .spec-row > .nm .ink3 { display: block; font-size: 12px; }
+.sp .spec-head { display: grid; grid-template-columns: 180px repeat(5, minmax(0,1fr)); column-gap: 20px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); padding-bottom: 8px; border-bottom: 1px solid var(--hair); }
+.sp .cell-demo { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sp .cell-demo .cap { font-size: 11.5px; color: var(--ink3); font-variant-numeric: tabular-nums; }
+.sp .spec-sec { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-top: 6px; }
+
+/* ---------- Round 4's review (decisions 64–73) ---------- */
+/* A tracked application: Applied is its email's date (decision 69) */
+.sp .jb-first { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; }
+.sp .jb-first .ms { font-size: 16px; }
+/* A lookup under way: the shared spinner (900 ms a turn) and the JD's skeleton, breathing */
+.sp .jb-spin { font-size: 16px; color: var(--ink3); }
+.sp .jb-skel { display: flex; flex-direction: column; gap: 9px; max-width: 600px; }
+/* The toast, at the top centre in the header's band (#92) */
+.sp .toast.top { top: 8px; bottom: auto; z-index: 9; font-size: 13px; color: var(--ink); }
+.sp .toast.top .ms { font-size: 16px; color: var(--good); }
+/* A segment never wraps; in a narrow window the search field gives way first (#140) */
+.sp .seg > span { white-space: nowrap; flex: none; }
