@@ -39,6 +39,10 @@ export interface TriageWorkerOptions {
   timeoutMs?: number;
   // Sends new Attention and FYI mail; none without it.
   notifier?: Notifier | null;
+  // Told each time an email is sorted, after it's written: a module that reads mail as triage left
+  // it (Jobs, wired in server.ts) learns there's something to read. It names no module; it should
+  // return at once, and what it throws is logged, never failing the email's triage.
+  onSorted?: ((messageId: number) => void) | null;
 }
 
 // Mail that waited longer than this for triage (an outage, a key added later) is sorted quietly,
@@ -92,17 +96,19 @@ export class TriageWorker implements JobWorker {
   private readonly concurrency: number;
   private readonly timeoutMs: number | undefined;
   private readonly notifier: Notifier | null;
+  private readonly onSorted: ((messageId: number) => void) | null;
   private lastResortAt = Number.NEGATIVE_INFINITY;
   private active = 0;
   private readonly waiting: (() => void)[] = [];
 
-  constructor({store, endpoints = AI_ENDPOINTS, resortEveryMs = 5 * 60_000, concurrency = 4, timeoutMs, notifier = null}: TriageWorkerOptions) {
+  constructor({store, endpoints = AI_ENDPOINTS, resortEveryMs = 5 * 60_000, concurrency = 4, timeoutMs, notifier = null, onSorted = null}: TriageWorkerOptions) {
     this.store = store;
     this.endpoints = endpoints;
     this.resortEveryMs = resortEveryMs;
     this.concurrency = concurrency;
     this.timeoutMs = timeoutMs;
     this.notifier = notifier;
+    this.onSorted = onSorted;
   }
 
   /** The engine's tick: queue Unsorted mail again when it's time. */
@@ -177,7 +183,14 @@ export class TriageWorker implements JobWorker {
       }
       failJob(store, job, error);
     }
-    if (sorted) await this.notifyMail(message.id);
+    if (!sorted) return;
+    try {
+      this.onSorted?.(message.id);
+    } catch (error) {
+      // Mail goes on whatever the listener does.
+      console.error(`After sorting email ${message.id}`, error);
+    }
+    await this.notifyMail(message.id);
   }
 
   /**

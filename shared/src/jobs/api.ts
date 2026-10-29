@@ -140,11 +140,28 @@ export const jobCountsSchema = z.strictObject({
 export type JobCountsOut = z.infer<typeof jobCountsSchema>;
 
 /**
+ * Jobs's reading of mail (J2; board 38b, drawn in J8): emails triage has sorted that Jobs hasn't read
+ * yet, and whether the AI is down: "5 emails not read yet, Anthropic unreachable since 8:52 AM,
+ * retrying". `waiting` is briefly above 0 as mail arrives; the line shows only while `down`.
+ */
+export const jobsReadingSchema = z.strictObject({
+  waiting: z.int().nonnegative(),
+  state: z.enum(['healthy', 'down']),
+  // The first failure since the last success, and the provider's words; null while healthy.
+  since: instant.nullable(),
+  reason: z.string().nullable(),
+  // False when it waits for a key in Settings › AI rather than retrying.
+  retrying: z.boolean(),
+});
+export type JobsReadingOut = z.infer<typeof jobsReadingSchema>;
+
+/**
  * GET /api/jobs: the page's two numbers and nothing else (D314), Needs you (oldest first, as they
  * came) and From history (newest first), and every application, newest first by Applied.
  */
 export const jobsPageSchema = z.strictObject({
   enabled: z.boolean(),
+  reading: jobsReadingSchema,
   counts: jobCountsSchema,
   weeks: z.array(jobWeekSchema),
   needs_you: z.array(needsYouItemSchema),

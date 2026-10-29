@@ -12,6 +12,7 @@ import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
 import {existingMessages} from './mail.ts';
+import {readingStatus} from './readerState.ts';
 import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
 import * as j from './schema.ts';
 
@@ -91,6 +92,7 @@ export function jobsPage(store: Store): JobsPageOut {
   const history = open.filter(item => item.fromHistory).sort((a, b) => b.at.localeCompare(a.at) || b.id - a.id);
   return {
     enabled: jobsEnabled(store),
+    reading: readingStatus(store),
     counts: countsByStatus(rows),
     weeks: weeklyCounts(applications.map(application => application.appliedAt), now, store.timeZone),
     needs_you: today.map(itemOf),

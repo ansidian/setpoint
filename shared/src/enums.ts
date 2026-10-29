@@ -121,11 +121,13 @@ export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 /**
  * Bring your own key: the model providers, and what each call was for (the AI usage ledger). N3 adds
- * News's own rows: each article read, grouping, stories written, and the hourly ranking (D90).
+ * News's own rows: each article read, grouping, stories written, and the hourly ranking (D90). Jobs
+ * (J2, a wiring point) adds its three parts (D315): each email read, finding JDs and reading JDs; the
+ * last two are J3's, named now so the ledger's table is rebuilt once. Removing Jobs may leave them.
  */
 export const AI_PROVIDERS = ['anthropic', 'openai'] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
-export const AI_PURPOSES = ['triage', 'alfred', 'news_articles', 'news_grouping', 'news_stories', 'news_ranking'] as const;
+export const AI_PURPOSES = ['triage', 'alfred', 'news_articles', 'news_grouping', 'news_stories', 'news_ranking', 'jobs_emails', 'jobs_finding_jds', 'jobs_reading_jds'] as const;
 export type AiPurpose = (typeof AI_PURPOSES)[number];
 
 /**

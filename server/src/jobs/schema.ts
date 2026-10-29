@@ -11,6 +11,8 @@ import {
   JD_LOOKUPS, JD_SOURCES, JOB_EVENT_KINDS, JOB_HAND_FIELDS, JOB_STATUS_SETTERS, JOB_STATUSES, JOB_WORKPLACES, NEEDS_YOU_KINDS, NEEDS_YOU_REASONS,
   type JobsReadAccount,
 } from '@setpoint/shared';
+import {PROVIDER_ERROR_KINDS} from '../domain/retry.ts';
+import {JOB_EMAIL_EVENTS} from './prompt.ts';
 
 const quoted = (values: readonly string[]) => sql.raw(values.map(value => `'${value}'`).join(', '));
 
@@ -44,6 +46,9 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   reappliedFromId: integer('reapplied_from_id').references((): AnySQLiteColumn => jobsApplications.id, {onDelete: 'set null'}),
   // Made by Track this: Applied is its email's date (decision 69).
   firstSeenInEmail: integer('first_seen_in_email', {mode: 'boolean'}).notNull().default(false),
+  // Its confirmation named no company (Indeed's "Indeed Application: <title>") and no match email
+  // paired with it yet: `company` holds the platform until one does (J2).
+  companyUnknown: integer('company_unknown', {mode: 'boolean'}).notNull().default(false),
   // Where its JD lookup stands; a saved posting is `found` (jobs_postings).
   jdLookup: text('jd_lookup', {enum: JD_LOOKUPS}).notNull().default('none'),
   jdLookupAt: text('jd_lookup_at'),
@@ -149,13 +154,30 @@ export const jobsNeedsYou = sqliteTable('jobs_needs_you', {
   check('jobs_needs_you_jd', sql`${table.kind} <> 'jd_to_confirm' or ${table.applicationId} is not null`),
 ]);
 
-/** Every email Jobs has read, once (decision 61): never read or charged for again. */
+/**
+ * Every email Jobs has read, once (decision 61): never read or charged for again. J2 keeps what the
+ * model read in it (null for the seed's and for an answer it couldn't use), so the rules can run
+ * again without asking (Indeed's pairs, blocked emails, J6's corrections) and J4 can re-run history.
+ */
 export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
   messageId: integer('message_id').primaryKey(),
   readAt: text('read_at').notNull(),
   // What it made: an application, an event, a Needs you item, or nothing.
   outcome: text('outcome', {enum: ['application', 'event', 'needs_you', 'ignored']}).notNull(),
-});
+  // The email's own date, and what the model read (./prompt.ts): its event, the company it names
+  // (null when it names none), the role and its key, the requisition ID and the one line.
+  at: text('at'),
+  event: text('event', {enum: JOB_EMAIL_EVENTS}),
+  company: text('company'),
+  title: text('title'),
+  titleKey: text('title_key'),
+  requisitionId: text('requisition_id'),
+  line: text('line'),
+  // The application it went to, or made; a Needs you item's is null until J6 assigns it.
+  applicationId: integer('application_id').references(() => jobsApplications.id, {onDelete: 'set null'}),
+}, table => [
+  index('jobs_emails_read_event').on(table.event, table.at),
+]);
 
 /** An email Not an application blocked (decision 67): it never makes an application again. */
 export const jobsBlockedEmails = sqliteTable('jobs_blocked_emails', {
@@ -180,8 +202,29 @@ export const jobsHandSet = sqliteTable('jobs_hand_set', {
 export const jobsSettings = sqliteTable('jobs_settings', {
   id: integer('id').primaryKey(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(false),
+  // When it was last turned on: mail received from then on is read as it's triaged (J2); what came
+  // before is the history pass's (J4). Null reads as `updated_at`.
+  enabledAt: text('enabled_at'),
   accounts: text('accounts', {mode: 'json'}).$type<JobsReadAccount[]>().notNull(),
   updatedAt: text('updated_at').notNull(),
 }, table => [
   check('jobs_settings_one', sql`${table.id} = 1`),
+]);
+
+/**
+ * How Jobs's reading of mail stands (J2), one row, as triage's health: down while its last model call
+ * failed (or there was no key to call with), as of its last success. Emails wait meanwhile, counted
+ * on the page ("5 emails not read yet"), and are read once it's back.
+ */
+export const jobsReader = sqliteTable('jobs_reader', {
+  id: integer('id').primaryKey(),
+  lastSuccessAt: text('last_success_at'),
+  lastFailureAt: text('last_failure_at'),
+  // The first failure since the last success: "Anthropic unreachable since 8:52 AM".
+  failingSince: text('failing_since'),
+  lastError: text('last_error'),
+  // The failure's kind (src/domain/retry.ts): `auth` waits for a key; the rest are retried.
+  lastErrorKind: text('last_error_kind', {enum: PROVIDER_ERROR_KINDS}),
+}, table => [
+  check('jobs_reader_one', sql`${table.id} = 1`),
 ]);

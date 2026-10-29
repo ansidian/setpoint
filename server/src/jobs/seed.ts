@@ -471,7 +471,7 @@ export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: S
 
   sqlite.transaction(() => {
     db.insert(j.jobsSettings).values({
-      id: 1, enabled: true, updatedAt: turnedOn,
+      id: 1, enabled: true, enabledAt: turnedOn, updatedAt: turnedOn,
       accounts: [{account_id: accounts.get('Jobs')!, reads: 'every'}, {account_id: accounts.get('Business')!, reads: 'career'}],
     }).run();
 

@@ -32,7 +32,7 @@ import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
-import {jobsApi, migrateJobs} from './jobs/index.ts';
+import {JobsReader, jobsApi, migrateJobs} from './jobs/index.ts';
 import {TriageWorker} from './triage/worker.ts';
 
 const config = loadConfig();
@@ -61,7 +61,9 @@ const adapters = new Adapters({
 // B3: triage runs as jobs on the same engine; with no AI key, new mail waits in Unsorted.
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
 const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl, openai: config.devAiUrl} : AI_ENDPOINTS;
-const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier});
+// Jobs reads what triage sorts in the accounts it lists (J2): triage's onSorted nudges its worker.
+const jobsReader = new JobsReader({store, endpoints: aiEndpoints});
+const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier, onSorted: () => jobsReader.nudge()});
 // And, once backfills are done and a key is set, the one-time model pass over history (D20).
 const history = new HistoryExtractor({store, endpoints: aiEndpoints});
 // News: its sources read on the same engine through their adapters (N2), each new article's page
@@ -72,7 +74,7 @@ const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production
 // N3: what News reads is sorted, grouped, written and ranked on the same engine, with the keys in
 // Settings › AI (D90); a dev run asks the loopback fake, if anything.
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
-const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, news, newsSort]});
+const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, news, newsSort, jobsReader]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
 const app = createApp({

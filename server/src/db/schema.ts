@@ -435,8 +435,9 @@ export const syncCursors = sqliteTable('sync_cursors', {
 // B3 adds `triage` (one email's triage, retried by the same policy while its models are down) and
 // `extract` (one backfilled email through the history extraction pass); N1 `news` (one News source's
 // fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly ranking,
-// run by src/news/sortWorker.ts).
-export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort'] as const;
+// run by src/news/sortWorker.ts); Jobs's `jobs_read` (J2, a wiring point: Jobs reading what triage
+// sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value).
+export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read'] as const;
 export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 
 /**
