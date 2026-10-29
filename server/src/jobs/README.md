@@ -130,8 +130,11 @@ the lint rule still refuses an import of Jobs from triage.
   again while it runs.
 - **Unsorted mail** in its window is waited for: triage sorts it again once it's back, and only its
   kind says whether a Career-only account's email is one to read. Backfilled mail is sorted as it
-  lands (rules only), so it never waits; the Jobs account's is read whatever kind the rules gave it,
-  and a Career-only account's only when the rules sorted it Career. An email the provider refuses
+  lands (rules only), so it never waits; the Jobs account's is read whatever kind the rules gave it.
+  In a Career-only account backfilled mail is read when it's Career, or typed a confirmation or
+  rejection (by triage's extraction, or the rules until it runs), or sent from a hiring platform's
+  mail domain (mail.ts `HIRING_PLATFORM_SENDERS`), since the rules make few emails Career and the
+  extraction never changes the kind (D355). Live mail there stays Career only (decision 56). An email the provider refuses
   outright (a 400) is passed over, the pass ends without it, and a later pass tries it again.
 - **JDs:** the applications it makes start at `jd_lookup = 'none'`, so no lookup runs while a later
   email may still close them. At its end (`finishHistory`) the open ones never looked up become

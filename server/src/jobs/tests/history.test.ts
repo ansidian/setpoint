@@ -37,7 +37,10 @@ const toolOf = (request: FakeRequest): string => request.body.tools?.map((tool: 
 const subjectOf = (request: FakeRequest) => /^Subject: (.*)$/m.exec(request.input)?.[1] ?? '';
 const companyOf = (request: FakeRequest) => /^Company: (.*)$/m.exec(request.input)?.[1] ?? '';
 
-/** What the pass reads: every email in Jobs, Business's Career (City Power & Light's, and the backfill's rejection). */
+/**
+ * What the pass reads: every email in Jobs; in Business, Career (City Power & Light's, the backfill's
+ * rejection) and the backfill's confirmation and its hiring platform's interview (D355).
+ */
 const READ = HISTORY_EMAILS.filter(email => email.jobs !== null);
 const NEVER_READ = HISTORY_EMAILS.filter(email => email.jobs === null).map(email => email.key);
 
@@ -184,6 +187,7 @@ describe('a recorded history (Done when)', () => {
       {company: 'Wingtip Toys', title: 'Support Engineer', requisitionId: null, status: 'rejected', step: null, account: 'Jobs', reappliedFrom: null},
       {company: 'Coho Winery', title: 'Marketing Analyst', requisitionId: null, status: 'rejected', step: null, account: 'Jobs', reappliedFrom: null},
       {company: 'Blue Yonder Airlines', title: 'IT Support Specialist', requisitionId: null, status: 'applied', step: null, account: 'Jobs', reappliedFrom: null},
+      {company: 'School of Fine Art', title: 'Records Clerk', requisitionId: null, status: 'rejected', step: null, account: 'Business', reappliedFrom: null},
       {company: 'Relecloud', title: 'Cloud Support Associate', requisitionId: 'R-310', status: 'applied', step: null, account: 'Jobs', reappliedFrom: null},
       {company: 'Relecloud', title: 'Cloud Support Associate', requisitionId: 'R-322', status: 'applied', step: null, account: 'Jobs', reappliedFrom: null},
       {company: 'Fourth Coffee', title: 'Junior Data Analyst', requisitionId: null, status: 'rejected', step: null, account: 'Jobs', reappliedFrom: null},
@@ -195,7 +199,7 @@ describe('a recorded history (Done when)', () => {
     ]);
     // Each Applied date is its confirmation's.
     const at = (key: string) => HISTORY_EMAILS.find(email => email.key === key)!.at;
-    expect(apps.map(row => row.appliedAt)).toEqual(['trey-applied', 'wingtip-applied', 'coho-applied', 'blueyonder-applied', 'relecloud-310', 'relecloud-322',
+    expect(apps.map(row => row.appliedAt)).toEqual(['trey-applied', 'wingtip-applied', 'coho-applied', 'blueyonder-applied', 'school-applied', 'relecloud-310', 'relecloud-322',
       'fourth-applied', 'tailspin-applied', 'city-applied', 'proseware-applied', 'fourth-reapplied', 'lucerne-applied'].map(at));
 
     // Updates found the confirmations read before them, though stored before them.
@@ -203,14 +207,16 @@ describe('a recorded history (Done when)', () => {
     expect(timeline(2)).toEqual([['applied', s.ids.get('coho-applied')], ['assessment', s.ids.get('coho-assessment')], ['rejection', s.ids.get('coho-rejected')]]);
     expect(s.ids.get('coho-rejected')!).toBeLessThan(s.ids.get('coho-applied')!);
     expect(timeline(1).map(([kind]) => kind)).toEqual(['applied', 'rejection']);
-    expect(timeline(6).map(([kind]) => kind)).toEqual(['applied', 'verification', 'form', 'rejection']);
-    expect(timeline(7).map(([kind]) => kind)).toEqual(['match', 'applied']);
-    expect(timeline(10).map(([kind]) => kind)).toEqual(['applied', 'interview']);
+    // Business's backfilled confirmation, typed Other by the rules, found its rejection (D355).
+    expect(timeline(4)).toEqual([['applied', s.ids.get('school-applied')], ['rejection', s.ids.get('school-rejected')]]);
+    expect(timeline(7).map(([kind]) => kind)).toEqual(['applied', 'verification', 'form', 'rejection']);
+    expect(timeline(8).map(([kind]) => kind)).toEqual(['match', 'applied']);
+    expect(timeline(11).map(([kind]) => kind)).toEqual(['applied', 'interview']);
 
     // The page: Ghosted from the clock, the unsure in From history, nothing in today's Needs you.
     const page = await s.page();
     expect(page.history).toEqual({state: 'done', read: READ.length, total: READ.length, started_at: TURNED_ON, finished_at: TURNED_ON});
-    expect(page.counts).toEqual({all: 12, ghosted: 6, by_status: {applied: 7, in_process: 2, offer: 0, rejected: 3, withdrawn: 0}});
+    expect(page.counts).toEqual({all: 13, ghosted: 6, by_status: {applied: 7, in_process: 2, offer: 0, rejected: 4, withdrawn: 0}});
     expect(page.rows.filter(row => row.ghosted).map(row => row.company).sort())
       .toEqual(['Blue Yonder Airlines', 'City Power & Light', 'Relecloud', 'Relecloud', 'Tailspin Toys', 'Trey Research']);
     expect(page.needs_you).toEqual([]);
@@ -219,6 +225,7 @@ describe('a recorded history (Done when)', () => {
       ['jd_to_confirm', 'unsure_posting', 'Lucerne Publishing', 'Junior Developer', true],
       ['update_to_assign', 'matches_several', 'Relecloud', 'Cloud Support Associate', true],
       ['email_to_track', 'no_application', 'Alpine Ski House', 'Operations Analyst', true],
+      ['email_to_track', 'no_application', 'Graphic Design Institute', 'Program Coordinator', true],
     ]);
     expect(page.from_history[1]!.candidates.map(candidate => candidate.title)).toEqual(['Junior Developer', 'Junior Developer, Digital']);
 
@@ -240,7 +247,10 @@ describe('a recorded history (Done when)', () => {
     expect(s.answered.sort()).toEqual(READ.map(email => email.subject).sort());
     expect(s.ledger('jobs_emails')).toHaveLength(READ.length);
     for (const key of NEVER_READ) expect(s.read(key)).toBeUndefined();
-    expect(s.read('school-rejected')).toMatchObject({outcome: 'ignored', event: 'rejection'});
+    expect(s.read('school-rejected')).toMatchObject({outcome: 'event', event: 'rejection'});
+    expect(s.read('graphic-interview')).toMatchObject({outcome: 'needs_you', event: 'interview'});
+    // The backfill's newsletter, and live Business mail typed a confirmation but not Career, stay unread.
+    expect(NEVER_READ).toEqual(['business-order', 'nod-digest', 'margies-booking', 'personal-applied']);
     expect(s.read('contoso-recruiter')).toMatchObject({outcome: 'ignored'});
 
     // A JD to confirm the history pass's lookup made is From history's; Look it up by hand makes today's.
@@ -249,7 +259,7 @@ describe('a recorded history (Done when)', () => {
     await s.drain();
     const after = await s.page();
     expect(after.needs_you.map(item => [item.kind, item.company, item.from_history])).toEqual([['jd_to_confirm', 'Lucerne Publishing', false]]);
-    expect(after.from_history.map(item => item.company)).toEqual(['Proseware', 'Relecloud', 'Alpine Ski House']);
+    expect(after.from_history.map(item => item.company)).toEqual(['Proseware', 'Relecloud', 'Alpine Ski House', 'Graphic Design Institute']);
   });
 
   test('a second turn-on reads nothing, and off then on again leaves the pass as it was', async () => {
@@ -335,7 +345,7 @@ describe('durable, with its progress (Done when)', () => {
     // Every email asked about once, and charged for once, the arrival included.
     expect(s.answered.sort()).toEqual([...READ.map(email => email.subject), arrival.subject].sort());
     expect(s.ledger('jobs_emails')).toHaveLength(READ.length + 1);
-    expect(page.counts.all).toBe(13);
+    expect(page.counts.all).toBe(14);
     // The arrival is today's: looked up as it came, with nothing of it in From history.
     expect(s.read('woodgrove-applied')).toMatchObject({outcome: 'application'});
     expect(page.rows.find(row => row.company === 'Woodgrove Bank')!.jd.state).toBe('not_found');

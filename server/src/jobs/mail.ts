@@ -77,11 +77,34 @@ export interface ReadWindow {
 // longer than this (triage down, a key missing) stops holding them.
 const HOLD_BEHIND_UNSORTED_MS = 24 * 60 * 60_000;
 
+/**
+ * Hiring platforms' own mail domains, as the part before the top-level domain, matched at the end
+ * ("us.greenhouse-mail.io" is Greenhouse's, "hire.lever.co" Lever's). Kept short: the platforms
+ * applications come through, not job boards' alerts.
+ */
+export const HIRING_PLATFORM_SENDERS = ['greenhouse-mail', 'greenhouse', 'hire.lever', 'ashbyhq', 'myworkday', 'icims', 'smartrecruiters', 'workablemail'] as const;
+
+/** The sender's domain is a hiring platform's: `…@[sub.]<name>.<tld>`. */
+const fromHiringPlatform = or(...HIRING_PLATFORM_SENDERS.flatMap(name => [
+  sql`lower(${t.messages.fromAddress}) like ${`%@${name}.%`}`, sql`lower(${t.messages.fromAddress}) like ${`%.${name}.%`}`,
+]));
+
+/**
+ * A Career-only account's email Jobs reads (decision 56, D355): triage's Career; and, for backfilled
+ * mail only, which the rules sorted without a model and whose kind triage's extraction never changes,
+ * one typed a confirmation or rejection (by the extraction, or the rules until it runs) or sent by a
+ * hiring platform. Live mail stays Career only.
+ */
+const careerMail = or(
+  eq(t.messages.kind, 'career'),
+  and(eq(t.messages.backfill, true), or(inArray(t.messages.type, ['confirmation', 'rejection']), fromHiringPlatform)),
+);
+
 function windowWhere(window: ReadWindow): SQL | undefined {
   const every = window.accounts.filter(account => account.reads === 'every').map(account => account.account_id);
   const career = window.accounts.filter(account => account.reads === 'career').map(account => account.account_id);
   return and(
-    or(every.length ? inArray(t.messages.accountId, every) : sql`0`, career.length ? and(inArray(t.messages.accountId, career), eq(t.messages.kind, 'career')) : sql`0`),
+    or(every.length ? inArray(t.messages.accountId, every) : sql`0`, career.length ? and(inArray(t.messages.accountId, career), careerMail) : sql`0`),
     window.from ? gte(t.messages.receivedAt, window.from) : undefined,
     window.before ? lt(t.messages.receivedAt, window.before) : undefined,
   );

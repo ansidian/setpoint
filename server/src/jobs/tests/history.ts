@@ -3,7 +3,8 @@
 // backfill, sorted as it landed by triage's rules-only pass (its kind and organisation guessed from
 // the words and the sender); from Jul 1 triage's model sorted each email as it came (its fields
 // here). `jobs` is what Haiku answers for Jobs, null for an email Jobs must never ask about: Business
-// mail triage didn't sort as Career, and an account Jobs doesn't list. Companies are Microsoft's
+// mail that isn't Career (nor, in the backfill, typed a confirmation or rejection or sent by a hiring
+// platform, D355), and an account Jobs doesn't list. Companies are Microsoft's
 // fictional ones and every address an example domain. tests/history.test.ts serves the answers from
 // the fake Anthropic and states what they make.
 export interface HistoryEmail {
@@ -61,8 +62,8 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
   {
     key: 'school-applied', account: 'Business', at: '2026-06-10T16:00:00.000Z', from: ['School of Fine Art HR', 'hr@schooloffineart.example'],
     subject: 'Application received: Records Clerk', body: 'Your application for Records Clerk has been received.',
-    // Backfilled into a Career-only account, sorted Other by the rules: never read.
-    jobs: null,
+    // Backfilled into a Career-only account, sorted Other by the rules but typed a confirmation: read (D355).
+    jobs: jobs('confirmation', 'School of Fine Art', 'Records Clerk'),
   },
   {
     key: 'business-order', account: 'Business', at: '2026-06-12T16:00:00.000Z', from: ['Wide World Importers', 'orders@wideworldimporters.example'],
@@ -78,6 +79,18 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
     key: 'relecloud-322', account: 'Jobs', at: '2026-06-16T16:00:00.000Z', from: ['Relecloud Recruiting', 'no-reply@relecloud.example'],
     subject: 'Application received: Cloud Support Associate (R-322)', body: 'We received your application for Cloud Support Associate, requisition R-322.',
     jobs: jobs('confirmation', 'Relecloud', 'Cloud Support Associate', 'R-322'),
+  },
+  {
+    key: 'graphic-interview', account: 'Business', at: '2026-06-17T16:00:00.000Z', from: ['Graphic Design Institute', 'no-reply@hire.lever.example'],
+    subject: 'Interview invitation: Program Coordinator', body: 'We would like to invite you to interview for Program Coordinator on Friday, June 19 at 2:00 PM.',
+    // Backfilled into a Career-only account, sorted Other with no type, but sent by a hiring platform: read (D355).
+    jobs: jobs('interview', 'Graphic Design Institute', 'Program Coordinator', null, 'Interview Fri Jun 19, 2:00 PM'),
+  },
+  {
+    key: 'nod-digest', account: 'Business', at: '2026-06-18T16:00:00.000Z', from: ['Nod Publishers', 'news@nodpublishers.example'],
+    subject: 'Your monthly digest', body: 'This month\'s new titles and events.',
+    // Backfilled into a Career-only account, a newsletter from no platform: never read.
+    jobs: null,
   },
   {
     key: 'coho-rejected', account: 'Jobs', at: '2026-06-20T16:00:00.000Z', from: ['Coho Winery', 'jobs@cohowinery.example'],
@@ -130,6 +143,13 @@ export const HISTORY_EMAILS: HistoryEmail[] = [
     subject: 'Your application to Litware', body: 'We have filled the QA Engineer role. Thank you for applying.',
     triage: fyi('career', 'rejection', 'Litware', null, 'QA Engineer role filled'),
     jobs: jobs('rejection', 'Litware', 'QA Engineer', null, 'Role filled'),
+  },
+  {
+    key: 'margies-booking', account: 'Business', at: '2026-07-15T16:00:00.000Z', from: ['Margie\'s Travel', 'bookings@margiestravel.example'],
+    subject: 'Your booking is confirmed', body: 'Your hotel booking in Portland is confirmed for August 3.',
+    triage: fyi('other', 'confirmation', 'Margie\'s Travel', null, 'Hotel booking confirmed'),
+    // Live mail in a Career-only account, typed a confirmation but not Career: never read (decision 56).
+    jobs: null,
   },
   {
     key: 'tailspin-match', account: 'Jobs', at: '2026-07-20T14:00:00.000Z', from: ['Indeed', 'alert@indeed.example'],
