@@ -5,7 +5,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Sources of truth
 
-- [BRIEF.md](BRIEF.md) owns scope, the data model, integrations and the cutover (decisions 1–63).
+- [BRIEF.md](BRIEF.md) owns scope, the data model, integrations and the cutover (decisions 1–73).
 - [DESIGN.md](DESIGN.md) owns what's on screen and how it behaves. It wins over the export in
   [design-export/](design-export/README.md); its Overrides list every known case.
 - [BUILD-PLAN.md](BUILD-PLAN.md) owns the slices, their order and their Done-when lists.

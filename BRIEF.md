@@ -523,7 +523,9 @@ and never touches the calendar. Its only signal is the Needs you count beside Jo
 Mail keeps handling the emails themselves exactly as before.
 
 Desktop web only (decision 49). It isn't in the phone's navigation, it has no phone layout, and the
-native iPhone app doesn't show it. Porting is a later decision.
+native iPhone app doesn't show it. Porting is a later decision. A narrow desktop window (640–1099
+px) is still the desktop: Jobs has its slot in the icon rail after News, and the detail opens over
+the table, as the reading pane does there (decision 71).
 
 ### Where it reads (decision 56)
 
@@ -586,8 +588,9 @@ The model checks each candidate against the company, normalised title, location 
 - **Confident:** saved silently.
 - **Unsure:** nothing is saved; up to three candidates wait in Needs you as "Is this the posting?",
   with "None of these".
-- **Not found:** the application says "No JD found". No retry, no paste field. A lookup that
-  *failed* (network, rate limit) isn't a "not found": it's retried.
+- **Not found:** the application says "No JD found", with a quiet **Look it up** to try again by
+  hand (as on any application, decision 57). Jobs never retries on its own, and there's no paste
+  field. A lookup that *failed* (network, rate limit) isn't a "not found": it's retried.
 
 **A saved JD holds:**
 - the posting's full text, cleaned to readable markdown, never overwritten
@@ -611,7 +614,8 @@ Not now: matching it against Andy's résumé.
 - **Ghosted** flags an application still at Applied after **30 days** with no email. It never moves
   it to Rejected.
 - **Andy can set a status** in one click, for news that came by phone or LinkedIn. **A later email
-  always wins** over a status set by hand.
+  that sets a status** (an assessment, interview, offer or rejection) wins over one set by hand.
+  Quiet emails (forms, account mail, a duplicate confirmation) never undo it (decision 68).
 - The latest step is text from the email, shown in Jobs only. It isn't a deadline anywhere else
   (decision 16 stands).
 
@@ -621,9 +625,12 @@ One queue at the top of the page, with its count in the sidebar. Empty on a good
 - **A JD to confirm:** the candidates, one tap to pick, or None of these.
 - **An update to assign:** the email, and **Assign to…** (that company's applications first) or
   **Not about a job**.
-- **An email to track:** an unmatched interview, assessment or offer, with **Track this**.
+- **An email to track:** an unmatched interview, assessment or offer, with **Track this**. Its
+  Applied date is that email's date, and its detail says "First seen in this email", since the
+  real one is unknown (decision 69).
 - **From history**, collapsed: what the history pass was unsure of, so an old backlog never buries
-  today's. Ignoring it costs nothing.
+  today's. Ignoring it costs nothing, and **Dismiss all** clears it: the same as ignoring each item,
+  so those emails make nothing (decision 70).
 
 ### Corrections (decision 58)
 
@@ -633,7 +640,8 @@ The first history pass will need some, so each is a click or two on the applicat
 - On each event, **Move to…** another application, or **Not about this** (back to Needs you).
 - **Not an application:** hidden, and its emails never make one again.
 - **Not this posting:** the JD goes, and its other candidates, if any, are offered.
-- **Delete**, for a real mistake.
+- **Delete**, for a real mistake: the application is forgotten, so a later email can make it
+  again (decision 67).
 
 **Every correction sticks.** A new email, a re-run or a lookup never overwrites a field Andy set,
 never undoes a merge or a move. Corrections don't train anything: at around 150 applications a
@@ -658,7 +666,8 @@ Laid out by Claude Design. What it has to hold:
 
 ### History (decision 57)
 
-- **Once, when Jobs is turned on,** over all the mail Setpoint holds for its accounts (about 330
+- **Once, when Jobs is turned on, oldest first** (decision 72), so each confirmation is read before
+  its updates, over all the mail Setpoint holds for its accounts (about 330
   emails in Jobs since May, and Business's Career mail). Each email is read once and never charged
   for again, as `triage-history` does.
 - **JDs are looked up only for applications still open** (Applied, In process, Offer). An
@@ -978,7 +987,7 @@ Business. The Northwind and Fabrikam emails are the Inbox's own.
 
 | Company | Role | Platform | Account | Applied | Status | JD |
 | --- | --- | --- | --- | --- | --- | --- |
-| Northwind Talent | Software Engineer I | Greenhouse | Jobs | Sep 24 | In process · "Pick a 30-minute interview slot this week" (2h) | Greenhouse · found Sep 24 |
+| Northwind Talent | Software Engineer I | Greenhouse | Jobs | Oct 1 | In process · "Pick a 30-minute interview slot this week" (2h) | Greenhouse · found Oct 1 |
 | Fabrikam | Data Analyst | Workday | Jobs | Today | Applied | Search · found 7h ago |
 | Relecloud | Support Engineer | Greenhouse | Jobs | Oct 6 | Applied · re-applied (rejected Sep 2) | Greenhouse |
 | Lucerne Publishing | Junior Developer | Greenhouse | Jobs | Oct 5 | Applied | In Needs you: 2 candidates |
@@ -997,8 +1006,9 @@ Business. The Northwind and Fabrikam emails are the Inbox's own.
 | Northwind Talent | Junior Developer | Greenhouse | Jobs | Feb 9 | Rejected · Mar 14 | none (history, closed) |
 
 - **The numbers:** 62 applications. Applied 31 (18 of them Ghosted), In process 3, Offer 1, Rejected
-  25, Withdrawn 2. Per week over the last 12, oldest first: 3, 5, 4, 6, 2, 4, 7, 5, 3, 6, 8, and 2
-  so far this week.
+  25, Withdrawn 2. Per week over the last 12, oldest first: 3, 5, 4, 6, 2, 4, 7, 5, 3, 6, 8, and 3
+  so far this week (Lucerne, Relecloud and Fabrikam). The table above is an excerpt: 17 of the 62,
+  the other 45 older and mostly Ghosted or Rejected.
 - **Needs you: 3** (the sidebar's Jobs 3), and From history 6, collapsed.
   - **JD to confirm:** Lucerne Publishing · Junior Developer. Candidates: "Junior Developer ·
     New York, NY · Greenhouse" and "Junior Developer, Digital · Remote · LinkedIn".
@@ -1015,8 +1025,8 @@ Business. The Northwind and Fabrikam emails are the Inbox's own.
   - Must-haves: TypeScript and React · an API you built · SQL · a CS degree or equivalent
     experience.
   - Nice-to-haves: Node.js on the server · tests in CI · hiring or HR software.
-  - Found on Greenhouse, Sep 24 at 10:41 AM, with its link.
-  - Timeline: Sep 24 Applied, "Thank you for applying to Northwind Talent" · Sep 24, "Verify your
+  - Found on Greenhouse, Oct 1 at 10:41 AM, with its link.
+  - Timeline: Oct 1 Applied, "Thank you for applying to Northwind Talent" · Oct 1, "Verify your
     email" (quiet) · Today, "Interview availability for Software Engineer I", In process.
   - Applied before: Junior Developer, rejected Mar 14.
 - **In mail:** the Northwind interview email in the reader shows the JD chip. A read Indeed match
@@ -1279,3 +1289,19 @@ about 330 emails in the Jobs account since May, and Business's Career mail.
     mail's search and ⌘K.
 63. **Events keep their own copy,** so history outlives purged mail. Applications are kept for good,
     with Delete for mistakes.
+
+From design round 4's review (2026-10-29, Andy, on the questions the round raised; darma
+D318–D327 in order, on SV-118):
+
+64. **This week's count follows the table:** 3 so far, not 2.
+65. **The sample's table is an excerpt** (17 of 62); the totals stand.
+66. **No JD found offers Look it up by hand;** Jobs still never retries on its own.
+67. **Not an application and Delete differ:** Not an application blocks its emails from making one
+    again; Delete forgets the application, so a later email can make it again.
+68. **Only an email that sets a status overrides one set by hand.** Quiet emails never do.
+69. **A tracked application's Applied date is its email's,** marked "First seen in this email".
+70. **From history has Dismiss all,** the same as ignoring each item.
+71. **Narrow desktop windows keep Jobs:** a slot in the icon rail after News, the detail over the
+    table.
+72. **The history pass reads oldest first,** so confirmations come before their updates.
+73. **Northwind's confirmation is Oct 1,** matching round 2's boards.
