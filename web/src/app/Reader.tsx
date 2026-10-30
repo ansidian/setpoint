@@ -6,7 +6,8 @@
 // card at the top (board 08), Ask about this email Alfred's card scoped to it; the button stays held
 // while its card is open. A plain-text body highlights `marks`: the words a search matched in it, or
 // the phrases Alfred's answer rests on. Reading it here doesn't mark it read: opening it
-// (InboxPage) does.
+// (InboxPage) does. Its head has mail's slot under the sender's line and above the actions
+// (slots.tsx), which another module may fill.
 //
 // On the phone (DESIGN.md › Phone; board 21) it covers the page: Back and Pin at the top, the email
 // full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
@@ -32,6 +33,7 @@ import {MailFrame} from './MailFrame.tsx';
 import {useCommands} from './palette/commands.ts';
 import {usePhone} from './Phone.tsx';
 import {setReadingPaneWidth, useReadingPaneWidth} from './readingPane.ts';
+import {ReaderSlot} from './slots.tsx';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {ProposalCard} from './search/ProposalCard.tsx';
 import {Marked} from './search/Search.tsx';
@@ -391,6 +393,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
           </dl>
         </div>
       )}
+      <ReaderSlot row={listed} />
       <div className="rd-acts">
         {offers.proposals === 'buttons' && (
           <>

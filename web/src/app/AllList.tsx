@@ -8,7 +8,7 @@
 // the days has Copy and its countdown. Pages load as the list nears its end. What shows comes from
 // logic/all.ts; actions are the page's. A trashed row folds out and Undo folds it back in
 // (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
-// tag (SV-69).
+// tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, RefObject, UIEvent} from 'react';
@@ -24,6 +24,7 @@ import type {IconName} from '../ui/glyphs.ts';
 import {dotStyle} from './accounts.ts';
 import {CodeCopy, useCountdown} from './Code.tsx';
 import {beats, FOLD_HOLD_MS, foldDelays, foldRef, useFold} from './fold.ts';
+import {useRowSlot} from './slots.tsx';
 import type {Beat} from './fold.ts';
 import {Count} from './Count.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
@@ -130,6 +131,9 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
     ];
   }, [fresh, freshUnread, attention, days, shelf, prompt, markable]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
+  // Every row the list holds, for the slot after the subject, asked about all at once.
+  const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
+  const afterSubject = useRowSlot(slotRows);
   const [list, keep] = useKeptRow(openId);
   const ticked = useTicked(days);
   // A row Trash took beats first; rows folding together start one after another.
@@ -221,6 +225,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
               </span>
             )}
+            {afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
             <span className="age" title={fullTimestamp(row.received_at, timeZone)}>{item.aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>
