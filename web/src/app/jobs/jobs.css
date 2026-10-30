@@ -64,6 +64,8 @@
    pointer or the cursor takes sub2 and its radio ink2; pressed, sub3; picked, the group takes good. */
 .jb-cands { border-radius: 12px; background: var(--sub); overflow: hidden; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .jb-cand { display: flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 6px 0 0; color: var(--ink2); font-size: 13px; transition: background-color var(--dur-fast) var(--ease); }
+/* A hairline between the candidates, as the group's rows have on 32 and 34a, inside the 32 px. */
+.jb-cand + .jb-cand { box-shadow: inset 0 1px 0 var(--hair); }
 .jb-cand .pick { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; min-height: 32px; padding: 0 0 0 12px; color: inherit; text-align: left; font-size: inherit; }
 .jb-cand .pick > .icon { color: var(--ink3); flex: none; transition: color var(--dur-fast) var(--ease); }
 .jb-cand .t { color: var(--ink); }

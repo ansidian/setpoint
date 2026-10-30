@@ -109,7 +109,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
 
     // From history, folded until a click (D311).
     const fold = page.locator('.jb-fold-t');
-    assert.equal(await fold.textContent(), 'From history 6· what the history pass wasn’t sure of');
+    assert.equal(await fold.textContent(), 'From history 6· what the history pass wasn\'t sure of');
     assert.equal(await fold.getAttribute('aria-expanded'), 'false');
     assert.equal(await page.locator('.jb-hist-wrap').getAttribute('inert'), '');
     await fold.click();

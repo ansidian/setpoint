@@ -306,6 +306,10 @@ test('the candidates are radios, the last None of these; ↑ ↓ choose and Ente
   await render(<Picked active={false} onPick={onPick} onNone={onNone} />);
   const group = page.getByRole('radiogroup', {name: 'Is this the posting?'});
   expect(group.getByRole('radio').all().map(radio => radio.element().textContent)).toEqual(['Junior Developer · New York, NY · Greenhouse', 'Junior Developer, Digital · Remote · LinkedIn', 'None of these']);
+  // A hairline between them, inside each 32 px row, as boards 32 and 34a draw.
+  const rows = group.getByRole('radio').all().map(radio => radio.element().parentElement!);
+  expect(rows.map(row => getComputedStyle(row).boxShadow.includes(colour('var(--hair)')))).toEqual([false, true, true]);
+  expect(rows.map(row => row.getBoundingClientRect().height)).toEqual([32, 32, 32]);
   // Each arrow opens its posting without picking it.
   await expect.element(group.getByRole('link', {name: 'Look at Junior Developer, Digital'})).toHaveAttribute('href', CANDIDATES[1]!.link);
   await group.getByRole('radio').first().element().focus();

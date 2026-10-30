@@ -189,7 +189,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
                 }}>
                   <Icon name="chevron_right" size={16} />
                   <span>From history <span className="n">{liveHistory.length}</span></span>
-                  <span className="why ink3">· what the history pass wasn&rsquo;t sure of</span>
+                  <span className="why ink3">· what the history pass wasn't sure of</span>
                 </button>
                 {open && <button className="btn quiet sm" type="button" title="The same as ignoring each one: those emails make nothing" onClick={event => {
                   event.stopPropagation();
