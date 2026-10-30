@@ -53,6 +53,7 @@ files marked *imports* import the folders.
 | `shared/src/enums.ts`, `LIVE_EVENT_TYPES` | `'jobs'` is a live event type |
 | `server/src/live/feed.ts`, `merge` | two `jobs` events in one transaction merge into one, the later history progress kept (J4) |
 | `server/src/server.ts`, the `./jobs/index.ts` import (*imports*) | brings in `migrateJobs` and `jobsApi` |
+| `server/src/cli.ts`, the `./jobs/index.ts` and `./providers/ai/index.ts` imports (*imports*), `jobs-reread` and its lines in `USAGE` (SV-128) | reading again what was read before Jobs read HTML; the `./providers/ai/index.ts` import, the command's `await` and `async` on `main` can stay, and `eslint.config.js`'s `JOBS_WIRING` line goes with it |
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |

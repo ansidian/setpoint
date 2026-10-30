@@ -77,6 +77,14 @@ export function jobsEmail(store: MailReader, messageId: number): JobsEmail | nul
   return {...email, body: emailBody({text: bodyText, html: bodyHtml, snippet})};
 }
 
+/** Which of these emails read differently from their text part or snippet alone (SV-128). */
+export function readsDifferently(store: MailReader, ids: number[]): Set<number> {
+  if (!ids.length) return new Set();
+  const rows = store.db.select({id: t.messages.id, text: t.messages.bodyText, html: t.messages.bodyHtml, snippet: t.messages.snippet})
+    .from(t.messages).where(inArray(t.messages.id, ids)).all();
+  return new Set(rows.filter(row => emailBody(row) !== (row.text.trim() || row.snippet)).map(row => row.id));
+}
+
 /** An email as the JD lookup reads it for links (J3): its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */
 export function lookupEmail(store: MailReader, messageId: number): {fromAddress: string; text: string; html: string | null} | null {
   const row = store.db.select({fromAddress: t.messages.fromAddress, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet})

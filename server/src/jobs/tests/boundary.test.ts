@@ -27,6 +27,7 @@ test.each([
 
 test.each([
   ['the server, a wiring point', 'server/src/server.ts', 'import {jobsApi} from \'./jobs/index.ts\';\nexport {jobsApi};\n'],
+  ['the command line, a wiring point', 'server/src/cli.ts', 'import {rereadPlan} from \'./jobs/index.ts\';\nexport {rereadPlan};\n'],
   ['the seed, a wiring point', 'server/src/dev/sample.ts', 'import {seedJobs} from \'../jobs/index.ts\';\nexport {seedJobs};\n'],
   ['shared\'s index, a wiring point', 'shared/src/index.ts', 'export * from \'./jobs/index.ts\';\n'],
   ['Jobs itself', 'server/src/jobs/queries.ts', 'import {jobsDb} from \'./db.ts\';\nimport * as t from \'../db/schema.ts\';\nexport {jobsDb, t};\n'],

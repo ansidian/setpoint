@@ -12,6 +12,7 @@
 //                                            trusted senders and pins (src/importV1.ts has the format)
 //   npm run cli -- import-v1-triage <file>   only v1's triage rules and lane corrections
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
+//   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML (SV-128); --apply does it
 //   npm run cli -- codes            which sorted emails' verification codes reading again would change,
 //                                   and the code emails still without one (SV-68)
 //   npm run cli -- codes --apply    write those changes
@@ -26,6 +27,8 @@ import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
 import {importV1} from './importV1.ts';
+import {rereadPlan, rereadWithHaiku} from './jobs/index.ts';
+import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {sourceList} from './queries/sources.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import type {Store} from './store.ts';
@@ -42,14 +45,15 @@ const USAGE = `Usage:
   pair-link       print a one-time link that pairs the iPhone app, as Settings › Security's Add iPhone does
   import-v1 <file>          import v1's export file (src/importV1.ts has the format); safe to run again
   import-v1-triage <file>   import only v1's triage rules and lane corrections (src/triage/importV1.ts)
+  jobs-reread [--apply]   what Jobs would read again now it reads HTML; --apply does it (the server reads them)
   triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
   codes           list sorted emails whose verification code reading again would change, and code emails with none
   codes --apply   write those changes`;
 
-function main(argv: string[]): number {
+async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
-    || (command === 'codes' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
+    || ((command === 'codes' || command === 'jobs-reread') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
@@ -59,7 +63,7 @@ function main(argv: string[]): number {
   const config = loadConfig();
   const {sqlite, db} = openDatabase(config.databasePath);
   // The import seals v1's secrets with Setpoint's key (production refuses to run without one).
-  const keyring = command === 'import-v1' ? loadKeyring(process.env, config.dataDir).keyring : null;
+  const keyring = command === 'import-v1' || (command === 'jobs-reread' && rest[0] === '--apply') ? loadKeyring(process.env, config.dataDir).keyring : null;
   const store: Store = {sqlite, db, timeZone: config.timeZone, now: () => new Date(), keyring};
   try {
     if (command === 'setup-token') {
@@ -89,6 +93,12 @@ function main(argv: string[]): number {
       console.log(state === 'waiting_for_key'
         ? `Started, but there's no AI key yet: add one in Settings › AI and the server reads ${total - done} emails.`
         : `${done} of ${total} backfilled emails read; ${queued} more queued for the server to read.`);
+      return 0;
+    }
+    if (command === 'jobs-reread') {
+      const plan = rest[0] === '--apply' ? await rereadWithHaiku(store, AI_ENDPOINTS) : rereadPlan(store);
+      console.log(`${plan.applications.length} application${plan.applications.length === 1 ? '' : 's'} to fill, ${plan.emails.length} ignored email${plan.emails.length === 1 ? '' : 's'} to read again.`);
+      console.log(rest[0] === '--apply' ? 'The server reads the emails, and looks up the JDs, as it comes to them.' : 'Nothing changed. Run with --apply to do it.');
       return 0;
     }
     if (command === 'codes') {
@@ -136,4 +146,4 @@ function main(argv: string[]): number {
   }
 }
 
-process.exitCode = main(process.argv.slice(2));
+process.exitCode = await main(process.argv.slice(2));

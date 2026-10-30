@@ -15,7 +15,8 @@
 //   (`rejectedLinks`), and a lookup writes only while its application is still `looking` for one
 //   (`stillLooking`): Undo, None of these or Not this posting since it began win over what it found.
 // - Emails already read are never read again (jobs_emails_read), so a history re-run never replays
-//   an email the user moved, assigned or took off.
+//   an email the user moved, assigned or took off. `jobs-reread` (./reread.ts) forgets only ignored
+//   emails, which no correction can have touched.
 import type {JobHandField} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import type {Store} from '../store.ts';

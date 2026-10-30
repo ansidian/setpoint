@@ -63,6 +63,7 @@ Run it in the container (`docker exec <container> npm run cli -- <command>`, or
 | `import-v1 <file>` | Imports v1's export file once. `server/src/importV1.ts` documents the format. It's safe to run again. |
 | `import-v1-triage <file>` | Imports only v1's triage rules and lane corrections. |
 | `triage-history` | Starts or resumes the one-time model pass over backfilled mail, once an AI key is set. |
+| `jobs-reread` / `jobs-reread --apply` | Lists what Jobs would read again now that it reads an email's HTML (SV-128), or does it: fills blank applications from their confirmations, then forgets the ignored emails that read differently and the ignored rejections so a history pass reads them. Safe to run again, and while the server runs. |
 | `codes` / `codes --apply` | Lists sorted emails whose verification code would change if read again with the current detector, and the emails triage typed as code emails that have no code (likely misses), or writes those changes. Safe to run while the server runs. |
 
 ## Importing v1

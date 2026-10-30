@@ -5,7 +5,7 @@
 // blocked emails, emails held behind one triage hasn't sorted, and that Jobs is passive.
 import {SEED_NOW} from '@setpoint/shared';
 import {jobsPageSchema} from '@setpoint/shared';
-import {and, asc, eq, inArray, lte} from 'drizzle-orm';
+import {and, asc, eq, inArray, isNull, lte} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import {FAKE_KEYS, fakeModels} from '../../../tests/fakeModels.ts';
 import type {FakeAnswer, FakeRequest} from '../../../tests/fakeModels.ts';
@@ -21,6 +21,8 @@ import {emailsToRead} from '../mail.ts';
 import {NO_JOBS_KEY} from '../models.ts';
 import {jobsPage} from '../queries.ts';
 import {JobsReader, readEmail} from '../reader.ts';
+import type {JobEmailEvent} from '../prompt.ts';
+import {reread, rereadPlan} from '../reread.ts';
 import * as j from '../schema.ts';
 import {RECORDED_EMAILS} from './emails.ts';
 import type {RecordedEmail} from './emails.ts';
@@ -305,6 +307,99 @@ describe('what the reader sees', () => {
     await drain();
     const asked = jobsRequests().find(request => subjectOf(request) === email.subject);
     expect(asked?.input).toContain(email.body);
+  });
+});
+
+describe('reading again what was read without its HTML (SV-128)', () => {
+  const READ_AT = '2026-10-08T01:00:00.000Z';
+  async function readBefore() {
+    const made = await setup();
+    const {store, db, accountId} = made;
+    const message = (key: string, body: {bodyText: string; bodyHtml: string | null}) => {
+      const [id] = upsertMessages(store, accountId('Jobs'), [{
+        providerId: `p-${key}`, threadId: `thread-${key}`, rfc822Id: null, fromName: 'Careers', fromAddress: 'careers@example.com', subject: key,
+        snippet: '', ...body, receivedAt: '2026-10-01T16:00:00.000Z', senderAuth: null, attachments: [], unread: true, trashed: false, archived: false,
+      }]).inserted;
+      store.db.update(t.messages).set({lane: 'fyi', kind: 'career'}).where(eq(t.messages.id, id!)).run();
+      return id!;
+    };
+    const ignored = (messageId: number, event: JobEmailEvent) =>
+      db.insert(j.jobsEmailsRead).values({messageId, readAt: READ_AT, outcome: 'ignored', at: '2026-10-01T16:00:00.000Z', event}).run();
+    const application = (company: string, title: string, messageId: number, extra: Partial<typeof j.jobsApplications.$inferInsert> = {}) => {
+      const {id} = db.insert(j.jobsApplications).values({
+        company, title, titleKey: title.toLowerCase(), platform: null, accountId: accountId('Jobs'), appliedAt: '2026-10-01T16:00:00.000Z', status: 'applied',
+        statusSetBy: 'email', statusSetAt: '2026-10-01T16:00:00.000Z', createdAt: READ_AT, updatedAt: READ_AT, ...extra,
+      }).returning({id: j.jobsApplications.id}).get();
+      db.insert(j.jobsEvents).values({applicationId: id, kind: 'applied', at: '2026-10-01T16:00:00.000Z', sender: 'Careers', subject: 'Applied', line: null, messageId, createdAt: READ_AT}).run();
+      db.insert(j.jobsEmailsRead).values({messageId, readAt: READ_AT, outcome: 'application', at: '2026-10-01T16:00:00.000Z', event: 'confirmation', applicationId: id}).run();
+      return id;
+    };
+    const html = '<p>Thanks for applying to be a Data Engineer at Trey Research, and we will be in touch about next steps soon.</p>';
+    const words = {bodyText: 'We received your application and will be in touch about next steps soon, one way or another.', bodyHtml: null};
+    const empty = {bodyText: '', bodyHtml: html};
+    const hidden = message('hidden', empty);
+    const unchanged = message('unchanged', words);
+    const rejection = message('rejection', words);
+    ignored(hidden, 'other');
+    ignored(unchanged, 'unrelated');
+    ignored(rejection, 'rejection');
+    const noTitle = application('Trey Research', '', message('no-title', empty));
+    const noCompany = application('Indeed', 'Data Engineer', message('no-company', empty), {companyUnknown: true});
+    const closed = application('Contoso', '', message('closed', empty), {status: 'rejected'});
+    const handSet = application('Fabrikam', '', message('hand-set', empty));
+    db.insert(j.jobsHandSet).values({applicationId: handSet, field: 'title', setAt: READ_AT}).run();
+    const textOnly = application('Northwind', '', message('text-only', words));
+    db.insert(j.jobsJdCandidates).values({applicationId: noTitle, title: 'Warehouse Lead', platform: 'Greenhouse', position: 0, foundAt: READ_AT, link: 'https://example.com/1', source: 'search'}).run();
+    db.insert(j.jobsNeedsYou).values({kind: 'jd_to_confirm', reason: 'unsure_posting', fromHistory: true, applicationId: noTitle, company: 'Trey Research', at: READ_AT, createdAt: READ_AT}).run();
+    return {...made, hidden, unchanged, rejection, noTitle, noCompany, closed, handSet, textOnly};
+  }
+  const askReading = async (_: {subject: string}) => ({event: 'confirmation' as const, company: 'Trey Research', title: 'Data Engineer', requisitionId: null, line: null});
+  const stillRead = (made: Awaited<ReturnType<typeof readBefore>>) =>
+    made.db.select({id: j.jobsEmailsRead.messageId}).from(j.jobsEmailsRead).all().map(row => row.id);
+
+  test('it plans only ignored emails that read differently, ignored rejections, and applications their HTML can fill', async () => {
+    const made = await readBefore();
+    const plan = rereadPlan(made.store);
+    expect(plan.emails.sort()).toEqual([made.hidden, made.rejection].sort());
+    expect(plan.applications.sort()).toEqual([made.noTitle, made.noCompany, made.closed].sort());
+    expect(stillRead(made)).toContain(made.hidden);
+  });
+
+  test('applying fills what\'s blank, looks up again only what\'s open, then reads the emails again', async () => {
+    const made = await readBefore();
+    const {db, store} = made;
+    await reread(store, askReading);
+    const row = (id: number) => db.select().from(j.jobsApplications).where(eq(j.jobsApplications.id, id)).get()!;
+    expect(row(made.noTitle)).toMatchObject({title: 'Data Engineer', titleKey: 'data engineer', jdLookup: 'looking'});
+    expect(row(made.noCompany)).toMatchObject({company: 'Trey Research', companyUnknown: false, jdLookup: 'looking'});
+    expect(row(made.closed)).toMatchObject({title: 'Data Engineer', jdLookup: 'none'});
+    expect(row(made.handSet).title).toBe('');
+    expect(row(made.textOnly).title).toBe('');
+    // The junk candidates a title-less search found go with their question.
+    expect(db.select().from(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, made.noTitle)).all()).toEqual([]);
+    expect(db.select().from(j.jobsNeedsYou).where(and(eq(j.jobsNeedsYou.applicationId, made.noTitle), isNull(j.jobsNeedsYou.resolvedAt))).all()).toEqual([]);
+    // Only the planned emails are forgotten, and the pass that reads them again has started.
+    const read = stillRead(made);
+    expect(read).toContain(made.unchanged);
+    expect(read).not.toContain(made.hidden);
+    expect(read).not.toContain(made.rejection);
+    expect(db.select().from(j.jobsHistory).get()?.state).toBe('running');
+  });
+
+  test('it\'s safe to run again: nothing is left to do, and a stop partway keeps what was done', async () => {
+    const made = await readBefore();
+    await reread(made.store, askReading);
+    expect(rereadPlan(made.store)).toEqual({emails: [], applications: []});
+
+    const again = await readBefore();
+    let asked = 0;
+    await expect(reread(again.store, async email => {
+      asked += 1;
+      if (asked === 2) throw new Error('the provider went away');
+      return askReading(email);
+    })).rejects.toThrow('the provider went away');
+    expect(stillRead(again)).toContain(again.hidden);
+    expect(rereadPlan(again.store).applications).toHaveLength(2);
   });
 });
 
