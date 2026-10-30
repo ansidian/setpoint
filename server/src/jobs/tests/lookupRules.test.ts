@@ -59,6 +59,28 @@ describe('emailLinks and postingLinks', () => {
   ])('%s', (_, links, expected) => {
     expect(postingLinks(links, HOSTS)).toEqual(expected);
   });
+
+  test.each<[string, string, boolean]>([
+    ['a posting with "support" in its name', 'https://fabrikam.example/jobs/technical-support-engineer-123', true],
+    ['with "account"', 'https://fabrikam.example/jobs/account-manager-123', true],
+    ['with "help"', 'https://fabrikam.example/jobs/help-desk-technician-9', true],
+    ['with "register"', 'https://fabrikam.example/jobs/registered-nurse-7', true],
+    ['with "terms", "privacy" and "verify" inside words', 'https://fabrikam.example/careers/privacy-engineer-verification-lead-terms', true],
+    ['a sign-in page', 'https://fabrikam.example/careers/login', false],
+    ['an unsubscribe page, any case', 'https://fabrikam.example/jobs/Unsubscribe', false],
+    ['a page with an extension', 'https://fabrikam.example/careers/login.aspx', false],
+    ['the account\'s settings', 'https://fabrikam.example/account/settings', false],
+    ['the candidate home', 'https://fabrikam.example/jobs/candidate-home', false],
+    ['the candidate home, run together', 'https://fabrikam.example/jobs/candidatehome', false],
+    ['a privacy policy', 'https://fabrikam.example/careers/privacy-policy', false],
+    ['the terms', 'https://fabrikam.example/careers/terms-of-use', false],
+    ['the cookies', 'https://fabrikam.example/careers/cookies', false],
+    ['the email\'s preferences', 'https://fabrikam.example/careers/email-preferences', false],
+    ['a query about the account', 'https://fabrikam.example/jobs/data-analyst-2291?next=login', false],
+    ['a query that reads like the email\'s footer', 'https://fabrikam.example/jobs/data-analyst-2291?type=unsubscribe', false],
+  ])('whole path segments, and anywhere in a query: %s', (_, link, posting) => {
+    expect(postingLinks([link], HOSTS)).toEqual(posting ? [link] : []);
+  });
 });
 
 describe('platformsToTry', () => {

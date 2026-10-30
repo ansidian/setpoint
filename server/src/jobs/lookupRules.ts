@@ -72,8 +72,11 @@ export function postingRef(raw: string, hosts: PostingHosts): PostingRef | null 
   return null;
 }
 
-// A link that is about the email or the account, never a posting.
+// A link that is about the email or the account, never a posting: these anywhere in its query, or as
+// one whole segment of its path, the longer names they go by included, since a posting's own name
+// can hold them ("/jobs/technical-support-engineer-123", "/jobs/registered-nurse-7").
 const NOT_A_POSTING = /unsubscribe|optout|opt-out|privacy|terms|login|log-in|signin|sign-in|sign_in|signup|register|account|settings|preferences|password|verify|verification|confirm|help|support|faq|cookie|candidate-?home|dashboard|mailto/i;
+const NOT_A_POSTING_SEGMENT = new RegExp(`^(${NOT_A_POSTING.source}|accounts|my-account|privacy-policy|privacy-notice|terms-of-use|terms-of-service|terms-and-conditions|email-preferences|reset-password|forgot-password|confirmation|help-center|faqs|cookies|cookie-policy|cookie-settings)(\\.\\w+)?$`, 'i');
 // A path that reads like one posting.
 const LOOKS_LIKE_A_POSTING = /\b(jobs?|careers?|positions?|openings?|vacanc(y|ies)|requisitions?|viewjob|job-?details|postings?|roles?|opportunit(y|ies))\b/i;
 
@@ -97,7 +100,7 @@ export function emailLinks(text: string, html: string | null): string[] {
 export function postingLinks(links: string[], hosts: PostingHosts, limit = 3): string[] {
   const rank = (raw: string): number | null => {
     const url = parse(raw);
-    if (!url || NOT_A_POSTING.test(`${url.pathname}${url.search}`)) return null;
+    if (!url || NOT_A_POSTING.test(url.search) || segments(url).some(segment => NOT_A_POSTING_SEGMENT.test(segment))) return null;
     const ref = postingRef(raw, hosts);
     if (ref && ref.platform !== 'indeed' && ref.id) return 0;
     if (ref?.platform === 'indeed' && ref.id) return 1;
