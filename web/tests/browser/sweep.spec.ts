@@ -278,7 +278,8 @@ async function axe(page: Page, route: Route, theme: typeof THEMES[number]): Prom
   return found;
 }
 
-test('the main pages, in Night and Light at three widths, keep to their boxes, and axe finds nothing', async () => {
+// Every route at each width in both themes, with axe: about a minute, three under stress, past the run's 180 s.
+test('the main pages, in Night and Light at three widths, keep to their boxes, and axe finds nothing', {timeout: 300_000}, async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: SIZES.target.width, height: HEIGHT});
