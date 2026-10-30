@@ -3289,3 +3289,13 @@ it changes what's on screen.
     D367): on its line, so it doesn't look like a click that failed, with a tip saying why. "No
     longer in" rather than "Deleted", as Trash expiry and retention also take mail. Board audit: no
     board draws it.
+270. **J6's small gaps** (Andy left small gaps to Claude, 2026-10-30; darma SV-124, D368–D371): the
+    toasts and answered items' outcome lines where no board words them ("Assigned to Software Engineer
+    II (Java)", "Status left to the emails", "Hidden Trey Research", "Back in Needs you"; `delete` for
+    Not about a job as for the three override 36 names); Another application… and Merge with…
+    searching every application by company or role, the company's own then six Recent before a word
+    is typed; Look up the JD again disabled while a JD is saved; Track this on an offer starting at
+    Offer; Not about this's item saying "taken off the application it was on"; the company edited in
+    its own line; a click-opened menu's cursor on its first item, a submenu under the resting pointer;
+    an event's right-click opening its ··· where it sits. Board audit: 34a draws the picked group,
+    which shows here only for the press before 34b's outcome replaces it.
