@@ -1,5 +1,7 @@
 // The visual net without baselines (SV-99), beside the release's nine page screenshots (pages.ts,
-// D281): the main pages (the Inbox with an email open, the calendar's month and week, the editor, News
+// D281): the main pages (the Inbox with an email open, with its JD popover open, and with the
+// Contoso Pharmaceuticals match email's Applied before on its row and in the reader (J7), the
+// calendar's month and week, the editor, News
 // with a story open, Jobs with an application open, and with its menus open (Assign to…, and More with
 // Merge with…'s submenu), every Settings page, the phone's Inbox; Jobs isn't on the phone, decision
 // 49) in Night and Light, at the design target,
@@ -10,7 +12,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
-import type {InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
+import type {AllOut, InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -165,8 +167,21 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
   const story = stories.find(one => one.headline.startsWith('Brush fire near the 210'))!.id;
   const {rows} = await setpoint.api<JobsPageOut>('GET', '/jobs');
   const application = rows.find(row => row.company === 'Northwind Talent' && row.title === 'Software Engineer I')!.id;
+  const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
+  const match = all.days.flatMap(day => day.rows).find(row => row.subject === 'Associate Software Engineer @ Contoso Pharmaceuticals')!.id;
   return [
     {name: 'the Inbox, an email open', path: `/inbox/${email}`, shows: '.rd-subj'},
+    // Each open is run again after a resize, so it opens only what isn't open yet.
+    {name: 'the Inbox, the JD popover open', path: `/inbox/${email}`, shows: '.rd-head .jb-chip', open: async page => {
+      const chip = page.locator('.rd-head .jb-chip');
+      if (await chip.getAttribute('aria-expanded') !== 'true') await chip.click();
+      await page.getByRole('dialog', {name: 'Job description'}).waitFor();
+    }},
+    {name: 'the Inbox, Applied before on a row and in the reader', path: `/inbox/${match}`, shows: '.rd-head .jb-badge', open: async page => {
+      const noise = page.locator('.list.all .nfold', {has: page.locator('.preview', {hasText: 'Indeed'})});
+      if (await noise.evaluate(line => line.classList.contains('collapsed'))) await noise.click();
+      await page.locator(`.list.all .row[data-id="${match}"] .jb-badge`).waitFor();
+    }},
     {name: 'the calendar\'s month', path: '/calendar', shows: '.cal-month'},
     // Over the month: a calendar address that names no view takes the one last used.
     {name: 'the editor', path: '/calendar/new?kind=event', shows: '.editor'},
