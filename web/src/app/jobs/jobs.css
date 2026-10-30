@@ -429,6 +429,8 @@
   font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums;
   transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .jb-badge > .icon { color: var(--ink3); flex: none; }
+/* On a row beside the reader, it gives way with the subject, so the account and time keep their place. */
+.row .jb-badge { flex: 0 1 auto; min-width: 0; }
 @media (hover: hover) { .jb-badge:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); color: var(--ink); } }
 .jb-badge:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
 .jb-badge.lg { height: 26px; padding: 0 10px 0 8px; font-size: 12.5px; gap: 6px; align-self: flex-start; max-width: 100%; }
