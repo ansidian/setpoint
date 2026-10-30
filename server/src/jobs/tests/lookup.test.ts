@@ -24,7 +24,7 @@ import {NO_JOBS_KEY} from '../models.ts';
 import {applicationDetail, jobsPage} from '../queries.ts';
 import {JobsReader} from '../reader.ts';
 import * as j from '../schema.ts';
-import {fakeWeb, fixture, htmlPage, serveFixtures, TEST_APIS} from './fakeWeb.ts';
+import {fakeWeb, fixture, htmlPage, serveFixtures, TEST_APIS, TEST_GOVERNMENT_JOBS} from './fakeWeb.ts';
 
 // Real HTTP round trips to the fakes, a few dozen per test.
 vi.setConfig({testTimeout: 30_000});
@@ -334,6 +334,172 @@ describe('unsure (decision 54)', () => {
     await s.drain();
     expect(s.posting(id)).toBeUndefined();
     expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{title: 'Data Analyst', platform: 'Fabrikam Careers'}]});
+  });
+});
+
+describe('GovernmentJobs, through its site-wide search (D389)', () => {
+  const CONTOSO: Made = {
+    company: 'City of Contoso', title: 'Office Assistant II', platform: 'GovernmentJobs',
+    emails: [{kind: 'applied', from: ['City of Contoso', 'noreply@governmentjobs.example'], subject: 'Your application for Office Assistant II', body: 'Thank you for applying to Office Assistant II. Sign in at https://governmentjobs.example/js_login.cfm to see your application.'}],
+  };
+  const WATER = `${TEST_GOVERNMENT_JOBS}/jobs/7100123-0/office-assistant-ii`;
+  const PUBLIC_WORKS = `${TEST_GOVERNMENT_JOBS}/jobs/7098777-0/office-assistant-ii-public-works`;
+  const OFFICE_READING = {summary: 'Front counter and records for the water department.', location: 'Contoso, WA', workplace: 'on_site', workplace_detail: null, salary: '$24.10–$30.75 an hour', must_haves: ['Two years of office experience'], nice_to_haves: []};
+  const SEARCHED_INSTEAD = {url: 'https://contoso.example/careers/office-assistant-ii', title: 'Office Assistant II', location: 'Contoso, WA', site: 'City of Contoso', verdict: 'maybe'};
+
+  test('the posting found there is saved with no search, Haiku weighing the employer\'s postings of the title by their dates', async () => {
+    const s = await setup();
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['match', 'no']), submit_posting_reading: reading(OFFICE_READING)});
+    await s.drain();
+
+    // Neither Greenhouse, Lever nor Ashby, and never the other employers' or the other role's pages.
+    expect(s.web.asked()).toEqual(['governmentjobs.example/jobs', 'governmentjobs.example/jobs/7100123-0/office-assistant-ii', 'governmentjobs.example/jobs/7098777-0/office-assistant-ii-public-works']);
+    expect(s.web.server.requests[0]!.query.get('keyword')).toBe('Office Assistant II');
+    expect(s.asked()).toEqual(['submit_posting_check', 'submit_posting_reading']);
+    const check = s.models.requests[0]!.input;
+    expect(check).toContain(`Candidate 1, on GovernmentJobs: ${WATER}\nTitle: Office Assistant II\nLocation: Contoso, WA\nPosted: 2026-10-05`);
+    expect(check).toContain(`Candidate 2, on GovernmentJobs: ${PUBLIC_WORKS}\nTitle: Office Assistant II\nLocation: Contoso, WA\nPosted: 2026-03-02`);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({source: 'platform', platform: 'GovernmentJobs', link: WATER, salary: '$24.10–$30.75 an hour'});
+    expect(s.posting(id)!.fullText).toMatch(/^## The position\n\nThe City of Contoso's Water Department/);
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'found', source: 'platform', platform: 'GovernmentJobs'});
+  });
+
+  test('a sender at its domain is enough, with no platform named, and the boards aren\'t guessed at', async () => {
+    const s = await setup();
+    const id = s.make({...CONTOSO, platform: null});
+    s.answers({submit_posting_check: match(['match', 'no']), submit_posting_reading: reading(OFFICE_READING)});
+    await s.drain();
+    expect(s.web.asked().every(asked => asked.startsWith('governmentjobs.example/'))).toBe(true);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({source: 'platform', platform: 'GovernmentJobs'});
+  });
+
+  test('a same-title posting at another employer is never offered', async () => {
+    const s = await setup();
+    const id = s.make({...CONTOSO, company: 'County of Contoso'});
+    s.web.serve(`${TEST_GOVERNMENT_JOBS}/jobs/7100901-0/office-assistant-ii`, htmlPage(fixture('governmentjobs-posting.html')));
+    s.answers({submit_posting_check: match(['maybe'])});
+    await s.drain();
+    // Its own wording of its name; not the city's two, nor Fabrikam's.
+    expect(s.web.asked()).toEqual(['governmentjobs.example/jobs', 'governmentjobs.example/jobs/7100901-0/office-assistant-ii']);
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([`${TEST_GOVERNMENT_JOBS}/jobs/7100901-0/office-assistant-ii`]);
+  });
+
+  test('an employer with none there falls through to search, with its same-title postings at others unread', async () => {
+    const s = await setup();
+    const id = s.make({...CONTOSO, company: 'City of Northwind'});
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await s.drain();
+    expect(s.web.asked()).toEqual(['governmentjobs.example/jobs']);
+    expect(s.asked()).toEqual(['submit_posting_search']);
+    expect(applicationDetail(s.store, id).candidates).toEqual([]);
+  });
+
+  test('two recruitments of a title both wait in Needs you when Haiku says maybe, with no search', async () => {
+    const s = await setup();
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['maybe', 'maybe'])});
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_check']);
+    expect(s.posting(id)).toBeUndefined();
+    expect(applicationDetail(s.store, id).candidates).toMatchObject([
+      {title: 'Office Assistant II', location: 'Contoso, WA', platform: 'GovernmentJobs', link: WATER},
+      {title: 'Office Assistant II', location: 'Contoso, WA', platform: 'GovernmentJobs', link: PUBLIC_WORKS},
+    ]);
+    expect(jobsPage(s.store).needs_you).toEqual([expect.objectContaining({kind: 'jd_to_confirm', platform: 'GovernmentJobs', application_id: id})]);
+  });
+
+  test('a posting that has closed gives no result, so search runs as it does today', async () => {
+    const s = await setup();
+    s.web.serve('https://contoso.example/careers/office-assistant-ii', htmlPage(fixture('posting-page.html')));
+    const id = s.make({...CONTOSO, title: 'Building Inspector'});
+    s.answers({submit_posting_search: () => searched([{...SEARCHED_INSTEAD, verdict: 'match'}]), submit_posting_reading: reading(OFFICE_READING)});
+    await s.drain();
+    expect(s.web.asked()).toEqual(['governmentjobs.example/jobs', 'contoso.example/careers/office-assistant-ii']);
+    expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_reading']);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({source: 'search', platform: null});
+  });
+
+  test('Haiku turning them all down is a miss, so search runs', async () => {
+    const s = await setup();
+    s.web.serve(SEARCHED_INSTEAD.url, {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}});
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['no', 'no']), submit_posting_search: () => searched([SEARCHED_INSTEAD])});
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_check', 'submit_posting_search']);
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([SEARCHED_INSTEAD.url]);
+  });
+
+  test('a result whose page is gone is passed over', async () => {
+    const s = await setup();
+    s.web.serve(WATER, {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}});
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['maybe'])});
+    await s.drain();
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([PUBLIC_WORKS]);
+  });
+
+  test('no title is a clean miss: the site isn\'t asked, and search runs', async () => {
+    const s = await setup();
+    const id = s.make({...CONTOSO, title: ''});
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await s.drain();
+    expect(s.web.asked()).toEqual([]);
+    expect(s.asked()).toEqual(['submit_posting_search']);
+    expect(applicationDetail(s.store, id).jd.state).toBe('not_found');
+  });
+
+  test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1]]>([
+    ['refusing Jobs', {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}}],
+    ['not there', {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}}],
+    ['in markup Jobs doesn\'t know', htmlPage('<div class="result"><a href="/jobs/1-0/x">Office Assistant II</a></div>')],
+  ])('its search %s is a miss, and search runs', async (_, answer) => {
+    const s = await setup();
+    s.web.serve(`${TEST_GOVERNMENT_JOBS}/jobs`, answer);
+    s.make(CONTOSO);
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_search']);
+  });
+
+  test('its search failing fails the lookup: retried, with no web search meanwhile', async () => {
+    const s = await setup();
+    s.web.server.fault({path: /governmentjobs/, response: {status: 503, body: 'Service Unavailable'}});
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['match', 'no']), submit_posting_reading: reading(OFFICE_READING)});
+    await s.drain();
+    expect(s.asked()).toEqual([]);
+    expect(s.lookupJobs(id)[0]).toMatchObject({state: 'queued', lastError: '503 Service Unavailable'});
+    expect(applicationDetail(s.store, id).jd.state).toBe('looking');
+    s.w.advance(30_000);
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'found', platform: 'GovernmentJobs'});
+  });
+
+  test('a result\'s page failing with nothing else found fails the lookup too', async () => {
+    const s = await setup();
+    s.web.server.fault({path: /7100123/, response: {status: 502, body: 'Bad Gateway'}});
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['maybe'])});
+    await s.drain();
+    expect(s.lookupJobs(id)[0]).toMatchObject({state: 'queued', lastError: '502 Bad Gateway'});
+    expect(applicationDetail(s.store, id).candidates).toEqual([]);
+  });
+
+  test('what the user turned down isn\'t read or offered again', async () => {
+    const s = await setup();
+    const id = s.make(CONTOSO);
+    s.answers({submit_posting_check: match(['maybe', 'maybe'])});
+    await s.drain();
+    const c = await signedIn(s.w, {routes: [jobsApi(s.store)]});
+    expect((await c.send('POST', `/api/jobs/applications/${id}/jd/none`)).status).toBe(200);
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await c.send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    // The search again, but neither page.
+    expect(s.web.asked().filter(asked => asked === 'governmentjobs.example/jobs')).toHaveLength(2);
+    expect(s.web.asked().filter(asked => asked.includes('7100123'))).toHaveLength(1);
+    expect(applicationDetail(s.store, id).jd.state).toBe('not_found');
   });
 });
 

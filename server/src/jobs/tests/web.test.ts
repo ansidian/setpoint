@@ -5,8 +5,8 @@
 // a failure is thrown for the retry policy.
 import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
-import {boardPostings, JOBS_USER_AGENT, openLink, pagePosting, readLink} from '../web.ts';
-import {fakeWeb, fixture, serveFixtures, TEST_APIS} from './fakeWeb.ts';
+import {boardPostings, governmentJobsResults, governmentJobsSearch, JOBS_USER_AGENT, openLink, pagePosting, readLink} from '../web.ts';
+import {fakeWeb, fixture, serveFixtures, TEST_APIS, TEST_GOVERNMENT_JOBS} from './fakeWeb.ts';
 
 const signal = new AbortController().signal;
 
@@ -81,6 +81,66 @@ describe('the platforms\' public APIs', () => {
     const error = await boardPostings(fake.web, 'ashby', 'litware', signal).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ProviderError);
     expect(error).toMatchObject({kind: 'rate_limited', retryAfterMs: 30_000});
+  });
+});
+
+describe('GovernmentJobs\' search (D389)', () => {
+  const result = (title: string, employer: string, location: string | null, path: string) => ({title, employer, location, link: `${TEST_GOVERNMENT_JOBS}/jobs/${path}`, postedAt: null, requisitionId: null});
+
+  test('its results parse: a title, an employer, a place and a link, each with no date until it\'s read', () => {
+    expect(governmentJobsResults(fixture('governmentjobs-search.html'), TEST_GOVERNMENT_JOBS)).toEqual([
+      result('Office Assistant II', 'City of Contoso', 'Contoso, WA', '7100123-0/office-assistant-ii'),
+      result('OFFICE ASSISTANT II', 'City of Fabrikam', 'Fabrikam, OR', '7100456-0/office-assistant-ii'),
+      result('Office Assistant II (Public Works)', 'City of Contoso', 'Contoso, WA', '7098777-0/office-assistant-ii-public-works'),
+      result('Office Assistant II', 'Contoso County', null, '7100901-0/office-assistant-ii'),
+      result('Senior Accountant', 'City of Contoso', 'Contoso, WA', '7095000-0/senior-accountant'),
+    ]);
+  });
+
+  test.each<[string, string]>([
+    ['no results', '<ul class="job-listing-container"></ul>'],
+    ['markup it doesn\'t know', '<div class="result"><a href="/jobs/1-0/x">Office Assistant II</a><p>City of Contoso</p></div>'],
+    ['a page that isn\'t a search', '<html><body><h1>Find a job</h1></body></html>'],
+    ['nothing', ''],
+  ])('%s is an empty list', (_, html) => {
+    expect(governmentJobsResults(html, TEST_GOVERNMENT_JOBS)).toEqual([]);
+  });
+
+  test('it asks by the title, as the site\'s own search does, with Setpoint\'s name', async () => {
+    const fake = await web();
+    const results = await governmentJobsSearch(fake.web, 'Office Assistant II (Water) & Parks', signal);
+    expect(results).toHaveLength(5);
+    expect(fake.asked()).toEqual(['governmentjobs.example/jobs']);
+    const [request] = fake.server.requests;
+    expect(request!.query.get('keyword')).toBe('Office Assistant II (Water) & Parks');
+    expect(request!.headers).toMatchObject({'user-agent': JOBS_USER_AGENT, accept: expect.stringContaining('text/html'), 'x-requested-with': 'XMLHttpRequest'});
+  });
+
+  test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1]]>([
+    ['a 404', {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}}],
+    ['a 403', {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}}],
+    ['an answer that isn\'t HTML', {status: 200, body: {jobs: []}}],
+  ])('%s is a miss', async (_, answer) => {
+    const fake = await web();
+    fake.serve(`${TEST_GOVERNMENT_JOBS}/jobs`, answer);
+    expect(await governmentJobsSearch(fake.web, 'Office Assistant II', signal)).toEqual([]);
+  });
+
+  test('a failure is thrown for the retry', async () => {
+    const fake = await web();
+    fake.server.fault({path: /governmentjobs/, response: {status: 503, body: 'Service Unavailable'}});
+    await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'transient', status: 503});
+    fake.server.fault({path: /governmentjobs/, response: {status: 429, body: {}, headers: {'retry-after': '30'}}});
+    await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'rate_limited', retryAfterMs: 30_000});
+    fake.server.fault({path: /governmentjobs/, response: 'hang'});
+    await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'transient'});
+  });
+
+  test('a result\'s page is read as any page, from its JSON-LD', async () => {
+    const fake = await web();
+    const posting = await readLink(fake.web, `${TEST_GOVERNMENT_JOBS}/jobs/7100123-0/office-assistant-ii`, signal);
+    expect(posting).toMatchObject({title: 'Office Assistant II', postedAt: '2026-10-05T16:00:00.000Z', facts: ['Pay: USD 24.1–30.75 hour']});
+    expect(posting!.text).toMatch(/^## The position\n\nThe City of Contoso's Water Department/);
   });
 });
 
@@ -207,7 +267,7 @@ describe('a link', () => {
   });
 
   test('the fixtures stay on example domains', () => {
-    for (const name of ['greenhouse-board.json', 'lever-postings.json', 'ashby-board.json', 'posting-page.html', 'view-job.html', 'script-drawn.html', 'closed-posting.html']) {
+    for (const name of ['greenhouse-board.json', 'lever-postings.json', 'ashby-board.json', 'posting-page.html', 'view-job.html', 'script-drawn.html', 'closed-posting.html', 'governmentjobs-search.html', 'governmentjobs-posting.html']) {
       const hosts = [...fixture(name).matchAll(/https?:\/\/([^/"'\s<>]+)/g)].map(match => match[1]!).filter(host => host !== 'schema.org');
       expect(hosts.every(host => host.endsWith('.example')), name).toBe(true);
     }

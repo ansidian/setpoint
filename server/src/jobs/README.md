@@ -58,7 +58,7 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
 | `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, and each JD lookup (J3) |
-| `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts, given only in production |
+| `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
 | `server/src/triage/worker.ts`, the `onSorted` option (J2) | the generic hook the line above uses: told after each email is sorted; it names no module, so it can stay |
 | `server/src/db/schema.ts`, `JOB_KINDS`, and `server/drizzle/0021_jobs_reading.sql` (J2) | `'jobs_read'` is a kind of engine job (the migration rebuilds `jobs` for its CHECK) |
 | `shared/src/enums.ts`, `AI_PURPOSES`, and the same migration (J2) | Jobs's three parts of the AI usage ledger: `jobs_emails` (J2), `jobs_finding_jds` and `jobs_reading_jds` (J3) |
@@ -141,13 +141,24 @@ the lint rule still refuses an import of Jobs from triage.
 - **Where, in order:** the emails' posting links (a platform's posting, Indeed's view-job link, a
   careers page; never a link about the account or the email, or an application's own page, by a
   whole path segment such as `candidates` or `apply`, unless a platform's posting id is in it, since
-  that's read by its id), then Greenhouse, Lever and Ashby's public APIs by board name, then Sonnet 5.5
-  with web search only when those cleanly missed, on the platform the application names first, then
-  the employer's careers site, then job boards. Haiku checks what a link or a platform found, and
+  that's read by its id), then Greenhouse, Lever and Ashby's public APIs by board name, or
+  GovernmentJobs' search in their place, then Sonnet 5.5 with web search only when those cleanly
+  missed, on the platform the application names first, then the employer's careers site, then job
+  boards. Haiku checks what a link or a platform found, and
   a page that isn't a posting is `no`, whatever company and role it names, as is one saying the
   posting has closed with no description of the job; Sonnet's search judges its own. Confident is
   saved with Haiku's reading; unsure offers up to three candidates as a JD to confirm; nothing is
   `not_found`.
+- **GovernmentJobs (D388, D389):** it has no public API and an email names no agency, so an
+  application through it (the platform triage named, or a sender at a governmentjobs or neogov
+  domain) reads the site's own search for its title: `/jobs?keyword=<title>`, page 1, ten results
+  across every employer (web.ts `governmentJobsSearch`). Results are kept only for the application's
+  employer (lookupRules.ts `sameEmployer`, stricter than `sameCompany`: a city and the county of its
+  name are two employers), ranked by title, and up to three are read as ordinary pages, whose
+  JSON-LD gives their date and text, then checked by Haiku with source `platform` and site
+  `GovernmentJobs`. One `match` is saved; maybes wait in Needs you. A title with no result (a closed
+  posting), markup Jobs doesn't recognise, a 404 or a 403 is a miss and search runs; a 5xx, a 429 or
+  the network is a failure to retry.
 - **What the search offers is opened (D388):** a sole `match` that reads is saved with no check.
   Otherwise each candidate is opened (web.ts `openLink`): one that's gone (a 404, a 410, a platform
   saying it isn't there) is dropped; one Jobs can't read (a 403, a non-HTML answer, a page drawn by

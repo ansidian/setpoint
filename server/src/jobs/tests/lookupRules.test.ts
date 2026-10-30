@@ -7,7 +7,8 @@ import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
 import {postingReadingOf} from '../jdPrompt.ts';
 import {
-  boardNames, emailLinks, isApplicationPage, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingFit, postingLinks, postingRef, senderBoard,
+  boardNames, emailLinks, governmentJobMatches, isApplicationPage, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingFit, postingLinks, postingRef, sameEmployer,
+  senderBoard, throughGovernmentJobs,
 } from '../lookupRules.ts';
 import type {JobPlatform, LookupApplication, PostingCandidate, PostingHosts, StepOutcome, Verdict} from '../lookupRules.ts';
 
@@ -189,6 +190,67 @@ describe('matching a board\'s postings', () => {
     expect(matchPostings(APPLICATION, [other, close, exactOld, exactNew, closer]).map(each => each.link)).toEqual([
       'https://x.example/2', 'https://x.example/1', 'https://x.example/3',
     ]);
+  });
+});
+
+describe('GovernmentJobs (D389)', () => {
+  test.each<[string, string | null, string[], boolean]>([
+    ['triage named it', 'GovernmentJobs', [], true],
+    ['any case', 'governmentjobs', [], true],
+    ['with a space', 'Government Jobs', [], true],
+    ['as its address', 'governmentjobs.com', [], true],
+    ['by its maker\'s name', 'NEOGOV', [], true],
+    ['any case', 'neogov', [], true],
+    ['a sender at its domain', null, ['noreply@governmentjobs.example'], true],
+    ['on a subdomain', null, ['alerts@mail.governmentjobs.example'], true],
+    ['at its maker\'s', null, ['Notices@NeoGov.example'], true],
+    ['one sender of several', 'Indeed', ['alert@indeed.example', 'noreply@governmentjobs.example'], true],
+    ['another platform', 'Workday', ['noreply@myworkday.example'], false],
+    ['the three boards', 'Greenhouse', [], false],
+    ['USAJobs is another', 'USAJobs', [], false],
+    ['nothing named', null, [], false],
+    ['a lookalike domain', null, ['noreply@notgovernmentjobs.example'], false],
+    ['a domain that only starts the same', null, ['noreply@governmentjobs.fabrikam.example'], false],
+    ['its name before the @', null, ['governmentjobs@fabrikam.example'], false],
+  ])('whether it runs: %s', (_, via, senders, runs) => {
+    expect(throughGovernmentJobs(via, senders)).toBe(runs);
+  });
+
+  test.each<[string, string, string, boolean]>([
+    ['the same name', 'City of Contoso', 'City of Contoso', true],
+    ['case and punctuation', 'CITY OF CONTOSO.', 'City of Contoso', true],
+    ['named without "City of"', 'Contoso', 'City of Contoso', true],
+    ['either way round', 'City of Contoso', 'Contoso', true],
+    ['a county, by either wording', 'County of Contoso', 'Contoso County', true],
+    ['a city, by either wording', 'Contoso City', 'City of Contoso', true],
+    ['a state', 'State of Contoso', 'Contoso', true],
+    // Both are real employers on the site, each with its own postings of a title.
+    ['a city isn\'t the county of its name', 'City of Contoso', 'County of Contoso', false],
+    ['nor by the other wording', 'City of Contoso', 'Contoso County', false],
+    ['a state isn\'t its city', 'State of Contoso', 'City of Contoso', false],
+    ['a district in the city', 'City of Contoso', 'Contoso Unified School District', false],
+    ['a college named for it', 'City of Contoso', 'Contoso City College', false],
+    ['a department of it is another name', 'City of Contoso', 'City of Contoso Water Department', false],
+    ['another city', 'City of Contoso', 'City of Fabrikam', false],
+    // The site's way of telling two of a name apart, so it's a miss, and search runs.
+    ['a state in brackets is another name', 'City of Contoso', 'City of Contoso (WA)', false],
+    ['a name that only starts the same', 'Contoso', 'Contoso Transit', false],
+  ])('sameEmployer: %s', (_, a, b, same) => {
+    expect(sameEmployer(a, b)).toBe(same);
+  });
+
+  test('the same employer\'s results for the role, three at most, best first', () => {
+    const result = (title: string, employer: string, n: number) => ({...posting(title, {postedAt: null, link: `https://governmentjobs.example/jobs/${n}-0/x`}), employer});
+    const application = {...APPLICATION, company: 'City of Contoso', title: 'Office Assistant II', titleKey: 'office assistant ii'};
+    expect(governmentJobMatches(application, [
+      result('Office Assistant II, Public Works', 'City of Contoso', 1),
+      result('Office Assistant II', 'City of Fabrikam', 2),
+      result('OFFICE ASSISTANT II', 'City of Contoso', 3),
+      result('Senior Accountant', 'City of Contoso', 4),
+      result('Office Assistant II (Water)', 'Contoso', 5),
+      result('Office Assistant II', 'Contoso County', 6),
+      result('Office Assistant II (Parks)', 'City of Contoso', 7),
+    ]).map(each => each.link)).toEqual([3, 5, 7].map(n => `https://governmentjobs.example/jobs/${n}-0/x`));
   });
 });
 

@@ -1,9 +1,10 @@
 // How the JD lookup reads the web (J3; decision 54): the hiring platforms' public job APIs
-// (Greenhouse's job board API, Lever's postings API, Ashby's posting API) and posting pages, each
-// request with Setpoint's honest, named User-Agent, through News's one way to GET (redirects followed
-// by hand, never to the home network, a cap on what's read, failures classified for the retry
-// policy). Only production is given the real hosts (server.ts): a dev run, `npm run try`, the seed and
-// every test get none, or example domains served by a fake on 127.0.0.1.
+// (Greenhouse's job board API, Lever's postings API, Ashby's posting API), GovernmentJobs' site-wide
+// search (D389) and posting pages, each request with Setpoint's honest, named User-Agent, through
+// News's one way to GET (redirects followed by hand, never to the home network, a cap on what's read,
+// failures classified for the retry policy). Only production is given the real hosts (server.ts): a
+// dev run, `npm run try`, the seed and every test get none, or example domains served by a fake on
+// 127.0.0.1.
 import type {NewsHttpOptions} from '../providers/news/http.ts';
 import {hostOf, newsGet, newsGetJson, responseText} from '../providers/news/http.ts';
 import {ProviderError} from '../sync/errors.ts';
@@ -21,16 +22,19 @@ export interface JobsWeb {
   http: NewsHttpOptions;
   // Each platform's public API base.
   apis: Record<JobPlatform, string>;
+  // GovernmentJobs' site: no API, so its search's HTML.
+  governmentJobs: string;
   // Where each platform's posting pages live, and Indeed's.
   hosts: PostingHosts;
   userAgent: string;
 }
 
-/** Production's web: the platforms' real public APIs and posting hosts. */
+/** Production's web: the platforms' real public APIs and posting hosts, and GovernmentJobs' site. */
 export function jobsWeb(http: NewsHttpOptions = {}): JobsWeb {
   return {
     http,
     apis: {greenhouse: 'https://boards-api.greenhouse.io', lever: 'https://api.lever.co', ashby: 'https://api.ashbyhq.com'},
+    governmentJobs: 'https://www.governmentjobs.com',
     hosts: {
       greenhouse: ['boards.greenhouse.io', 'job-boards.greenhouse.io', 'job-boards.eu.greenhouse.io', 'boards.eu.greenhouse.io'],
       lever: ['jobs.lever.co', 'jobs.eu.lever.co'],
@@ -244,6 +248,50 @@ export function pagePosting(html: string, link: string): FoundPosting | null {
   const title = meta('og:title') ?? (heading ? flat(textContent(heading)) : null) ?? flat(textContent(findOne(node => node.name === 'title', document.children) ?? []));
   if (!title || text.length < MIN_POSTING_CHARS) return null;
   return {title, link, site, text, location: null, postedAt: null, requisitionId: null, facts: []};
+}
+
+// ---- GovernmentJobs: GET /jobs?keyword={title} ----
+
+/** One of GovernmentJobs' search results: a posting's address, with no date or text until its page is read. */
+export interface GovernmentJob extends PostingCandidate {
+  employer: string;
+}
+
+const hasClass = (element: Element, name: string) => attr(element, 'class')?.split(/\s+/).includes(name) ?? false;
+
+/** The results in the search's HTML; none in markup it doesn't recognise, so a change on the site is a miss and search still runs (D388). */
+export function governmentJobsResults(html: string, base: string): GovernmentJob[] {
+  const items = findAll(node => node.name === 'li' && hasClass(node, 'job-item'), parseDocument(html).children);
+  return items.flatMap((item): GovernmentJob[] => {
+    const part = (name: string) => findOne(node => hasClass(node, name), item.children);
+    const details = part('job-details-link');
+    const organization = part('job-organization');
+    const href = details && attr(details, 'href');
+    const title = details && flat(textContent(details));
+    const employer = organization && flat(textContent(organization));
+    if (!href || !title || !employer || !URL.canParse(href, base)) return [];
+    const place = part('job-location');
+    return [{title, employer, location: (place && flat(textContent(place))) || null, link: new URL(href, base).toString(), postedAt: null, requisitionId: null}];
+  });
+}
+
+/**
+ * The first page of GovernmentJobs' search for a title, ten results across every employer on the
+ * site; none when it says no (a 404, a 403) or answers with something else. Throws a failure to retry.
+ */
+export async function governmentJobsSearch(web: JobsWeb, keyword: string, signal: AbortSignal): Promise<GovernmentJob[]> {
+  try {
+    // Asked as the site's own script asks, it answers with the results alone rather than the whole page.
+    const response = await newsGet(web.http, {
+      url: `${web.governmentJobs}/jobs?keyword=${encodeURIComponent(keyword)}`, userAgent: web.userAgent, signal, accept: HTML,
+      headers: {'x-requested-with': 'XMLHttpRequest'},
+    });
+    if (!/html/i.test(response.headers.get('content-type') ?? '')) return [];
+    return governmentJobsResults(responseText(response), web.governmentJobs);
+  } catch (error) {
+    if (error instanceof ProviderError && isMiss(error)) return [];
+    throw error;
+  }
 }
 
 /**

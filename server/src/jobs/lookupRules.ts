@@ -1,16 +1,20 @@
 // The JD lookup's pure rules (J3; BRIEF.md › Jobs › The JD; decisions 53, 54, 61, 66), tested as
 // tables (tests/lookupRules.test.ts): which links in an email are postings and on which platform,
-// which hiring platforms and board names to try, which of a board's postings could be the role, what
-// the model's verdicts make (confident, unsure, nothing), how a lookup ends, and what counts as a
-// failure to retry rather than a miss. No network, no database, no clock.
+// which hiring platforms and board names to try, when GovernmentJobs' search runs and which of its
+// results are the employer's, which of a board's postings could be the role, what the model's
+// verdicts make (confident, unsure, nothing), how a lookup ends, and what counts as a failure to retry
+// rather than a miss. No network, no database, no clock.
 import type {ProviderError} from '../sync/errors.ts';
 import {companyKey, requisitionKey, titleKey} from './rules.ts';
 
-/** The hiring platforms whose public job APIs Jobs reads (decision 54). */
+/**
+ * The hiring platforms whose public job APIs Jobs reads, board by board (decision 54). GovernmentJobs
+ * isn't one: it has no API, and is read through its site-wide search (D389).
+ */
 export const JOB_PLATFORMS = ['greenhouse', 'lever', 'ashby'] as const;
 export type JobPlatform = (typeof JOB_PLATFORMS)[number];
 
-export const PLATFORM_NAMES: Record<JobPlatform | 'indeed', string> = {greenhouse: 'Greenhouse', lever: 'Lever', ashby: 'Ashby', indeed: 'Indeed'};
+export const PLATFORM_NAMES: Record<JobPlatform | 'indeed' | 'governmentjobs', string> = {greenhouse: 'Greenhouse', lever: 'Lever', ashby: 'Ashby', indeed: 'Indeed', governmentjobs: 'GovernmentJobs'};
 
 /**
  * The hosts each platform's public posting pages live on, and Indeed's: production's real ones
@@ -148,6 +152,14 @@ export function platformsToTry(via: string | null, linked: JobPlatform[]): JobPl
   return [...new Set([...linked, ...fromVia])];
 }
 
+const GOVERNMENT_JOBS_NAME = /\b(government ?jobs|neogov)\b/i;
+const GOVERNMENT_JOBS_SENDER = /@([^@\s]+\.)?(governmentjobs|neogov)\.[a-z]{2,}$/i;
+
+/** Whether the application came through GovernmentJobs (NEOGOV's), by the platform triage named or an email's sender. */
+export function throughGovernmentJobs(via: string | null, senders: string[]): boolean {
+  return (via !== null && GOVERNMENT_JOBS_NAME.test(via)) || senders.some(sender => GOVERNMENT_JOBS_SENDER.test(sender.trim()));
+}
+
 // Mail and job-board services whose domain says nothing about the employer.
 const SERVICE_DOMAINS = /^(greenhouse|greenhouse-mail|lever|hire|ashbyhq|ashby|myworkday|myworkdayjobs|workday|icims|smartrecruiters|breezy|breezyhr|workable|jobvite|bamboohr|indeed|indeedemail|linkedin|ziprecruiter|glassdoor|dice|monster|handshake|wellfound|gmail|googlemail|outlook|hotmail|live|yahoo|icloud|me|aol|proton|protonmail|google|amazonses|sendgrid|mailgun|mailchimp|mcsv|successfactors|taleo|oraclecloud|paylocity|adp|recruitee|teamtailor|jazzhr|applytojob|governmentjobs|neogov|example)$/i;
 
@@ -239,6 +251,31 @@ export function matchPostings<T extends PostingCandidate>(application: LookupApp
   return scored.filter(entry => (best === 3 ? entry.fit === 3 : true))
     .sort((a, b) => b.fit - a.fit || distance(a.posting) - distance(b.posting))
     .slice(0, limit).map(entry => entry.posting);
+}
+
+/** A public employer's name as a place and what it is of it: "City of Contoso" and "Contoso City" are the city of "contoso". */
+function employerName(company: string): {of: string | null; place: string} {
+  const key = companyKey(company);
+  const [, of, place] = /^(city|county|state) of (.+)$/.exec(key) ?? [];
+  if (of && place) return {of, place};
+  const [, named, kind] = /^(.+) (city|county)$/.exec(key) ?? [];
+  return named && kind ? {of: kind, place: named} : {of: null, place: key};
+}
+
+/**
+ * Whether a GovernmentJobs result is the application's employer: the same name, or the same place
+ * with "City of", "County of" or "State of" on one side only or worded the other way round. Never
+ * looser: a city and the county of its name are two employers, each with its own postings of a title.
+ */
+export function sameEmployer(a: string, b: string): boolean {
+  if (companyKey(a) === companyKey(b)) return true;
+  const [mine, theirs] = [employerName(a), employerName(b)];
+  return mine.place === theirs.place && (mine.of === null || theirs.of === null || mine.of === theirs.of);
+}
+
+/** GovernmentJobs' results that could be the role: the employer's own, by their titles, best first, at most `limit`. */
+export function governmentJobMatches<T extends PostingCandidate & {employer: string}>(application: LookupApplication, results: T[], limit = 3): T[] {
+  return matchPostings(application, results.filter(result => sameEmployer(application.company, result.employer)), limit);
 }
 
 /** The model's verdict on one candidate: it's the posting, it might be, or it isn't. */

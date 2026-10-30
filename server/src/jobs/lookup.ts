@@ -8,8 +8,9 @@
 //   open or closed, whoever asks. Each
 //   lookup is its own `jobs_read` job on the sync engine, keyed `jobs_jd:<application>`, so one
 //   that fails waits out its own backoff.
-// - Where, in order: the email's own links, then Greenhouse, Lever and Ashby's public job APIs,
-//   then Sonnet 5.5 with Claude's web search, only when those cleanly missed (./lookupRules.ts).
+// - Where, in order: the email's own links, then Greenhouse, Lever and Ashby's public job APIs, or
+//   GovernmentJobs' site-wide search for an application through it (D389), then Sonnet 5.5 with
+//   Claude's web search, only when those cleanly missed (./lookupRules.ts).
 // - The check: Haiku 5.5 weighs what a link or a platform found; Sonnet's search judges its own.
 //   Confident is saved silently; unsure saves nothing and offers up to three candidates as a JD to
 //   confirm in Needs you; nothing is "No JD found", never retried on its own (D320). A lookup that
@@ -43,15 +44,16 @@ import {
 } from './jdPrompt.ts';
 import type {JdApplication} from './jdPrompt.ts';
 import {
-  boardNames, emailLinks, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingLinks, postingRef,
+  boardNames, emailLinks, governmentJobMatches, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, PLATFORM_NAMES, platformsToTry, postingLinks, postingRef,
+  throughGovernmentJobs,
 } from './lookupRules.ts';
 import type {JobPlatform, StepOutcome, Verdict} from './lookupRules.ts';
 import {lookupEmail} from './mail.ts';
 import {jobsModelClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import * as j from './schema.ts';
 import {rejectedLinks, stillLooking} from './stick.ts';
-import {boardPostings, openLink, readLink} from './web.ts';
-import type {FoundPosting, JobsWeb, OpenedLink} from './web.ts';
+import {boardPostings, governmentJobsSearch, openLink, readLink} from './web.ts';
+import type {FoundPosting, GovernmentJob, JobsWeb, OpenedLink} from './web.ts';
 
 export const LOOKUP_KEY_PREFIX = 'jobs_jd:';
 export const lookupKey = (applicationId: number) => `${LOOKUP_KEY_PREFIX}${applicationId}`;
@@ -252,14 +254,19 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   const links = postingLinks(emails.links, web.hosts).filter(fresh);
   if (links.length) steps.push(await fromFound(store, haiku, context, 'email_link', links.map(link => () => readLink(web, link, signal)), signal));
 
-  // 2. The hiring platforms' public APIs, by the board names the emails and the company suggest.
+  // 2. The hiring platforms' public APIs, by the board names the emails and the company suggest, or
+  // GovernmentJobs' search for an application through it.
   if (nextSourceRuns('platforms', steps)) {
-    const refs = emails.links.map(link => postingRef(link, web.hosts)).filter(ref => ref !== null && ref.platform !== 'indeed');
-    const platforms = platformsToTry(application.platform, refs.map(ref => ref!.platform as JobPlatform));
-    const step = await fromPlatforms(store, haiku, context, application, platforms, platform => boardNames(
-      application.company, refs.filter(ref => ref!.platform === platform).map(ref => ref!.board), emails.senders,
-    ), web, fresh, signal);
-    if (step) steps.push(step);
+    if (throughGovernmentJobs(application.platform, emails.senders)) {
+      steps.push(await fromGovernmentJobs(store, haiku, context, application, web, fresh, signal));
+    } else {
+      const refs = emails.links.map(link => postingRef(link, web.hosts)).filter(ref => ref !== null && ref.platform !== 'indeed');
+      const platforms = platformsToTry(application.platform, refs.map(ref => ref!.platform as JobPlatform));
+      const step = await fromPlatforms(store, haiku, context, application, platforms, platform => boardNames(
+        application.company, refs.filter(ref => ref!.platform === platform).map(ref => ref!.board), emails.senders,
+      ), web, fresh, signal);
+      if (step) steps.push(step);
+    }
   }
 
   // 3. Sonnet with web search, only when those cleanly missed.
@@ -353,6 +360,29 @@ async function fromPlatforms(
   }
   const outcome: StepOutcome<Offer> = offers.length ? await check(store, haiku, context, offers.slice(0, 3), signal) : {is: 'none'};
   return outcome.is !== 'confident' && failed ? {is: 'failed', error: failed} : outcome;
+}
+
+/**
+ * GovernmentJobs' search for the title (D389): the employer's results are read as any page, and Haiku
+ * checks them, with their dates and text, since an employer posts a title more than once. A result
+ * keeps the address the search gave, which what the user turns down is compared with, and the place
+ * it gave, since the page's own repeats the state ("Contoso, WA, WA").
+ */
+async function fromGovernmentJobs(
+  store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, application: Application, web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal,
+): Promise<Step> {
+  if (!application.titleKey) return {is: 'none'};
+  let results: GovernmentJob[];
+  try {
+    results = await governmentJobsSearch(web, application.title, signal);
+  } catch (error) {
+    return {is: 'failed', error: asProviderError(error)};
+  }
+  const reads = governmentJobMatches(application, results.filter(result => fresh(result.link))).map(({link, location}) => async () => {
+    const found = await readLink(web, link, signal);
+    return found && {...found, link, location: location ?? found.location, site: PLATFORM_NAMES.governmentjobs};
+  });
+  return fromFound(store, haiku, context, 'platform', reads, signal);
 }
 
 /**
