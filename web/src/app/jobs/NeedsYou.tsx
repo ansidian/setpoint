@@ -66,7 +66,7 @@ function shownItems(items: NeedsYouItemOut[], answered: ReadonlyMap<number, Answ
   return list.filter(item => !gone.has(item.id)).map(item => ({key: needKey(item.id), id: item.id, item}));
 }
 
-export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, onPoint, onOpen}: {
+export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, unfoldHistory = 0, onPoint, onOpen}: {
   items: NeedsYouItemOut[];
   history: NeedsYouItemOut[];
   // The table's rows, for Assign to…'s applications.
@@ -77,11 +77,23 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   folded: boolean;
   now: number;
   timeZone: string;
+  // How many times Settings › Jobs's Show has asked for From history (J8): each ask unfolds it.
+  unfoldHistory?: number;
   onPoint: (key: string) => void;
   // Track this opens the application it made (34c).
   onOpen: (id: number) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(unfoldHistory > 0);
+  const [asked, setAsked] = useState(unfoldHistory);
+  if (asked !== unfoldHistory) {
+    setAsked(unfoldHistory);
+    setOpen(true);
+  }
+  // Unfolded by Show, From history comes into view under the header.
+  const fold = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (unfoldHistory > 0) requestAnimationFrame(() => fold.current?.scrollIntoView({block: 'nearest'}));
+  }, [unfoldHistory]);
   const [answered, setAnswered] = useState<ReadonlyMap<number, Answered>>(new Map());
   const [gone, setGone] = useState<ReadonlySet<number>>(new Set());
   const [menu, setMenu] = useState<{spec: MenuSpec; anchor: MenuAnchor; owner: string} | null>(null);
@@ -182,7 +194,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
         {historyLine.shown && (
           <div className={historyLine.closing ? 'jb-histsec closing' : 'jb-histsec'}>
             <div>
-              <div className="jb-fold" onClick={() => setOpen(!open)}>
+              <div className="jb-fold" ref={fold} onClick={() => setOpen(!open)}>
                 <button className="jb-fold-t" type="button" aria-expanded={open} onClick={event => {
                   event.stopPropagation();
                   setOpen(!open);

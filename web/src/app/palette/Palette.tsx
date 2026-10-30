@@ -35,6 +35,7 @@ const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
   {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
   {page: 'news', keywords: 'sources feeds airnow'},
+  {page: 'jobs', keywords: 'applications history reads'},
   {page: 'ai', keywords: 'keys models anthropic openai claude gpt alfred usage cap'},
   {page: 'appearance', keywords: 'theme'},
   {page: 'security', keywords: 'password passkeys recovery codes'},

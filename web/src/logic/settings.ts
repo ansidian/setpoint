@@ -12,6 +12,7 @@ export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}>
   notifications: {label: 'Notifications', icon: 'notifications'},
   mail: {label: 'Mail', icon: 'mail'},
   news: {label: 'News', icon: 'newspaper'},
+  jobs: {label: 'Jobs', icon: 'work'},
   ai: {label: 'AI', icon: 'auto_awesome'},
   appearance: {label: 'Appearance', icon: 'contrast'},
   security: {label: 'Security', icon: 'lock'},

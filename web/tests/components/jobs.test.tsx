@@ -1,10 +1,14 @@
 // Jobs's widgets (J5, J6; DESIGN.md › Jobs): Per week's chart, the status filter and the full posting
 // unfolding in place (board 33); J6's menus with their keys and submenus, the candidate picker and the
 // title's field (boards 34a, 35a, 35b); J7's JD chip with its popover and Applied before, as mail's
-// slots draw them (boards 37a–37c). What they do with the props and the pointer or keys they're given; the
-// page around them, its keys and the server are jobs.spec.ts's. This file imports Jobs's folder, so
+// slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
+// lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b). What they do with
+// the props and the pointer or keys they're given; the page around them, its keys and the server are
+// jobs.spec.ts's and jobsStates.spec.ts's. This file imports Jobs's folder, so
 // it's one of Jobs's wiring points (server/src/jobs/README.md).
-import type {ApplicationOut, JdCandidateOut, JobCountsOut, JobsMailApplicationOut, JobsMailMessageOut, JobWeekOut, PostingOut} from '@setpoint/shared';
+import type {
+  ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, PostingOut,
+} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -20,6 +24,7 @@ import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
+import {fromHistorySetting, historyLine, historySetting, historyShare, jobsUsageParts, readingLine} from '../../src/app/jobs/words.ts';
 import {colour} from './colour.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -493,4 +498,43 @@ test('Applied before (37c): 20 px on the row, 26 px in the reader, each with its
   } finally {
     window.history.replaceState(null, '', was);
   }
+});
+
+// ---- J8's words (38a, 38b, 39a, 39b) ----
+
+const NOW = Date.parse('2026-10-07T16:12:00.000Z');
+const HEALTHY: JobsReadingOut = {waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false};
+const DONE: JobsHistoryOut = {state: 'done', read: 330, total: 330, started_at: '2026-10-02T01:02:00.000Z', finished_at: '2026-10-02T03:14:00.000Z'};
+const down = (cause: JobsReadingOut['cause'], waiting = 5, retrying = cause === 'unreachable' || cause === 'rate_limited', since = '2026-10-07T15:52:00.000Z'): JobsReadingOut =>
+  ({waiting, state: 'down', since, reason: 'Anthropic: Overloaded (529)', cause, retrying});
+
+test.each<[string, JobsReadingOut, JobsHistoryOut, string | null]>([
+  ['healthy: no line', HEALTHY, DONE, null],
+  ['unreachable (38b)', down('unreachable'), DONE, '5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying'],
+  ['one email', down('unreachable', 1), DONE, '1 email not read yet, Anthropic unreachable since 8:52 AM, retrying'],
+  ['rate limited', down('rate_limited'), DONE, '5 emails not read yet, Anthropic rate limited since 8:52 AM, retrying'],
+  ['its key refused: no retrying', down('refused'), DONE, '5 emails not read yet, Anthropic refused its key in Settings › AI'],
+  ['no key', down('no_key'), DONE, '5 emails not read yet, Jobs needs an Anthropic key in Settings › AI'],
+  ['down since yesterday: the day too', down('unreachable', 5, true, '2026-10-06T15:52:00.000Z'), DONE, '5 emails not read yet, Anthropic unreachable since Oct 6, 8:52 AM, retrying'],
+  ['the history pass held: what it has left counts too', down('unreachable', 2), {...DONE, state: 'waiting', read: 140, finished_at: null}, '192 emails not read yet, Anthropic unreachable since 8:52 AM, retrying'],
+  ['nothing waiting: the reason alone', down('unreachable', 0), DONE, 'Anthropic unreachable since 8:52 AM, retrying'],
+])('the AI down\'s line, %s', (_, reading, history, line) => {
+  expect(readingLine(reading, history, NOW, ZONE)).toBe(line);
+});
+
+test('the history pass\'s line (38a): its counts in place and how far it has come; Settings › Jobs\'s row as it runs, once done and before', () => {
+  const running: JobsHistoryOut = {...DONE, state: 'running', read: 140, finished_at: null};
+  expect(historyLine(running)).toBe('Reading history · 140 of 330 emails · showing what’s read so far');
+  expect(historyLine({read: 1200, total: 1310})).toBe('Reading history · 1,200 of 1,310 emails · showing what’s read so far');
+  expect([historyShare(running), historyShare({read: 0, total: 0}), historyShare({read: 12, total: 10})]).toEqual([140 / 330, 0, 1]);
+  expect(historySetting(running, NOW, ZONE)).toBe('Reading history · 140 of 330 emails');
+  expect(historySetting(DONE, NOW, ZONE)).toBe('Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM');
+  expect(historySetting({state: 'not_started', read: 0, total: 0, started_at: null, finished_at: null}, NOW, ZONE)).toBe('Runs once when Jobs is turned on, over the mail from before then');
+  expect([fromHistorySetting(6), fromHistorySetting(0)]).toEqual(['6 waiting in Needs you, what the pass wasn\'t sure of', 'None waiting in Needs you']);
+});
+
+test('Usage this month\'s Jobs row (39b): its three parts', () => {
+  const part = (cost_usd: number) => ({calls: 1, input_tokens: 0, output_tokens: 0, cost_usd});
+  const month: JobsAiOut['this_month'] = {...part(3.85), emails: part(0.62), finding_jds: part(2.71), reading_jds: part(0.52)};
+  expect(jobsUsageParts(month)).toBe('Emails $0.62 · finding JDs $2.71 · reading JDs $0.52');
 });

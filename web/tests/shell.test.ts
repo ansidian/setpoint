@@ -153,6 +153,8 @@ describe('routes', () => {
     // From mail (J7): Full posting arrives unfolded, and Applied before searched for the company.
     ['/jobs/12/posting', '', {page: 'jobs', open: 12, posting: true}],
     ['/jobs/posting', '', {page: 'jobs', open: null}],
+    // From Settings › Jobs's Show (J8): From history unfolded.
+    ['/jobs/from-history', '', {page: 'jobs', open: null, history: true}],
     ['/jobs', '?q=contoso%20pharmaceuticals', {page: 'jobs', open: null, q: 'contoso pharmaceuticals'}],
     ['/jobs', '?q=%20%20', {page: 'jobs', open: null}],
     ['/somewhere', '', {page: 'inbox', account: null, open: null}],

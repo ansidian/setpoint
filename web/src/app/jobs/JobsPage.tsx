@@ -13,6 +13,10 @@
 // unfolded posting, then closes the detail (in a narrow window, Back), then clears the query, then
 // leaves search. `4` is the shell's (App.tsx).
 //
+// J8's states (States.tsx; 38a–38c): the AI down and the history pass's lines at the top of the column,
+// three skeleton rows holding the table's top while the pass runs, and Jobs off's one line, its header
+// "Jobs" alone. Settings › Jobs's Show arrives at /jobs/from-history, From history unfolded.
+//
 // From mail (J7): an application open as the page mounts (Open in Jobs, Full posting, a reload)
 // arrives with its pane simply there, no slide; /jobs/12/posting arrives scrolled to its full posting
 // and unfolded (#271); /jobs?q=… arrives searched, the query in the field (Applied before). The
@@ -52,8 +56,9 @@ import type {FullPostingHandle} from './FullPosting.tsx';
 import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
+import {HistorySkeleton, JobsLines, JobsOff} from './States.tsx';
 import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
-import {DEFAULT_SORT, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
+import {DEFAULT_SORT, historyRuns, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import './jobs.css';
 
@@ -84,6 +89,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const load = {path: JOBS_PATH, ...useResource<JobsPageOut>(JOBS_PATH)};
   const page = load.data;
   const failed = useLoadFailed([load]);
+  // Off (38c), the page is its one line: no header numbers, no search, nothing for the keys.
+  const enabled = page?.enabled ?? true;
 
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
@@ -151,8 +158,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const corRows = useMemo(() => (results ? sortRows(results.company_or_role, sort) : []), [results, sort]);
   const jdRows = useMemo(() => (results ? sortRows(results.in_jd.map(each => each.row), sort) : []), [results, sort]);
   const lines = useMemo(() => new Map(results?.in_jd.map(each => [each.row.id, each.line]) ?? []), [results]);
-  const shownRows = results ? [...corRows, ...jdRows] : table;
-  const needs = !q && page ? page.needs_you : [];
+  const shownRows = !enabled ? [] : results ? [...corRows, ...jdRows] : table;
+  const needs = !q && page?.enabled ? page.needs_you : [];
   const keys = [...needs.map(item => needKey(item.id)), ...shownRows.map(row => rowKey(row.id))];
 
   const open = route.open;
@@ -162,10 +169,13 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // Full posting from mail: that application's posting arrives unfolded, once.
   const [unfold, setUnfold] = useState(route.posting ? open : null);
   if (unfold !== null && open !== unfold) setUnfold(null);
-  // What the address carried from mail is spent once it's here.
+  // Settings › Jobs's Show: From history unfolds, each time it's asked, even with the page already here.
+  const [historyAsks, setHistoryAsks] = useState({route, count: route.history ? 1 : 0});
+  if (historyAsks.route !== route) setHistoryAsks({route, count: historyAsks.count + (route.history ? 1 : 0)});
+  // What the address carried from mail or Settings is spent once it's here.
   useEffect(() => {
-    if (route.posting || route.q) navigate({page: 'jobs', open: route.open}, {replace: true});
-  }, [route.posting, route.q, route.open]);
+    if (route.posting || route.q || route.history) navigate({page: 'jobs', open: route.open}, {replace: true});
+  }, [route.posting, route.q, route.history, route.open]);
   const openRow = open === null ? undefined : shownRows.find(row => row.id === open) ?? rows.find(row => row.id === open);
   const {data: detail} = useResource<ApplicationOut>(open === null ? null : applicationPath(open));
   const titled = openRow ?? (detail?.id === open ? detail : undefined);
@@ -231,7 +241,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
       if (plainKey(event, 'j')) move(1);
       else if (plainKey(event, 'k')) move(-1);
       else if (plainKey(event, 'Enter') && cursor?.startsWith('r:') && keys.includes(cursor)) run(() => openAt(Number(cursor.slice(2))));
-      else if (plainKey(event, '/')) run(enterSearch);
+      else if (plainKey(event, '/') && enabled) run(enterSearch);
       else if (plainKey(event, 'o') && open !== null) {
         const link = postingLink();
         if (link) {
@@ -329,7 +339,6 @@ export function JobsPage({route}: {route: JobsRoute}) {
     cursor: cursor === rowKey(row.id), open: open === row.id, landed: seen.landed.has(row.id) || seen.moved.has(row.id), moved: seen.moved.has(row.id),
   });
   const rowProps = {rowState, besideDetail: open !== null, query: q || null, now, timeZone: zone, today, onPoint, onClick: onRowClick, onMenu: onRowMenu};
-  const enabled = page?.enabled ?? true;
 
   return (
     <>
@@ -364,11 +373,13 @@ export function JobsPage({route}: {route: JobsRoute}) {
       </header>
       <div className="content">
         <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
-          {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <div className="jb-empty" /> : (
+          {page?.enabled && !q && <JobsLines page={page} now={now} timeZone={zone} />}
+          {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
             <div className="jb-scroll jb-tbl" ref={scroller}>
               <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
-                onPoint={onPoint} onOpen={openAt} />
+                unfoldHistory={historyAsks.count} onPoint={onPoint} onOpen={openAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />
+              {!results && historyRuns(page.history) && <HistorySkeleton />}
               {results ? (
                 <>
                   {corRows.length > 0 ? (

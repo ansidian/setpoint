@@ -362,7 +362,35 @@
   .jb-week .words { display: none; }
 }
 
-.jb-empty { flex: 1 1 auto; }
+/* ---------- J8's states (38a–38c) ---------- */
+/* The AI down and the history pass: a 32 px line at the top of the column, over a hairline, as mail's
+   health lines and News's first run are. The pass's progress runs along its foot (states.css's .progress). */
+.jb-state { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.jb-state.failing { color: var(--caution); }
+.jb-state.muted { color: var(--ink3); }
+.jb-state .spin { margin-left: 0; vertical-align: 0; color: inherit; }
+.jb-state .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* Its source back (the AI, or the pass done): `check` in `good` for 1.2 s, then it folds out (states-13). */
+.jb-state.cleared > .icon.ok { color: var(--good); animation: line-ok var(--dur-fast) var(--ease); }
+/* While the pass runs, three skeleton rows hold the table's top (#225). */
+.jb-sk > .jb-tr { pointer-events: none; }
+.jb-sk > .jb-tr > span { display: flex; align-items: center; }
+
+/* Jobs off (38c): the one-line empty state, `work` over "Jobs is off · Turn on", Turn on an ink pill. */
+.jb-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink3); padding-bottom: 80px; }
+.jb-empty .line { display: flex; align-items: center; gap: 12px; color: var(--ink2); }
+.jb-empty .sep { color: var(--ink3); }
+.jb-empty .lnk { color: var(--ink); height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; margin-left: -4px;
+  transition: background-color var(--dur-fast) var(--ease), transform var(--dur-press) var(--ease); }
+@media (hover: hover) { .jb-empty .lnk:hover { background: var(--sub2); } }
+.jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }
+
+/* Settings › Jobs (39a): each account's dot and label, then what Jobs reads there, a plain value (#273);
+   the group's foot under it. Settings › AI's This month (39b): the amount in ink, with no meter. */
+.settings .jb-reads .acc { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); min-width: 0; }
+.settings .jb-reads .reads { color: var(--ink3); font-size: 12.5px; white-space: nowrap; flex: none; }
+.settings .jb-note { height: auto; margin: 0; padding: 8px 4px 0; }
+.settings .jb-spent { color: var(--ink); font-size: 12.5px; flex: none; white-space: nowrap; }
 
 /* ---------- Menus (34a, 35a, 35b; #266–#268): the reader's menu, from its anchor's corner ---------- */
 .jb-menu { position: fixed; z-index: 40; padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 16px); overflow-y: auto; }

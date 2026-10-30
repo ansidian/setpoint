@@ -232,6 +232,8 @@
 /* News (board 30a): the head's counts, each section's count by its label, 44 px rows, and a state as
    wide as "Failing, 404 since 6:02 AM". */
 .settings .set-head .head-note { color: var(--ink3); font-size: 12.5px; }
+/* A note straight after the title rather than at the head's end (Settings › Jobs's count, 39a). */
+.settings .set-head .head-note.after { margin-left: 4px; }
 .settings .set-label .n { letter-spacing: 0; color: var(--ink2); }
 .settings .set-row.slim { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 .settings .news-src .state { width: 230px; }

@@ -1,10 +1,13 @@
 // What the Jobs page writes (DESIGN.md › Jobs, boards 32–36): its dates, each status's mark and step,
-// the JD column, the per-week tip, Needs you's lines, and the table's order; and mail's chip and
-// badge (J7). Pure, so the page and its pane stay thin.
+// the JD column, the per-week tip, Needs you's lines, and the table's order; mail's chip and badge
+// (J7); and J8's states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
 import type {
-  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobsMailApplicationOut, JobStatus, JobWeekOut, NeedsYouItemOut, PostingOut,
+  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobReadMode, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsReadingOut, JobStatus,
+  JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
-import {clockTime, localDate} from '../../logic/format.ts';
+import {clockTime, localDate, readerTime} from '../../logic/format.ts';
+import {asOf} from '../../logic/health.ts';
+import {dollars} from '../../logic/news.ts';
 import type {Segment} from '../../logic/search.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 
@@ -282,4 +285,71 @@ export function marks(textValue: string, q: string): Segment[] {
   }
   if (last < textValue.length) parts.push({text: textValue.slice(last), mark: false});
   return parts;
+}
+
+// ---- J8: the states (38a, 38b) and Settings (39a, 39b) ----
+
+const emails = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'email' : 'emails'}`;
+
+/** The history pass's line while it runs (38a): "Reading history · 140 of 330 emails · showing what’s read so far". */
+export const historyLine = (history: Pick<JobsHistoryOut, 'read' | 'total'>) =>
+  `Reading history · ${history.read.toLocaleString('en-US')} of ${emails(history.total)} · showing what’s read so far`;
+
+/** How far the pass has come, 0 to 1, for its line's foot. */
+export const historyShare = (history: Pick<JobsHistoryOut, 'read' | 'total'>) => (history.total > 0 ? Math.min(1, history.read / history.total) : 0);
+
+/** The line's last words, with its `good` check, before it folds away: "Read 330 emails". */
+export const historyRead = (history: Pick<JobsHistoryOut, 'read'>) => `Read ${emails(history.read)}`;
+
+/** Whether the pass is under way: reading, or held while the AI is down. */
+export const historyRuns = (history: Pick<JobsHistoryOut, 'state'>) => history.state === 'running' || history.state === 'waiting';
+
+/**
+ * The AI down (38b): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying". It counts
+ * what waits for the reader and what the history pass, held, has still to read. Null while healthy.
+ */
+export function readingLine(reading: JobsReadingOut, history: Pick<JobsHistoryOut, 'state' | 'read' | 'total'>, now: number, timeZone: string): string | null {
+  if (reading.state !== 'down' || !reading.cause) return null;
+  const since = reading.since ? ` since ${asOf(reading.since, now, timeZone)}` : '';
+  const why = {
+    unreachable: `Anthropic unreachable${since}`,
+    rate_limited: `Anthropic rate limited${since}`,
+    refused: 'Anthropic refused its key in Settings › AI',
+    no_key: 'Jobs needs an Anthropic key in Settings › AI',
+  }[reading.cause];
+  const waiting = reading.waiting + (history.state === 'waiting' ? Math.max(0, history.total - history.read) : 0);
+  const line = `${why}${reading.retrying ? ', retrying' : ''}`;
+  return waiting ? `${emails(waiting)} not read yet, ${line}` : line;
+}
+
+/** Settings › Jobs's head (39a): "62 applications". */
+export const applicationsCount = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'application' : 'applications'}`;
+
+/** What Jobs reads in an account (D310, #273): "Every email", "Career mail only", or "Off" for one it doesn't list. */
+export const READS_WORDS: Record<JobReadMode | 'off', string> = {every: 'Every email', career: 'Career mail only', off: 'Off'};
+
+/**
+ * Settings › Jobs's History pass row (39a): "Read 330 emails once, when Jobs was turned on · finished
+ * Oct 1, 8:14 PM" once done, the running line while it runs, and what it will do before it has.
+ */
+export function historySetting(history: JobsHistoryOut, now: number, timeZone: string): string {
+  if (historyRuns(history)) return `Reading history · ${history.read.toLocaleString('en-US')} of ${emails(history.total)}`;
+  if (history.state === 'done') {
+    const finished = history.finished_at ? ` · finished ${readerTime(history.finished_at, now, timeZone)}` : '';
+    return `Read ${emails(history.read)} once, when Jobs was turned on${finished}`;
+  }
+  return 'Runs once when Jobs is turned on, over the mail from before then';
+}
+
+/** Settings › Jobs's From history row: "6 waiting in Needs you, what the pass wasn't sure of". */
+export const fromHistorySetting = (waiting: number) =>
+  (waiting ? `${waiting.toLocaleString('en-US')} waiting in Needs you, what the pass wasn't sure of` : 'None waiting in Needs you');
+
+/** A model's name and how it runs: "Claude Sonnet 5.5 with web search". */
+export const jobsModelWith = (label: string, search = false) => (search ? `${label} with web search` : label);
+
+/** Usage this month's Jobs row (39b): "Emails $0.62 · finding JDs $2.71 · reading JDs $0.52". */
+export function jobsUsageParts(month: JobsAiOut['this_month']): string {
+  const parts: [string, number][] = [['Emails', month.emails.cost_usd], ['finding JDs', month.finding_jds.cost_usd], ['reading JDs', month.reading_jds.cost_usd]];
+  return parts.map(([name, cost]) => `${name} ${dollars(cost, true)}`).join(' · ');
 }

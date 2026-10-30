@@ -1,4 +1,4 @@
-// Settings (DESIGN.md › Settings; boards 17, 18a, 18b, 30a, 30b): a 1040 × 720 modal over the page,
+// Settings (DESIGN.md › Settings; boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
 // the scrim behind, not in the address bar. The 220 px nav holds the pages, Accounts marked while a
 // source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
 // topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
@@ -14,6 +14,7 @@ import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {AI_PATH, NOTIFY_STATUS_PATH, PRECISION_PATH, RULES_PATH, SECRETS_PATH, SECURITY_PATH, SOURCES_PATH, TRUSTED_PATH} from '../../api/settings.ts';
 import {feedFailing} from '../../logic/news.ts';
+import {JOBS_SETTINGS_PATHS, JobsSettingsPage} from '../jobs/index.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {SETTINGS_PAGES} from '../../logic/route.ts';
 import type {SettingsPage} from '../../logic/route.ts';
@@ -34,14 +35,14 @@ import './settings.css';
 // Every page's answers, loaded as Settings opens so a page switched to shows at once (settings-05).
 const PAGE_PATHS = [
   ACCOUNTS_PATH, SOURCES_PATH, PRECISION_PATH, CALENDARS_PATH, TODOIST_PROJECTS_PATH, SETTINGS_PATH, RULES_PATH, TRUSTED_PATH, NOTIFY_STATUS_PATH,
-  SECRETS_PATH, AI_PATH, SECURITY_PATH, NEWS_SOURCES_PATH,
+  SECRETS_PATH, AI_PATH, SECURITY_PATH, NEWS_SOURCES_PATH, ...JOBS_SETTINGS_PATHS,
 ];
 // After the page opened at has asked for its own, so they come first.
 const PREFETCH_AFTER_MS = 250;
 
 const PAGES: Record<SettingsPage, () => JSX.Element> = {
   accounts: AccountsPage, calendar: CalendarPage, todoist: TodoistPage, notifications: NotificationsPage,
-  mail: MailPage, news: NewsSettingsPage, ai: AiPage, appearance: AppearancePage, security: SecurityPage,
+  mail: MailPage, news: NewsSettingsPage, jobs: JobsSettingsPage, ai: AiPage, appearance: AppearancePage, security: SecurityPage,
 };
 
 export function Settings() {

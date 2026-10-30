@@ -177,7 +177,8 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     await openAt(page, setpoint.base, 'news');
     const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'});
     await fox.waitFor();
-    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Calendar', 'Todoist', 'Notifications', 'Mail', 'News', 'AI', 'Appearance', 'Security', 'Sign out']);
+    // Jobs (J8) comes between News and AI; its page is jobsStates.spec.ts's.
+    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Calendar', 'Todoist', 'Notifications', 'Mail', 'News', 'Jobs', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon path').getAttribute('d'), ICONS.warning, 'a failing feed keeps warning (override 24)');
@@ -219,7 +220,8 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     const amount = page.locator('.settings .amount');
     await amount.waitFor();
     assert.equal(await amount.textContent(), '$18.40 of $40');
-    assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['Keys', 'Mail', 'News', 'Usage this month']);
+    // Jobs's group follows News's (J8; its own check is jobsStates.spec.ts's).
+    assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['Keys', 'Mail', 'News', 'Jobs', 'Usage this month']);
     const news = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: /^News$/})});
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
@@ -235,16 +237,17 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
       [await rested(() => computed(page, 'background', 'var(--sub2)')), neutral]);
     assert.equal(await rested(() => amount.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--ink)')));
 
-    // Usage this month: Triage, Alfred and News, News in its parts.
+    // Usage this month: Triage, Alfred, News and Jobs, News and Jobs in their parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
     await usage.scrollIntoViewIfNeeded();
     assert.deepEqual(await usage.locator('.set-row').evaluateAll(rows => rows.map(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.cost')?.textContent])), [
       ['Triage', '1,214 calls · 2.4M tokens in · 49k out', '$2.10'],
       ['Alfred', '18 calls · 112k tokens in · 8k out', '$0.85'],
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
+      ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
     ]);
     // The month's total in the label, each cost in ink at 500.
-    assert.equal(await usage.locator('.set-label .r').textContent(), '$21.35');
+    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.20');
     assert.deepEqual(await rested(() => usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight])), [await rested(() => computed(page, 'color', 'var(--ink)')), '500']);
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it

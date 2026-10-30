@@ -168,7 +168,8 @@ const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const JOBS_FOLDERS = ['server/src/jobs/', 'web/src/app/jobs/', 'shared/src/jobs/'];
 const JOBS_WIRING = [
   'server/src/server.ts', 'server/src/dev/sample.ts', 'shared/src/index.ts', 'shared/src/api/live.ts',
-  'web/src/app/App.tsx', 'web/src/app/Sidebar.tsx', 'web/src/app/palette/Palette.tsx', 'web/tests/components/jobs.test.tsx',
+  'web/src/app/App.tsx', 'web/src/app/Sidebar.tsx', 'web/src/app/palette/Palette.tsx', 'web/src/app/settings/Settings.tsx', 'web/src/app/settings/Ai.tsx',
+  'web/tests/components/jobs.test.tsx',
 ];
 const moduleBoundary = {
   rules: {

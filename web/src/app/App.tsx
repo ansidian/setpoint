@@ -1,7 +1,7 @@
 // The shell (DESIGN.md › Layout): the sidebar, then the page under its header, with the offline
 // pill over it while Setpoint's live stream is down, and the one toast (ToastPill.tsx) above it all,
 // Settings included. The keys that work everywhere: `1` Inbox, `2` Calendar, `3` News, `/` search,
-// ⌘K the palette, ⌘, Settings, and `4` Jobs while it's on (jobs/, a wiring point). Settings is a modal over the page, not in the address bar: /settings/<page>
+// ⌘K the palette, ⌘, Settings, and `4` Jobs (jobs/, a wiring point; off, its page says so). Settings is a modal over the page, not in the address bar: /settings/<page>
 // opens it over the Inbox. Below 640 px the phone's shell (Phone.tsx) takes the sidebar's place,
 // Calendar is the agenda, and Settings, ⌘K, News and Jobs stay on the desktop (their addresses open the Inbox).
 import {useEffect} from 'react';

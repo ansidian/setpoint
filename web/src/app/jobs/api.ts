@@ -1,7 +1,8 @@
-// Jobs's calls to the server (J5; J6 adds Needs you's answers, the corrections and their Undo), through web/src/api/client.ts's helpers, never `fetch` itself (the
+// Jobs's calls to the server (J5; J6 adds Needs you's answers, the corrections and their Undo; J8
+// Settings › Jobs and Settings › AI's Jobs group), through web/src/api/client.ts's helpers, never `fetch` itself (the
 // lint holds the network to web/src/api/). Every path is under /jobs, so a `jobs` live event refreshes
 // whichever are on screen (logic/live.ts).
-import type {ApplicationOut, JobsChangeOut, JobsDismissedOut, JobsEdit, JobsNavOut, JobStatus, JobsUndoneOut} from '@setpoint/shared';
+import type {ApplicationOut, JobsChangeOut, JobsDismissedOut, JobsEdit, JobsNavOut, JobsSettingsOut, JobStatus, JobsUndoneOut} from '@setpoint/shared';
 import {getCached, refreshIfShown, sendJson, setCached} from '../../api/client.ts';
 
 /** GET /api/jobs: the two numbers, Needs you, From history and the rows. */
@@ -15,6 +16,11 @@ export const searchPath = (q: string) => `/jobs/search?q=${encodeURIComponent(q.
 
 /** GET /api/jobs/mail?messages=…: what mail's slots draw for these emails (J7), in one request. */
 export const mailPath = (ids: readonly number[]) => `/jobs/mail?messages=${ids.join(',')}`;
+
+/** GET /api/jobs/settings: Settings › Jobs (J8, board 39a). */
+export const SETTINGS_PATH = '/jobs/settings';
+/** GET /api/jobs/ai: Settings › AI's Jobs group and its row in Usage this month (J8, board 39b). */
+export const AI_PATH = '/jobs/ai';
 
 /** The shell's item as last answered, if it has been. */
 export const cachedNav = () => getCached<JobsNavOut>(NAV_PATH);
@@ -73,5 +79,15 @@ export async function dismissFromHistory(): Promise<number[]> {
 /** Dismiss all's Undo: those items back in From history. */
 export async function undoDismiss(ids: number[]): Promise<void> {
   await sendJson<JobsDismissedOut>('POST', '/jobs/from-history/undo', {needs_you: ids});
+  refreshJobs();
+}
+
+/**
+ * Settings › Jobs's switch (J8): on starts the history pass and brings Jobs into the sidebar; off stops
+ * reading. Settings shows the answer at once; the page and the shell's item ask again.
+ */
+export async function turnJobs(enabled: boolean): Promise<void> {
+  const settings = await sendJson<JobsSettingsOut>('PATCH', SETTINGS_PATH, {enabled});
+  setCached(SETTINGS_PATH, settings);
   refreshJobs();
 }

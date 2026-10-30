@@ -12,15 +12,17 @@ import {closeSettings} from './store.ts';
 
 /**
  * A Settings page: its head, then its sections, or, when one of its `loads` failed with nothing to
- * show, why, with Try again (states-06, #228).
+ * show, why, with Try again (states-06, #228). `note` follows the title ("62 applications", 39a);
+ * `actions` sit at the head's end.
  */
-export function Page({title, actions, loads = [], children}: {title: string; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
+export function Page({title, note, actions, loads = [], children}: {title: string; note?: ReactNode; actions?: ReactNode; loads?: Load[]; children: ReactNode}) {
   const failed = useLoadFailed(loads);
   return (
     <section className="set-main" aria-label={title}>
       <button className="ibtn set-x" type="button" aria-label="Close settings" onClick={closeSettings}><Icon name="close" /></button>
       <div className="set-head">
         <h2 className="set-title">{title}</h2>
+        {note && <span className="head-note after num">{note}</span>}
         {actions && <><span className="grow" />{actions}</>}
       </div>
       {failed ? <LoadFailed what={`Settings › ${title}`} loads={loads} /> : children}

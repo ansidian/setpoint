@@ -2,8 +2,8 @@
 // and D26): the Anthropic and OpenAI keys, write-only (set or replace, or remove); Mail's four models,
 // each changeable at will (triage's cheap and strong, the history pass, and Alfred; Default is the
 // built-in choice for the keys that are set); News's group (N5): its two models, fixed (D90), the
-// monthly cap, and this month's spend on its meter, saying so at the cap; then this month's usage,
-// Triage, Alfred and News in its parts.
+// monthly cap, and this month's spend on its meter, saying so at the cap; Jobs's group (J8, board 39b,
+// from jobs/, a wiring point); then this month's usage, Triage, Alfred, News and Jobs in their parts.
 import type {AiModelChoiceOut, AiOut, SecretName, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -14,6 +14,7 @@ import {readerTime} from '../../logic/format.ts';
 import {CAP_CHOICES, capMeter, cappedLine, dollars, newsUsageParts} from '../../logic/news.ts';
 import {monthTotal, usageLine} from '../../logic/settings.ts';
 import {useNow} from '../clock.ts';
+import {JobsAiGroup, JobsUsageRow, useJobsSpend} from '../jobs/index.ts';
 import {Line, Page, Row, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
 type ModelSetting = keyof Settings['ai'];
@@ -43,6 +44,7 @@ export function AiPage() {
   const capValue = settings?.news.monthly_cap_usd ?? news?.monthly_cap_usd ?? 40;
   const needsKey = news?.missing ? ' · needs a key' : '';
   const usage = ai?.usage_this_month;
+  const jobsSpend = useJobsSpend();
 
   return (
     <Page title="AI" loads={[aiLoad, settingsLoad, secretsLoad]}>
@@ -101,11 +103,14 @@ export function AiPage() {
         <Line text={cap.line?.text ?? null} tone={cap.line?.tone} />
       </Section>
 
-      <Section label="Usage this month" right={usage && <span className="num ink2">{dollars(monthTotal(usage), true)}</span>}>
+      <JobsAiGroup label={ai ? label : null} />
+
+      <Section label="Usage this month" right={usage && jobsSpend !== undefined && <span className="num ink2">{dollars(monthTotal(usage) + jobsSpend, true)}</span>}>
         {!usage ? <SkeletonRows count={3} /> : <div className="set-group">
           <Row title="Triage" sub={usage ? usageLine(usage.triage) : ''}>{usage && <span className="cost num">{dollars(usage.triage.cost_usd, true)}</span>}</Row>
           <Row title="Alfred" sub={usage ? usageLine(usage.alfred) : ''}>{usage && <span className="cost num">{dollars(usage.alfred.cost_usd, true)}</span>}</Row>
           <Row title="News" sub={usage ? newsUsageParts(usage.news) : ''}>{usage && <span className="cost num">{dollars(usage.news.cost_usd, true)}</span>}</Row>
+          <JobsUsageRow />
         </div>}
       </Section>
     </Page>
