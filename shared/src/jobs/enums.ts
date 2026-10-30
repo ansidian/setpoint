@@ -71,9 +71,10 @@ export type NeedsYouKind = (typeof NEEDS_YOU_KINDS)[number];
 /**
  * Why an item waits, which line two words: "it could be either Humongous application" (matches
  * several), "names no role, and there are two", "names a role neither application has", "an interview
- * request with no application", "Is this the posting?" (unsure of the posting).
+ * request with no application", "Is this the posting?" (unsure of the posting), and an email the user
+ * took off an application with Not about this (J6): "taken off Software Engineer I".
  */
-export const NEEDS_YOU_REASONS = ['matches_several', 'names_no_role', 'names_other_role', 'no_application', 'unsure_posting'] as const;
+export const NEEDS_YOU_REASONS = ['matches_several', 'names_no_role', 'names_other_role', 'no_application', 'unsure_posting', 'taken_off'] as const;
 export type NeedsYouReason = (typeof NEEDS_YOU_REASONS)[number];
 
 /** The fields a correction sets by hand, which no later email, re-run or lookup overwrites (decision 58). */

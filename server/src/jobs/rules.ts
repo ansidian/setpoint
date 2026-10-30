@@ -124,6 +124,15 @@ export function sameRole(a: Role, b: Role): boolean {
 
 const namesRole = (role: Role) => !!role.titleKey || !!role.requisitionId;
 
+/**
+ * Another company and role an application answers to, because the user said so (decision 58): a
+ * merge brings the other's, an email moved or assigned to it brings the role it names, and a title
+ * or company edited by hand keeps the old name (./stick.ts). A null company is the application's own.
+ */
+export interface Alias extends Role {
+  company: string | null;
+}
+
 /** What the rules know of an application. */
 export interface KnownApplication extends Role {
   id: number;
@@ -133,7 +142,16 @@ export interface KnownApplication extends Role {
   appliedAt: string;
   // A company-less confirmation waiting for its Indeed pair.
   companyUnknown: boolean;
+  aliases?: Alias[];
 }
+
+/** Whether an application answers to a company: its own, or one a correction gave it. */
+const answersTo = (application: KnownApplication, company: string) =>
+  sameCompany(application.company, company) || (application.aliases ?? []).some(alias => alias.company !== null && sameCompany(alias.company, company));
+
+/** Whether an application is about a role: its own, or one a correction gave it at that company. */
+const hasRole = (application: KnownApplication, company: string, role: Role) =>
+  sameRole(application, role) || (application.aliases ?? []).some(alias => (alias.company === null || sameCompany(alias.company, company)) && sameRole(alias, role));
 
 export type Match =
   | {match: KnownApplication}
@@ -150,14 +168,14 @@ const newestFirst = (a: KnownApplication, b: KnownApplication) => b.appliedAt.lo
  * nothing (no application at the company, or none open for an email naming no role).
  */
 export function matchApplication(applications: KnownApplication[], company: string, role: Role): Match {
-  const atCompany = applications.filter(application => !application.companyUnknown && sameCompany(application.company, company));
+  const atCompany = applications.filter(application => !application.companyUnknown && answersTo(application, company));
   if (!atCompany.length) return {none: 'no_company'};
   const open = atCompany.filter(application => !isClosed(application.status));
   if (!namesRole(role)) {
     if (open.length === 1) return {match: open[0]!};
     return open.length ? {several: 'names_no_role'} : {none: 'no_role'};
   }
-  const roles = atCompany.filter(application => sameRole(application, role)).sort(newestFirst);
+  const roles = atCompany.filter(application => hasRole(application, company, role)).sort(newestFirst);
   if (roles.length === 1) return {match: roles[0]!};
   if (!roles.length) return {none: 'names_other_role'};
   const openRoles = roles.filter(application => !isClosed(application.status));
@@ -175,9 +193,32 @@ export function statusAfter(application: Pick<KnownApplication, 'statusSetAt'>, 
   return STATUS_OF_JOB_EVENT[kind];
 }
 
+/** An event as Let emails decide reads it. */
+export interface StatusEvent {
+  at: string;
+  kind: JobEventKind;
+  line: string | null;
+  subject: string;
+}
+
+/**
+ * The status an application's emails make it (decision 55): the latest event that sets one, by its
+ * date, with In process's step its line; with none, Applied as of its Applied date. Let emails decide
+ * hands a status set by hand back to this, and a merge, a move or Not about this recomputes it unless
+ * the user set it (decision 68, D365).
+ */
+export function statusFromEvents(appliedAt: string, events: StatusEvent[]): {status: JobStatus; statusSetAt: string; step: string | null; stepAt: string | null} {
+  const loud = events.filter(event => !isQuietJobEvent(event.kind)).sort((a, b) => a.at.localeCompare(b.at));
+  const last = loud.at(-1);
+  if (!last) return {status: 'applied', statusSetAt: appliedAt, step: null, stepAt: null};
+  const status = STATUS_OF_JOB_EVENT[last.kind as keyof typeof STATUS_OF_JOB_EVENT];
+  return {status, statusSetAt: last.at, step: status === 'in_process' ? last.line ?? last.subject : null, stepAt: status === 'in_process' ? last.at : null};
+}
+
 /** An email blocked by Not an application (decision 67, D321), as the rules see it. */
 export interface BlockedEmail extends Role {
-  messageId: number;
+  // Null for a role blocked with no email of its own.
+  messageId: number | null;
   company: string | null;
 }
 
@@ -281,8 +322,8 @@ export function planEmail(email: IncomingEmail, applications: KnownApplication[]
     if ('several' in found && namesRole(email.role)) {
       // A role several applications share (none of them told apart by requisition ID): a duplicate on
       // the newest open one, else a re-application of the newest closed one.
-      const roles = applications.filter(application => !application.companyUnknown && sameCompany(application.company, company)
-        && sameRole(application, email.role)).sort(newestFirst);
+      const roles = applications.filter(application => !application.companyUnknown && answersTo(application, company)
+        && hasRole(application, company, email.role)).sort(newestFirst);
       const open = roles.find(application => !isClosed(application.status));
       if (open) return {do: 'event', applicationId: open.id, kind: 'duplicate', status: null};
       return {do: 'create', company, companyUnknown: false, reappliedFrom: roles[0]?.id ?? null, pairedWith: pair};

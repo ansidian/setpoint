@@ -17,14 +17,17 @@
 //   retry policy and never shown as not found.
 // - The saved JD (decision 53): its full text as markdown, its link, when and how it was found, and
 //   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
+// - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
+//   turned down is never saved or offered again, and a lookup writes only while its application is
+//   still `looking` (./stick.ts).
 // - Cost: no cap (decision 61). Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
 import type {JdSource, JobStatus} from '@setpoint/shared';
-import {and, asc, desc, eq, inArray, isNull} from 'drizzle-orm';
+import {and, asc, desc, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {localDay} from '../domain/time.ts';
-import {notFound} from '../errors.ts';
+import {conflict, notFound} from '../errors.ts';
 import type {AiEndpoints, ModelClient} from '../providers/ai/index.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -43,6 +46,7 @@ import type {JobPlatform, StepOutcome} from './lookupRules.ts';
 import {lookupEmail} from './mail.ts';
 import {jobsModelClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import * as j from './schema.ts';
+import {rejectedLinks, stillLooking} from './stick.ts';
 import {boardPostings, readLink} from './web.ts';
 import type {FoundPosting, JobsWeb} from './web.ts';
 
@@ -98,6 +102,31 @@ export function requestLookup(store: Store, applicationId: number): 'looking' | 
     queueLookup(store, applicationId);
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
     return 'looking';
+  });
+}
+
+/**
+ * A candidate picked (J6: a JD to confirm, Choose…, or the detail after Not this posting): it's the
+ * posting, so the application is `looking` at once and its job reads that one link and saves it
+ * without a check; its JD to confirm is answered. The other candidates stay, for Not this posting.
+ * Without a web (a dev run) it stays `looking`, as any lookup does there.
+ */
+export function requestPick(store: Store, applicationId: number, candidateId: number): number[] {
+  const db = jobsDb(store.sqlite);
+  return transaction(store, () => {
+    const candidate = db.select().from(j.jobsJdCandidates)
+      .where(and(eq(j.jobsJdCandidates.id, candidateId), eq(j.jobsJdCandidates.applicationId, applicationId))).get();
+    if (!candidate) throw notFound('No such candidate.');
+    if (hasPosting(store, applicationId)) throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
+    const now = isoNow(store);
+    const answered = answerJdItems(store, applicationId, 'picked', now);
+    db.update(j.jobsJdCandidates).set({pickedAt: null}).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
+    db.update(j.jobsJdCandidates).set({pickedAt: now}).where(eq(j.jobsJdCandidates.id, candidateId)).run();
+    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupFromHistory: false, updatedAt: now})
+      .where(eq(j.jobsApplications.id, applicationId)).run();
+    queueLookup(store, applicationId);
+    noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
+    return answered;
   });
 }
 
@@ -183,10 +212,30 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   const db = jobsDb(store.sqlite);
   const application = db.select().from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get();
   if (!application) return 'gone';
-  if (hasPosting(store, applicationId)) return 'already';
+  // A saved JD is never replaced, and one no longer looked for (Undo, None of these) isn't looked up (stick.ts).
+  if (hasPosting(store, applicationId) || !stillLooking(store, applicationId)) return 'already';
   const haiku = jobsModelClient(store, endpoints, 'reading', timeoutMs);
   const sonnet = jobsModelClient(store, endpoints, 'finding', timeoutMs);
   if (!haiku || !sonnet) throw new ProviderError('auth', NO_JOBS_KEY);
+
+  // The user picked a candidate (J6): read that posting and save it, with no check, since they chose it.
+  const picked = db.select().from(j.jobsJdCandidates).where(and(eq(j.jobsJdCandidates.applicationId, applicationId), isNotNull(j.jobsJdCandidates.pickedAt))).get();
+  if (picked) {
+    const found = await readLink(web, picked.link, signal);
+    if (!found) {
+      // The posting has come down since it was offered: as a lookup finding nothing (D320).
+      markNotFound(store, applicationId);
+      return 'not_found';
+    }
+    // Found as the lookup found it; one kept from before that was recorded (the seed's) by where it is.
+    const platform = postingRef(picked.link, web.hosts)?.platform;
+    const source = picked.source ?? (platform === 'indeed' ? 'email_link' : platform ? 'platform' : 'search');
+    return await readAndSave(store, haiku, application, found, source, signal, {keepCandidates: true}) ? 'saved' : 'already';
+  }
+
+  // What the user turned down is never saved or offered again (stick.ts).
+  const rejected = rejectedLinks(store, applicationId);
+  const fresh = (link: string) => !rejected.has(link);
 
   const emails = emailsOf(store, application);
   const context: JdApplication = {
@@ -196,7 +245,7 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   const steps: Step[] = [];
 
   // 1. The email's own links: the posting it points at (Indeed's view-job link on its match email).
-  const links = postingLinks(emails.links, web.hosts);
+  const links = postingLinks(emails.links, web.hosts).filter(fresh);
   if (links.length) steps.push(await fromFound(store, haiku, context, 'email_link', links.map(link => () => readLink(web, link, signal)), signal));
 
   // 2. The hiring platforms' public APIs, by the board names the emails and the company suggest.
@@ -205,30 +254,35 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
     const platforms = platformsToTry(application.platform, refs.map(ref => ref!.platform as JobPlatform));
     const step = await fromPlatforms(store, haiku, context, application, platforms, platform => boardNames(
       application.company, refs.filter(ref => ref!.platform === platform).map(ref => ref!.board), emails.senders,
-    ), web, signal);
+    ), web, fresh, signal);
     if (step) steps.push(step);
   }
 
   // 3. Sonnet with web search, only when those cleanly missed.
-  if (nextSourceRuns('search', steps)) steps.push(await fromSearch(store, sonnet, context, web, signal));
+  if (nextSourceRuns('search', steps)) steps.push(await fromSearch(store, sonnet, context, web, fresh, signal));
 
   const end = lookupEnd(steps);
   if (end.is === 'failed') throw end.error;
-  if (end.is === 'save') {
-    const found = end.posting.found!;
-    const answer = await haiku.client.call({
-      model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, found), maxOutputTokens: READING_MAX_OUTPUT_TOKENS,
-      cacheKey: `setpoint-jobs-reading:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
-    });
-    recordJobsUsage(store, answer, 'jobs_reading_jds', null);
-    return savePosting(store, applicationId, found, end.posting.source, postingReadingOf(answer.toolInput, found.location)) ? 'saved' : 'already';
-  }
+  if (end.is === 'save') return await readAndSave(store, haiku, application, end.posting.found!, end.posting.source, signal) ? 'saved' : 'already';
   if (end.is === 'candidates') {
     saveCandidates(store, applicationId, end.candidates);
     return 'candidates';
   }
   markNotFound(store, applicationId);
   return 'not_found';
+}
+
+/** Haiku reads the posting (its summary, lists, salary and setting), then it's saved. Returns whether it saved. */
+async function readAndSave(
+  store: Store, haiku: {client: ModelClient; model: string}, application: Application, found: FoundPosting, source: JdSource, signal: AbortSignal,
+  options: {keepCandidates?: boolean} = {},
+): Promise<boolean> {
+  const answer = await haiku.client.call({
+    model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, found), maxOutputTokens: READING_MAX_OUTPUT_TOKENS,
+    cacheKey: `setpoint-jobs-reading:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
+  });
+  recordJobsUsage(store, answer, 'jobs_reading_jds', null);
+  return savePosting(store, application.id, found, source, postingReadingOf(answer.toolInput, found.location), options);
 }
 
 /** Haiku's verdict on postings a link or a platform found, as a step. */
@@ -262,7 +316,7 @@ async function fromFound(store: Store, haiku: {client: ModelClient; model: strin
 /** The platforms' boards: on each platform, the first board name that exists, and its postings that could be the role. */
 async function fromPlatforms(
   store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, application: Application, platforms: JobPlatform[],
-  boardsFor: (platform: JobPlatform) => string[], web: JobsWeb, signal: AbortSignal,
+  boardsFor: (platform: JobPlatform) => string[], web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal,
 ): Promise<Step | null> {
   if (!application.titleKey && !application.requisitionId) return {is: 'none'};
   const offers: Offer[] = [];
@@ -277,7 +331,7 @@ async function fromPlatforms(
         continue;
       }
       if (postings === null) continue;
-      for (const posting of matchPostings(application, postings)) if (!offers.some(offer => offer.link === posting.link)) offers.push(offerOf(posting, 'platform'));
+      for (const posting of matchPostings(application, postings)) if (fresh(posting.link) && !offers.some(offer => offer.link === posting.link)) offers.push(offerOf(posting, 'platform'));
       break;
     }
   }
@@ -286,13 +340,13 @@ async function fromPlatforms(
 }
 
 /** Sonnet searches and judges; a confident answer is read for its text, and one that can't be read is offered instead. */
-async function fromSearch(store: Store, sonnet: {client: ModelClient; model: string}, context: JdApplication, web: JobsWeb, signal: AbortSignal): Promise<Step> {
+async function fromSearch(store: Store, sonnet: {client: ModelClient; model: string}, context: JdApplication, web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal): Promise<Step> {
   const answer = await sonnet.client.call({
     model: sonnet.model, system: SEARCH_SYSTEM, tool: SEARCH_TOOL, input: searchInput(context), maxOutputTokens: SEARCH_MAX_OUTPUT_TOKENS,
     webSearch: {maxUses: SEARCH_MAX_USES}, signal,
   });
   recordJobsUsage(store, answer, 'jobs_finding_jds', null);
-  const candidates = searchCandidatesOf(answer.toolInput);
+  const candidates = searchCandidatesOf(answer.toolInput).filter(candidate => fresh(candidate.url));
   const offers = candidates.map((candidate): Offer => ({found: null, title: candidate.title, location: candidate.location, site: candidate.site, link: candidate.url, source: 'search'}));
   const outcome = outcomeOf(offers.map((candidate, index) => ({candidate, verdict: candidates[index]!.verdict})));
   if (outcome.is !== 'confident') return outcome;
@@ -308,11 +362,15 @@ async function fromSearch(store: Store, sonnet: {client: ModelClient; model: str
   return {is: 'confident', posting: {...outcome.posting, found}};
 }
 
-/** Saves the JD (decision 53), unless one was saved meanwhile: never overwritten. Returns whether it saved. */
-function savePosting(store: Store, applicationId: number, found: FoundPosting, source: JdSource, reading: ReturnType<typeof postingReadingOf>): boolean {
+/**
+ * Saves the JD (decision 53), unless one was saved meanwhile (never overwritten) or the application
+ * is no longer looked up (stick.ts). A pick keeps the other candidates, for Not this posting to offer
+ * again. Returns whether it saved.
+ */
+export function savePosting(store: Store, applicationId: number, found: FoundPosting, source: JdSource, reading: ReturnType<typeof postingReadingOf>, {keepCandidates = false}: {keepCandidates?: boolean} = {}): boolean {
   const db = jobsDb(store.sqlite);
   return transaction(store, () => {
-    if (!db.select({id: j.jobsApplications.id}).from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get()) return false;
+    if (!stillLooking(store, applicationId)) return false;
     if (hasPosting(store, applicationId)) return false;
     const now = isoNow(store);
     db.insert(j.jobsPostings).values({
@@ -322,7 +380,8 @@ function savePosting(store: Store, applicationId: number, found: FoundPosting, s
       // The platform it was found on ("Greenhouse", "Indeed"); none for a search.
       platform: source === 'search' ? null : found.site, foundAt: now,
     }).run();
-    db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
+    if (keepCandidates) db.update(j.jobsJdCandidates).set({pickedAt: null}).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
+    else db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     const answered = answerJdItems(store, applicationId, 'found', now);
     db.update(j.jobsApplications).set({jdLookup: 'none', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
@@ -338,12 +397,12 @@ function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
   const db = jobsDb(store.sqlite);
   transaction(store, () => {
     const application = db.select().from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get();
-    if (!application || hasPosting(store, applicationId)) return;
+    if (!application || hasPosting(store, applicationId) || !stillLooking(store, applicationId)) return;
     const now = isoNow(store);
     const answered = answerJdItems(store, applicationId, 'looked_up_again', now);
     db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     offers.slice(0, 3).forEach((offer, position) => db.insert(j.jobsJdCandidates).values({
-      applicationId, title: offer.title, location: offer.location, platform: offer.site, link: offer.link, position, foundAt: now,
+      applicationId, title: offer.title, location: offer.location, platform: offer.site, link: offer.link, position, foundAt: now, source: offer.source,
     }).onConflictDoNothing().run());
     const item = db.insert(j.jobsNeedsYou).values({
       kind: 'jd_to_confirm', reason: 'unsure_posting', fromHistory: application.jdLookupFromHistory, applicationId, company: application.company, title: application.title || null,
@@ -358,7 +417,7 @@ function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
 function markNotFound(store: Store, applicationId: number) {
   const db = jobsDb(store.sqlite);
   transaction(store, () => {
-    if (hasPosting(store, applicationId)) return;
+    if (hasPosting(store, applicationId) || !stillLooking(store, applicationId)) return;
     const now = isoNow(store);
     db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: []});

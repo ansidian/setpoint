@@ -21,7 +21,9 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   its prompts ([`jdPrompt.ts`](jdPrompt.ts)). J4 adds the history pass: starting, resuming and
   ending it ([`history.ts`](history.ts)), its state and progress ([`historyState.ts`](historyState.ts)),
   Settings › Jobs's turning on and off ([`settings.ts`](settings.ts)) and From history's Dismiss all
-  ([`needsYou.ts`](needsYou.ts)); the reader reads it.
+  ([`needsYou.ts`](needsYou.ts)); the reader reads it. J6 adds Needs you's answers (the rest of
+  [`needsYou.ts`](needsYou.ts)), the corrections ([`corrections.ts`](corrections.ts)), their Undo
+  ([`undo.ts`](undo.ts)) and the guards that make every correction stick ([`stick.ts`](stick.ts)).
 - `shared/src/jobs/`: its enums, API schemas and types, and the `jobs` live event (D328: the contract
   needs a third folder, since `web/` can't import server code).
 - `web/src/app/jobs/`: the page ([`JobsPage.tsx`](../../../web/src/app/jobs/JobsPage.tsx)), its table, Needs you
@@ -176,6 +178,41 @@ the lint rule still refuses an import of Jobs from triage.
 - **The shell's item:** `GET /api/jobs/nav` answers whether Jobs is on and today's Needs you count,
   for the sidebar, the rail, ⌘K's Go to and `4` on every page; it's under `/jobs`, so the `jobs`
   event refreshes it.
+
+## Needs you's answers and the corrections (J6)
+
+- **The routes** (each answers `JobsChangeOut`, `{undo, application}`): a candidate picked
+  (`POST /applications/:id/jd/pick`) or None of these (`…/jd/none`); Assign to…, Track this and Not
+  about a job (`POST /needs-you/:id/assign|track|not-a-job`); the title or company
+  (`PATCH /applications/:id`), Set status and Let emails decide (`POST …/status`, `{status: null}`),
+  Merge with… (`…/merge`), Not this posting, Not an application (`POST …/not-this-posting|not-an-application`)
+  and Delete (`DELETE /applications/:id`); an event's Move to… and Not about this
+  (`POST /events/:id/move|not-about-this`). `POST /undo/:token` is the toast's Undo. Look up the JD
+  again is J3's `…/lookup`. All under /api/jobs.
+- **Undo** ([`undo.ts`](undo.ts)): before it writes, a correction keeps every row it may touch (its
+  applications with their events, JD, candidates, hand-set fields, aliases and turned-down postings,
+  the Needs you items, the emails' read records and blocks) in `jobs_undo`, and says what it made.
+  Undo puts those rows back with their ids and takes away what it made, so a merge, a delete or a block
+  comes back whole. A snapshot is kept a day.
+- **Every correction sticks** ([`stick.ts`](stick.ts), the one place the reader, the rules, the
+  history pass and the lookup ask): a field set by hand (`jobs_hand_set`) is never written again, but
+  for D322's one exception, an email that sets a status (`emailSetsStatus`, used only by the reader's
+  event and by an email the user brings to an application); a merge, a move, an assignment and an
+  edited title or company leave the application answering to the company and role they brought
+  (`jobs_aliases`, rules.ts `Alias`), so a later email finds it; Not an application blocks its emails
+  and its company and role (`jobs_blocked_emails`, decision 67), and Delete blocks nothing; a posting
+  turned down by None of these or Not this posting (`jobs_rejected_postings`) is never saved or
+  offered again, and a lookup writes only while its application is still `looking` (`stillLooking`),
+  so Undo or a correction made while it ran wins. Emails are read once, so a history re-run never
+  replays one the user moved, assigned or took off.
+- **A pick** (lookup.ts `requestPick`) marks the candidate and queues the application's lookup job,
+  which reads that one link and saves it with Haiku's reading and no check; the other candidates stay
+  for Not this posting. Without a web (a dev run) it stays `looking`, as any lookup does.
+- **Track this** makes the application from the email: Applied on its date, First seen, In process
+  (Offer for an offer), and requests its lookup.
+- **A merge, a move or Not about this** settles the status from the emails again (rules.ts
+  `statusFromEvents`) unless the user set it; an email brought in that sets a status later than one
+  set by hand takes over, as it would have on arrival.
 
 ## The lint rule
 

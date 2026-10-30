@@ -11,6 +11,22 @@
 //   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
 //   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
 //
+// J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
+//   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
+//   POST   /api/jobs/applications/:id/jd/none           None of these
+//   POST   /api/jobs/needs-you/:id/assign               jobsAssignInput (Assign to…, Another application…)
+//   POST   /api/jobs/needs-you/:id/track                Track this (decision 69)
+//   POST   /api/jobs/needs-you/:id/not-a-job            Not about a job
+//   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More)
+//   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status; null is Let emails decide)
+//   POST   /api/jobs/applications/:id/merge             jobsMergeInput (Merge with…: the other comes into this one)
+//   POST   /api/jobs/applications/:id/not-this-posting  the JD goes, its other candidates offered
+//   POST   /api/jobs/applications/:id/not-an-application  hidden, its emails blocked (decision 67)
+//   DELETE /api/jobs/applications/:id                   forgotten, so a later email can make it again
+//   POST   /api/jobs/events/:id/move                    jobsMoveInput (Move to…)
+//   POST   /api/jobs/events/:id/not-about-this          back into Needs you
+//   POST   /api/jobs/undo/:token                        JobsUndoneOut (the toast's Undo: exactly what was there)
+//
 // Every change goes out as a `jobs` live event (JobsLiveEvent). Ages are instants and dates are
 // local; the page words them ("Today", "2h", "no email in 48 days"). Jobs never counts anything in the
 // Inbox (D313).
@@ -300,6 +316,37 @@ export type JobsDismissedOut = z.infer<typeof jobsDismissedSchema>;
 /** Undo of Dismiss all: the items it dismissed, as its answer named them. */
 export const jobsUndoDismissInput = z.strictObject({needs_you: z.array(id).min(1).max(10_000)});
 export type JobsUndoDismiss = z.infer<typeof jobsUndoDismissInput>;
+
+/**
+ * What an answer or a correction did (J6): `undo` is its toast's Undo, and `application` the one it
+ * made or kept (Track this opens the one it made; Merge with… keeps this one), or null.
+ */
+export const jobsChangeSchema = z.strictObject({undo: id, application: id.nullable()});
+export type JobsChangeOut = z.infer<typeof jobsChangeSchema>;
+
+/** Undo's answer: the applications and Needs you items put back as they were. */
+export const jobsUndoneSchema = z.strictObject({applications: z.array(id), needs_you: z.array(id)});
+export type JobsUndoneOut = z.infer<typeof jobsUndoneSchema>;
+
+/** A candidate picked as the posting. */
+export const jobsPickInput = z.strictObject({candidate: id});
+/** Assign to…: the application an update is about. */
+export const jobsAssignInput = z.strictObject({application: id});
+/** Move to…: the application an event belongs to instead. */
+export const jobsMoveInput = z.strictObject({application: id});
+/** Merge with…: the other application, which comes into this one with all its emails. */
+export const jobsMergeInput = z.strictObject({other: id});
+
+/** The title in place, or the company from More (decision 58): set by hand, and kept. */
+export const jobsEditInput = z.strictObject({
+  company: z.string().trim().min(1).max(200).optional(),
+  title: z.string().trim().min(1).max(300).optional(),
+}).refine(edit => edit.company !== undefined || edit.title !== undefined, 'The company or the title.');
+export type JobsEdit = z.infer<typeof jobsEditInput>;
+
+/** Set status (D365): one of the five, set by hand (D322); null is Let emails decide. */
+export const jobsStatusInput = z.strictObject({status: jobStatusSchema.nullable()});
+export type JobsStatusSet = z.infer<typeof jobsStatusInput>;
 
 /**
  * The `jobs` live event: `applications` changed (a row lands or moves, settling from `sub2`) and

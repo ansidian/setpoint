@@ -7,8 +7,8 @@ import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {emailReadingOf, jobsPromptInput} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
-import {isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, titleKey} from '../rules.ts';
-import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail} from '../rules.ts';
+import {isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
+import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
 
 describe('companies match loosely (decision 51)', () => {
   test.each<[string, string, boolean]>([
@@ -104,6 +104,47 @@ describe('statuses (decisions 55, 68)', () => {
     ['nor a verification code', at('01'), 'verification', at('05'), null],
   ])('%s', (_, statusSetAt, kind, emailAt, status) => {
     expect(statusAfter({statusSetAt}, kind, emailAt)).toBe(status);
+  });
+});
+
+describe('what corrections give an application to answer to (decision 58, J6)', () => {
+  // Merged with Fabrikam's Data Analyst; given the Software Engineer II email by Assign to…; retitled by hand.
+  const merged = app('Contoso', 'Software Engineer I', 'applied', {aliases: [
+    {company: 'Fabrikam', titleKey: titleKey('Data Analyst'), requisitionId: null},
+    {company: 'Contoso', titleKey: titleKey('Software Engineer II'), requisitionId: null},
+    {company: null, titleKey: titleKey('Platform Engineer'), requisitionId: null},
+  ]});
+  const other = app('Contoso', 'Designer');
+  const all = [merged, other];
+
+  test.each<[string, string, string | null, number | string]>([
+    ['its own role', 'Contoso', 'Software Engineer I', merged.id],
+    ['the merged one\'s company and role', 'Fabrikam Labs', 'Data Analyst', merged.id],
+    ['the role an assigned email named', 'Contoso', 'Software Engineer II (Java)', merged.id],
+    ['the title it was given by hand, at its own company', 'Contoso', 'Platform Engineer', merged.id],
+    ['the merged one\'s company with another role', 'Fabrikam', 'Product Manager', 'none:names_other_role'],
+    ['the merged one\'s company, no role: its only open application there', 'Fabrikam', null, merged.id],
+    ['another company with an alias\'s role is still another company', 'Northwind Talent', 'Data Analyst', 'none:no_company'],
+    ['the other application at the company keeps its own', 'Contoso', 'Designer', other.id],
+  ])('%s', (_, company, title, expected) => {
+    const found = matchApplication(all, company, {titleKey: title ? titleKey(title) : null, requisitionId: null});
+    const got = 'match' in found ? found.match.id : 'several' in found ? `several:${found.several}` : `none:${found.none}`;
+    expect(got).toBe(expected);
+  });
+});
+
+describe('the status the emails make it (Let emails decide, D365)', () => {
+  const at = (day: string) => `2026-10-${day}T16:00:00.000Z`;
+  const event = (day: string, kind: StatusEvent['kind'], line: string | null = null): StatusEvent => ({at: at(day), kind, line, subject: `${kind} email`});
+  test.each<[string, StatusEvent[], ReturnType<typeof statusFromEvents>]>([
+    ['only a confirmation: Applied as of it', [event('01', 'applied')], {status: 'applied', statusSetAt: at('01'), step: null, stepAt: null}],
+    ['an interview: In process with its line', [event('01', 'applied'), event('05', 'interview', 'Interview Tue')], {status: 'in_process', statusSetAt: at('05'), step: 'Interview Tue', stepAt: at('05')}],
+    ['quiet emails after it don\'t count', [event('01', 'applied'), event('05', 'assessment'), event('07', 'form')], {status: 'in_process', statusSetAt: at('05'), step: 'assessment email', stepAt: at('05')}],
+    ['the latest by date, whatever the order', [event('09', 'rejection'), event('01', 'applied'), event('05', 'interview')], {status: 'rejected', statusSetAt: at('09'), step: null, stepAt: null}],
+    ['an offer', [event('01', 'applied'), event('06', 'offer')], {status: 'offer', statusSetAt: at('06'), step: null, stepAt: null}],
+    ['no emails that set one: Applied as of its Applied date', [event('03', 'verification')], {status: 'applied', statusSetAt: at('01'), step: null, stepAt: null}],
+  ])('%s', (_, events, expected) => {
+    expect(statusFromEvents(at('01'), events)).toEqual(expected);
   });
 });
 

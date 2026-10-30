@@ -152,6 +152,8 @@ export function whyLine(item: NeedsYouItemOut): string {
       return `${eventWord(item.event_kind)} with no application`;
     case 'unsure_posting':
       return 'Is this the posting?';
+    case 'taken_off':
+      return 'taken off the application it was on';
   }
 }
 

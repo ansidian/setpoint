@@ -119,9 +119,52 @@ export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
   link: text('link').notNull(),
   position: integer('position').notNull(),
   foundAt: text('found_at').notNull(),
+  // How the lookup found it (J6: a pick saves it as found this way); null reads as a search.
+  source: text('source', {enum: JD_SOURCES}),
+  // The user picked it (J6): the lookup reads this one and saves it.
+  pickedAt: text('picked_at'),
 }, table => [
   uniqueIndex('jobs_jd_candidates_link').on(table.applicationId, table.link),
 ]);
+
+/**
+ * A posting the user said isn't this application's (J6: None of these, Not this posting): no lookup
+ * saves or offers it again (decision 58).
+ */
+export const jobsRejectedPostings = sqliteTable('jobs_rejected_postings', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  applicationId: integer('application_id').notNull().references(() => jobsApplications.id, {onDelete: 'cascade'}),
+  link: text('link').notNull(),
+  rejectedAt: text('rejected_at').notNull(),
+}, table => [
+  uniqueIndex('jobs_rejected_postings_link').on(table.applicationId, table.link),
+]);
+
+/**
+ * Another company and role an application answers to because the user said so (J6, decision 58):
+ * a merge's other application, an email moved or assigned to it, a title or company edited by hand.
+ * A later email naming it finds this application (rules.ts `Alias`). A null company is its own.
+ */
+export const jobsAliases = sqliteTable('jobs_aliases', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  applicationId: integer('application_id').notNull().references(() => jobsApplications.id, {onDelete: 'cascade'}),
+  company: text('company'),
+  titleKey: text('title_key'),
+  requisitionId: text('requisition_id'),
+  createdAt: text('created_at').notNull(),
+}, table => [
+  index('jobs_aliases_application').on(table.applicationId),
+]);
+
+/**
+ * What a correction or an answer changed, kept for its toast's Undo (J6): the rows as they were
+ * before, and the rows it made. Undo puts them back exactly (./undo.ts); a day later they go.
+ */
+export const jobsUndo = sqliteTable('jobs_undo', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  snapshot: text('snapshot', {mode: 'json'}).$type<unknown>().notNull(),
+  createdAt: text('created_at').notNull(),
+});
 
 /**
  * What waits in Needs you (decisions 50, 54, 57). Like an event, it keeps its own copy of the email
@@ -181,11 +224,24 @@ export const jobsEmailsRead = sqliteTable('jobs_emails_read', {
   index('jobs_emails_read_event').on(table.event, table.at),
 ]);
 
-/** An email Not an application blocked (decision 67): it never makes an application again. */
+/**
+ * What Not an application blocked (decision 67): each of its emails, so none makes an application
+ * again, and its company and role, so no later email naming them does either. J6 keeps that company
+ * and role here, as the application had them (null falls back to what the email was read as), and a
+ * row without an email holds the role alone, for an application whose emails Setpoint never held.
+ * `applicationId` is the application it was, gone now, for Undo.
+ */
 export const jobsBlockedEmails = sqliteTable('jobs_blocked_emails', {
-  messageId: integer('message_id').primaryKey(),
+  id: integer('id').primaryKey({autoIncrement: true}),
+  messageId: integer('message_id'),
   blockedAt: text('blocked_at').notNull(),
-});
+  company: text('company'),
+  titleKey: text('title_key'),
+  requisitionId: text('requisition_id'),
+  applicationId: integer('application_id'),
+}, table => [
+  uniqueIndex('jobs_blocked_emails_message').on(table.messageId),
+]);
 
 /** A field the user set by hand (decision 58): no later email, re-run or lookup overwrites it. */
 export const jobsHandSet = sqliteTable('jobs_hand_set', {

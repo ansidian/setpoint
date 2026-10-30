@@ -37,8 +37,9 @@ import {historyRow, historyStatus, historyWindow} from './historyState.ts';
 import {LOOKUP_KEY_PREFIX, lookUpJd, queueDueLookups} from './lookup.ts';
 import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts';
 import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
-import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail} from './rules.ts';
+import type {Plan, ReadMatchEmail} from './rules.ts';
 import * as j from './schema.ts';
+import {blockedEmails, emailSetsStatus, knownApplications, setByHand} from './stick.ts';
 import type {JobsWeb} from './web.ts';
 
 export const JOBS_READ_KEY = 'jobs_read';
@@ -75,23 +76,15 @@ export async function readEmail(store: Store, ask: AskJobs, messageId: number, o
 const platformOf = (email: JobsEmail, company: string) =>
   email.via ?? (email.organisation && !sameCompany(email.organisation, company) ? email.organisation : null);
 
-/** What the rules know of every application, the blocked emails and the match emails read. */
+/** What the rules know of every application (with what corrections gave them), the blocked emails and the match emails read. */
 function known(store: Store) {
   const db = jobsDb(store.sqlite);
-  const applications: KnownApplication[] = db.select({
-    id: j.jobsApplications.id, company: j.jobsApplications.company, titleKey: j.jobsApplications.titleKey, requisitionId: j.jobsApplications.requisitionId,
-    status: j.jobsApplications.status, statusSetAt: j.jobsApplications.statusSetAt, appliedAt: j.jobsApplications.appliedAt,
-    companyUnknown: j.jobsApplications.companyUnknown,
-  }).from(j.jobsApplications).all().map(row => ({...row, titleKey: row.titleKey || null}));
-  const blocked: BlockedEmail[] = db.select({
-    messageId: j.jobsBlockedEmails.messageId, company: j.jobsEmailsRead.company, titleKey: j.jobsEmailsRead.titleKey, requisitionId: j.jobsEmailsRead.requisitionId,
-  }).from(j.jobsBlockedEmails).leftJoin(j.jobsEmailsRead, eq(j.jobsEmailsRead.messageId, j.jobsBlockedEmails.messageId)).all();
   const matches = db.select({
     messageId: j.jobsEmailsRead.messageId, at: j.jobsEmailsRead.at, company: j.jobsEmailsRead.company, titleKey: j.jobsEmailsRead.titleKey,
     applicationId: j.jobsEmailsRead.applicationId,
   }).from(j.jobsEmailsRead).where(and(eq(j.jobsEmailsRead.event, 'match'), isNotNull(j.jobsEmailsRead.company), isNotNull(j.jobsEmailsRead.titleKey)))
     .all() as ReadMatchEmail[];
-  return {applications, blocked, matches};
+  return {applications: knownApplications(store), blocked: blockedEmails(store), matches};
 }
 
 /**
@@ -115,8 +108,6 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
 
     const addEvent = (application: number, kind: JobEventKind, copy: {at: string; sender: string; subject: string; line: string | null; messageId: number | null}) =>
       db.insert(j.jobsEvents).values({applicationId: application, kind, ...copy, createdAt: now}).run();
-    const handSet = (application: number, field: 'company' | 'title' | 'status') =>
-      db.select().from(j.jobsHandSet).where(and(eq(j.jobsHandSet.applicationId, application), eq(j.jobsHandSet.field, field))).get() !== undefined;
     // The match email an Indeed confirmation pairs with joins it as a quiet event, with its own copy.
     const joinMatch = (application: number, messageId: number, line: string | null) => {
       const match = jobsEmail(store, messageId);
@@ -155,8 +146,8 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
             status: plan.status, statusSetBy: 'email', statusSetAt: at,
             step: plan.status === 'in_process' ? reading!.line ?? email.summary : null, stepAt: plan.status === 'in_process' ? at : null,
           });
-          // An email that sets a status wins over one set by hand (decision 68).
-          db.delete(j.jobsHandSet).where(and(eq(j.jobsHandSet.applicationId, plan.applicationId), eq(j.jobsHandSet.field, 'status'))).run();
+          // An email that sets a status wins over one set by hand (decision 68, D322): stick.ts's one exception.
+          emailSetsStatus(store, plan.applicationId);
         }
         db.update(j.jobsApplications).set(changes).where(eq(j.jobsApplications.id, plan.applicationId)).run();
         applicationId = plan.applicationId;
@@ -164,7 +155,8 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
         break;
       }
       case 'pair': {
-        if (!handSet(plan.applicationId, 'company')) {
+        // A company the user set stays theirs (stick.ts).
+        if (!setByHand(store, plan.applicationId, 'company')) {
           db.update(j.jobsApplications).set({company: plan.company, companyUnknown: false, updatedAt: now}).where(eq(j.jobsApplications.id, plan.applicationId)).run();
         }
         addEvent(plan.applicationId, 'match', {at, sender, subject: email.subject, line: reading!.line, messageId: email.id});
