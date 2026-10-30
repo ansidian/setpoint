@@ -86,12 +86,12 @@ files marked *imports* import the folders.
 | `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, and J8's words (removed with the module) |
 | `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
 | `web/tests/browser/jobsStates.spec.ts` (J8) | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
-| Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group and usage row), `sweep.spec.ts` (J8's states and Jobs off), `pages.ts` (Jobs's page screenshot, `32-jobs-a-typical-morning`, and `jobs.spec.ts`'s `matchGolden`), `audit.ts` (`JOBS_EVERYWHERE` and `JOBS_BOARDS`) and `web/tests/shell.test.ts` (`/jobs/from-history`), and `web/tests/browser/goldens/32-jobs-a-typical-morning.png` once approved (J8) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches and its screenshot go too |
+| Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group, its usage row and the total with it, $25.20 for $21.35), `sweep.spec.ts` (J8's states and Jobs off, with their `node:path` and `node:sqlite` imports), `pages.ts` (Jobs's page screenshot, `32-jobs-a-typical-morning`, and `jobs.spec.ts`'s `matchGolden`), `audit.ts` (from override 37's patches to `JOBS_EVERYWHERE`, from Jobs's icons to `JOBS_BOARDS`, and `JOBS_DIR` with its test in `patchedBoard`) and `web/tests/shell.test.ts` (`/jobs/from-history`), and `web/tests/browser/goldens/32-jobs-a-typical-morning.png` once approved (J8) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches and its screenshot go too |
 | `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` (J5) | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
 | `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
 | `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
 | `server/vitest.config.ts`, `include` | runs `src/jobs/tests/` |
-| `eslint.config.js`, `JOBS_FOLDERS`, `JOBS_WIRING`, `moduleBoundary` and its block | the lint rule |
+| `eslint.config.js`, `ROOT`, `JOBS_FOLDERS`, `JOBS_WIRING`, `moduleBoundary` and its block, and the `node:path` and `node:url` imports only they use | the lint rule |
 
 `web/src/api/live.ts` listens for every type in `LIVE_EVENT_TYPES`, so it needs no line of its own.
 
