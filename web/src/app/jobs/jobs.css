@@ -236,7 +236,7 @@
 .jb-facts { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink2); font-variant-numeric: tabular-nums; }
 /* A long fact wraps inside its box, its glyph level with the first line (SV-129). */
 .jb-facts > span, .jb-facts > a { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-.jb-facts .icon { color: var(--ink3); height: 1lh; }
+.jb-facts .icon { color: var(--ink3); margin-top: calc((1lh - 16px) / 2); }
 .jb-facts .quiet { color: var(--ink3); }
 .jb-lists { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; max-width: 624px; }
 .jb-lists ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -285,7 +285,8 @@
 @keyframes jb-unfold { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes jb-refold { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 100% 0); opacity: 0; } }
 .jb-unfold .jb-facts { font-size: 12.5px; color: var(--ink3); gap: 6px 14px; padding: 0 2px; }
-.jb-unfold .jb-facts > span, .jb-unfold .jb-facts > a { white-space: nowrap; }
+.jb-unfold .jb-facts > span, .jb-unfold .jb-facts > a { white-space: nowrap; align-items: center; }
+.jb-unfold .jb-facts .icon { margin-top: 0; }
 .jb-unfold .jb-facts a { color: var(--ink2); overflow: hidden; }
 .jb-unfold .jb-facts a > span { overflow: hidden; text-overflow: ellipsis; }
 .jb-full { color: var(--ink); font-size: 14px; line-height: 1.62; max-width: 600px; padding: 2px 2px 0; user-select: text; -webkit-user-select: text; }
