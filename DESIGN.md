@@ -3304,3 +3304,14 @@ it changes what's on screen.
     application arrives open, scrolled to its full posting and unfolded, as Open in Jobs arrives at
     the top; the popover stays a quick look, and the long read happens where the detail is built for
     it. Board audit: 37b draws the button without saying where it goes.
+272. **J7's small gaps** (Andy left small gaps to Claude, 2026-10-30; darma SV-125, D373–D376): a
+    job-match email is one Jobs read as a job board's match, and one that also belongs to an
+    application shows the JD chip in the reader and Applied before on its row; the chip and the badge
+    word the status as the table's step does ("· In process" with no date, "· Ghosted", Applied alone
+    "Applied Sep 16"), a role-less application's chip its company; the badge's search the words its
+    applications' companies share; the popover without a JD in the detail's words (No JD found,
+    Looking for the posting…, Is this the posting?, Not looked up) with Open in Jobs alone, and as wide
+    as the reader leaves room for; Applied before on the Inbox's rows and the reader, not mail
+    search's results; any application open as Jobs mounts arriving without a slide, Full posting's
+    unfolded with no motion, a search's query in the field without focus, and the address dropping
+    what it carried. Board audit: 37a–37c draw only In process and Rejected, and a 460 px popover.
