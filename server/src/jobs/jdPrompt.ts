@@ -11,7 +11,7 @@ import type {ToolSpec} from '../providers/ai/index.ts';
 import type {Verdict} from './lookupRules.ts';
 
 /** Bumped when a prompt or tool changes. */
-export const JD_PROMPT_VERSION = 'v1';
+export const JD_PROMPT_VERSION = 'v2';
 
 /** How much of a candidate's text the check sees, and of the confirmation email. */
 export const CHECK_TEXT_LIMIT = 1_500;
@@ -57,7 +57,9 @@ export const CHECK_SYSTEM = `You check which job postings are the one the user a
 For each candidate give a verdict:
 - match: the same employer, the same role (titles can differ in brackets, tags like "remote", or word order), a location that fits what the emails say, and posted before the user applied. Say match only when you are sure.
 - maybe: it could be the one, but something doesn't fit or the emails don't say enough to tell (another location of the same role, a near title).
-- no: another employer, another role, or posted after the user applied.`;
+- no: another employer, another role, or posted after the user applied.
+
+A page that isn't a job posting itself, such as an application confirmation, an application status page, or the applicant's own details and answers, is no, whatever company and role it names.`;
 
 export const CHECK_TOOL: ToolSpec = {
   name: 'submit_posting_check',
