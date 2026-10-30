@@ -1,8 +1,8 @@
 // What the Jobs page writes (DESIGN.md › Jobs, boards 32–36): its dates, each status's mark and step,
-// the JD column, the per-week tip, Needs you's lines, and the table's order. Pure, so the page and its
-// pane stay thin.
+// the JD column, the per-week tip, Needs you's lines, and the table's order; and mail's chip and
+// badge (J7). Pure, so the page and its pane stay thin.
 import type {
-  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobStatus, JobWeekOut, NeedsYouItemOut, PostingOut,
+  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobsMailApplicationOut, JobStatus, JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {clockTime, localDate} from '../../logic/format.ts';
 import type {Segment} from '../../logic/search.ts';
@@ -94,9 +94,11 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
 }
 
 /** The full posting's row and head: "Found on Greenhouse · Oct 1, 10:41 AM", "Found by search · Sep 30, 2:18 PM". */
+const foundHow = (posting: Pick<PostingOut, 'source' | 'platform'>) =>
+  (posting.source === 'platform' ? `Found on ${posting.platform ?? 'the platform'}` : posting.source === 'search' ? 'Found by search' : 'Found from the email\'s link');
+
 export function foundLine(posting: Pick<PostingOut, 'source' | 'platform' | 'found_at'>, timeZone: string, today: string): string {
-  const how = posting.source === 'platform' ? `Found on ${posting.platform ?? 'the platform'}` : posting.source === 'search' ? 'Found by search' : 'Found from the email\'s link';
-  return `${how} · ${stampWord(posting.found_at, timeZone, today)}`;
+  return `${foundHow(posting)} · ${stampWord(posting.found_at, timeZone, today)}`;
 }
 
 /** A link's host, the full posting's tool ("greenhouse.example"). */
@@ -196,6 +198,30 @@ export function latestStep(detail: Pick<ApplicationOut, 'status' | 'step' | 'ste
 
 /** The detail's line under its head, "· Applied Oct 1", "· Applied Today". */
 export const appliedLine = (date: string, today: string) => `Applied ${appliedWord(date, today)}`;
+
+// ---- In mail (J7, boards 37a–37c) ----
+
+/**
+ * Where an application stands, after its Applied date in mail's chip and badge: "In process",
+ * "Rejected Oct 5", "Offer Oct 6", "Ghosted"; nothing for Applied, which the date already says.
+ */
+export function standing(application: Pick<JobsMailApplicationOut, 'status' | 'status_on' | 'ghosted'>, today: string): string | null {
+  if (application.status === 'applied') return application.ghosted ? 'Ghosted' : null;
+  if (application.status === 'in_process') return STATUS_LABELS.in_process;
+  return `${STATUS_LABELS[application.status]} ${dayWord(application.status_on, today)}`;
+}
+
+/** "Applied Sep 16 · Rejected Oct 5": the badge, and the chip after its role. */
+export const appliedStanding = (application: Pick<JobsMailApplicationOut, 'applied_on' | 'status' | 'status_on' | 'ghosted'>, today: string) =>
+  [appliedLine(application.applied_on, today), standing(application, today)].filter(Boolean).join(' · ');
+
+/** The chip's role, or the company for an application that names none. */
+export const chipRole = (application: Pick<JobsMailApplicationOut, 'title' | 'company'>) => application.title.trim() || application.company;
+
+/** The popover's foot: "Found on Greenhouse · Oct 1", its full time in the tooltip (foundLine). */
+export function foundShort(posting: Pick<PostingOut, 'source' | 'platform' | 'found_at'>, timeZone: string, today: string): string {
+  return `${foundHow(posting)} · ${dayWord(localDate(posting.found_at, timeZone), today)}`;
+}
 
 // ---- The table's order (D314: newest first by Applied, by default) ----
 

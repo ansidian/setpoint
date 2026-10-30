@@ -388,3 +388,47 @@
 .jb-mrow { display: flex; align-items: center; gap: 2px; }
 .jb-mrow > .menu-i { flex: 1 1 auto; min-width: 0; }
 .jb-mrow > .ibtn { color: var(--ink3); }
+
+/* ---------- In mail (J7, 37a–37c, D306): the JD chip and its popover, Applied before ---------- */
+/* The chip draws with the reader's head, under the sender's line and above the actions, with no
+   entrance of its own; it answers the pointer as an outlined control does (sub, edgeHover, 120 ms). */
+.jb-chipwrap { position: relative; align-self: flex-start; display: flex; max-width: 100%; min-width: 0; }
+.jb-chip { height: 28px; display: inline-flex; align-items: center; gap: 7px; padding: 0 8px 0 10px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--ink2); font-size: 12.5px; white-space: nowrap; min-width: 0; max-width: 100%;
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.jb-chip > .icon { color: var(--ink3); flex: none; }
+.jb-chip .t { color: var(--ink); flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.jb-chip .chev { transition: transform var(--dur-medium) var(--ease); }
+@media (hover: hover) { .jb-chip:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
+.jb-chip:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
+.jb-chip[aria-expanded="true"] { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.jb-chip[aria-expanded="true"] .chev { transform: rotate(180deg); }
+/* The popover (37b, 460 wide, narrower where the reader is) grows from the chip's bottom-left corner,
+   8 px under it (.pop's entrance). */
+.jb-pop { position: absolute; left: 0; top: calc(100% + 8px); z-index: 7; width: 460px; display: flex; flex-direction: column; overflow: hidden; cursor: default; }
+.jb-pop[data-up] { top: auto; bottom: calc(100% + 8px); }
+.jb-pop .ph-head { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+.jb-pop .co { color: var(--ink3); font-size: 12.5px; display: flex; gap: 6px; align-items: center; min-width: 0; white-space: nowrap; }
+.jb-pop .co .name { color: var(--ink2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.jb-pop .ti { color: var(--ink); font-size: 15px; font-weight: 500; letter-spacing: -.005em; }
+.jb-pop .st { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 12.5px; }
+.jb-pop .st .num { color: var(--ink3); }
+.jb-pop .bd { padding: 2px 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.jb-pop .want { color: var(--ink); font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
+.jb-pop .jb-facts { font-size: 12.5px; gap: 4px 14px; }
+.jb-pop .jb-lists { gap: 18px; }
+.jb-pop .jb-lists li { font-size: 12.5px; line-height: 1.4; }
+.jb-pop .jb-lists li::before { margin-top: 6px; }
+.jb-popnojd { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 12.5px; min-width: 0; }
+.jb-popnojd .ink2 { color: var(--ink2); }
+.jb-popnojd .spin { color: var(--ink3); margin-left: 0; vertical-align: 0; }
+.jb-pop .ft { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 16px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.jb-pop .ft .btn .icon { color: var(--ink3); }
+/* Applied before (37c): 20 px after a row's subject, a Noise row's too; 26 px where the chip sits. */
+.jb-badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px 0 6px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge);
+  font-size: 11.5px; color: var(--ink2); white-space: nowrap; flex: none; font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.jb-badge > .icon { color: var(--ink3); flex: none; }
+@media (hover: hover) { .jb-badge:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); color: var(--ink); } }
+.jb-badge:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
+.jb-badge.lg { height: 26px; padding: 0 10px 0 8px; font-size: 12.5px; gap: 6px; align-self: flex-start; max-width: 100%; }

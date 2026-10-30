@@ -32,7 +32,8 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   ([`api.ts`](../../../web/src/app/jobs/api.ts)), what it writes ([`words.ts`](../../../web/src/app/jobs/words.ts))
   and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5); J6's menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
   what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, and the
-  toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)). The shell imports only
+  toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); J7's fillers of mail's slots, the JD chip with its
+  popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
 
 Its tables point at mail by message id and account id only, as plain integers with no foreign key,
@@ -65,12 +66,17 @@ files marked *imports* import the folders.
 | `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds |
 | `server/src/dev/sample.ts`, the last of `SAMPLE_EMAILS` | the Indeed match email Jobs's sample reads (mail's own data; it can stay) |
 | `web/src/logic/live.ts`, `pathsForEvent`'s `jobs` case | a `jobs` event refreshes what's mounted under `/jobs`: the page, the shell's item (`/jobs/nav`), an open application and a search (J5) |
-| `web/src/logic/route.ts`, the `jobs` route (J5) | `/jobs` and `/jobs/12` (an application open) in the address bar; it names no module, so it imports nothing |
-| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*, J5) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox, decision 49), and `goToJobs` for `4` while Jobs is on |
+| `web/src/logic/route.ts`, the `jobs` route (J5) | `/jobs` and `/jobs/12` (an application open) in the address bar; J7 adds `/jobs/12/posting` (Full posting from mail, #271) and `?q=` (Applied before's search); it names no module, so it imports nothing |
+| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*, J5) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox, decision 49), and `goToJobs` for `4` while Jobs is on; J7 adds `jobsMailSlots` to it |
+| `web/src/app/App.tsx`, `fillMailSlots(jobsMailSlots)` and the `./slots.tsx` import (J7) | Jobs fills mail's slots ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)): the reader's JD chip, and Applied before on the reader and the rows |
+| `web/src/app/slots.tsx` (J7) | the generic slots the line above fills: a hook the Inbox's list calls with its rows, and the reader head's component; unfilled, both draw nothing; it names no module, so it can stay |
+| `web/src/app/AllList.tsx`, `useRowSlot` and `{afterSubject(row)}` (J7) | each row draws the slot after its subject; it imports only `slots.tsx`, so it can stay |
+| `web/src/app/Reader.tsx`, `<ReaderSlot>` before the actions (J7) | the reader's head draws the slot under the sender's line; it imports only `slots.tsx`, so it can stay |
 | `web/src/app/Sidebar.tsx`, the `./jobs/index.ts` import and `<JobsNavItem>` after News (*imports*, J5) | the sidebar's Jobs item with its Needs you count, and in the compact tier the rail's slot with its neutral badge |
 | `web/src/app/palette/Palette.tsx`, the `../jobs/index.ts` import and `...jobsCommands()` in Go to (*imports*, J5) | ⌘K's "Jobs 4", while Jobs is on (search stays out of ⌘K, D316) |
 | `web/src/app/ShellFrame.tsx`, the starting shell's title (J5) | "Jobs" while Setpoint starts on a Jobs address; it imports nothing |
-| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, and J6's menus, candidate picker and title field (removed with the module) |
+| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, and J7's JD chip, popover and Applied before (removed with the module) |
+| `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
 | `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` (J5) | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
 | `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
 | `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
@@ -79,8 +85,8 @@ files marked *imports* import the folders.
 
 `web/src/api/live.ts` listens for every type in `LIVE_EVENT_TYPES`, so it needs no line of its own.
 
-J6 to J8 add: Jobs's row in Settings › AI; and the slot on the reader and on the row that mail renders
-without knowing what fills it. Each adds its line here.
+J8 adds Jobs's row in Settings › AI, with its line here. J7's slots on the reader and the row are in the
+table: with Jobs removed, `fillMailSlots` goes with App.tsx's import, and the slots draw nothing.
 
 The hook (J2) is triage's, not storing's: Jobs reads an email only once triage has typed it, so being
 told when one is stored would tell it nothing it could act on. A missed nudge costs nothing: the
@@ -228,6 +234,16 @@ the lint rule still refuses an import of Jobs from triage.
   matches applications as an email's does: loosely (`sameCompany`) and by the companies corrections
   gave them (stick.ts `knownApplications`' aliases). The badge names the most recent; `query` is the
   search that shows them all on Jobs (the words their companies share, else the newest's company).
+- **The slots** ([`web/src/app/slots.tsx`](../../../web/src/app/slots.tsx)): mail's list calls `useRowSlot(rows)` with
+  every row it holds and draws what it answers after each subject; the reader's head draws
+  `<ReaderSlot row>` under the sender's line. App.tsx fills both with `jobsMailSlots`
+  ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)) before the first draw. The list's rows are asked
+  about in one request, then one for each set it adds (a page, a day's Noise opened, new mail), never
+  one per row; the reader asks for its one email. Being under `/jobs`, a `jobs` event refreshes both.
+  Neither draws on the phone (decision 49) or while Jobs is off, and nothing is asked then.
+- **Leaving for Jobs:** the JD chip's popover goes to `/jobs/12` (Open in Jobs) or `/jobs/12/posting`
+  (Full posting, #271), the application arriving with its pane simply there; Applied before goes to
+  `/jobs?q=<query>`, searched. The page drops what the address carried once it's arrived.
 - **The seed** keeps the Indeed match email as the reader would have read it (its event, company and
   role), so its badge shows (board 37c).
 

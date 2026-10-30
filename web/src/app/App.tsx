@@ -11,7 +11,7 @@ import {isTyping, plainKey} from '../ui/keys.ts';
 import {CalendarPage} from './calendar/CalendarPage.tsx';
 import {Agenda} from './calendar/Agenda.tsx';
 import {InboxPage} from './InboxPage.tsx';
-import {goToJobs, JobsPage} from './jobs/index.ts';
+import {goToJobs, jobsMailSlots, JobsPage} from './jobs/index.ts';
 import {NewsPage} from './news/NewsPage.tsx';
 import {ContextMenu} from './ContextMenu.tsx';
 import {Palette} from './palette/Palette.tsx';
@@ -23,8 +23,12 @@ import {openSettings} from './settings/store.ts';
 import {Sidebar} from './Sidebar.tsx';
 import {OfflinePill} from './states/States.tsx';
 import {toInbox} from './toInbox.ts';
+import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
 import {ToastPill} from './ToastPill.tsx';
+
+// Jobs fills mail's slots (J7): the reader's JD chip and Applied before, before Setpoint first draws.
+fillMailSlots(jobsMailSlots);
 
 /** `arrive`: it follows Setpoint's mark at the start, and fades in (#233). */
 export function App({arrive = false}: {arrive?: boolean}) {

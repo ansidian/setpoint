@@ -13,6 +13,9 @@ export const applicationPath = (id: number) => `/jobs/applications/${id}`;
 /** GET /api/jobs/search?q=…: company or role first, then JD text (D316). */
 export const searchPath = (q: string) => `/jobs/search?q=${encodeURIComponent(q.trim())}`;
 
+/** GET /api/jobs/mail?messages=…: what mail's slots draw for these emails (J7), in one request. */
+export const mailPath = (ids: readonly number[]) => `/jobs/mail?messages=${ids.join(',')}`;
+
 /** The shell's item as last answered, if it has been. */
 export const cachedNav = () => getCached<JobsNavOut>(NAV_PATH);
 

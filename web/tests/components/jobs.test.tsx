@@ -1,9 +1,10 @@
 // Jobs's widgets (J5, J6; DESIGN.md › Jobs): Per week's chart, the status filter and the full posting
 // unfolding in place (board 33); J6's menus with their keys and submenus, the candidate picker and the
-// title's field (boards 34a, 35a, 35b). What they do with the props and the pointer or keys they're given; the
+// title's field (boards 34a, 35a, 35b); J7's JD chip with its popover and Applied before, as mail's
+// slots draw them (boards 37a–37c). What they do with the props and the pointer or keys they're given; the
 // page around them, its keys and the server are jobs.spec.ts's. This file imports Jobs's folder, so
 // it's one of Jobs's wiring points (server/src/jobs/README.md).
-import type {JdCandidateOut, JobCountsOut, JobWeekOut, PostingOut} from '@setpoint/shared';
+import type {ApplicationOut, JdCandidateOut, JobCountsOut, JobsMailApplicationOut, JobsMailMessageOut, JobWeekOut, PostingOut} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -12,6 +13,7 @@ import '../../src/app/jobs/jobs.css';
 import {CandidatePicker} from '../../src/app/jobs/CandidatePicker.tsx';
 import {EditField} from '../../src/app/jobs/EditField.tsx';
 import {FullPosting} from '../../src/app/jobs/FullPosting.tsx';
+import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
 import {JobsMenu} from '../../src/app/jobs/Menu.tsx';
 import type {MenuSpec} from '../../src/app/jobs/Menu.tsx';
 import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
@@ -359,4 +361,132 @@ test('an empty or unchanged title saves nothing', async () => {
   await render(<EditField label="Title" value="Data Analyst" onSave={onSave} onCancel={onCancel} />);
   await userEvent.keyboard('{Enter}');
   expect([onSave.mock.calls.length, onCancel.mock.calls.length]).toEqual([0, 1]);
+});
+
+// ---- In mail (J7, boards 37a–37c): the JD chip, its popover, and Applied before ----
+
+const NORTHWIND: JobsMailApplicationOut = {id: 7, company: 'Northwind Talent', title: 'Software Engineer I', applied_on: '2026-10-01', status: 'in_process', status_on: '2026-10-07', ghosted: false};
+
+/** Northwind's detail, as GET /api/jobs/applications/7 answers it, with its JD or where the JD stands. */
+const detailOf = (posting: PostingOut | null, jd: Partial<ApplicationOut['jd']> = {}): ApplicationOut => ({
+  ...NORTHWIND, platform: 'Greenhouse', account_id: 4, applied_at: '2026-10-01T18:26:00.000Z', status_set_by: 'email', status_set_at: '2026-10-07T14:12:00.000Z',
+  step: 'Pick a 30-minute interview slot this week', step_at: '2026-10-07T14:12:00.000Z', days_without_email: 0, reapplied_from: null, first_seen_in_email: false,
+  jd: {state: posting ? 'found' : 'none', source: posting?.source ?? null, platform: posting?.platform ?? null, found_at: posting?.found_at ?? null, candidates: 0, looked_at: null, link: posting?.link ?? null, ...jd},
+  posting, candidates: [], timeline: [], applied_before: [], also_at: [], hand_set: [],
+});
+
+/** The chip as the reader's head draws it, inside something that takes the page's keys and clicks. */
+async function chip(application = NORTHWIND, detail: ApplicationOut | undefined = detailOf({...POSTING, must_haves: ['TypeScript and React', 'An API you built', 'SQL'], nice_to_haves: ['Node.js on the server', 'Tests in CI']})) {
+  const onKey = vi.fn();
+  await render(
+    <div style={{display: 'flex', flexDirection: 'column', gap: 12, padding: 28, height: 800}} onKeyDown={event => onKey(event.key)} tabIndex={-1}>
+      <JdChip application={application} detail={detail} today={TODAY} timeZone={ZONE} />
+      <p>The email&apos;s body</p>
+    </div>,
+  );
+  return {onKey, button: page.getByRole('button', {name: /Software Engineer I|Northwind Talent/})};
+}
+
+test('the JD chip (37a): work, the role, "· Applied Oct 1 · In process" and its chevron, its tip saying what it is', async () => {
+  const {button} = await chip();
+  await expect.element(button).toHaveTextContent('Software Engineer I· Applied Oct 1 · In process');
+  await expect.element(button).toHaveAttribute('title', 'The job description you applied to');
+  await expect.element(button).toHaveAttribute('aria-expanded', 'false');
+  expect(getComputedStyle(button.element()).backgroundColor).toBe(colour('var(--chip)'));
+});
+
+test.each<[string, Partial<JobsMailApplicationOut>, string]>([
+  ['Rejected, with its day', {status: 'rejected', status_on: '2026-10-05'}, 'Software Engineer I· Applied Oct 1 · Rejected Oct 5'],
+  ['Offer, with its day', {status: 'offer', status_on: '2026-10-06'}, 'Software Engineer I· Applied Oct 1 · Offer Oct 6'],
+  ['Applied, which the date already says', {status: 'applied'}, 'Software Engineer I· Applied Oct 1'],
+  ['Ghosted, a flag on Applied', {status: 'applied', ghosted: true}, 'Software Engineer I· Applied Oct 1 · Ghosted'],
+  ['an application naming no role: its company', {title: '  '}, 'Northwind Talent· Applied Oct 1 · In process'],
+  ['applied today', {applied_on: TODAY}, 'Software Engineer I· Applied Today · In process'],
+])('the chip for %s', async (_, change, words) => {
+  const {button} = await chip({...NORTHWIND, ...change});
+  await expect.element(button).toHaveTextContent(words);
+});
+
+test('its popover (37b): the head, What they want, the facts and both lists, and the foot; the chip lit while it\'s open, and again closes it', async () => {
+  const {button} = await chip();
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.element(popover).toBeInTheDocument();
+  await expect.element(button).toHaveAttribute('aria-expanded', 'true');
+  await expect.poll(() => getComputedStyle(button.element()).backgroundColor).toBe(colour('var(--sub2)'));
+  const parts = (selector: string) => [...popover.element().querySelectorAll(selector)].map(part => part.textContent);
+  expect(parts('.ph-head > *')).toEqual(['Northwind Talent· via Greenhouse', 'Software Engineer I', 'In process· Applied Oct 1']);
+  expect(parts('.bd .jb-label')).toEqual(['What they want', 'Must-haves 3', 'Nice-to-haves 2']);
+  expect(parts('.bd .jb-facts > span')).toEqual(['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
+  await expect.element(popover.getByText('Found on Greenhouse · Oct 1', {exact: true})).toHaveAttribute('title', 'Found on Greenhouse · Oct 1, 10:41 AM');
+  expect([...popover.element().querySelectorAll('.ft button')].map(each => each.textContent)).toEqual(['Full posting', 'Open in Jobs']);
+  // Under the chip, at its left edge, 460 wide, once it has grown in.
+  await expect.poll(() => popover.element().getBoundingClientRect().width).toBe(460);
+  expect(popover.element().getBoundingClientRect().left).toBe(button.element().getBoundingClientRect().left);
+  await button.click();
+  await expect.element(popover).not.toBeInTheDocument();
+  await expect.element(button).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('Esc closes the popover at once, and goes no further (it would close the reader); a click away closes it too', async () => {
+  const {onKey, button} = await chip();
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.element(popover).toBeInTheDocument();
+  await userEvent.keyboard('{Escape}');
+  await expect.element(popover).not.toBeInTheDocument();
+  expect(onKey.mock.calls.filter(([key]) => key === 'Escape')).toEqual([]);
+  // A second Esc, with nothing open, is the page's.
+  await userEvent.keyboard('{Escape}');
+  expect(onKey.mock.calls.filter(([key]) => key === 'Escape')).toHaveLength(1);
+
+  await button.click();
+  await expect.element(popover).toBeInTheDocument();
+  // A click inside it keeps it.
+  await popover.getByText('What they want').click();
+  await expect.element(popover).toBeInTheDocument();
+  await page.getByText('The email\'s body').click();
+  await expect.element(popover).not.toBeInTheDocument();
+});
+
+test.each<[string, ApplicationOut, string]>([
+  ['No JD found', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z'}), 'No JD found · Greenhouse and a web search had nothing for it on Oct 1'],
+  ['Looking for the posting…', detailOf(null, {state: 'looking', looked_at: '2026-10-07T16:00:00.000Z'}), 'Looking for the posting… · the email\'s link, then the platforms, then search'],
+  ['Is this the posting?', detailOf(null, {state: 'candidates', candidates: 2}), 'Is this the posting? · 2 candidates in Needs you'],
+])('without a JD the popover says so: %s, with Open in Jobs and no Full posting', async (_, detail, words) => {
+  const {button} = await chip(NORTHWIND, detail);
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.element(popover.getByText(words.split(' · ')[0]!, {exact: true})).toBeInTheDocument();
+  expect(popover.element().querySelector('.bd')!.textContent).toBe(words);
+  expect([...popover.element().querySelectorAll('.ft button')].map(each => each.textContent)).toEqual(['Open in Jobs']);
+});
+
+const CONTOSO: NonNullable<JobsMailMessageOut['applied_before']> = {
+  query: 'contoso pharmaceuticals', count: 1,
+  latest: {id: 12, company: 'Contoso Pharmaceuticals', title: 'Associate Software Engineer', applied_on: '2026-09-16', status: 'rejected', status_on: '2026-10-05', ghosted: false},
+};
+
+test('Applied before (37c): 20 px on the row, 26 px in the reader, each with its tip; a click opens Jobs searched for the company, never the row under it', async () => {
+  const onRow = vi.fn();
+  const was = `${window.location.pathname}${window.location.search}`;
+  try {
+    await render(
+      <div className="row" style={{display: 'flex', width: 900}} onClick={onRow}>
+        <AppliedBefore before={CONTOSO} today={TODAY} />
+        <AppliedBefore before={CONTOSO} today={TODAY} large />
+      </div>,
+    );
+    const [row, reader] = [page.getByTitle('Open Jobs searched for Contoso Pharmaceuticals'), page.getByTitle('Open in Jobs · every application at Contoso Pharmaceuticals')];
+    await expect.element(row).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
+    await expect.element(reader).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
+    expect([row.element().getBoundingClientRect().height, reader.element().getBoundingClientRect().height]).toEqual([20, 26]);
+    await userEvent.hover(row);
+    await expect.poll(() => getComputedStyle(row.element()).backgroundColor).toBe(colour('var(--sub)'));
+    await row.click();
+    expect(`${window.location.pathname}${window.location.search}`).toBe('/jobs?q=contoso%20pharmaceuticals');
+    expect(onRow).not.toHaveBeenCalled();
+  } finally {
+    window.history.replaceState(null, '', was);
+  }
 });

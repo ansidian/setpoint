@@ -9,7 +9,7 @@
 // place (and the company, from More), the status chip's Set status, Not this posting's candidates
 // offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
 // right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
-import type {AccountOut, ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut} from '@setpoint/shared';
+import type {AccountOut, ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, PostingOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
@@ -36,7 +36,6 @@ import {CandidatePicker} from './CandidatePicker.tsx';
 import {EditField} from './EditField.tsx';
 import {appliedLine, dayWord, latestStep, lookingWhere, markLabel, markOf, notFoundLine, STATUS_LABELS, titleOf} from './words.ts';
 
-const WORKPLACES = {on_site: 'On-site', hybrid: 'Hybrid', remote: 'Remote'} as const;
 const EVENT_KINDS: Partial<Record<JobEventOut['kind'], string>> = {applied: 'Applied', assessment: 'Assessment', interview: 'Interview', offer: 'Offer', rejection: 'Rejected'};
 
 export interface DetailProps {
@@ -218,30 +217,14 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   };
   const saved = detail.posting;
   if (saved) {
-    const place = saved.workplace ? `${WORKPLACES[saved.workplace]}${saved.workplace_detail ? `, ${saved.workplace_detail}` : ''}` : null;
     return (
       <>
         <div className="jb-arrive">
           <h2 className="jb-label">What they want</h2>
           <p className="jb-want">{saved.summary}</p>
         </div>
-        <div className="jb-facts">
-          {saved.location && <span><Icon name="location_on" size={16} />{saved.location}</span>}
-          {place && <span><Icon name="home_work" size={16} />{place}</span>}
-          <span><Icon name="payments" size={16} />{saved.salary ?? <span className="quiet">Salary not stated</span>}</span>
-        </div>
-        {(saved.must_haves.length > 0 || saved.nice_to_haves.length > 0) && (
-          <div className="jb-lists">
-            <div>
-              <h2 className="jb-label">Must-haves <span className="n">{saved.must_haves.length}</span></h2>
-              <ul>{saved.must_haves.map(item => <li key={item}>{item}</li>)}</ul>
-            </div>
-            <div className="nice">
-              <h2 className="jb-label">Nice-to-haves <span className="n">{saved.nice_to_haves.length}</span></h2>
-              <ul>{saved.nice_to_haves.map(item => <li key={item}>{item}</li>)}</ul>
-            </div>
-          </div>
-        )}
+        <JdFacts posting={saved} />
+        <JdLists posting={saved} />
         <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
       </>
     );
@@ -285,6 +268,37 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
         {detail.jd.state !== 'candidates' && (
           <button className="btn quiet sm" type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
         )}
+      </div>
+    </div>
+  );
+}
+
+const WORKPLACES = {on_site: 'On-site', hybrid: 'Hybrid', remote: 'Remote'} as const;
+
+/** The JD's facts (D307): where, the setting, the salary or "Salary not stated". Mail's popover shows them too. */
+export function JdFacts({posting}: {posting: PostingOut}) {
+  const place = posting.workplace ? `${WORKPLACES[posting.workplace]}${posting.workplace_detail ? `, ${posting.workplace_detail}` : ''}` : null;
+  return (
+    <div className="jb-facts">
+      {posting.location && <span><Icon name="location_on" size={16} />{posting.location}</span>}
+      {place && <span><Icon name="home_work" size={16} />{place}</span>}
+      <span><Icon name="payments" size={16} />{posting.salary ?? <span className="quiet">Salary not stated</span>}</span>
+    </div>
+  );
+}
+
+/** Must-haves and nice-to-haves in two columns, each with its count; none when both are empty. */
+export function JdLists({posting}: {posting: PostingOut}) {
+  if (!posting.must_haves.length && !posting.nice_to_haves.length) return null;
+  return (
+    <div className="jb-lists">
+      <div>
+        <h2 className="jb-label">Must-haves <span className="n">{posting.must_haves.length}</span></h2>
+        <ul>{posting.must_haves.map(item => <li key={item}>{item}</li>)}</ul>
+      </div>
+      <div className="nice">
+        <h2 className="jb-label">Nice-to-haves <span className="n">{posting.nice_to_haves.length}</span></h2>
+        <ul>{posting.nice_to_haves.map(item => <li key={item}>{item}</li>)}</ul>
       </div>
     </div>
   );
