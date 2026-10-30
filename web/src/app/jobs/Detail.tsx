@@ -179,7 +179,7 @@ function Jd({detail, timeZone, today, posting}: {
         <div className="jb-src looking" role="status">
           <span className="spin"><Icon name="progress_activity" size={16} /></span>
           <span className="t">Looking for the posting…</span>
-          <span className="how">· {lookingWhere(detail.platform)}</span>
+          <span className="how">{lookingWhere(detail.platform)}</span>
         </div>
         <Sk kind="jobs-jd" className="jb-skel" immediate><Bar w="92%" h={10} /><Bar w="86%" h={10} /><Bar w="54%" h={10} /><Bar w="38%" h={10} /></Sk>
       </>

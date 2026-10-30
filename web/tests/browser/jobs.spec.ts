@@ -180,7 +180,7 @@ test('an application opens where the reading pane sits: Platform drops and JD is
     assert.match(await pane.locator('.jb-want').textContent() ?? '', /^A new-grad engineer for the hiring-platform team/);
     assert.deepEqual(await pane.locator('.jb-body > .jb-facts > span').allTextContents(), ['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
     assert.deepEqual(await pane.locator('.jb-lists .jb-label').allTextContents(), ['Must-haves 4', 'Nice-to-haves 3']);
-    assert.equal(await pane.locator('.jb-src').textContent(), 'Full posting· Found on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
+    assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
     // The timeline, oldest first (D317); then Applied before at the company (D306).
     assert.deepEqual(await pane.locator('.jb-ev').allTextContents(), [
       'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email', 'TodayInterviewInterview availability for Software Engineer I',
@@ -248,7 +248,7 @@ test('Esc goes back a step at a time: it folds the full posting, then closes the
     // Board 33: Show unfolds the posting's own words in place, under its head.
     await page.locator('.jb-src .tool', {hasText: 'Show'}).click();
     await page.locator('.jb-fullhead').waitFor();
-    assert.equal(await page.locator('.jb-fullhead').textContent(), 'Full posting· Software Engineer I · Northwind TalentCollapse');
+    assert.equal(await page.locator('.jb-fullhead').textContent(), 'Full postingSoftware Engineer I · Northwind TalentCollapse');
     assert.equal(await page.locator('.jb-full h3').first().textContent(), 'About the team');
 
     await page.keyboard.press('Escape');
@@ -349,7 +349,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     assert.equal(await pane.locator('.rd-tools .tool').count(), 0);
     await pane.getByRole('button', {name: 'Look it up'}).click();
     await pane.locator('.jb-src.looking').waitFor();
-    assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…· Breezy, then the platforms, then search');
+    assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then search');
     assert.equal(await pane.locator('[data-skeleton="jobs-jd"] .sk-bar').count(), 4);
     await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('title'), title => title === 'Looking for the posting');
     await setpoint.idle();

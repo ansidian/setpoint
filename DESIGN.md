@@ -74,7 +74,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
 | `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | attention pill and count, needs-reconnect bar, failing lines |
-| `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line |
+| `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line, Jobs's Rejected mark (#265) |
 | `warm` | `oklch(0.8 0.11 55)` | `oklch(0.54 0.12 55)` | Business |
 | `cool` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | Personal (account and calendar), rain |
 | `accent` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | "you are here": the open email's bar, the current page's icon, today's month boundary, a date range, selected search chips, News's updates |
@@ -84,7 +84,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `violet` | `oklch(0.8 0.11 300)` | `oklch(0.54 0.14 300)` | Jobs (account and calendar) |
 | `cyan` | `oklch(0.86 0.11 182)` | `oklch(0.58 0.1 182)` | Classes |
 | `onAlert` | `#1a0806` | `#ffffff` | text on `alert` |
-| `sunGlyph` | `var(--sun)` | `oklch(0.58 0.14 78)` | the forecast's sun on the grids and the right pane |
+| `sunGlyph` | `var(--sun)` | `oklch(0.58 0.14 78)` | the forecast's sun on the grids and the right pane, Jobs's Ghosted ring (#265) |
 | `switchOn` / `switchKnobOn` | `color-mix(in oklch, var(--good) 58%, var(--modal))` / `var(--ink)` | `var(--good)` / `var(--onInk)` | a switch that's on: its track / its knob |
 | `hl` | `color-mix(in oklch, var(--sun) 26%, transparent)` | `oklch(0.92 0.12 96)` | search's match highlight |
 | `edgeFocus` | `rgba(255,255,255,.2)` | `rgba(29,30,33,.3)` | a focused field's border |
@@ -945,16 +945,16 @@ desktop and keeps it (D325).
   - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
     its left edge.
 - **Status** (D309): a 7 px mark, the status, then its step in `ink3` (an ellipsis when it's long).
-  Existing colours only, but In process's cobalt (#264, D362):
+  Existing colours, but In process's cobalt (#264, D362) and Rejected's and Ghosted's marks (#265, D363):
 
   | Status | Mark | Label | Step |
   | --- | --- | --- | --- |
   | Applied | a 1.5 px `ink2` ring | `ink2` | "· Re-applied" beside the detail, "· Re-applied, rejected Sep 2" without it |
   | In process | an `inProcess` disc | `inProcess` 500 | the latest step in `ink2`: "· Interview Tue Oct 13, 2:00 PM", "· Case study due Oct 12" |
   | Offer | a `good` disc | `good` 500 | "· Oct 6" |
-  | Rejected | an `ink3` disc | `ink3` | "· Oct 5" |
+  | Rejected | an `alert` disc (#265) | `ink3` | "· Oct 5" |
   | Withdrawn | a 1.5 px `ink3` ring | `ink3` | "· Sep 10" |
-  | Ghosted | an 8 px dashed `ink3` ring (1.2 px) | `ink3` | "· no email in 48 days" |
+  | Ghosted | an 8 px dashed `sunGlyph` ring (1.2 px, #265) | `ink3` | "· no email in 48 days" |
 
   - Ghosted is a flag on Applied after 30 days without an email, and it never moves an application
     to Rejected. It appears on the next draw after the 30 days, without motion.
@@ -1008,8 +1008,8 @@ desktop and keeps it (D325).
     count in `ink2` ("MUST-HAVES 4"). Items 6 apart at 13 / 1.45 in a 14 px hanging column:
     must-haves in `ink` after a 5 px `ink2` dot, nice-to-haves in `ink2` after a 5 px `ink3` ring.
   - **Full posting:** a 44 px row (radius 12, `sub`, padding 0 6 0 14): `article` 17 in `ink3`,
-    "Full posting" in `ink` 500, how it was found in `ink3` 12.5 ("· Found on Greenhouse · Oct 1,
-    10:41 AM", "· Found by search · Sep 30, 2:18 PM"), then two 30 px tools: the link's host
+    "Full posting" in `ink` 500, how it was found in `ink3` 12.5 ("Found on Greenhouse · Oct 1,
+    10:41 AM", "Found by search · Sep 30, 2:18 PM", no dot after the title, #265), then two 30 px tools: the link's host
     (`link`, "greenhouse.example"), which opens it, and **Show** with `expand_more`. `sub2` under
     the pointer, `sub3` pressed.
   - **Timeline** (D317), with its count, oldest first; each event opens its email:
@@ -1032,8 +1032,8 @@ desktop and keeps it (D325).
     too.
 - **The full posting** (33, D307) unfolds in place under the lists, rather than replacing them:
   - Show, or Space on its row, turns the row into the section's sticky head (44 px, `sub2`, radius
-    12): `article` 16, "Full posting" in `ink` 500, "· Software Engineer I · Northwind Talent" in
-    `ink3`, and a quiet small **Collapse** with `expand_less`.
+    12): `article` 16, "Full posting" in `ink` 500, "Software Engineer I · Northwind Talent" in
+    `ink3` (no dot after the title, #265), and a quiet small **Collapse** with `expand_less`.
   - Under it, a line in `ink3` 12.5 (6 / 14 apart): `travel_explore` "Found on Greenhouse · Oct 1,
     10:41 AM", `link` and the whole link in `ink2`, and `lock_clock` "Kept as it was on Oct 1".
   - The text at 14 / 1.62 in `ink`, max 600: its headings 13 / 600, 18 above and 6 below; paragraphs
@@ -1050,7 +1050,7 @@ desktop and keeps it (D325).
   its own; a lookup that errored is retried and never shows this.
 - **Looking it up** (34c): the Full posting row outlined instead of filled (an `edge` ring): the
   shared spinner (`progress_activity` 16 in `ink3`, 900 ms a turn), "Looking for the posting…" in
-  `ink2`, "· LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
+  `ink2`, "LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
   four 10 px bars in `sub2` (92%, 86%, 54% and 38% wide, 9 apart, the last 10 further down),
   breathing as every skeleton does (#225). What comes fades in over 120 ms.
 - **First seen in this email** (34c, D323): an application Track this made is dated by its email, so
@@ -3249,3 +3249,10 @@ it changes what's on screen.
     `oklch(0.52 0.16 258)`), picked from a mock beside `accent`, periwinkle, teal and violet. It is
     deeper than `accent`, so an open In process row's bar and its mark never read as one. The other
     statuses keep D309's colours. Board audit: the boards draw In process in `ink`.
+265. **Rejected and Ghosted take colour, and no dot follows "Full posting"** (Andy, 2026-10-29;
+    darma SV-123, D363): Rejected's disc is `alert` and Ghosted's dashed ring `sunGlyph` (Night
+    `sun`, Light the deeper amber); their labels stay `ink3` and their rows still step down, so a
+    table of mostly closed rows doesn't shout. The Full posting row, its unfolded head and the
+    Looking for the posting row put how it was found straight after the title, 10 px apart, with no
+    "·"; the search snippet's "Full posting · " keeps it, as it introduces a quote. Board audit:
+    the boards draw both marks in `ink3` and the dot after "Full posting".

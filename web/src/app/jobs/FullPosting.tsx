@@ -149,7 +149,7 @@ export function FullPosting({posting, title, company, timeZone, today, ref}: {
         }}>
         <Icon name="article" size={17} />
         <span className="t">Full posting</span>
-        <span className="how">· {how}</span>
+        <span className="how">{how}</span>
         {posting.link && (
           <a className="tool host" href={posting.link} target="_blank" rel="noopener noreferrer" title={posting.link}>
             <Icon name="link" size={16} /><span>{hostOf(posting.link)}</span>
@@ -167,7 +167,7 @@ export function FullPosting({posting, title, company, timeZone, today, ref}: {
       }}>
         <Icon name="article" size={16} />
         <span className="t">Full posting</span>
-        <span className="ell">· {title} · {company}</span>
+        <span className="ell">{title} · {company}</span>
         <button className="btn quiet sm" type="button" aria-expanded="true" onClick={fold}>Collapse<Icon name="expand_less" size={16} /></button>
       </div>
       <div className={state === 'folding' ? 'jb-unfold folding' : 'jb-unfold'}>

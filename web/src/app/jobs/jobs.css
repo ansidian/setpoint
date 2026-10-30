@@ -146,7 +146,7 @@
 .jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-scroll .gh.sr { border-top: 0; }
 
-/* Status: a 7 px mark, the label, then the step. Existing colours only (D309), but In process's cobalt (#264, D362). */
+/* Status: a 7 px mark, the label, then the step. Existing colours (D309), In process in its own cobalt (#264, D362), and Rejected's mark `alert` and Ghosted's ring amber, their labels `ink3` (#265). */
 .st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .st .sl { flex: none; }
 .st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
@@ -157,9 +157,9 @@
 .sd.applied { box-shadow: inset 0 0 0 1.5px var(--ink2); }
 .sd.proc { background: var(--inProcess); }
 .sd.offer { background: var(--good); }
-.sd.rej { background: var(--ink3); }
+.sd.rej { background: var(--alert); }
 .sd.wd { box-shadow: inset 0 0 0 1.5px var(--ink3); }
-.sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--ink3); }
+.sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--sunGlyph); }
 .sl.applied { color: var(--ink2); }
 .sl.proc { color: var(--inProcess); font-weight: 500; }
 .sl.offer { color: var(--good); font-weight: 500; }

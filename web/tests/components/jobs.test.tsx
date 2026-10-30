@@ -114,12 +114,12 @@ async function posting() {
 test('the full posting is a row: how it was found, the link\'s host, and Show; Show unfolds the text in place under a sticky head, the pane scrolling it up', async () => {
   const {scroller} = await posting();
   const row = page.getByRole('group', {name: 'Full posting'});
-  await expect.element(row).toHaveTextContent('Full posting· Found on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
+  await expect.element(row).toHaveTextContent('Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
   await expect.element(row.getByRole('link', {name: 'greenhouse.example'})).toHaveAttribute('href', POSTING.link);
   await row.getByRole('button', {name: 'Show'}).click();
 
   await expect.element(page.getByRole('button', {name: 'Collapse'})).toHaveAttribute('aria-expanded', 'true');
-  await expect.element(page.getByText('· Software Engineer I · Northwind Talent')).toBeInTheDocument();
+  await expect.element(page.getByText('Software Engineer I · Northwind Talent', {exact: true})).toBeInTheDocument();
   await expect.element(page.getByText('Kept as it was on Oct 1')).toBeInTheDocument();
   await expect.element(page.getByRole('link', {name: 'greenhouse.example/northwindtalent/jobs/4471029'})).toBeInTheDocument();
   // The posting's own words, its markdown as headings, paragraphs and lists.
