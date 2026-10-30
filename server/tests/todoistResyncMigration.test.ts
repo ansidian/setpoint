@@ -10,6 +10,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 
@@ -38,6 +39,7 @@ test('the migration after 0013 makes Todoist\'s next poll a full sync, keeping e
   cursor.run(1, 'completed', 'completed-token', at);
   cursor.run(2, '', 'weather-token', at);
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select source_id, scope, cursor from sync_cursors order by source_id, scope').all()).toEqual([

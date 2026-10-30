@@ -249,6 +249,8 @@ third, because it ranked importance above match.
   week"), an account, a kind. `northwind rejection march` becomes **Northwind · Rejection ·
   Mar 2026**. Chips filter exactly; results are **newest first**.
 - Free text without chips matches sender, then subject, then body, then date. No importance boost.
+- The body search sees leaves out links and footers, keeping each link's domain as a word, and an
+  email's summary counts as body (SV-135). The reader, triage and Alfred still read the whole body.
 - Each result shows why it matched, with the matching words highlighted.
 - Searches and the position of the opened result are logged, so ranking can be measured against
   real searches rather than made-up ones.

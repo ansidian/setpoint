@@ -1,7 +1,8 @@
 // The full-text index's basic query (B2): free text over `messages_fts` (sender, organisation,
-// subject, body), newest first, with which fields each result matched. B4 builds the chip grammar,
-// match reasons and the search log on it (BRIEF.md › Search: chips filter exactly, results come
-// newest first, and there's no importance boost).
+// subject, and as the body its summary, search terms and search body), newest first, with which
+// fields each result matched. B4 builds the chip grammar, match reasons and the search log on it
+// (BRIEF.md › Search: chips filter exactly, results come newest first, and there's no importance
+// boost).
 import type {MatchField} from '@setpoint/shared';
 import type {Store} from '../store.ts';
 
@@ -39,7 +40,9 @@ interface Row {
   from_address: string;
   organisation: string | null;
   subject: string;
-  body_text: string;
+  summary: string | null;
+  search_terms: string | null;
+  search_body: string;
 }
 
 const hasWordStarting = (value: string | null, term: string) => (fold(value ?? '').match(/[\p{L}\p{N}]+/gu) ?? []).some(word => word.startsWith(term));
@@ -49,7 +52,7 @@ export function searchMessages(store: Store, {text, accountId, limit = 50}: Mess
   const query = ftsQuery(text);
   if (!query) return [];
   const rows = store.sqlite.prepare(`
-    SELECT m.id, m.from_name, m.from_address, m.organisation, m.subject, m.body_text
+    SELECT m.id, m.from_name, m.from_address, m.organisation, m.subject, m.summary, m.search_terms, m.search_body
     FROM messages_fts
     JOIN messages m ON m.id = messages_fts.rowid
     WHERE messages_fts MATCH ? AND m.trashed_at IS NULL ${accountId ? 'AND m.account_id = ?' : ''}
@@ -62,7 +65,7 @@ export function searchMessages(store: Store, {text, accountId, limit = 50}: Mess
       if (hasWordStarting(row.from_name, term) || hasWordStarting(row.from_address, term)) fields.add('sender');
       if (hasWordStarting(row.organisation, term)) fields.add('organisation');
       if (hasWordStarting(row.subject, term)) fields.add('subject');
-      if (hasWordStarting(row.body_text, term)) fields.add('body');
+      if (hasWordStarting(row.search_body, term) || hasWordStarting(row.summary, term) || hasWordStarting(row.search_terms, term)) fields.add('body');
     }
     return {id: row.id, fields: (['sender', 'organisation', 'subject', 'body'] as const).filter(field => fields.has(field))};
   });

@@ -9,6 +9,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 
@@ -40,6 +41,7 @@ test('0019_task_without_date applies over a database at 0018 with tasks, a tombs
   item.run(2, 'dentist', 'event', 'Dentist', 0, null, '2026-10-15T21:30:00.000Z', '2026-10-15T22:30:00.000Z', 0, null, null, null);
   sqlite.prepare(`insert into travel_estimates (item_id, occurrence_start, inputs, duration_seconds) values (3, '2026-10-15T21:30:00.000Z', 'home|dentist', 1080)`).run();
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select id, provider_id, recurring_item_id, done_at from items order by id').all()).toEqual([

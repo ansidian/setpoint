@@ -8,6 +8,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 const AT = '2026-10-07T16:00:00.000Z';
@@ -35,6 +36,7 @@ test('0017_news_airnow_key applies over a database at 0016 with secrets', () => 
   sqlite.prepare(`insert into secrets (name, ciphertext, updated_at) values ('places_api_key', 'sp2:sealed', '${AT}')`).run();
   expect(() => sqlite.prepare(`insert into secrets (name, ciphertext, updated_at) values ('airnow_api_key', 'sp2:sealed', '${AT}')`).run()).toThrow(/CHECK/);
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select name, ciphertext, updated_at from secrets').all()).toEqual([{name: 'places_api_key', ciphertext: 'sp2:sealed', updated_at: AT}]);

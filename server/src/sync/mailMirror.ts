@@ -9,6 +9,7 @@
 import {and, eq, gte, inArray} from 'drizzle-orm';
 import {activeCommands} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
+import {searchBody} from '../domain/searchBody.ts';
 import {senderAuthenticated} from '../domain/senderAuthentication.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
@@ -96,7 +97,7 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
       }
       const fields = {
         providerId: message.providerId, threadId: message.threadId, rfc822Id: message.rfc822Id, fromName: message.fromName,
-        fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, bodyHtml: message.bodyHtml,
+        fromAddress: message.fromAddress, subject: message.subject, snippet: message.snippet, bodyText: message.bodyText, searchBody: searchBody(message.bodyText), bodyHtml: message.bodyHtml,
         receivedAt: message.receivedAt, senderAuth: message.senderAuth, senderAuthenticated: senderAuthenticated(message.senderAuth),
       };
       if (!row) {

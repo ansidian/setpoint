@@ -23,6 +23,7 @@ import type {RuleMatch, Settings} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import type {Db, OpenDatabase} from '../../db/open.ts';
 import * as t from '../../db/schema.ts';
+import {searchBody} from '../../domain/searchBody.ts';
 import {zoned} from '../sample.ts';
 
 const account = (db: Db, label: string) => {
@@ -97,12 +98,14 @@ export function triageDown({db}: OpenDatabase) {
       accountId: account(db, 'Jobs').id, providerId: 'fixture-19a-assessment', threadId: 'fixture-19a-assessment-thread',
       fromName: 'Fabrikam', fromAddress: 'no-reply@fabrikam.example', via: 'Workday', subject: 'Online assessment · Data Analyst',
       snippet: 'Your online assessment for the Data Analyst role is ready.', bodyText: 'Your online assessment for the Data Analyst role is ready. Complete it within 5 days.',
+      searchBody: searchBody('Your online assessment for the Data Analyst role is ready. Complete it within 5 days.'),
       receivedAt: minutesAgo(1), unread: true,
     },
     {
       accountId: account(db, 'Personal').id, providerId: 'fixture-19a-order', threadId: 'fixture-19a-order-thread',
       fromName: 'Tailspin Toys', fromAddress: 'orders@tailspintoys.example', subject: 'Order confirmation',
       snippet: 'Thanks for your order.', bodyText: 'Thanks for your order. We\'ll email you when it ships.',
+      searchBody: searchBody('Thanks for your order. We\'ll email you when it ships.'),
       receivedAt: minutesAgo(2), unread: true,
     },
   ]).run();

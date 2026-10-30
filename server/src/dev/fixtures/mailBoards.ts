@@ -18,6 +18,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {Db, OpenDatabase} from '../../db/open.ts';
 import * as t from '../../db/schema.ts';
+import {searchBody} from '../../domain/searchBody.ts';
 import {zoned} from '../sample.ts';
 
 
@@ -170,7 +171,7 @@ export function newDigest({db}: OpenDatabase) {
   for (const [date, label] of [['2026-09-02', 'September 2'], ['2026-09-09', 'September 9'], ['2026-09-16', 'September 16'], ['2026-09-23', 'September 23']] as const) {
     db.insert(t.messages).values({
       accountId: jobs.id, providerId: `fixture-09-digest-${date}`, threadId: `fixture-09-digest-${date}-thread`, ...DIGEST_FROM,
-      subject: `Northwind Engineering Digest · ${label}`, summary: 'New posts from the team', snippet: DIGEST_BODY.split('\n')[0]!, bodyText: DIGEST_BODY,
+      subject: `Northwind Engineering Digest · ${label}`, summary: 'New posts from the team', snippet: DIGEST_BODY.split('\n')[0]!, bodyText: DIGEST_BODY, searchBody: searchBody(DIGEST_BODY),
       receivedAt: zoned(date, '06:30'), unread: false, lane: 'attention', kind: 'updates', type: 'newsletter',
       doneAt: zoned(date, '07:40'), openedBeforeDone: false,
     }).run();
@@ -181,6 +182,7 @@ export function newDigest({db}: OpenDatabase) {
     subject: 'Northwind Engineering Digest · October 7', summary: 'How we rebuilt search, and four more posts from the team',
     snippet: 'This week on the Northwind Engineering blog: how we rebuilt search, and four more posts from the team.',
     bodyText: 'This week on the Northwind Engineering blog: how we rebuilt search, and four more posts from the team.\n\nYou\'re receiving this because you applied to Northwind.',
+    searchBody: searchBody('This week on the Northwind Engineering blog: how we rebuilt search, and four more posts from the team.\n\nYou\'re receiving this because you applied to Northwind.'),
     receivedAt: SEED_NOW, unread: true, lane: 'attention', kind: 'updates', type: 'newsletter',
   }).run();
 }
@@ -199,6 +201,7 @@ export function lastYear({db}: OpenDatabase) {
     fromName: 'Northwind Recruiting', fromAddress: 'no-reply@northwind.example', organisation: 'Northwind Talent', via: 'Greenhouse',
     subject: 'Thank you for applying to Northwind', snippet: 'Thank you for applying to Northwind. We\'ve filled the Support Engineer role.',
     bodyText: 'Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.',
+    searchBody: searchBody('Thank you for applying to Northwind. We\'ve filled the Support Engineer role, and we\'ll keep your profile on file.'),
     receivedAt: zoned('2025-12-20', '11:05'), unread: false, lane: 'fyi', kind: 'career', type: 'rejection',
   }).run();
 }

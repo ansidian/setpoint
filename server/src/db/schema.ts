@@ -42,9 +42,9 @@ export const accounts = sqliteTable('accounts', {
  * One row per email: the provider's fields plus what triage derives (BRIEF.md › Triage). Every
  * view is a query over this table; nothing is copied per view.
  *
- * Search reads `messages_fts`, an FTS5 index over the sender, organisation, subject and body kept
- * in step by triggers on this table. Drizzle has no virtual tables or triggers, so migration
- * 0002_mail creates them by hand (see the note at its end).
+ * Search reads `messages_fts`, an FTS5 index over the sender, organisation, subject, summary, search
+ * terms and search body, kept in step by triggers on this table. Drizzle has no virtual tables or
+ * triggers, so migration 0022 creates them by hand (see the note there).
  */
 export const messages = sqliteTable('messages', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -104,6 +104,12 @@ export const messages = sqliteTable('messages', {
   backfill: integer('backfill', {mode: 'boolean'}).notNull().default(false),
   // iCloud: where Trash keeps it ("uidvalidity:uid" in the Trash mailbox), for Undo.
   trashRef: text('trash_ref'),
+
+  // ---- SV-135 · Search: what the index holds in place of `body_text` ----
+  // `body_text` without its links and footers (src/domain/searchBody.ts), written with it.
+  searchBody: text('search_body').notNull().default(''),
+  // Words for what the email is about, written after it arrives. Null until then.
+  searchTerms: text('search_terms'),
 
   // ---- B3 · Triage: how the lane was decided, once per email ----
   // What decided it (a rule, a learned rule, a model, the unsure default, the history pass), the

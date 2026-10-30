@@ -9,6 +9,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 
@@ -37,6 +38,7 @@ test('0005_triage applies over a database at 0004 with jobs and mail', () => {
   sqlite.prepare(`insert into messages (account_id, provider_id, thread_id, from_name, from_address, subject, snippet, body_text, received_at, unread)
     values (1, 'm1', 't1', 'Woodgrove Bank', 'no-reply@woodgrovebank.example', 'Statement ready', 'Your statement', 'Your statement is ready', '2026-10-07T16:00:00.000Z', 1)`).run();
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select kind, key, state, message_id from jobs').all()).toEqual([{kind: 'sync', key: 'sync:1', state: 'queued', message_id: null}]);

@@ -9,6 +9,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 
@@ -43,6 +44,7 @@ test('0012_calendar_per_account applies over a database at 0011 with calendars, 
   sqlite.prepare(`insert into items (calendar_id, provider_id, kind, title, all_day, due_date) values (2, 'task-1', 'task', 'Laundry', 1, '2026-10-10')`).run();
   sqlite.prepare(`insert into calendar_channels (id, source_id, calendar_id, address, token_hash, state, expires_at, created_at) values ('channel-1', 1, 1, 'https://setpoint.example.com/api/calendar/push', ?, 'active', ?, ?)`).run('0'.repeat(64), '2026-10-15T16:00:00.000Z', at);
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select id, provider, provider_id, account_id from calendars order by id').all()).toEqual([

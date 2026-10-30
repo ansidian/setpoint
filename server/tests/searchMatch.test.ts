@@ -43,12 +43,17 @@ describe('withoutExcluded: "!word"s leave out the mail that has them (SV-31)', (
 });
 
 describe('matching and highlighting', () => {
-  const row = {fromName: 'Dana Whitfield', fromAddress: 'dana@parksideapts.example', organisation: 'Parkside Apartments', subject: 'Lease renewal terms', bodyText: 'Your lease ends. Once it\'s signed, your new term starts.'};
+  const row = {fromName: 'Dana Whitfield', fromAddress: 'dana@parksideapts.example', organisation: 'Parkside Apartments', subject: 'Lease renewal terms', summary: 'Renewal terms for the flat', searchTerms: 'tenancy agreement', searchBody: 'Your lease ends. Once it\'s signed, your new term starts.'};
 
   test('fields in BRIEF.md\'s order, by word prefix', () => {
     expect(textMatches(row, ['dana', 'parkside', 'lease', 'sign', 'zebra'])).toEqual([
       {field: 'sender', terms: ['dana', 'parkside']}, {field: 'organisation', terms: ['parkside']}, {field: 'subject', terms: ['lease']}, {field: 'body', terms: ['lease', 'sign']},
     ]);
+  });
+
+  test('the summary and search terms match as the body does, and a word the index no longer holds matches nothing', () => {
+    expect(textMatches(row, ['flat', 'tenancy'])).toEqual([{field: 'body', terms: ['flat', 'tenancy']}]);
+    expect(textMatches({...row, summary: null, searchTerms: null}, ['flat', 'tenancy'])).toEqual([]);
   });
 
   test('runs cover the typed prefix, or the whole word once it\'s typed out; phrases match whole words', () => {

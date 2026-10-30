@@ -84,11 +84,15 @@ export function ftsExpression(terms: string[], mode: 'and' | 'or', columns?: str
   return columns ? `{${columns.join(' ')}} : (${body})` : body;
 }
 
-/** The index's columns for each field, in BRIEF.md's order of preference. */
+/**
+ * The index's columns for each field, in BRIEF.md's order of preference. A row's summary and search
+ * terms rank with its body for now: they're words about the email, and a match there has no place
+ * of its own in a result.
+ */
 export const FIELD_TIERS: {field: 'sender' | 'subject' | 'body'; columns: string[]}[] = [
   {field: 'sender', columns: ['from_name', 'from_address', 'organisation']},
   {field: 'subject', columns: ['subject']},
-  {field: 'body', columns: ['body_text']},
+  {field: 'body', columns: ['search_body', 'summary', 'search_terms']},
 ];
 
 const wordStarts = (value: string) => [...value.matchAll(/[\p{L}\p{N}]+/gu)].map(match => ({start: match.index, word: match[0], folded: fold(match[0])}));
@@ -133,16 +137,22 @@ export interface TextRow {
   fromAddress: string;
   organisation: string | null;
   subject: string;
-  bodyText: string;
+  summary: string | null;
+  searchTerms: string | null;
+  searchBody: string;
 }
 
-/** Which fields each term matched, in BRIEF.md's order: sender (and organisation), subject, body. */
+/**
+ * Which fields each term matched, in BRIEF.md's order: sender (and organisation), subject, body. These
+ * are the index's words, so a link's path never reads as a match, and body takes the summary and
+ * search terms as FIELD_TIERS does.
+ */
 export function textMatches(row: TextRow, terms: string[]): {field: Extract<MatchField, 'sender' | 'organisation' | 'subject' | 'body'>; terms: string[]}[] {
   const fields = [
     {field: 'sender' as const, matches: (term: string) => hasTerm(row.fromName, term) || hasTerm(row.fromAddress, term)},
     {field: 'organisation' as const, matches: (term: string) => hasTerm(row.organisation, term)},
     {field: 'subject' as const, matches: (term: string) => hasTerm(row.subject, term)},
-    {field: 'body' as const, matches: (term: string) => hasTerm(row.bodyText, term)},
+    {field: 'body' as const, matches: (term: string) => hasTerm(row.searchBody, term) || hasTerm(row.summary, term) || hasTerm(row.searchTerms, term)},
   ];
   return fields.map(({field, matches}) => ({field, terms: terms.filter(matches)})).filter(entry => entry.terms.length);
 }

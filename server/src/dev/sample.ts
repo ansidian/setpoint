@@ -11,6 +11,7 @@ import {
 } from '@setpoint/shared';
 import type {OpenDatabase} from '../db/open.ts';
 import type {Store} from '../store.ts';
+import {searchBody} from '../domain/searchBody.ts';
 import {DEFAULT_SCHEDULES} from '../domain/sources.ts';
 import {zonedInstant} from '../domain/time.ts';
 import * as t from '../db/schema.ts';
@@ -371,6 +372,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         summary: email.summary ?? null,
         snippet: snippetOf(email.body),
         bodyText: email.body,
+        searchBody: searchBody(email.body),
         bodyHtml: email.html ?? null,
         receivedAt,
         unread: email.unread,

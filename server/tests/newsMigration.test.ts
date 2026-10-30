@@ -9,6 +9,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 const AT = '2026-10-07T16:00:00.000Z';
@@ -35,6 +36,7 @@ test('0016_news applies over a database at 0015 with jobs', () => {
   migrate(db, {migrationsFolder: before});
   sqlite.prepare(`insert into jobs (kind, key, state, run_at, created_at) values ('sync', 'sync:1', 'queued', '${AT}', '${AT}')`).run();
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select kind, key, state, news_source_id from jobs').all()).toEqual([{kind: 'sync', key: 'sync:1', state: 'queued', news_source_id: null}]);

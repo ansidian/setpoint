@@ -10,6 +10,7 @@ import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {migrate} from 'drizzle-orm/better-sqlite3/migrator';
 import {expect, onTestFinished, test} from 'vitest';
+import {registerMigrationFunctions} from '../src/db/open.ts';
 
 const MIGRATIONS = fileURLToPath(new URL('../drizzle', import.meta.url));
 
@@ -38,6 +39,7 @@ test.each(['_calendar_colour', '_todoist_project_colour'])('%s applies over a da
   sqlite.prepare(`insert into jobs (kind, key, run_at, created_at) values ('sync', 'sync:1', ?, ?)`).run(at, at);
   sqlite.prepare(`insert into todoist_projects (provider_id, name, position, inbox) values ('p-home', 'Home', 1, 0), ('inbox', 'Inbox', 0, 1)`).run();
 
+  registerMigrationFunctions(sqlite);
   migrate(db, {migrationsFolder: MIGRATIONS});
 
   expect(sqlite.prepare('select id, target, kind, state from commands').all()).toEqual([{id: 1, target: 'item', kind: 'item_update', state: 'pending'}]);

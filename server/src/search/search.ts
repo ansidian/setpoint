@@ -1,5 +1,6 @@
 // Search (BRIEF.md › Search; DESIGN.md › Search): the field's words become chips that filter exactly
-// (src/domain/searchChips.ts); whatever's left is free text over the full-text index. With any chip,
+// (src/domain/searchChips.ts); whatever's left is free text over the full-text index, which holds an
+// email's summary and its body without links or footers (src/domain/searchBody.ts). With any chip,
 // results come newest first. Free text alone ranks by the best field a word matched — sender (and
 // organisation), then subject, then body — and newest first within each, with no importance boost
 // (decision 9). Search covers All's mail: archived mail is in (D14), trashed mail is out. A Not chip
@@ -184,8 +185,13 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   }
 
   const runsIn = (value: string | null) => mergeRuns([...termRuns(value, matches.terms), ...orgPhrases.flatMap(phrase => phraseRuns(value, phrase))]);
-  // The excerpt shows the words only the body has ("Body signed"), else any.
-  const excerpt = excerptOf(row.bodyText, text => (bodyTerms.length ? termRuns(text, bodyTerms) : runsIn(text)));
+  // The excerpt comes from what the index holds, so it never shows a word search no longer knows,
+  // and shows the words only the body has ("Body signed"), else any. A word only the summary has
+  // isn't in it: its reason stays, and the row has nothing to mark.
+  const excerpt = excerptOf(row.searchBody, text => {
+    const own = termRuns(text, bodyTerms);
+    return own.length ? own : runsIn(text);
+  });
   const highlights: HighlightOut[] = [];
   for (const [field, value] of [['from_name', row.fromName], ['organisation', row.organisation], ['subject', row.subject], ['excerpt', excerpt]] as const) {
     for (const run of runsIn(value)) highlights.push({field, ...run});
