@@ -1159,7 +1159,8 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
     time in its tooltip), then quiet small **Full posting** (`article`) and **Open in Jobs** with
     `arrow_forward`.
   - Esc, a click away or the chip closes it at once. Open in Jobs goes to Jobs with the application
-    open, the pane simply there, with no slide: it's arriving, not opening.
+    open, the pane simply there, with no slide: it's arriving, not opening. **Full posting** arrives
+    the same way, scrolled to the full posting and unfolded (#271).
 - **Applied before** (37c, D306), on job-match emails only ("Associate Software Engineer @ Contoso
   Pharmaceuticals"), when the company matches an application, a Noise row too:
   - **On the row:** a 20 px badge after the subject (`chip`, an `edge` ring, padding 0 7 0 6, `ink2`
@@ -3299,3 +3300,7 @@ it changes what's on screen.
     its own line; a click-opened menu's cursor on its first item, a submenu under the resting pointer;
     an event's right-click opening its ··· where it sits. Board audit: 34a draws the picked group,
     which shows here only for the press before 34b's outcome replaces it.
+271. **The JD popover's Full posting opens it in Jobs** (Andy, 2026-10-29; darma SV-125, D372): the
+    application arrives open, scrolled to its full posting and unfolded, as Open in Jobs arrives at
+    the top; the popover stays a quick look, and the long read happens where the detail is built for
+    it. Board audit: 37b draws the button without saying where it goes.
