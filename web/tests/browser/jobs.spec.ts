@@ -1,17 +1,22 @@
-// Jobs (J5; DESIGN.md › Jobs, boards 32, 32b, 33, 34c, 36a, 36b, 38b, 40) against the seed's sample
-// (BRIEF.md › Sample data › Jobs): the shell's item and `4`, the two numbers and the table, Needs you
-// drawn read-only with From history unfolding, an application's detail, J / K, the full posting, Look
-// it up on Trey Research, search (humongous, kubernetes by its JD, wide world loosely), the status
-// filter, a narrow window at 1024, Esc's order, an event opening its email, a `jobs` event landing a
-// row, and board 40's Light. Per week's chart, the status control and the posting's unfolding are the
-// component tests' (web/tests/components/jobs.test.tsx); search's ranking is the server's tables.
+// Jobs (J5, J6; DESIGN.md › Jobs, boards 32–36, 38b, 40) against the seed's sample (BRIEF.md › Sample
+// data › Jobs): the shell's item and `4`, the two numbers and the table, Needs you with From history
+// unfolding, an application's detail, J / K, the full posting, Look it up on Trey Research, search
+// (humongous, kubernetes by its JD, wide world loosely), the status filter, a narrow window at 1024,
+// Esc's order, an event opening its email and one whose email is gone, a `jobs` event landing a row,
+// and board 40's Light. J6: each Needs you kind answered (a pick, None of these, Assign to…, Not about
+// a job, Track this, Choose…, Dismiss all) and each correction (the title, the company, Set status and
+// Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
+// posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
+// Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
+// picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
+// each correction keeps, and that it sticks, the server's (server/src/jobs/tests/corrections.test.ts).
 // A change to Jobs arrives as the reader's will: the server's database changes, then a `jobs` live
 // event names an application (here, Look it up on Trey Research sends one).
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {ApplicationOut, JobsPageOut} from '@setpoint/shared';
+import type {ApplicationOut, JobsNavOut, JobsPageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
 import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
@@ -91,7 +96,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await page.locator('.jb-week').textContent(), 'Per week3 this week');
     assert.equal(await page.getByRole('textbox', {name: 'Search jobs'}).getAttribute('placeholder'), 'Search jobs');
 
-    // Needs you, each kind as 34a draws it; its actions drawn but J6's.
+    // Needs you, each kind as 34a draws it.
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
     assert.deepEqual(await page.locator('.jb-need .l1').allTextContents(), [
       'Lucerne Publishing · Junior Developer· Is this the posting?',
@@ -100,8 +105,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     ]);
     assert.deepEqual(await page.locator('.jb-need .acts .line').allTextContents(), ['A rejection · it could be either Humongous application', 'An interview request with no application']);
     assert.deepEqual(await page.locator('.jb-need .jb-cand').allTextContents(), ['Junior Developer · New York, NY · Greenhouse', 'Junior Developer, Digital · Remote · LinkedIn', 'None of these']);
-    assert.deepEqual(await page.locator('.jb-need .jb-inert').evaluateAll(buttons => buttons.map(button => [button.textContent, button.getAttribute('aria-disabled')])),
-      [['Assign to…', 'true'], ['Not about a job', 'true'], ['Track this', 'true'], ['Not about a job', 'true']]);
+    assert.deepEqual(await page.locator('.jb-need .acts .btn').allTextContents(), ['Assign to…', 'Not about a job', 'Track this', 'Not about a job']);
 
     // From history, folded until a click (D311).
     const fold = page.locator('.jb-fold-t');
@@ -111,6 +115,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     await fold.click();
     await until('From history unfolded', () => page.locator('.jb-hist').evaluateAll(all => all.filter(row => row.getBoundingClientRect().height > 0 && !row.closest('[inert]')).length), count => count === 6);
     assert.equal(await page.locator('.jb-hist').first().textContent(), 'Thanks for your interest in the Support Specialist role · Relecloud · names a role neither application hasAug 30Assign to…Not about a job');
+    assert.deepEqual(await page.locator('.jb-hist .acts .btn.out').allTextContents(), ['Assign to…', 'Assign to…', 'Choose…', 'Track this', 'Track this', 'Choose…']);
     assert.equal(await page.locator('.jb-fold .btn').textContent(), 'Dismiss all');
 
     // The table: every application, newest first by Applied (D314), its status with Ghosted and the step (D309).
@@ -183,7 +188,7 @@ test('an application opens where the reading pane sits: Platform drops and JD is
     assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
     // The timeline, oldest first (D317); then Applied before at the company (D306).
     assert.deepEqual(await pane.locator('.jb-ev').allTextContents(), [
-      'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email', 'TodayInterviewInterview availability for Software Engineer I',
+      'Oct 1AppliedThank you for applying to Northwind Talent', 'Oct 1Verify your email· No longer in Gmail', 'TodayInterviewInterview availability for Software Engineer I',
     ]);
     assert.equal(await pane.locator('.jb-before').textContent(), 'Junior Developer· Applied Feb 9Rejected Mar 14');
 
@@ -360,7 +365,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
   }
 });
 
-test('an event opens its email in the mail reader; one whose email is gone keeps its line and opens nothing', async () => {
+test('an event opens its email in the mail reader; one whose email is gone says so, opens nothing and its ··· has no Open email (#269)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -370,8 +375,22 @@ test('an event opens its email in the mail reader; one whose email is gone keeps
     await page.goto(`${setpoint.base}/jobs/${northwind}`);
     const events = page.locator('.jb-pane .jb-ev');
     await events.first().waitFor();
-    // The verification email isn't in mail: its line stays, and it isn't a control.
-    assert.deepEqual(await events.evaluateAll(all => all.map(one => one.tagName)), ['BUTTON', 'DIV', 'BUTTON']);
+    // The verification email isn't in mail: its line stays, says why, takes no hover fill and opens nothing.
+    assert.deepEqual(await events.evaluateAll(all => all.map(one => Boolean(one.querySelector('button.open')))), [true, false, true]);
+    const gone = events.nth(1);
+    assert.equal(await gone.getAttribute('title'), 'Gmail no longer has this email, so Jobs keeps only its line');
+    assert.equal(await gone.locator('.gonetxt').textContent(), '· No longer in Gmail');
+    await gone.hover();
+    assert.equal(await rested(() => gone.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)');
+    assert.equal(await rested(() => gone.evaluate(element => getComputedStyle(element).cursor)), 'default');
+    // Its ··· (shown on hover) has no Open email; the one whose email is there has.
+    await gone.locator('.go .ibtn').click();
+    assert.deepEqual(await page.getByRole('menu', {name: 'Event'}).getByRole('menuitem').allTextContents(), ['Move to…', 'Not about this']);
+    await page.keyboard.press('Escape');
+    await until('its menu closed', () => page.locator('.jb-menu').count(), count => count === 0);
+    await events.nth(2).click({button: 'right'});
+    assert.deepEqual(await page.getByRole('menu', {name: 'Event'}).getByRole('menuitem').allTextContents(), ['Open email', 'Move to…', 'Not about this']);
+    await page.keyboard.press('Escape');
     await events.nth(2).click();
     await until('the email', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === `/inbox/${interview.message_id}`);
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
@@ -481,6 +500,420 @@ test('the phone has no Jobs: its address opens the Inbox, and its tabs don\'t na
     await page.locator('.list .row').first().waitFor();
     assert.deepEqual(await page.locator('.ph-tabs .ph-tab').evaluateAll(tabs => tabs.map(tab => tab.textContent!.replace(/\d+/g, ''))), ['Inbox', 'Agenda']);
     assert.equal(await page.locator('.jb-col, .nav.jobs').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// ---- J6: Needs you's answers (34a–34c, #266) ----
+
+const need = (page: Page, text: string) => page.locator('.jb-need[data-key]', {hasText: text});
+const toast = (page: Page) => page.locator('.toast:not(.leaving)');
+const undo = (page: Page) => toast(page).getByRole('button', {name: 'Undo'}).click();
+const navCount = async (setpoint: Setpoint) => (await setpoint.api<JobsNavOut>('GET', '/jobs/nav')).needs_you;
+
+test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, JD saved shows, the item folds with the count, and Undo folds it back; None of these', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const lucerne = await applicationId(setpoint, 'Lucerne Publishing', 'Junior Developer');
+    await page.goto(`${setpoint.base}/jobs`);
+    // J puts the cursor on Lucerne's item, and ↑ ↓ choose among its candidates.
+    await page.mouse.move(290, 28);
+    await page.keyboard.press('j');
+    await until('the cursor on Lucerne', () => page.locator('.jb-need.cur').textContent(), text => Boolean(text?.includes('Lucerne')));
+    await page.keyboard.press('ArrowDown');
+    await until('the first candidate chosen', () => page.locator('.jb-cand.cur').textContent(), text => text === 'Junior Developer · New York, NY · Greenhouse');
+    const item = need(page, 'Lucerne');
+    const classes = await watch(item, 'class');
+    await page.keyboard.press('Enter');
+    // The outcome in line two's place, then the fold, the count going with it.
+    await item.locator('.jb-done').waitFor();
+    assert.equal(await item.locator('.jb-done').textContent(), 'JD saved· Junior Developer · New York, NY · Greenhouse');
+    await until('Lucerne folded away', () => need(page, 'Lucerne').count(), count => count === 0);
+    assert.ok((await classes()).some(value => value?.split(' ').includes('answered')), 'it was answered before it went');
+    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
+    await until('the toast', () => toast(page).textContent(), text => text === 'JD saved for Lucerne PublishingUndo');
+    await until('the sidebar\'s count', () => page.locator('aside.sb .nav.jobs .cnt').textContent(), text => text === '2');
+    // A pick is the posting: its lookup reads it (here, a dev run with no web, it stays looking).
+    assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${lucerne}`)).jd.state, 'looking');
+
+    // Undo folds it back, its candidates as they were.
+    await undo(page);
+    await until('Lucerne back', () => need(page, 'Lucerne').count(), count => count === 1);
+    await until('Needs you 3', () => page.locator('.jb-band .gh').textContent(), text => text === 'Needs you 3');
+    assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${lucerne}`)).jd.state, 'candidates');
+
+    // None of these: No JD found.
+    await need(page, 'Lucerne').getByRole('radio', {name: 'None of these'}).click();
+    await until('Lucerne gone again', () => need(page, 'Lucerne').count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'None of these for Lucerne PublishingUndo');
+    await until('its row: No JD found', () => row(page, lucerne).locator('.jd').textContent(), text => text === 'No JD found');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick moves its row to Rejected; Not about a job sets Wide World aside; the last item takes the band', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const java = await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II (Java)');
+    await page.goto(`${setpoint.base}/jobs`);
+    const assign = need(page, 'Software Engineer II role').getByRole('button', {name: 'Assign to…'});
+    await assign.click();
+    const menu = page.getByRole('menu', {name: 'Assign to'});
+    await menu.waitFor();
+    assert.equal(await assign.getAttribute('aria-expanded'), 'true');
+    assert.equal(await menu.locator('.jb-mlab').first().textContent(), 'Humongous Insurance');
+    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+      'Software Engineer II, ClaimsApplied Sep 30 · Applied', 'Software Engineer II (Java)Applied Sep 28 · Applied', 'Another application…', 'Not about a job',
+    ]);
+    // It grows from the button's bottom-left corner.
+    const [button, box] = await rested(() => Promise.all([assign.boundingBox(), menu.boundingBox()]));
+    assert.ok(Math.abs(box!.x - button!.x) < 1 && box!.y >= button!.y + button!.height, 'under the button, from its left');
+    await menu.getByRole('menuitem', {name: /\(Java\)/}).click();
+    await until('Humongous\'s update gone', () => need(page, 'Software Engineer II role').count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Assigned to Software Engineer II (Java)Undo');
+    await until('its row moved on', () => row(page, java).locator('.st').textContent(), text => text === 'Rejected· Oct 6');
+
+    // Dismiss all first, so From history's line goes too and the band can go whole.
+    await page.locator('.jb-fold-t').click();
+    await page.getByRole('button', {name: 'Dismiss all'}).click();
+    await until('the toast', () => toast(page).textContent(), text => text === 'Dismissed 6 from historyUndo');
+    await until('From history folded away', () => page.locator('.jb-fold').count(), count => count === 0);
+    await undo(page);
+    await until('From history back', () => page.locator('.jb-fold-t').textContent(), text => Boolean(text?.startsWith('From history 6')));
+    // Back as it was, unfolded.
+    assert.equal(await page.locator('.jb-fold-t').getAttribute('aria-expanded'), 'true');
+    await page.getByRole('button', {name: 'Dismiss all'}).click();
+    await until('From history gone', () => page.locator('.jb-fold').count(), count => count === 0);
+
+    await need(page, 'Wide World').getByRole('button', {name: 'Not about a job'}).click();
+    await until('the toast', () => toast(page).textContent(), text => text === 'Not about a jobUndo');
+    await need(page, 'Lucerne').getByRole('radio', {name: 'None of these'}).click();
+    // The last item leaving folds the band, header and all.
+    await until('the band gone', () => page.locator('.jb-band').count(), count => count === 0);
+    assert.equal(await navCount(setpoint), 0);
+    await until('no count in the sidebar', () => page.locator('aside.sb .nav.jobs .cnt').count(), count => count === 0);
+    assert.equal(await page.locator('.jb-th').getAttribute('class'), 'jb-th first');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Track this (34c, decision 69): the application lands at its email\'s date, opens with First seen and its JD looked up, In process, and the numbers move', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/jobs`);
+    await need(page, 'Wide World').getByRole('button', {name: 'Track this'}).click();
+    await need(page, 'Wide World').locator('.jb-done').waitFor();
+    assert.equal(await need(page, 'Wide World').locator('.jb-done').textContent(), 'Tracked· Wide World Importers');
+    await until('it opens', () => page.title(), title => title === 'Junior Software Engineer · Wide World Importers');
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-first').waitFor();
+    assert.equal(await pane.locator('.jb-first').textContent(), 'First seen in this email, so Applied is its date');
+    assert.equal(await pane.locator('.jb-stchip').textContent(), 'In process');
+    await pane.locator('.jb-src.looking').waitFor();
+    assert.equal(await pane.locator('.jb-ev .tag').textContent(), 'First seen');
+    await until('the toast', () => toast(page).textContent(), text => text === 'Tracking Wide World ImportersUndo');
+    // It landed at the top, at its date, settling from sub2; the numbers move with it (All 63, In process 4, this week 4).
+    assert.deepEqual((await companies(page)).slice(0, 2), ['Wide World Importers', 'Fabrikam']);
+    assert.deepEqual(await page.locator('.hd .jb-status button').allTextContents(), ['All63', 'Applied31', 'In process4', 'Offer1', 'Rejected25', 'Withdrawn2']);
+    assert.equal(await page.locator('.jb-week').textContent(), 'Per week4 this week');
+    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
+
+    // Undo takes the application away and brings the item back.
+    await undo(page);
+    await until('the item back', () => need(page, 'Wide World').count(), count => count === 1);
+    await until('the row gone', () => companies(page).then(all => all.includes('Wide World Importers')), found => !found);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('From history (D364): Choose… is a menu of the candidates, each opening its posting, a pick folding the row; Assign to… and Track this on rows too', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const margies = await applicationId(setpoint, 'Margie\'s Travel', 'Associate Developer');
+    await page.goto(`${setpoint.base}/jobs`);
+    await page.locator('.jb-fold-t').click();
+    const history = (text: string) => page.locator('.jb-hist[data-need]', {hasText: text});
+    await history('Margie').getByRole('button', {name: 'Choose…'}).click();
+    const menu = page.getByRole('menu', {name: 'Choose the posting'});
+    await menu.waitFor();
+    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+      'Associate DeveloperChicago, IL · Greenhouse', 'Associate Software DeveloperRemote · LinkedIn', 'Associate Developer, BookingsChicago, IL · Indeed', 'None of these',
+    ]);
+    assert.equal(await menu.getByRole('link', {name: 'Look at Associate Developer, Bookings'}).getAttribute('href'), 'https://indeed.example/viewjob?jk=2b90d4e1c7a8');
+    await menu.getByRole('menuitem', {name: /^Associate Developer, Bookings/}).click();
+    await until('Margie\'s row folded', () => history('Margie').count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'JD saved for Margie\'s TravelUndo');
+    await until('From history 5', () => page.locator('.jb-fold-t').textContent(), text => Boolean(text?.startsWith('From history 5')));
+    assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${margies}`)).jd.state, 'looking');
+
+    // Assign to… on Relecloud's row: Another application… searches every application.
+    await history('Support Specialist').getByRole('button', {name: 'Assign to…'}).click();
+    await page.getByRole('menuitem', {name: 'Another application…'}).click();
+    await page.getByRole('textbox', {name: 'Search applications'}).fill('proseware');
+    await page.getByRole('menuitem', {name: /^Proseware · Software Engineer, Platform/}).click();
+    await until('the toast', () => toast(page).textContent(), text => text === 'Assigned to Software Engineer, PlatformUndo');
+    await until('Relecloud\'s row folded', () => history('Support Specialist').count(), count => count === 0);
+
+    // Track this on Bellows College's.
+    await history('Bellows').getByRole('button', {name: 'Track this'}).click();
+    await until('Bellows College tracked', () => companies(page).then(all => all.includes('Bellows College')), found => found);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// ---- J6: the corrections (35a, 35b, #267, #268) ----
+
+test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter saves it; the company from More; each with Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const claims = await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims');
+    await page.goto(`${setpoint.base}/jobs/${claims}`);
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-want').waitFor();
+    // Under the pointer, its pencil.
+    await pane.locator('.jb-tbtn').hover();
+    await until('the pencil', () => pane.locator('.jb-tbtn .pen').evaluate(pen => getComputedStyle(pen).opacity), opacity => opacity === '1');
+    await pane.locator('.jb-tbtn').click();
+    const field = pane.getByRole('textbox', {name: 'Title'});
+    await field.waitFor();
+    assert.equal(await pane.locator('.jb-hint').textContent(), 'Enter to save · Esc');
+    await page.keyboard.type('Claims Platform Engineer');
+    await page.keyboard.press('Escape');
+    await until('back as it was', () => pane.locator('.rd-subj').textContent(), text => text === 'Software Engineer II, Claims');
+    assert.equal(await pane.count(), 1, 'Esc went no further than the field');
+
+    await pane.locator('.jb-tbtn').click();
+    await field.fill('Claims Platform Engineer');
+    await page.keyboard.press('Enter');
+    await until('the new title', () => pane.locator('.rd-subj').textContent(), text => text === 'Claims Platform Engineer');
+    await until('its row too', () => row(page, claims).locator('.ro').textContent(), text => text === 'Claims Platform Engineer');
+    await until('the toast', () => toast(page).textContent(), text => text === 'Title changedUndo');
+    await setpoint.idle();
+    assert.deepEqual((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${claims}`)).hand_set.map(each => each.field), ['title']);
+    await undo(page);
+    await until('the title back', () => pane.locator('.rd-subj').textContent(), text => text === 'Software Engineer II, Claims');
+
+    // The company, from More.
+    await pane.getByRole('button', {name: 'More'}).click();
+    await page.getByRole('menuitem', {name: 'Edit company'}).click();
+    await pane.getByRole('textbox', {name: 'Company'}).fill('Humongous Insurance Group');
+    await page.keyboard.press('Enter');
+    await until('the company', () => pane.locator('.jb-co .name').textContent(), text => text === 'Humongous Insurance Group');
+    await until('the toast', () => toast(page).textContent(), text => text === 'Company changedUndo');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Set status (#267): the chip\'s menu in the table\'s colours, a pick crossfades it and settles the row with the set-by-hand mark; Let emails decide hands it back', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const litware = await applicationId(setpoint, 'Litware', 'QA Engineer');
+    await page.goto(`${setpoint.base}/jobs/${litware}`);
+    const pane = page.locator('.jb-pane');
+    const chip = pane.locator('.jb-stchip');
+    await chip.waitFor();
+    await chip.click();
+    const menu = page.getByRole('menu', {name: 'Set status'});
+    await menu.waitFor();
+    assert.equal(await chip.getAttribute('aria-expanded'), 'true');
+    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), ['Applied', 'In process', 'Offer', 'Rejected', 'Withdrawn']);
+    assert.equal(await menu.getByRole('menuitem', {name: 'In process'}).getAttribute('aria-checked'), 'true');
+    assert.equal(await rested(() => menu.getByRole('menuitem', {name: 'In process'}).locator('.sl').evaluate(label => getComputedStyle(label).color)),
+      await rested(() => colourOf(page, 'var(--inProcess)')));
+    const classes = await watch(row(page, litware), 'class');
+    await menu.getByRole('menuitem', {name: 'Rejected'}).click();
+    await until('the chip', () => chip.textContent(), text => text === 'Rejected');
+    await until('the toast', () => toast(page).textContent(), text => text === 'Set to RejectedUndo');
+    await until('its row, set by hand', () => row(page, litware).locator('.st .by').count(), count => count === 1);
+    assert.ok((await classes()).some(value => value?.split(' ').includes('moved')), 'the row settled');
+
+    // Set by hand, the menu ends with Let emails decide, which gives the emails' status back.
+    await chip.click();
+    await page.getByRole('menuitem', {name: 'Let emails decide'}).click();
+    await until('the emails\' status', () => chip.textContent(), text => text === 'In process');
+    await until('the toast', () => toast(page).textContent(), text => text === 'Status left to the emailsUndo');
+    await until('no mark', () => row(page, litware).locator('.st .by').count(), count => count === 0);
+    assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${litware}`)).step, 'Case study due Oct 12');
+    await chip.click();
+    assert.equal(await page.getByRole('menuitem', {name: 'Let emails decide'}).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Merge with… (35b): More\'s submenu, its field focused, the company\'s other first; merged, the other row folds out and its emails join; Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const [claims, java] = [await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims'), await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II (Java)')];
+    await page.goto(`${setpoint.base}/jobs/${claims}`);
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-want').waitFor();
+    await pane.getByRole('button', {name: 'More'}).click();
+    const more = page.getByRole('menu', {name: 'More'});
+    await more.waitFor();
+    assert.deepEqual(await more.getByRole('menuitem').allTextContents(), [
+      'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
+      'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again',
+    ]);
+    // A saved JD is never replaced: Look up the JD again waits for Not this posting.
+    assert.equal(await more.getByRole('menuitem', {name: 'Look up the JD again'}).isDisabled(), true);
+    await more.getByRole('menuitem', {name: 'Merge with…'}).hover();
+    const field = page.getByRole('textbox', {name: 'Search applications'});
+    await until('its field focused', () => field.evaluate(input => input === document.activeElement), focused => focused);
+    const merge = page.getByRole('menu', {name: 'Merge with'});
+    assert.deepEqual(await merge.locator('.jb-mlab').allTextContents(), ['Humongous Insurance', 'Recent']);
+    // To More's left.
+    const [outer, inner] = await rested(() => Promise.all([more.boundingBox(), page.locator('.jb-menu.searching').boundingBox()]));
+    assert.ok(inner!.x + inner!.width <= outer!.x, 'to More\'s left');
+    await merge.getByRole('menuitem', {name: /^Software Engineer II \(Java\)/}).click();
+    await until('the other row gone', () => row(page, java).count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'MergedUndo');
+    await until('its emails here', () => pane.locator('.jb-ev').count(), count => count === 3);
+    assert.equal(await row(page, claims).locator('.ap').textContent(), 'Sep 28');
+    await undo(page);
+    await until('the other row back', () => row(page, java).count(), count => count === 1);
+    await until('its emails back', () => pane.locator('.jb-ev').count(), count => count === 2);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('an event\'s ··· (35a): Move to… the company\'s other application folds it out; Not about this folds it into Needs you', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const [claims, java, northwind] = [
+      await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims'), await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II (Java)'),
+      await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I'),
+    ];
+    await page.goto(`${setpoint.base}/jobs/${claims}`);
+    const pane = page.locator('.jb-pane');
+    const account = pane.locator('.jb-ev', {hasText: 'Your candidate account is ready'});
+    await account.hover();
+    await account.getByRole('button', {name: 'Event actions'}).click();
+    await page.getByRole('menuitem', {name: 'Move to…'}).hover();
+    const move = page.getByRole('menu', {name: 'Move to'});
+    await move.waitFor();
+    assert.deepEqual(await move.getByRole('menuitem').allTextContents(), ['Software Engineer II (Java)Applied Sep 28 · Applied', 'Another application…']);
+    await move.getByRole('menuitem', {name: /\(Java\)/}).click();
+    await until('it folded out', () => account.count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Moved to Software Engineer II (Java)Undo');
+    assert.deepEqual((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${java}`)).timeline.map(event => event.subject), ['Thank you for applying', 'Your candidate account is ready']);
+    await undo(page);
+    await until('it came back', () => account.count(), count => count === 1);
+
+    // Not about this, from a right-click: the interview goes back to Needs you, and Northwind to Applied.
+    await page.goto(`${setpoint.base}/jobs/${northwind}`);
+    const interview = pane.locator('.jb-ev', {hasText: 'Interview availability'});
+    await interview.click({button: 'right'});
+    await page.getByRole('menuitem', {name: 'Not about this'}).click();
+    await until('it folded out', () => interview.count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Back in Needs youUndo');
+    await until('in Needs you', () => need(page, 'Interview availability').locator('.line').textContent(), text => text === 'An interview request · taken off the application it was on');
+    await until('its status back to Applied', () => pane.locator('.jb-stchip').textContent(), text => text === 'Applied');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Not an application, Delete and Not this posting (35b): the row folds away and the pane closes; the JD goes to No JD found; each with Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const [trey, proseware, northwind] = [
+      await applicationId(setpoint, 'Trey Research', 'Data Engineer I'), await applicationId(setpoint, 'Proseware', 'Software Engineer, Platform'),
+      await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I'),
+    ];
+    await page.goto(`${setpoint.base}/jobs/${trey}`);
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-nojd').waitFor();
+    await pane.getByRole('button', {name: 'More'}).click();
+    await page.getByRole('menuitem', {name: /^Not an application/}).click();
+    await until('the pane closed', () => pane.count(), count => count === 0);
+    await until('the row folded away', () => row(page, trey).count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Hidden Trey ResearchUndo');
+    assert.equal(await toast(page).locator('.tone').count(), 1);
+    await undo(page);
+    await until('the row back', () => row(page, trey).count(), count => count === 1);
+
+    await page.goto(`${setpoint.base}/jobs/${proseware}`);
+    await pane.locator('.jb-want').waitFor();
+    await pane.getByRole('button', {name: 'More'}).click();
+    const remove = page.getByRole('menuitem', {name: /^Delete/});
+    await remove.hover();
+    // Delete is alert on its wash under the pointer.
+    assert.equal(await rested(() => remove.evaluate(item => getComputedStyle(item).color)), await rested(() => colourOf(page, 'var(--alert)')));
+    await remove.click();
+    await until('the row folded away', () => row(page, proseware).count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Deleted ProsewareUndo');
+    assert.equal((await setpoint.api<JobsPageOut>('GET', '/jobs')).rows.length, 61);
+
+    // Not this posting: the JD crossfades to No JD found, there being no other candidates.
+    await page.goto(`${setpoint.base}/jobs/${northwind}`);
+    await pane.locator('.jb-want').waitFor();
+    await pane.getByRole('button', {name: 'More'}).click();
+    await page.getByRole('menuitem', {name: 'Not this posting'}).click();
+    await until('No JD found', () => pane.locator('.jb-nojd').textContent(), text => Boolean(text?.startsWith('No JD found')));
+    await until('the toast', () => toast(page).textContent(), text => text === 'JD taken awayUndo');
+    assert.equal(await pane.locator('.rd-tools a[data-hint="o"]').count(), 0);
+    await undo(page);
+    await pane.locator('.jb-want').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a row\'s right-click (#268): its actions at the pointer, the cursor on it and nothing opened; Copy company and role; Edit title opens it with the field', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const northwind = await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I');
+    await page.goto(`${setpoint.base}/jobs`);
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
+    const target = row(page, northwind);
+    const box = (await rested(() => target.boundingBox()))!;
+    await page.mouse.click(box.x + 60, box.y + box.height / 2, {button: 'right'});
+    const menu = page.getByRole('menu', {name: 'Northwind Talent · Software Engineer I'});
+    await menu.waitFor();
+    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+      'Open↵', 'Open postingO', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
+      'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again', 'Copy company and role', 'Copy posting link',
+    ]);
+    // At the pointer; the cursor on the row, and the row not opened.
+    const at = (await rested(() => menu.boundingBox()))!;
+    assert.ok(Math.abs(at.x - (box.x + 60)) < 2, `at the pointer: ${at.x}`);
+    assert.match(await target.getAttribute('class') ?? '', /\bcur\b/);
+    assert.equal(await page.locator('.jb-pane').count(), 0);
+    await menu.getByRole('menuitem', {name: 'Copy company and role'}).click();
+    await until('copied', () => page.evaluate(() => navigator.clipboard.readText()), text => text === 'Northwind Talent · Software Engineer I');
+
+    await page.mouse.click(box.x + 60, box.y + box.height / 2, {button: 'right'});
+    await menu.getByRole('menuitem', {name: 'Edit title'}).click();
+    await until('it opens', () => page.title(), title => title === 'Software Engineer I · Northwind Talent');
+    await until('its title in a field', () => page.getByRole('textbox', {name: 'Title'}).evaluate(input => input === document.activeElement), focused => focused);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

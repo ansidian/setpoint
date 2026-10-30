@@ -1,7 +1,8 @@
 // The visual net without baselines (SV-99), beside the release's nine page screenshots (pages.ts,
 // D281): the main pages (the Inbox with an email open, the calendar's month and week, the editor, News
-// with a story open, Jobs with an application open, every Settings page, the phone's Inbox; Jobs isn't
-// on the phone, decision 49) in Night and Light, at the design target,
+// with a story open, Jobs with an application open, and with its menus open (Assign to…, and More with
+// Merge with…'s submenu), every Settings page, the phone's Inbox; Jobs isn't on the phone, decision
+// 49) in Night and Light, at the design target,
 // 1100 and 820 wide and on the phone. On each, at rest: nothing scrolls sideways, no text is cut by an
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
@@ -27,6 +28,8 @@ interface Route {
   path: string;
   // What shows once it's there.
   shows: string;
+  // What it opens once there, again at each width (a menu closes as the window resizes).
+  open?: (page: Page) => Promise<void>;
 }
 
 /** Problems on the page as it rests, each naming its element. */
@@ -93,7 +96,7 @@ function sweepPage(): string[] {
 
   // Nothing interactive is covered at the centre of what shows of it. Behind a modal only the modal
   // counts, and a pane lying over the page (the reader over the list from 640 to 1099 px, DESIGN.md
-  // #140), many times the size of what it covers, covers it on purpose.
+  // #140), many times the size of what it covers, or an open menu (Jobs's, J6), covers it on purpose.
   const modal = document.querySelector('[aria-modal="true"]');
   const interactive = all.filter(element => element.matches('button, a[href], input, select, textarea, [role="button"], [role="tab"], [role^="menuitem"], [tabindex]:not([tabindex="-1"])'));
   const area = (rect: DOMRect) => rect.width * rect.height;
@@ -112,6 +115,8 @@ function sweepPage(): string[] {
     if (right - left < 2 || bottom - top < 2) continue;
     const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
     if (!hit || element.contains(hit) || hit.contains(element) || (hit as HTMLLabelElement).control === element) continue;
+    // An open menu or popover lies over the page on purpose.
+    if (hit.closest('.pop') && !element.closest('.pop')) continue;
     // A label's own input is covered by the label on purpose.
     if (element.matches('input') && hit.closest('label')?.contains(element)) continue;
     // The cover: the outermost box holding the hit that doesn't hold the element.
@@ -168,6 +173,15 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
     {name: 'the calendar\'s week', path: '/calendar?view=week', shows: '.cal-week'},
     {name: 'News, a story open', path: `/news/story/${story}`, shows: '.pane .rd-subj'},
     {name: 'Jobs, an application open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want'},
+    {name: 'Jobs, Assign to… open', path: '/jobs', shows: '.jb-need', open: async page => {
+      await page.locator('.jb-need .btn.out', {hasText: 'Assign to…'}).click();
+      await page.getByRole('menu', {name: 'Assign to'}).waitFor();
+    }},
+    {name: 'Jobs, More and Merge with… open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want', open: async page => {
+      await page.locator('.jb-pane').getByRole('button', {name: 'More'}).click();
+      await page.getByRole('menuitem', {name: 'Merge with…'}).hover();
+      await page.getByRole('textbox', {name: 'Search applications'}).waitFor();
+    }},
     ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on'})),
   ];
 }
@@ -183,11 +197,15 @@ async function visit(page: Page, base: string, route: Route) {
   await page.locator(route.shows).first().waitFor();
   // The pointer out of the way, so no hover card covers anything.
   await page.mouse.move(0, 0);
+  await route.open?.(page);
 }
 
 /** Night or Light at `width`, at rest, swept; what it found, each line naming where. */
 async function sweepAt(page: Page, route: Route, theme: typeof THEMES[number], width: number, heard: () => string[]): Promise<string[]> {
-  if (page.viewportSize()!.width !== width) await page.setViewportSize({width, height: page.viewportSize()!.height});
+  if (page.viewportSize()!.width !== width) {
+    await page.setViewportSize({width, height: page.viewportSize()!.height});
+    if (route.open) await route.open(page);
+  }
   await page.emulateMedia({colorScheme: theme});
   await until(NAMES[theme], () => page.evaluate(() => document.documentElement.dataset.theme), value => value === (theme === 'dark' ? 'night' : 'light'));
   const where = `${route.name}, ${NAMES[theme]}, ${width} wide`;
