@@ -806,12 +806,6 @@ const BOARD_32_PATCHES: Patch[] = [
     from: '<span class="t"><span class="s">Verify your email</span></span>', to: '<span class="t"><span class="s">Verify your email</span><span class="s">· No longer in Gmail</span></span>'},
 ];
 
-const READS = (value: string, off = false) => ({
-  why: '#273 (D377): what Jobs reads in an account is a plain value in ink3, no chevron, nothing to press',
-  from: `<span class="dd${off ? ' off' : ''}">${value}<span class="ms">expand_more</span></span>`,
-  to: `<span class="reads" style="color: var(--ink3); font-size: 12.5px">${value}</span>`,
-  times: off ? 3 : 1,
-});
 const NEWS_FAILING_NAV = (on: string): Patch => ({
   why: 'N5 (override 24): Settings\' News item carries its warning glyph while the seed\'s FOX 11 fails',
   from: `<span class="grow">News</span></a>\n    <a class="nav${on}" href="#"><span class="ms">work</span>`,
@@ -826,7 +820,7 @@ const BOARD_38C_PATCHES: Patch[] = [
     from: '\n  <a class="nav on" href="#"><span class="ms">work</span><span class="grow">Jobs</span></a>', to: ''},
 ];
 const BOARD_39A_PATCHES: Patch[] = [
-  READS('Every email'), READS('Career mail only'), READS('Off', true), NEWS_FAILING_NAV(' on'),
+  NEWS_FAILING_NAV(' on'),
 ];
 const BOARD_39B_PATCHES: Patch[] = [
   NEWS_FAILING_NAV(''),

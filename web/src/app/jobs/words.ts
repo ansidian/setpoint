@@ -325,7 +325,7 @@ export function readingLine(reading: JobsReadingOut, history: Pick<JobsHistoryOu
 /** Settings › Jobs's head (39a): "62 applications". */
 export const applicationsCount = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'application' : 'applications'}`;
 
-/** What Jobs reads in an account (D310, #273): "Every email", "Career mail only", or "Off" for one it doesn't list. */
+/** What Jobs reads in an account (D310, #273), its select's choices: "Every email", "Career mail only", or "Off" for one it doesn't list. */
 export const READS_WORDS: Record<JobReadMode | 'off', string> = {every: 'Every email', career: 'Career mail only', off: 'Off'};
 
 /**

@@ -267,8 +267,8 @@ the lint rule still refuses an import of Jobs from triage.
   `jobs` events.
 - **Off** (38c): the page's one line, with Turn on opening Settings › Jobs, its switch focused. `4` opens it;
   the sidebar, the rail and ⌘K's Go to leave Jobs out.
-- **Settings › Jobs** (39a): `GET`/`PATCH /api/jobs/settings`. Reads shows what each account is read for, as
-  plain values (#273); Show goes to `/jobs/from-history`, From history unfolded.
+- **Settings › Jobs** (39a): `GET`/`PATCH /api/jobs/settings`. Reads is a select on each account (#273, D383),
+  sending the whole list; Show goes to `/jobs/from-history`, From history unfolded.
 - **Settings › AI's Jobs group** (39b): `GET /api/jobs/ai` ([`models.ts`](models.ts) `jobsAi`): the three models,
   whether there's a key, and this month's ledger for `jobs_emails`, `jobs_finding_jds` and `jobs_reading_jds`
   in total and in parts. The seed's usage ([`seed.ts`](seed.ts) `JOBS_USAGE`) is $3.85, loaded with mail's

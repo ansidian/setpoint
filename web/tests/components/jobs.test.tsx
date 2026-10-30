@@ -18,6 +18,7 @@ import {CandidatePicker} from '../../src/app/jobs/CandidatePicker.tsx';
 import {EditField} from '../../src/app/jobs/EditField.tsx';
 import {FullPosting} from '../../src/app/jobs/FullPosting.tsx';
 import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
+import {readsWith} from '../../src/app/jobs/JobsSettings.tsx';
 import {JobsMenu} from '../../src/app/jobs/Menu.tsx';
 import type {MenuSpec} from '../../src/app/jobs/Menu.tsx';
 import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
@@ -537,4 +538,12 @@ test('Usage this month\'s Jobs row (39b): its three parts', () => {
   const part = (cost_usd: number) => ({calls: 1, input_tokens: 0, output_tokens: 0, cost_usd});
   const month: JobsAiOut['this_month'] = {...part(3.85), emails: part(0.62), finding_jds: part(2.71), reading_jds: part(0.52)};
   expect(jobsUsageParts(month)).toBe('Emails $0.62 · finding JDs $2.71 · reading JDs $0.52');
+});
+
+test('Reads (#273, D383): an account changed in place, added at the end, or taken out by Off', () => {
+  const listed = [{account_id: 4, reads: 'every' as const}, {account_id: 1, reads: 'career' as const}];
+  expect(readsWith(listed, 1, 'every')).toEqual([{account_id: 4, reads: 'every'}, {account_id: 1, reads: 'every'}]);
+  expect(readsWith(listed, 2, 'career')).toEqual([...listed, {account_id: 2, reads: 'career'}]);
+  expect(readsWith(listed, 4, 'off')).toEqual([{account_id: 1, reads: 'career'}]);
+  expect(readsWith(listed, 3, 'off')).toEqual(listed);
 });

@@ -2,8 +2,9 @@
 // draw these through their wiring lines (server/src/jobs/README.md) and know nothing else of Jobs.
 //
 // - Settings › Jobs (39a): "62 applications" by the title; the one switch, which turns Jobs on (the
-//   history pass starts, and Jobs folds into the sidebar under News) or off; Reads, what Jobs reads in
-//   each account as a plain value (#273); and History: the pass's progress or when it finished, and
+//   history pass starts, and Jobs folds into the sidebar under News) or off; Reads, a select on each
+//   account for what Jobs reads there (#273, D383), a change while it's on starting the history pass
+//   over what's new to it; and History: the pass's progress or when it finished, and
 //   From history's waiting items with Show, which opens Jobs with them unfolded.
 // - Settings › AI's Jobs group (39b, D315): its three models by name, not selects (override 26), and
 //   this month's spend with no meter (no cap, decision 61); Usage this month's Jobs row in its three
@@ -11,7 +12,7 @@
 // - Jobs off's Turn on (38c) opens Settings › Jobs with the switch focused, so turning it on is a
 //   choice made where the accounts it reads are listed.
 import type {CSSProperties} from 'react';
-import type {JobsAiOut, JobsSettingsOut} from '@setpoint/shared';
+import type {JobReadMode, JobsAiOut, JobsReadAccount, JobsSettingsOut} from '@setpoint/shared';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {dollars} from '../../logic/news.ts';
@@ -20,15 +21,26 @@ import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {navigate} from '../router.ts';
-import {HealthGlyph, Line, Page, Row, Section, SkeletonRows, Switch, useAttempt} from '../settings/parts.tsx';
+import {HealthGlyph, Line, Page, Row, Section, Select, SkeletonRows, Switch, useAttempt} from '../settings/parts.tsx';
 import {closeSettings, openSettings} from '../settings/store.ts';
-import {AI_PATH, SETTINGS_PATH, turnJobs} from './api.ts';
+import {AI_PATH, SETTINGS_PATH, setReads, turnJobs} from './api.ts';
 import {
   applicationsCount, fromHistorySetting, historyRuns, historySetting, historyShare, jobsModelWith, jobsUsageParts, READS_WORDS,
 } from './words.ts';
 
 /** What Settings loads as it opens, so Settings › Jobs and AI's Jobs group show at once. */
 export const JOBS_SETTINGS_PATHS = [SETTINGS_PATH, AI_PATH];
+
+type Reads = JobReadMode | 'off';
+const READS_OPTIONS = (['every', 'career', 'off'] as const).map(value => ({value, label: READS_WORDS[value]}));
+
+/** The accounts Jobs reads with one changed: kept in place, added at the end, or dropped when Off. */
+export function readsWith(accounts: JobsReadAccount[], id: number, reads: Reads): JobsReadAccount[] {
+  if (reads === 'off') return accounts.filter(account => account.account_id !== id);
+  return accounts.some(account => account.account_id === id)
+    ? accounts.map(account => (account.account_id === id ? {account_id: id, reads} : account))
+    : [...accounts, {account_id: id, reads}];
+}
 
 // Set by Turn on: Settings › Jobs focuses its switch once it's drawn.
 let focusSwitch = false;
@@ -52,6 +64,7 @@ export function JobsSettingsPage() {
   const {list: accounts} = useAccounts();
   const now = useNow();
   const turn = useAttempt();
+  const choose = useAttempt();
   const reads = new Map(settings?.accounts.map(account => [account.account_id, account.reads]));
   // What it reads first, as it lists them, then the rest in the sidebar's order (39a).
   const listed = settings?.accounts.flatMap(({account_id: id}) => accounts.filter(account => account.id === id)) ?? [];
@@ -80,11 +93,13 @@ export function JobsSettingsPage() {
             {ordered.map(account => (
               <div key={account.id} className="set-row ctl" data-account={account.id}>
                 <span className="acc grow"><span className="dot" style={dotStyle(account.colour)} />{account.label}</span>
-                <span className="reads">{READS_WORDS[reads.get(account.id) ?? 'off']}</span>
+                <Select value={reads.get(account.id) ?? 'off'} options={READS_OPTIONS} label={`What Jobs reads in ${account.label}`}
+                  onChange={mode => void choose.attempt(() => setReads(readsWith(settings.accounts, account.id, mode)))} />
               </div>
             ))}
           </div>
         )}
+        <Line text={choose.line?.text ?? null} tone={choose.line?.tone} />
         <p className="note jb-note">Career mail is what triage sorts as Career. Jobs never changes how mail itself is sorted.</p>
       </Section>
 

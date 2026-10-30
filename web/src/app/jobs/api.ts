@@ -2,7 +2,7 @@
 // Settings › Jobs and Settings › AI's Jobs group), through web/src/api/client.ts's helpers, never `fetch` itself (the
 // lint holds the network to web/src/api/). Every path is under /jobs, so a `jobs` live event refreshes
 // whichever are on screen (logic/live.ts).
-import type {ApplicationOut, JobsChangeOut, JobsDismissedOut, JobsEdit, JobsNavOut, JobsSettingsOut, JobStatus, JobsUndoneOut} from '@setpoint/shared';
+import type {ApplicationOut, JobsChangeOut, JobsDismissedOut, JobsEdit, JobsNavOut, JobsReadAccount, JobsSettingsOut, JobStatus, JobsUndoneOut} from '@setpoint/shared';
 import {getCached, refreshIfShown, sendJson, setCached} from '../../api/client.ts';
 
 /** GET /api/jobs: the two numbers, Needs you, From history and the rows. */
@@ -88,6 +88,13 @@ export async function undoDismiss(ids: number[]): Promise<void> {
  */
 export async function turnJobs(enabled: boolean): Promise<void> {
   const settings = await sendJson<JobsSettingsOut>('PATCH', SETTINGS_PATH, {enabled});
+  setCached(SETTINGS_PATH, settings);
+  refreshJobs();
+}
+
+/** Reads (#273, D383): the accounts Jobs reads and how; while it's on, a change starts the history pass over what's new to it. */
+export async function setReads(accounts: JobsReadAccount[]): Promise<void> {
+  const settings = await sendJson<JobsSettingsOut>('PATCH', SETTINGS_PATH, {accounts});
   setCached(SETTINGS_PATH, settings);
   refreshJobs();
 }

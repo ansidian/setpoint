@@ -260,7 +260,7 @@ async function openSettings(page: Page, base: string, name: 'Jobs' | 'AI') {
   return settings;
 }
 
-test('board 39a: Settings › Jobs: its count, the switch, Reads in plain values, the history pass done, and From history\'s Show opening Jobs with it unfolded', async () => {
+test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on each account, the history pass done, and From history\'s Show opening Jobs with it unfolded', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -279,11 +279,11 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads in plain values
     assert.equal(await main.getByRole('switch', {name: 'Jobs'}).getAttribute('aria-checked'), 'true');
     assert.deepEqual(await main.locator('.set-label').allTextContents(), ['Reads', 'History']);
 
-    // Reads (D310, #273): what Jobs reads first, then the rest in the sidebar's order, each a plain value in ink3, nothing to press.
-    assert.deepEqual(await main.locator('.jb-reads .set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.acc')!.textContent, row.querySelector('.reads')!.textContent])), [
+    // Reads (D310, #273, D383): what Jobs reads first, then the rest in the sidebar's order, each a select.
+    const readsShown = () => main.locator('.jb-reads .set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.acc')!.textContent, row.querySelector('.select')!.textContent]));
+    assert.deepEqual(await readsShown(), [
       ['Jobs', 'Every email'], ['Business', 'Career mail only'], ['Personal', 'Off'], ['Work', 'Off'], ['iCloud', 'Off'],
     ]);
-    assert.equal(await main.locator('.jb-reads').locator('button, .select, .icon').count(), 0);
     assert.equal(await main.locator('.jb-note').textContent(), 'Career mail is what triage sorts as Career. Jobs never changes how mail itself is sorted.');
 
     // History: the pass done, with its good dot; From history's six with Show.
@@ -294,7 +294,6 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads in plain values
     ]);
     for (const [scheme, theme] of THEMES) {
       await inTheme(page, scheme, theme);
-      assert.equal(await rested(() => main.locator('.jb-reads .reads').first().evaluate(value => getComputedStyle(value).color)), await rested(() => colourOf(page, 'var(--ink3)')), `${theme}: Reads in ink3`);
       assert.equal(await rested(() => rows.first().locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor)), await rested(() => page.evaluate(() => {
         const probe = document.body.appendChild(document.createElement('i'));
         probe.style.background = 'var(--good)';
@@ -303,6 +302,19 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads in plain values
         return good;
       })), `${theme}: Done's dot in good`);
     }
+
+    // Choosing one sends the whole list, the account added at its end, and Off takes it out again.
+    const accountOf = async (label: string) => Number(await main.locator('.jb-reads .set-row', {hasText: label}).getAttribute('data-account'));
+    const [jobs, business, personal] = [await accountOf('Jobs'), await accountOf('Business'), await accountOf('Personal')];
+    await main.getByRole('button', {name: 'What Jobs reads in Personal'}).click();
+    await page.getByRole('menuitemradio', {name: 'Career mail only'}).click();
+    await until('Personal read', () => setpoint.api<JobsSettingsOut>('GET', '/jobs/settings'), value => value.accounts.length === 3);
+    assert.deepEqual((await setpoint.api<JobsSettingsOut>('GET', '/jobs/settings')).accounts,
+      [{account_id: jobs, reads: 'every'}, {account_id: business, reads: 'career'}, {account_id: personal, reads: 'career'}]);
+    await until('the select', readsShown, shown => shown[2]![1] === 'Career mail only');
+    await main.getByRole('button', {name: 'What Jobs reads in Personal'}).click();
+    await page.getByRole('menuitemradio', {name: 'Off'}).click();
+    await until('Personal off again', () => setpoint.api<JobsSettingsOut>('GET', '/jobs/settings'), value => value.accounts.length === 2);
 
     // Show: Settings closes, and Jobs shows From history unfolded.
     await rows.getByRole('button', {name: 'Show'}).click();

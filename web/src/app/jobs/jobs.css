@@ -385,10 +385,9 @@
 @media (hover: hover) { .jb-empty .lnk:hover { background: var(--sub2); } }
 .jb-empty .lnk:active { background: var(--sub3); transform: scale(.97); }
 
-/* Settings › Jobs (39a): each account's dot and label, then what Jobs reads there, a plain value (#273);
+/* Settings › Jobs (39a): each account's dot and label, then a select for what Jobs reads there (#273);
    the group's foot under it. Settings › AI's This month (39b): the amount in ink, with no meter. */
 .settings .jb-reads .acc { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); min-width: 0; }
-.settings .jb-reads .reads { color: var(--ink3); font-size: 12.5px; white-space: nowrap; flex: none; }
 .settings .jb-note { height: auto; margin: 0; padding: 8px 4px 0; }
 .settings .jb-spent { color: var(--ink); font-size: 12.5px; flex: none; white-space: nowrap; }
 
