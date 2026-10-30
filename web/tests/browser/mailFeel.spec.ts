@@ -582,9 +582,9 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
     assert.equal(await rested(() => page.locator('.no-results').evaluate(line => getComputedStyle(line).columnGap)), '8px');
     const not = parts.filter({has: page.locator('.k')});
     if (await not.count()) assert.equal(await not.locator('.k').textContent(), 'Not');
-    const before = await parts.count();
+    // Knocking off "zebra" leaves a search with emails, so the line goes rather than losing one chip.
     await parts.last().getByRole('button').click();
-    await until('a chip knocked off', () => parts.count(), count => count === before - 1);
+    await until('a chip knocked off, and the line gone with it', () => page.locator('.no-results').count(), count => count === 0);
 
     // The answer's key fact: underlined 2 px, 3 px under, in Night's `sun` at 70%.
     assert.deepEqual(await rested(() => page.evaluate(() => {
