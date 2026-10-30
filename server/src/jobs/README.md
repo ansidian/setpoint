@@ -144,9 +144,18 @@ the lint rule still refuses an import of Jobs from triage.
   that's read by its id), then Greenhouse, Lever and Ashby's public APIs by board name, then Sonnet 5.5
   with web search only when those cleanly missed, on the platform the application names first, then
   the employer's careers site, then job boards. Haiku checks what a link or a platform found, and
-  a page that isn't a posting is `no`, whatever company and role it names; Sonnet's search judges its
-  own. Confident is saved with Haiku's reading; unsure offers up to three candidates as a JD to
-  confirm; nothing is `not_found`.
+  a page that isn't a posting is `no`, whatever company and role it names, as is one saying the
+  posting has closed with no description of the job; Sonnet's search judges its own. Confident is
+  saved with Haiku's reading; unsure offers up to three candidates as a JD to confirm; nothing is
+  `not_found`.
+- **What the search offers is opened (D388):** a sole `match` that reads is saved with no check.
+  Otherwise each candidate is opened (web.ts `openLink`): one that's gone (a 404, a 410, a platform
+  saying it isn't there) is dropped; one Jobs can't read (a 403, a non-HTML answer, a page drawn by
+  script) stays, since the user can open it in a browser, and so does one whose page failed (the
+  network, a 5xx, a 429, a timeout), which doesn't fail the lookup; and those that read go to Haiku
+  in one call, whose `no` drops one and whose `maybe` or `match` leaves it a maybe. Haiku never
+  saves a candidate. A failed check fails the lookup, like any model call, and its retry searches
+  again.
 - **While it runs** the row's `jd` is `{state: 'looking', looked_at: <when it began>}`; its end comes as
   a `jobs` event naming the application (and any Needs you item).
 

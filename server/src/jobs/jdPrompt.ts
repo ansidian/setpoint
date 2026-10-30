@@ -3,7 +3,8 @@
 // - Haiku 5.5 checks the candidates the email's link or a platform found against the application
 //   (company, normalised title, location, date): each is the posting, might be, or isn't.
 // - Sonnet 5.5 with Claude's web search, only when those miss, searches and judges what it finds
-//   itself, as the same three verdicts.
+//   itself, as the same three verdicts. Haiku then checks the pages of those it wasn't sure of, which
+//   can only drop one (D388).
 // - Haiku 5.5 reads the saved JD: location and setting, salary if stated, must-haves, nice-to-haves
 //   and the three-line what-they-want summary.
 import type {JobWorkplace} from '@setpoint/shared';
@@ -59,7 +60,9 @@ For each candidate give a verdict:
 - maybe: it could be the one, but something doesn't fit or the emails don't say enough to tell (another location of the same role, a near title).
 - no: another employer, another role, or posted after the user applied.
 
-A page that isn't a job posting itself, such as an application confirmation, an application status page, or the applicant's own details and answers, is no, whatever company and role it names.`;
+A page that isn't a job posting itself, such as an application confirmation, an application status page, or the applicant's own details and answers, is no, whatever company and role it names.
+
+A page saying the posting has closed or no longer exists, with no description of the job, is no. A closed posting that still shows its full description isn't: judge it as any other.`;
 
 export const CHECK_TOOL: ToolSpec = {
   name: 'submit_posting_check',

@@ -139,6 +139,7 @@ const LUCERNE: Made = {
 };
 const match = (verdicts: string[]) => () => ({tool: {verdicts: verdicts.map((verdict, index) => ({candidate: index + 1, verdict}))}, usage: {input: 2400, output: 40}});
 const reading = (tool: Record<string, unknown>) => () => ({tool, usage: {input: 1800, output: 260}});
+const FORBIDDEN = {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}};
 
 describe('confident (decision 54)', () => {
   test('a platform\'s posting the check is sure of is saved silently, with what Haiku read in it', async () => {
@@ -316,21 +317,180 @@ describe('unsure (decision 54)', () => {
   test('three candidates at most, from a search that was unsure of four', async () => {
     const s = await setup();
     const id = s.make({company: 'Wide World Importers', title: 'Software Developer', platform: 'iCIMS'});
+    for (const n of [1, 2, 3, 4]) s.web.serve(`https://wideworldimporters.example/careers/jobs/${n}`, FORBIDDEN);
     s.answers({submit_posting_search: () => searched([1, 2, 3, 4].map(n => ({url: `https://wideworldimporters.example/careers/jobs/${n}`, title: `Software Developer ${n}`, location: 'Remote', site: 'Wide World Importers', verdict: 'maybe'})))});
     await s.drain();
     expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([1, 2, 3].map(n => `https://wideworldimporters.example/careers/jobs/${n}`));
-    // Unsure pages aren't read until one is picked (J6).
-    expect(s.web.asked()).toEqual([]);
+    // Each of the three is opened before it's offered (D388); these turn Jobs away, so they stay, unread.
+    expect(s.web.asked()).toEqual([1, 2, 3].map(n => `wideworldimporters.example/careers/jobs/${n}`));
+    expect(s.asked()).toEqual(['submit_posting_search']);
   });
 
   test('a confident search result whose page can\'t be read is offered instead', async () => {
     const s = await setup();
-    s.web.serve('https://fabrikam.example/careers/data-analyst-2291', {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}});
+    s.web.serve('https://fabrikam.example/careers/data-analyst-2291', FORBIDDEN);
     const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday'});
     s.answers({submit_posting_search: () => searched([{url: 'https://fabrikam.example/careers/data-analyst-2291', title: 'Data Analyst', location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict: 'match'}])});
     await s.drain();
     expect(s.posting(id)).toBeUndefined();
     expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{title: 'Data Analyst', platform: 'Fabrikam Careers'}]});
+  });
+});
+
+describe('a search\'s candidates are opened before they\'re offered (D388)', () => {
+  const FABRIKAM: Made = {company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday', appliedAt: '2026-10-06T21:00:00.000Z'};
+  const one = (n: number, verdict = 'maybe') => ({url: `https://fabrikam.example/careers/jobs/${n}`, title: `Data Analyst ${n}`, location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict});
+  const links = (s: Awaited<ReturnType<typeof setup>>, id: number) => applicationDetail(s.store, id).candidates.map(candidate => candidate.link);
+
+  test('a candidate that\'s gone is dropped, and one Jobs can\'t read stays for the user to open', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, {status: 410, body: 'Gone', headers: {'content-type': 'text/html'}});
+    s.web.serve(one(2).url, FORBIDDEN);
+    s.web.serve(one(3).url, htmlPage(fixture('script-drawn.html')));
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2), one(3)])});
+    await s.drain();
+    expect(s.web.asked()).toEqual([1, 2, 3].map(n => `fabrikam.example/careers/jobs/${n}`));
+    // Nothing read, so Haiku has nothing to check.
+    expect(s.asked()).toEqual(['submit_posting_search']);
+    expect(s.posting(id)).toBeUndefined();
+    expect(links(s, id)).toEqual([one(2).url, one(3).url]);
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'candidates', candidates: 2});
+  });
+
+  test('a page that reads goes to Haiku: no drops it, and maybe or match only stays a maybe', async () => {
+    const s = await setup();
+    for (const n of [1, 2, 3]) s.web.serve(one(n).url, htmlPage(fixture('posting-page.html')));
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2), one(3)]), submit_posting_check: match(['no', 'maybe', 'match'])});
+    await s.drain();
+    // Never promoted: Haiku's match isn't saved, and nothing reads it.
+    expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_check']);
+    expect(s.models.requests[1]!.model).toBe('claude-haiku-5-5');
+    expect(s.models.requests[1]!.input).toContain('Candidate 1, on Fabrikam Careers: https://fabrikam.example/careers/jobs/1\nTitle: Data Analyst\nLocation: Atlanta, GA\nPosted: 2026-09-29');
+    expect(s.posting(id)).toBeUndefined();
+    expect(links(s, id)).toEqual([one(2).url, one(3).url]);
+    // As Sonnet described them.
+    expect(applicationDetail(s.store, id).candidates[0]).toMatchObject({title: 'Data Analyst 2', platform: 'Fabrikam Careers'});
+  });
+
+  test('one that\'s closed, turned down by Haiku, leaves the others', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, htmlPage(fixture('closed-posting.html')));
+    s.web.serve(one(2).url, FORBIDDEN);
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2)]), submit_posting_check: match(['no'])});
+    await s.drain();
+    expect(s.models.requests[1]!.input).toContain('This job posting is no longer available');
+    expect(s.models.requests[1]!.input).not.toContain('Candidate 2');
+    expect(links(s, id)).toEqual([one(2).url]);
+  });
+
+  test('every page turned down ends "No JD found"', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, htmlPage(fixture('closed-posting.html')));
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1)]), submit_posting_check: match(['no'])});
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', candidates: 0, link: null});
+    expect(jobsPage(s.store).needs_you).toEqual([]);
+  });
+
+  test('a sole match that reads is saved with no check, and the others aren\'t opened (decision 54)', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, htmlPage(fixture('posting-page.html')));
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1, 'match'), one(2)]), submit_posting_reading: reading({summary: 'Weekly reporting.', location: 'Atlanta, GA', workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: []})});
+    await s.drain();
+    expect(s.web.asked()).toEqual(['fabrikam.example/careers/jobs/1']);
+    expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_reading']);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({source: 'search', link: one(1).url});
+  });
+
+  test('a sole match that\'s gone is dropped and the others are still weighed', async () => {
+    const s = await setup();
+    s.web.serve(one(2).url, htmlPage(fixture('posting-page.html')));
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1, 'match'), one(2)]), submit_posting_check: match(['maybe'])});
+    await s.drain();
+    expect(s.web.asked()).toEqual([1, 2].map(n => `fabrikam.example/careers/jobs/${n}`));
+    expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_check']);
+    expect(s.posting(id)).toBeUndefined();
+    expect(links(s, id)).toEqual([one(2).url]);
+  });
+
+  test('two matches are no sole match: each is opened, and a page that reads is checked', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, htmlPage(fixture('posting-page.html')));
+    s.web.serve(one(2).url, FORBIDDEN);
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1, 'match'), one(2, 'match')]), submit_posting_check: match(['maybe'])});
+    await s.drain();
+    expect(s.posting(id)).toBeUndefined();
+    expect(links(s, id)).toEqual([one(1).url, one(2).url]);
+  });
+
+  test('a failure on one candidate keeps it offered and doesn\'t fail the lookup', async () => {
+    const s = await setup();
+    s.web.serve(one(2).url, htmlPage(fixture('posting-page.html')));
+    s.web.server.fault({path: /careers\/jobs\/1/, response: {status: 503, body: 'Service Unavailable'}});
+    s.web.server.fault({path: /careers\/jobs\/3/, response: {status: 429, body: {}, headers: {'retry-after': '300'}}});
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2), one(3)]), submit_posting_check: match(['maybe'])});
+    await s.drain();
+    expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
+    expect(links(s, id)).toEqual([one(1).url, one(2).url, one(3).url]);
+  });
+
+  test('a sole match that fails is offered rather than searched for again', async () => {
+    const s = await setup();
+    s.web.server.fault({path: /careers\/jobs\/1/, response: {status: 502, body: 'Bad Gateway'}});
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1, 'match')])});
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_search']);
+    expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
+    expect(links(s, id)).toEqual([one(1).url]);
+  });
+
+  test('a lookup stopped while it opens them ends there, offering nothing', async () => {
+    const s = await setup();
+    const stop = new AbortController();
+    s.web.serve(one(1).url, () => {
+      stop.abort();
+      return FORBIDDEN;
+    });
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2)])});
+    await expect(lookUpJd(s.store, id, {...s.options, signal: stop.signal})).rejects.toThrow();
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'looking'}, candidates: []});
+  });
+
+  test('every candidate gone ends "No JD found"', async () => {
+    const s = await setup();
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2, 'match')])});
+    await s.drain();
+    expect(s.web.asked()).toEqual([2, 1].map(n => `fabrikam.example/careers/jobs/${n}`));
+    expect(s.asked()).toEqual(['submit_posting_search']);
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', candidates: 0, link: null});
+    expect(jobsPage(s.store).needs_you).toEqual([]);
+  });
+
+  test('what the user turned down isn\'t opened', async () => {
+    const s = await setup();
+    s.web.serve(one(1).url, FORBIDDEN);
+    s.web.serve(one(2).url, FORBIDDEN);
+    const id = s.make(FABRIKAM);
+    s.answers({submit_posting_search: () => searched([one(1), one(2)])});
+    await s.drain();
+    const c = await signedIn(s.w, {routes: [jobsApi(s.store)]});
+    expect((await c.send('POST', `/api/jobs/applications/${id}/jd/none`)).status).toBe(200);
+    const asked = s.web.asked().length;
+    await c.send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    expect(s.web.asked()).toHaveLength(asked);
+    expect(applicationDetail(s.store, id).jd.state).toBe('not_found');
   });
 });
 

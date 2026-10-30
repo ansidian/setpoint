@@ -15,6 +15,9 @@
 //   confirm in Needs you; nothing is "No JD found", never retried on its own (D320). A lookup that
 //   failed (the network, a 5xx, a 429, a timeout, the AI down) is retried with backoff by the one
 //   retry policy and never shown as not found.
+// - Opening what the search offers (D388): a sole match that reads is saved with no check. Otherwise
+//   each candidate is opened: gone is dropped, one Jobs can't read or couldn't reach stays offered,
+//   and one that reads goes to Haiku, who can only drop it, never save it.
 // - The saved JD (decision 53): its full text as markdown, its link, when and how it was found, and
 //   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
 // - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
@@ -40,15 +43,15 @@ import {
 } from './jdPrompt.ts';
 import type {JdApplication} from './jdPrompt.ts';
 import {
-  boardNames, emailLinks, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingLinks, postingRef,
+  boardNames, emailLinks, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingLinks, postingRef,
 } from './lookupRules.ts';
-import type {JobPlatform, StepOutcome} from './lookupRules.ts';
+import type {JobPlatform, StepOutcome, Verdict} from './lookupRules.ts';
 import {lookupEmail} from './mail.ts';
 import {jobsModelClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import * as j from './schema.ts';
 import {rejectedLinks, stillLooking} from './stick.ts';
-import {boardPostings, readLink} from './web.ts';
-import type {FoundPosting, JobsWeb} from './web.ts';
+import {boardPostings, openLink, readLink} from './web.ts';
+import type {FoundPosting, JobsWeb, OpenedLink} from './web.ts';
 
 export const LOOKUP_KEY_PREFIX = 'jobs_jd:';
 export const lookupKey = (applicationId: number) => `${LOOKUP_KEY_PREFIX}${applicationId}`;
@@ -260,7 +263,7 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   }
 
   // 3. Sonnet with web search, only when those cleanly missed.
-  if (nextSourceRuns('search', steps)) steps.push(await fromSearch(store, sonnet, context, web, fresh, signal));
+  if (nextSourceRuns('search', steps)) steps.push(await fromSearch(store, haiku, sonnet, context, web, fresh, signal));
 
   const end = lookupEnd(steps);
   if (end.is === 'failed') throw end.error;
@@ -293,15 +296,20 @@ async function readAndSave(
   return savePosting(store, application.id, found, source, await readPosting(store, haiku, application, found, signal), options);
 }
 
-/** Haiku's verdict on postings a link or a platform found, as a step. */
-async function check(store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, offers: Offer[], signal: AbortSignal): Promise<StepOutcome<Offer>> {
+/** Haiku's verdict on each posting read, the call on the ledger. */
+async function verdictsOn(store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, offers: Offer[], signal: AbortSignal): Promise<Verdict[]> {
   const answer = await haiku.client.call({
     model: haiku.model, system: CHECK_SYSTEM, tool: CHECK_TOOL, maxOutputTokens: CHECK_MAX_OUTPUT_TOKENS,
     input: checkInput(context, offers.map(offer => ({...offer.found!, site: offer.site}))),
     cacheKey: `setpoint-jobs-check:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
   });
   recordJobsUsage(store, answer, 'jobs_reading_jds', null);
-  const verdicts = verdictsOf(answer.toolInput, offers.length);
+  return verdictsOf(answer.toolInput, offers.length);
+}
+
+/** Haiku's verdict on postings a link or a platform found, as a step. */
+async function check(store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, offers: Offer[], signal: AbortSignal): Promise<StepOutcome<Offer>> {
+  const verdicts = await verdictsOn(store, haiku, context, offers, signal);
   return outcomeOf(offers.map((candidate, index) => ({candidate, verdict: verdicts[index]!})));
 }
 
@@ -347,8 +355,28 @@ async function fromPlatforms(
   return outcome.is !== 'confident' && failed ? {is: 'failed', error: failed} : outcome;
 }
 
-/** Sonnet searches and judges; a confident answer is read for its text, and one that can't be read is offered instead. */
-async function fromSearch(store: Store, sonnet: {client: ModelClient; model: string}, context: JdApplication, web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal): Promise<Step> {
+/**
+ * A search candidate opened. One that failed (the network, a 5xx, a 429, a timeout) stays offered, as
+ * one Jobs can't read does, rather than paying for the search again over one page.
+ */
+async function openCandidate(web: JobsWeb, link: string, signal: AbortSignal): Promise<OpenedLink> {
+  try {
+    return await openLink(web, link, signal);
+  } catch {
+    signal.throwIfAborted();
+    return {is: 'unreadable'};
+  }
+}
+
+/**
+ * Sonnet searches and judges (decision 54), and what it offers is opened (D388). A sole match that
+ * reads is saved with no check. Otherwise each candidate is opened: one that's gone is dropped, one
+ * Jobs can't read stays for the user to open, and one that reads goes to Haiku, who can only drop it,
+ * never save it. Nothing left is `none`.
+ */
+async function fromSearch(
+  store: Store, haiku: {client: ModelClient; model: string}, sonnet: {client: ModelClient; model: string}, context: JdApplication, web: JobsWeb, fresh: (link: string) => boolean, signal: AbortSignal,
+): Promise<Step> {
   const answer = await sonnet.client.call({
     model: sonnet.model, system: SEARCH_SYSTEM, tool: SEARCH_TOOL, input: searchInput(context), maxOutputTokens: SEARCH_MAX_OUTPUT_TOKENS,
     webSearch: {maxUses: SEARCH_MAX_USES}, signal,
@@ -357,17 +385,22 @@ async function fromSearch(store: Store, sonnet: {client: ModelClient; model: str
   const candidates = searchCandidatesOf(answer.toolInput).filter(candidate => fresh(candidate.url));
   const offers = candidates.map((candidate): Offer => ({found: null, title: candidate.title, location: candidate.location, site: candidate.site, link: candidate.url, source: 'search'}));
   const outcome = outcomeOf(offers.map((candidate, index) => ({candidate, verdict: candidates[index]!.verdict})));
-  if (outcome.is !== 'confident') return outcome;
-  let found: FoundPosting | null;
-  try {
-    found = await readLink(web, outcome.posting.link, signal);
-  } catch (error) {
-    const failure = asProviderError(error);
-    if (!isMiss(failure)) return {is: 'failed', error: failure};
-    found = null;
+  const reads = new Map<Offer, OpenedLink>();
+  if (outcome.is === 'confident') {
+    const read = await openCandidate(web, outcome.posting.link, signal);
+    if (read.is === 'read') return {is: 'confident', posting: {...outcome.posting, found: read.posting}};
+    reads.set(outcome.posting, read);
   }
-  if (!found) return {is: 'unsure', candidates: offers};
-  return {is: 'confident', posting: {...outcome.posting, found}};
+  for (const offer of offers) if (!reads.has(offer)) reads.set(offer, await openCandidate(web, offer.link, signal));
+  const left = offers.flatMap((offer): Offer[] => {
+    const read = reads.get(offer)!;
+    return read.is === 'gone' ? [] : read.is === 'read' ? [{...offer, found: read.posting}] : [offer];
+  });
+  const readable = left.filter(offer => offer.found);
+  const verdicts = readable.length ? await verdictsOn(store, haiku, context, readable, signal) : [];
+  const turnedDown = new Set(readable.filter((_, index) => verdicts[index] === 'no'));
+  const kept = left.filter(offer => !turnedDown.has(offer));
+  return kept.length ? {is: 'unsure', candidates: kept} : {is: 'none'};
 }
 
 /**

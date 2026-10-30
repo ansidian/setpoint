@@ -164,6 +164,8 @@ export async function boardPostings(web: JobsWeb, platform: JobPlatform, board: 
 
 // ---- Posting pages ----
 
+const HTML = 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5';
+
 const attr = (element: Element, key: string) => getAttributeValue(element, key)?.trim() || null;
 
 /** The schema.org JobPostings in a page's JSON-LD. */
@@ -245,35 +247,49 @@ export function pagePosting(html: string, link: string): FoundPosting | null {
 }
 
 /**
- * Reads one link as a posting: a platform's posting through its API, anything else as a page (an
- * Indeed view-job link, a careers site). Null when it isn't there or isn't a posting (a 404, a page
- * with no posting on it); throws a failure to retry.
+ * What opening a link found: its posting; `gone` (a 404, a 410, a platform that says it isn't there);
+ * or `unreadable`, there but not for Jobs (a 403, a non-HTML answer, a page with no posting Jobs can
+ * read, such as one drawn by script), which the user can still open in a browser.
  */
-export async function readLink(web: JobsWeb, link: string, signal: AbortSignal): Promise<FoundPosting | null> {
+export type OpenedLink = {is: 'read'; posting: FoundPosting} | {is: 'gone'} | {is: 'unreadable'};
+
+const opened = (posting: FoundPosting | null): OpenedLink => (posting ? {is: 'read', posting} : {is: 'unreadable'});
+
+/**
+ * Opens one link: a platform's posting through its API, anything else as a page (an Indeed view-job
+ * link, a careers site). Throws a failure to retry.
+ */
+export async function openLink(web: JobsWeb, link: string, signal: AbortSignal): Promise<OpenedLink> {
   const ref = postingRef(link, web.hosts);
-  if (ref?.platform === 'greenhouse' && ref.board && ref.id) {
-    return greenhouseJob(await getJson(web, `${web.apis.greenhouse}/v1/boards/${encodeURIComponent(ref.board)}/jobs/${ref.id}`, signal));
-  }
-  if (ref?.platform === 'lever' && ref.board && ref.id) {
-    return leverPosting(await getJson(web, `${web.apis.lever}/v0/postings/${encodeURIComponent(ref.board)}/${encodeURIComponent(ref.id)}?mode=json`, signal));
-  }
-  if (ref?.platform === 'ashby' && ref.board && ref.id) {
-    const body = await getJson(web, `${web.apis.ashby}/posting-api/job-board/${encodeURIComponent(ref.board)}?includeCompensation=true`, signal);
-    const jobs = isRecord(body) && Array.isArray(body.jobs) ? body.jobs.map(ashbyJob) : [];
-    const job = jobs.find(each => each?.id === ref.id || each?.link === link);
-    if (!job) return null;
-    const {id: _, ...posting} = job;
-    return posting;
-  }
   try {
-    const response = await newsGet(web.http, {url: link, userAgent: web.userAgent, signal, accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.5'});
+    if (ref?.platform === 'greenhouse' && ref.board && ref.id) {
+      return opened(greenhouseJob(await newsGetJson<unknown>(web.http, {url: `${web.apis.greenhouse}/v1/boards/${encodeURIComponent(ref.board)}/jobs/${ref.id}`, userAgent: web.userAgent, signal})));
+    }
+    if (ref?.platform === 'lever' && ref.board && ref.id) {
+      return opened(leverPosting(await newsGetJson<unknown>(web.http, {url: `${web.apis.lever}/v0/postings/${encodeURIComponent(ref.board)}/${encodeURIComponent(ref.id)}?mode=json`, userAgent: web.userAgent, signal})));
+    }
+    if (ref?.platform === 'ashby' && ref.board && ref.id) {
+      const body = await newsGetJson<unknown>(web.http, {url: `${web.apis.ashby}/posting-api/job-board/${encodeURIComponent(ref.board)}?includeCompensation=true`, userAgent: web.userAgent, signal});
+      const jobs = isRecord(body) && Array.isArray(body.jobs) ? body.jobs.map(ashbyJob) : [];
+      const job = jobs.find(each => each?.id === ref.id || each?.link === link);
+      if (!job) return {is: 'gone'};
+      const {id: _, ...posting} = job;
+      return opened(posting);
+    }
+    const response = await newsGet(web.http, {url: link, userAgent: web.userAgent, signal, accept: HTML});
     const type = response.headers.get('content-type') ?? '';
-    if (response.status !== 200 || (type && !/html|xml/i.test(type))) return null;
+    if (response.status !== 200 || (type && !/html|xml/i.test(type))) return {is: 'unreadable'};
     const posting = pagePosting(responseText(response), response.url);
     // An Indeed link is Indeed's, wherever its redirects led.
-    return posting && ref?.platform === 'indeed' ? {...posting, site: PLATFORM_NAMES.indeed} : posting;
+    return opened(posting && ref?.platform === 'indeed' ? {...posting, site: PLATFORM_NAMES.indeed} : posting);
   } catch (error) {
-    if (error instanceof ProviderError && isMiss(error)) return null;
-    throw error;
+    if (!(error instanceof ProviderError) || !isMiss(error)) throw error;
+    return error.status === 404 || error.status === 410 ? {is: 'gone'} : {is: 'unreadable'};
   }
+}
+
+/** A link's posting; null when it isn't there or isn't a posting. Throws a failure to retry. */
+export async function readLink(web: JobsWeb, link: string, signal: AbortSignal): Promise<FoundPosting | null> {
+  const result = await openLink(web, link, signal);
+  return result.is === 'read' ? result.posting : null;
 }

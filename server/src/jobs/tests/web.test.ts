@@ -5,7 +5,7 @@
 // a failure is thrown for the retry policy.
 import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
-import {boardPostings, JOBS_USER_AGENT, pagePosting, readLink} from '../web.ts';
+import {boardPostings, JOBS_USER_AGENT, openLink, pagePosting, readLink} from '../web.ts';
 import {fakeWeb, fixture, serveFixtures, TEST_APIS} from './fakeWeb.ts';
 
 const signal = new AbortController().signal;
@@ -150,6 +150,54 @@ describe('a link', () => {
     expect(await readLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).toBeNull();
   });
 
+  // What a search candidate is, once opened (D388): gone is dropped; unreadable stays, since the user can open it in a browser.
+  const html = {'content-type': 'text/html'};
+  test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1], 'gone' | 'unreadable']>([
+    ['a 404', {status: 404, body: 'Not Found', headers: html}, 'gone'],
+    ['a 410', {status: 410, body: 'Gone', headers: html}, 'gone'],
+    ['a 403', {status: 403, body: 'Forbidden', headers: html}, 'unreadable'],
+    ['a 401', {status: 401, body: 'Unauthorized', headers: html}, 'unreadable'],
+    ['a redirect to nowhere', {status: 302, body: '', headers: {}}, 'unreadable'],
+    ['a PDF', {status: 200, body: '%PDF-1.7', headers: {'content-type': 'application/pdf'}}, 'unreadable'],
+    ['a page drawn by script', {status: 200, body: fixture('script-drawn.html'), headers: html}, 'unreadable'],
+    ['a page with no posting on it', {status: 200, body: '<html><head><title>Sign in</title></head><body><main><p>Sign in to see this job.</p></main></body></html>', headers: html}, 'unreadable'],
+  ])('openLink: %s', async (_, answer, is) => {
+    const fake = await web();
+    fake.serve('https://woodgrovebank.example/careers/jobs/31877', answer);
+    expect(await openLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).toEqual({is});
+  });
+
+  test('openLink: a page that reads gives its posting', async () => {
+    const fake = await web();
+    const opened = await openLink(fake.web, 'https://fabrikam.example/careers/data-analyst-2291', signal);
+    expect(opened).toMatchObject({is: 'read', posting: {title: 'Data Analyst', site: 'Fabrikam Careers'}});
+  });
+
+  test.each<[string, string, 'read' | 'gone' | 'unreadable']>([
+    ['Greenhouse\'s posting', 'https://greenhouse.example/lucernepublishing/jobs/5520391', 'read'],
+    ['Greenhouse without it', 'https://greenhouse.example/lucernepublishing/jobs/9999999', 'gone'],
+    ['Lever\'s posting', 'https://lever.example/proseware/9a41c7e2-5d0b-4f1e-8c3a-2b7d90e1f4a6', 'read'],
+    ['Lever without it', 'https://lever.example/proseware/ffffffff-0000-4000-8000-000000000000', 'gone'],
+    ['Ashby\'s posting', 'https://ashby.example/litware/3f6e2a10-91c4-4b7e-a2d5-0c8f61e7b934', 'read'],
+    ['Ashby\'s board without it', 'https://ashby.example/litware/ffffffff-0000-4000-8000-000000000000', 'gone'],
+    ['a board Ashby doesn\'t have', 'https://ashby.example/nobody/ffffffff-0000-4000-8000-000000000000', 'gone'],
+  ])('openLink, through a platform\'s API: %s', async (_, link, is) => {
+    const fake = await web();
+    expect((await openLink(fake.web, link, signal)).is).toBe(is);
+  });
+
+  test('openLink: a platform\'s API refusing Jobs is unreadable, not gone', async () => {
+    const fake = await web();
+    fake.server.fault({path: /greenhouse/, response: {status: 403, body: 'Forbidden'}});
+    expect(await openLink(fake.web, 'https://greenhouse.example/lucernepublishing/jobs/5520391', signal)).toEqual({is: 'unreadable'});
+  });
+
+  test('openLink: a failure is thrown, as readLink\'s is', async () => {
+    const fake = await web();
+    fake.server.fault({path: /woodgrovebank/, response: {status: 503, body: 'Service Unavailable'}});
+    await expect(openLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).rejects.toMatchObject({kind: 'transient', status: 503});
+  });
+
   test('a page that fails is thrown for the retry', async () => {
     const fake = await web();
     fake.server.fault({path: /woodgrovebank/, response: {status: 502, body: 'Bad Gateway'}});
@@ -159,7 +207,7 @@ describe('a link', () => {
   });
 
   test('the fixtures stay on example domains', () => {
-    for (const name of ['greenhouse-board.json', 'lever-postings.json', 'ashby-board.json', 'posting-page.html', 'view-job.html']) {
+    for (const name of ['greenhouse-board.json', 'lever-postings.json', 'ashby-board.json', 'posting-page.html', 'view-job.html', 'script-drawn.html', 'closed-posting.html']) {
       const hosts = [...fixture(name).matchAll(/https?:\/\/([^/"'\s<>]+)/g)].map(match => match[1]!).filter(host => host !== 'schema.org');
       expect(hosts.every(host => host.endsWith('.example')), name).toBe(true);
     }

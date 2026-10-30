@@ -582,7 +582,9 @@ before recruiters reply, so searching later fails exactly when the JD is needed.
 
 1. **The email's own link** where there is one (Indeed's view-job link).
 2. **The hiring platform's public job API:** Greenhouse, Lever and Ashby. Exact and free.
-3. **Claude web search**, only when those miss.
+3. **Claude web search**, only when those miss. What it offers is opened first (D388): a page that's
+   gone is dropped, one Jobs can't read stays for the user to open, and the model can drop one that
+   reads but never save it.
 
 The model checks each candidate against the company, normalised title, location and date:
 - **Confident:** saved silently.
