@@ -347,6 +347,28 @@ test('the status filter: In process shows its three, and All all 62', async () =
   }
 });
 
+test('a pick Jobs couldn\'t read says so, and Open posting opens it (SV-132)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const trey = await applicationId(setpoint, 'Trey Research', 'Data Engineer I');
+    const link = 'https://www.glassdoor.example/job-listing/2291';
+    // The seed has no pick; the server's side of one is lookup.test.ts's.
+    await page.route(`**/api/jobs/applications/${trey}`, async route => {
+      const response = await route.fetch();
+      const body = await response.json() as {jd: {link: string | null}};
+      await route.fulfill({response, json: {...body, jd: {...body.jd, link}}});
+    });
+    await page.goto(`${setpoint.base}/jobs/${trey}`);
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-nojd').waitFor();
+    assert.equal(await pane.locator('.jb-nojd').textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Oct 1Look it up');
+    assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Look it up on Trey Research: No JD found becomes the lookup under way, in the detail and its row (38b, 34c)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

@@ -19,7 +19,7 @@
 //   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
 // - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
 //   turned down is never saved or offered again, and a lookup writes only while its application is
-//   still `looking` (./stick.ts).
+//   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link (SV-132).
 // - Cost: no cap (decision 61). Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
@@ -223,7 +223,8 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   if (picked) {
     const found = await readLink(web, picked.link, signal);
     if (!found) {
-      // The posting has come down since it was offered: as a lookup finding nothing (D320).
+      // It came down, the site turned Jobs away, or its page draws itself by script. Not retried on
+      // its own (D320), and the pick stays, so the application says so and still opens it (SV-132).
       markNotFound(store, applicationId);
       return 'not_found';
     }

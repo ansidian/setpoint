@@ -88,7 +88,9 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
     case 'candidates':
       return {icon: 'pending', text: 'In Needs you', title: `${jd.candidates} ${jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`};
     case 'not_found':
-      return {icon: 'remove', text: 'No JD found', title: 'No JD found'};
+      return jd.link
+        ? {icon: 'remove', text: 'Couldn\'t read', title: 'Couldn\'t read the posting you picked'}
+        : {icon: 'remove', text: 'No JD found', title: 'No JD found'};
     case 'looking':
       return {icon: 'progress_activity', text: 'Looking it up…', title: 'Looking for the posting', spin: true};
     case 'none':
@@ -121,9 +123,16 @@ const PLATFORM_APIS = ['Greenhouse', 'Lever', 'Ashby'];
 export const lookingWhere = (platform: string | null) => (platform && !PLATFORM_APIS.includes(platform) ? `${platform}, then the platforms, then search` : 'the email\'s link, then the platforms, then search');
 
 /** No JD found's line (38b): "Breezy and a web search had nothing for it on Oct 1". */
-export function notFoundLine(platform: string | null, lookedAt: string | null, timeZone: string, today: string): string {
+function notFoundLine(platform: string | null, lookedAt: string | null, timeZone: string, today: string): string {
   const who = platform ? `${platform} and a web search` : 'A web search';
   return lookedAt ? `${who} had nothing for it on ${dayWord(localDate(lookedAt, timeZone), today)}` : `${who} had nothing for it`;
+}
+
+/** Not found's lead and line: No JD found, or the posting the user picked that Jobs couldn't read (SV-132). */
+export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at'>, platform: string | null, timeZone: string, today: string): {lead: string; rest: string} {
+  if (!jd.link) return {lead: 'No JD found', rest: notFoundLine(platform, jd.looked_at, timeZone, today)};
+  const host = new URL(jd.link).hostname.replace(/^www\./, '');
+  return {lead: 'Couldn\'t read the posting you picked', rest: jd.looked_at ? `${host} gave Jobs no text on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : `${host} gave Jobs no text`};
 }
 
 /** Applications per week's bars: the busiest week 20 px and the rest in proportion; a week with none a 1 px stub. */

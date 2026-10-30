@@ -30,7 +30,7 @@ import {Bar, Sk} from '../states/Loading.tsx';
 import type {MailSlots} from '../slots.tsx';
 import {applicationPath, mailPath, NAV_PATH} from './api.ts';
 import {JdFacts, JdLists} from './Detail.tsx';
-import {appliedLine, appliedStanding, chipRole, foundLine, foundShort, lookingWhere, markLabel, markOf, notFoundLine, titleOf} from './words.ts';
+import {appliedLine, appliedStanding, chipRole, foundLine, foundShort, lookingWhere, markLabel, markOf, notFoundWords, titleOf} from './words.ts';
 
 /** What the list last knew of each email, so the reader's chip draws with its head. */
 const known = new Map<number, JobsMailMessageOut | null>();
@@ -265,7 +265,7 @@ function NoJd({detail, timeZone, today}: {detail: ApplicationOut; timeZone: stri
     );
   }
   const line = jd.state === 'not_found'
-    ? {icon: 'search_off' as const, lead: 'No JD found', rest: notFoundLine(detail.platform, jd.looked_at, timeZone, today)}
+    ? {icon: 'search_off' as const, ...notFoundWords(jd, detail.platform, timeZone, today)}
     : jd.state === 'candidates'
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${jd.candidates} ${jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};

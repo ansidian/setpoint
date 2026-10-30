@@ -461,6 +461,7 @@ test('Esc closes the popover at once, and goes no further (it would close the re
 
 test.each<[string, ApplicationOut, string]>([
   ['No JD found', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z'}), 'No JD found · Greenhouse and a web search had nothing for it on Oct 1'],
+  ['Couldn\'t read the posting you picked', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z', link: 'https://www.glassdoor.example/job-listing/2291'}), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Oct 1'],
   ['Looking for the posting…', detailOf(null, {state: 'looking', looked_at: '2026-10-07T16:00:00.000Z'}), 'Looking for the posting… · the email\'s link, then the platforms, then search'],
   ['Is this the posting?', detailOf(null, {state: 'candidates', candidates: 2}), 'Is this the posting? · 2 candidates in Needs you'],
 ])('without a JD the popover says so: %s, with Open in Jobs and no Full posting', async (_, detail, words) => {

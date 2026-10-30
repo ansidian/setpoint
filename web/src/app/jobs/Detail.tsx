@@ -34,7 +34,7 @@ import {eventMenu, moreMenu, statusMenu} from './menus.ts';
 import type {CorrectionActions} from './menus.ts';
 import {CandidatePicker} from './CandidatePicker.tsx';
 import {EditField} from './EditField.tsx';
-import {appliedLine, dayWord, latestStep, lookingWhere, markLabel, markOf, notFoundLine, STATUS_LABELS, titleOf} from './words.ts';
+import {appliedLine, dayWord, latestStep, lookingWhere, markLabel, markOf, notFoundWords, STATUS_LABELS, titleOf} from './words.ts';
 
 const EVENT_KINDS: Partial<Record<JobEventOut['kind'], string>> = {applied: 'Applied', assessment: 'Assessment', interview: 'Interview', offer: 'Offer', rejection: 'Rejected'};
 
@@ -84,7 +84,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, arrive
   const failed = useLoadFailed([load]);
   const shown: ApplicationRowOut | undefined = detail ?? (row?.id === id ? row : undefined);
 
-  const link = detail?.posting?.link ?? null;
+  const link = detail?.jd.link ?? null;
   // With no posting link, Open email while its JD is looked up (34c), and nothing once none was found (38b).
   const firstEmail = detail?.timeline.find(event => event.message_id !== null)?.message_id ?? null;
   const style = {'--readingPane': `${width}px`} as CSSProperties;
@@ -255,7 +255,7 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   // No JD found (D320), or never looked up (a closed application from history, D311): each says so
   // under the section's label, with Look it up where it can run.
   const line = detail.jd.state === 'not_found'
-    ? {icon: 'search_off' as const, lead: 'No JD found', rest: notFoundLine(detail.platform, detail.jd.looked_at, timeZone, today)}
+    ? {icon: 'search_off' as const, ...notFoundWords(detail.jd, detail.platform, timeZone, today)}
     : detail.jd.state === 'candidates'
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${detail.jd.candidates} ${detail.jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};

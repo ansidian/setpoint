@@ -53,9 +53,10 @@ function loadRows(store: Store) {
     if (posting) {
       return {state: 'found', source: posting.source, platform: posting.platform, found_at: posting.foundAt, candidates: 0, looked_at: application.jdLookupAt, link: posting.link};
     }
+    const unread = application.jdLookup === 'not_found' ? candidates.get(application.id)?.find(candidate => candidate.pickedAt) : undefined;
     return {
       state: application.jdLookup, source: null, platform: null, found_at: null,
-      candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt, link: null,
+      candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt, link: unread?.link ?? null,
     };
   };
   const rowOf = (application: Application): ApplicationRowOut => {

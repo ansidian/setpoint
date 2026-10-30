@@ -46,7 +46,7 @@ export type JdSource = (typeof JD_SOURCES)[number];
 /**
  * Where an application's JD stands, for its row and detail. `found` has a saved posting; `candidates`
  * waits in Needs you as a JD to confirm; `looking` is a lookup under way; `not_found` says "No JD
- * found" with Look it up (D320); `none` was never looked up (a closed application from history).
+ * found", or that a picked posting couldn't be read, with Look it up (D320); `none` was never looked up (a closed application from history).
  */
 export const JD_STATES = ['found', 'candidates', 'looking', 'not_found', 'none'] as const;
 export type JdState = (typeof JD_STATES)[number];

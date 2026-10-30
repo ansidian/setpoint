@@ -317,6 +317,27 @@ describe('unsure (decision 54)', () => {
 });
 
 describe('not found (D320)', () => {
+  test('a pick Jobs can\'t read keeps its link and asks nothing more, and Look it up searches again', async () => {
+    const s = await setup();
+    const link = 'https://www.glassdoor.example/job-listing/data-analyst-2291';
+    s.web.serve(link, {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}});
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: null});
+    s.answers({submit_posting_search: () => searched([{url: link, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Glassdoor', verdict: 'maybe'}])});
+    await s.drain();
+    const c = await signedIn(s.w, {routes: [jobsApi(s.store)]});
+    const [candidate] = applicationDetail(s.store, id).candidates;
+    expect((await c.send('POST', `/api/jobs/applications/${id}/jd/pick`, {body: {candidate: candidate!.id}})).status).toBe(200);
+    await s.drain();
+    expect(s.posting(id)).toBeUndefined();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link});
+    expect(s.lookupJobs(id).at(-1)!.state).toBe('done');
+
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await c.send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: null});
+  });
+
   test('"No JD found" after the platforms and a search missed, never retried on its own; Look it up tries again', async () => {
     const s = await setup();
     const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: null});

@@ -1055,7 +1055,8 @@ desktop and keeps it (D325).
 - **No JD found** (38b, D320): under a **Job description** label, a 44 px card (radius 12, an `edge`
   ring, padding 0 14, `ink3`): `search_off` 16, "No JD found" in `ink2`, "· Breezy and a web search
   had nothing for it on Oct 1", and a quiet small **Look it up** (`search`). Jobs never retries on
-  its own; a lookup that errored is retried and never shows this.
+  its own; a lookup that errored is retried and never shows this. A posting the user picked that
+  Jobs couldn't read says so instead (#276).
 - **Looking it up** (34c): the Full posting row outlined instead of filled (an `edge` ring): the
   shared spinner (`progress_activity` 16 in `ink3`, 900 ms a turn), "Looking for the posting…" in
   `ink2`, "LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
@@ -3359,3 +3360,8 @@ it changes what's on screen.
     SV-128, D384): a rejection whose company matches nothing but whose role an open application has
     is an update to assign, line two "A rejection · the same role as an application under another
     name". It never moves a status on a title alone. One matching no open role stays ignored.
+276. **A picked posting Jobs can't read says so** (Andy, 2026-10-30; darma SV-132): the card reads
+    "Couldn't read the posting you picked · glassdoor.com gave Jobs no text on Oct 1", the row
+    "Couldn't read", and the pick stays the application's link, so Open posting, `O` and the row's
+    menu open it. A 403, a page drawn by script and a posting that's gone all read the same: Jobs
+    can't tell them apart, and the link shows which. Look it up forgets the pick and searches again.

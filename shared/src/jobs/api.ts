@@ -55,7 +55,8 @@ export const jdSummarySchema = z.strictObject({
   candidates: z.int().nonnegative(),
   // When a lookup last ended (`not_found`: "had nothing for it on Oct 1") or began (`looking`).
   looked_at: instant.nullable(),
-  // The saved posting's link, for a row's Open posting and Copy posting link (J6); null unless found.
+  // The saved posting's link, for a row's Open posting and Copy posting link (J6). On `not_found`,
+  // the posting the user picked that Jobs couldn't read (SV-132). Null otherwise.
   link: z.url().nullable(),
 });
 export type JdSummaryOut = z.infer<typeof jdSummarySchema>;
