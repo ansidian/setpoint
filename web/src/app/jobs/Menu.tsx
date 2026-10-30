@@ -10,7 +10,7 @@
 // closes the menu and gives focus back to what opened it, and Tab closes it. A submenu opens to the
 // left of its item at its height (to the right where there's no room), and under the pointer as it
 // rests on its item. A press outside, a scroll, the window resizing or losing focus closes it all.
-// It's drawn on the page's body, so a band or a pane that clips can't cut it.
+// It's drawn in the page's main landmark, beside the page, so a band or a pane that clips can't cut it.
 import type {ReactNode} from 'react';
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'react';
 import {createPortal} from 'react-dom';
@@ -119,8 +119,22 @@ export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuA
       if ('element' in anchor && anchor.element.contains(event.target as Node)) return;
       latest.current();
     };
+    // A scroll that moves what it hangs from closes it; one that was already under way as it opened
+    // (a button scrolled into view, then pressed) leaves it be.
+    const was = 'element' in anchor ? anchor.element.getBoundingClientRect() : null;
+    const opened = performance.now();
     const away = (event: Event) => {
-      if (event.type === 'scroll' && inside(event.target)) return;
+      if (event.type === 'scroll') {
+        if (inside(event.target)) return;
+        // A box that clips rather than scrolls (a band unfolding) is moved by the page, not the user.
+        if (event.target instanceof Element && getComputedStyle(event.target).overflowY === 'hidden') return;
+        if (was) {
+          const now = (anchor as {element: HTMLElement}).element.getBoundingClientRect();
+          if (Math.abs(now.top - was.top) < 1 && Math.abs(now.left - was.left) < 1) return;
+        } else if (performance.now() - opened < 100) {
+          return;
+        }
+      }
       latest.current();
     };
     document.addEventListener('pointerdown', press, true);
@@ -135,7 +149,8 @@ export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuA
     };
   }, [anchor, tree]);
 
-  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} onBack={null} onClose={close} />, document.body);
+  // Drawn in the page's main landmark, as the toast is, beside the page rather than inside what clips it.
+  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} onBack={null} onClose={close} />, document.querySelector('main') ?? document.body);
 }
 
 function Level({spec, tree, place, onBack, onClose}: {
