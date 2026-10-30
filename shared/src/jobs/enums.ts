@@ -74,7 +74,7 @@ export type NeedsYouKind = (typeof NEEDS_YOU_KINDS)[number];
  * request with no application", "Is this the posting?" (unsure of the posting), and an email the user
  * took off an application with Not about this (J6): "taken off Software Engineer I".
  */
-export const NEEDS_YOU_REASONS = ['matches_several', 'names_no_role', 'names_other_role', 'no_application', 'unsure_posting', 'taken_off'] as const;
+export const NEEDS_YOU_REASONS = ['matches_several', 'names_no_role', 'names_other_role', 'same_role_elsewhere', 'no_application', 'unsure_posting', 'taken_off'] as const;
 export type NeedsYouReason = (typeof NEEDS_YOU_REASONS)[number];
 
 /** The fields a correction sets by hand, which no later email, re-run or lookup overwrites (decision 58). */

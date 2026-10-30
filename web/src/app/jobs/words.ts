@@ -153,6 +153,8 @@ export function whyLine(item: NeedsYouItemOut): string {
       return 'names no role, and there are two';
     case 'names_other_role':
       return 'names a role neither application has';
+    case 'same_role_elsewhere':
+      return 'the same role as an application under another name';
     case 'no_application':
       return `${eventWord(item.event_kind)} with no application`;
     case 'unsure_posting':

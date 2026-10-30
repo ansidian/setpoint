@@ -3355,3 +3355,7 @@ it changes what's on screen.
       - 38c draws the sidebar's item while off (States says it has none).
       - 39a and 39b draw News in Settings' nav without its warning (the seed's FOX 11 fails), and 39b
         draws the Anthropic key set.
+275. **A rejection under another name of the employer waits to be assigned** (Andy, 2026-10-30; darma
+    SV-128, D384): a rejection whose company matches nothing but whose role an open application has
+    is an update to assign, line two "A rejection · the same role as an application under another
+    name". It never moves a status on a title alone. One matching no open role stays ignored.

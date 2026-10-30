@@ -545,7 +545,7 @@ the table, as the reading pane does there (decision 71).
 | **A confirmation** ("Thank you for applying", "Application received") | Makes an application, unless it matches one (below). |
 | **An update** (assessment, interview, offer, rejection) that confidently matches one application | Added to it as an event. The status moves. |
 | **An update that might match** (two applications at that company, or the role doesn't match even normalised) | Waits in Needs you, to assign. |
-| **A rejection that matches nothing** | Ignored. There's nothing worth tracking about a role already closed. |
+| **A rejection that matches nothing** | Ignored. There's nothing worth tracking about a role already closed. When an open application elsewhere has its role, it may be another name of the employer, so it waits to be assigned (D384). |
 | **An interview, assessment or offer that matches nothing** (an Easy Apply that never confirmed) | Waits in Needs you with **Track this**, which makes the application from that email, looks up its JD and puts it straight into In process. |
 | **The rest**: account created, verification codes, "one final step", EEO and screening forms, job-board matches | Never makes an application. Added as a quiet event when it matches one; otherwise ignored. |
 | **A recruiter's cold email** | Out. Andy didn't apply. |
@@ -1259,7 +1259,7 @@ about 330 emails in the Jobs account since May, and Business's Career mail.
     iPhone work until it proves itself. It's a module that can be removed whole: two folders,
     `jobs_` tables, mail never imports it.
 50. **A confirmation makes an application;** nothing else does on its own. An update that might
-    match waits in Needs you; a rejection matching nothing is ignored; an interview, assessment or
+    match waits in Needs you; a rejection matching nothing is ignored (D384 asks when an open application has its role); an interview, assessment or
     offer matching nothing offers Track this. Account, code, form and job-board mail never makes
     one. Prod data: 7 of 29 rejections had no earlier confirmation under the same company name.
 51. **An application is a company and a role,** by requisition ID or normalised title. A second

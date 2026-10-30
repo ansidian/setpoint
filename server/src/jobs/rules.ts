@@ -317,8 +317,8 @@ export const EVENT_OF_EMAIL = {
  * - a confirmation makes an application, unless it matches an open one (a duplicate, quiet) or only
  *   a closed one (a re-application, linked); naming no company, it takes its Indeed pair's
  * - an assessment, interview, offer or rejection matching one becomes its event, moving the status;
- *   one that might match waits to be assigned; a rejection matching nothing is ignored, and the rest
- *   matching nothing wait as Track this
+ *   one that might match waits to be assigned; a rejection matching nothing is ignored unless an open
+ *   application elsewhere has its role (SV-128), and the rest matching nothing wait as Track this
  * - quiet mail becomes a quiet event when it matches, and is otherwise ignored; a job board's match
  *   email only joins an application as its Indeed pair
  */
@@ -359,6 +359,10 @@ export function planEmail(email: IncomingEmail, applications: KnownApplication[]
   if (isQuietJobEvent(kind)) return {do: 'ignore', why: 'quiet_matches_nothing'};
   if ('several' in found) return {do: 'needs_you', kind: 'update_to_assign', reason: found.several};
   if (found.none === 'names_other_role') return {do: 'needs_you', kind: 'update_to_assign', reason: 'names_other_role'};
-  if (kind === 'rejection') return {do: 'ignore', why: 'rejection_matches_nothing'};
+  if (kind === 'rejection') {
+    // Another name of the employer, perhaps: a title alone never moves a status, so it's asked.
+    const sameRoleOpen = namesRole(email.role) && applications.some(application => !isClosed(application.status) && hasRole(application, email.company, email.role));
+    return sameRoleOpen ? {do: 'needs_you', kind: 'update_to_assign', reason: 'same_role_elsewhere'} : {do: 'ignore', why: 'rejection_matches_nothing'};
+  }
   return {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'};
 }
