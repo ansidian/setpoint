@@ -924,6 +924,11 @@ desktop and keeps it (D325).
     posting? · 3 candidates"); the date in `ink3` 12 ("Aug 30", "Applied Jun 2"); and two 24 px
     buttons at 12: outline **Assign to…**, **Choose…** or **Track this**, and quiet **Not about a
     job** or **None of these**.
+  - **Choose…** (not drawn) opens a menu from the button's bottom-left corner, as Assign to… does:
+    each candidate a 44 px item with `description` and two lines (the role over "New York, NY ·
+    Greenhouse" in `ink3` 12) and its 26 px `open_in_new`, then a divider and **None of these**
+    (`block`). A pick saves the JD and the row folds away as an answered item does, with "JD saved
+    for Lucerne Publishing · Undo" (#266).
   - Dismiss all folds the rows away together (180 ms), then the line, and says "Dismissed 6 from
     history · Undo" (D324).
 
@@ -1022,7 +1027,10 @@ desktop and keeps it (D325).
       event ("Verify your email", "Your candidate account is ready") has no kind and its subject is
       `ink3` 12.5.
     - Hover `sub`, its 26 px ··· showing; with its menu open, `sub2` and the ··· `sub3` in `ink`.
-    - An event whose email Gmail has purged keeps its line and opens nothing (D317).
+    - An event whose email Gmail has purged keeps its line and opens nothing (D317): after its
+      subject "· No longer in Gmail" in `ink3`, no hover fill and the default cursor, its tip
+      "Gmail no longer has this email, so Jobs keeps only its line", and its ··· without Open email
+      (#269).
   - **Applied before at Northwind Talent** (D306): a label, then one 44 px card per earlier
     application there (radius 12, an `edge` ring, padding 0 8 0 14): `history` 17 in `ink3`, "Junior
     Developer" in `ink`, "· Applied Feb 9" in `ink3`, its status mark and "Rejected Mar 14", and an
@@ -1094,7 +1102,17 @@ with Undo for 6 seconds and #147's glyph (override 36).
   Needs you.
 - **Set status** (not drawn, nor the status chip's menu) offers the five statuses; a status set by
   hand gives way only to an email that sets one (an assessment, interview, offer or rejection),
-  never to a quiet one (D322).
+  never to a quiet one (D322). The chip's menu grows from its bottom-left corner and More's is its
+  submenu (#267): Applied, In process, Offer, Rejected and Withdrawn as 32 px items, each its mark
+  and its label in the table's colours, the current one with a `check` at the right; Ghosted isn't
+  one, as it's a flag. A pick crossfades the chip (120 / 120 ms), the row settles from `sub2` over
+  900 ms, the set-by-hand `edit` appears, and the toast says "Set to Rejected · Undo". While the
+  status is set by hand, a divider and **Let emails decide** (`mail`) end the menu: the status goes
+  back to what the emails make it, and the `edit` goes.
+- **A right-click** on a row (#248, #268) opens its actions at the pointer, moving the cursor to it
+  without opening it: **Open** ↵, **Open posting** O when there's a link, More's list (Edit company
+  and Edit title open the application with that field in edit), then **Copy company and role** and
+  **Copy posting link**. On a timeline event it opens the event's ··· menu.
 
 ### Search
 
@@ -3256,3 +3274,18 @@ it changes what's on screen.
     Looking for the posting row put how it was found straight after the title, 10 px apart, with no
     "·"; the search snippet's "Full posting · " keeps it, as it introduces a quote. Board audit:
     the boards draw both marks in `ink3` and the dot after "Full posting".
+266. **From history's Choose… is a menu** (Andy, 2026-10-29; darma SV-124, D364): the candidates
+    open from the button, as Assign to…'s applications do, so history's rows keep one height; a pick
+    folds the row as an answered Needs you item does. Board audit: no board draws it.
+267. **Set status, and Let emails decide** (Andy, 2026-10-29; darma SV-124, D365): the chip's menu
+    and More's submenu list the five statuses in their colours, Ghosted not among them. A status set
+    by hand otherwise holds until an email sets one, so the menu offers **Let emails decide** while
+    it's set by hand, handing the status back without waiting for an email. Board audit: no board
+    draws it.
+268. **A Jobs row's right-click** (Andy, 2026-10-29; darma SV-124, D366): #248's rule on the table,
+    Open, Open posting, More's list and two Copy items; a timeline event's is its ··· menu. Board
+    audit: no board draws it.
+269. **An event whose email is gone says "No longer in Gmail"** (Andy, 2026-10-29; darma SV-124,
+    D367): on its line, so it doesn't look like a click that failed, with a tip saying why. "No
+    longer in" rather than "Deleted", as Trash expiry and retention also take mail. Board audit: no
+    board draws it.
