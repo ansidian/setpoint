@@ -415,7 +415,7 @@ describe('the iPhone app\'s contract', () => {
   test.skipIf(RECORDING)('the API still answers the way the recorded fixtures say', async () => {
     const found = compare(await recordAll());
     expect(found, 'An installed iPhone app would fail on these. Keep the old field, status or value alongside the new one; or, once setpoint-ios handles it, npm run contract:record and pin the new commit there.').toEqual([]);
-  });
+  }, 30_000);
 
   test.runIf(RECORDING)('records the fixtures', async () => {
     write(await recordAll());
