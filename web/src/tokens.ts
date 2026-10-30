@@ -62,6 +62,8 @@ export const colour = {
   dayOut: 'rgba(255,255,255,.035)',
   // The line's reminder phrase (#258): a hue of its own, so it doesn't read as moving the item.
   remind: 'oklch(0.8 0.11 345)',
+  // Jobs's In process (#264): a cobalt of its own, deeper than `accent` so it never reads as the open row's bar.
+  inProcess: 'oklch(0.7 0.15 258)',
 } as const;
 
 export type ColourToken = keyof typeof colour;
@@ -114,6 +116,7 @@ export const lightColour: Record<ColourToken, string> = {
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
   remind: 'oklch(0.55 0.14 345)',
+  inProcess: 'oklch(0.52 0.16 258)',
 };
 
 /** Overlay shadows; shadows only on overlays. */

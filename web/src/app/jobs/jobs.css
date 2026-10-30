@@ -146,7 +146,7 @@
 .jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-scroll .gh.sr { border-top: 0; }
 
-/* Status: a 7 px mark, the label, then the step. Existing colours only (D309). */
+/* Status: a 7 px mark, the label, then the step. Existing colours only (D309), but In process's cobalt (#264, D362). */
 .st { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .st .sl { flex: none; }
 .st .step { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
@@ -155,13 +155,13 @@
 @media (hover: hover) { .st .by:hover { color: var(--ink); } }
 .sd { width: 7px; height: 7px; border-radius: 999px; flex: none; }
 .sd.applied { box-shadow: inset 0 0 0 1.5px var(--ink2); }
-.sd.proc { background: var(--ink); }
+.sd.proc { background: var(--inProcess); }
 .sd.offer { background: var(--good); }
 .sd.rej { background: var(--ink3); }
 .sd.wd { box-shadow: inset 0 0 0 1.5px var(--ink3); }
 .sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--ink3); }
 .sl.applied { color: var(--ink2); }
-.sl.proc { color: var(--ink); font-weight: 500; }
+.sl.proc { color: var(--inProcess); font-weight: 500; }
 .sl.offer { color: var(--good); font-weight: 500; }
 .sl.rej, .sl.wd, .sl.ghost { color: var(--ink3); }
 
@@ -263,7 +263,7 @@ button.jb-ev:active { background: var(--sub3); transition-duration: var(--dur-pr
 .jb-ev.first.last .node::before { display: none; }
 .jb-ev .node i { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--ink2); box-shadow: 0 0 0 3px var(--page); }
 .jb-ev.quiet .node i { width: 5px; height: 5px; background: var(--page); box-shadow: inset 0 0 0 1.2px var(--ink3), 0 0 0 3px var(--page); }
-.jb-ev.proc .node i { background: var(--ink); }
+.jb-ev.proc .node i { background: var(--inProcess); }
 .jb-ev .t { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .jb-ev .t .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-ev.quiet .t .s { color: var(--ink3); font-size: 12.5px; }

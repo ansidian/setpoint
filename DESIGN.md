@@ -92,6 +92,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 | `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled (#258) |
+| `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.52 0.16 258)` | Jobs's In process: its mark, its label and its events' node (#264) |
 
 - **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
@@ -944,12 +945,12 @@ desktop and keeps it (D325).
   - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
     its left edge.
 - **Status** (D309): a 7 px mark, the status, then its step in `ink3` (an ellipsis when it's long).
-  Existing colours only:
+  Existing colours only, but In process's cobalt (#264, D362):
 
   | Status | Mark | Label | Step |
   | --- | --- | --- | --- |
   | Applied | a 1.5 px `ink2` ring | `ink2` | "· Re-applied" beside the detail, "· Re-applied, rejected Sep 2" without it |
-  | In process | an `ink` disc | `ink` 500 | the latest step in `ink2`: "· Interview Tue Oct 13, 2:00 PM", "· Case study due Oct 12" |
+  | In process | an `inProcess` disc | `inProcess` 500 | the latest step in `ink2`: "· Interview Tue Oct 13, 2:00 PM", "· Case study due Oct 12" |
   | Offer | a `good` disc | `good` 500 | "· Oct 6" |
   | Rejected | an `ink3` disc | `ink3` | "· Oct 5" |
   | Withdrawn | a 1.5 px `ink3` ring | `ink3` | "· Sep 10" |
@@ -1015,7 +1016,7 @@ desktop and keeps it (D325).
     - A grid of 52 | 14 | text | ···, 10 apart, at least 38 px, radius 10, padding 0 6 0 8, reaching
       8 px past the body on each side.
     - The date in `ink2` 12.5 ("Oct 1"; "Today" in `ink`).
-    - The node: a 7 px `ink2` dot (`ink` on an In process event) on a 1 px `hair` line through the
+    - The node: a 7 px `ink2` dot (`inProcess` on an In process event, #264) on a 1 px `hair` line through the
       events, ringed in `page` to break it; a **quiet** event's is a 5 px `ink3` ring.
     - What it was in `ink3` 12 ("Applied", "Interview"), then the email's subject in `ink`; a quiet
       event ("Verify your email", "Your candidate account is ready") has no kind and its subject is
@@ -3243,3 +3244,8 @@ it changes what's on screen.
     candidates in Needs you", or "Not looked up", the last two with Look it up where it can run.
     Search with no match anywhere is one line, "No application matches “x”". Board audit: the boards
     draw the buttons live and More, the pencil and the ··· on hover.
+264. **In process is cobalt** (Andy, 2026-10-29; darma SV-123, D362): its mark, its label and an In
+    process event's node take `inProcess`, a cobalt of its own (Night `oklch(0.7 0.15 258)`, Light
+    `oklch(0.52 0.16 258)`), picked from a mock beside `accent`, periwinkle, teal and violet. It is
+    deeper than `accent`, so an open In process row's bar and its mark never read as one. The other
+    statuses keep D309's colours. Board audit: the boards draw In process in `ink`.
