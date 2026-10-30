@@ -2,13 +2,13 @@
 // application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
 // Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
 // its Undo (J4); search and the shell's item (J5); Needs you's answers, the corrections and their
-// Undo (J6). Mounted under /api behind the session by server.ts, a wiring point, through
-// createApp's `routes`, so the app itself never names Jobs.
+// Undo (J6); what mail's slots draw (J7). Mounted under /api behind the session by server.ts, a
+// wiring point, through createApp's `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
 import {
-  jobsAssignInput, jobsEditInput, jobsMergeInput, jobsMoveInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
+  jobsAssignInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
 } from '@setpoint/shared';
 import type {JobsChangeOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
 import {conflict, invalid, notFound, parse} from '../errors.ts';
@@ -18,7 +18,7 @@ import {
   deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, setStatus,
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
-import {applicationDetail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
+import {applicationDetail, jobsInMail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
 import {undoCorrection} from './undo.ts';
 
@@ -38,6 +38,8 @@ export function jobsApi(store: Store) {
   api.get('/jobs/nav', c => c.json(jobsNav(store)));
   // Jobs's own search, never mail's or ⌘K's (D316).
   api.get('/jobs/search', c => c.json(jobsSearch(store, parse(jobsSearchInput, {q: c.req.query('q') ?? ''}).q)));
+  // Mail's slots (J7): a page of rows, or the email open, in one request (D306).
+  api.get('/jobs/mail', c => c.json(jobsInMail(store, parse(jobsMailInput, {messages: c.req.query('messages') ?? ''}).messages)));
   api.get('/jobs/applications/:id', c => c.json(applicationDetail(store, id(c.req.param('id')))));
   // Look it up: the application's JD looked up again, open or closed. It answers at once with the
   // detail, its JD `looking`; the lookup runs on Jobs's worker and its end comes as a `jobs` event.

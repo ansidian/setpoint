@@ -7,7 +7,7 @@ import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {emailReadingOf, jobsPromptInput} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
-import {isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
+import {appliedBefore, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
 
 describe('companies match loosely (decision 51)', () => {
@@ -280,5 +280,43 @@ describe('the model\'s answer, read leniently', () => {
       'Triage read it as: organisation Fabrikam, via Workday, type confirmation, kind career.', 'Triage\'s summary: Application received', '',
       'Body:', 'Thank you for applying to Software Engineer II.',
     ].join('\n'));
+  });
+});
+
+describe('Applied before in mail (J7, D306): a match email\'s company, loosely and by its aliases', () => {
+  const contoso = app('Contoso Pharmaceuticals', 'Associate Software Engineer', 'rejected', {appliedAt: '2026-09-16T18:00:00.000Z'});
+  const contosoOld = app('Contoso Pharmaceuticals Inc.', 'Lab Tools Intern', 'withdrawn', {appliedAt: '2026-03-02T18:00:00.000Z'});
+  const contosoLabs = app('Contoso', 'QA Engineer', 'applied', {appliedAt: '2026-08-10T18:00:00.000Z'});
+  const university = app('Contoso University', 'Teaching Assistant', 'rejected');
+  // Renamed by hand from "Fourth Coffee Roasters", which it still answers to (stick.ts).
+  const renamed = app('Fourth Coffee', 'Software Developer', 'applied', {aliases: [{company: 'Fourth Coffee Roasters Ltd', titleKey: null, requisitionId: null}]});
+  const merged = app('Tailspin Toys', 'Full Stack Developer', 'applied', {aliases: [{company: 'Wingtip Toys', titleKey: 'web developer', requisitionId: null}]});
+  const waiting = app('Indeed', 'Data Analyst', 'applied', {companyUnknown: true});
+  const all = [contoso, contosoOld, contosoLabs, university, renamed, merged, waiting];
+
+  test.each<[string, {event: string | null; company: string | null}, number[], string | null]>([
+    ['loose: case, punctuation and "Inc." ignored, newest first', {event: 'match', company: 'CONTOSO PHARMACEUTICALS, INC'}, [contoso.id, contosoLabs.id, contosoOld.id], 'contoso'],
+    ['one name the start of the other, word by word', {event: 'match', company: 'Contoso'}, [university.id, contoso.id, contosoLabs.id, contosoOld.id], 'contoso'],
+    ['"Contoso" is the start of "Contoso University", which isn\'t "Contoso Pharmaceuticals"', {event: 'match', company: 'Contoso University'}, [university.id, contosoLabs.id], 'contoso'],
+    ['one application: its own company is the search', {event: 'match', company: 'Fourth Coffee'}, [renamed.id], 'fourth coffee'],
+    ['the company a correction left it answering to', {event: 'match', company: 'Fourth Coffee Roasters'}, [renamed.id], 'fourth coffee'],
+    ['and a merge\'s', {event: 'match', company: 'Wingtip Toys'}, [merged.id], 'tailspin toys'],
+    ['no match', {event: 'match', company: 'Northwind Traders'}, [], null],
+    ['not "Contosoco"', {event: 'match', company: 'Contosoco'}, [], null],
+    ['a company-less confirmation waiting for its pair is never one', {event: 'match', company: 'Indeed'}, [], null],
+    ['a match email naming no company', {event: 'match', company: null}, [], null],
+    ['an email that isn\'t a match: a rejection', {event: 'rejection', company: 'Contoso Pharmaceuticals'}, [], null],
+    ['nor a confirmation', {event: 'confirmation', company: 'Contoso Pharmaceuticals'}, [], null],
+    ['nor one Jobs read nothing of', {event: null, company: 'Contoso Pharmaceuticals'}, [], null],
+  ])('%s', (_, email, matches, query) => {
+    const found = appliedBefore(email, all);
+    expect(found?.matches.map(each => each.id) ?? []).toEqual(matches);
+    expect(found?.query ?? null).toBe(query);
+  });
+
+  test('several companies sharing no word: the newest\'s is the search', () => {
+    const fabrikam = app('Fabrikam', 'Data Analyst', 'applied', {appliedAt: '2026-10-05T18:00:00.000Z', aliases: [{company: 'Trey Research', titleKey: null, requisitionId: null}]});
+    const trey = app('Trey Research', 'Data Engineer I', 'applied', {appliedAt: '2026-10-01T18:00:00.000Z'});
+    expect(appliedBefore({event: 'match', company: 'Trey Research'}, [trey, fabrikam])).toEqual({matches: [fabrikam, trey], query: 'fabrikam'});
   });
 });

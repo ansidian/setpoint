@@ -1,12 +1,12 @@
 // Jobs's reads (J1): the page (its two numbers, Needs you, From history, the rows, and J4's history
 // pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; J5's search and
-// the shell's item. Ghosted comes from the clock here, never from a stored status (rules.ts).
+// the shell's item; J7's emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
 import type {
-  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsNavOut, JobsPageOut, JobsSearchOut, NeedsYouItemOut,
-  PostingOut,
+  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
+  JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {isQuietJobEvent} from '@setpoint/shared';
-import {and, asc, eq, isNull} from 'drizzle-orm';
+import {and, asc, desc, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
 import {localDay} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {isoNow} from '../store.ts';
@@ -15,9 +15,10 @@ import {jobsDb} from './db.ts';
 import {historyStatus} from './historyState.ts';
 import {existingMessages} from './mail.ts';
 import {readingStatus} from './readerState.ts';
-import {countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
+import {appliedBefore, countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
 import * as j from './schema.ts';
 import {searchApplications} from './search.ts';
+import {knownApplications} from './stick.ts';
 
 type Application = typeof j.jobsApplications.$inferSelect;
 type Candidate = typeof j.jobsJdCandidates.$inferSelect;
@@ -156,4 +157,47 @@ export function jobsNav(store: Store): JobsNavOut {
   const waiting = jobsDb(store.sqlite).select({id: j.jobsNeedsYou.id}).from(j.jobsNeedsYou)
     .where(and(isNull(j.jobsNeedsYou.resolvedAt), eq(j.jobsNeedsYou.fromHistory, false))).all();
   return {enabled: jobsEnabled(store), needs_you: waiting.length};
+}
+
+/**
+ * GET /api/jobs/mail?messages=…: what mail's slots draw for these emails, in one request for a page
+ * of rows (J7, D306): the application each belongs to, for the reader's JD chip, and Applied before on
+ * a job board's match email whose company matches applications, the most recent of them named. Only
+ * the emails with something are listed, and none while Jobs is off. Nothing here writes, so mail's
+ * counts never change (D313).
+ */
+export function jobsInMail(store: Store, messageIds: number[]): JobsMailOut {
+  if (!messageIds.length || !jobsEnabled(store)) return {messages: []};
+  const db = jobsDb(store.sqlite);
+  // The application an email belongs to is the one its event is on; the newest, should two be.
+  const belongs = new Map<number, number>();
+  for (const event of db.select({messageId: j.jobsEvents.messageId, applicationId: j.jobsEvents.applicationId}).from(j.jobsEvents)
+    .where(inArray(j.jobsEvents.messageId, messageIds)).orderBy(asc(j.jobsEvents.at), asc(j.jobsEvents.id)).all()) {
+    if (event.messageId !== null) belongs.set(event.messageId, event.applicationId);
+  }
+  const matchEmails = db.select({messageId: j.jobsEmailsRead.messageId, event: j.jobsEmailsRead.event, company: j.jobsEmailsRead.company}).from(j.jobsEmailsRead)
+    .where(and(inArray(j.jobsEmailsRead.messageId, messageIds), eq(j.jobsEmailsRead.event, 'match'), isNotNull(j.jobsEmailsRead.company)))
+    .orderBy(desc(j.jobsEmailsRead.messageId)).all();
+  if (!belongs.size && !matchEmails.length) return {messages: []};
+
+  const {byId, rowOf} = loadRows(store);
+  const summary = (id: number): JobsMailApplicationOut | null => {
+    const application = byId.get(id);
+    if (!application) return null;
+    const row = rowOf(application);
+    return {id: row.id, company: row.company, title: row.title, applied_on: row.applied_on, status: row.status, status_on: row.status_on, ghosted: row.ghosted};
+  };
+  const known = matchEmails.length ? knownApplications(store) : [];
+  const out = new Map<number, JobsMailMessageOut>();
+  const entry = (messageId: number) => out.get(messageId) ?? out.set(messageId, {message_id: messageId, application: null, applied_before: null}).get(messageId)!;
+  for (const [messageId, applicationId] of belongs) {
+    const application = summary(applicationId);
+    if (application) entry(messageId).application = application;
+  }
+  for (const email of matchEmails) {
+    const found = appliedBefore(email, known);
+    const latest = found ? summary(found.matches[0]!.id) : null;
+    if (found && latest) entry(email.messageId).applied_before = {query: found.query, count: found.matches.length, latest};
+  }
+  return {messages: messageIds.filter(id => out.has(id)).map(id => out.get(id)!)};
 }

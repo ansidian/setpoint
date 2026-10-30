@@ -216,6 +216,21 @@ the lint rule still refuses an import of Jobs from triage.
   `statusFromEvents`) unless the user set it; an email brought in that sets a status later than one
   set by hand takes over, as it would have on arrival.
 
+## Jobs in mail (J7)
+
+- **What:** `GET /api/jobs/mail?messages=1,2,3` ([`queries.ts`](queries.ts) `jobsInMail`) answers what mail's
+  slots draw for a page of rows, or the email the reader has open, in one request (up to 500 ids):
+  for each email with something, the application it belongs to (its event's, for the reader's JD
+  chip), and Applied before. Emails with nothing are left out, and everything is while Jobs is off.
+  It only reads, so the Inbox's counts never change (D313).
+- **Applied before** (rules.ts `appliedBefore`, D306): only on an email Jobs read as a job board's
+  match ("<title> @ <company>", `jobs_emails_read.event = 'match'` with its company). Its company
+  matches applications as an email's does: loosely (`sameCompany`) and by the companies corrections
+  gave them (stick.ts `knownApplications`' aliases). The badge names the most recent; `query` is the
+  search that shows them all on Jobs (the words their companies share, else the newest's company).
+- **The seed** keeps the Indeed match email as the reader would have read it (its event, company and
+  role), so its badge shows (board 37c).
+
 ## The lint rule
 
 `module-boundary/jobs` in [`eslint.config.js`](../../../eslint.config.js) refuses an import of

@@ -1,7 +1,8 @@
 // Jobs's pure rules, tested as tables (tests/rules.test.ts, tests/reading.test.ts): Ghosted, the
 // per-week buckets, the counts by status, which of a company's other applications are Applied before
 // (J1); and what each email does (J2): the keys and loose company names applications match on, a
-// confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked emails. No
+// confident match, duplicates and re-applications, Indeed's pairs, statuses and blocked emails; and
+// mail's Applied before (J7). No
 // database, no clock: the caller passes now and the zone.
 import {GHOSTED_AFTER_DAYS, isQuietJobEvent, JOB_STATUSES, JOB_WEEKS, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobCountsOut, JobEventKind, JobReadMode, JobStatus, JobWeekOut, Kind, NeedsYouReason} from '@setpoint/shared';
@@ -180,6 +181,27 @@ export function matchApplication(applications: KnownApplication[], company: stri
   if (!roles.length) return {none: 'names_other_role'};
   const openRoles = roles.filter(application => !isClosed(application.status));
   return openRoles.length === 1 ? {match: openRoles[0]!} : {several: 'matches_several'};
+}
+
+/**
+ * Applied before (D306, decision 52), for mail: a job board's match email ("Associate Software
+ * Engineer @ Contoso Pharmaceuticals") whose company matches applications, loosely and by the
+ * companies corrections gave them, as an email does. Any other email, or one naming no company, has
+ * none. The matches come newest first, the badge naming the first; `query` is the search that shows
+ * them all on Jobs: the words their companies share, or the newest's company when they share none.
+ */
+export function appliedBefore<T extends KnownApplication>(email: {event: string | null; company: string | null}, applications: T[]): {matches: T[]; query: string} | null {
+  if (email.event !== 'match' || !email.company?.trim()) return null;
+  const company = email.company;
+  const matches = applications.filter(application => !application.companyUnknown && answersTo(application, company)).sort(newestFirst);
+  if (!matches.length) return null;
+  const words = matches.map(application => companyWords(application.company));
+  const shared: string[] = [];
+  for (const [index, word] of words[0]!.entries()) {
+    if (!words.every(each => each[index] === word)) break;
+    shared.push(word);
+  }
+  return {matches, query: shared.length ? shared.join(' ') : companyKey(matches[0]!.company)};
 }
 
 /**

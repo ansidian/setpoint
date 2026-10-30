@@ -10,6 +10,7 @@
 //   POST /api/jobs/from-history/undo     jobsUndoDismissInput → JobsDismissedOut (J4: the toast's Undo)
 //   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
 //   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
+//   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (J7: what mail's slots draw for a page of rows, or the email open)
 //
 // J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
 //   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
@@ -284,6 +285,51 @@ export type JobsSearchOut = z.infer<typeof jobsSearchSchema>;
  */
 export const jobsNavSchema = z.strictObject({enabled: z.boolean(), needs_you: z.int().nonnegative()});
 export type JobsNavOut = z.infer<typeof jobsNavSchema>;
+
+/**
+ * J7's request (D306): the emails a page of mail's rows shows, or the one the reader has open, as
+ * their ids joined by commas. At most 500, so a long list asks in a few requests, never one per row.
+ */
+export const JOBS_MAIL_MAX = 500;
+export const jobsMailInput = z.strictObject({
+  messages: z.string().regex(/^[1-9]\d{0,9}(,[1-9]\d{0,9})*$/, 'Message ids joined by commas.')
+    .transform(list => [...new Set(list.split(',').map(Number))]).pipe(z.array(id).min(1).max(JOBS_MAIL_MAX)),
+});
+
+/** An application as mail's slots name it: "Software Engineer I · Applied Oct 1 · In process". */
+export const jobsMailApplicationSchema = z.strictObject({
+  id,
+  company: z.string(),
+  title: z.string(),
+  applied_on: localDate,
+  status: jobStatusSchema,
+  // The day its status was set: "Rejected Oct 5".
+  status_on: localDate,
+  ghosted: z.boolean(),
+});
+export type JobsMailApplicationOut = z.infer<typeof jobsMailApplicationSchema>;
+
+/**
+ * One email with something for mail's slots (DESIGN.md › Jobs › In mail; boards 37a–37c):
+ * `application` is the one it belongs to (the reader's JD chip); `applied_before`, on a job board's
+ * match email whose company matches applications (loosely, and by the companies corrections gave
+ * them), is the most recent of them, how many there are, and the search that shows them all in Jobs
+ * ("contoso pharmaceuticals").
+ */
+export const jobsMailMessageSchema = z.strictObject({
+  message_id: id,
+  application: jobsMailApplicationSchema.nullable(),
+  applied_before: z.strictObject({
+    query: z.string(),
+    count: z.int().positive(),
+    latest: jobsMailApplicationSchema,
+  }).nullable(),
+});
+export type JobsMailMessageOut = z.infer<typeof jobsMailMessageSchema>;
+
+/** GET /api/jobs/mail: only the emails with something to show; none while Jobs is off (D313: mail's counts never change). */
+export const jobsMailSchema = z.strictObject({messages: z.array(jobsMailMessageSchema)});
+export type JobsMailOut = z.infer<typeof jobsMailSchema>;
 
 /** An account Jobs reads and how (decision 56); an account not listed is off. */
 export const jobsReadAccountSchema = z.strictObject({account_id: id, reads: z.enum(JOB_READ_MODES)});

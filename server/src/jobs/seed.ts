@@ -447,11 +447,15 @@ const NEEDS_YOU: SeedNeedsYou[] = [
   {kind: 'jd_to_confirm', reason: 'unsure_posting', fromHistory: true, company: 'Margie\'s Travel', title: 'Associate Developer', platform: 'Greenhouse', createdAt: ['10-01', '20:14']},
 ];
 
-/** The Indeed match email (mail's sample) and the Inbox's two older Northwind rejections: read, making nothing. */
-const IGNORED_MAIL: [subject: string, at: [string, string]][] = [
-  ['Associate Software Engineer @ Contoso Pharmaceuticals', ['09-15', '06:05']],
-  ['Update on your application', ['03-14', '15:22']],
-  ['Your application for Data Engineer Intern', ['03-03', '09:41']],
+/**
+ * The Indeed match email (mail's sample) and the Inbox's two older Northwind rejections: read, making
+ * nothing. The match email is kept as the reader keeps one (its event, company and role), so mail
+ * shows Applied before on it (J7, board 37c).
+ */
+const IGNORED_MAIL: {subject: string; at: [string, string]; match?: {company: string; title: string}}[] = [
+  {subject: 'Associate Software Engineer @ Contoso Pharmaceuticals', at: ['09-15', '06:05'], match: {company: 'Contoso Pharmaceuticals', title: 'Associate Software Engineer'}},
+  {subject: 'Update on your application', at: ['03-14', '15:22']},
+  {subject: 'Your application for Data Engineer Intern', at: ['03-03', '09:41']},
 ];
 
 /** Every application the seed makes, the table's first. */
@@ -467,7 +471,7 @@ export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: S
   const ids = new Map<string, number>();
   const byRole = new Map<string, number>();
   const appliedAts = new Map<number, string>();
-  const readMessages = new Map<number, {outcome: 'application' | 'event' | 'ignored'; at: string}>();
+  const readMessages = new Map<number, {outcome: 'application' | 'event' | 'ignored'; at: string; match?: {company: string; title: string}}>();
 
   sqlite.transaction(() => {
     db.insert(j.jobsSettings).values({
@@ -540,14 +544,17 @@ export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: S
       }).run();
     }
 
-    for (const [subject, when] of IGNORED_MAIL) {
+    for (const {subject, at: when, match} of IGNORED_MAIL) {
       const messageId = findMessage(mail, subject, at(...when));
       if (messageId === null) throw new Error(`The Inbox's email "${subject}" isn't in mail's sample.`);
-      readMessages.set(messageId, {outcome: 'ignored', at: at(...when)});
+      readMessages.set(messageId, {outcome: 'ignored', at: at(...when), match});
     }
     // Read by the history pass when Jobs was turned on, or within a minute of arriving after it.
-    for (const [messageId, {outcome, at: received}] of readMessages) {
-      db.insert(j.jobsEmailsRead).values({messageId, readAt: received > turnedOn ? minutesAfter(received, 1) : turnedOn, outcome}).run();
+    for (const [messageId, {outcome, at: received, match}] of readMessages) {
+      db.insert(j.jobsEmailsRead).values({
+        messageId, readAt: received > turnedOn ? minutesAfter(received, 1) : turnedOn, outcome,
+        ...(match ? {at: received, event: 'match' as const, company: match.company, title: match.title, titleKey: titleKey(match.title)} : {}),
+      }).run();
     }
   })();
   return {applications: SEED_APPLICATIONS.length, now: SEED_NOW};
