@@ -253,10 +253,10 @@ export function postingReadingOf(input: Record<string, unknown> | null, fallback
   const summary = typeof input?.summary === 'string' ? input.summary.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim().slice(0, 600) : '';
   return {
     summary,
-    location: line(input?.location, 120) ?? fallbackLocation,
+    location: line(input?.location, 200) ?? fallbackLocation,
     workplace: workplace === 'on_site' || workplace === 'hybrid' || workplace === 'remote' ? workplace : null,
     workplaceDetail: line(input?.workplace_detail, 40),
-    salary: line(input?.salary, 80),
+    salary: line(input?.salary, 240),
     mustHaves: items(input?.must_haves),
     niceToHaves: items(input?.nice_to_haves),
   };

@@ -1,10 +1,11 @@
 // The JD lookup's pure rules (J3), as tables: links that are postings, the platforms and board
 // names to try, a board's postings that could be the role, what the model's verdicts make
 // (confident, unsure with three at most, none), how a lookup ends (a failure is retried, never "No JD
-// found"), which failures are misses, and when web search runs. Example domains stand in for the
-// platforms' real hosts.
+// found"), which failures are misses, when web search runs, and how much of a salary or a location
+// a reading keeps. Example domains stand in for the platforms' real hosts.
 import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
+import {postingReadingOf} from '../jdPrompt.ts';
 import {
   boardNames, emailLinks, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingFit, postingLinks, postingRef, senderBoard,
 } from '../lookupRules.ts';
@@ -186,5 +187,21 @@ describe('how a lookup ends', () => {
     ['no search when a source failed: retried first', 'search', [{is: 'failed'}, {is: 'none'}], false],
   ])('nextSourceRuns: %s', (_, source, steps, runs) => {
     expect(nextSourceRuns(source, steps)).toBe(runs);
+  });
+});
+
+describe('what a reading keeps of a salary and a location (SV-129)', () => {
+  const PAY = '$3,900.00 - $6,500.00 per month (grades A, B, C, D, E, F; varies by grade, by office and by bargaining unit)';
+  const PLACES = 'Fresno, Sacramento, Oakland, Riverside, San Diego, Santa Rosa, Redding, Bakersfield, Stockton, Modesto, Visalia, San Bernardino, Eureka and Salinas, CA';
+
+  test.each<[string, 'salary' | 'location', string, string]>([
+    ['a salary with its notes is kept whole', 'salary', PAY, PAY],
+    ['a salary of 240 is kept whole', 'salary', 'x'.repeat(240), 'x'.repeat(240)],
+    ['a salary past 240 is cut', 'salary', 'x'.repeat(241), `${'x'.repeat(239)}…`],
+    ['a list of places is kept whole', 'location', PLACES, PLACES],
+    ['a location of 200 is kept whole', 'location', 'x'.repeat(200), 'x'.repeat(200)],
+    ['a location past 200 is cut', 'location', 'x'.repeat(201), `${'x'.repeat(199)}…`],
+  ])('%s', (_, field, stated, kept) => {
+    expect(postingReadingOf({[field]: stated}, null)[field]).toBe(kept);
   });
 });
