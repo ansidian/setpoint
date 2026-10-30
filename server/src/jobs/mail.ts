@@ -6,6 +6,7 @@ import {and, asc, count, eq, gte, inArray, isNotNull, isNull, lt, or, sql} from 
 import type {SQL} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import type {Store} from '../store.ts';
+import {htmlToMarkdown} from './markdown.ts';
 import {jobsEmailsRead} from './schema.ts';
 
 type MailReader = Pick<Store, 'db'>;
@@ -36,7 +37,7 @@ export interface JobsEmail {
   fromAddress: string;
   subject: string;
   receivedAt: string;
-  // The text body, or the snippet when there's none.
+  // What the email says, as emailBody reads it.
   body: string;
   organisation: string | null;
   via: string | null;
@@ -45,16 +46,35 @@ export interface JobsEmail {
   summary: string | null;
 }
 
+// Invisible padding senders put in a preheader, which would only spend the prompt's evidence limit.
+const INVISIBLE = /\u00ad|\u034f/g;
+const LINK = /<?https?:\/\/\S+>?/g;
+/** A text part counts as a stub once the HTML says this many times as much, links aside (Indeed's names no employer). */
+const STUB_RATIO = 3;
+
+/**
+ * What an email says, for the reader (SV-128): its text part, unless that's empty, a stub or HTML
+ * itself, when its HTML's words take over; else the snippet. Only Jobs reads mail this way.
+ */
+export function emailBody({text, html, snippet}: {text: string; html: string | null; snippet: string}): string {
+  const textIsHtml = /^\s*<(!doctype|html)\b/i.test(text);
+  const plain = textIsHtml ? '' : text.replace(INVISIBLE, '').trim();
+  const source = html ?? (textIsHtml ? text : null);
+  const rich = source ? htmlToMarkdown(source.replace(INVISIBLE, '')) : '';
+  if (!rich) return plain || snippet;
+  return rich.length >= STUB_RATIO * plain.replace(LINK, '').trim().length ? rich : plain;
+}
+
 /** The email, once triage has sorted it; null while it's Unsorted or once it's gone. */
 export function jobsEmail(store: MailReader, messageId: number): JobsEmail | null {
   const row = store.db.select({
     id: t.messages.id, accountId: t.messages.accountId, accountLabel: t.accounts.label, fromName: t.messages.fromName, fromAddress: t.messages.fromAddress,
-    subject: t.messages.subject, receivedAt: t.messages.receivedAt, bodyText: t.messages.bodyText, snippet: t.messages.snippet,
+    subject: t.messages.subject, receivedAt: t.messages.receivedAt, bodyText: t.messages.bodyText, bodyHtml: t.messages.bodyHtml, snippet: t.messages.snippet,
     organisation: t.messages.organisation, via: t.messages.via, type: t.messages.type, kind: t.messages.kind, summary: t.messages.summary, lane: t.messages.lane,
   }).from(t.messages).leftJoin(t.accounts, eq(t.accounts.id, t.messages.accountId)).where(eq(t.messages.id, messageId)).get();
   if (!row || row.lane === null) return null;
-  const {bodyText, snippet, lane: _, ...email} = row;
-  return {...email, body: bodyText.trim() || snippet};
+  const {bodyText, bodyHtml, snippet, lane: _, ...email} = row;
+  return {...email, body: emailBody({text: bodyText, html: bodyHtml, snippet})};
 }
 
 /** An email as the JD lookup reads it for links (J3): its sender, text and HTML, whether or not triage has sorted it; null once it's gone. */

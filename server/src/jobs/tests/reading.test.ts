@@ -5,6 +5,7 @@
 // a status set by hand, blocked emails, and the model's answer read leniently.
 import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
+import {emailBody} from '../mail.ts';
 import {emailReadingOf, jobsPromptInput} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
 import {appliedBefore, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
@@ -253,6 +254,27 @@ describe('what each email does (decision 50)', () => {
   test('an email Not an application blocked is ignored however it reads', () => {
     const email = {messageId: 90, at: '2026-10-07T16:00:00.000Z', event: 'interview' as const, company: 'Litware', companyNamed: true, role: {titleKey: null, requisitionId: null}};
     expect(planEmail(email, applications, blocked, matches)).toEqual({do: 'ignore', why: 'blocked'});
+  });
+});
+
+describe('an email\'s words for the reader', () => {
+  const stub = 'Your application has been submitted. Good luck!\nContact Indeed <https://apply.indeed.example/contactus?iaUid=1k5md1uc2go4h801&apiToken=63068f635f0c971d3fbaad3fbe89b745dfc382f86002bac3db46f>\n------\nIndeed - one search. all jobs';
+  const applied = '<table><tr><td><h2>Software Programmer</h2><p>Fourth Coffee - Brea, CA 92821</p><p>The following items were sent to Fourth Coffee. Good luck!</p><p>Application</p><p>Resume</p><p>Next steps: the employer or job advertiser may reach out to you directly about your application, so keep an eye on your email and your phone, and check My jobs on Indeed for any update on where it stands.</p></td></tr></table>';
+  const full = 'We received your application for Data Analyst, requisition R-100, in Claims. Our team will review it and be in touch within two weeks.';
+
+  test.each<[string, {text: string; html: string | null; snippet: string}, string[], string[]]>([
+    ['an HTML-only email has its HTML\'s words', {text: '', html: '<p>We\'ve decided to pursue other candidates.</p>', snippet: ''}, ['pursue other candidates'], ['<p>']],
+    ['a text part that\'s a stub gives way to the HTML that names the employer', {text: stub, html: applied, snippet: stub.slice(0, 120)}, ['Fourth Coffee - Brea', 'Software Programmer'], ['apiToken']],
+    ['a text part saying as much as the HTML stays', {text: full, html: `<div><p>${full}</p><p>Regards, the team</p></div>`, snippet: ''}, [full], []],
+    ['no HTML: the text', {text: full, html: null, snippet: ''}, [full], []],
+    ['HTML with no words keeps the text', {text: full, html: '<img src="https://example.com/a.png"><style>p {color: red}</style>', snippet: ''}, [full], []],
+    ['nothing at all: the snippet', {text: '', html: null, snippet: 'Your application was received'}, ['Your application was received'], []],
+    ['a text part that is itself HTML is read as HTML', {text: `<!DOCTYPE html><html><head><title>x</title></head><body><p>${full}</p></body></html>`, html: null, snippet: ''}, [full], ['<body>', 'DOCTYPE']],
+    ['the invisible padding of a preheader goes', {text: `Log in to view${'\u034f\u00ad '.repeat(40)}the message`, html: null, snippet: ''}, ['Log in to view'], ['\u034f', '\u00ad']],
+  ])('%s', (_, parts, has, hasnt) => {
+    const body = emailBody(parts);
+    for (const words of has) expect(body).toContain(words);
+    for (const words of hasnt) expect(body).not.toContain(words);
   });
 });
 

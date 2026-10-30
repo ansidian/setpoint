@@ -293,6 +293,21 @@ describe('the hook', () => {
   });
 });
 
+describe('what the reader sees', () => {
+  test('an HTML-only email reaches the model with its words, not an empty body (SV-128)', async () => {
+    const {store, drain, jobsRequests, accountId} = await setup();
+    const email = RECORDED_EMAILS.find(each => each.key === 'fabrikam-applied')!;
+    upsertMessages(store, accountId(email.account), [{
+      providerId: 'p-html', threadId: 'thread-html', rfc822Id: null, fromName: email.from[0], fromAddress: email.from[1], subject: email.subject,
+      snippet: '', bodyText: '', bodyHtml: `<table><tr><td><p>${email.body}</p></td></tr></table>`, receivedAt: email.at, senderAuth: null, attachments: [],
+      unread: true, trashed: false, archived: false,
+    }]);
+    await drain();
+    const asked = jobsRequests().find(request => subjectOf(request) === email.subject);
+    expect(asked?.input).toContain(email.body);
+  });
+});
+
 describe('the AI down (When things break)', () => {
   test('emails wait and are counted, then are read once it\'s back; nothing is lost', async () => {
     const s = await setup();
