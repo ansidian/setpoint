@@ -69,6 +69,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   `npm run seed` and `npm run try` load News from it, its times moved onto the seed's clock, in place
   of the sample's. It stays out of git (Local names the area); the browser checks seed with
   `--sample-news`, so they and the page screenshots never see it.
+- Search has a score (SV-134): `server/src/dev/scoreSearch.ts` runs the real `matchSearch` for the
+  searches in `data/search-test/test.json` and prints numbers and search text only. `--migrate`
+  scores the local snapshot (`server/src/dev/exportSearchSnapshot.ts`, the mail of prod with nothing
+  secret in it) on a scratch copy at this checkout's migrations, so unreleased code can be scored
+  before anything is deployed. Both files stay out of git, under `data/`, in the main checkout.
 
 ## Tests own behaviour
 
