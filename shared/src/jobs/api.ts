@@ -11,6 +11,7 @@
 //   GET  /api/jobs/search?q=…            JobsSearchOut (J5: company or role first, then JD text)
 //   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
 //   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (J7: what mail's slots draw for a page of rows, or the email open)
+//   GET  /api/jobs/ai                    JobsAiOut (J8: Settings › AI's Jobs group and its row in Usage this month)
 //
 // J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
 //   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
@@ -34,7 +35,7 @@
 import {z} from 'zod';
 import {id, instant, localDate} from '../api/common.ts';
 import {
-  JD_SOURCES, JD_STATES, JOB_EVENT_KINDS, JOB_HAND_FIELDS, JOB_HISTORY_STATES, JOB_READ_MODES, JOB_STATUS_SETTERS, JOB_STATUSES,
+  JD_SOURCES, JD_STATES, JOB_EVENT_KINDS, JOB_HAND_FIELDS, JOB_HISTORY_STATES, JOB_READ_MODES, JOB_READING_CAUSES, JOB_STATUS_SETTERS, JOB_STATUSES,
   JOB_WORKPLACES, NEEDS_YOU_KINDS, NEEDS_YOU_REASONS,
 } from './enums.ts';
 
@@ -170,6 +171,9 @@ export const jobsReadingSchema = z.strictObject({
   // The first failure since the last success, and the provider's words; null while healthy.
   since: instant.nullable(),
   reason: z.string().nullable(),
+  // What the page words (J8): unreachable or rate limited, retried; the key refused or missing, waiting
+  // for Settings › AI. Null while healthy.
+  cause: z.enum(JOB_READING_CAUSES).nullable(),
   // False when it waits for a key in Settings › AI rather than retrying.
   retrying: z.boolean(),
 });
@@ -356,6 +360,27 @@ export const jobsSettingsPatchInput = z.strictObject({
   accounts: z.array(jobsReadAccountSchema).refine(list => new Set(list.map(each => each.account_id)).size === list.length, 'Each account once.').optional(),
 });
 export type JobsSettingsPatch = z.infer<typeof jobsSettingsPatchInput>;
+
+/** A part of Jobs's AI usage this month: its calls, tokens and cost. */
+export const jobsUsageSchema = z.strictObject({
+  calls: z.int().nonnegative(),
+  input_tokens: z.int().nonnegative(),
+  output_tokens: z.int().nonnegative(),
+  cost_usd: z.number().nonnegative(),
+});
+export type JobsUsageOut = z.infer<typeof jobsUsageSchema>;
+
+/**
+ * Settings › AI's Jobs group (J8, board 39b, D315): its three models, fixed, shown by name (override
+ * 26), why they can't run (no key) or null, and this month's usage (since local midnight on the 1st),
+ * in total and in its three parts, for This month (no cap, so no meter) and Usage this month's row.
+ */
+export const jobsAiSchema = z.strictObject({
+  models: z.strictObject({emails: z.string(), finding: z.string(), reading: z.string()}),
+  missing: z.string().nullable(),
+  this_month: jobsUsageSchema.extend({emails: jobsUsageSchema, finding_jds: jobsUsageSchema, reading_jds: jobsUsageSchema}),
+});
+export type JobsAiOut = z.infer<typeof jobsAiSchema>;
 
 /** Dismiss all's answer, and Undo's: the From history items it dismissed, or brought back. */
 export const jobsDismissedSchema = z.strictObject({needs_you: z.array(id)});

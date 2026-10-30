@@ -2,7 +2,7 @@
 // application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
 // Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
 // its Undo (J4); search and the shell's item (J5); Needs you's answers, the corrections and their
-// Undo (J6); what mail's slots draw (J7). Mounted under /api behind the session by server.ts, a
+// Undo (J6); what mail's slots draw (J7); Settings › AI's Jobs group (J8). Mounted under /api behind the session by server.ts, a
 // wiring point, through createApp's `routes`, so the app itself never names Jobs.
 import type {Context} from 'hono';
 import {Hono} from 'hono';
@@ -18,6 +18,7 @@ import {
   deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, setStatus,
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
+import {jobsAi} from './models.ts';
 import {applicationDetail, jobsInMail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
 import {undoCorrection} from './undo.ts';
@@ -49,6 +50,8 @@ export function jobsApi(store: Store) {
     return c.json(applicationDetail(store, applicationId), 202);
   });
   api.get('/jobs/settings', c => c.json(jobsSettings(store)));
+  // Settings › AI's Jobs group: the models, and this month's spend in its three parts (J8).
+  api.get('/jobs/ai', c => c.json(jobsAi(store)));
   // On starts the history pass (once: it never reads an email twice); off stops reading.
   api.patch('/jobs/settings', async c => c.json(updateJobsSettings(store, parse(jobsSettingsPatchInput, await body(c)))));
   // Dismiss all: the same as ignoring each From history item (D324). Its answer names them for Undo.

@@ -3,12 +3,14 @@
 // last model call failed or there was no key to call with, as of its last success. Emails wait while
 // it's down, counted for the page ("5 emails not read yet, Anthropic unreachable since 8:52 AM,
 // retrying"), and are read once it's back.
+import type {JobReadingCause, JobsReadingOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import type {ProviderErrorKind} from '../domain/retry.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
 import {emailsWaiting} from './mail.ts';
+import {NO_JOBS_KEY} from './models.ts';
 import type {ReadWindow} from './mail.ts';
 import * as j from './schema.ts';
 
@@ -55,16 +57,24 @@ export function recordReadFailure(store: Store, kind: ProviderErrorKind, reason:
   });
 }
 
-/** The page's reading line: how many emails wait, and whether the AI is down and since when. */
-export function readingStatus(store: Store) {
+/** What the page words (J8): no key, the key refused, rate limited, or unreachable (the rest). */
+function causeOf(health: Row): JobReadingCause {
+  if (health.lastError === NO_JOBS_KEY) return 'no_key';
+  if (health.lastErrorKind === 'auth') return 'refused';
+  return health.lastErrorKind === 'rate_limited' ? 'rate_limited' : 'unreachable';
+}
+
+/** The page's reading line: how many emails wait, and whether the AI is down, why and since when. */
+export function readingStatus(store: Store): JobsReadingOut {
   const window = readWindow(store);
   const health = row(store);
   const down = isDown(health);
   return {
     waiting: window ? emailsWaiting(store, window) : 0,
-    state: down ? 'down' as const : 'healthy' as const,
+    state: down ? 'down' : 'healthy',
     since: down ? health.failingSince : null,
     reason: down ? health.lastError : null,
+    cause: down ? causeOf(health) : null,
     // A refused or missing key waits for Settings › AI; anything else is retried.
     retrying: down && health.lastErrorKind !== 'auth' && health.lastErrorKind !== 'permanent',
   };

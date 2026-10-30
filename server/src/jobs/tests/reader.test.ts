@@ -178,7 +178,7 @@ describe('a recorded set of invented emails (Done when)', () => {
     ]);
     expect(page.from_history).toEqual([]);
     expect(page.counts).toEqual({all: 8, ghosted: 0, by_status: {applied: 5, in_process: 2, offer: 0, rejected: 1, withdrawn: 0}});
-    expect(page.reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, retrying: false});
+    expect(page.reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
     expect(page.rows.find(row => row.company === 'Tailspin Toys')!.jd).toMatchObject({state: 'looking'});
 
     // Each email Jobs reads is read once; Business mail that isn't Career never is.
@@ -298,7 +298,7 @@ describe('the AI down (When things break)', () => {
     const s = await setup();
     await s.arrive('fabrikam-applied');
     const healthy = jobsPage(s.store).reading;
-    expect(healthy).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, retrying: false});
+    expect(healthy).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
 
     // Anthropic overloaded for Jobs; triage still sorts.
     s.fake.answer(request => {
@@ -308,7 +308,7 @@ describe('the AI down (When things break)', () => {
     await s.arrive('fabrikam-interview', 'proseware-screen');
     expect(s.store.db.select().from(t.messages).where(eq(t.messages.id, s.ids.get('proseware-screen')!)).get()!.lane).toBe('attention');
     const down = jobsPage(s.store).reading;
-    expect(down).toEqual({waiting: 2, state: 'down', since: '2026-10-12T17:01:00.000Z', reason: 'Anthropic: Overloaded (529)', retrying: true});
+    expect(down).toEqual({waiting: 2, state: 'down', since: '2026-10-12T17:01:00.000Z', reason: 'Anthropic: Overloaded (529)', cause: 'unreachable', retrying: true});
     expect(s.readJob()).toMatchObject({state: 'queued', lastError: 'Anthropic: Overloaded (529)'});
     expect(s.read('fabrikam-interview')).toBeUndefined();
     expect(s.applications()[0]!.status).toBe('applied');
@@ -324,7 +324,7 @@ describe('the AI down (When things break)', () => {
     });
     s.w.advance(31 * 60_000);
     await s.drain();
-    expect(jobsPage(s.store).reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, retrying: false});
+    expect(jobsPage(s.store).reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
     expect(s.read('fabrikam-interview')?.outcome).toBe('event');
     expect(s.read('proseware-screen')?.outcome).toBe('needs_you');
     expect(s.applications()[0]).toMatchObject({status: 'in_process', step: 'Interview Tue Oct 13, 2:00 PM'});
@@ -336,7 +336,7 @@ describe('the AI down (When things break)', () => {
     setSecret(s.store, 'openai_api_key', FAKE_KEYS.openai);
     await s.arrive('fabrikam-applied');
     expect(s.read('fabrikam-applied')).toBeUndefined();
-    expect(jobsPage(s.store).reading).toEqual({waiting: 1, state: 'down', since: expect.any(String), reason: NO_JOBS_KEY, retrying: false});
+    expect(jobsPage(s.store).reading).toEqual({waiting: 1, state: 'down', since: expect.any(String), reason: NO_JOBS_KEY, cause: 'no_key', retrying: false});
     expect(s.readJob()).toMatchObject({state: 'failed'});
 
     setSecret(s.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
@@ -457,7 +457,7 @@ describe('the seed', () => {
     await engine.tick();
     await engine.settled();
     expect(fake.requests).toEqual([]);
-    expect(jobsPage(w.store).reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, retrying: false});
+    expect(jobsPage(w.store).reading).toEqual({waiting: 0, state: 'healthy', since: null, reason: null, cause: null, retrying: false});
     expect(jobsPage(w.store).counts.all).toBe(62);
   });
 });

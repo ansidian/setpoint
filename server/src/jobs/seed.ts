@@ -11,6 +11,7 @@
 import type Database from 'better-sqlite3';
 import {SEED_NOW, SEED_TIME_ZONE, STATUS_OF_JOB_EVENT, isQuietJobEvent} from '@setpoint/shared';
 import type {JdSource, JobEventKind, JobStatus, JobWorkplace, NeedsYouKind, NeedsYouReason} from '@setpoint/shared';
+import * as t from '../db/schema.ts';
 import {zonedInstant} from '../domain/time.ts';
 import type {Store} from '../store.ts';
 import {jobsDb, migrateJobs} from './db.ts';
@@ -461,8 +462,35 @@ const IGNORED_MAIL: {subject: string; at: [string, string]; match?: {company: st
 /** Every application the seed makes, the table's first. */
 export const SEED_APPLICATIONS: SeedApplication[] = [...TABLE, ...OLDER.map(olderApplication)];
 
-/** Loads Jobs's sample, turned on and reading Jobs and Business (D310). Mail's sample must be in first. */
-export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: Store['db']}) {
+/**
+ * Jobs's AI usage this month (board 39b), invented: emails $0.62, finding JDs $2.71 and reading JDs
+ * $0.52, $3.85 in all, spread evenly from when Jobs was turned on (Oct 1, 6:02 PM) to the seed's moment.
+ */
+const JOBS_USAGE: {purpose: 'jobs_emails' | 'jobs_finding_jds' | 'jobs_reading_jds'; model: string; calls: number; dollars: number; input: number; output: number}[] = [
+  {purpose: 'jobs_emails', model: 'claude-haiku-5-5', calls: 412, dollars: 0.62, input: 1100, output: 90},
+  {purpose: 'jobs_finding_jds', model: 'claude-sonnet-5-5', calls: 21, dollars: 2.71, input: 24_000, output: 900},
+  {purpose: 'jobs_reading_jds', model: 'claude-haiku-5-5', calls: 64, dollars: 0.52, input: 5200, output: 380},
+];
+
+function jobsUsage(from: string): (typeof t.aiUsage.$inferInsert)[] {
+  const start = Date.parse(from);
+  const span = Date.parse(SEED_NOW) - 30 * 60_000 - start;
+  return JOBS_USAGE.flatMap(({purpose, model, calls, dollars, input, output}) => {
+    const micros = Math.round(dollars * 1_000_000);
+    // Whole micros a call, the remainder spread over the first calls, so the month adds up exactly.
+    const each = Math.floor(micros / calls);
+    return Array.from({length: calls}, (_, index) => ({
+      at: new Date(start + Math.floor((span * index) / calls)).toISOString(), provider: 'anthropic' as const, model, purpose, messageId: null,
+      inputTokens: input, outputTokens: output, costMicros: each + (index < micros - each * calls ? 1 : 0),
+    }));
+  });
+}
+
+/**
+ * Loads Jobs's sample, turned on and reading Jobs and Business (D310). Mail's sample must be in first.
+ * `usage` adds Jobs's AI usage this month, as mail's sample does its own (board 39b).
+ */
+export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.Database; db: Store['db']; usage?: boolean}) {
   migrateJobs(sqlite);
   const db = jobsDb(sqlite);
   const mail = {db: mailDb};
@@ -556,6 +584,7 @@ export function seedJobs({sqlite, db: mailDb}: {sqlite: Database.Database; db: S
         ...(match ? {at: received, event: 'match' as const, company: match.company, title: match.title, titleKey: titleKey(match.title)} : {}),
       }).run();
     }
+    if (usage) mailDb.insert(t.aiUsage).values(jobsUsage(turnedOn)).run();
   })();
   return {applications: SEED_APPLICATIONS.length, now: SEED_NOW};
 }

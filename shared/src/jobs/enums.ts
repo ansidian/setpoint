@@ -95,6 +95,13 @@ export type JobReadMode = (typeof JOB_READ_MODES)[number];
 export const JOB_HISTORY_STATES = ['not_started', 'running', 'waiting', 'done'] as const;
 export type JobHistoryState = (typeof JOB_HISTORY_STATES)[number];
 
+/**
+ * Why Jobs's reading is down (J8, board 38b), as the page words it: Anthropic unreachable or rate
+ * limited (retried), its key refused, or no key in Settings › AI (both waiting for Settings › AI).
+ */
+export const JOB_READING_CAUSES = ['unreachable', 'rate_limited', 'refused', 'no_key'] as const;
+export type JobReadingCause = (typeof JOB_READING_CAUSES)[number];
+
 /** Ghosted: still at Applied this many days after its last email (decision 55). */
 export const GHOSTED_AFTER_DAYS = 30;
 

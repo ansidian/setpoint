@@ -427,7 +427,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
   const store = {sqlite, db, timeZone: SEED_TIME_ZONE, now: () => new Date(SEED_NOW), keyring: null};
   const {stories} = newsSnapshot ? snapshotOrSample(store, newsSnapshot, newsImagesDir) : seedNews(store, newsImagesDir);
   if (usage) db.insert(t.aiUsage).values(sampleUsage()).run();
-  seedJobs({sqlite, db});
+  seedJobs({sqlite, db, usage});
   return {now: SEED_NOW, emails: SAMPLE_EMAILS.length, items: SAMPLE_ITEMS.length, stories};
 }
 
