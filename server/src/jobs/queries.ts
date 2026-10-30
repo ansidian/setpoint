@@ -49,10 +49,12 @@ function loadRows(store: Store) {
   });
   const jdOf = (application: Application): JdSummaryOut => {
     const posting = postings.get(application.id);
-    if (posting) return {state: 'found', source: posting.source, platform: posting.platform, found_at: posting.foundAt, candidates: 0, looked_at: application.jdLookupAt};
+    if (posting) {
+      return {state: 'found', source: posting.source, platform: posting.platform, found_at: posting.foundAt, candidates: 0, looked_at: application.jdLookupAt, link: posting.link};
+    }
     return {
       state: application.jdLookup, source: null, platform: null, found_at: null,
-      candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt,
+      candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt, link: null,
     };
   };
   const rowOf = (application: Application): ApplicationRowOut => {

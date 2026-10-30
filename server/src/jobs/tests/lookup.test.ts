@@ -161,7 +161,7 @@ describe('confident (decision 54)', () => {
     expect(s.models.requests[1]!.input).toMatch(/^Employer: Lucerne Publishing\nPosting: Junior Developer\nLocation given: New York, NY\n\n## About Lucerne Publishing/);
 
     const detail = applicationDetail(s.store, id);
-    expect(detail.jd).toEqual({state: 'found', source: 'platform', platform: 'Greenhouse', found_at: SEED_NOW, candidates: 0, looked_at: SEED_NOW});
+    expect(detail.jd).toEqual({state: 'found', source: 'platform', platform: 'Greenhouse', found_at: SEED_NOW, candidates: 0, looked_at: SEED_NOW, link: expect.any(String)});
     expect(detail.posting).toMatchObject({
       summary: LUCERNE_READING.summary, location: 'New York, NY', workplace: 'hybrid', workplace_detail: '3 days', salary: '$80,000–$95,000',
       must_haves: LUCERNE_READING.must_haves, nice_to_haves: LUCERNE_READING.nice_to_haves,
@@ -282,7 +282,7 @@ describe('unsure (decision 54)', () => {
     expect(s.asked()).toEqual(['submit_posting_check']);
     expect(s.posting(id)).toBeUndefined();
     const page = jobsPageSchema.parse(jobsPage(s.store));
-    expect(page.rows.find(row => row.id === id)!.jd).toEqual({state: 'candidates', source: null, platform: null, found_at: null, candidates: 2, looked_at: SEED_NOW});
+    expect(page.rows.find(row => row.id === id)!.jd).toEqual({state: 'candidates', source: null, platform: null, found_at: null, candidates: 2, looked_at: SEED_NOW, link: null});
     expect(page.needs_you).toEqual([expect.objectContaining({
       kind: 'jd_to_confirm', reason: 'unsure_posting', company: 'Lucerne Publishing', title: 'Junior Developer', platform: 'Greenhouse', application_id: id,
       at: '2026-10-05T17:20:00.000Z', subject: null, event_kind: null, from_history: false,
@@ -329,7 +329,7 @@ describe('not found (D320)', () => {
       'api.ashby.example/posting-api/job-board/treyresearch', 'api.ashby.example/posting-api/job-board/trey-research',
     ]);
     expect(s.asked()).toEqual(['submit_posting_search']);
-    expect(applicationDetail(s.store, id).jd).toEqual({state: 'not_found', source: null, platform: null, found_at: null, candidates: 0, looked_at: SEED_NOW});
+    expect(applicationDetail(s.store, id).jd).toEqual({state: 'not_found', source: null, platform: null, found_at: null, candidates: 0, looked_at: SEED_NOW, link: null});
     expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
 
     // Hours of rescans later, nothing more.

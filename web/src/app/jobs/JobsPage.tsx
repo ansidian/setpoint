@@ -4,6 +4,10 @@
 // header into Search: its results replace the table's rows as the user types, company or role first,
 // then a match only in a JD's text with its line; Needs you folds away while a query is in.
 //
+// J6: Needs you's answers and the corrections, each with its toast and Undo (act.ts); a row's
+// right-click opens its actions at the pointer (#268), and More's Edit company and Edit title (or the
+// right-click's) open the application with that field in edit.
+//
 // Keys: `J` / `K` move through Needs you's items and then the table's rows (with an application open,
 // they open the next and previous one); Enter opens; `O` opens the posting; `/` searches; Esc folds an
 // unfolded posting, then closes the detail (in a narrow window, Back), then clears the query, then
@@ -12,10 +16,11 @@
 // Live: a `jobs` event refreshes what's on screen (logic/live.ts). An application that lands takes its
 // place by the sort and settles from `sub2` over 900 ms; a row an email moves on crossfades its status
 // and settles the same way. In a filtered view a row stays put until the next visit.
-import type {ApplicationRowOut, JobsPageOut, JobsSearchOut} from '@setpoint/shared';
+import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, JobsPageOut, JobsSearchOut} from '@setpoint/shared';
+import type {MouseEvent as ReactMouseEvent} from 'react';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone as userZone} from '../../api/auth.ts';
-import {useResource} from '../../api/client.ts';
+import {updateCached, useResource} from '../../api/client.ts';
 import {localDate} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {motion, news as arrivals} from '../../tokens.ts';
@@ -25,15 +30,25 @@ import {useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {useCompact} from '../Phone.tsx';
 import {navigate} from '../router.ts';
+import {copyText, takesContextMenu} from '../ContextMenu.tsx';
 import {Bar, LoadFailed, Sk, useLoadFailed} from '../states/Loading.tsx';
-import {applicationPath, JOBS_PATH, searchPath} from './api.ts';
+import {showToast, toastFailure} from '../toast.ts';
+import {act} from './act.ts';
+import {
+  applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
+  pickCandidate, searchPath, setStatus,
+} from './api.ts';
+import {JobsMenu} from './Menu.tsx';
+import type {MenuAnchor, MenuSpec} from './Menu.tsx';
+import {rowMenu} from './menus.ts';
+import type {CorrectionActions} from './menus.ts';
 import {Detail} from './Detail.tsx';
 import type {FullPostingHandle} from './FullPosting.tsx';
 import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
-import {HeaderRow, rowKey, Rows} from './Table.tsx';
-import {DEFAULT_SORT, sortRows, tabTitle} from './words.ts';
+import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
+import {DEFAULT_SORT, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import './jobs.css';
 
@@ -115,8 +130,9 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // A filtered view holds its rows for the visit: one an email moves out of the filter stays put.
   const rows = useMemo(() => page?.rows ?? [], [page]);
   const [hold, setHold] = useState<{filter: Filter; ids: ReadonlySet<number>}>({filter: 'all', ids: new Set()});
-  const held = hold.filter === filter ? hold.ids : new Set<number>();
-  const filtered = rows.filter(row => matches(row, filter) || held.has(row.id));
+  const held = useMemo(() => (hold.filter === filter ? hold.ids : new Set<number>()), [hold, filter]);
+  // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
+  const filtered = useMemo(() => rows.filter(row => matches(row, filter) || held.has(row.id)), [rows, filter, held]);
   if (filter !== 'all' && (hold.filter !== filter || filtered.some(row => !held.has(row.id)))) setHold({filter, ids: new Set(filtered.map(row => row.id))});
   const table = useMemo(() => sortRows(filtered, sort), [filtered, sort]);
 
@@ -130,7 +146,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   const open = route.open;
   const openRow = open === null ? undefined : shownRows.find(row => row.id === open) ?? rows.find(row => row.id === open);
-  const {data: detail} = useResource<{id: number; title: string; company: string}>(open === null ? null : applicationPath(open));
+  const {data: detail} = useResource<ApplicationOut>(open === null ? null : applicationPath(open));
   const titled = openRow ?? (detail?.id === open ? detail : undefined);
   useEffect(() => {
     document.title = tabTitle(open === null ? null : titled ?? null);
@@ -213,11 +229,85 @@ export function JobsPage({route}: {route: JobsRoute}) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
+  // ---- J6: the corrections, each said in the toast with its Undo ----
+  const [editing, setEditing] = useState<{id: number; field: 'company' | 'title'} | null>(null);
+  // Another application opened: no field in edit.
+  if (editing && editing.id !== open) setEditing(null);
+  const [rowMenuOpen, setRowMenuOpen] = useState<{spec: MenuSpec; anchor: MenuAnchor} | null>(null);
+  /** A row a correction takes away folds out; refused, it stays, and once gone it's forgotten. */
+  const takeAway = (id: number, send: () => ReturnType<typeof act>) => {
+    takenAway.add(id);
+    void send().then(change => {
+      if (!change) takenAway.delete(id);
+      else window.setTimeout(() => takenAway.delete(id), motion.medium * 4);
+    });
+  };
+  const edit = (row: ApplicationRowOut, field: 'company' | 'title') => {
+    if (open !== row.id) openAt(row.id);
+    setEditing({id: row.id, field});
+  };
+  const correctionsFor = (row: ApplicationRowOut): CorrectionActions => ({
+    editCompany: () => edit(row, 'company'),
+    editTitle: () => edit(row, 'title'),
+    setStatus: status => void act(() => setStatus(row.id, status), {
+      done: status ? `Set to ${STATUS_LABELS[status]}` : 'Status left to the emails', failed: 'Couldn\'t set the status',
+    }),
+    merge: other => takeAway(other.id, () => act(() => mergeWith(row.id, other.id), {done: 'Merged', failed: 'Couldn\'t merge them'})),
+    notThisPosting: () => void act(() => notThisPosting(row.id), {done: 'JD taken away', failed: 'Couldn\'t take the JD away'}),
+    lookUpAgain: () => void lookUp(row.id).then(() => showToast('Looking for the posting'), toastFailure('Couldn\'t look it up')),
+    notAnApplication: () => {
+      if (open === row.id) close();
+      takeAway(row.id, () => act(() => notAnApplication(row.id), {done: `Hidden ${row.company}`, tone: 'gone', failed: 'Couldn\'t hide it'}));
+    },
+    remove: () => {
+      if (open === row.id) close();
+      takeAway(row.id, () => act(() => deleteApplication(row.id), {done: `Deleted ${row.company}`, tone: 'gone', failed: 'Couldn\'t delete it'}));
+    },
+  });
+  /** The title or company in place: shown at once, then saved; refused, it's what it was. */
+  const save = (field: 'company' | 'title', value: string) => {
+    if (open === null) return;
+    const id = open;
+    setEditing(null);
+    const put = <T extends {id: number}>(data: T) => (data.id === id ? {...data, [field]: value} : data);
+    updateCached<ApplicationOut>(applicationPath(id), put);
+    updateCached<JobsPageOut>(JOBS_PATH, data => ({...data, rows: data.rows.map(put)}));
+    void act(() => editApplication(id, {[field]: value}), {
+      done: field === 'title' ? 'Title changed' : 'Company changed', failed: field === 'title' ? 'Couldn\'t change the title' : 'Couldn\'t change the company',
+    });
+  };
+  const move = (event: JobEventOut, to: ApplicationRowOut) => open !== null && void act(() => moveEvent(event.id, open, to.id), {done: `Moved to ${titleOf(to)}`, failed: 'Couldn\'t move it'});
+  const takeOff = (event: JobEventOut) => void act(() => notAboutThis(event.id), {done: 'Back in Needs you', failed: 'Couldn\'t take it off'});
+  const pick = (candidate: JdCandidateOut | null) => {
+    if (open === null) return;
+    const company = (openRow ?? detail)?.company ?? '';
+    void (candidate
+      ? act(() => pickCandidate(open, candidate.id), {done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'})
+      : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Couldn\'t turn them down'}));
+  };
+  // A row's right-click (#248, #268): its actions at the pointer; the cursor moves to it, and it doesn't open.
+  const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
+  const onRowMenu = (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => {
+    if (!takesContextMenu(event, event.currentTarget)) return;
+    event.preventDefault();
+    setCursor(rowKey(row.id));
+    const link = row.jd.link;
+    setRowMenuOpen({
+      anchor: {point: {x: event.clientX / zoom(), y: event.clientY / zoom()}},
+      spec: rowMenu(row, rows, today, {
+        ...correctionsFor(row),
+        open: () => openAt(row.id),
+        openPosting: () => link && window.open(link, '_blank', 'noopener'),
+        copy: text => copyText(text),
+      }),
+    });
+  };
+
   const onPoint = (key: string) => key !== cursor && setCursor(key);
   const rowState = (row: ApplicationRowOut) => ({
     cursor: cursor === rowKey(row.id), open: open === row.id, landed: seen.landed.has(row.id) || seen.moved.has(row.id), moved: seen.moved.has(row.id),
   });
-  const rowProps = {rowState, besideDetail: open !== null, query: q || null, now, timeZone: zone, today, onPoint, onClick: onRowClick};
+  const rowProps = {rowState, besideDetail: open !== null, query: q || null, now, timeZone: zone, today, onPoint, onClick: onRowClick, onMenu: onRowMenu};
   const enabled = page?.enabled ?? true;
 
   return (
@@ -255,7 +345,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
         <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <div className="jb-empty" /> : (
             <div className="jb-scroll jb-tbl" ref={scroller}>
-              <NeedsYou items={page.needs_you} history={page.from_history} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone} onPoint={onPoint} />
+              <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
+                onPoint={onPoint} onOpen={openAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />
               {results ? (
                 <>
@@ -275,9 +366,12 @@ export function JobsPage({route}: {route: JobsRoute}) {
         {open !== null && (
           <Detail id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} today={today} leaving={leaving}
             canStep={{previous: neighbour(-1) !== null, next: neighbour(1) !== null}} onStep={step} onClose={close} onOpen={openAt}
-            onEmail={messageId => navigate({page: 'inbox', account: null, open: messageId})} postingRef={posting} />
+            onEmail={messageId => navigate({page: 'inbox', account: null, open: messageId})} postingRef={posting}
+            rows={rows} corrections={correctionsFor} editing={editing?.id === open ? editing.field : null}
+            onEdit={field => setEditing(field === null ? null : {id: open, field})} onSave={save} onMove={move} onNotAboutThis={takeOff} onPick={pick} />
         )}
       </div>
+      {rowMenuOpen && <JobsMenu spec={rowMenuOpen.spec} anchor={rowMenuOpen.anchor} onClose={() => setRowMenuOpen(null)} />}
     </>
   );
 }

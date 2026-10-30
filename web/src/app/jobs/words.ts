@@ -189,7 +189,8 @@ export const tabTitle = (row: Pick<ApplicationRowOut, 'title' | 'company'> | nul
  */
 export function latestStep(detail: Pick<ApplicationOut, 'status' | 'step' | 'step_at' | 'timeline'>): {text: string; at: string | null} {
   if (detail.status === 'in_process' && detail.step) return {text: detail.step, at: detail.step_at};
-  const moved = detail.timeline.filter(event => !event.quiet).slice(1).at(-1);
+  // A second confirmation (one a merge brought) isn't a step.
+  const moved = detail.timeline.filter(event => !event.quiet).slice(1).filter(event => event.kind !== 'applied').at(-1);
   return moved ? {text: moved.subject, at: moved.at} : {text: 'No reply yet', at: null};
 }
 

@@ -5,10 +5,17 @@
 // email"); then the JD first (D307): what they want, the facts, both lists and the full posting one
 // step away, or where the JD stands (looking, No JD found with Look it up, candidates in Needs you);
 // the timeline, each event opening its email; Applied before at the company, and its other
-// applications. More, the title's pencil and each event's ··· are J6's corrections and not drawn yet.
-import type {AccountOut, ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JobEventOut} from '@setpoint/shared';
-import {useState} from 'react';
-import type {CSSProperties, RefObject} from 'react';
+// applications. J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
+// place (and the company, from More), the status chip's Set status, Not this posting's candidates
+// offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
+// right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
+import type {AccountOut, ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut} from '@setpoint/shared';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
+import type {Entry, FoldRules} from '../../logic/fold.ts';
+import {news as arrivals} from '../../tokens.ts';
+import {takesContextMenu} from '../ContextMenu.tsx';
+import {foldIn, foldOut, useFold} from '../fold.ts';
 import {useResource} from '../../api/client.ts';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -21,6 +28,12 @@ import {toastFailure} from '../toast.ts';
 import {applicationPath, lookUp} from './api.ts';
 import {FullPosting} from './FullPosting.tsx';
 import type {FullPostingHandle} from './FullPosting.tsx';
+import {JobsMenu} from './Menu.tsx';
+import type {MenuAnchor, MenuSpec} from './Menu.tsx';
+import {eventMenu, moreMenu, statusMenu} from './menus.ts';
+import type {CorrectionActions} from './menus.ts';
+import {CandidatePicker} from './CandidatePicker.tsx';
+import {EditField} from './EditField.tsx';
 import {appliedLine, dayWord, latestStep, lookingWhere, markLabel, markOf, notFoundLine, STATUS_LABELS, titleOf} from './words.ts';
 
 const WORKPLACES = {on_site: 'On-site', hybrid: 'Hybrid', remote: 'Remote'} as const;
@@ -42,9 +55,26 @@ export interface DetailProps {
   onEmail: (messageId: number) => void;
   // The page's Esc asks the pane first: an unfolded posting folds back.
   postingRef: RefObject<FullPostingHandle | null>;
+  // J6: every application, for the menus; the corrections; the field being edited, from More or a
+  // row's right-click; and an event's Move to… and Not about this, and a candidate picked.
+  rows: ApplicationRowOut[];
+  corrections: (row: ApplicationRowOut) => CorrectionActions;
+  editing: 'company' | 'title' | null;
+  onEdit: (field: 'company' | 'title' | null) => void;
+  onSave: (field: 'company' | 'title', value: string) => void;
+  onMove: (event: JobEventOut, to: ApplicationRowOut) => void;
+  onNotAboutThis: (event: JobEventOut) => void;
+  onPick: (candidate: JdCandidateOut | null) => void;
 }
 
-export function Detail({id, row, accounts, now, timeZone, today, leaving, canStep, onStep, onClose, onOpen, onEmail, postingRef}: DetailProps) {
+/** One of the pane's menus, open: More, the status chip's, or an event's ···. */
+interface OpenMenu {
+  owner: string;
+  spec: MenuSpec;
+  anchor: MenuAnchor;
+}
+
+export function Detail({id, row, accounts, now, timeZone, today, leaving, canStep, onStep, onClose, onOpen, onEmail, postingRef, rows, corrections, editing, onEdit, onSave, onMove, onNotAboutThis, onPick}: DetailProps) {
   const width = useReadingPaneWidth();
   const load = {path: applicationPath(id), ...useResource<ApplicationOut>(applicationPath(id))};
   const detail = load.data?.id === id ? load.data : undefined;
@@ -55,6 +85,16 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, canSte
   // With no posting link, Open email while its JD is looked up (34c), and nothing once none was found (38b).
   const firstEmail = detail?.timeline.find(event => event.message_id !== null)?.message_id ?? null;
   const style = {'--readingPane': `${width}px`} as CSSProperties;
+  // A menu belongs to the application it opened on: J / K to another closes it.
+  const [opened, setMenu] = useState<(OpenMenu & {id: number}) | null>(null);
+  const menu = opened?.id === id ? opened : null;
+  const toggle = (owner: string, spec: () => MenuSpec, anchor: MenuAnchor) => setMenu(current => (current?.owner === owner && current.id === id ? null : {owner, spec: spec(), anchor, id}));
+  const actions = shown ? corrections(shown) : null;
+  const more = (element: HTMLElement) => shown && actions && toggle('more', () => moreMenu(shown, rows, today, actions), {element, corner: 'right'});
+  const chip = (element: HTMLElement) => shown && actions && toggle('status', () => statusMenu(shown, {set: actions.setStatus}), {element, corner: 'left'});
+  const eventActions = (event: JobEventOut, element: HTMLElement) => shown && toggle(`event:${event.id}`, () => eventMenu(event, shown, rows, today, {
+    openEmail: onEmail, move: to => onMove(event, to), notAboutThis: () => onNotAboutThis(event),
+  }), {element, corner: 'right'});
   return (
     <section className={leaving ? 'pane jb-pane leaving' : 'pane jb-pane'} aria-label="Application" style={style}>
       <PaneEdge width={width} />
@@ -68,16 +108,19 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, canSte
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous application" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next application" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>
+        <button className="ibtn" type="button" aria-label="More" title="More" aria-haspopup="menu" aria-expanded={menu?.owner === 'more'} disabled={!shown}
+          onClick={event => more(event.currentTarget)}><Icon name="more_horiz" /></button>
       </div>
       <div className="rd-scroll">
         {/* J / K swap what it shows at once: the pane stays, and its content is the next one's. */}
         {shown ? (
           <div key={id}>
-            <Head row={shown} detail={detail} account={shown.account_id !== null ? accounts.get(shown.account_id) : undefined} now={now} timeZone={timeZone} today={today} />
+            <Head row={shown} detail={detail} account={shown.account_id !== null ? accounts.get(shown.account_id) : undefined} now={now} timeZone={timeZone} today={today}
+              editing={editing} onEdit={onEdit} onSave={onSave} chipOpen={menu?.owner === 'status'} onChip={chip} />
             {detail ? (
               <div className="jb-body">
-                <Jd detail={detail} timeZone={timeZone} today={today} posting={postingRef} />
-                <Timeline events={detail.timeline} timeZone={timeZone} today={today} onEmail={onEmail} />
+                <Jd detail={detail} timeZone={timeZone} today={today} posting={postingRef} onPick={onPick} />
+                <Timeline events={detail.timeline} timeZone={timeZone} today={today} onEmail={onEmail} menuOpen={menu?.owner ?? null} onMenu={eventActions} />
                 {detail.applied_before.length > 0 && <Related label={`Applied before at ${detail.company}`} icon="history" links={detail.applied_before} today={today} onOpen={onOpen} />}
                 {detail.also_at.length > 0 && <Related label={`Also at ${detail.company}`} icon="work" links={detail.also_at} today={today} onOpen={onOpen} />}
               </div>
@@ -85,6 +128,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, canSte
           </div>
         ) : <div className="jb-body">{failed ? <LoadFailed what="this application" loads={[load]} /> : <BodySkeleton />}</div>}
       </div>
+      {menu && <JobsMenu spec={menu.spec} anchor={menu.anchor} onClose={() => setMenu(null)} />}
     </section>
   );
 }
@@ -97,32 +141,55 @@ function BodySkeleton() {
   );
 }
 
-function Head({row, detail, account, now, timeZone, today}: {
+function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSave, chipOpen, onChip}: {
   row: ApplicationRowOut;
   detail: ApplicationOut | undefined;
   account: AccountOut | undefined;
   now: number;
   timeZone: string;
   today: string;
+  editing: 'company' | 'title' | null;
+  onEdit: (field: 'company' | 'title' | null) => void;
+  onSave: (field: 'company' | 'title', value: string) => void;
+  chipOpen: boolean;
+  onChip: (element: HTMLElement) => void;
 }) {
   const step = detail ? latestStep(detail) : row.status === 'in_process' && row.step ? {text: row.step, at: row.step_at} : null;
   const mark = markOf(row);
+  // The chip crossfades when the status changes while it's shown, never as it's first drawn.
+  const [chip, setChip] = useState({mark, changed: false});
+  if (chip.mark !== mark) setChip({mark, changed: true});
+  const field = (which: 'company' | 'title', value: string) => (
+    <EditField key={which} label={which === 'company' ? 'Company' : 'Title'} value={value} small={which === 'company'}
+      onSave={next => onSave(which, next)} onCancel={() => onEdit(null)} />
+  );
   return (
     <div className="jb-head">
       <div className="jb-co">
-        <span className="name">{row.company}</span>
+        {editing === 'company' ? field('company', row.company) : <span className="name">{row.company}</span>}
         {row.platform && <span>· via {row.platform}</span>}
         <span className="right">
           {account && <><span className="dot sm" style={dotStyle(account.colour)} /><span className="ink2">{account.label}</span></>}
           <span>· {appliedLine(row.applied_on, today)}</span>
         </span>
       </div>
-      <div className="jb-title"><h1 className={row.title.trim() ? 'rd-subj' : 'rd-subj none'}>{titleOf(row)}</h1></div>
+      {editing === 'title' ? field('title', row.title) : (
+        <div className="jb-title">
+          <h1 className={row.title.trim() ? 'rd-subj' : 'rd-subj none'}>
+            {/* A click puts the title in a field on the same baseline (35a). */}
+            <button type="button" className="jb-tbtn" title="Edit title" onClick={() => onEdit('title')}>
+              <span>{titleOf(row)}</span><Icon name="edit" size={16} className="pen" />
+            </button>
+          </h1>
+        </div>
+      )}
+      {editing && <div className="jb-hint">Enter to save · Esc</div>}
       <div className="jb-stat">
-        {/* The status as its chip; one click on it setting the status by hand is J6's (D309). */}
-        <span className="jb-stchip" title={markLabel(row)}>
-          <i className={`sd ${mark}`} />{STATUS_LABELS[row.status]}<Icon name="expand_more" size={16} />
-        </span>
+        {/* One click on the chip sets the status by hand (D309, #267). */}
+        <button type="button" className="jb-stchip" title={markLabel(row)} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
+          <span key={mark} className={chip.changed ? 'swap changed' : 'swap'}><i className={`sd ${mark}`} />{STATUS_LABELS[row.status]}</span>
+          <Icon name={chipOpen ? 'expand_less' : 'expand_more'} size={16} />
+        </button>
         {step && <span className={step.at ? 'step' : 'step quiet'} title={step.text}>{step.text}</span>}
         {step?.at && <span className="age" title={fullTimestamp(step.at, timeZone)}>· {age(step.at, now, timeZone)}</span>}
       </div>
@@ -132,11 +199,12 @@ function Head({row, detail, account, now, timeZone, today}: {
 }
 
 /** The JD first (D307): its summary, facts, lists and the full posting; or where it stands without one. */
-function Jd({detail, timeZone, today, posting}: {
+function Jd({detail, timeZone, today, posting, onPick}: {
   detail: ApplicationOut;
   timeZone: string;
   today: string;
   posting: RefObject<FullPostingHandle | null>;
+  onPick: (candidate: JdCandidateOut | null) => void;
 }) {
   const [asking, setAsking] = useState(false);
   const lookItUp = () => {
@@ -148,7 +216,7 @@ function Jd({detail, timeZone, today, posting}: {
     const place = saved.workplace ? `${WORKPLACES[saved.workplace]}${saved.workplace_detail ? `, ${saved.workplace_detail}` : ''}` : null;
     return (
       <>
-        <div>
+        <div className="jb-arrive">
           <h2 className="jb-label">What they want</h2>
           <p className="jb-want">{saved.summary}</p>
         </div>
@@ -185,15 +253,26 @@ function Jd({detail, timeZone, today, posting}: {
       </>
     );
   }
-  // No JD found (D320), candidates waiting in Needs you, or never looked up (a closed application from
-  // history, D311): each says so under the section's label, with Look it up where it can run.
+  // Not this posting's other candidates (35b), as Needs you shows them: Is this the posting?
+  if (detail.jd.state === 'candidates' && detail.candidates.length) {
+    return (
+      <div className="jb-arrive" key="candidates">
+        <h2 className="jb-label">Is this the posting?</h2>
+        <div className="jb-jdcands">
+          <CandidatePicker candidates={detail.candidates} active={false} picked={null} onPick={onPick} onNone={() => onPick(null)} />
+        </div>
+      </div>
+    );
+  }
+  // No JD found (D320), or never looked up (a closed application from history, D311): each says so
+  // under the section's label, with Look it up where it can run.
   const line = detail.jd.state === 'not_found'
     ? {icon: 'search_off' as const, lead: 'No JD found', rest: notFoundLine(detail.platform, detail.jd.looked_at, timeZone, today)}
     : detail.jd.state === 'candidates'
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${detail.jd.candidates} ${detail.jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
   return (
-    <div>
+    <div className="jb-arrive" key={detail.jd.state}>
       <h2 className="jb-label">Job description</h2>
       <div className="jb-nojd">
         <Icon name={line.icon} size={16} />
@@ -206,31 +285,83 @@ function Jd({detail, timeZone, today, posting}: {
   );
 }
 
-/** The timeline (D317), oldest first: each event opens its email, and one whose email is gone keeps its line and opens nothing. */
-function Timeline({events, timeZone, today, onEmail}: {events: JobEventOut[]; timeZone: string; today: string; onEmail: (messageId: number) => void}) {
+const EVENT_FOLDS: FoldRules<JobEventOut> = {folds: () => true, arrives: () => true};
+
+/** Whose email Gmail no longer has (D317, #269): its line stays, and it opens nothing. */
+const GONE_TIP = 'Gmail no longer has this email, so Jobs keeps only its line';
+
+/**
+ * The timeline (D317), oldest first: each event opens its email, and one whose email is gone keeps
+ * its line and says so (#269). Its ··· (on hover, or a right-click) holds Open email, Move to… and Not
+ * about this; one moved or taken off folds out (180 ms), one a merge brings settles from sub2 (900 ms).
+ */
+function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
+  events: JobEventOut[];
+  timeZone: string;
+  today: string;
+  onEmail: (messageId: number) => void;
+  menuOpen: string | null;
+  onMenu: (event: JobEventOut, element: HTMLElement) => void;
+}) {
+  const entries = useMemo(() => events.map((event): Entry<JobEventOut> => ({key: `e:${event.id}`, id: event.id, item: event})), [events]);
+  const shown = useFold(entries, EVENT_FOLDS);
+  // Those a merge or Undo brought since it was drawn settle in.
+  const seen = useRef<Set<number> | null>(null);
+  const [landed, setLanded] = useState<ReadonlySet<number>>(new Set());
+  useEffect(() => {
+    if (seen.current === null) {
+      seen.current = new Set(events.map(event => event.id));
+      return;
+    }
+    const fresh = events.filter(event => !seen.current!.has(event.id)).map(event => event.id);
+    fresh.forEach(id => seen.current!.add(id));
+    if (!fresh.length) return;
+    setLanded(new Set(fresh));
+    const timer = window.setTimeout(() => setLanded(new Set()), arrivals.landedMs);
+    return () => window.clearTimeout(timer);
+  }, [events]);
+  const live = shown.filter(entry => entry.fold !== 'out');
+  const rightClick = (event: JobEventOut) => (mouse: ReactMouseEvent<HTMLElement>) => {
+    if (!takesContextMenu(mouse, mouse.currentTarget)) return;
+    mouse.preventDefault();
+    const button = mouse.currentTarget.querySelector<HTMLElement>('.go .ibtn');
+    if (button && menuOpen !== `event:${event.id}`) onMenu(event, button);
+  };
   return (
     <div>
-      <h2 className="jb-label">Timeline <span className="n">{events.length}</span></h2>
+      <h2 className="jb-label">Timeline <span className="n">{live.length}</span></h2>
       <div className="jb-tl">
-        {events.map((event, index) => {
+        {shown.map(({key, item: event, fold}) => {
           const day = localDate(event.at, timeZone);
-          const classes = ['jb-ev', index === 0 && 'first', index === events.length - 1 && 'last', event.quiet && 'quiet', !event.quiet && (event.kind === 'interview' || event.kind === 'assessment') && 'proc']
-            .filter(Boolean).join(' ');
-          const content = (
-            <>
+          const leaving = fold === 'out';
+          const index = live.findIndex(entry => entry.item.id === event.id);
+          const messageId = event.message_id;
+          const open = menuOpen === `event:${event.id}`;
+          const classes = [
+            'jb-ev', index === 0 && 'first', index === live.length - 1 && 'last', event.quiet && 'quiet',
+            !event.quiet && (event.kind === 'interview' || event.kind === 'assessment') && 'proc', messageId === null && 'gone', open && 'menu',
+            landed.has(event.id) && 'landed',
+          ].filter(Boolean).join(' ');
+          return (
+            <div key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-event={event.id} aria-hidden={leaving || undefined}
+              title={messageId === null ? GONE_TIP : undefined} onContextMenu={leaving ? undefined : rightClick(event)}>
               <span className={day === today ? 'd now' : 'd'} title={fullTimestamp(event.at, timeZone)}>{day === today ? 'Today' : dayWord(day, today)}</span>
               <span className="node"><i /></span>
               <span className="t">
                 {!event.quiet && EVENT_KINDS[event.kind] && <span className="k">{EVENT_KINDS[event.kind]}</span>}
-                <span className="s">{event.subject}</span>
+                {messageId !== null ? (
+                  // The whole line opens its email; the ··· sits above it.
+                  <button type="button" className="s open" onClick={() => onEmail(messageId)}>{event.subject}</button>
+                ) : <span className="s">{event.subject}</span>}
                 {event.first_seen && <span className="tag">First seen</span>}
+                {messageId === null && <span className="gonetxt">· No longer in Gmail</span>}
               </span>
-            </>
+              <span className="go">
+                <button type="button" className="ibtn sm" aria-label="Event actions" title="More" aria-haspopup="menu" aria-expanded={open}
+                  onClick={click => onMenu(event, click.currentTarget)}><Icon name="more_horiz" size={16} /></button>
+              </span>
+            </div>
           );
-          const messageId = event.message_id;
-          return messageId !== null
-            ? <button key={event.id} className={classes} type="button" data-event={event.id} onClick={() => onEmail(messageId)}>{content}</button>
-            : <div key={event.id} className={classes} data-event={event.id} title="Its email is gone; the event keeps its line">{content}</div>;
         })}
       </div>
     </div>

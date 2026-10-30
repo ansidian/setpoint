@@ -2,15 +2,29 @@
 // sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
 // application: company, role, platform, Applied, the status with its mark and step, and how its JD
 // was found. Closed and Ghosted rows step down a shade. Search's rows highlight what matched, and a
-// match only in a JD's text adds the line it matched under its row.
+// match only in a JD's text adds the line it matched under its row. A row a correction takes away
+// (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
+// right-click opens its actions at the pointer (#268).
 import type {ApplicationRowOut} from '@setpoint/shared';
-import {Fragment} from 'react';
+import type {MouseEvent as ReactMouseEvent} from 'react';
+import {useMemo} from 'react';
+import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {Icon} from '../../ui/Icon.tsx';
+import {foldIn, foldOut, useFold} from '../fold.ts';
 import {Marked} from '../search/Search.tsx';
 import {appliedWord, jdCell, markLabel, markOf, marks, nextSort, recedes, setByYou, statusStep, titleOf} from './words.ts';
 import type {Sort, SortKey} from './words.ts';
 
 export const rowKey = (id: number) => `r:${id}`;
+
+/**
+ * The applications a correction is taking away just now, so their rows fold out rather than vanish;
+ * set by the page as it sends one, and cleared if it's refused. Rows leaving for any other reason (a
+ * filter, a search) simply go.
+ */
+export const takenAway = new Set<number>();
+
+const ROW_FOLDS: FoldRules<ApplicationRowOut> = {folds: entry => entry.id !== null && takenAway.has(entry.id), arrives: () => true};
 
 const COLUMNS: {key: SortKey; label: string; className?: string; title?: string}[] = [
   {key: 'company', label: 'Company'},
@@ -46,7 +60,7 @@ export interface RowState {
   moved: boolean;
 }
 
-export function Row({row, state, besideDetail, query, line, now, timeZone, today, onPoint, onClick}: {
+export function Row({row, state, besideDetail, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu}: {
   row: ApplicationRowOut;
   state: RowState;
   besideDetail: boolean;
@@ -56,10 +70,13 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
   now: number;
   timeZone: string;
   today: string;
+  fold?: 'in' | 'out' | null;
   onPoint: (key: string) => void;
   onClick: (id: number) => void;
+  onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
 }) {
   const key = rowKey(row.id);
+  const leaving = fold === 'out';
   const mark = markOf(row);
   const step = statusStep(row, besideDetail, today);
   const jd = jdCell(row.jd, now, timeZone);
@@ -67,8 +84,10 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
   const classes = ['jb-tr', line !== undefined && 'two', recedes(row) && 'recedes', state.cursor && 'cur', state.open && 'open', state.landed && 'landed', state.moved && 'moved']
     .filter(Boolean).join(' ');
   return (
-    <div className={classes} data-key={key} data-application={row.id}
-      onMouseMove={() => !state.cursor && onPoint(key)} onClick={() => onClick(row.id)}>
+    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={leaving ? `${classes} leaving` : classes} data-key={leaving ? undefined : key}
+      data-application={leaving ? undefined : row.id} aria-hidden={leaving || undefined}
+      onMouseMove={() => !leaving && !state.cursor && onPoint(key)} onClick={() => !leaving && onClick(row.id)}
+      onContextMenu={leaving || !onMenu ? undefined : event => onMenu(row, event)}>
       <span />
       <span className="co" title={row.company}>{text(row.company)}</span>
       <span className={row.title.trim() ? 'ro' : 'ro none'} title={titleOf(row)}>{row.title.trim() ? text(row.title) : titleOf(row)}</span>
@@ -103,6 +122,9 @@ export function Rows({rows, lines, rowState, ...rest}: {
   today: string;
   onPoint: (key: string) => void;
   onClick: (id: number) => void;
+  onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
 }) {
-  return <>{rows.map(row => <Fragment key={row.id}><Row row={row} state={rowState(row)} line={lines?.get(row.id)} {...rest} /></Fragment>)}</>;
+  const entries = useMemo(() => rows.map((row): Entry<ApplicationRowOut> => ({key: rowKey(row.id), id: row.id, item: row})), [rows]);
+  const shown = useFold(entries, ROW_FOLDS);
+  return <>{shown.map(({key, item: row, fold}) => <Row key={key} row={row} state={rowState(row)} line={lines?.get(row.id)} fold={fold} {...rest} />)}</>;
 }

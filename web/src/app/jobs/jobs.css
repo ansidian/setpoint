@@ -60,16 +60,36 @@
 .jb-need .line { color: var(--ink2); font-size: 12.5px; margin-right: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-need .acts .btn.sm { height: 28px; }
 .jb-need .acts .btn .icon.after { color: var(--ink3); margin-right: -4px; }
-/* A JD to confirm's candidates: a sub group of 32 px rows, the last None of these. */
-.jb-cands { border-radius: 12px; background: var(--sub); overflow: hidden; }
-.jb-cand { display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 6px 0 12px; color: var(--ink2); font-size: 13px; }
-.jb-cand > .icon { color: var(--ink3); }
+/* A JD to confirm's candidates: a sub group of 32 px rows, the last None of these. A row under the
+   pointer or the cursor takes sub2 and its radio ink2; pressed, sub3; picked, the group takes good. */
+.jb-cands { border-radius: 12px; background: var(--sub); overflow: hidden; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.jb-cand { display: flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 6px 0 0; color: var(--ink2); font-size: 13px; transition: background-color var(--dur-fast) var(--ease); }
+.jb-cand .pick { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; min-height: 32px; padding: 0 0 0 12px; color: inherit; text-align: left; font-size: inherit; }
+.jb-cand .pick > .icon { color: var(--ink3); flex: none; transition: color var(--dur-fast) var(--ease); }
 .jb-cand .t { color: var(--ink); }
 .jb-cand .ell { flex: 1 1 auto; }
-/* Drawn here as the boards draw them; J6 makes them answer (D-numbered on SV-123). */
-.jb-inert { pointer-events: none; }
+.jb-cand > .ibtn { color: var(--ink3); }
+.jb-cands:not(.picked) .jb-cand.cur { background: var(--sub2); }
+.jb-cands:not(.picked) .jb-cand.cur .pick > .icon { color: var(--ink2); }
+.jb-cands:not(.picked) .jb-cand:has(.pick:active) { background: var(--sub3); transition-duration: var(--dur-press); }
+.jb-cands.picked { background: color-mix(in oklch, var(--good) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--good) 35%, transparent); }
+.jb-cand .icon.ok { color: var(--good); }
+/* Not this posting's candidates, where the JD was (35b). */
+.jb-jdcands { margin-top: 8px; max-width: 560px; }
+/* Answered (34b): the outcome in line two's place, then the item folds away. */
+.jb-need.answered .acts.outcome { animation: jb-fade var(--dur-fast) var(--ease); }
+.jb-done { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-size: 12.5px; white-space: nowrap; min-width: 0; overflow: hidden; }
+.jb-done > .icon { color: var(--good); flex: none; }
+.jb-done .ink3 { color: var(--ink3); overflow: hidden; text-overflow: ellipsis; }
+.jb-hist .what .jb-done { animation: jb-fade var(--dur-fast) var(--ease); }
+.jb-need .btn.out[aria-expanded="true"] { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
+.jb-need .btn .icon.after { transition: transform var(--dur-medium) var(--ease); }
+.jb-need .btn[aria-expanded="true"] .icon.after { transform: rotate(180deg); }
 
-/* From history (D311, D324), folded under the items. */
+/* From history (D311, D324), folded under the items. Dismiss all folds its rows away, then the line. */
+.jb-histsec { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
+.jb-histsec > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.jb-histsec.closing { grid-template-rows: 0fr; transition-delay: var(--dur-medium); }
 .jb-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; cursor: default;
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-fold:hover { background: var(--sub); color: var(--ink); } }
@@ -174,10 +194,30 @@
 .jb-co .name { color: var(--ink2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-co .right { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-variant-numeric: tabular-nums; flex: none; }
 .jb-title .rd-subj.none { color: var(--ink3); }
+/* The title in place (35a): under the pointer a sub fill 4 px beyond the text and a pencil after it;
+   a click swaps it for a field on the same baseline, its edgeFocus ring arriving over 120 ms. */
+.jb-tbtn { display: inline-flex; align-items: center; max-width: 100%; padding: 0; font: inherit; letter-spacing: inherit; color: inherit; text-align: left; border-radius: 8px; cursor: text;
+  transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.jb-tbtn > span { min-width: 0; }
+.jb-tbtn .pen { color: var(--ink3); margin-left: 8px; flex: none; opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-tbtn:hover { background: var(--sub); box-shadow: 0 0 0 4px var(--sub); } .jb-tbtn:hover .pen { opacity: 1; } }
+.jb-tbtn:focus-visible .pen { opacity: 1; }
+.jb-edit { height: 34px; display: flex; align-items: center; padding: 0 6px 0 10px; margin: -4px 0 -4px -11px; border-radius: 10px; background: var(--cardOn);
+  box-shadow: inset 0 0 0 1px var(--edgeFocus); animation: jb-ring var(--dur-fast) var(--ease); font-size: 20px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); min-width: 0; }
+.jb-edit.sm { height: 28px; margin: -4px 0 -4px -9px; padding: 0 6px 0 8px; border-radius: 8px; font-size: 13px; flex: 1 1 auto; max-width: 320px; }
+@keyframes jb-ring { from { box-shadow: inset 0 0 0 1px transparent; } }
+.jb-edit input { flex: 1 1 auto; min-width: 0; border: 0; padding: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; outline: none; }
+.jb-hint { color: var(--ink3); font-size: 12px; margin-top: -4px; }
 .jb-stat { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .jb-stchip { height: 28px; display: inline-flex; align-items: center; gap: 8px; padding: 0 6px 0 11px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); font-size: 12.5px; color: var(--ink);
-  flex: none; white-space: nowrap; }
+  flex: none; white-space: nowrap; transition: background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .jb-stchip > .icon { color: var(--ink3); }
+.jb-stchip > .swap { display: inline-flex; align-items: center; gap: 8px; }
+/* A status set by hand crossfades the chip (120 / 120 ms). */
+.jb-stchip > .swap.changed { animation: jb-swap calc(var(--dur-fast) * 2) var(--ease); }
+@media (hover: hover) { .jb-stchip:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); } }
+.jb-stchip:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
+.jb-stchip[aria-expanded="true"] { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .jb-stat .step { color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-stat .step.quiet { color: var(--ink3); }
 .jb-stat .age { color: var(--ink3); font-size: 12.5px; flex: none; font-variant-numeric: tabular-nums; }
@@ -250,10 +290,21 @@
 .jb-full li::marker { color: var(--ink3); }
 /* The timeline (D317), oldest first: each event opens its email. */
 .jb-tl { display: flex; flex-direction: column; margin: 6px -8px 0; }
-.jb-ev { display: grid; grid-template-columns: 52px 14px minmax(0, 1fr); column-gap: 10px; align-items: center; min-height: 38px; padding: 0 6px 0 8px; border-radius: 10px; color: var(--ink); position: relative;
+.jb-ev { display: grid; grid-template-columns: 52px 14px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; min-height: 38px; padding: 0 6px 0 8px; border-radius: 10px; color: var(--ink); position: relative;
   width: 100%; text-align: left; transition: background-color var(--dur-fast) var(--ease); }
-@media (hover: hover) { button.jb-ev:hover { background: var(--sub); } }
-button.jb-ev:active { background: var(--sub3); transition-duration: var(--dur-press); }
+@media (hover: hover) { .jb-ev:not(.gone):hover { background: var(--sub); } }
+.jb-ev:not(.gone):has(.open:active) { background: var(--sub3); transition-duration: var(--dur-press); }
+.jb-ev.menu { background: var(--sub2); }
+.jb-ev.gone { cursor: default; }
+.jb-ev.landed { animation: jb-landed var(--news-landed) var(--ease); }
+/* The whole line opens its email; its ··· sits above it, shown under the pointer or with its menu open. */
+.jb-ev .t .s.open { padding: 0; font: inherit; color: inherit; text-align: left; cursor: default; }
+.jb-ev .t .s.open::after { content: ""; position: absolute; inset: 0; border-radius: 10px; }
+.jb-ev .go { position: relative; z-index: 1; display: flex; align-items: center; opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-ev:hover .go { opacity: 1; } }
+.jb-ev.menu .go, .jb-ev .go:focus-within { opacity: 1; }
+.jb-ev .go .ibtn[aria-expanded="true"] { background: var(--sub3); color: var(--ink); }
+.jb-ev .gonetxt { color: var(--ink3); font-size: 12.5px; flex: none; white-space: nowrap; }
 .jb-ev .d { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .jb-ev .d.now { color: var(--ink); }
 .jb-ev .node { position: relative; height: 38px; display: grid; place-items: center; }
@@ -306,3 +357,30 @@ button.jb-ev:active { background: var(--sub3); transition-duration: var(--dur-pr
 }
 
 .jb-empty { flex: 1 1 auto; }
+
+/* ---------- Menus (34a, 35a, 35b; #266–#268): the reader's menu, from its anchor's corner ---------- */
+.jb-menu { position: fixed; z-index: 40; padding: 6px; display: flex; flex-direction: column; gap: 1px; max-height: calc(100vh - 16px); overflow-y: auto; }
+.jb-menu .jb-mlist { display: flex; flex-direction: column; gap: 1px; }
+.jb-menu .menu-i { font-size: 13px; }
+.jb-menu .menu-i.tall { height: 44px; }
+.jb-menu .menu-i .two { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.jb-menu .menu-i .two > span { overflow: hidden; text-overflow: ellipsis; }
+.jb-menu .menu-i .two .s { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.jb-menu .menu-i .icon.after { margin-left: auto; color: var(--ink3); flex: none; }
+.jb-menu .menu-i[aria-checked="true"] .icon.after { color: var(--ink); }
+.jb-menu .menu-i .kbd + .icon.after { margin-left: 6px; }
+.jb-menu .menu-i.open { background: var(--sub2); color: var(--ink); }
+.jb-menu .menu-i.danger { color: var(--ink2); }
+.jb-menu .menu-i.danger.cur { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
+.jb-menu .menu-i.danger.cur .icon { color: var(--alert); }
+.jb-menu .menu-i .mk { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
+.jb-menu .menu-sep { margin: 5px 6px; }
+.jb-mlab { height: 26px; display: flex; align-items: center; padding: 0 12px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jb-mfield { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; margin: 0 0 4px; border-radius: 10px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeFocus); color: var(--ink); flex: none; }
+.jb-mfield > .icon { color: var(--ink3); flex: none; }
+.jb-mfield input { flex: 1 1 auto; min-width: 0; border: 0; padding: 0; background: none; color: inherit; font: inherit; font-size: 13px; outline: none; }
+.jb-mfield input::placeholder { color: var(--ink3); }
+.jb-mrow { display: flex; align-items: center; gap: 2px; }
+.jb-mrow > .menu-i { flex: 1 1 auto; min-width: 0; }
+.jb-mrow > .ibtn { color: var(--ink3); }

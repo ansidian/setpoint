@@ -27,10 +27,12 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
 - `shared/src/jobs/`: its enums, API schemas and types, and the `jobs` live event (D328: the contract
   needs a third folder, since `web/` can't import server code).
 - `web/src/app/jobs/`: the page ([`JobsPage.tsx`](../../../web/src/app/jobs/JobsPage.tsx)), its table, Needs you
-  (read-only until J6), Per week, the status filter, the detail and its full posting, the shell's item
+  (its answers J6's), Per week, the status filter, the detail and its full posting, the shell's item
   and `4` ([`Nav.tsx`](../../../web/src/app/jobs/Nav.tsx)), its calls through `web/src/api/client.ts`
   ([`api.ts`](../../../web/src/app/jobs/api.ts)), what it writes ([`words.ts`](../../../web/src/app/jobs/words.ts))
-  and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5). The shell imports only
+  and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5); J6's menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
+  what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, and the
+  toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
 
 Its tables point at mail by message id and account id only, as plain integers with no foreign key,
@@ -68,7 +70,7 @@ files marked *imports* import the folders.
 | `web/src/app/Sidebar.tsx`, the `./jobs/index.ts` import and `<JobsNavItem>` after News (*imports*, J5) | the sidebar's Jobs item with its Needs you count, and in the compact tier the rail's slot with its neutral badge |
 | `web/src/app/palette/Palette.tsx`, the `../jobs/index.ts` import and `...jobsCommands()` in Go to (*imports*, J5) | ⌘K's "Jobs 4", while Jobs is on (search stays out of ⌘K, D316) |
 | `web/src/app/ShellFrame.tsx`, the starting shell's title (J5) | "Jobs" while Setpoint starts on a Jobs address; it imports nothing |
-| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting (removed with the module) |
+| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, and J6's menus, candidate picker and title field (removed with the module) |
 | `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` (J5) | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
 | `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
 | `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
