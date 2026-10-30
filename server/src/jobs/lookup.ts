@@ -273,17 +273,24 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   return 'not_found';
 }
 
-/** Haiku reads the posting (its summary, lists, salary and setting), then it's saved. Returns whether it saved. */
+/** Haiku reads a posting (its summary, lists, salary and setting), the call on the ledger. */
+export async function readPosting(
+  store: Store, haiku: {client: ModelClient; model: string}, application: Pick<Application, 'company' | 'title'>, posting: Pick<FoundPosting, 'title' | 'location' | 'facts' | 'text'>, signal?: AbortSignal,
+) {
+  const answer = await haiku.client.call({
+    model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, posting), maxOutputTokens: READING_MAX_OUTPUT_TOKENS,
+    cacheKey: `setpoint-jobs-reading:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
+  });
+  recordJobsUsage(store, answer, 'jobs_reading_jds', null);
+  return postingReadingOf(answer.toolInput, posting.location);
+}
+
+/** Reads the posting, then saves it. Returns whether it saved. */
 async function readAndSave(
   store: Store, haiku: {client: ModelClient; model: string}, application: Application, found: FoundPosting, source: JdSource, signal: AbortSignal,
   options: {keepCandidates?: boolean} = {},
 ): Promise<boolean> {
-  const answer = await haiku.client.call({
-    model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, found), maxOutputTokens: READING_MAX_OUTPUT_TOKENS,
-    cacheKey: `setpoint-jobs-reading:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
-  });
-  recordJobsUsage(store, answer, 'jobs_reading_jds', null);
-  return savePosting(store, application.id, found, source, postingReadingOf(answer.toolInput, found.location), options);
+  return savePosting(store, application.id, found, source, await readPosting(store, haiku, application, found, signal), options);
 }
 
 /** Haiku's verdict on postings a link or a platform found, as a step. */

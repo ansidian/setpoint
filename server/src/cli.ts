@@ -13,6 +13,7 @@
 //   npm run cli -- import-v1-triage <file>   only v1's triage rules and lane corrections
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
 //   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML (SV-128); --apply does it
+//   npm run cli -- jobs-repair-facts   the JDs' salaries and locations that were cut (SV-129); --apply reads them again
 //   npm run cli -- codes            which sorted emails' verification codes reading again would change,
 //                                   and the code emails still without one (SV-68)
 //   npm run cli -- codes --apply    write those changes
@@ -27,7 +28,7 @@ import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
 import {importV1} from './importV1.ts';
-import {rereadPlan, rereadWithHaiku} from './jobs/index.ts';
+import {repairFactsPlan, repairFactsWithHaiku, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
 import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {sourceList} from './queries/sources.ts';
 import {loadKeyring} from './secrets/crypto.ts';
@@ -46,6 +47,7 @@ const USAGE = `Usage:
   import-v1 <file>          import v1's export file (src/importV1.ts has the format); safe to run again
   import-v1-triage <file>   import only v1's triage rules and lane corrections (src/triage/importV1.ts)
   jobs-reread [--apply]   what Jobs would read again now it reads HTML; --apply does it (the server reads them)
+  jobs-repair-facts [--apply]   the JDs' salaries and locations that were cut; --apply reads them again from the saved JDs
   triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
   codes           list sorted emails whose verification code reading again would change, and code emails with none
   codes --apply   write those changes`;
@@ -53,7 +55,7 @@ const USAGE = `Usage:
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
-    || ((command === 'codes' || command === 'jobs-reread') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
+    || ((command === 'codes' || command === 'jobs-reread' || command === 'jobs-repair-facts') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
@@ -63,7 +65,7 @@ async function main(argv: string[]): Promise<number> {
   const config = loadConfig();
   const {sqlite, db} = openDatabase(config.databasePath);
   // The import seals v1's secrets with Setpoint's key (production refuses to run without one).
-  const keyring = command === 'import-v1' || (command === 'jobs-reread' && rest[0] === '--apply') ? loadKeyring(process.env, config.dataDir).keyring : null;
+  const keyring = command === 'import-v1' || ((command === 'jobs-reread' || command === 'jobs-repair-facts') && rest[0] === '--apply') ? loadKeyring(process.env, config.dataDir).keyring : null;
   const store: Store = {sqlite, db, timeZone: config.timeZone, now: () => new Date(), keyring};
   try {
     if (command === 'setup-token') {
@@ -99,6 +101,19 @@ async function main(argv: string[]): Promise<number> {
       const plan = rest[0] === '--apply' ? await rereadWithHaiku(store, AI_ENDPOINTS) : rereadPlan(store);
       console.log(`${plan.applications.length} application${plan.applications.length === 1 ? '' : 's'} to fill, ${plan.emails.length} ignored email${plan.emails.length === 1 ? '' : 's'} to read again.`);
       console.log(rest[0] === '--apply' ? 'The server reads the emails, and looks up the JDs, as it comes to them.' : 'Nothing changed. Run with --apply to do it.');
+      return 0;
+    }
+    if (command === 'jobs-repair-facts') {
+      const postings = (count: number) => `${count} posting${count === 1 ? '' : 's'}`;
+      if (rest[0] === '--apply') {
+        const {cut, repaired} = await repairFactsWithHaiku(store, AI_ENDPOINTS);
+        console.log(`${postings(cut.length)} read again, ${repaired} repaired. One left as it was can be tried again.`);
+        return 0;
+      }
+      const cut = repairFactsPlan(store);
+      console.log(`${postings(cut.length)} with a salary or location that was cut.`);
+      for (const posting of cut) console.log(`  #${posting.applicationId}\t${posting.cut.join(', ')}\t${posting.company}\t${posting.title}`);
+      console.log('Nothing changed. Run with --apply to read them again.');
       return 0;
     }
     if (command === 'codes') {

@@ -6,4 +6,5 @@ export {jobsApi} from './api.ts';
 export {seedJobs} from './seed.ts';
 export {JobsReader} from './reader.ts';
 export {jobsWeb} from './web.ts';
+export {repairFactsPlan, repairFactsWithHaiku} from './repairFacts.ts';
 export {rereadPlan, rereadWithHaiku} from './reread.ts';
