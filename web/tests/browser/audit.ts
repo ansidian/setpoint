@@ -1,8 +1,9 @@
 // The design-conformance audit (SV-33, D69): each board beside the app's page screenshot of the
-// same state (goldens/, the nine pages.ts keeps, D281), with a diff, on one page to read,
+// same state (goldens/, the ten pages.ts keeps, D281), with a diff, on one page to read,
 // test-results/audit/index.html; a board without one is drawn alone. It has no
-// pass or fail. Each board is drawn by Chromium at its exact size from design-export/boards/, and
-// News's from design-export/news/boards/ (SV decision D7: the export holds board HTML, not PNGs),
+// pass or fail. Each board is drawn by Chromium at its exact size from design-export/boards/, News's
+// from design-export/news/boards/ and Jobs's from design-export/jobs/boards/ (SV decision D7: the
+// export holds board HTML, not PNGs),
 // after its listed patches: DESIGN.md's
 // Overrides to the export, and where the dev seed (decision D3) or DESIGN.md's own text says
 // otherwise than the board. The patches are the differences already decided, so what the diff
@@ -144,13 +145,35 @@ const AUDIT_TOKENS: Patch = {
   to: `styles/fonts.css">\n<style>.sp{--ink3:${colour.ink3};--panel:${colour.panel};--cyan:${colour.cyan}} .sp.light{--ink2:${lightColour.ink2};--cardOn:${lightColour.cardOn};--cyan:${lightColour.cyan};--evtint:${evtint.light}%}</style>`,
 };
 
+// J8 (override 37, DESIGN.md › Jobs › Shell and Jobs in Settings): the sidebar's Jobs item under News,
+// its Needs you count in ink2 (the seed's 3), and Settings' nav listing Jobs between News and AI, on
+// every board from before Jobs (01–31); its `work` glyph is drawn from glyphs/icons.json.
+const WORK = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-export', 'glyphs', 'icons.json'), 'utf8')).work.d as string;
+const WORK_GLYPH = `<svg class="ms" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor" style="display: block; flex: none"><path d="${WORK}"></path></svg>`;
+const JOBS_NAV = `\n  <a class="nav" href="#">${WORK_GLYPH}<span class="grow">Jobs</span><span class="cnt num" style="color: var(--ink2)">3</span></a>`;
+const JOBS_SIDEBAR = 'Override 37 (J8): the sidebar\'s Jobs item under News, its Needs you count in ink2';
+const JOBS_SETTINGS_NAV = 'Override 37 (J8): Settings\' nav lists Jobs between News and AI';
+const SETTINGS_JOBS = `\n    <a class="nav" href="#">${WORK_GLYPH}<span class="grow">Jobs</span></a>`;
+const JOBS_EVERYWHERE: Patch[] = [
+  // Round 2, after N4's News item; round 3, after its own.
+  {why: JOBS_SIDEBAR, from: NEWS_NAV, to: `${NEWS_NAV}${JOBS_NAV}`},
+  {why: JOBS_SIDEBAR, from: '<span class="ms">newspaper</span><span class="grow">News</span></a>\n  <div class="sb-sec">', to: `<span class="ms">newspaper</span><span class="grow">News</span></a>${JOBS_NAV}\n  <div class="sb-sec">`},
+  {why: JOBS_SIDEBAR, from: '<span class="ms">newspaper</span><span class="grow">News</span></a>\n\n  <div class="sb-sec">', to: `<span class="ms">newspaper</span><span class="grow">News</span></a>${JOBS_NAV}\n\n  <div class="sb-sec">`},
+  // Round 2, after N5's News item, and 30a; then 30b.
+  {why: JOBS_SETTINGS_NAV, from: '<span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>\n    <a class="nav" href="#"><span class="ms">auto_awesome</span>',
+    to: `<span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>${SETTINGS_JOBS}\n    <a class="nav" href="#"><span class="ms">auto_awesome</span>`},
+  {why: JOBS_SETTINGS_NAV, from: '<span class="grow">News</span></a>\n    <a class="nav on" href="#"><span class="ms">auto_awesome</span>',
+    to: `<span class="grow">News</span></a>${SETTINGS_JOBS}\n    <a class="nav on" href="#"><span class="ms">auto_awesome</span>`},
+];
+
 /** Patches for every board that draws what they change; a board without it skips them. */
-const EVERY_BOARD: Patch[] = [
-  AUDIT_TOKENS,
-  TODAY_NAMED,
+const EVERY_BOARD: Patch[] = [AUDIT_TOKENS, TODAY_NAMED];
+/** And for every board from before Jobs (01–31): Jobs's boards draw News and Jobs themselves. */
+const BEFORE_JOBS: Patch[] = [
   SETTINGS_NEWS_NAV,
   newsNav('\n  <a class="nav" href="#" style="margin-top: 2px"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>'),
   newsNav('\n  <a class="nav on" href="#"><span class="ms">calendar_month</span><span class="grow">Calendar</span></a>'),
+  ...JOBS_EVERYWHERE,
 ];
 
 // Decided while building #87: the mark is Day stack (Icon.tsx's Mark), where every board draws the
@@ -160,6 +183,7 @@ const DAY_STACK = '<svg width="18" height="18" viewBox="0 0 22 22" aria-hidden="
 
 const BOARDS_DIR = path.join(ROOT, 'design-export', 'boards');
 const NEWS_DIR = 'news/boards';
+const JOBS_DIR = 'jobs/boards';
 /** A board's markup from the line holding `start` to the end of `end`, for an annotation patched out whole. */
 function boardBlock(file: string, start: string, end: string, dir = 'boards'): string {
   const html = fs.readFileSync(path.join(ROOT, 'design-export', dir, file), 'utf8');
@@ -503,11 +527,11 @@ const BOARD_21_PATCHES: Patch[] = [
 // outlet name stand in for the real image the app shows (design-export/news/README.md).
 const NEWS_ICONS = ['newspaper', 'arrow_back', 'arrow_upward', 'info', 'pending', 'live_tv', 'local_police', 'thunderstorm', 'earthquake', 'local_fire_department', 'travel_explore'];
 const ICON_FONT_LINK = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,300,0..1,0&amp;display=block">';
-function newsIcons(): Patch {
+function newsIcons(names: string[] = NEWS_ICONS, why = 'Off the network: News\'s icons from glyphs/icons.json, not Google Fonts; the placeholders\' icon and outlet name stand in for the real image'): Patch {
   const glyphs = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-export', 'glyphs', 'icons.json'), 'utf8')) as Record<string, {d: string}>;
-  const paths = Object.fromEntries(NEWS_ICONS.map(name => [name, glyphs[name]!.d]));
+  const paths = Object.fromEntries(names.map(name => [name, glyphs[name]!.d]));
   return {
-    why: 'Off the network: News\'s icons from glyphs/icons.json, not Google Fonts; the placeholders\' icon and outlet name stand in for the real image',
+    why,
     from: ICON_FONT_LINK,
     to: `<style>.sp .ph > .ms, .sp .nw-lead .ph > .cap, .sp .nw-row .ph > .cap { visibility: hidden; }</style>
 <script>
@@ -728,6 +752,114 @@ const NEWS_BOARDS: Board[] = [
   {name: '30a-settings-news', file: '30a-settings-news.html', dir: NEWS_DIR, width: 1677, height: 1050, patches: BOARD_30A_PATCHES},
   {name: '30b-settings-ai', file: '30b-settings-ai.html', dir: NEWS_DIR, width: 1677, height: 1050, patches: BOARD_30B_PATCHES},
   {name: '31-light-news', file: '31-light-news.html', dir: NEWS_DIR, width: 1677, height: 1050, patches: BOARD_31_PATCHES},
+];
+
+// Jobs's boards (design round 4) load the full icon font for their icons, as round 3 does; the audit
+// draws every one from glyphs/icons.json instead, as the app does (override 34).
+const JOBS_ICONS = [
+  'add', 'alt_route', 'alternate_email', 'arrow_back', 'arrow_downward', 'arrow_forward', 'arrow_upward', 'article', 'auto_awesome', 'block', 'bookmark_add', 'business',
+  'calendar_month', 'campaign', 'check', 'check_circle', 'chevron_right', 'close', 'content_copy', 'contrast', 'delete', 'description', 'edit', 'edit_note', 'event',
+  'expand_less', 'expand_more', 'flag', 'hide_image', 'history', 'home_work', 'inbox', 'info', 'keep', 'keyboard_arrow_down', 'keyboard_arrow_up', 'link', 'link_off',
+  'local_shipping', 'location_on', 'lock', 'lock_clock', 'mail', 'manage_search', 'mark_email_read', 'mark_email_unread', 'merge', 'more_horiz', 'move_item', 'newspaper',
+  'notifications', 'open_in_new', 'payments', 'pending', 'pending_actions', 'person', 'progress_activity', 'radio_button_checked', 'radio_button_unchecked', 'remove',
+  'search', 'search_off', 'settings', 'shield', 'task_alt', 'travel_explore', 'undo', 'visibility_off', 'warning', 'work',
+];
+const JOBS_ICONS_PATCH = newsIcons(JOBS_ICONS, 'Override 34: Jobs\'s icons from glyphs/icons.json, not Google Fonts');
+// #264 and #265: In process in its own cobalt (its mark, label and an In process event's node), Rejected's
+// disc `alert` and Ghosted's dashed ring `sunGlyph`, where the boards draw them ink and ink3. Override 35:
+// Glyphs' sizes per role, 16 where the boards draw 15 (the JD glyph, From history's, the chip's, the
+// reader's badge) and 17 (a small button's, by the stylesheet's cascade), 14 where they draw 13.
+const JOBS_COLOURS: Patch = {
+  why: '#264, #265 and override 35: In process cobalt, Rejected\'s disc alert, Ghosted\'s ring sunGlyph; Jobs\'s glyphs at Glyphs\' sizes',
+  from: '</style>\n</head>',
+  to: `.sp{--inProcess:${colour.inProcess};--sunGlyph:${colour.sunGlyph}} .sp.light{--inProcess:${lightColour.inProcess};--sunGlyph:${lightColour.sunGlyph}}
+.sp .sd.proc, .sp .jb-ev.proc .node i { background: var(--inProcess); } .sp .sl.proc { color: var(--inProcess); }
+.sp .sd.rej { background: var(--alert); } .sp .sd.ghost { border-color: var(--sunGlyph); }
+.sp .jb-need .btn .ms, .sp .jb-tr .jd .ms, .sp .jb-hist > .ms, .sp .jb-chip > .ms, .sp .jb-badge.lg .ms { font-size: 16px; }
+.sp .st .by, .sp .jb-badge .ms { font-size: 14px; }
+</style>\n</head>`,
+};
+/** A Jobs board at 1677 × 1050 with Jobs's icons and colours, and the Today block's tasks where it has them. */
+const jobsBoard = (file: string, patches: Patch[] = [], today = true): Board =>
+  ({name: file.replace(/\.html$/, ''), file, dir: JOBS_DIR, width: 1677, height: 1050, patches: [JOBS_ICONS_PATCH, JOBS_COLOURS, ...today ? N5_TODAY : [], ...patches]});
+
+/** A row of the table beside the detail (32): Platform dropped, JD its glyph. */
+const jobsRow = (company: string, role: string, applied: string, status: 'applied' | 'proc' | 'rej', step = '', jd = 'description') => {
+  const label = {applied: 'Applied', proc: 'In process', rej: 'Rejected'}[status];
+  return `      <div class="jb-tr${status === 'rej' ? ' closed' : ''}"><span></span><span class="co">${company}</span><span class="ro">${role}</span><span class="pl c-plat"></span>`
+    + `<span class="ap">${applied}</span><span class="st${status === 'proc' ? ' proc' : ''}"><i class="sd ${status}"></i><span class="sl ${status}">${label}</span>${step && `<span class="step">· ${step}</span>`}</span>`
+    + `<span class="jd"><span class="ms">${jd}</span></span></div>\n`;
+};
+
+const BOARD_32_PATCHES: Patch[] = [
+  {why: 'Seed (D3): the table holds every application, newest first, so Sep 27\'s three, Sep 26\'s, Sep 25\'s, Sep 24\'s, Sep 23\'s and Sep 22\'s come before Litware, down to the fold',
+    from: boardBlock('32-jobs-a-typical-morning.html', '      <div class="jb-tr"><span></span><span class="co">Litware</span>', '<span class="co">Northwind Talent</span><span class="ro">Junior Developer</span>', JOBS_DIR),
+    to: [
+      jobsRow('Coho Winery', 'Software Developer', 'Sep 27', 'applied'), jobsRow('Southridge Video', 'Web Developer', 'Sep 27', 'applied'),
+      jobsRow('Lamna Healthcare', 'Junior Developer', 'Sep 27', 'applied'), jobsRow('A. Datum Corporation', 'Support Engineer', 'Sep 26', 'applied'),
+      jobsRow('School of Fine Art', 'Developer', 'Sep 25', 'rej', 'Oct 5'), jobsRow('Munson\'s Pickles and Preserves Farm', 'Software Engineer', 'Sep 24', 'rej', 'Oct 1'),
+      jobsRow('VanArsdel', 'Application Developer', 'Sep 23', 'applied'), jobsRow('Fincher Architects', 'Software Developer', 'Sep 22', 'rej', 'Oct 6'),
+      jobsRow('Litware', 'QA Engineer', 'Sep 21', 'proc', 'Case study due Oct 12'),
+    ].join('') + '      <div class="jb-tr closed"><span></span><span class="co">Northwind Talent</span><span class="ro">Junior Developer</span>'},
+  {why: '#265: how the posting was found follows "Full posting" with no dot', from: '<span class="how grow">· Found on Greenhouse', to: '<span class="how grow">Found on Greenhouse'},
+  {why: '#269: the verification email Gmail no longer has says so on its line (the seed keeps no message for it)',
+    from: '<span class="t"><span class="s">Verify your email</span></span>', to: '<span class="t"><span class="s">Verify your email</span><span class="s">· No longer in Gmail</span></span>'},
+];
+
+const READS = (value: string, off = false) => ({
+  why: '#273 (D377): what Jobs reads in an account is a plain value in ink3, no chevron, nothing to press',
+  from: `<span class="dd${off ? ' off' : ''}">${value}<span class="ms">expand_more</span></span>`,
+  to: `<span class="reads" style="color: var(--ink3); font-size: 12.5px">${value}</span>`,
+  times: off ? 3 : 1,
+});
+const NEWS_FAILING_NAV = (on: string): Patch => ({
+  why: 'N5 (override 24): Settings\' News item carries its warning glyph while the seed\'s FOX 11 fails',
+  from: `<span class="grow">News</span></a>\n    <a class="nav${on}" href="#"><span class="ms">work</span>`,
+  to: `<span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>\n    <a class="nav${on}" href="#"><span class="ms">work</span>`,
+});
+const needsKey = (sub: string): Patch => ({
+  why: 'D315, as News\'s rows: with no Anthropic key (the seed sets none), each model\'s row says one is needed',
+  from: `<span class="s">${sub}</span>`, to: `<span class="s">${sub} · needs a key</span>`,
+});
+const BOARD_38C_PATCHES: Patch[] = [
+  {why: 'DESIGN.md › Jobs › States: while Jobs is off it has no item in the sidebar (38c draws it, current)',
+    from: '\n  <a class="nav on" href="#"><span class="ms">work</span><span class="grow">Jobs</span></a>', to: ''},
+];
+const BOARD_39A_PATCHES: Patch[] = [
+  READS('Every email'), READS('Career mail only'), READS('Off', true), NEWS_FAILING_NAV(' on'),
+];
+const BOARD_39B_PATCHES: Patch[] = [
+  NEWS_FAILING_NAV(''),
+  needsKey('Role title, requisition ID, the event, the match'), needsKey('When the email\'s link and the platforms miss'),
+  needsKey('Summary, must-haves and nice-to-haves, salary and setting'),
+];
+
+/**
+ * Jobs's boards (design round 4, J8). Board 32 is set beside its page screenshot (pages.ts); the rest are
+ * drawn alone, their states held by jobs.spec.ts, jobsMail.spec.ts and jobsStates.spec.ts. Where the
+ * app differs by a decision, DESIGN.md lists it (overrides 34–37, Decided while building #261–#274).
+ */
+const JOBS_BOARDS: Board[] = [
+  jobsBoard('32-jobs-a-typical-morning.html', BOARD_32_PATCHES),
+  {...jobsBoard('32b-a-narrow-window.html', [], false), width: 1024, height: 768},
+  jobsBoard('33-the-jds-full-text.html'),
+  jobsBoard('34a-needs-you-each-kind.html'),
+  jobsBoard('34b-an-item-resolving-from-history.html'),
+  jobsBoard('34c-track-this-resolved.html'),
+  jobsBoard('35a-corrections-edit-in-place-move-to.html'),
+  jobsBoard('35b-corrections-more-merge-with.html'),
+  jobsBoard('36a-search-humongous.html'),
+  jobsBoard('36b-search-kubernetes.html'),
+  jobsBoard('37a-in-mail-the-jd-chip.html'),
+  jobsBoard('37b-in-mail-the-chip-opens-its-jd.html'),
+  jobsBoard('37c-in-mail-applied-before.html'),
+  jobsBoard('38a-states-the-history-pass.html'),
+  jobsBoard('38b-states-not-read-no-jd-ghosted-set-by-hand.html'),
+  jobsBoard('38c-states-jobs-off.html', BOARD_38C_PATCHES),
+  jobsBoard('39a-settings-jobs.html', BOARD_39A_PATCHES, false),
+  jobsBoard('39b-settings-ai.html', BOARD_39B_PATCHES, false),
+  jobsBoard('40-light-jobs.html'),
+  {...jobsBoard('states-hover-and-state.html', [], false), height: 1180},
 ];
 
 export const BOARDS: Board[] = [
@@ -1216,6 +1348,7 @@ export const BOARDS: Board[] = [
   {name: '21b-phone-reader', file: '21-phone-inbox-reader-agenda.html', width: 1394, height: 1020, phone: 1, patches: BOARD_21_PATCHES},
   {name: '21c-phone-agenda', file: '21-phone-inbox-reader-agenda.html', width: 1394, height: 1020, phone: 2, patches: BOARD_21_PATCHES},
   ...NEWS_BOARDS,
+  ...JOBS_BOARDS,
 ];
 
 /** A board's HTML with every board's patches and its own applied; one of its own that doesn't match exactly once throws. */
@@ -1224,7 +1357,7 @@ export function patchedBoard(board: Board): string {
   // Round 3 (News) draws Day stack already.
   if (!board.dir && !html.includes(PLACEHOLDER_MARK)) throw new Error(`${board.name}: the placeholder mark isn't drawn as expected.`);
   html = html.replaceAll(PLACEHOLDER_MARK, DAY_STACK);
-  for (const patch of EVERY_BOARD) {
+  for (const patch of board.dir === JOBS_DIR ? EVERY_BOARD : [...EVERY_BOARD, ...BEFORE_JOBS]) {
     const count = html.split(patch.from).length - 1;
     if (count > 1) throw new Error(`${board.name}: the patch "${patch.why}" matches ${count} times, not once or none.`);
     html = html.replace(patch.from, () => patch.to);
@@ -1311,7 +1444,7 @@ figcaption { font-size: 12px; margin-bottom: 4px; }
 img { width: 100%; height: auto; display: block; border: 1px solid var(--hair); }
 </style></head><body>
 <header><h1>Board audit</h1>
-<p>Each board as drawn, after the patches DESIGN.md has decided, beside the app's page screenshot of the same state (web/tests/browser/goldens/, the nine the release keeps, D281) and their diff; a board without one is drawn alone. Every board also draws the mark as Day stack (#87) and the Today block's named tasks (#78). Anything the diff shows that no listed difference explains is a gap: a patch nobody wrote yet, or the app departing from the board.</p></header>
+<p>Each board as drawn, after the patches DESIGN.md has decided, beside the app's page screenshot of the same state (web/tests/browser/goldens/, the ten the release keeps, D281) and their diff; a board without one is drawn alone. Every board also draws the mark as Day stack (#87) and the Today block's named tasks (#78). Anything the diff shows that no listed difference explains is a gap: a patch nobody wrote yet, or the app departing from the board.</p></header>
 ${sections.join('\n')}
 </body></html>
 `;

@@ -1484,10 +1484,14 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     the network; the build adds the ones it lacks, listed under Jobs's Keys and behaviour.
 35. **Jobs's glyphs keep Glyphs' sizes per role** (#123): where the boards draw 15 px (the table's
     JD glyph, From history's rows, the JD chip, the reader's Applied before badge) the app draws 16,
-    and where they draw 13 (the row's Applied before badge, the set-by-hand mark) 14.
+    and where they draw 13 (the row's Applied before badge, the set-by-hand mark) 14; Needs you's
+    small buttons, which the boards' stylesheet draws at 17 by its cascade, take 16 (#274).
 36. **Jobs's toasts lead with #147's glyphs:** `check` in `good` for a thing done ("JD saved for
     Lucerne Publishing", "Merged"), where 34b draws `check_circle`; `delete` in `ink3` for one taken
     away (Dismiss all, Not an application, Delete), which no board draws.
+37. **The boards from before Jobs draw it as it now is** (J8, as override 24 did for News): on 01–31
+    the sidebar lists **Jobs** (`work`) under News with its Needs you count in `ink2` (the seed's 3),
+    and on 17, 18a, 18b, 30a and 30b Settings' nav lists **Jobs** between News and AI.
 
 ## Not designed yet
 
@@ -3321,3 +3325,33 @@ it changes what's on screen.
     with no chevron and nothing to press, as override 26 did for News's models. The brief lists the
     accounts Jobs reads (D310) rather than offering a choice; the settings route still takes the
     accounts, so selects are a small change if one's wanted. Board audit: 39a draws a select on each.
+274. **J8's small gaps** (Andy left small gaps to Claude, 2026-10-30; darma SV-126, D378–D382):
+    - **The AI down's line** words why it's down: "Anthropic unreachable since 8:52 AM, retrying", "rate
+      limited since…", "refused its key in Settings › AI" or "Jobs needs an Anthropic key in Settings ›
+      AI", the last two linking there and not retrying. It counts what waits for the reader and what a
+      held history pass has left, or is the reason alone with nothing to count. The pass's line stays
+      under it while held, and both step aside while a search holds a query.
+    - **Jobs off:** `4` opens it, while ⌘K's Go to lists Jobs only while it's on, as the sidebar does;
+      `/` and J / K do nothing there. Turned on, the sidebar's item folds in whenever it appears after
+      being off; turned off, it goes at once.
+    - **Settings › Jobs:**
+      - Reads lists the accounts Jobs reads first, as it lists them, then the rest in the sidebar's order.
+      - The History pass row while it runs reads "Reading history · 140 of 330 emails" with the spinner
+        and "Reading", its progress along the row's foot. Held, it reads `history` "Waiting for the AI";
+        before it has run, "Runs once when Jobs is turned on, over the mail from before then".
+      - From history with none waiting says so, without Show. Show opens Jobs at /jobs/from-history,
+        From history unfolded and in view.
+    - **Settings › AI's Jobs group** shows on or off. Without an Anthropic key each model's line ends "·
+      needs a key", as News's do. Usage this month's total waits for Jobs's answer too.
+    - **Matching the board and the text:** a JD to confirm's candidates have a hairline between them,
+      as 32 and 34a draw, and From history's fold reads "wasn't" as written here.
+    - **Board audit:**
+      - Board 32 is set beside its page screenshot (`32-jobs-a-typical-morning`), with the seed's rows
+        to the fold and #264, #265, #269 and override 35 patched in. The other Jobs boards are drawn
+        alone.
+      - 38a draws a history pass the seed doesn't run (no Needs you, From history 2); jobsStates.spec.ts
+        holds it.
+      - 38c draws the sidebar's item while off (States says it has none).
+      - 39a draws selects for Reads (#273).
+      - 39a and 39b draw News in Settings' nav without its warning (the seed's FOX 11 fails), and 39b
+        draws the Anthropic key set.
