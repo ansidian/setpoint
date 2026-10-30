@@ -150,6 +150,11 @@ describe('routes', () => {
     ['/jobs', '', {page: 'jobs', open: null}],
     ['/jobs/12', '', {page: 'jobs', open: 12}],
     ['/jobs/nope', '', {page: 'jobs', open: null}],
+    // From mail (J7): Full posting arrives unfolded, and Applied before searched for the company.
+    ['/jobs/12/posting', '', {page: 'jobs', open: 12, posting: true}],
+    ['/jobs/posting', '', {page: 'jobs', open: null}],
+    ['/jobs', '?q=contoso%20pharmaceuticals', {page: 'jobs', open: null, q: 'contoso pharmaceuticals'}],
+    ['/jobs', '?q=%20%20', {page: 'jobs', open: null}],
     ['/somewhere', '', {page: 'inbox', account: null, open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);

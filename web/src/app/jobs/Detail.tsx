@@ -48,6 +48,10 @@ export interface DetailProps {
   timeZone: string;
   today: string;
   leaving: boolean;
+  // Arrived from mail (Open in Jobs, Full posting), or open as the page mounted: no slide (37b).
+  arrived?: boolean;
+  // Arrived from the JD popover's Full posting: the posting unfolded, scrolled to (#271).
+  unfolded?: boolean;
   canStep: {previous: boolean; next: boolean};
   onStep: (delta: 1 | -1) => void;
   onClose: () => void;
@@ -74,7 +78,7 @@ interface OpenMenu {
   anchor: MenuAnchor;
 }
 
-export function Detail({id, row, accounts, now, timeZone, today, leaving, canStep, onStep, onClose, onOpen, onEmail, postingRef, rows, corrections, editing, onEdit, onSave, onMove, onNotAboutThis, onPick}: DetailProps) {
+export function Detail({id, row, accounts, now, timeZone, today, leaving, arrived = false, unfolded = false, canStep, onStep, onClose, onOpen, onEmail, postingRef, rows, corrections, editing, onEdit, onSave, onMove, onNotAboutThis, onPick}: DetailProps) {
   const width = useReadingPaneWidth();
   const load = {path: applicationPath(id), ...useResource<ApplicationOut>(applicationPath(id))};
   const detail = load.data?.id === id ? load.data : undefined;
@@ -96,7 +100,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, canSte
     openEmail: onEmail, move: to => onMove(event, to), notAboutThis: () => onNotAboutThis(event),
   }), {element, corner: 'right'});
   return (
-    <section className={leaving ? 'pane jb-pane leaving' : 'pane jb-pane'} aria-label="Application" style={style}>
+    <section className={['pane', 'jb-pane', leaving && 'leaving', arrived && 'arrived'].filter(Boolean).join(' ')} aria-label="Application" style={style}>
       <PaneEdge width={width} />
       <div className="rd-tools">
         <button className="ibtn rd-back" type="button" aria-label="Back" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
@@ -119,7 +123,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, canSte
               editing={editing} onEdit={onEdit} onSave={onSave} chipOpen={menu?.owner === 'status'} onChip={chip} />
             {detail ? (
               <div className="jb-body">
-                <Jd detail={detail} timeZone={timeZone} today={today} posting={postingRef} onPick={onPick} />
+                <Jd detail={detail} timeZone={timeZone} today={today} posting={postingRef} unfolded={unfolded} onPick={onPick} />
                 <Timeline events={detail.timeline} timeZone={timeZone} today={today} onEmail={onEmail} menuOpen={menu?.owner ?? null} onMenu={eventActions} />
                 {detail.applied_before.length > 0 && <Related label={`Applied before at ${detail.company}`} icon="history" links={detail.applied_before} today={today} onOpen={onOpen} />}
                 {detail.also_at.length > 0 && <Related label={`Also at ${detail.company}`} icon="work" links={detail.also_at} today={today} onOpen={onOpen} />}
@@ -199,11 +203,12 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
 }
 
 /** The JD first (D307): its summary, facts, lists and the full posting; or where it stands without one. */
-function Jd({detail, timeZone, today, posting, onPick}: {
+function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   detail: ApplicationOut;
   timeZone: string;
   today: string;
   posting: RefObject<FullPostingHandle | null>;
+  unfolded: boolean;
   onPick: (candidate: JdCandidateOut | null) => void;
 }) {
   const [asking, setAsking] = useState(false);
@@ -237,7 +242,7 @@ function Jd({detail, timeZone, today, posting, onPick}: {
             </div>
           </div>
         )}
-        <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} />
+        <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
       </>
     );
   }

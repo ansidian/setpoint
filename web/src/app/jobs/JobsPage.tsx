@@ -13,6 +13,11 @@
 // unfolded posting, then closes the detail (in a narrow window, Back), then clears the query, then
 // leaves search. `4` is the shell's (App.tsx).
 //
+// From mail (J7): an application open as the page mounts (Open in Jobs, Full posting, a reload)
+// arrives with its pane simply there, no slide; /jobs/12/posting arrives scrolled to its full posting
+// and unfolded (#271); /jobs?q=… arrives searched, the query in the field (Applied before). The
+// address then drops what it carried, so a reload or Back doesn't do it again.
+//
 // Live: a `jobs` event refreshes what's on screen (logic/live.ts). An application that lands takes its
 // place by the sort and settles from `sub2` over 900 ms; a row an email moves on crossfades its status
 // and settles the same way. In a filtered view a row stays put until the next visit.
@@ -85,8 +90,10 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const [cursor, setCursor] = useState<string | null>(null);
 
   // Search (36a, 36b): its own state, never mail's (D316).
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(Boolean(route.q));
+  const [query, setQuery] = useState(route.q ?? '');
+  // Searched from mail: the field shows the query, without taking focus, so J / K and Esc are the page's.
+  const arrivedSearching = useRef(Boolean(route.q));
   const q = searching ? query.trim() : '';
   const {data: answer} = useResource<JobsSearchOut>(q ? searchPath(q) : null);
   // The results as last answered for a query, so typing never blanks them between answers.
@@ -105,6 +112,10 @@ export function JobsPage({route}: {route: JobsRoute}) {
   };
   // Turned on from the glass alone (a narrow header), the field shows first, then takes focus.
   useEffect(() => {
+    if (arrivedSearching.current) {
+      arrivedSearching.current = false;
+      return;
+    }
     if (searching && document.activeElement !== field.current) field.current?.focus();
   }, [searching]);
   const leaveSearch = () => {
@@ -145,6 +156,16 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const keys = [...needs.map(item => needKey(item.id)), ...shownRows.map(row => rowKey(row.id))];
 
   const open = route.open;
+  // An application open as the page mounts arrives: its pane is simply there until it closes (37b).
+  const [arriving, setArriving] = useState(open !== null);
+  if (arriving && open === null) setArriving(false);
+  // Full posting from mail: that application's posting arrives unfolded, once.
+  const [unfold, setUnfold] = useState(route.posting ? open : null);
+  if (unfold !== null && open !== unfold) setUnfold(null);
+  // What the address carried from mail is spent once it's here.
+  useEffect(() => {
+    if (route.posting || route.q) navigate({page: 'jobs', open: route.open}, {replace: true});
+  }, [route.posting, route.q, route.open]);
   const openRow = open === null ? undefined : shownRows.find(row => row.id === open) ?? rows.find(row => row.id === open);
   const {data: detail} = useResource<ApplicationOut>(open === null ? null : applicationPath(open));
   const titled = openRow ?? (detail?.id === open ? detail : undefined);
@@ -364,7 +385,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
           )}
         </section>
         {open !== null && (
-          <Detail id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} today={today} leaving={leaving}
+          <Detail id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} today={today} leaving={leaving} arrived={arriving} unfolded={unfold === open}
             canStep={{previous: neighbour(-1) !== null, next: neighbour(1) !== null}} onStep={step} onClose={close} onOpen={openAt}
             onEmail={messageId => navigate({page: 'inbox', account: null, open: messageId})} postingRef={posting}
             rows={rows} corrections={correctionsFor} editing={editing?.id === open ? editing.field : null}

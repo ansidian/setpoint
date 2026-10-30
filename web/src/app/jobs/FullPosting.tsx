@@ -4,7 +4,8 @@
 // paragraphs fading in over 180 ms from 60 ms), while the pane scrolls the head up under the tools, so
 // the summary and lists slide away rather than the text appearing off screen. Collapse, the head or
 // Esc folds it back over 180 ms and scrolls back to the row. The text is the posting's own words,
-// cleaned to markdown and never rewritten.
+// cleaned to markdown and never rewritten. Arriving from mail's JD popover (#271), it's unfolded
+// already, the pane at it, with no motion.
 import type {PostingOut} from '@setpoint/shared';
 import {Fragment, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState} from 'react';
 import type {ReactNode, Ref} from 'react';
@@ -84,15 +85,18 @@ export function blocks(markdown: string): ReactNode[] {
   return out;
 }
 
-export function FullPosting({posting, title, company, timeZone, today, ref}: {
+export function FullPosting({posting, title, company, timeZone, today, arrived = false, ref}: {
   posting: PostingOut;
   title: string;
   company: string;
   timeZone: string;
   today: string;
+  arrived?: boolean;
   ref?: Ref<FullPostingHandle>;
 }) {
-  const [state, setState] = useState<'row' | 'open' | 'folding'>('row');
+  const [state, setState] = useState<'row' | 'open' | 'folding'>(arrived ? 'open' : 'row');
+  // Unfolded as it was drawn: no unfolding, and the pane at it at once.
+  const [still, setStill] = useState(arrived);
   const root = useRef<HTMLDivElement>(null);
   // Where the pane stood before it unfolded, to go back to; and the pane's scroll under way, so a
   // fold started while it unfolds takes over from it.
@@ -107,6 +111,7 @@ export function FullPosting({posting, title, company, timeZone, today, ref}: {
 
   const unfold = () => {
     before.current = scroller()?.scrollTop ?? 0;
+    setStill(false);
     setState('open');
   };
   const fold = () => setState(current => (current === 'open' ? 'folding' : current));
@@ -123,8 +128,11 @@ export function FullPosting({posting, title, company, timeZone, today, ref}: {
     const pane = scroller();
     if (state !== 'open' || !pane || !root.current) return;
     const top = root.current.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop;
-    scrollPane(pane, Math.max(0, top), motion.slow);
-  }, [state]);
+    if (still) {
+      scrolling.current();
+      pane.scrollTop = Math.max(0, top);
+    } else scrollPane(pane, Math.max(0, top), motion.slow);
+  }, [state, still]);
   // Folding: back to the row once the text has folded away, the pane going back to where it was.
   useEffect(() => {
     if (state !== 'folding') return;
@@ -170,7 +178,7 @@ export function FullPosting({posting, title, company, timeZone, today, ref}: {
         <span className="ell">{title} · {company}</span>
         <button className="btn quiet sm" type="button" aria-expanded="true" onClick={fold}>Collapse<Icon name="expand_less" size={16} /></button>
       </div>
-      <div className={state === 'folding' ? 'jb-unfold folding' : 'jb-unfold'}>
+      <div className={['jb-unfold', state === 'folding' && 'folding', still && 'still'].filter(Boolean).join(' ')}>
         <div className="jb-facts">
           <span><Icon name="travel_explore" size={16} />{how}</span>
           {posting.link && <a href={posting.link} target="_blank" rel="noopener noreferrer"><Icon name="link" size={16} /><span>{bareLink(posting.link)}</span></a>}
