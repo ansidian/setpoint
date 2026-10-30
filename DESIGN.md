@@ -1008,7 +1008,8 @@ desktop and keeps it (D325).
     `ink`, max 600, 8 px under it.
   - **Facts:** one line in `ink2` (6 / 18 apart), each after a 16 px glyph in `ink3`: `location_on`
     "Irvine, CA", `home_work` "Hybrid, 3 days", `payments` "$95,000–$115,000". With no salary
-    stated, "Salary not stated" in `ink3`.
+    stated, "Salary not stated" in `ink3`. A fact too long for its line wraps ([Decided while
+    building](#decided-while-building) #277).
   - **Must-haves** and **Nice-to-haves** in two columns, 28 apart, max 624, each label with its
     count in `ink2` ("MUST-HAVES 4"). Items 6 apart at 13 / 1.45 in a 14 px hanging column:
     must-haves in `ink` after a 5 px `ink2` dot, nice-to-haves in `ink2` after a 5 px `ink3` ring.
@@ -3365,3 +3366,8 @@ it changes what's on screen.
     "Couldn't read", and the pick stays the application's link, so Open posting, `O` and the row's
     menu open it. A 403, a page drawn by script and a posting that's gone all read the same: Jobs
     can't tell them apart, and the link shows which. Look it up forgets the pick and searches again.
+277. **A long fact wraps** (Andy, 2026-10-30; darma SV-129): a salary or location too long for the
+    line wraps inside its box, in the detail and in the JD popover, its glyph level with the first
+    line, and the short facts stay on one line each. Jobs keeps 240 characters of a salary and 200
+    of a location. The source facts over the unfolded posting stay on one line, the link cut by its
+    ellipsis.

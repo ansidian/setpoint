@@ -2,10 +2,10 @@
 // unfolding in place (board 33); J6's menus with their keys and submenus, the candidate picker and the
 // title's field (boards 34a, 35a, 35b); J7's JD chip with its popover and Applied before, as mail's
 // slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
-// lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b). What they do with
-// the props and the pointer or keys they're given; the page around them, its keys and the server are
-// jobs.spec.ts's and jobsStates.spec.ts's. This file imports Jobs's folder, so
-// it's one of Jobs's wiring points (server/src/jobs/README.md).
+// lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
+// wrapping in their boxes (SV-129). What they do with the props and the pointer or keys they're
+// given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
+// This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
   ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, PostingOut,
 } from '@setpoint/shared';
@@ -15,6 +15,7 @@ import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import '../../src/app/jobs/jobs.css';
 import {CandidatePicker} from '../../src/app/jobs/CandidatePicker.tsx';
+import {JdFacts} from '../../src/app/jobs/Detail.tsx';
 import {EditField} from '../../src/app/jobs/EditField.tsx';
 import {FullPosting} from '../../src/app/jobs/FullPosting.tsx';
 import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
@@ -436,6 +437,69 @@ test('its popover (37b): the head, What they want, the facts and both lists, and
   await button.click();
   await expect.element(popover).not.toBeInTheDocument();
   await expect.element(button).toHaveAttribute('aria-expanded', 'false');
+});
+
+const LONG_SALARY = '$3,900.00 - $6,500.00 per month (grades A, B, C, D, E, F; varies by grade, by office and by bargaining unit)';
+const UNBROKEN_PLACES = 'Fresno/Sacramento/Oakland/Riverside/Redding/Bakersfield/Stockton/Modesto/Visalia/Eureka/Salinas';
+
+const factOf = (root: Element, words: string) => [...root.querySelectorAll<HTMLElement>('.jb-facts > span')].find(fact => fact.textContent === words)!;
+/** The lines a fact's text is drawn on, top to bottom. */
+function textLines(fact: HTMLElement) {
+  const range = document.createRange();
+  range.selectNodeContents(fact);
+  const rects = [...range.getClientRects()].filter(rect => rect.width > 0 && rect.x > fact.querySelector('.icon')!.getBoundingClientRect().right);
+  return [...new Set(rects.map(rect => rect.top))].map(top => rects.filter(rect => rect.top === top));
+}
+
+/** The fact wraps within its box and the row's, its glyph level with the first line. */
+function expectWrappedInside(fact: HTMLElement) {
+  const box = fact.getBoundingClientRect();
+  const row = fact.closest('.jb-facts')!.getBoundingClientRect();
+  const lines = textLines(fact);
+  expect(lines.length).toBeGreaterThan(1);
+  expect(box.right).toBeLessThanOrEqual(row.right);
+  expect(Math.max(...lines.flat().map(rect => rect.right))).toBeLessThanOrEqual(box.right);
+  const icon = fact.querySelector('.icon')!.getBoundingClientRect();
+  const first = lines[0]![0]!;
+  expect(Math.abs((icon.top + icon.bottom) / 2 - (first.top + first.bottom) / 2)).toBeLessThan(1);
+}
+
+test.each([
+  ['a long salary', {salary: LONG_SALARY}, LONG_SALARY, 'Irvine, CA'],
+  ['a long location with no spaces', {location: UNBROKEN_PLACES}, UNBROKEN_PLACES, '$95,000–$115,000'],
+])('a JD\'s facts: %s wraps inside its box, and the short ones stay on one line, side by side', async (_, change, long, beside) => {
+  const {container} = await render(<div style={{width: 340}}><JdFacts posting={{...POSTING, ...change}} /></div>);
+  expectWrappedInside(factOf(container, long));
+  const place = factOf(container, 'Hybrid, 3 days');
+  expect(textLines(place)).toHaveLength(1);
+  expect(place.getBoundingClientRect().top).toBe(factOf(container, beside).getBoundingClientRect().top);
+});
+
+test('a long fact wraps inside mail\'s popover too', async () => {
+  const {button} = await chip(NORTHWIND, detailOf({...POSTING, salary: `${LONG_SALARY}; ${LONG_SALARY}`}));
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.poll(() => popover.element().getBoundingClientRect().width).toBe(460);
+  expectWrappedInside(factOf(popover.element(), `${LONG_SALARY}; ${LONG_SALARY}`));
+});
+
+test('the unfolded posting\'s source facts hold one line each, a long link cut by its ellipsis', async () => {
+  await render(
+    <div style={{width: 300}}>
+      <FullPosting posting={{...POSTING, link: 'https://careers.a-very-long-hiring-platform-name-for-northwind-talent.example/jobs/4471029'}} title="Software Engineer I" company="Northwind Talent" timeZone={ZONE} today={TODAY} />
+    </div>,
+  );
+  await page.getByRole('group', {name: 'Full posting'}).getByRole('button', {name: 'Show'}).click();
+  const facts = await vi.waitFor(() => {
+    const found = document.querySelector<HTMLElement>('.jb-unfold .jb-facts');
+    expect(found).not.toBeNull();
+    return found!;
+  });
+  const link = facts.querySelector('a')!;
+  const words = link.querySelector<HTMLElement>('span')!;
+  expect(words.scrollWidth).toBeGreaterThan(words.clientWidth);
+  expect(link.getBoundingClientRect().height).toBe(facts.querySelector('span')!.getBoundingClientRect().height);
+  expect(link.getBoundingClientRect().right).toBeLessThanOrEqual(facts.getBoundingClientRect().right);
 });
 
 test('Esc closes the popover at once, and goes no further (it would close the reader); a click away closes it too', async () => {
