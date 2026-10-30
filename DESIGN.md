@@ -1202,8 +1202,9 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
   - A first group, one row: **Jobs**, "Builds applications from their confirmation emails and keeps
     each JD as it was", and its switch (the knob travelling 120 ms, stretching while pressed, #151).
     Turning it on starts the history pass, and Jobs folds into the sidebar under News (180 ms).
-  - **Reads** (D310): a 48 px row per account, its dot and label, then a select: Jobs "Every email",
-    Business "Career mail only", Personal, Work and iCloud "Off". Under the group: "Career mail is
+  - **Reads** (D310): a 48 px row per account, its dot and label, then what Jobs reads there as a
+    plain value in `ink3`, no chevron (#273): Jobs "Every email", Business "Career mail only",
+    Personal, Work and iCloud "Off". Under the group: "Career mail is
     what triage sorts as Career. Jobs never changes how mail itself is sorted."
   - **History:** **History pass**, "Read 330 emails once, when Jobs was turned on · finished Oct 1,
     8:14 PM", with a 7 px `good` dot and "Done" (while it runs, 38a's line and progress instead);
@@ -3315,3 +3316,8 @@ it changes what's on screen.
     search's results; any application open as Jobs mounts arriving without a slide, Full posting's
     unfolded with no motion, a search's query in the field without focus, and the address dropping
     what it carried. Board audit: 37a–37c draw only In process and Rejected, and a 460 px popover.
+273. **Settings › Jobs › Reads shows plain values** (Andy, 2026-10-29; darma SV-126, D377): each
+    account's row ends in what Jobs reads there ("Every email", "Career mail only", "Off") in `ink3`,
+    with no chevron and nothing to press, as override 26 did for News's models. The brief lists the
+    accounts Jobs reads (D310) rather than offering a choice; the settings route still takes the
+    accounts, so selects are a small change if one's wanted. Board audit: 39a draws a select on each.
