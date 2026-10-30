@@ -14,6 +14,7 @@
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
 //   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML (SV-128); --apply does it
 //   npm run cli -- jobs-repair-facts   the JDs' salaries and locations that were cut (SV-129); --apply reads them again
+//   npm run cli -- jobs-repair-postings   the application pages saved as JDs (SV-130); --apply takes them away and looks each up again
 //   npm run cli -- codes            which sorted emails' verification codes reading again would change,
 //                                   and the code emails still without one (SV-68)
 //   npm run cli -- codes --apply    write those changes
@@ -28,7 +29,7 @@ import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
 import {importV1} from './importV1.ts';
-import {repairFactsPlan, repairFactsWithHaiku, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
+import {jobsWeb, repairFactsPlan, repairFactsWithHaiku, repairPostings, repairPostingsPlan, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
 import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {sourceList} from './queries/sources.ts';
 import {loadKeyring} from './secrets/crypto.ts';
@@ -48,6 +49,7 @@ const USAGE = `Usage:
   import-v1-triage <file>   import only v1's triage rules and lane corrections (src/triage/importV1.ts)
   jobs-reread [--apply]   what Jobs would read again now it reads HTML; --apply does it (the server reads them)
   jobs-repair-facts [--apply]   the JDs' salaries and locations that were cut; --apply reads them again from the saved JDs
+  jobs-repair-postings [--apply]   the application pages saved as JDs; --apply takes them away and looks each up again (the server does)
   triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
   codes           list sorted emails whose verification code reading again would change, and code emails with none
   codes --apply   write those changes`;
@@ -55,7 +57,7 @@ const USAGE = `Usage:
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
-    || ((command === 'codes' || command === 'jobs-reread' || command === 'jobs-repair-facts') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
+    || ((command === 'codes' || command === 'jobs-reread' || command === 'jobs-repair-facts' || command === 'jobs-repair-postings') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
@@ -114,6 +116,20 @@ async function main(argv: string[]): Promise<number> {
       console.log(`${postings(cut.length)} with a salary or location that was cut.`);
       for (const posting of cut) console.log(`  #${posting.applicationId}\t${posting.cut.join(', ')}\t${posting.company}\t${posting.title}`);
       console.log('Nothing changed. Run with --apply to read them again.');
+      return 0;
+    }
+    if (command === 'jobs-repair-postings') {
+      const postings = (count: number) => `${count} application page${count === 1 ? '' : 's'}`;
+      const {hosts} = jobsWeb();
+      if (rest[0] === '--apply') {
+        const repaired = repairPostings(store, hosts);
+        console.log(`${postings(repaired.length)} taken away. The server looks up each one's JD again.`);
+        return 0;
+      }
+      const pages = repairPostingsPlan(store, hosts);
+      console.log(`${postings(pages.length)} saved as JDs.`);
+      for (const page of pages) console.log(`  #${page.applicationId}\t${page.company}\t${page.title}`);
+      console.log('Nothing changed. Run with --apply to take them away.');
       return 0;
     }
     if (command === 'codes') {
