@@ -33,7 +33,9 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5); J6's menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
   what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, and the
   toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); J7's fillers of mail's slots, the JD chip with its
-  popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)). The shell imports only
+  popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)); J8's states, the history pass's
+  and the AI down's lines and Jobs off ([`States.tsx`](../../../web/src/app/jobs/States.tsx)), and Settings › Jobs with
+  Settings › AI's Jobs group ([`JobsSettings.tsx`](../../../web/src/app/jobs/JobsSettings.tsx)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
 
 Its tables point at mail by message id and account id only, as plain integers with no foreign key,
@@ -63,20 +65,28 @@ files marked *imports* import the folders.
 | `server/src/domain/aiCost.ts`, `webSearches` (J3) | web searches priced in the ledger at $10 per 1,000; generic, so it can stay |
 | `server/src/api/app.ts`, `routes` in `AppOptions` and its mount after News's | the generic hook the line above uses; it names no module, so it can stay |
 | `server/src/dev/sample.ts`, the `../jobs/index.ts` import (*imports*) | brings in `seedJobs` |
-| `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds |
+| `server/src/dev/sample.ts`, the end of `seedSampleData` | `seedJobs({sqlite, db, usage})`: Jobs's sample for `npm run seed`, `npm run try`, the browser checks and the tests' seeded worlds, with its AI usage this month where mail's sample has its own (J8) |
 | `server/src/dev/sample.ts`, the last of `SAMPLE_EMAILS` | the Indeed match email Jobs's sample reads (mail's own data; it can stay) |
 | `web/src/logic/live.ts`, `pathsForEvent`'s `jobs` case | a `jobs` event refreshes what's mounted under `/jobs`: the page, the shell's item (`/jobs/nav`), an open application and a search (J5) |
-| `web/src/logic/route.ts`, the `jobs` route (J5) | `/jobs` and `/jobs/12` (an application open) in the address bar; J7 adds `/jobs/12/posting` (Full posting from mail, #271) and `?q=` (Applied before's search); it names no module, so it imports nothing |
-| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*, J5) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox, decision 49), and `goToJobs` for `4` while Jobs is on; J7 adds `jobsMailSlots` to it |
+| `web/src/logic/route.ts`, the `jobs` route (J5) | `/jobs` and `/jobs/12` (an application open) in the address bar; J7 adds `/jobs/12/posting` (Full posting from mail, #271) and `?q=` (Applied before's search), J8 `/jobs/from-history` (Settings › Jobs's Show); it names no module, so it imports nothing |
+| `web/src/app/App.tsx`, the `./jobs/index.ts` import (*imports*, J5) | `JobsPage` for the `jobs` route (the phone's goes to the Inbox, decision 49), and `goToJobs` for `4` (on or off, J8); J7 adds `jobsMailSlots` to it |
 | `web/src/app/App.tsx`, `fillMailSlots(jobsMailSlots)` and the `./slots.tsx` import (J7) | Jobs fills mail's slots ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)): the reader's JD chip, and Applied before on the reader and the rows |
 | `web/src/app/slots.tsx` (J7) | the generic slots the line above fills: a hook the Inbox's list calls with its rows, and the reader head's component; unfilled, both draw nothing; it names no module, so it can stay |
 | `web/src/app/AllList.tsx`, `useRowSlot` and `{afterSubject(row)}` (J7) | each row draws the slot after its subject; it imports only `slots.tsx`, so it can stay |
 | `web/src/app/Reader.tsx`, `<ReaderSlot>` before the actions (J7) | the reader's head draws the slot under the sender's line; it imports only `slots.tsx`, so it can stay |
 | `web/src/app/Sidebar.tsx`, the `./jobs/index.ts` import and `<JobsNavItem>` after News (*imports*, J5) | the sidebar's Jobs item with its Needs you count, and in the compact tier the rail's slot with its neutral badge |
 | `web/src/app/palette/Palette.tsx`, the `../jobs/index.ts` import and `...jobsCommands()` in Go to (*imports*, J5) | ⌘K's "Jobs 4", while Jobs is on (search stays out of ⌘K, D316) |
+| `web/src/app/palette/Palette.tsx`, the `jobs` line of `SETTINGS_SECTIONS` (J8) | ⌘K's "Settings › Jobs" |
+| `web/src/app/settings/Settings.tsx`, the `../jobs/index.ts` import, `jobs: JobsSettingsPage` in `PAGES` and `...JOBS_SETTINGS_PATHS` (*imports*, J8) | Settings › Jobs, loaded with the other pages as Settings opens |
+| `web/src/app/settings/Ai.tsx`, the `../jobs/index.ts` import, `<JobsAiGroup>`, `<JobsUsageRow>` and `useJobsSpend()` in Usage this month's total (*imports*, J8) | Settings › AI's Jobs group after News's, and Jobs's row in Usage this month, its total in the label's |
+| `web/src/app/settings/parts.tsx`, `Page`'s `note` (J8) | the generic hook Settings › Jobs's "62 applications" uses; it names no module, so it can stay |
+| `web/src/logic/route.ts`, `'jobs'` in `SETTINGS_PAGES` (J8) | Settings › Jobs between News and AI, and /settings/jobs |
+| `web/src/logic/settings.ts`, `SETTINGS_NAV`'s `jobs` (J8) | Settings' nav item, Jobs with `work` |
 | `web/src/app/ShellFrame.tsx`, the starting shell's title (J5) | "Jobs" while Setpoint starts on a Jobs address; it imports nothing |
-| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, and J7's JD chip, popover and Applied before (removed with the module) |
+| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, and J8's words (removed with the module) |
 | `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
+| `web/tests/browser/jobsStates.spec.ts` (J8) | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
+| Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group and usage row), `sweep.spec.ts` (J8's states and Jobs off), `pages.ts` (Jobs's page screenshot, `32-jobs-a-typical-morning`, and `jobs.spec.ts`'s `matchGolden`), `audit.ts` (`JOBS_EVERYWHERE` and `JOBS_BOARDS`) and `web/tests/shell.test.ts` (`/jobs/from-history`), and `web/tests/browser/goldens/32-jobs-a-typical-morning.png` once approved (J8) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches and its screenshot go too |
 | `web/tests/browser/jobs.spec.ts`, and Jobs's lines in `sweep.spec.ts`, `news.spec.ts`, `palette.spec.ts`, `compact.spec.ts` and `web/tests/shell.test.ts` (J5) | the browser checks and the sweep's Jobs route; the shell's lists that now name Jobs; they import nothing from the folders |
 | `server/tests/contract.test.ts`, the `jobs` `noteLive` | the iPhone app's contract records the event (it ignores the type) |
 | `shared/contract/` | the recorded `jobs` event and `LIVE_EVENT_TYPES` (re-recorded by `npm run contract:record`) |
@@ -85,8 +95,8 @@ files marked *imports* import the folders.
 
 `web/src/api/live.ts` listens for every type in `LIVE_EVENT_TYPES`, so it needs no line of its own.
 
-J8 adds Jobs's row in Settings › AI, with its line here. J7's slots on the reader and the row are in the
-table: with Jobs removed, `fillMailSlots` goes with App.tsx's import, and the slots draw nothing.
+J7's slots on the reader and the row are in the table: with Jobs removed, `fillMailSlots` goes with
+App.tsx's import, and the slots draw nothing.
 
 The hook (J2) is triage's, not storing's: Jobs reads an email only once triage has typed it, so being
 told when one is stored would tell it nothing it could act on. A missed nudge costs nothing: the
@@ -246,6 +256,23 @@ the lint rule still refuses an import of Jobs from triage.
   `/jobs?q=<query>`, searched. The page drops what the address carried once it's arrived.
 - **The seed** keeps the Indeed match email as the reader would have read it (its event, company and
   role), so its badge shows (board 37c).
+
+## States and Settings (J8)
+
+- **The page's lines** ([`States.tsx`](../../../web/src/app/jobs/States.tsx), 38a, 38b): `GET /api/jobs`'s `history`
+  draws the pass's line while it's `running` or `waiting`, with three skeleton rows over the table, and its
+  check and "Read 330 emails" once it's `done`; `reading` draws the AI down's line, worded by its `cause`
+  (`unreachable`, `rate_limited`, `refused`, `no_key`; [`readerState.ts`](readerState.ts)), counting what waits
+  for the reader and what a held pass has left. Both fold in and out as mail's health lines do, by
+  `jobs` events.
+- **Off** (38c): the page's one line, with Turn on opening Settings › Jobs, its switch focused. `4` opens it;
+  the sidebar, the rail and ⌘K's Go to leave Jobs out.
+- **Settings › Jobs** (39a): `GET`/`PATCH /api/jobs/settings`. Reads shows what each account is read for, as
+  plain values (#273); Show goes to `/jobs/from-history`, From history unfolded.
+- **Settings › AI's Jobs group** (39b): `GET /api/jobs/ai` ([`models.ts`](models.ts) `jobsAi`): the three models,
+  whether there's a key, and this month's ledger for `jobs_emails`, `jobs_finding_jds` and `jobs_reading_jds`
+  in total and in parts. The seed's usage ([`seed.ts`](seed.ts) `JOBS_USAGE`) is $3.85, loaded with mail's
+  sample usage (`npm run seed`, `npm run try` and the browser checks; the tests' worlds start empty).
 
 ## The lint rule
 
