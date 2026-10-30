@@ -78,6 +78,8 @@ describe('emailLinks and postingLinks', () => {
     ['the email\'s preferences', 'https://fabrikam.example/careers/email-preferences', false],
     ['a query about the account', 'https://fabrikam.example/jobs/data-analyst-2291?next=login', false],
     ['a query that reads like the email\'s footer', 'https://fabrikam.example/jobs/data-analyst-2291?type=unsubscribe', false],
+    ['a malformed segment is used raw', 'https://fabrikam.example/jobs/a%zz', true],
+    ['a malformed segment doesn\'t hide a sign-in page', 'https://fabrikam.example/jobs/a%zz/login', false],
   ])('whole path segments, and anywhere in a query: %s', (_, link, posting) => {
     expect(postingLinks([link], HOSTS)).toEqual(posting ? [link] : []);
   });

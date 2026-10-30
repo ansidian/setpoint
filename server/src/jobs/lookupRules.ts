@@ -24,7 +24,14 @@ export type PostingRef =
   | {platform: 'indeed'; board: null; id: string | null};
 
 const hostIs = (host: string, hosts: string[]) => hosts.some(each => host === each || host.endsWith(`.${each}`));
-const segments = (url: URL) => url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+const decoded = (segment: string) => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+};
+const segments = (url: URL) => url.pathname.split('/').filter(Boolean).map(decoded);
 // A board's name as the platforms write it: letters, digits, dashes and underscores.
 const BOARD = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
 
