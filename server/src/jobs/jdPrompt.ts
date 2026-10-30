@@ -11,7 +11,7 @@ import type {ToolSpec} from '../providers/ai/index.ts';
 import type {Verdict} from './lookupRules.ts';
 
 /** Bumped when a prompt or tool changes. */
-export const JD_PROMPT_VERSION = 'v2';
+export const JD_PROMPT_VERSION = 'v3';
 
 /** How much of a candidate's text the check sees, and of the confirmation email. */
 export const CHECK_TEXT_LIMIT = 1_500;
@@ -122,7 +122,11 @@ export function verdictsOf(input: Record<string, unknown> | null, count: number)
 
 export const SEARCH_SYSTEM = `You find the job posting the user applied to, for their job application tracker, while it's still up. Use web search, then answer only with the submit_posting_search tool.
 
-Search for the employer's own careers page and its hiring platform (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters and the like) before job boards. Give up to three candidates, best first, each the page of one posting (never a search results page or a list of jobs), with:
+When the application says where it was applied ("Applied through"), look on that platform first, then the employer's own careers site, then job boards. With no platform named, look on the employer's careers site and its hiring platform (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, GovernmentJobs/NEOGOV and the like) before job boards.
+
+A page must be the same recruitment, not only the same title: public employers repost a title often, so a different department or an older posting of the same title is at most a maybe.
+
+Give up to three candidates, best first, each the page of one posting (never a search results page or a list of jobs), with:
 - url: the posting's address, exactly as found
 - title, location, and site (where it is: "Greenhouse", "LinkedIn", the employer's name)
 - verdict: match only when you are sure it is the same employer, the same role, a location that fits the emails, and was up when the user applied; maybe when it could be.
