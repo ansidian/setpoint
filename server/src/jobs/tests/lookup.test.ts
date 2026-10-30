@@ -24,7 +24,7 @@ import {NO_JOBS_KEY} from '../models.ts';
 import {applicationDetail, jobsPage} from '../queries.ts';
 import {JobsReader} from '../reader.ts';
 import * as j from '../schema.ts';
-import {fakeWeb, serveFixtures, TEST_APIS} from './fakeWeb.ts';
+import {fakeWeb, fixture, htmlPage, serveFixtures, TEST_APIS} from './fakeWeb.ts';
 
 // Real HTTP round trips to the fakes, a few dozen per test.
 vi.setConfig({testTimeout: 30_000});
@@ -257,6 +257,24 @@ describe('confident (decision 54)', () => {
       ['jobs_finding_jds', 'claude-sonnet-5-5', 5200 * 2 + 310 * 10 + 2 * 10_000],
       ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('anthropic', 'claude-haiku-5-5', {inputTokens: 1800, outputTokens: 260, cachedTokens: 0, cacheWriteTokens: 0})],
     ]);
+  });
+
+  test('an application\'s own page in the email is never read or checked: the lookup carries on to search (SV-130)', async () => {
+    const s = await setup();
+    const page = 'https://fabrikam.tracker.example/jobs/6120884/candidates/8f2c1d9e';
+    s.web.serve(page, htmlPage(fixture('posting-page.html')));
+    const id = s.make({
+      company: 'Fabrikam', title: 'Data Analyst', platform: 'Workable', appliedAt: '2026-10-06T21:00:00.000Z',
+      emails: [{kind: 'applied', from: ['Fabrikam', 'noreply@tracker.example'], subject: 'Thanks for applying to Fabrikam', body: 'Your application for Data Analyst was received.', html: `<a href="${page}">View your application</a>`}],
+    });
+    s.answers({
+      submit_posting_search: () => searched([{url: 'https://fabrikam.example/careers/data-analyst-2291', title: 'Data Analyst', location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict: 'match'}]),
+      submit_posting_reading: reading({summary: 'Weekly operations reporting.', location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: null, salary: null, must_haves: [], nice_to_haves: []}),
+    });
+    await s.drain();
+    expect(s.web.asked()).toEqual(['fabrikam.example/careers/data-analyst-2291']);
+    expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_reading']);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({source: 'search', link: 'https://fabrikam.example/careers/data-analyst-2291'});
   });
 
   test('a board found through a Lever link in the email, and its platform, though triage named none', async () => {

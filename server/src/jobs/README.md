@@ -139,9 +139,11 @@ the lint rule still refuses an import of Jobs from triage.
   (`LOOKUP_COOL_OFF_MS`), so it stays `looking` and is never "No JD found". Without a web (any
   non-production run) lookups aren't queued, and one requested by hand finishes doing nothing.
 - **Where, in order:** the emails' posting links (a platform's posting, Indeed's view-job link, a
-  careers page), then Greenhouse, Lever and Ashby's public APIs by board name, then Sonnet 5.5 with
-  web search only when those cleanly missed. Haiku checks what a link or a platform found; Sonnet's
-  search judges its own. Confident is saved with Haiku's reading; unsure offers up to three
+  careers page; never a link about the account or the email, or an application's own page, by a
+  whole path segment such as `candidates` or `apply`, unless a platform's posting id is in it, since
+  that's read by its id), then Greenhouse, Lever and Ashby's public APIs by board name, then Sonnet 5.5
+  with web search only when those cleanly missed. Haiku checks what a link or a platform found;
+  Sonnet's search judges its own. Confident is saved with Haiku's reading; unsure offers up to three
   candidates as a JD to confirm; nothing is `not_found`.
 - **While it runs** the row's `jd` is `{state: 'looking', looked_at: <when it began>}`; its end comes as
   a `jobs` event naming the application (and any Needs you item).

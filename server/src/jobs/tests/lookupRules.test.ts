@@ -7,7 +7,7 @@ import {describe, expect, test} from 'vitest';
 import {ProviderError} from '../../sync/errors.ts';
 import {postingReadingOf} from '../jdPrompt.ts';
 import {
-  boardNames, emailLinks, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingFit, postingLinks, postingRef, senderBoard,
+  boardNames, emailLinks, isApplicationPage, isMiss, lookupEnd, matchPostings, nextSourceRuns, outcomeOf, platformsToTry, postingFit, postingLinks, postingRef, senderBoard,
 } from '../lookupRules.ts';
 import type {JobPlatform, LookupApplication, PostingCandidate, PostingHosts, StepOutcome, Verdict} from '../lookupRules.ts';
 
@@ -80,6 +80,38 @@ describe('emailLinks and postingLinks', () => {
     ['a query that reads like the email\'s footer', 'https://fabrikam.example/jobs/data-analyst-2291?type=unsubscribe', false],
   ])('whole path segments, and anywhere in a query: %s', (_, link, posting) => {
     expect(postingLinks([link], HOSTS)).toEqual(posting ? [link] : []);
+  });
+
+  test.each<[string, string, boolean]>([
+    ['an applicant\'s personal page', 'https://fabrikam.tracker.example/jobs/6120884/candidates/8f2c1d9e', false],
+    ['one segment, any case', 'https://fabrikam.tracker.example/jobs/6120884/Candidates/8f2c1d9e', false],
+    ['a candidate', 'https://fabrikam.example/careers/candidate/8f2c1d9e', false],
+    ['an application', 'https://fabrikam.example/jobs/application/8f2c1d9e', false],
+    ['the applications', 'https://fabrikam.example/careers/applications', false],
+    ['an applicant', 'https://fabrikam.example/jobs/applicant/8f2c1d9e', false],
+    ['the applicants', 'https://fabrikam.example/jobs/applicants/8f2c1d9e', false],
+    ['the form', 'https://fabrikam.example/careers/data-analyst-2291/apply', false],
+    ['withdrawing', 'https://fabrikam.example/jobs/2291/withdraw', false],
+    ['the thanks', 'https://fabrikam.example/careers/thanks', false],
+    ['the thank-you page', 'https://fabrikam.example/jobs/2291/thank-you', false],
+    ['a posting with "application" in its name', 'https://fabrikam.example/jobs/application-developer-4412', true],
+    ['with "candidate"', 'https://fabrikam.example/jobs/candidate-experience-manager', true],
+    ['with "applicant"', 'https://fabrikam.example/jobs/applicant-tracking-analyst-88', true],
+    ['with "thanks"', 'https://fabrikam.example/jobs/thanks-and-giving-coordinator', true],
+  ])('an application\'s own page is no posting, by whole path segments: %s', (_, link, posting) => {
+    expect(postingLinks([link], HOSTS)).toEqual(posting ? [link] : []);
+    expect(isApplicationPage(link, HOSTS)).toBe(!posting);
+  });
+
+  // Read through the platform's API by its id, so what the link's path says about the page is no matter.
+  test.each<[string, string, string]>([
+    ['Lever\'s apply page', 'https://lever.example/proseware/9a41c7e2-5d0b-4f1e-8c3a-2b7d90e1f4a6/apply', 'lever'],
+    ['Ashby\'s application page', 'https://ashby.example/litware/3f6e2a10-91c4-4b7e-a2d5-0c8f61e7b934/application', 'ashby'],
+    ['Greenhouse\'s', 'https://greenhouse.example/lucernepublishing/jobs/5520391/applications', 'greenhouse'],
+  ])('a platform\'s posting by its id stays one: %s', (_, link, platform) => {
+    expect(postingRef(link, HOSTS)?.platform).toBe(platform);
+    expect(postingLinks([link], HOSTS)).toEqual([link]);
+    expect(isApplicationPage(link, HOSTS)).toBe(false);
   });
 });
 

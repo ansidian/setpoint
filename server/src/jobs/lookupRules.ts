@@ -77,8 +77,19 @@ export function postingRef(raw: string, hosts: PostingHosts): PostingRef | null 
 // can hold them ("/jobs/technical-support-engineer-123", "/jobs/registered-nurse-7").
 const NOT_A_POSTING = /unsubscribe|optout|opt-out|privacy|terms|login|log-in|signin|sign-in|sign_in|signup|register|account|settings|preferences|password|verify|verification|confirm|help|support|faq|cookie|candidate-?home|dashboard|mailto/i;
 const NOT_A_POSTING_SEGMENT = new RegExp(`^(${NOT_A_POSTING.source}|accounts|my-account|privacy-policy|privacy-notice|terms-of-use|terms-of-service|terms-and-conditions|email-preferences|reset-password|forgot-password|confirmation|help-center|faqs|cookies|cookie-policy|cookie-settings)(\\.\\w+)?$`, 'i');
+// A path segment that says the page is an application, the applicant's own, rather than a posting.
+const APPLICATION_PAGE = new Set(['candidate', 'candidates', 'application', 'applications', 'applicant', 'applicants', 'apply', 'withdraw', 'thanks', 'thank-you']);
 // A path that reads like one posting.
 const LOOKS_LIKE_A_POSTING = /\b(jobs?|careers?|positions?|openings?|vacanc(y|ies)|requisitions?|viewjob|job-?details|postings?|roles?|opportunit(y|ies))\b/i;
+
+/**
+ * Whether a link is an application's own page: a confirmation, a status page, the applicant's details.
+ * One a platform's posting id is in isn't: Jobs reads the posting by that id, not the page.
+ */
+export function isApplicationPage(raw: string, hosts: PostingHosts): boolean {
+  const url = parse(raw);
+  return url !== null && !postingRef(raw, hosts)?.id && segments(url).some(segment => APPLICATION_PAGE.has(segment.toLowerCase()));
+}
 
 /** Every http(s) link in an email: its text's and its HTML's hrefs, in order, once each. */
 export function emailLinks(text: string, html: string | null): string[] {
@@ -95,7 +106,8 @@ export function emailLinks(text: string, html: string | null): string[] {
 /**
  * The links in an application's emails that could be its posting, most likely first, at most
  * `limit`: a platform's posting, then Indeed's view-job links, then any link whose path reads like a
- * posting. Links about the account or the email itself are never one.
+ * posting. Links about the account or the email itself are never one, and neither is an application's
+ * own page.
  */
 export function postingLinks(links: string[], hosts: PostingHosts, limit = 3): string[] {
   const rank = (raw: string): number | null => {
@@ -104,7 +116,7 @@ export function postingLinks(links: string[], hosts: PostingHosts, limit = 3): s
     const ref = postingRef(raw, hosts);
     if (ref && ref.platform !== 'indeed' && ref.id) return 0;
     if (ref?.platform === 'indeed' && ref.id) return 1;
-    if (!ref && LOOKS_LIKE_A_POSTING.test(url.pathname) && segments(url).length >= 2) return 2;
+    if (!ref && LOOKS_LIKE_A_POSTING.test(url.pathname) && segments(url).length >= 2 && !isApplicationPage(raw, hosts)) return 2;
     return null;
   };
   return links.map((link, index) => ({link, index, rank: rank(link)}))
