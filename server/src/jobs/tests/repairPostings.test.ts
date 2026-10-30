@@ -122,6 +122,15 @@ describe('jobs-repair-postings', () => {
     expect(s.web.asked()).toEqual([]);
   });
 
+  test('the saved text doesn\'t stay behind in an Undo no toast will offer', async () => {
+    const s = await setup();
+    s.saved('Fabrikam', 'Data Analyst');
+
+    s.repair();
+
+    expect(s.db.select().from(j.jobsUndo).all()).toEqual([]);
+  });
+
   test('applying takes each away as Not this posting does and starts a new lookup, closed or open; the others stay', async () => {
     const s = await setup();
     const open = s.saved('Fabrikam', 'Data Analyst');

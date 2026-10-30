@@ -9,6 +9,7 @@
 // - Each is taken away as Not this posting takes one (./corrections.ts), the only way a saved JD goes
 //   (decision 53), so its link is turned down for good (./stick.ts). A new lookup then starts, which
 //   the server runs: it's no longer offered that link, and carries on to the platforms and search.
+// - The Undo that keeps goes at once: no toast offers it here, and it holds the saved text.
 // - It says only which applications, never the saved text, since that's what holds the details.
 import {and, asc, eq, isNotNull} from 'drizzle-orm';
 import {transaction} from '../store.ts';
@@ -42,7 +43,8 @@ export function repairPostings(store: Store, hosts: PostingHosts): SavedApplicat
   const pages = repairPostingsPlan(store, hosts);
   for (const page of pages) {
     transaction(store, () => {
-      notThisPosting(store, page.applicationId);
+      const {undo} = notThisPosting(store, page.applicationId);
+      jobsDb(store.sqlite).delete(j.jobsUndo).where(eq(j.jobsUndo.id, undo)).run();
       requestLookup(store, page.applicationId);
     });
   }
