@@ -103,8 +103,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   or a console error. Then axe runs on the same pages per theme, by rule and element; its contrast
   floor is 3:1 for now (D283, SV-100). A finding is fixed, with "the sweep caught it" or "axe caught
   it" in the commit, or decided in darma and left out in the spec by name.
-- At release, nine whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
-  News and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside
+- At release, ten whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
+  News, Jobs and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside
   the sweep (D281, SV-97 found the region goldens before them caught nothing). They're compared only
   at release, in release:check. When one has changed on purpose, `npm run goldens` re-captures them
   and Andy looks at each changed image beside its diff before it's committed; a session never

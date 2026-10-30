@@ -21,6 +21,7 @@ export const PAGES: readonly PageShot[] = [
   {name: '22b-light-calendar', spec: 'theme', test: 'board 22b:'},
   {name: '25-news-a-typical-morning', spec: 'news', test: 'board 25:'},
   {name: '31-light-news', spec: 'news', test: 'board 31:'},
+  {name: '32-jobs-a-typical-morning', spec: 'jobs', test: 'board 32:'},
 ];
 
 /** Set by `npm run test:pages` and `npm run goldens`: matchGolden compares (or re-captures). */

@@ -19,7 +19,7 @@ import {after} from 'node:test';
 import type {ApplicationOut, JobsNavOut, JobsPageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -152,6 +152,12 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     await until('Z to A', () => companies(page).then(all => all[0]), first => first === 'Zava');
     await page.locator('.jb-th .h', {hasText: 'Applied'}).click();
     await until('newest first', () => companies(page).then(all => all[0]), first => first === 'Fabrikam');
+
+    // Board 32 as a whole: Northwind's application open beside the table (J8's page screenshot).
+    await page.goto(`${setpoint.base}/jobs/${await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I')}`);
+    await page.locator('.jb-pane .jb-want').waitFor();
+    await page.mouse.move(0, 0);
+    await matchGolden(page, '32-jobs-a-typical-morning');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

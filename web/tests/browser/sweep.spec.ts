@@ -1,15 +1,17 @@
-// The visual net without baselines (SV-99), beside the release's nine page screenshots (pages.ts,
+// The visual net without baselines (SV-99), beside the release's ten page screenshots (pages.ts,
 // D281): the main pages (the Inbox with an email open, with its JD popover open, and with the
 // Contoso Pharmaceuticals match email's Applied before on its row and in the reader (J7), the
 // calendar's month and week, the editor, News
 // with a story open, Jobs with an application open, and with its menus open (Assign to…, and More with
-// Merge with…'s submenu), every Settings page, the phone's Inbox; Jobs isn't on the phone, decision
-// 49) in Night and Light, at the design target,
+// Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
+// and Jobs off (J8), the phone's Inbox; Jobs isn't on the phone, decision 49) in Night and Light, at the design target,
 // 1100 and 820 wide and on the phone. On each, at rest: nothing scrolls sideways, no text is cut by an
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
 // theme at the target width, by rule and element. Each failure names the element, page, theme and width.
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import type {AllOut, InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
@@ -198,6 +200,26 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
       await page.getByRole('textbox', {name: 'Search applications'}).waitFor();
     }},
     ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on'})),
+    // J8's states, last, as they change the server: the pass's line and skeleton rows, the AI down's line, then Jobs off.
+    {name: 'Jobs, its history pass and the AI down', path: '/jobs', shows: '.jb-scroll .jb-tr', open: async page => {
+      if (await page.locator('.jb-col > .jb-state').count() === 2) return;
+      const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+      try {
+        database.exec('PRAGMA busy_timeout = 5000');
+        database.exec(`UPDATE jobs_history SET state = 'running', started_at = '2026-10-07T16:00:00.000Z', total = 330, read = NULL, finished_at = NULL;
+          INSERT OR REPLACE INTO jobs_reader (id, last_success_at, last_failure_at, failing_since, last_error, last_error_kind)
+            VALUES (1, NULL, '2026-10-07T16:10:00.000Z', '2026-10-07T15:52:00.000Z', 'Anthropic: Overloaded (529)', 'transient')`);
+      } finally {
+        database.close();
+      }
+      // A `jobs` event has the page ask again.
+      await setpoint.api('POST', `/jobs/applications/${rows.find(row => row.company === 'Trey Research')!.id}/lookup`);
+      await until('both lines', () => page.locator('.jb-col > .jb-state').count(), count => count === 2);
+    }},
+    {name: 'Jobs, off', path: '/jobs', shows: '.hd-title', open: async page => {
+      await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
+      await page.locator('.jb-empty').waitFor();
+    }},
   ];
 }
 
