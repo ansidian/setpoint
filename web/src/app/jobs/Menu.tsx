@@ -293,7 +293,7 @@ function Entries({entries, current, sub, role, label, onPoint, onPick}: {
     return (
       <div key={entry.id} className="jb-mrow">
         {button}
-        <a className="ibtn sm" href={entry.peek} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${entry.label}`} title="Look at this posting" tabIndex={-1}>
+        <a className="ibtn sm" role="menuitem" href={entry.peek} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${entry.label}`} title="Look at this posting" tabIndex={-1}>
           <Icon name="open_in_new" size={16} />
         </a>
       </div>

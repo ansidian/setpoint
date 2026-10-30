@@ -648,10 +648,11 @@ test('From history (D364): Choose… is a menu of the candidates, each opening i
     await history('Margie').getByRole('button', {name: 'Choose…'}).click();
     const menu = page.getByRole('menu', {name: 'Choose the posting'});
     await menu.waitFor();
-    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+    assert.deepEqual(await menu.locator('button[role="menuitem"]').allTextContents(), [
       'Associate DeveloperChicago, IL · Greenhouse', 'Associate Software DeveloperRemote · LinkedIn', 'Associate Developer, BookingsChicago, IL · Indeed', 'None of these',
     ]);
-    assert.equal(await menu.getByRole('link', {name: 'Look at Associate Developer, Bookings'}).getAttribute('href'), 'https://indeed.example/viewjob?jk=2b90d4e1c7a8');
+    // Each candidate's arrow opens its posting without picking it.
+    assert.equal(await menu.getByRole('menuitem', {name: 'Look at Associate Developer, Bookings'}).getAttribute('href'), 'https://indeed.example/viewjob?jk=2b90d4e1c7a8');
     await menu.getByRole('menuitem', {name: /^Associate Developer, Bookings/}).click();
     await until('Margie\'s row folded', () => history('Margie').count(), count => count === 0);
     await until('the toast', () => toast(page).textContent(), text => text === 'JD saved for Margie\'s TravelUndo');
