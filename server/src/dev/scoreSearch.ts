@@ -14,6 +14,12 @@
 // field will once chips come from the server (SV-139). Each search's "about" and "right" columns are
 // the rows in the first section, and the share of its right emails there.
 //
+// --reading-prompts <file> writes what the model would be asked for each search, by the real code, as
+// JSON ({model, system, tool, max_output_tokens, searches: [{text, input}]}), and scores nothing. A
+// script that can reach the model answers them. --readings <file> then scores those answers through
+// the real code, one {"text": "...", "reading": {...}} a line, the tool's input or null for none,
+// reporting list sizes and the right emails the chips hide. Both files stay out of git.
+//
 // Inside the app's container, the test file comes on stdin:
 //
 //   docker compose exec -T app node server/src/dev/scoreSearch.ts - < data/search-test/test.json
@@ -27,12 +33,13 @@ import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {openDatabase} from '../db/open.ts';
 import * as schema from '../db/schema.ts';
 import type {Store} from '../store.ts';
-import {loadTerms, scoreReport, scoreSearches, searchTest} from './searchScore.ts';
+import {SEARCH_READING_MAX_OUTPUT_TOKENS, SEARCH_READING_MODEL, SEARCH_READING_SYSTEM, SEARCH_READING_TOOL} from '../search/readingPrompt.ts';
+import {loadTerms, readingPrompts, readingReport, readingScore, scoreReport, scoreSearches, searchTest} from './searchScore.ts';
 
-const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--no-chips] [--migrate [--terms <file>]...]';
-const {values: {migrate, terms: termFiles = [], 'no-chips': noChips}, positionals: [testFile]} = parseArgs({
+const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--no-chips | --reading-prompts <file> | --readings <file>] [--migrate [--terms <file>]...]';
+const {values: {migrate, terms: termFiles = [], 'no-chips': noChips, 'reading-prompts': promptsFile, readings: readingsFile}, positionals: [testFile]} = parseArgs({
   allowPositionals: true,
-  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}, 'no-chips': {type: 'boolean'}},
+  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}, 'no-chips': {type: 'boolean'}, 'reading-prompts': {type: 'string'}, readings: {type: 'string'}},
 });
 if (!testFile) throw new Error(usage);
 // Search terms only ever go into a scratch copy, never the database named.
@@ -46,6 +53,17 @@ function scoreOn(sqlite: Database.Database) {
   const {newest} = sqlite.prepare('SELECT max(received_at) AS newest FROM messages').get() as {newest: string};
   // The newest email is "now", so the same data scores the same on any day.
   const store: Store = {sqlite, db, timeZone: process.env.SETPOINT_TZ ?? 'America/Los_Angeles', now: () => new Date(newest), keyring: null};
+  if (promptsFile) {
+    const prompts = {model: SEARCH_READING_MODEL, system: SEARCH_READING_SYSTEM, tool: SEARCH_READING_TOOL, max_output_tokens: SEARCH_READING_MAX_OUTPUT_TOKENS, searches: readingPrompts(store, searches)};
+    fs.writeFileSync(promptsFile, JSON.stringify(prompts));
+    return;
+  }
+  if (readingsFile) {
+    const lines = fs.readFileSync(readingsFile, 'utf8').split('\n').filter(line => line.trim()).map(line => JSON.parse(line) as {text: string; reading: Record<string, unknown> | null});
+    const answers = new Map(lines.map(({text, reading}) => [text, reading]));
+    console.log(readingReport(searches.map(search => readingScore(store, search, answers.get(search.text) ?? null))));
+    return;
+  }
   console.log(scoreReport(scoreSearches(store, searches, noChips ? {chipsFromWords: 'dates'} : {})));
 }
 

@@ -10,7 +10,7 @@ import {describe, expect, onTestFinished, test} from 'vitest';
 import {openDatabase} from '../src/db/open.ts';
 import * as t from '../src/db/schema.ts';
 import {seedSampleData} from '../src/dev/sample.ts';
-import {loadTerms, scoreList, scoreReport, scoreSearches, searchTest, summarise} from '../src/dev/searchScore.ts';
+import {loadTerms, readingPrompts, readingReport, readingScore, scoreList, scoreReport, scoreSearches, searchTest, summarise} from '../src/dev/searchScore.ts';
 import type {TestSearch} from '../src/dev/searchScore.ts';
 import {world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -78,6 +78,40 @@ test('--no-chips\'s option reaches the matching: organisations and types stay wo
   const [words] = scoreSearches(w.store, wanted, {chipsFromWords: 'dates'});
   expect(chips!.anywhere).toBe(1);
   expect(words!.listed).not.toBe(chips!.listed);
+});
+
+describe('scoring with readings', () => {
+  const reading = (changes: Record<string, unknown> = {}) => ({organisations: [], types: [], is_date: true, keywords: 'renewal', ...changes});
+
+  test('a prompt comes from the real plan, and nothing to read asks nothing', () => {
+    const w = world({seed: true});
+    const [read, skipped] = readingPrompts(w.store, [{text: 'renewal'}, {text: '"renewal"'}]);
+    expect(read!.input).toContain('Search: renewal');
+    expect(skipped).toEqual({text: '"renewal"', input: null});
+  });
+
+  test('a reading\'s list, what it left out, and the right emails it hid, all counted', () => {
+    const w = world({seed: true});
+    const hiddenOne = idOf(w, 'October rent received');
+    const score = readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Lease renewal terms'), hiddenOne, 987_654]}, reading({organisations: ['Parkside Apartments']}));
+    expect(score).toMatchObject({chips: ['Parkside Apartments'], fallback: null, listed: 2, words: 4, more: 2, hidden: 0, counted: 0});
+    const hiding = readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Car registration renewal notice')]}, reading({organisations: ['Parkside Apartments']}));
+    expect(hiding).toMatchObject({firstRight: null, hidden: 1, counted: 1});
+  });
+
+  test('no answer scores the word results, and the report says numbers, words and chips, no subject', () => {
+    const w = world({seed: true});
+    const scores = [
+      readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Lease renewal terms')]}, null),
+      readingScore(w.store, {group: 'topic', text: 'lease', wanted: [idOf(w, 'Lease renewal terms')]}, reading({organisations: ['Parkside Apartments'], keywords: 'lease'})),
+    ];
+    expect(scores[0]).toMatchObject({fallback: 'failed', chips: [], listed: 4, more: 0});
+    const report = readingReport(scores);
+    expect(report).toContain('Right emails hidden by chips: 0, counted in "more": 0');
+    expect(report).toContain('renewal [] (failed)');
+    expect(report).toContain('lease [Parkside Apartments]');
+    expect(report).not.toContain('Lease renewal terms');
+  });
 });
 
 describe('the report', () => {
