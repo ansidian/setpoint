@@ -6,12 +6,13 @@ import {useEffect, useRef, useState} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
 import {isTyping} from '../../ui/keys.ts';
 import {candidateWhere, CANT_READ} from './menus.ts';
+import {pickWords} from './words.ts';
 
 /**
  * A JD's candidates (34a): a group of radios, the last None of these, each candidate's arrow opening
  * its posting without picking it. ↑ ↓ choose and Enter picks, in the group or, while its item has the
  * page's cursor (`active`), from the page. Picked, the group takes `good` and the row reads "JD saved".
- * One Jobs can't read says so after its line, which gives way to it (SV-140).
+ * One Jobs can't read says so after its line, which gives way to it, and picked reads "Link kept" (SV-140).
  */
 export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
   candidates: JdCandidateOut[];
@@ -72,7 +73,7 @@ export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
       {candidates.map((candidate, index) => row(index, picked === candidate.id ? (
         <>
           <Icon name="check_circle" size={16} className="ok" />
-          <span className="ell"><span className="t">{candidate.title}</span> <span className="ink3">· JD saved</span></span>
+          <span className="ell"><span className="t">{candidate.title}</span> <span className="ink3">· {pickWords(candidate, '').what}</span></span>
         </>
       ) : (
         <>

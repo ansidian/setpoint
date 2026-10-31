@@ -29,7 +29,7 @@ import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, tra
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {assignMenu, candidateWhere, chooseMenu} from './menus.ts';
-import {dayWord, historyWhy, itemFrom, itemWhat, needsLine, titleOf} from './words.ts';
+import {dayWord, historyWhy, itemFrom, itemWhat, needsLine, pickWords, titleOf} from './words.ts';
 
 const KIND_GLYPHS: Record<NeedsYouItemOut['kind'], IconName> = {jd_to_confirm: 'description', update_to_assign: 'alt_route', email_to_track: 'bookmark_add'};
 
@@ -38,7 +38,7 @@ export const needKey = (id: number) => `n:${id}`;
 /** How long an answered item shows its outcome before it folds away (34b). */
 export const ANSWERED_MS = 360;
 
-/** An answer's outcome, line two's words once the press lands: "JD saved · Junior Developer · New York, NY · Greenhouse". */
+/** An answer's outcome, line two's words once the press lands: "JD saved · Junior Developer · New York, NY · Greenhouse", or "Link kept · …". */
 interface Outcome {
   what: string;
   rest: string | null;
@@ -150,8 +150,10 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   };
   const said = (item: NeedsYouItemOut, done: string, failed: string, tone?: Said['tone']): Said => ({done, failed, tone, undone: () => drop(item.id)});
 
-  const pick = (item: NeedsYouItemOut, candidate: JdCandidateOut) => answer(item, {what: 'JD saved', rest: `${candidate.title} · ${candidateWhere(candidate)}`, picked: candidate.id},
-    () => act(() => pickCandidate(item.application_id!, candidate.id), said(item, `JD saved for ${item.company}`, 'Couldn\'t save the JD')));
+  const pick = (item: NeedsYouItemOut, candidate: JdCandidateOut) => {
+    const {what, done, failed} = pickWords(candidate, item.company);
+    answer(item, {what, rest: `${candidate.title} · ${candidateWhere(candidate)}`, picked: candidate.id}, () => act(() => pickCandidate(item.application_id!, candidate.id), said(item, done, failed)));
+  };
   const none = (item: NeedsYouItemOut) => answer(item, {what: 'None of these', rest: 'No JD found', picked: 'none'},
     () => act(() => noneOfThese(item.application_id!), said(item, `None of these for ${item.company}`, 'Couldn\'t turn them down')));
   const assign = (item: NeedsYouItemOut, row: ApplicationRowOut) => answer(item, {what: 'Assigned', rest: `${titleOf(row)} · ${row.company}`},

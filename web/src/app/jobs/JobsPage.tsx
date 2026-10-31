@@ -58,7 +58,7 @@ import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
 import {HistorySkeleton, JobsLines, JobsOff} from './States.tsx';
 import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
-import {DEFAULT_SORT, historyRuns, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
+import {DEFAULT_SORT, historyRuns, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import './jobs.css';
 
@@ -313,7 +313,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
     if (open === null) return;
     const company = (openRow ?? detail)?.company ?? '';
     void (candidate
-      ? act(() => pickCandidate(open, candidate.id), {done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'})
+      ? act(() => pickCandidate(open, candidate.id), pickWords(candidate, company))
       : act(() => noneOfThese(open), {done: `None of these for ${company}`, failed: 'Couldn\'t turn them down'}));
   };
   // A row's right-click (#248, #268): its actions at the pointer; the cursor moves to it, and it doesn't open.

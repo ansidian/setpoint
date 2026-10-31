@@ -27,7 +27,7 @@ import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
-import {fromHistorySetting, historyLine, historySetting, historyShare, jobsUsageParts, readingLine} from '../../src/app/jobs/words.ts';
+import {fromHistorySetting, historyLine, historySetting, historyShare, jobsUsageParts, pickWords, readingLine} from '../../src/app/jobs/words.ts';
 import {colour} from './colour.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -350,6 +350,13 @@ test('a candidate Jobs can\'t read says so in ink3, however long its title, and 
   expect(note.element().getBoundingClientRect().right).toBeLessThanOrEqual(group.getByRole('radio').nth(1).element().getBoundingClientRect().right);
   expect(note.element().scrollWidth).toBeLessThanOrEqual(note.element().clientWidth);
   await expect.element(group.getByRole('link', {name: `Look at ${long.title}`})).toHaveAttribute('href', UNREADABLE.link);
+});
+
+test('picked, a candidate Jobs can\'t read reads "Link kept", never "JD saved", and the toast says the same (SV-140)', async () => {
+  await render(<CandidatePicker candidates={[CANDIDATES[0]!, UNREADABLE]} active={false} picked={UNREADABLE.id} onPick={() => {}} onNone={() => {}} />);
+  await expect.element(page.getByRole('radio').nth(1)).toHaveTextContent('Junior Developer · Link kept');
+  expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({what: 'Link kept', done: 'Link kept for Lucerne Publishing', failed: 'Couldn\'t keep the link'});
+  expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({what: 'JD saved', done: 'JD saved for Lucerne Publishing', failed: 'Couldn\'t save the JD'});
 });
 
 test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there (SV-140)', () => {
