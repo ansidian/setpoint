@@ -140,7 +140,7 @@ test('search: words become chips, results replace the list, J / K / Enter open t
   }
 });
 
-test('what only mentions the search folds under a line: it opens in place, J / K cross it, an open logs the place it shows at, and each search starts folded', async () => {
+test('a thin first section hides nothing: its fold starts open with its line, J / K cross it, an open logs the place it shows at, a close holds while the words are refined, and a new search decides again', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -151,10 +151,10 @@ test('what only mentions the search folds under a line: it opens in place, J / K
     const fold = page.locator('.search-list .mentions');
     await fold.waitFor();
     assert.equal(await page.locator('.search-list .bar').textContent(), '3 results');
-    assert.equal(await rows.count(), 3);
+    await until('every row, with no click', () => rows.count(), count => count === 4);
     assert.equal(await fold.textContent(), '1 more mentions these words');
-    assert.equal(await fold.getAttribute('aria-expanded'), 'false');
-    // J stops on the fold, under its fill; Enter opens it in place, the cursor on the row it opened.
+    assert.equal(await fold.getAttribute('aria-expanded'), 'true');
+    // J stops on the line, under its fill, and the list runs on over it, K back as J on.
     const fill = (token: string) => page.evaluate(name => {
       const probe = document.createElement('span');
       probe.style.backgroundColor = `var(--${name})`;
@@ -168,11 +168,6 @@ test('what only mentions the search folds under a line: it opens in place, J / K
     await page.keyboard.press('j');
     await page.locator('.search-list .mentions.cur').waitFor();
     assert.equal(await rested(() => fold.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => fill('sub2')));
-    await page.keyboard.press('Enter');
-    await until('the fold opened', () => fold.getAttribute('aria-expanded'), expanded => expanded === 'true');
-    await until('its row', () => rows.count(), count => count === 4);
-    // The list runs on over it, K back as J on, and an open logs the place shown.
-    await page.locator('.search-list .mentions.cur').waitFor();
     await page.keyboard.press('j');
     await page.locator('.arow.result.cur', {hasText: 'October rent received'}).waitFor();
     await page.keyboard.press('k');
@@ -185,22 +180,68 @@ test('what only mentions the search folds under a line: it opens in place, J / K
     assert.equal((JSON.parse((await opened).postData()!) as {position: number}).position, 3);
     await page.keyboard.press('Escape');
     await page.locator('.rd-subj').waitFor({state: 'detached'});
-    // A click folds it again, its row folding out, and the pointer takes the cursor as a row's does.
+    // Its line closes it as one opened by hand, and the pointer takes the cursor as a row's does.
     await fold.click();
     await until('the row gone', () => rows.count(), count => count === 3);
     assert.equal(await fold.getAttribute('aria-expanded'), 'false');
     await page.keyboard.press('k');
     await page.locator('.arow.result.cur').waitFor();
     await point(fold);
-    await page.locator('.search-list .mentions.cur').waitFor();
-    // Another search starts folded.
-    await fold.click();
-    await until('the row back', () => rows.count(), count => count === 4);
+    // More of the same words: still closed, though a search of them would start open.
     await page.keyboard.press('/');
-    await page.keyboard.type('renewals');
+    await page.keyboard.press('End');
+    await page.keyboard.type('s');
     await page.keyboard.press('Enter');
-    await page.locator('.search-list .mentions[aria-expanded="false"]').waitFor();
-    await until('its rows', () => rows.count(), count => count === 3);
+    await page.locator('.ask', {hasText: 'renewals'}).waitFor();
+    await until('its fold', () => fold.getAttribute('aria-expanded'), expanded => expanded === 'false');
+    assert.equal(await rows.count(), 3);
+    // Another search decides again.
+    await page.keyboard.press('/');
+    await page.keyboard.type('lease');
+    await page.keyboard.press('Enter');
+    await page.locator('.search-list .mentions[aria-expanded="true"]').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a fold that starts open pages in with no click, page 2 and on, and closing it stops there', async () => {
+  const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await page.keyboard.type('vault inventory');
+    await page.keyboard.press('Enter');
+    const rows = page.locator('.arow.result');
+    const fold = page.locator('.search-list .mentions');
+    await fold.waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '3 results');
+    assert.equal(await fold.textContent(), '60 more mention these words');
+    assert.equal(await fold.getAttribute('aria-expanded'), 'true');
+    assert.equal(await rows.count(), 50);
+    // Off the fold, by the keys, to the place the row shows at.
+    await page.locator('.arow.result.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.locator('.search-list .mentions.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur').nth(0).waitFor();
+    assert.equal(await page.locator('.arow.result.cur').getAttribute('data-id'), await rows.nth(3).getAttribute('data-id'));
+    const opened = page.waitForRequest(request => request.url().endsWith('/api/search/opened'));
+    await page.keyboard.press('Enter');
+    await page.locator('.rd-subj').waitFor();
+    assert.equal((JSON.parse((await opened).postData()!) as {position: number}).position, 3);
+    await page.keyboard.press('Escape');
+    await page.locator('.rd-subj').waitFor({state: 'detached'});
+    // Page 2 comes as the list nears its end.
+    await rows.last().scrollIntoViewIfNeeded();
+    await until('every row', () => rows.count(), count => count === 63);
+    // Closed, its rows go, and it stays closed.
+    await fold.click();
+    await until('the rows above it', () => rows.count(), count => count === 3);
+    assert.equal(await fold.getAttribute('aria-expanded'), 'false');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

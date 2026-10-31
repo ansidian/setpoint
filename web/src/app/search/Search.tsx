@@ -267,7 +267,7 @@ const FOLD_RULES: FoldRules<Part> = {
 };
 const inFold = (entry: Folded<Part>) => (entry.item.kind === 'row' ? MENTIONS_KEY : null);
 
-/** The fold, "12 more mention these words", and its rows, which open in place on a click or Enter. */
+/** The fold, "12 more mention these words", and its rows, open from the start or in place on a click or Enter. */
 function Mentions(props: ResultsProps) {
   const {search, sections, cursor, onPoint} = props;
   const open = search.mentions;
@@ -278,9 +278,13 @@ function Mentions(props: ResultsProps) {
   const shown = useFold(entries, FOLD_RULES, FOLD_HOLD_MS);
   const delays = foldDelays(shown, inFold);
   const line = useRef<HTMLButtonElement>(null);
-  // Opened at the foot of the list, its rows come into view once they're in (#70).
+  // Opened at the foot of the list, its rows come into view once they're in (#70); a search that
+  // starts open leaves the list where it is.
+  const wasOpen = useRef(open);
   useEffect(() => {
-    if (!open) return;
+    const opened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opened) return;
     const timer = window.setTimeout(() => line.current?.nextElementSibling?.scrollIntoView({block: 'nearest'}), FOLD_HOLD_MS);
     return () => window.clearTimeout(timer);
   }, [open]);

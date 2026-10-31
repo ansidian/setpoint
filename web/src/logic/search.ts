@@ -118,6 +118,38 @@ export function resultSections<R extends {id: number}>(results: readonly R[], ou
   return {about, more: (out?.total ?? results.length) - first - (after.length - mentions.length), mentions: open ? mentions : []};
 }
 
+// Fewer rows than this above the fold and search isn't sure of them, so it hides nothing.
+export const FOLD_OPENS_UNDER = 5;
+
+/** Whether a search's fold starts open: the first section is thin, and not empty, which is a plain list. */
+export const foldStartsOpen = ({first_section}: Pick<SearchOut, 'first_section'>) => first_section > 0 && first_section < FOLD_OPENS_UNDER;
+
+/** The fold of the search on screen. */
+export interface MentionsFold {
+  chips: string;
+  text: string;
+  open: boolean;
+  // The user closed it.
+  closed: boolean;
+}
+
+/**
+ * The fold for an answer: the same search keeps its own, whatever a later page or new mail says, and
+ * a new one decides again, except that a fold the user closed stays closed while they refine the
+ * same words (one's text starting the other's, the same chips), so typing doesn't undo the close.
+ */
+export function foldFor(before: MentionsFold | null, out: Pick<SearchOut, 'chips' | 'text' | 'first_section'> | null): MentionsFold | null {
+  if (!out) return null;
+  const chips = JSON.stringify(out.chips);
+  const text = out.text.trim().toLowerCase();
+  if (before?.chips === chips && before.text === text) return before;
+  const refined = before?.closed && before.chips === chips && (text.startsWith(before.text) || before.text.startsWith(text));
+  return refined ? {...before, text} : {chips, text, open: foldStartsOpen(out), closed: false};
+}
+
+/** The fold after a click or Enter on its line. */
+export const toggledFold = (fold: MentionsFold): MentionsFold => ({...fold, open: !fold.open, closed: fold.open});
+
 /** The fold's line: "12 more mention these words". */
 export const mentionsLine = (more: number, partial: boolean) => `${more} more ${more === 1 ? 'mentions' : 'mention'} ${partial ? 'some of ' : ''}these words`;
 

@@ -193,7 +193,10 @@ export const secondPin = ({db}: OpenDatabase) =>
 export const codeExpiring = ({db}: OpenDatabase) =>
   db.update(t.messages).set({codeExpiresAt: new Date(Date.parse(SEED_NOW) + 12_000).toISOString()}).where(eq(t.messages.id, bySubject(db, 'Your code is 482913').id)).run();
 
-/** 60 emails about "ledger audit", more than a page, then 60 that only mention it, for search's fold. */
+/**
+ * For search's fold: 60 emails about "ledger audit", more than a page, then 60 that only mention it;
+ * and 3 about "vault inventory", few enough that its fold starts open, then 60 that only mention it.
+ */
 export function ledgerAudit({db}: OpenDatabase) {
   const jobs = db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get();
   if (!jobs) throw new Error('The ledger-audit fixture needs the seed\'s Jobs account: run `npm run seed` first.');
@@ -207,6 +210,8 @@ export function ledgerAudit({db}: OpenDatabase) {
   const rows = Array.from({length: 60}, (_, at) => [
     email(at, `Ledger audit, part ${at + 1}`, 'The figures for this part.', '2026-08-14'),
     email(at + 60, `Quarter notes, part ${at + 1}`, 'A ledger came up in the meeting, and later on there may well be an audit.', '2026-08-13'),
+    email(at + 120, `Depot notes, part ${at + 1}`, 'A vault came up in the meeting, and later on there may well be an inventory.', '2026-08-11'),
+    ...(at < 3 ? [email(at + 180, `Vault inventory, part ${at + 1}`, 'The figures for this part.', '2026-08-12')] : []),
   ]).flat();
   db.insert(t.messages).values(rows).run();
 }

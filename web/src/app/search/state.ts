@@ -11,7 +11,8 @@ import {useEffect, useRef, useState} from 'react';
 import {ApiFailure} from '../../api/client.ts';
 import {searchNews} from '../../api/news.ts';
 import {alfredStep, askAlfred, searchCalendar, searchMail, searchOpened} from '../../api/search.ts';
-import {alfredQuestion, finishedWords, isSearching, typedAfter, withStep} from '../../logic/search.ts';
+import {alfredQuestion, finishedWords, foldFor, isSearching, toggledFold, typedAfter, withStep} from '../../logic/search.ts';
+import type {MentionsFold} from '../../logic/search.ts';
 
 const TYPING_MS = 120;
 const STEP_POLL_MS = 400;
@@ -48,9 +49,9 @@ export interface SearchFieldState<C, O, R> {
 }
 
 export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchResultOut> {
-  // What the answers are for: the same words and chips keep their fold, and others start folded.
+  // What the answers are for: another search's fold is drawn afresh, without motion.
   answering: string;
-  // Whether the results that only mention the search show.
+  // Whether the results that only mention the search show (logic/search.ts › foldFor).
   mentions: boolean;
   toggleMentions: () => void;
   /** The search log: the user opened this result, at its place in the list. */
@@ -186,13 +187,14 @@ export function useSearch(account: number | null, plain = false): Search {
   const search = useSearchField<SearchChip, SearchResultOut, SearchOut>((text, chips, after) => searchMail({
     text, chips, account, ...(after ? {page: {search_id: after.search_id, offset: after.next_offset!}} : {}),
   }), plain);
-  const [openFor, setOpenFor] = useState<string | null>(null);
-  const answering = JSON.stringify([search.out?.chips, search.out?.text]);
+  const [fold, setFold] = useState<MentionsFold | null>(null);
+  const current = foldFor(fold, search.out);
+  if (current !== fold) setFold(current);
   return {
     ...search,
-    answering,
-    mentions: openFor === answering,
-    toggleMentions: () => setOpenFor(openFor === answering ? null : answering),
+    answering: JSON.stringify([search.out?.chips, search.out?.text]),
+    mentions: current?.open ?? false,
+    toggleMentions: () => setFold(last => last && toggledFold(last)),
     opened(id) {
       // `results` are in the server's order, the fold's rows after what's above it, loaded or shown
       // or not, so this is the place the list shows it at.

@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  firstSection, mentionsLine, resultSections, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, mentionsLine, resultSections, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -143,6 +143,52 @@ describe('the results by section, and the fold', () => {
 
   test('no answer yet shows what\'s there', () => {
     expect(resultSections(rows, null, false, none)).toEqual({about: rows, more: 0, mentions: []});
+  });
+
+  test.each<[number, boolean]>([
+    [0, false], [1, true], [FOLD_OPENS_UNDER - 1, true], [4, true], [FOLD_OPENS_UNDER, false], [5, false], [60, false],
+  ])('a first section of %i: starts open, %s', (first_section, open) => {
+    expect(foldStartsOpen({first_section})).toBe(open);
+    expect(foldFor(null, {chips: [], text: 'water bill', first_section})?.open).toBe(open);
+  });
+
+  describe('a search\'s fold', () => {
+    const answer = (text: string, first_section: number, chips: SearchChip[] = []) => ({text, first_section, chips});
+    const thin = foldFor(null, answer('sgv', 1))!;
+
+    test('the same search keeps its own, whatever a later answer says', () => {
+      expect(foldFor(thin, answer('sgv', 9))).toBe(thin);
+      const closed = toggledFold(thin);
+      expect(foldFor(closed, answer('SGV', 1))).toBe(closed);
+    });
+
+    test('a new search decides again, across the threshold either way', () => {
+      expect(foldFor(thin, answer('sgv invoice', 9))).toMatchObject({open: false, closed: false});
+      expect(foldFor(foldFor(null, answer('sgv', 9)), answer('sgv invoice', 4))).toMatchObject({open: true, closed: false});
+    });
+
+    test('a close holds while the same words are refined, and goes with them', () => {
+      const closed = toggledFold(thin);
+      expect(closed).toMatchObject({open: false, closed: true});
+      const longer = foldFor(closed, answer('sgv invoice', 2))!;
+      expect(longer).toMatchObject({open: false, closed: true, text: 'sgv invoice'});
+      expect(foldFor(longer, answer('sgv inv', 3))).toMatchObject({open: false, closed: true});
+      expect(foldFor(longer, answer('water', 2))).toMatchObject({open: true, closed: false});
+      expect(foldFor(longer, answer('sgv invoice', 2, [{kind: 'type', value: 'statement', label: 'Statement'}]))).toMatchObject({open: true, closed: false});
+    });
+
+    test('opening it again by hand takes the close back, and opening one by hand is for that search', () => {
+      const reopened = toggledFold(toggledFold(thin));
+      expect(reopened).toMatchObject({open: true, closed: false});
+      expect(foldFor(reopened, answer('sgv invoice', 9))).toMatchObject({open: false});
+      const opened = toggledFold(foldFor(null, answer('renewal', 9))!);
+      expect(opened).toMatchObject({open: true, closed: false});
+      expect(foldFor(opened, answer('renewals', 9))).toMatchObject({open: false});
+    });
+
+    test('no search, no fold', () => {
+      expect(foldFor(thin, null)).toBeNull();
+    });
   });
 
   test.each<[number, boolean, string]>([
