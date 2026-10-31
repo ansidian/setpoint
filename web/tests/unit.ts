@@ -1,12 +1,17 @@
 // `npm test`: lint, typecheck and Vitest, stopping at the first that fails. A whole run that passes
 // is recorded for the content it ran on (passes.ts), unless the files changed meanwhile, so
 // release:check doesn't run it again. `npm test -- <args>` passes them to Vitest and isn't recorded.
+// A whole run takes the lock the browser checks do (browser/lock.ts), since either slows the other
+// into timing out, and waits for it, saying whose run it waits for. `npm test -- <args>` runs without
+// it: a few files are light, and shouldn't wait out a stress run.
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {holdForRun} from './browser/lock.ts';
 import {record, treeOf} from './passes.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const args = process.argv.slice(2);
+if (!args.length) await holdForRun();
 const tree = treeOf();
 
 // Lint and typecheck keep what they found per file under node_modules/.cache, so a run redoes only

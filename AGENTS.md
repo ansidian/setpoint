@@ -33,6 +33,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - `npm test` (lint, typecheck, Vitest, its component tests in Chromium too) passes before every
   commit, and `npm run test:browser` (build and Playwright) for the spec files covering what the
   change touches; a change to the harness or the shared styles runs them all. Say what ran.
+- A whole `npm test` and every browser run share one lock (web/tests/browser/lock.ts), so each waits
+  for the other's run, in any session, saying whose, for up to 45 minutes: run them in the
+  background when another session may be testing. `npm test -- <args>` doesn't wait. Vitest runs as
+  many workers as a Mac has performance cores (vitest.config.ts), since one on an efficiency core
+  can pass a time limit with the Mac idle.
 - `npm run test:browser -- mail search` runs only those spec files, and
   `npm run test:browser -- mail --only "S8"` only the checks whose names start that way: iterate on
   the one check, then run its files before the commit (a run with `--only` isn't recorded for
@@ -59,8 +64,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes 5
   to 10 minutes.
 - When Andy says a release is coming, the session that pushes its commit runs
-  `npm run release:check` in the background straight after, so the release finds it done. It holds
-  the browser lock while it runs.
+  `npm run release:check` in the background straight after, so the release finds it done. Each of
+  its checks takes the test lock while it runs.
 - `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
   how to sign in: the quickest way to see a change or reproduce a report by hand.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
@@ -96,7 +101,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   (D269).
 - A widget's own behaviour goes to a component test (`web/tests/components/*.test.tsx`, SV-101):
   React renders the one widget in a real Chromium with the app's stylesheets and tokens (Vitest's
-  browser mode, part of `npm test`, a few seconds; no browser lock, it's one headless page). It
+  browser mode, part of `npm test`, a few seconds; run alone, they take no lock, it's one headless page). It
   finds by role, waits with `expect.element` or `expect.poll`, and takes the same single-value rule
   as a browser check. That's a select's keys and Esc, a picker's band, the toast's timing (with
   Vitest's clock, so its seconds pass at once): what the widget does with the props and the pointer
