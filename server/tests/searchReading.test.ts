@@ -201,12 +201,12 @@ describe('filters from the model', () => {
     const otherOrg = mail(w, 'Gadget receipt too', {organisation: 'Fourth Coffee', receivedAt: '2026-08-13T17:00:00.000Z'});
     fake.answer(() => answer({organisations: ['Proseware'], types: ['receipt'], keywords: 'gadget'}));
     const out = await read('gadget receipts from proseware august');
-    expect(labels(out)).toEqual(['Aug 2026', 'Proseware', 'Receipt']);
+    expect(labels(out)).toEqual(['Proseware', 'Receipt', 'Aug 2026']);
     expect(ids(out)).toEqual([inMonth]);
     expect(out.reading!.more).toBe(0);
     fake.answer(() => answer({organisations: ['Proseware'], keywords: 'gadget receipt'}));
     const narrower = await read('gadget receipt august');
-    expect(labels(narrower)).toEqual(['Aug 2026', 'Proseware']);
+    expect(labels(narrower)).toEqual(['Proseware', 'Aug 2026']);
     expect(ids(narrower)).toEqual([inMonth]);
     expect(narrower.reading!.more).toBe(1);
     expect(otherOrg).toBeGreaterThan(0);
@@ -300,7 +300,7 @@ describe('exclusions and quotes', () => {
     fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'gadget'}));
     const out = await read('gadget !alert !zebrafish');
     expect(fake.requests[0]!.input).toMatch(/Search: gadget$/);
-    expect(out.chips).toEqual([{kind: 'type', value: 'alert', label: 'Alert', not: true}, {kind: 'organisation', value: 'Contoso Insurance', label: 'Contoso Insurance'}]);
+    expect(out.chips).toEqual([{kind: 'organisation', value: 'Contoso Insurance', label: 'Contoso Insurance'}, {kind: 'type', value: 'alert', label: 'Alert', not: true}]);
     expect(out.text).toBe('gadget !zebrafish');
     expect(ids(out)).toEqual([kept]);
     expect(out.reading).toMatchObject({more: 1});
@@ -397,12 +397,20 @@ describe('falling back to the word results', () => {
 });
 
 describe('asking only when the search says so', () => {
-  test('a search without `read` never reaches the model, typed words forming chips as ever', async () => {
+  test('a search without `read` never reaches the model, and its words form no chip, a date\'s neither', async () => {
     const {fake, reader} = await setup();
     const out = await reader.search(searchInput.parse({text: 'northwind rejection march'}));
     expect(fake.requests).toEqual([]);
-    expect(labels(out)).toEqual(['Northwind', 'Rejection', 'Mar 2026']);
-    expect(out.reading).toBeNull();
+    expect(out).toMatchObject({chips: [], text: 'northwind rejection march', order: 'match', reading: null});
+  });
+
+  test('with no words left there\'s nothing to say more about', async () => {
+    const {w, reader} = await setup();
+    mail(w, 'Gadget notice', {organisation: 'Fourth Coffee'});
+    const organisation = {kind: 'organisation', value: 'Proseware', label: 'Proseware'};
+    const date = {kind: 'date', from: '2026-10-01', to: '2026-11-01', label: 'Oct 2026'};
+    const out = await reader.search(searchInput.parse({text: '', typed: '', chips: [organisation, date], read: 'kept'}));
+    expect(out.reading!.more).toBe(0);
   });
 
   test('a later page and a chip removed keep what was read, with no model call, and the word comes back', async () => {

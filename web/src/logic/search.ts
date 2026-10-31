@@ -1,7 +1,7 @@
 // Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
 // card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
 // what the reader highlights, and how a proposal's time reads.
-import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchReadingFallback, SearchResultOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
@@ -153,6 +153,52 @@ export const toggledFold = (fold: MentionsFold): MentionsFold => ({...fold, open
 /** The fold's line: "12 more mention these words". */
 export const mentionsLine = (more: number, partial: boolean) => `${more} more ${more === 1 ? 'mentions' : 'mention'} ${partial ? 'some of ' : ''}these words`;
 
+/** The rows Enter's chips hid, as far as the user has asked for them (D385). */
+export interface LeftOut<R> {
+  open: boolean;
+  rows: readonly R[];
+}
+
+/**
+ * The line under the results and its rows: `more` from the reading, less rows taken out meanwhile,
+ * and like the fold it waits for everything above it to load, then shows whether the fold is open
+ * or not. The server's count, not the rows, since only an open line has any.
+ */
+export function leftOutSection<R extends {id: number}>(results: readonly R[], out: Pick<SearchOut, 'total' | 'first_section' | 'reading'> | null, left: LeftOut<R> | null, gone: ReadonlySet<number>): {more: number; rows: R[]} {
+  const more = out?.reading?.more ?? 0;
+  if (!out || !more || results.length < firstSection(out)) return {more: 0, rows: []};
+  const rows = left?.rows ?? [];
+  const here = rows.filter(row => !gone.has(row.id));
+  return {more: more - (rows.length - here.length), rows: left?.open ? here : []};
+}
+
+/** The line itself: "6 more emails match your words", the same words a search of them would find. */
+export const leftOutLine = (more: number) => `${more} more ${more === 1 ? 'email matches' : 'emails match'} your words`;
+
+/** A reading that didn't come in time, or at all, is worth another Enter: a slow one is held for it. */
+export const worthAskingAgain = (fallback: SearchReadingFallback | null) => fallback === 'slow' || fallback === 'failed';
+
+/** A chip a reading made, which stood for words in the search. A date or a Not chip stands for no word in `reading.typed`. */
+export const standsForWords = (chip: SearchChip) => !chip.not && (chip.kind === 'organisation' || chip.kind === 'type');
+
+const foldedWord = (word: string) => word.normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
+
+const typedTokens = (text: string) => text.match(/"[^"]*"?|[^\s"]+/g) ?? [];
+
+/**
+ * The field's words once a chip comes off: the words as typed, but for those a chip still in force
+ * says itself ("receipts" under Type Receipt), unless the reading kept them. So the word comes back
+ * without the words the other chips still stand for.
+ */
+export function wordsBack(typed: string, text: string, left: readonly SearchChip[]): string {
+  const kept = new Set(typedTokens(text));
+  const says = (chip: SearchChip, word: string) => chip.label.split(/\s+/).some(part => {
+    const own = foldedWord(part);
+    return word !== '' && (own.startsWith(word) || word.startsWith(own));
+  });
+  return typedTokens(typed).filter(token => kept.has(token) || !left.some(chip => standsForWords(chip) && says(chip, foldedWord(token)))).join(' ');
+}
+
 /** "Indexing · 62% · showing what's indexed so far", during the first backfill. */
 export const indexingLine = (indexing: SearchOut['indexing']) =>
   indexing ? `Indexing · ${Math.round(indexing.progress * 100)}% · showing what’s indexed so far` : null;
@@ -164,20 +210,24 @@ export const chipWords = (chip: SearchChip) => (chip.not ? `!${chip.label}` : ch
 export const queryParts = (chips: readonly SearchChip[], text: string) => [...chips.map(chipWords), ...(text.trim() ? [text.trim()] : [])];
 
 /**
- * What ⌘Enter asks Alfred: the words in the field, in the order they were typed when the field still
- * knows it (`typed`), since a chip leaves the text where it formed and sits first. Without that order,
- * chips go back first as their words, which the grammar reads as the same chips.
+ * What ⌘Enter asks Alfred, and Enter reads anew: the words in the field, in the order they were typed
+ * when the field still knows it (`typed`), since a chip leaves the text where it formed and sits
+ * first. Without that order, chips go back first as their words, which the grammar reads as the same
+ * chips.
  */
 export const alfredQuestion = (chips: readonly SearchChip[], text: string, typed: string | null = null) =>
   typed?.trim() ? typed.trim() : queryParts(chips, text).join(' ');
 
 /**
  * The field's words as typed, after its text went from `before` to `after` while it holds chips.
- * Typing on at the end keeps the order; any other edit loses it (null), and it stays lost until the
- * field holds no chips again.
+ * Typing on at the end keeps the order, a new word after chips that took every word; any other edit
+ * loses it (null), and it stays lost until the field holds no chips again.
  */
-export const typedAfter = (typed: string | null, before: string, after: string): string | null =>
-  typed !== null && after.startsWith(before) ? typed + after.slice(before.length) : null;
+export function typedAfter(typed: string | null, before: string, after: string): string | null {
+  if (typed === null || !after.startsWith(before)) return null;
+  const gap = before === '' && after !== '' && typed !== '' && !/\s$/.test(typed) ? ' ' : '';
+  return `${typed}${gap}${after.slice(before.length)}`;
+}
 
 /** Whether the field holds a search: chips, or words. */
 export const isSearching = (chips: readonly unknown[], text: string) => chips.length > 0 || text.trim().length > 0;
@@ -368,8 +418,8 @@ export function calendarResultLine(result: Pick<CalendarSearchResultOut, 'item' 
 }
 
 /**
- * The words before the last when the field's text doesn't end in a space ("northwind rejection" and
- * "march"), or null when there's only one word or a "quote" is still open.
+ * The calendar field's words before the last when its text doesn't end in a space ("classes" and
+ * "october"), or null when there's only one word or a "quote" is still open.
  */
 export function finishedWords(text: string): {words: string; last: string} | null {
   const match = /^(.*\S)\s+(\S+)$/s.exec(text.trimStart());

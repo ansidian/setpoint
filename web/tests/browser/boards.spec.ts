@@ -177,8 +177,13 @@ test('board 10: two pins, the lease open, Unpin under the pointer on the DMV not
 // 127.0.0.1 (fakeAlfred.ts), reached through SETPOINT_DEV_AI_URL.
 
 test('board 06: search with chips, the first result open', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
+  const fake = await fakeAlfred(leaseAlfred);
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
+    await fake.close();
+    throw error;
+  });
   try {
+    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
@@ -187,12 +192,14 @@ test('board 06: search with chips, the first result open', async () => {
     await page.keyboard.type('northwind rejection march');
     await page.keyboard.press('Enter');
     await until('the chips', () => page.locator('.search .qchip').count(), count => count === 3);
+    await page.locator('.arow.result.cur').waitFor();
     await page.keyboard.press('Enter');
     await page.locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();
     await page.keyboard.press('/');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+    await fake.close();
   }
 });
 

@@ -16,6 +16,7 @@ import {signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
 const search = (w: World, text: string, extra: Record<string, unknown> = {}) => searchMail(w.store, searchInput.parse({text, ...extra}));
+const broad = (w: World, text: string) => searchMail(w.store, searchInput.parse({text}), {log: false, matching: 'broad'});
 const subjects = (out: SearchOut) => out.results.map(result => result.subject);
 const reasons = (result: SearchResultOut) => result.reasons.map(reason => reason.label).join(' · ');
 const idOf = (w: World, subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.subject, subject)).get()!.id;
@@ -37,10 +38,15 @@ function sentEmail(w: World, subject: string, bodyText: string) {
   }]).inserted[0]!;
 }
 
+// Board 06's chips, as Enter's reading gives them and the field sends them back.
+const NORTHWIND = {kind: 'organisation', value: 'Northwind', label: 'Northwind'};
+const REJECTION = {kind: 'type', value: 'rejection', label: 'Rejection'};
+const BOARD_CHIPS = [NORTHWIND, REJECTION, {kind: 'date', from: '2026-03-01', to: '2026-04-01', label: 'Mar 2026'}];
+
 describe('search over the seed: the brief\'s and the boards\' examples', () => {
-  test('northwind rejection march → Northwind · Rejection · Mar 2026, "Update on your application" first (board 06)', () => {
+  test('Northwind · Rejection · Mar 2026, "Update on your application" first (board 06)', () => {
     const w = world({seed: true});
-    const out = search(w, 'northwind rejection march');
+    const out = search(w, '', {chips: BOARD_CHIPS});
     expect(out.chips.map(chip => chip.label).join(' · ')).toBe('Northwind · Rejection · Mar 2026');
     expect(out).toMatchObject({text: '', order: 'newest', total: 2, next_offset: null, indexing: null});
     expect(subjects(out)).toEqual(['Update on your application', 'Your application for Data Engineer Intern']);
@@ -120,18 +126,27 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(out).toMatchObject({total: 2, first_section: 0});
   });
 
-  test('a chip keeps newest first, in one section, and every page says the same first section', () => {
+  test('words typed form no chip, a date\'s neither, and a filter can\'t hide what they find', () => {
     const w = world({seed: true});
-    expect(search(w, 'northwind rejection march')).toMatchObject({total: 2, first_section: 2, order: 'newest'});
-    const words = search(w, 'northwind application zebra');
-    expect(words).toMatchObject({order: 'newest', partial: true, first_section: words.total});
+    const out = search(w, 'northwind rejection march');
+    expect(out).toMatchObject({chips: [], text: 'northwind rejection march', order: 'match', partial: true});
+    expect(subjects(out)).toContain('Update on your application');
+    expect(search(w, 'october')).toMatchObject({chips: [], text: 'october', order: 'match'});
+    expect(subjects(search(w, 'parkside lease'))).toEqual(['Lease renewal terms', 'October rent received']);
+    expect(search(w, 'n')).toMatchObject({chips: [], text: 'n'});
+  });
+
+  test('chips alone go newest first, in one section, words keep their order under chips, and every page says the same first section', () => {
+    const w = world({seed: true});
+    expect(search(w, '', {chips: BOARD_CHIPS})).toMatchObject({total: 2, first_section: 2, order: 'newest'});
+    expect(search(w, 'application', {chips: [NORTHWIND]})).toMatchObject({order: 'match'});
     expect(search(w, 'renewal', {limit: 2})).toMatchObject({total: 4, first_section: 3, next_offset: 2});
     expect(search(w, 'renewal', {limit: 2, offset: 2})).toMatchObject({total: 4, first_section: 3, next_offset: null});
   });
 
   test('with a chip in force, leftover filler asks nothing of the mail', () => {
     const w = world({seed: true});
-    expect(search(w, 'northwind rejection march the').results.map(result => result.subject)).toEqual(['Update on your application', 'Your application for Data Engineer Intern']);
+    expect(search(w, 'the', {chips: BOARD_CHIPS}).results.map(result => result.subject)).toEqual(['Update on your application', 'Your application for Data Engineer Intern']);
   });
 
   test('a search no email fully matches says so (UX #10)', () => {
@@ -143,20 +158,20 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(search(w, 'zebra quokka').partial).toBe(false);
   });
 
-  test('more chips: an account and a kind, an organisation alone, a type with a month, and a day', () => {
+  test('Alfred\'s words form every chip: an account and a kind, an organisation alone, a type with a month, and a day', () => {
     const w = world({seed: true});
-    const jobs = search(w, 'jobs career');
+    const jobs = broad(w, 'jobs career');
     expect(jobs.chips.map(chip => `${chip.kind} ${chip.label}`)).toEqual(['account Jobs', 'kind Career']);
     expect(subjects(jobs)).toEqual([
       'Interview availability for Software Engineer I', 'Application received', 'Thanks for applying', 'Update on your application', 'Your application for Data Engineer Intern',
     ]);
     expect(reasons(jobs.results[0]!)).toBe('Account Jobs · Kind Career');
-    expect(subjects(search(w, 'parkside'))).toEqual(['October rent received', 'Lease renewal terms']);
-    expect(subjects(search(w, 'statement oct'))).toEqual(['Statement ready', 'Bill is ready']);
-    expect(subjects(search(w, 'contoso university sep 30'))).toEqual([]);
-    expect(subjects(search(w, 'parkside sep 30'))).toEqual(['Lease renewal terms']);
+    expect(subjects(broad(w, 'parkside'))).toEqual(['October rent received', 'Lease renewal terms']);
+    expect(subjects(broad(w, 'statement oct'))).toEqual(['Statement ready', 'Bill is ready']);
+    expect(subjects(broad(w, 'contoso university sep 30'))).toEqual([]);
+    expect(subjects(broad(w, 'parkside sep 30'))).toEqual(['Lease renewal terms']);
     // Chips with free text: the text must match too, and order stays newest first.
-    const interview = search(w, 'northwind interview');
+    const interview = broad(w, 'northwind interview');
     expect(interview).toMatchObject({order: 'newest', text: 'interview'});
     expect(subjects(interview)).toEqual(['Interview availability for Software Engineer I']);
     expect(reasons(interview.results[0]!)).toBe('Org Northwind · Subject interview');
@@ -164,10 +179,12 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
 
   test('"!" leaves out what it names: a Not chip, or the mail with a word; neither is a reason (SV-31)', () => {
     const w = world({seed: true});
-    const notRejection = search(w, 'northwind !rejection');
-    expect(notRejection.chips).toEqual([{kind: 'organisation', value: 'Northwind', label: 'Northwind'}, {kind: 'type', value: 'rejection', label: 'Rejection', not: true}]);
+    const notRejection = search(w, '!rejection', {chips: [NORTHWIND]});
+    expect(notRejection.chips).toEqual([NORTHWIND, {...REJECTION, not: true}]);
     expect(subjects(notRejection)).toEqual(['Interview availability for Software Engineer I', 'Thanks for applying']);
     expect(reasons(notRejection.results[0]!)).toBe('Org Northwind');
+    // Typed in with the words, its chip forms as ever, and the words stay words.
+    expect(search(w, 'northwind !rejection')).toMatchObject({chips: [{...REJECTION, not: true}], text: 'northwind', order: 'match'});
     // Leaving out alone keeps free text's order: by the best field, newest first.
     const application = search(w, 'application !northwind');
     expect(application).toMatchObject({order: 'match', text: 'application'});
@@ -183,13 +200,13 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(notConfirmation.results.some(result => result.type === null)).toBe(true);
     expect(search(w, '!application', {limit: 200}).results.some(result => /application/i.test(result.subject))).toBe(false);
     // Chips the field already shows keep their Not.
-    expect(subjects(search(w, 'northwind', {chips: [{kind: 'type', value: 'rejection', label: 'Rejection', not: true}]}))).toEqual(subjects(notRejection));
+    expect(subjects(search(w, '', {chips: [NORTHWIND, {...REJECTION, not: true}]}))).toEqual(subjects(notRejection));
   });
 
   test('chips the field already shows are kept, and an organisation nobody has matches nothing', () => {
     const w = world({seed: true});
-    const out = search(w, 'march', {chips: [{kind: 'organisation', value: 'Northwind', label: 'Northwind'}, {kind: 'type', value: 'rejection', label: 'Rejection'}]});
-    expect(out.chips.map(chip => chip.label)).toEqual(['Northwind', 'Rejection', 'Mar 2026']);
+    const out = search(w, 'application', {chips: [NORTHWIND, REJECTION]});
+    expect(out.chips.map(chip => chip.label)).toEqual(['Northwind', 'Rejection']);
     expect(out.total).toBe(2);
     expect(search(w, '', {chips: [{kind: 'organisation', value: 'Initech', label: 'Initech'}]}).total).toBe(0);
     expect(search(w, '').total).toBe(0);
@@ -209,27 +226,26 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
   test('pages, with the indexing line while the first backfill runs', () => {
     const w = world({seed: true});
     // The Jobs account's six emails (the brief's five and Jobs's Indeed match email, round 4).
-    const first = search(w, 'jobs', {limit: 2});
+    const jobs = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get()!.id;
+    const first = search(w, '', {chips: [{kind: 'account', value: jobs, label: 'Jobs'}], limit: 2});
     expect(first).toMatchObject({total: 6, next_offset: 2});
-    const second = search(w, 'jobs', {limit: 2, offset: 2, search_id: first.search_id});
+    const second = search(w, '', {chips: first.chips, limit: 2, offset: 2, search_id: first.search_id});
     expect(second).toMatchObject({search_id: first.search_id, total: 6, next_offset: 4});
     expect(searchLogEntry(w.store, first.search_id)!.resultIds).toEqual([...first.results, ...second.results].map(result => result.id));
     const source = w.store.db.select().from(t.sources).where(eq(t.sources.provider, 'gmail')).get()!;
     startBackfill(w.store, source.id, 100, null);
-    expect(search(w, 'jobs').indexing).toEqual({progress: 0});
+    expect(search(w, 'lease').indexing).toEqual({progress: 0});
   });
 });
 
-describe('chips from dates alone, for a search of words', () => {
+describe('dates alone from the words, for Enter\'s reading', () => {
   const words = (w: World, text: string) => matchSearch(w.store, {text, chips: [], account_id: undefined}, {chipsFromWords: 'dates'});
 
   test('an organisation, a type and a kind stay words, and a type\'s word also finds that type', () => {
     const w = world({seed: true});
-    const chipped = search(w, 'northwind rejection');
-    expect(chipped.chips.map(chip => chip.kind)).toEqual(['organisation', 'type']);
     const out = words(w, 'northwind rejection');
     expect(out).toMatchObject({chips: [], order: 'match'});
-    expect(out.ids).toEqual(expect.arrayContaining(chipped.results.map(result => result.id)));
+    expect(out.ids).toEqual(expect.arrayContaining(search(w, '', {chips: [NORTHWIND, REJECTION]}).results.map(result => result.id)));
     expect(words(w, 'career').chips).toEqual([]);
   });
 
@@ -244,8 +260,6 @@ describe('chips from dates alone, for a search of words', () => {
 });
 
 describe('Alfred\'s broad search, an option apart', () => {
-  const broad = (w: World, text: string) => searchMail(w.store, searchInput.parse({text}), {log: false, matching: 'broad'});
-
   test('filler counts, any one word will do, and the best field any word matched orders them', () => {
     const w = world({seed: true});
     const out = broad(w, 'When does my lease renewal need to be signed?');
@@ -266,20 +280,19 @@ describe('the search log', () => {
     const w = world({seed: true});
     const c = await signedIn(w);
     const typed: number[] = [];
-    for (const text of ['nor', 'northwind rej', 'northwind rejection march']) {
+    for (const text of ['nor', 'northwind rej', 'northwind rejection']) {
       typed.push((await c.send('POST', '/api/search', {body: {text}})).body.search_id);
       w.advance(1500);
     }
     expect(new Set(typed).size).toBe(1);
     const entry = searchLogEntry(w.store, typed[0]!)!;
-    expect(entry).toMatchObject({query: 'northwind rejection march', freeText: '', order: 'newest', total: 2});
-    expect(entry.chips.map(chip => chip.label)).toEqual(['Northwind', 'Rejection', 'Mar 2026']);
-    expect(entry.resultIds).toEqual([idOf(w, 'Update on your application'), idOf(w, 'Your application for Data Engineer Intern')]);
+    expect(entry).toMatchObject({query: 'northwind rejection', freeText: 'northwind rejection', chips: [], order: 'match'});
+    expect(entry.resultIds).toEqual(expect.arrayContaining([idOf(w, 'Update on your application'), idOf(w, 'Your application for Data Engineer Intern')]));
 
     expect((await c.send('POST', '/api/search/opened', {body: {search_id: typed[0], message_id: idOf(w, 'Update on your application'), position: 0}})).status).toBe(204);
     expect(searchLogEntry(w.store, typed[0]!)!.opens).toEqual([{messageId: idOf(w, 'Update on your application'), position: 0}]);
     // After an open, or a new subject, a search is a new row.
-    const next = (await c.send('POST', '/api/search', {body: {text: 'northwind rejection march 2'}})).body.search_id;
+    const next = (await c.send('POST', '/api/search', {body: {text: 'northwind rejection letter'}})).body.search_id;
     expect(next).not.toBe(typed[0]);
     w.advance(60_000);
     const lease = (await c.send('POST', '/api/search', {body: {text: 'lease'}})).body;

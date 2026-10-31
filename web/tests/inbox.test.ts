@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -176,6 +176,13 @@ describe('search\'s stops', () => {
     expect(keys(searchStops({about: [row(1), row(2)], more: 3, mentions: []}))).toEqual(['all:1', 'all:2', MENTIONS_KEY]);
     expect(keys(searchStops({about: [row(1), row(2)], more: 2, mentions: [row(3), row(4)]}))).toEqual(['all:1', 'all:2', MENTIONS_KEY, 'all:3', 'all:4']);
     expect(keys(searchStops({about: [row(1)], more: 0, mentions: []}))).toEqual(['all:1']);
+  });
+
+  test('what Enter\'s chips left out comes last, its line a stop, and only when there is any', () => {
+    const leftOut = {more: 2, rows: [row(5), row(6)]};
+    expect(keys(searchStops({about: [row(1)], more: 2, mentions: [row(2)], leftOut}))).toEqual(['all:1', MENTIONS_KEY, 'all:2', LEFT_OUT_KEY, 'all:5', 'all:6']);
+    expect(keys(searchStops({about: [row(1)], more: 0, mentions: [], leftOut: {more: 2, rows: []}}))).toEqual(['all:1', LEFT_OUT_KEY]);
+    expect(keys(searchStops({about: [row(1)], more: 0, mentions: [], leftOut: {more: 0, rows: []}}))).toEqual(['all:1']);
   });
 
   test('folding it from a row it opened leaves the cursor on the fold', () => {

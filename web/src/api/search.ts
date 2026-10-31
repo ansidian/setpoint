@@ -1,7 +1,7 @@
 // Search, Alfred and proposals (shared/src/api/search.ts has the routes). None of these is cached:
 // a search, an answer and a proposal belong to the screen that asked for them. Create is the one
 // change here, a command: pending until its provider confirms it, failed with the provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut} from '@setpoint/shared';
+import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut, SearchRead} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 import {untilSettled} from './items.ts';
 
@@ -11,12 +11,19 @@ export interface SearchQuery {
   text: string;
   chips: SearchChip[];
   account: number | null;
+  // Enter's reading of the search, or what it left: the only way a search reaches the model (D390).
+  read?: SearchRead;
+  // With `read`: the words as typed, which the chips' "more" number counts from.
+  typed?: string;
   // A later page of the same search.
   page?: {search_id: number; offset: number};
 }
 
-export const searchMail = ({text, chips, account, page}: SearchQuery) =>
-  sendJson<SearchOut>('POST', '/search', {text, chips, ...(account ? {account_id: account} : {}), ...(page ?? {})});
+export const searchMail = ({text, chips, account, read, typed, page}: SearchQuery) =>
+  sendJson<SearchOut>('POST', '/search', {text, chips, ...(account ? {account_id: account} : {}), ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
+
+/** The search log: a chip the user took off a search, so a wrong reading can be seen. */
+export const searchChipRemoved = (searchId: number, chip: SearchChip) => sendJson<void>('POST', '/search/chip-removed', {search_id: searchId, chip});
 
 /** SV-23: the calendar's search; a later page passes the last one's `next_offset`. Not logged. */
 export const searchCalendar = ({text, chips, offset}: {text: string; chips: CalendarSearchChip[]; offset: number}) =>

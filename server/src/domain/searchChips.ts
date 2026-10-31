@@ -1,9 +1,12 @@
-// The search field's chip grammar (BRIEF.md › Search; DESIGN.md › Search): as the user types, words that
-// name an organisation, a type, a date or range, an account or a kind become chips that filter
-// exactly. `northwind rejection march` becomes Org Northwind · Type Rejection · Date Mar 2026. Words
-// that form no chip stay free text, and so does anything in "quotes". A "!" before a word negates
-// it (SV-31): `!confirmation` is a Not Type Confirmation chip, and a "!word" that forms no chip stays
-// in the text, where search leaves out the mail that has it.
+// The chip grammar: words that name an organisation, a type, a date or range, an account or a kind
+// become chips that filter exactly. `northwind rejection march` becomes Org Northwind · Type
+// Rejection · Date Mar 2026. Words that form no chip stay free text, and so does anything in
+// "quotes". A "!" before a word negates it (SV-31): `!confirmation` is a Not Type Confirmation chip,
+// and a "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
+//
+// Mail's field no longer runs all of it: a word typed there stays a word (D385, SV-139). What's left
+// is a "!word", any time; dates on Enter (src/search/reading.ts); and Alfred's searches, whole.
+// Calendar search keeps its own words on `parseChips` below.
 //
 // Pure: the known organisations and accounts come in as a vocabulary, and dates resolve against the
 // given clock in the owner's zone. Dates prefer the past (the user is looking for an email they got):
@@ -13,8 +16,8 @@
 // Chrono resolves those forward or not at all.
 //
 // The grammar is here rather than in `shared/` because it needs the vocabulary (the database's
-// organisations and accounts) and keeps Chrono out of the web bundle: F3 shows the chips each
-// search returns (`SearchOut.chips`), searching as the user types.
+// organisations and accounts) and keeps Chrono out of the web bundle: the web shows the chips each
+// answer returns (`SearchOut.chips`).
 import * as chrono from 'chrono-node';
 import type {CalendarSearchChip, Kind, MessageType, SearchChip} from '@setpoint/shared';
 import {addDays, localDay} from './time.ts';
@@ -28,9 +31,9 @@ export interface ChipVocabulary {
 export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
-  // What plain words form: every chip, only dates, the rest staying text for search to rank (SV-137,
-  // for SV-139), or nothing. A word after "!" is the whole grammar's in each, since it says what it
-  // leaves out as exactly as it did (SV-31, SV-138).
+  // What plain words form: every chip (Alfred's), only dates, the rest staying text for search to
+  // rank (Enter's reading), or nothing (the field). A word after "!" is the whole grammar's in each,
+  // since it says what it leaves out as exactly as it did (SV-31, SV-138).
   fromWords?: 'all' | 'dates' | 'none';
 }
 

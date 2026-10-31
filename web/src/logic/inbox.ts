@@ -88,18 +88,23 @@ export function withoutEmails(groups: InboxGroupOut[], ids: ReadonlySet<number>)
  * Where J and K stop: each row shown (the list's under the group 'all', the shelf's under 'pinned'),
  * and a folded Noise line (Enter opens it).
  */
-export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'noise'; date: string} | {key: string; kind: 'mentions'};
+export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'noise'; date: string} | {key: string; kind: 'mentions'} | {key: string; kind: 'leftOut'};
 
 /** All's stops: every row, newest first, by its id. */
 export const allStops = (rows: MessageRowOut[]): Stop[] => rows.map(row => ({key: `all:${row.id}`, kind: 'row', group: 'all', id: row.id}));
 
 export const MENTIONS_KEY = 'mentions';
+export const LEFT_OUT_KEY = 'left-out';
 
-/** Search's stops: what's about the search, its fold, open or not, so Enter closes what it opened, then the rows it opened. */
-export const searchStops = ({about, more, mentions}: {about: MessageRowOut[]; more: number; mentions: MessageRowOut[]}): Stop[] => [
+/**
+ * Search's stops: what's about the search, its fold, open or not, so Enter closes what it opened,
+ * then the rows it opened; then the same for the line of what Enter's chips left out.
+ */
+export const searchStops = ({about, more, mentions, leftOut}: {about: MessageRowOut[]; more: number; mentions: MessageRowOut[]; leftOut?: {more: number; rows: MessageRowOut[]}}): Stop[] => [
   ...allStops(about),
   ...(more > 0 ? [{key: MENTIONS_KEY, kind: 'mentions'} satisfies Stop] : []),
   ...allStops(mentions),
+  ...(leftOut?.more ? [{key: LEFT_OUT_KEY, kind: 'leftOut'} satisfies Stop, ...allStops(leftOut.rows)] : []),
 ];
 
 export const rowKey = (group: InboxGroup, id: number) => `${group}:${id}`;

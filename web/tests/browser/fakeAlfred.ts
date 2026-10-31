@@ -1,8 +1,9 @@
 // A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one):
 // Anthropic's Messages API answering Alfred's turns with the tool calls a test scripts, so board 07
-// can show Alfred answering. Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a dev run
-// accepts; with the key set, triage and the history pass ask it too, and are told it's overloaded,
-// so they change nothing. No check reaches a real model provider.
+// can show Alfred answering, and Enter's reading of a search with invented readings of the seed's mail
+// (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a dev run accepts;
+// with the key set, triage and the history pass ask it too, and are told it's overloaded, so they
+// change nothing. No check reaches a real model provider.
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 
@@ -17,8 +18,31 @@ export interface AlfredTurn {
 export type Call = {name: string; input: Record<string, unknown>};
 type Block = {type: string; text?: string; content?: string};
 
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0}: {delayMs?: number} = {}) {
+/** How the fake reads a search: the tool's input, `keywords` the whole search unless it says, a late answer, or none. */
+export interface FakeReading {
+  organisations?: string[];
+  types?: string[];
+  is_date?: boolean;
+  keywords?: string;
+  delayMs?: number;
+  fails?: boolean;
+}
+
+/** Readings of the seed's mail, by the plain words of a search. Any other reads as its words, with no filter. */
+export const SEED_READINGS: Record<string, FakeReading> = {
+  'northwind rejection march': {organisations: ['Northwind Talent'], types: ['rejection'], keywords: ''},
+  'northwind rejection': {organisations: ['Northwind Talent'], types: ['rejection'], keywords: ''},
+  'northwind': {organisations: ['Northwind Talent'], keywords: ''},
+  'parkside renewal': {organisations: ['Parkside Apartments'], keywords: 'renewal'},
+  'renewal': {organisations: ['Parkside Apartments'], keywords: 'renewal'},
+  'google': {organisations: ['Google'], keywords: ''},
+  'contoso policy': {organisations: ['Contoso Insurance'], keywords: 'policy'},
+};
+
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0, readings = SEED_READINGS}: {delayMs?: number; readings?: Record<string, FakeReading>} = {}) {
   let ids = 0;
+  // Every search the model was asked to read, in turn.
+  const read: string[] = [];
   const server = http.createServer((request, response) => {
     let raw = '';
     request.on('data', chunk => (raw += chunk));
@@ -28,20 +52,30 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
         return send(401, {type: 'error', error: {type: 'authentication_error', message: 'invalid x-api-key'}});
       }
       const body = JSON.parse(raw) as {model: string; tools?: {name: string}[]; messages: {role: string; content: string | Block[]}[]};
-      if (!body.tools?.some(tool => tool.name === 'answer')) return send(529, {type: 'error', error: {type: 'overloaded_error', message: 'Overloaded'}});
       const blocks = (content: string | Block[]) => (typeof content === 'string' ? [{type: 'text', text: content}] : content);
+      const overloaded = () => send(529, {type: 'error', error: {type: 'overloaded_error', message: 'Overloaded'}});
+      const called = (call: Call, wait: number) => {
+        ids += 1;
+        // A slow model, so a check can watch the card while Alfred works, or the field while a reading comes.
+        setTimeout(() => send(200, {
+          id: `msg_${ids}`, type: 'message', role: 'assistant', model: body.model, stop_reason: 'tool_use', stop_sequence: null,
+          content: [{type: 'tool_use', id: `toolu_${ids}`, name: call.name, input: call.input}],
+          usage: {input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 0, cache_creation_input_tokens: 0},
+        }), wait);
+      };
+      if (body.tools?.some(tool => tool.name === 'submit_reading')) {
+        const search = /^Search: (.*)$/m.exec(blocks(body.messages[0]!.content).map(block => block.text).join(''))?.[1] ?? '';
+        read.push(search);
+        const {delayMs: wait = 0, fails = false, ...reading} = readings[search] ?? {};
+        if (fails) return overloaded();
+        return called({name: 'submit_reading', input: {organisations: [], types: [], is_date: true, keywords: search, ...reading}}, wait);
+      }
+      if (!body.tools?.some(tool => tool.name === 'answer')) return overloaded();
       const users = body.messages.filter(message => message.role === 'user');
       const question = blocks(users.at(-1)!.content).filter(block => block.type === 'text').map(block => block.text).join('')
         || [...users].reverse().map(message => blocks(message.content).filter(block => block.type === 'text').map(block => block.text).join('')).find(Boolean) || '';
       const results = body.messages.flatMap(message => blocks(message.content).filter(block => block.type === 'tool_result').map(block => JSON.parse(String(block.content)) as Record<string, unknown>));
-      const call = answer({question, results});
-      ids += 1;
-      // A slow model, so a check can watch the card while Alfred works.
-      setTimeout(() => send(200, {
-        id: `msg_${ids}`, type: 'message', role: 'assistant', model: body.model, stop_reason: 'tool_use', stop_sequence: null,
-        content: [{type: 'tool_use', id: `toolu_${ids}`, name: call.name, input: call.input}],
-        usage: {input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 0, cache_creation_input_tokens: 0},
-      }), delayMs);
+      called(answer({question, results}), delayMs);
     });
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -49,7 +83,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
   // running: the socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
-  return {url: `http://127.0.0.1:${port}`, close: () => new Promise<void>(resolve => {
+  return {url: `http://127.0.0.1:${port}`, read, close: () => new Promise<void>(resolve => {
     server.close(() => resolve());
     server.closeAllConnections();
   })};

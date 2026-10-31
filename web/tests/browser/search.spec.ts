@@ -1,7 +1,8 @@
 // Search, Alfred and proposals in the browser (BUILD-PLAN.md › F3), at the design target on a fresh
-// seed each: words becoming chips, results replacing the list with the reader and J / K / Enter
-// working the same, each open logged with its position, a chip removed, no results, Esc back to the
-// Inbox; Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this
+// seed each: words staying words as they're typed, Enter's reading into chips against a fake Anthropic
+// (D385), results replacing the list with the reader and J / K / Enter working the same, each open
+// logged with its position, a chip removed, what the chips left out, a reading slow, failed or
+// overtaken, no results, Esc back to the Inbox; Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this
 // email), against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key;
 // the proposal card's Create through the command layer, More options, and the More menu on Security
 // mail. SV-23: calendar search, from the header's button, `/` or ⌘F, with its results in the right
@@ -11,7 +12,8 @@ import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred} from './fakeAlfred.ts';
+import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
+import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, point, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -40,44 +42,77 @@ async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
 // The field's chips, not a removed one's copy collapsing away (Search.tsx).
 const chips = (page: Page) => page.locator('.search .qchip:not([aria-hidden])').allTextContents();
 
-/** Setpoint with Alfred's key set and its model calls going to the fake. */
-async function withAlfred() {
-  const fake = await fakeAlfred(leaseAlfred);
-  const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
+/** Setpoint with Alfred's key set and its model calls going to the fake, which reads searches too. */
+async function withAlfred({readings = SEED_READINGS, fixtures = []}: {readings?: Record<string, FakeReading>; fixtures?: string[]} = {}) {
+  const fake = await fakeAlfred(leaseAlfred, {readings});
+  const setpoint = await startSetpoint({fixtures, env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
     throw error;
   });
   await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
-  return {setpoint, stop: async () => {
+  return {setpoint, fake, stop: async () => {
     await setpoint.stop();
     await fake.close();
   }};
 }
 
-test('search: words become chips, results replace the list, J / K / Enter open them and each open is logged', async () => {
-  const setpoint = await startSetpoint();
+interface SearchRequest {
+  text: string;
+  chips: {label: string}[];
+  read?: string;
+  typed?: string;
+  account_id?: number;
+  offset?: number;
+}
+
+/** Every mail search the page asks, as it's asked. */
+function searchesOf(page: Page): SearchRequest[] {
+  const searches: SearchRequest[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/search') searches.push(JSON.parse(request.postData()!) as SearchRequest);
+  });
+  return searches;
+}
+
+/** Types into the field, and waits for those words' results to be on screen. */
+async function typeWords(page: Page, setpoint: Setpoint, text: string) {
+  const answered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search' && (JSON.parse(response.request().postData()!) as SearchRequest).text.endsWith(text));
+  await page.keyboard.type(text);
+  await answered;
+  await setpoint.idle();
+}
+
+const field = (page: Page) => page.locator('.search input');
+const focused = (page: Page) => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? null);
+const titles = (page: Page) => page.locator('.arow.result .l2').allTextContents();
+
+test('search: typing makes no chip and asks no model; Enter reads the whole search, then hands the keys to the results; J / K / Enter open them and each open is logged', async () => {
+  const {setpoint, fake, stop} = await withAlfred();
   try {
     const page = await load(setpoint);
     await page.keyboard.press('/');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search mail');
-    // A pause chips the finished words; the one still being typed stays a word. The results show at once.
-    await page.keyboard.type('northwind rejection march');
+    assert.equal(await focused(page), 'Search mail');
+    // Keyword results as it's typed, each word still a word, a date's too.
+    await typeWords(page, setpoint, 'northwind rejection march');
     await page.locator('.list .arow.result').first().waitFor();
-    await until('the finished words chipped', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection');
-    assert.equal(await page.locator('.search input').inputValue(), 'march');
+    assert.deepEqual(await chips(page), []);
+    assert.equal(await field(page).inputValue(), 'northwind rejection march');
+    assert.deepEqual(fake.read, []);
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
-    // Enter: the chips the server found, and the keys go to the results.
+    // Enter: the reading's chips, and the keys go to the results.
     await page.keyboard.press('Enter');
-    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection | DateMar 2026');
-    assert.equal(await page.locator('.search input').inputValue(), '');
-    assert.equal(await page.locator('.search-list .bar').textContent(), '2 results·newest first');
-    assert.deepEqual(await page.locator('.arow.result .l2').allTextContents(), ['Update on your application', 'Your application for Data Engineer Intern']);
+    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind Talent | TypeRejection | DateMar 2026');
+    assert.deepEqual(fake.read, ['northwind rejection march']);
+    assert.equal(await field(page).inputValue(), '');
+    assert.equal(await page.locator('.search-list .bar').textContent(), '2 results');
+    assert.deepEqual(await titles(page), ['Update on your application', 'Your application for Data Engineer Intern']);
     // Only the reason the row doesn't already show (search-11): its organisation is highlighted, its day is its age.
     assert.equal(await page.locator('.arow.result .why').first().textContent(), 'Type Rejection');
-    assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').textContent(), 'Northwind');
-    assert.equal(await page.locator('.ask').textContent(), 'Ask Alfred · Northwind · Rejection · Mar 2026⌘Enter');
+    assert.equal(await page.locator('.arow.result').first().locator('.from mark.hl').textContent(), 'Northwind Talent');
+    assert.equal(await page.locator('.ask').textContent(), 'Ask Alfred · Northwind Talent · Rejection · Mar 2026⌘Enter');
     // The cursor starts on the first; J, K move it; Enter opens it and logs its position.
     await page.locator('.arow.result.cur', {hasText: 'Update on your application'}).waitFor();
+    assert.notEqual(await focused(page), 'Search mail');
     await page.keyboard.press('j');
     await page.locator('.arow.result.cur', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
     await page.keyboard.press('k');
@@ -90,13 +125,14 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     // The reader highlights the words the search matched, once its body is in (the head is drawn from the row at once).
     await page.locator('.mailtext mark.hl').first().waitFor();
     const marks = await page.locator('.mailtext mark.hl').allTextContents();
-    assert.ok(marks.length > 0 && marks.every(text => text === 'Northwind'), `marks: ${JSON.stringify(marks)}`);
+    assert.ok(marks.length > 0 && marks.every(text => /northwind|rejection/i.test(text)), `marks: ${JSON.stringify(marks)}`);
     // The reader's next steps through the results.
     await page.locator('.rd-tools [aria-label="Next email"]').click();
     await page.locator('.rd-subj', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
-    // A chip's ×: the search runs again without it.
+    // A date chip's ×: the search runs again without it, its word gone with it.
     await page.locator('.qchip', {hasText: 'Mar 2026'}).locator('.x').click();
     await until('the chips', () => chips(page), shown => shown.length === 2);
+    assert.equal(await field(page).inputValue(), '');
     // `/` with the search open selects the whole query, chips too (SV-25); End keeps it to add a word.
     await page.keyboard.press('/');
     assert.equal(await page.locator('.search .qchip.sel').count(), 2);
@@ -105,7 +141,7 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     // No results: each part removable.
     await page.keyboard.type('zebra');
     await page.locator('.no-results', {hasText: 'No emails match'}).waitFor();
-    assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwindRejectionzebra');
+    assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwind TalentRejectionzebra');
     const ink3 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
       probe.style.color = 'var(--ink3)';
@@ -117,13 +153,6 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     assert.deepEqual(await rested(() => leadGlyph(page.locator('.no-results'))), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#124)');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await page.locator('.arow.result').first().waitFor();
-    // Typing over the selected query replaces it, chips and words; ⌘F selects the words again.
-    await page.keyboard.press('/');
-    await page.keyboard.type('contoso');
-    await until('the chips', () => chips(page), shown => shown.length === 0);
-    assert.equal(await page.locator('.search input').inputValue(), 'contoso');
-    await page.keyboard.press('Meta+f');
-    assert.deepEqual(await page.locator('.search input').evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd]), [0, 7]);
     // Esc in the field clears the search: the Inbox is back.
     await page.keyboard.press('/');
     await page.keyboard.press('Escape');
@@ -133,10 +162,361 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     // ⌘F focuses the field too.
     await page.locator('.list .gh.new').click();
     await page.keyboard.press('Meta+f');
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search mail');
+    assert.equal(await focused(page), 'Search mail');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('a date is a word while it\'s typed and a chip on Enter, with no model or key, which nothing else needs', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'march');
+    assert.deepEqual(await chips(page), []);
+    await page.keyboard.press('Enter');
+    await until('the date', () => chips(page), shown => shown.join() === 'DateMar 2026');
+    assert.equal(await field(page).inputValue(), '');
+    assert.ok((await page.locator('.arow.result').count()) > 0);
+    assert.equal(await page.locator('.search-list .bar').textContent(), `${await page.locator('.arow.result').count()} results·newest first`);
+    // With words a model would have to read, and no key: no reading, so nothing changes.
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'northwind march');
+    const before = await titles(page);
+    await page.keyboard.press('Enter');
+    await page.locator('.arow.result.cur').first().waitFor();
+    assert.deepEqual([await chips(page), await field(page).inputValue(), await titles(page)], [[], 'northwind march', before]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+  }
+});
+
+test('×: the filter goes, its word is plain text again, it\'s logged, and neither the next results nor Enter on the same words bring the chip back', async () => {
+  const {setpoint, fake, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    await page.keyboard.press('/');
+    await page.keyboard.type('northwind rejection');
+    await page.keyboard.press('Enter');
+    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind Talent | TypeRejection');
+    assert.equal(await field(page).inputValue(), '');
+    await page.locator('.arow.result.cur').first().waitFor();
+    // Org off: Type Rejection still says its word, so only Northwind's comes back.
+    const removed = page.waitForRequest(request => request.url().endsWith('/api/search/chip-removed'));
+    await page.locator('.qchip', {hasText: 'Northwind'}).locator('.x').click();
+    const logged = JSON.parse((await removed).postData()!) as {search_id: number; chip: {value: string}};
+    assert.equal(logged.chip.value, 'Northwind Talent');
+    assert.ok(logged.search_id > 0);
+    await until('the word', () => field(page).inputValue(), value => value === 'northwind');
+    assert.deepEqual(await chips(page), ['TypeRejection']);
+    await until('what stays kept', async () => searches.at(-1)!, last => last.read === 'kept' && last.text === 'northwind' && last.typed === 'northwind rejection');
+    // The last chip off: the words as typed, and still no reading.
+    await page.locator('.qchip', {hasText: 'Rejection'}).locator('.x').click();
+    await until('the words', () => field(page).inputValue(), value => value === 'northwind rejection');
+    await until('what stays kept', async () => searches.at(-1)!, last => last.read === 'kept' && last.chips.length === 0);
+    await page.locator('.ask', {hasText: 'northwind rejection'}).waitFor();
+    // A pause for a "nothing happened" check: no chip comes back by itself.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.deepEqual(await chips(page), []);
+    // Enter on the same words asks nothing, and hands over the keys as ever.
+    await field(page).click();
+    await page.keyboard.press('Enter');
+    await page.locator('.arow.result.cur').first().waitFor();
+    assert.notEqual(await focused(page), 'Search mail');
+    const first = await page.locator('.arow.result.cur .l2').textContent();
+    await page.keyboard.press('j');
+    await until('the cursor moved', () => page.locator('.arow.result.cur .l2').textContent(), text => text !== first);
+    // Away from those words and back is the same search.
+    await page.keyboard.press('/');
+    await page.keyboard.press('End');
+    await page.keyboard.type('s');
+    await page.keyboard.press('Backspace');
+    await page.keyboard.press('Enter');
+    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
+    assert.deepEqual(await chips(page), []);
+    assert.deepEqual(fake.read, ['northwind rejection']);
+    // Other words are another reading, of the whole search.
+    await page.keyboard.press('/');
+    await page.keyboard.type('northwind');
+    await page.keyboard.press('Enter');
+    await until('the chip', () => chips(page), shown => shown.join() === 'OrgNorthwind Talent');
+    assert.deepEqual(fake.read, ['northwind rejection', 'northwind']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('Enter on what\'s already read asks nothing and still hands over the keys; words added under the chips stay words, and the next Enter reads the whole search in the order typed', async () => {
+  const {setpoint, fake, stop} = await withAlfred({readings: {...SEED_READINGS, 'parkside renewal terms': {organisations: ['Parkside Apartments'], keywords: 'renewal terms'}}});
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    await page.keyboard.press('/');
+    await page.keyboard.type('parkside renewal');
+    await page.keyboard.press('Enter');
+    await until('the chip', () => chips(page), shown => shown.join() === 'OrgParkside Apartments');
+    assert.equal(await field(page).inputValue(), 'renewal');
+    await page.locator('.arow.result.cur').first().waitFor();
+    await page.keyboard.press('/');
+    assert.equal(await focused(page), 'Search mail');
+    await page.keyboard.press('Enter');
+    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
+    await page.locator('.arow.result.cur').first().waitFor();
+    assert.deepEqual(fake.read, ['parkside renewal']);
+    // Twice at once is one reading: the second joins the first.
+    await page.keyboard.press('/');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' terms');
+    await until('the chip keeps filtering, and what\'s typed stays a word', async () => searches.at(-1)!, last => last.read === 'kept' && last.text === 'renewal terms' && last.typed === 'parkside renewal terms');
+    assert.deepEqual(await chips(page), ['OrgParkside Apartments']);
+    assert.deepEqual(fake.read, ['parkside renewal']);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
+    assert.deepEqual(fake.read, ['parkside renewal', 'parkside renewal terms']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('the "more" line: what the chips hid, under the fold and apart from it, a stop for the keys, opening in place from `left_out` and gone when there\'s nothing to say', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    await page.keyboard.press('/');
+    await page.keyboard.type('renewal');
+    await page.locator('.arow.result').first().waitFor();
+    assert.equal(await page.locator('.left-out').count(), 0, 'no line for words alone');
+    await page.keyboard.press('Enter');
+    await until('the chip', () => chips(page), shown => shown.join() === 'OrgParkside Apartments');
+    const line = page.locator('.left-out');
+    const fold = page.locator('.search-list .mentions:not(.left-out)');
+    await line.waitFor();
+    assert.equal(await line.textContent(), '2 more emails match your words');
+    assert.equal(await line.getAttribute('aria-expanded'), 'false');
+    // Both lines, in that order, the fold over what the chip kept.
+    assert.equal(await fold.textContent(), '1 more mentions these words');
+    assert.deepEqual(await page.locator('.search-list .mentions').evaluateAll(lines => lines.map(element => element.classList.contains('left-out'))), [false, true]);
+    assert.deepEqual(await titles(page), ['Lease renewal terms', 'October rent received']);
+    assert.equal(await page.locator('.search-list .bar').textContent(), '1 result');
+    // J stops on it past the fold and its row; Enter opens it, from what the chips left out.
+    await page.locator('.arow.result.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.search-list .mentions.cur:not(.left-out)').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur', {hasText: 'October rent received'}).waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.left-out.cur').waitFor();
+    await page.keyboard.press('Enter');
+    await until('its rows', () => titles(page), shown => shown.length === 4);
+    assert.deepEqual((await titles(page)).slice(2).sort(), ['Car registration renewal notice', 'Your renters policy renewal is coming up']);
+    assert.equal(await line.getAttribute('aria-expanded'), 'true');
+    const left = searches.filter(search => search.read === 'left_out');
+    assert.deepEqual(left.map(({text, typed, chips}) => [text, typed, chips.length]), [['renewal', 'renewal', 1]]);
+    // A row there opens as any other, logged past the results.
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur').waitFor();
+    const opened = page.waitForRequest(request => request.url().endsWith('/api/search/opened'));
+    await page.keyboard.press('Enter');
+    await page.locator('.rd-subj').waitFor();
+    assert.equal((JSON.parse((await opened).postData()!) as {position: number}).position, 2);
+    await page.keyboard.press('Escape');
+    await page.locator('.rd-subj').waitFor({state: 'detached'});
+    // Closed and opened again, it asks nothing more.
+    await line.click();
+    await until('its rows gone', () => titles(page), shown => shown.length === 2);
+    await line.click();
+    await until('its rows back', () => titles(page), shown => shown.length === 4);
+    assert.equal(searches.filter(search => search.read === 'left_out').length, 1);
+    // A word more under the chip, and its own number; the chip off, and no line.
+    await page.keyboard.press('/');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' policy');
+    await page.locator('.left-out', {hasText: '1 more email matches your words'}).waitFor();
+    assert.equal(await line.getAttribute('aria-expanded'), 'false');
+    await page.locator('.qchip .x').click();
+    await line.waitFor({state: 'detached'});
+    await page.locator('.arow.result').first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+/** Holds Enter's readings at the browser until the function returned lets them go. */
+async function holdReadings(page: Page) {
+  let release = () => {};
+  const held = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  await page.route(url => url.pathname === '/api/search', async route => {
+    if ((route.request().postDataJSON() as SearchRequest).read === 'ask') await held;
+    await route.fallback();
+  });
+  return release;
+}
+
+test('a reading on its way: the field\'s glyph turns, nothing else moves, the keys stay in the field, and what\'s typed meanwhile drops its answer', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    let release = await holdReadings(page);
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'northwind');
+    const before = await titles(page);
+    await page.keyboard.press('Enter');
+    const glyph = page.locator('.search.pending .glass > .spin');
+    await glyph.waitFor();
+    await until('the spinner in the glass\'s place', () => glyph.evaluate(element => getComputedStyle(element).visibility), visibility => visibility === 'visible');
+    assert.equal(await page.locator('.search-list.pending').count(), 0, 'the list isn\'t dimmed');
+    assert.deepEqual([await titles(page), await chips(page), await focused(page)], [before, [], 'Search mail']);
+    release();
+    await until('the reading', () => chips(page), shown => shown.join() === 'OrgNorthwind Talent');
+    await page.locator('.arow.result.cur').first().waitFor();
+    assert.equal(await page.locator('.search.pending').count(), 0);
+    // Typed over while it comes: the words win, and the answer is dropped.
+    await page.unrouteAll();
+    release = await holdReadings(page);
+    await page.keyboard.press('Escape');
+    await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'google');
+    const asked = page.waitForRequest(request => (request.postDataJSON() as SearchRequest | null)?.read === 'ask');
+    await page.keyboard.press('Enter');
+    await asked;
+    await page.keyboard.type(' alerts');
+    await page.locator('.ask', {hasText: 'google alerts'}).waitFor();
+    release();
+    // A pause for a "nothing happened" check: the answer that was held has time to land.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.deepEqual([await chips(page), await field(page).inputValue(), await focused(page)], [[], 'google alerts', 'Search mail']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('a reading too slow or failed changes nothing on screen, hands over the keys, and is worth another Enter: a slow one is held for it', async () => {
+  const {setpoint, fake, stop} = await withAlfred({readings: {
+    northwind: {organisations: ['Northwind Talent'], keywords: '', delayMs: 2600},
+    'contoso policy': {fails: true},
+  }});
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'northwind');
+    const before = await titles(page);
+    await page.keyboard.press('Enter');
+    await page.locator('.arow.result.cur').first().waitFor({timeout: 10_000});
+    assert.notEqual(await focused(page), 'Search mail');
+    assert.deepEqual([await chips(page), await field(page).inputValue(), await titles(page)], [[], 'northwind', before]);
+    assert.equal(await page.locator('.search.pending').count(), 0);
+    // The answer that came too late is there for the next Enter, and costs no call.
+    await page.keyboard.press('/');
+    await page.keyboard.press('Enter');
+    await until('the held reading', () => chips(page), shown => shown.join() === 'OrgNorthwind Talent');
+    assert.deepEqual(fake.read, ['northwind']);
+    // A failed one, with no line about it.
+    await page.keyboard.press('/');
+    await typeWords(page, setpoint, 'contoso policy');
+    const failing = await titles(page);
+    await page.keyboard.press('Enter');
+    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
+    assert.deepEqual([await chips(page), await field(page).inputValue(), await titles(page), await page.locator('.search-list .failing').count()], [[], 'contoso policy', failing, 0]);
+    await page.keyboard.press('/');
+    await page.keyboard.press('Enter');
+    await until('asked again', async () => fake.read.filter(search => search === 'contoso policy').length, count => count === 2);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('chips go with their search: `/` or ⌘F and a new word, Backspace, Esc and another account in the sidebar', async () => {
+  const {setpoint, stop} = await withAlfred();
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    const enter = async (text: string, shown: string) => {
+      await page.keyboard.type(text);
+      await page.keyboard.press('Enter');
+      await until(`the chips of ${text}`, () => chips(page), now => now.join(' | ') === shown);
+      await page.locator('.arow.result.cur').first().waitFor();
+    };
+    await page.keyboard.press('/');
+    await enter('northwind', 'OrgNorthwind Talent');
+    // `/` selects the whole query, and what's typed replaces it, chips too.
+    await page.keyboard.press('/');
+    await enter('google', 'OrgGoogle');
+    assert.deepEqual(searches.filter(search => search.read === 'ask').at(-1), {text: 'google', chips: [], read: 'ask'});
+    assert.ok(searches.filter(search => search.text.startsWith('g')).every(search => search.chips.length === 0), 'no search carried the chip');
+    // ⌘F the same.
+    await page.keyboard.press('Meta+f');
+    await enter('northwind', 'OrgNorthwind Talent');
+    // Backspace in the empty field takes the chip off, its word back and whole, and goes on as a word.
+    await page.keyboard.press('/');
+    await page.keyboard.press('End');
+    await page.keyboard.press('Backspace');
+    await until('the word back', () => field(page).inputValue(), value => value === 'northwind');
+    assert.deepEqual(await chips(page), []);
+    await page.keyboard.press('Backspace');
+    await until('a letter off', () => field(page).inputValue(), value => value === 'northwin');
+    // Esc ends it, and the next search starts clean.
+    await page.keyboard.press('Escape');
+    await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
+    await page.keyboard.press('/');
+    await enter('northwind', 'OrgNorthwind Talent');
+    await page.keyboard.press('Escape');
+    await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
+    assert.deepEqual([await chips(page), await field(page).inputValue()], [[], '']);
+    // Another account in the sidebar is that account's Inbox, and the search goes with the page it was on.
+    await page.keyboard.press('/');
+    await enter('northwind', 'OrgNorthwind Talent');
+    await page.locator('.sb .acct', {hasText: 'Business'}).click();
+    await page.locator('.hd-title', {hasText: 'Inbox · Business'}).waitFor();
+    assert.deepEqual([await chips(page), await field(page).inputValue()], [[], '']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
+  }
+});
+
+test('under a reading a later page keeps what was read, and the fold works as it does for words', async () => {
+  const {setpoint, fake, stop} = await withAlfred({fixtures: ['ledger-audit'], readings: {'ledger audit': {organisations: ['Fourth Coffee'], keywords: 'ledger audit'}}});
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    await page.keyboard.press('/');
+    await page.keyboard.type('ledger audit');
+    await page.keyboard.press('Enter');
+    await until('the chip', () => chips(page), shown => shown.join() === 'OrgFourth Coffee');
+    const rows = page.locator('.arow.result');
+    const fold = page.locator('.search-list .mentions:not(.left-out)');
+    await rows.nth(49).waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
+    await rows.last().scrollIntoViewIfNeeded();
+    await fold.waitFor();
+    assert.equal(await fold.textContent(), '60 more mention these words');
+    assert.equal(await rows.count(), 60);
+    await fold.click();
+    await until('the rows under it', () => rows.count(), count => count > 60);
+    await rows.last().scrollIntoViewIfNeeded();
+    await until('every row', () => rows.count(), count => count === 120);
+    const later = searches.filter(search => search.offset);
+    assert.deepEqual(later.map(({read, text, typed, chips: sent, offset}) => [read, text, typed, sent.length, offset]), [['kept', 'ledger audit', 'ledger audit', 1, 50], ['kept', 'ledger audit', 'ledger audit', 1, 100]]);
+    assert.deepEqual(fake.read, ['ledger audit']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await stop();
   }
 });
 
@@ -150,6 +530,7 @@ test('a thin first section hides nothing: its fold starts open with its line, J 
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions');
     await fold.waitFor();
+    await page.locator('.arow.result.cur').waitFor();
     assert.equal(await page.locator('.search-list .bar').textContent(), '3 results');
     await until('every row, with no click', () => rows.count(), count => count === 4);
     assert.equal(await fold.textContent(), '1 more mentions these words');
@@ -192,7 +573,7 @@ test('a thin first section hides nothing: its fold starts open with its line, J 
     await page.keyboard.press('End');
     await page.keyboard.type('s');
     await page.keyboard.press('Enter');
-    await page.locator('.ask', {hasText: 'renewals'}).waitFor();
+    await until('the keys handed over', () => focused(page), label => label !== 'Search mail');
     await until('its fold', () => fold.getAttribute('aria-expanded'), expanded => expanded === 'false');
     assert.equal(await rows.count(), 3);
     // Another search decides again.
@@ -306,55 +687,68 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
 });
 
 test('a click on a chip, the search glyph or the Esc hint keeps every chip and goes to the words; the pointer over the field lights no ×', async () => {
-  const setpoint = await startSetpoint();
+  const {setpoint, stop} = await withAlfred();
   try {
     const page = await load(setpoint);
     await page.keyboard.press('/');
     await page.keyboard.type('northwind rejection march');
     await page.keyboard.press('Enter');
-    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | TypeRejection | DateMar 2026');
-    const field = page.locator('.hd .search');
-    const first = field.locator('.qchip').first().locator('.x');
-    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? null);
-    for (const [what, part] of [['the third chip', field.locator('.qchip', {hasText: 'Mar 2026'}).locator('.k')], ['the glyph', field.locator('svg.icon').first()], ['the hint', field.locator('.kbd')]] as const) {
+    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind Talent | TypeRejection | DateMar 2026');
+    const search = page.locator('.hd .search');
+    const first = search.locator('.qchip').first().locator('.x');
+    for (const [what, part] of [['the third chip', search.locator('.qchip', {hasText: 'Mar 2026'}).locator('.k')], ['the glyph', search.locator('svg.icon').first()], ['the hint', search.locator('.kbd')]] as const) {
       await page.locator('.hd-title').click();
-      await until(`the words left before ${what}`, focused, label => label !== 'Search mail');
+      await until(`the words left before ${what}`, () => focused(page), label => label !== 'Search mail');
       await part.hover();
       assert.equal(await first.evaluate(x => x.matches(':hover')), false, `over ${what}, the first chip's × isn't lit`);
       await part.click();
-      await until(`${what} goes to the words`, focused, label => label === 'Search mail');
-      assert.deepEqual(await chips(page), ['OrgNorthwind', 'TypeRejection', 'DateMar 2026'], `a click on ${what}`);
+      await until(`${what} goes to the words`, () => focused(page), label => label === 'Search mail');
+      assert.deepEqual(await chips(page), ['OrgNorthwind Talent', 'TypeRejection', 'DateMar 2026'], `a click on ${what}`);
     }
     // Only a chip's own × removes it.
     await first.click();
     await until('the first chip gone', () => chips(page), shown => shown.join(' | ') === 'TypeRejection | DateMar 2026');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
-    await setpoint.stop();
+    await stop();
   }
 });
 
-test('"!" leaves out what a word names: a Not chip, or the mail with a word kept as typed (SV-31)', async () => {
-  const setpoint = await startSetpoint();
+test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip with the model given only the rest, or the mail with a word kept as typed; a quote stays whole (SV-31)', async () => {
+  const {setpoint, fake, stop} = await withAlfred({readings: {...SEED_READINGS, renewal: {keywords: 'renewal'}}});
   try {
     const page = await load(setpoint);
     await page.keyboard.press('/');
     await page.keyboard.type('northwind !rejection');
+    // In force as it's typed, in the field's own words.
+    await until('Northwind without its rejections', () => titles(page), shown => shown.length > 0 && !shown.some(text => /Update on your application|Data Engineer Intern/.test(text)));
+    assert.deepEqual(await chips(page), []);
     await page.keyboard.press('Enter');
-    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind | Not TypeRejection');
-    await until('Northwind without its rejections', () => page.locator('.list .arow.result .l2').allTextContents(),
+    await until('the chips', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind Talent | Not TypeRejection');
+    assert.deepEqual(fake.read, ['northwind']);
+    assert.equal(await field(page).inputValue(), '');
+    await until('Northwind without its rejections', () => titles(page),
       shown => shown.length === 2 && !shown.some(text => /Update on your application|Data Engineer Intern/.test(text)));
+    // A Not chip stood for no word to give back: it goes, and what it left out returns.
+    await page.locator('.qchip', {hasText: 'Rejection'}).locator('.x').click();
+    await until('its rejections back', () => titles(page), shown => shown.some(text => /Update on your application/.test(text)));
+    assert.equal(await field(page).inputValue(), '');
+    await page.locator('.search .qchip:not([aria-hidden]) .x').first().click();
+    await until('its word back', () => field(page).inputValue(), value => value === 'northwind');
     // A word that forms no chip stays in the field, "!" and all.
-    await page.locator('.search .qchip:not([aria-hidden]) .x').first().click();
-    await page.locator('.search .qchip:not([aria-hidden]) .x').first().click();
-    await page.locator('.search input').fill('renewal !lease');
+    await field(page).fill('renewal !lease');
     await page.keyboard.press('Enter');
     await until('the renewals but the lease', () => page.locator('.list .arow.result').count(), count => count === 2);
-    assert.equal(await page.locator('.search input').inputValue(), 'renewal !lease');
+    assert.equal(await field(page).inputValue(), 'renewal !lease');
     assert.equal(await page.locator('.list .arow.result', {hasText: 'Lease renewal terms'}).count(), 0);
+    // Quotes are what the user said exactly: nothing to read, and no chip.
+    await field(page).fill('"lease renewal"');
+    await page.keyboard.press('Enter');
+    await until('the phrase', () => titles(page), shown => shown.join() === 'Lease renewal terms,October rent received');
+    assert.deepEqual([await chips(page), await field(page).inputValue(), fake.read], [[], '"lease renewal"', ['northwind', 'renewal']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
-    await setpoint.stop();
+    await stop();
   }
 });
 
@@ -434,16 +828,36 @@ test('Alfred: ⌘Enter answers above the results with its source, a follow-up go
   }
 });
 
-test('Alfred: ⌘Enter asks the question as typed, though a chip formed in its middle and sits first', async () => {
-  const {setpoint, stop} = await withAlfred();
+test('Alfred: ⌘Enter asks the words in the order typed, though Enter\'s chips took them from the field and sit first, and what\'s typed after; plain Enter never asks him', async () => {
+  const question = 'When does northwind need my availability';
+  const {setpoint, fake, stop} = await withAlfred({readings: {[question]: {organisations: ['Northwind Talent'], keywords: 'availability'}}});
   try {
     const page = await load(setpoint);
+    const asks: string[] = [];
+    page.on('request', request => {
+      if (request.url().endsWith('/api/alfred/ask')) asks.push((JSON.parse(request.postData()!) as {question: string}).question);
+    });
     await page.keyboard.press('/');
-    await page.keyboard.type('When does northwind need my availability?');
-    await until('the organisation chipped', () => chips(page), shown => shown.join(' | ') === 'OrgNorthwind');
-    const asked = page.waitForRequest(request => request.url().endsWith('/api/alfred/ask'));
+    await page.keyboard.type(question);
+    await page.keyboard.press('Enter');
+    await until('the organisation chipped', () => chips(page), shown => shown.join() === 'OrgNorthwind Talent');
+    assert.equal(await field(page).inputValue(), 'availability');
+    assert.deepEqual(fake.read, [question]);
+    assert.deepEqual(asks, []);
+    await page.locator('.arow.result.cur').first().waitFor();
     await page.keyboard.press('Meta+Enter');
-    assert.equal(JSON.parse((await asked).postData()!).question, 'When does northwind need my availability?');
+    await until('the question as typed', async () => asks, sent => sent.length === 1);
+    assert.equal(asks[0], question);
+    await page.locator('.answer').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('.ask').waitFor();
+    // More typed after it joins the end, chips or no chips.
+    await page.keyboard.press('/');
+    await page.keyboard.press('End');
+    await page.keyboard.type(' today');
+    await page.keyboard.press('Meta+Enter');
+    await until('the question and what came after', async () => asks, sent => sent.length === 2);
+    assert.equal(asks[1], `${question} today`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, mentionsLine, resultSections, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, worthAskingAgain, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -226,12 +226,72 @@ describe('what the field asks', () => {
   });
 });
 
+describe('what Enter\'s chips left out', () => {
+  const rows = [{id: 1}, {id: 2}, {id: 3}];
+  const reading = (more: number) => ({used: 'reading', fallback: null, more, typed: 'renewal'}) as const;
+  const out = (more: number) => ({total: 3, first_section: 3, reading: reading(more)});
+  const none = new Set<number>();
+
+  test('the line says the reading\'s number, in the fold\'s words, and shows nothing until it opens', () => {
+    expect(leftOutLine(6)).toBe('6 more emails match your words');
+    expect(leftOutLine(1)).toBe('1 more email matches your words');
+    expect(leftOutSection(rows, out(6), null, none)).toEqual({more: 6, rows: []});
+    expect(leftOutSection(rows, out(6), {open: false, rows: [{id: 9}]}, none)).toEqual({more: 6, rows: []});
+    expect(leftOutSection(rows, out(6), {open: true, rows: [{id: 9}]}, none)).toEqual({more: 6, rows: [{id: 9}]});
+  });
+
+  test.each([
+    ['no reading', {total: 3, first_section: 3, reading: null}],
+    ['none left out', out(0)],
+    ['nothing searched', null],
+  ])('no line with %s', (_name, given) => {
+    expect(leftOutSection(rows, given, null, none).more).toBe(0);
+  });
+
+  test('it waits for what\'s above it, as the fold does, and a row taken out comes off its number', () => {
+    expect(leftOutSection(rows.slice(0, 2), out(6), null, none).more).toBe(0);
+    expect(leftOutSection(rows, out(6), {open: true, rows: [{id: 9}, {id: 10}]}, new Set([9]))).toEqual({more: 5, rows: [{id: 10}]});
+  });
+
+  test('a reading that didn\'t come is worth another Enter; one that came to nothing isn\'t', () => {
+    expect(['slow', 'failed'].map(fallback => worthAskingAgain(fallback as 'slow'))).toEqual([true, true]);
+    expect(['no_key', 'left_nothing', 'nothing_to_read'].map(fallback => worthAskingAgain(fallback as 'no_key'))).toEqual([false, false, false]);
+    expect(worthAskingAgain(null)).toBe(false);
+  });
+});
+
+describe('a chip\'s word back', () => {
+  const organisation = chips[0]!;
+  const type = chips[1]!;
+  const date = chips[2]!;
+
+  test('only a reading\'s filters stood for words', () => {
+    expect(([organisation, type, date, {...type, not: true}] as SearchChip[]).map(standsForWords)).toEqual([true, true, false, false]);
+  });
+
+  test.each<[string, string, string, SearchChip[], string]>([
+    // name, the words as typed, the field's text, the chips left, the text
+    ['the last chip off: every word', 'car insurance', '', [], 'car insurance'],
+    ['words a chip left still says stay out', 'northwind rejections', '', [type], 'northwind'],
+    ['by its whole name, in any case', 'Northwind rejections', '', [organisation], 'rejections'],
+    ['a word the chip doesn\'t say comes back beside it', 'bill from northwind', '', [organisation], 'bill from'],
+    ['a word the reading kept stays, whatever the chips say', 'rejection letter', 'rejection', [type], 'rejection letter'],
+    ['a date stays out of the words: `typed` never had it', 'rent', 'rent', [date], 'rent'],
+    ['"quotes" and "!words" stay whole', '"lease renewal" !proseware northwind', '"lease renewal" !proseware', [], '"lease renewal" !proseware northwind'],
+  ])('%s', (_name, typed, text, left, back) => {
+    expect(wordsBack(typed, text, left)).toBe(back);
+  });
+});
+
 describe('typedAfter: the field\'s words as typed, while it holds chips', () => {
   test.each<[string, string | null, string, string, string | null]>([
     // name, typed so far, the field's text before, after, typed now
     ['typing on at the end adds the new letters', 'when is my interview with Northwind ', 'when is my interview with ', 'when is my interview with ?', 'when is my interview with Northwind ?'],
     ['an edit before the end loses the order', 'Northwind interview', 'interview', 'intrview', null],
     ['once lost, it stays lost', null, 'interview', 'interview ', null],
+    ['a new word after chips that took every word stands apart', 'northwind rejection', '', 'zebra', 'northwind rejection zebra'],
+    ['only its first letter needs the gap', 'northwind rejection zebra', 'zebra', 'zebras', 'northwind rejection zebras'],
+    ['nothing typed yet is nothing to add', 'northwind', '', '', 'northwind'],
   ])('%s', (_name, typed, before, after, now) => {
     expect(typedAfter(typed, before, after)).toBe(now);
   });

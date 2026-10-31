@@ -279,7 +279,7 @@ describe('the tools on their own', () => {
       ],
     },
     {query: 'lease zebra', searched: 'lease zebra', total: 2, fieldTotal: 2, emails: [['Subject: Lease renewal terms', ['Subject lease']], ['Subject: October rent received', ['Body lease']]]},
-    {query: 'northwind rejection march', searched: 'Northwind · Rejection · Mar 2026', total: 2, fieldTotal: 2, emails: [
+    {query: 'northwind rejection march', searched: 'Northwind · Rejection · Mar 2026', total: 2, fieldTotal: 4, emails: [
       ['Subject: Update on your application', ['Org Northwind', 'Type Rejection', 'Date Mar 14']],
       ['Subject: Your application for Data Engineer Intern', ['Org Northwind', 'Type Rejection', 'Date Mar 3']],
     ]},

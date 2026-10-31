@@ -382,18 +382,29 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
 - `/` or ⌘F focuses the header field (focused: `edgeFocus` border, `cardOn` fill, its hint `Esc`;
   #172). Results replace the
   list; the reading pane and `J` / `K` work the same.
-- Recognised words become **chips** in the field (22 px, `sub2`), each with a small label in `ink3`
-  and an ×: "Org Northwind ×", "Type Rejection ×", "Date Mar 2026 ×", plus account and kind. One
-  case style: the label capitalised.
-- **"!" before a word leaves out what it names** (#85): one that forms a chip gives a **Not** chip
-  ("Not Type Confirmation ×"); one that doesn't stays in the field as typed ("!proseware") and leaves
-  out the mail that has it.
-- A results line: "2 results · newest first". Each result shows why it matched ("Type Rejection",
+- **Typing never makes a chip** (#280): results update as the words are typed, and every word stays
+  a word, a date's too, so nothing filters that the field doesn't show.
+- **Enter reads the whole search** (#280) into **chips** in the field (22 px, `sub2`), each with a
+  small label in `ink3` and an ×: "Org Northwind Talent ×", "Type Rejection ×", "Date Mar 2026 ×".
+  One case style: the label capitalised. The list updates once, then stays, and only then do the keys
+  go to it, the cursor on the first result. A date alone needs no reading and takes its chip at once.
+  While a reading is on its way, at most about 2 seconds, the field's glyph turns and nothing else
+  moves; typing meanwhile drops it. A reading that doesn't come changes nothing on screen, and Enter
+  still hands over the keys. Enter on what's already read asks nothing and does the same; after a
+  reading that was slow or failed it asks again.
+- **A chip's ×** removes the filter and puts its word back as plain text; Backspace in the empty field
+  does the same for the last chip. A date's or a Not chip's goes with its words. The chip doesn't
+  return by itself: chips stay in force as the words around them change, and only the next Enter on
+  other words reads again, the whole search in the order typed.
+- **"!" before a word leaves out what it names** (#85), as it's typed: on Enter one that forms a chip
+  gives a **Not** chip ("Not Type Confirmation ×"); one that doesn't stays in the field as typed
+  ("!proseware") and leaves out the mail that has it.
+- A results line: "2 results", with "· newest first" for chips with no words. Each result shows why it matched ("Type Rejection",
   `ink3` 12) where its lines don't already show it (#212), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
   yellow in Light, #172).
 - **Free text ranks by how well the words matched**, newest first within each tier, with no
   importance boost (#279). Every word but filler is required, and a word in capitals isn't filler
-  (`IT Specialist`). With a chip in force, results stay newest first in one list.
+  (`IT Specialist`). Chips narrow the list and keep its order.
 - **Emails about the search come first; those that only mention it fold away** under a 32 px line
   after them, "12 more mention these words" (`ink3` 12.5), with `expand_more`. The line opens in
   place on a click or Enter, its rows folding in as a group's do (#198), the chevron turning from
@@ -407,13 +418,19 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
   is the list.
 - **No email has every word:** "No email has every word · 3 have some of them", ranked by the rarest
   words each has; the line under them reads "12 more mention some of these words".
+- **What the chips left out** (#280) is a line of its own, last, under the results and under the fold:
+  "6 more emails match your words". It looks and answers as the fold's line does, starts closed
+  whatever the fold does, and only shows when there are some. It opens in place, its rows after it, and
+  a new answer closes it. The fold is what the chips kept and only mentions the words; this is what
+  they hid, so a reading that narrowed too far can be seen and undone from there.
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
   after it in `ink3` (#173).
 - No results: "No emails match" and each chip as the field draws it, removable by its × (#213),
   after a 20 px `search_off` (#124).
 - **On its way** (#235): until the first answer the list stays at .55, then the results' skeleton;
-  the field's glyph turns while a search is on its way; a refinement dims the results it replaces.
+  the field's glyph turns while a search is on its way; a refinement dims the results it replaces, and
+  Enter's reading doesn't.
 
 ### Alfred's Answer card
 
@@ -1354,8 +1371,9 @@ Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the 
 (New, Attention, Pinned, the days, #243), its rows with the account label; the reader full width with
 Back; a read-only agenda for today and the next 7 days, empty days collapsed. Actions: Done (on
 Attention mail, #93), Trash,
-Mark read, Mark unread, Mark all as read. Plain search; no calendar editing, no Alfred, Settings only to
-sign in. Dates never wrap.
+Mark read, Mark unread, Mark all as read. Plain search: words stay words, and Return only hands over
+to the results, until the phone gets Enter's chips (SI-64, D387). No calendar editing, no Alfred,
+Settings only to sign in. Dates never wrap.
 
 It feels like an installed app (each line's [Decided while building](#decided-while-building) entry has its values):
 
@@ -3430,3 +3448,23 @@ it changes what's on screen.
     and body want it whole, except the word being typed and a phrase. A type's word, and `bill` for
     a statement, brings that type's emails first within a tier. Alfred keeps its own broad search
     (filler counts, any one word will do), so its answers don't change.
+280. **Chips come on Enter, from a reading of the whole search** (Andy, 2026-10-30; darma D385, D386,
+    SV-133, SV-138, SV-139, amending Search's "recognised words become chips" and #80's word-by-word
+    forming of them). Typing runs the words alone and never reaches a model. Enter asks once:
+    organisations and types from Claude Haiku 5.5, dates from the grammar, in that order in the field.
+    A date is a plain word until Enter, whatever client asked, so a phone's text-only search filters
+    by nothing it can't see. Chips filter, and keep the words' order, with each word as typed still
+    ranking. The keys stay in the field until the answer lands. The reading that doesn't come (no key,
+    2 seconds, a failed call, filters that leave nothing) changes nothing on screen, though the server
+    could have given its date: what's in the field stays what's searched. Only a search with nothing
+    for a model to read (a date alone, "!words", a quote) takes its chips without one. A `slow` or
+    `failed` reading is worth a second Enter, since the server holds what comes late; every other
+    Enter on the field as the last answer left it asks nothing. The field as Enter or a × left it is
+    remembered, so typing away and back is the same search and a chip taken off stays off. Enter on
+    other words reads the words as typed whole, the chips sent back only once an edit before the end
+    has lost that order. × puts back `reading.typed`, less a word another chip still says by its
+    label ("receipts" under Type Receipt); a date or a Not chip isn't in those words and has none to
+    put back. "6 more emails match your words" comes last, after the fold, in the fold's own line, and
+    J and K stop on it; its rows open under it from `read: 'left_out'`, an open there logged at a place
+    past the results'. `/` or ⌘F and a new word, Esc and another account all end the search and its
+    chips (the Inbox of another account is another page).

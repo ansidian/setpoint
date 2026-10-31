@@ -1,15 +1,16 @@
 // Search (DESIGN.md › Search; board 06): the header's field with its chips, and the results that
 // replace the list: Alfred's Answer card above them, the results line, each result with why it
-// matched and its matches highlighted, the fold over those that only mention the search, Ask Alfred
-// ⌘Enter last, and the no-results line with each chip removable. Kept thin: the rules are
-// logic/search.ts's, and the state is state.ts's.
+// matched and its matches highlighted, the fold over those that only mention the search, the line of
+// what Enter's chips left out, Ask Alfred ⌘Enter last, and the no-results line with each chip
+// removable. Kept thin: the rules are logic/search.ts's, and the state is mailSearch.ts's and
+// state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
-import type {Entry, Fold, Folded, FoldRules} from '../../logic/fold.ts';
-import {MENTIONS_KEY} from '../../logic/inbox.ts';
-import {fieldSegments, firstSection, indexingLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
+import type {Entry, Fold, FoldRules} from '../../logic/fold.ts';
+import {LEFT_OUT_KEY, MENTIONS_KEY} from '../../logic/inbox.ts';
+import {fieldSegments, firstSection, indexingLine, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -17,7 +18,8 @@ import {keepTextUnselected} from '../../ui/keys.ts';
 import {dotStyle} from '../accounts.ts';
 import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
-import type {Search, SearchFieldState} from './state.ts';
+import type {Search} from './mailSearch.ts';
+import type {SearchFieldState} from './state.ts';
 import './search.css';
 
 const CHIP_KEYS: Record<SearchChip['kind'] | CalendarSearchChip['kind'], string> = {organisation: 'Org', type: 'Type', date: 'Date', account: 'Account', kind: 'Kind', calendar: 'Calendar'};
@@ -62,9 +64,9 @@ export function selectSearch() {
 }
 
 /**
- * The header's field. `/` or ⌘F focuses it, selecting the query; Enter takes the chips and hands the keys to the results
- * (J, K, Enter), the cursor on the first; ⌘Enter asks Alfred; Esc clears the search; Backspace in an empty field removes the
- * last chip.
+ * The header's field. `/` or ⌘F focuses it, selecting the query; Enter takes the chips and, once they're in, hands the keys
+ * to the results (J, K, Enter), the cursor on the first; ⌘Enter asks Alfred; Esc clears the search; Backspace in an empty
+ * field removes the last chip.
  */
 export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
@@ -109,8 +111,13 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       if (search.active && onAsk) onAsk();
     } else if (event.key === 'Enter' || (arrowDown && event.key === 'ArrowDown')) {
       event.preventDefault();
-      input.current?.blur();
-      void search.settle().then(first => first && onEnter(first));
+      // The keys stay here until the answer's in, so what's typed meanwhile is typed, and a row doesn't
+      // move under J or K. Not if the user has gone elsewhere since.
+      void search.settle().then(settled => {
+        if (!settled || document.activeElement !== input.current) return;
+        input.current?.blur();
+        if (settled.first) onEnter(settled.first);
+      });
     } else if (event.key === 'Escape') {
       if (onEscape) {
         event.preventDefault();
@@ -120,6 +127,8 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
       if (search.active) search.clear();
       input.current?.blur();
     } else if (event.key === 'Backspace' && !search.text && search.chips.length) {
+      // Its word may come back into the field, and Backspace isn't to take a letter off it.
+      event.preventDefault();
       removeChip(search.chips.length - 1);
     }
   };
@@ -183,7 +192,7 @@ export function NoResults({lead, search}: {lead: string; search: Pick<SearchFiel
 export interface ResultsProps {
   search: Search;
   // The results by section (logic/search.ts › resultSections), without those in Trash.
-  sections: {about: SearchResultOut[]; more: number; mentions: SearchResultOut[]};
+  sections: {about: SearchResultOut[]; more: number; mentions: SearchResultOut[]; leftOut: {more: number; rows: SearchResultOut[]}};
   cursor: string | null;
   openId: number | null;
   // The emails selected (#249), drawn as the open one is.
@@ -208,12 +217,15 @@ export function SearchResults(props: ResultsProps) {
   // The next page as the list nears its end, which is the fold while it's folded: the rows under it
   // aren't asked for until they'd show.
   const ended = out !== null && !search.mentions && search.results.length >= firstSection(out);
+  const moreResults = !ended && out?.next_offset != null;
   useEffect(() => {
     const target = end.current;
-    if (!target || ended) return;
+    if (!target || (ended && !search.moreLeftOut)) return;
     // The list is the root: its margin means nothing for a box scrolling inside the page, and at the
     // very end a fraction of a pixel can leave the empty marker just outside what the list shows.
-    const observer = new IntersectionObserver(entries => entries.some(entry => entry.isIntersecting) && search.loadMore(), {root: target.parentElement, rootMargin: '400px'});
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) (moreResults ? search.loadMore : search.loadLeftOut)();
+    }, {root: target.parentElement, rootMargin: '400px'});
     observer.observe(target);
     return () => observer.disconnect();
   });
@@ -221,9 +233,10 @@ export function SearchResults(props: ResultsProps) {
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
   // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
-  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235).
+  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235), where
+  // Enter's reading doesn't: only the field's glyph says it's coming.
   return (
-    <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
+    <section className={search.pending && !search.reading ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
       {out && !card && (
@@ -248,8 +261,14 @@ export function SearchResults(props: ResultsProps) {
       )}
       {sections.about.map(result => <ResultRow key={result.id} result={result} {...props} />)}
       {/* A new search's fold is its own: no rows folding between one search's and the next's. */}
-      {sections.more > 0 && <Mentions key={search.answering} {...props} />}
+      {sections.more > 0 && (
+        <Folding key={search.answering} {...props} line={MENTIONS_KEY} rows={sections.mentions} open={search.mentions} toggle={search.toggleMentions} words={mentionsLine(sections.more, out?.partial ?? false)} />
+      )}
       {out && out.total === 0 && <NoResults lead="No emails match" search={search} />}
+      {/* Past the chips, under whatever they let through: the fold is what they kept and only mentions the words. */}
+      {sections.leftOut.more > 0 && (
+        <Folding key={`left:${search.answering}`} {...props} line={LEFT_OUT_KEY} rows={sections.leftOut.rows} open={search.leftOut?.open ?? false} toggle={search.toggleLeftOut} words={leftOutLine(sections.leftOut.more)} />
+      )}
       <div ref={end} />
     </section>
   );
@@ -257,26 +276,36 @@ export function SearchResults(props: ResultsProps) {
 
 type Part = {kind: 'fold'; open: boolean} | {kind: 'row'; result: SearchResultOut};
 // Its rows open and close as a group's do (#198); a page arriving under it just comes.
-const FOLD_RULES: FoldRules<Part> = {
+const foldRules = (line: string): FoldRules<Part> => ({
   folds: () => true,
   arrives: () => true,
   opens: (_, was) => {
-    const fold = was(MENTIONS_KEY)?.item;
+    const fold = was(line)?.item;
     return fold?.kind === 'fold' && !fold.open;
   },
-};
-const inFold = (entry: Folded<Part>) => (entry.item.kind === 'row' ? MENTIONS_KEY : null);
+});
+const FOLD_RULES = {[MENTIONS_KEY]: foldRules(MENTIONS_KEY), [LEFT_OUT_KEY]: foldRules(LEFT_OUT_KEY)};
 
-/** The fold, "12 more mention these words", and its rows, open from the start or in place on a click or Enter. */
-function Mentions(props: ResultsProps) {
-  const {search, sections, cursor, onPoint} = props;
-  const open = search.mentions;
+interface FoldingProps extends ResultsProps {
+  line: typeof MENTIONS_KEY | typeof LEFT_OUT_KEY;
+  rows: SearchResultOut[];
+  open: boolean;
+  toggle: () => void;
+  words: string;
+}
+
+/**
+ * A line and the rows it folds, open from the start or in place on a click or Enter: "12 more mention
+ * these words", and "6 more emails match your words" after it.
+ */
+function Folding({line: lineKey, rows, open, toggle, words, ...props}: FoldingProps) {
+  const {cursor, onPoint} = props;
   const entries = useMemo((): Entry<Part>[] => [
-    {key: MENTIONS_KEY, id: null, item: {kind: 'fold', open}},
-    ...sections.mentions.map((result): Entry<Part> => ({key: resultKey(result.id), id: result.id, item: {kind: 'row', result}})),
-  ], [open, sections.mentions]);
-  const shown = useFold(entries, FOLD_RULES, FOLD_HOLD_MS);
-  const delays = foldDelays(shown, inFold);
+    {key: lineKey, id: null, item: {kind: 'fold', open}},
+    ...rows.map((result): Entry<Part> => ({key: resultKey(result.id), id: result.id, item: {kind: 'row', result}})),
+  ], [lineKey, open, rows]);
+  const shown = useFold(entries, FOLD_RULES[lineKey], FOLD_HOLD_MS);
+  const delays = foldDelays(shown, entry => (entry.item.kind === 'row' ? lineKey : null));
   const line = useRef<HTMLButtonElement>(null);
   // Opened at the foot of the list, its rows come into view once they're in (#70); a search that
   // starts open leaves the list where it is.
@@ -291,9 +320,9 @@ function Mentions(props: ResultsProps) {
   return shown.map(({key, item, fold}) => {
     if (item.kind === 'row') return <ResultRow key={key} {...props} result={item.result} fold={fold} delay={delays.get(key)} />;
     return (
-      <button key={key} ref={line} type="button" className={['mentions', !item.open && 'collapsed', cursor === key && 'cur'].filter(Boolean).join(' ')} aria-expanded={item.open}
-        data-key={key} onMouseMove={() => key !== cursor && onPoint(key)} onClick={search.toggleMentions}>
-        <span className="num">{mentionsLine(sections.more, search.out?.partial ?? false)}</span>
+      <button key={key} ref={line} type="button" className={['mentions', lineKey === LEFT_OUT_KEY && 'left-out', !item.open && 'collapsed', cursor === key && 'cur'].filter(Boolean).join(' ')} aria-expanded={item.open}
+        data-key={key} onMouseMove={() => key !== cursor && onPoint(key)} onClick={toggle}>
+        <span className="num">{words}</span>
         {/* One chevron, turned to point right while it's folded, as a group's. */}
         <span className="chev"><Icon name="expand_more" /></span>
       </button>

@@ -10,15 +10,15 @@
 // before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
 // email replacing an earlier one. Terms for mail that isn't there are left out.
 //
-// --no-chips scores with typed words forming date chips only, the rest staying words to rank, as the
-// field will once chips come from the server (SV-139). Each search's "about" and "right" columns are
-// the rows in the first section, and the share of its right emails there.
+// With no other flag it scores the words as typed, which form no chips (D385, SV-139). Each search's
+// "about" and "right" columns are the rows in the first section, and the share of its right emails
+// there.
 //
 // --reading-prompts <file> writes what the model would be asked for each search, by the real code, as
 // JSON ({model, system, tool, max_output_tokens, searches: [{text, input}]}), and scores nothing. A
-// script that can reach the model answers them. --readings <file> then scores those answers through
-// the real code, one {"text": "...", "reading": {...}} a line, the tool's input or null for none,
-// reporting list sizes and the right emails the chips hide. Both files stay out of git.
+// script that can reach the model answers them. --readings <file> then scores Enter: those answers
+// through the real code, one {"text": "...", "reading": {...}} a line, the tool's input or null for
+// none, reporting list sizes and the right emails the chips hide. Both files stay out of git.
 //
 // Inside the app's container, the test file comes on stdin:
 //
@@ -36,10 +36,10 @@ import type {Store} from '../store.ts';
 import {SEARCH_READING_MAX_OUTPUT_TOKENS, SEARCH_READING_MODEL, SEARCH_READING_SYSTEM, SEARCH_READING_TOOL} from '../search/readingPrompt.ts';
 import {loadTerms, readingPrompts, readingReport, readingScore, scoreReport, scoreSearches, searchTest} from './searchScore.ts';
 
-const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--no-chips | --reading-prompts <file> | --readings <file>] [--migrate [--terms <file>]...]';
-const {values: {migrate, terms: termFiles = [], 'no-chips': noChips, 'reading-prompts': promptsFile, readings: readingsFile}, positionals: [testFile]} = parseArgs({
+const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--reading-prompts <file> | --readings <file>] [--migrate [--terms <file>]...]';
+const {values: {migrate, terms: termFiles = [], 'reading-prompts': promptsFile, readings: readingsFile}, positionals: [testFile]} = parseArgs({
   allowPositionals: true,
-  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}, 'no-chips': {type: 'boolean'}, 'reading-prompts': {type: 'string'}, readings: {type: 'string'}},
+  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}, 'reading-prompts': {type: 'string'}, readings: {type: 'string'}},
 });
 if (!testFile) throw new Error(usage);
 // Search terms only ever go into a scratch copy, never the database named.
@@ -64,7 +64,7 @@ function scoreOn(sqlite: Database.Database) {
     console.log(readingReport(searches.map(search => readingScore(store, search, answers.get(search.text) ?? null))));
     return;
   }
-  console.log(scoreReport(scoreSearches(store, searches, noChips ? {chipsFromWords: 'dates'} : {})));
+  console.log(scoreReport(scoreSearches(store, searches)));
 }
 
 if (migrate) {

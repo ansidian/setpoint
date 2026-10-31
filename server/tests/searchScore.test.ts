@@ -61,7 +61,7 @@ describe('scoring the real search over the seed', () => {
   const lease = 'When does my lease renewal need to be signed?';
 
   test.each([
-    {text: 'northwind rejection march', subjects: ['Update on your application', 'Your application for Data Engineer Intern'], firstRight: 1, precisionTop5: 0.4, top10: 1, anywhere: 1},
+    {text: 'northwind rejection', subjects: ['Update on your application', 'Your application for Data Engineer Intern'], firstRight: 1, precisionTop5: 0.4, top10: 1, anywhere: 1},
     {text: 'renewal', subjects: ['October rent received'], firstRight: 4, precisionTop5: 0.2, top10: 1, anywhere: 1, firstSection: 3, rightInFirst: 0},
     {text: lease, subjects: ['Lease renewal terms', 'Update on your application'], firstRight: 1, precisionTop5: 0.2, top10: 0.5, anywhere: 0.5, listed: 1},
   ])('$text → $subjects', ({text, subjects, ...scores}) => {
@@ -69,15 +69,6 @@ describe('scoring the real search over the seed', () => {
     const [score] = scoreSearches(w.store, [{group: 'topic', text, wanted: subjects.map(subject => idOf(w, subject))}]);
     expect(score).toMatchObject(scores);
   });
-});
-
-test('--no-chips\'s option reaches the matching: organisations and types stay words', () => {
-  const w = world({seed: true});
-  const wanted = [{group: 'topic' as const, text: 'career', wanted: [idOf(w, 'Update on your application')]}];
-  const [chips] = scoreSearches(w.store, wanted);
-  const [words] = scoreSearches(w.store, wanted, {chipsFromWords: 'dates'});
-  expect(chips!.anywhere).toBe(1);
-  expect(words!.listed).not.toBe(chips!.listed);
 });
 
 describe('scoring with readings', () => {

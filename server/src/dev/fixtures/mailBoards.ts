@@ -203,7 +203,7 @@ export function ledgerAudit({db}: OpenDatabase) {
   const email = (at: number, subject: string, body: string, day: string) => {
     const bodyText = `${body}\n\nThis is number ${at}.`;
     return {
-      accountId: jobs.id, providerId: `fixture-ledger-${at}`, threadId: `fixture-ledger-${at}-thread`, fromName: 'Fourth Coffee', fromAddress: 'books@fourthcoffee.example',
+      accountId: jobs.id, providerId: `fixture-ledger-${at}`, threadId: `fixture-ledger-${at}-thread`, fromName: 'Fourth Coffee', fromAddress: 'books@fourthcoffee.example', organisation: 'Fourth Coffee',
       subject, snippet: body, bodyText, searchBody: searchBody(bodyText), receivedAt: zoned(day, `${String(8 + at % 10).padStart(2, '0')}:${String(at % 60).padStart(2, '0')}`), unread: false, lane: 'fyi' as const,
     };
   };

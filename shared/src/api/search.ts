@@ -47,17 +47,18 @@ export const searchChipKindSchema = z.enum(SEARCH_CHIP_KINDS);
 export const MAX_SEARCH_CHIPS = 10;
 
 /**
- * The field: the chips it already shows, and the text typed after them. The server turns any
- * recognised words in `text` into more chips and returns them; words in "quotes" always stay text.
+ * The field: the chips it already shows, and the text typed after them. Words stay words, a date's
+ * too (D385, SV-139), so a phone sending only `text` gets keyword results and no filter it can't see.
  * A word after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it.
+ * Words in "quotes" always stay text.
  * A later page of the same search passes `search_id` and `offset` (`next_offset` from the last page).
  *
  * SV-138: `read` is D385's Enter, and only a request that says so can reach the model, so typing
- * never does. Without it the chip grammar runs as it always has. `ask` reads the search: dates from
- * the grammar, organisations and types from the model, as `chips`, with `text` the keywords left and
- * `reading.typed` the words as typed. With `kept` or `left_out` the client sends those back and
- * nothing is read again: `text` and `chips` for a later page, `typed` as well for what the chips left
- * out. A chip removed sends `reading.typed` as `text` too, so the word it stood for is a word again.
+ * never does. `ask` reads the search: dates from the grammar, organisations and types from the
+ * model, as `chips`, with `text` the keywords left and `reading.typed` the words as typed. With
+ * `kept` or `left_out` the client sends those back and nothing is read again: `text` and `chips` for
+ * a later page, `typed` as well for what the chips left out. A chip removed puts the word it stood
+ * for back in `text`, from `reading.typed`, so it's a word again.
  */
 export const searchInput = z.strictObject({
   text: z.string().max(500),

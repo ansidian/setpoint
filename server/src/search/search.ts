@@ -1,12 +1,13 @@
-// Search (BRIEF.md › Search; DESIGN.md › Search): the field's words become chips that filter exactly
-// (src/domain/searchChips.ts), or on Enter a model reads the whole search into chips (D385,
-// src/search/reading.ts); whatever's left is free text over the full-text index, which holds an
-// email's summary, its search terms (src/search/terms.ts) and its body without links or footers
-// (src/domain/searchBody.ts). With any chip, results come newest first. Free text alone ranks by how
-// well the words matched (src/domain/searchMatch.ts › matchTier), newest first within each tier, with
-// no importance boost (decision 9): what's about the search comes first, and `first` counts it, then
-// what only mentions it. Search covers All's mail: archived mail is in (D14), trashed mail is out. A
-// Not chip or a "!word" leaves out what it matches (SV-31).
+// Search (BRIEF.md › Search; DESIGN.md › Search): the field's words are free text over the full-text
+// index, which holds an email's summary, its search terms (src/search/terms.ts) and its body without
+// links or footers (src/domain/searchBody.ts). They rank by how well they matched
+// (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost
+// (decision 9): what's about the search comes first, and `first` counts it, then what only mentions
+// it. Words never become chips as they're typed (D385, SV-139): chips come on Enter, from a model's
+// reading of the whole search and the date grammar (src/search/reading.ts), and a client sends them
+// back. They narrow the list and keep its order. A "!word" alone still forms a chip here, a Not chip,
+// since it says exactly what it leaves out, or stays text and leaves out the mail with it (SV-31).
+// Search covers All's mail: archived mail is in (D14), trashed mail is out.
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
@@ -126,12 +127,12 @@ export interface SearchMatches {
 
 export interface MatchOptions {
   // 'ranked' is the field's search. 'broad' is Alfred's: every word counts, filler too, any one word
-  // will do when no email has them all, and the best field any word matched orders them.
+  // will do when no email has them all, the best field any word matched orders them, and its words
+  // form every chip the grammar knows.
   matching?: 'ranked' | 'broad';
-  // 'dates': typed words form only date chips, and the rest stay words to rank (for SV-139, and the
-  // score's --no-chips). A word naming a type then finds that type too, and dates don't reorder.
-  // 'none' is the same with no date either, for words that are already what's left of a reading.
-  chipsFromWords?: 'all' | 'dates' | 'none';
+  // What the words of a ranked search form: nothing, as the field's typing and what's left of a
+  // reading, or dates for Enter's reading. A word naming a type also finds that type (SV-137).
+  chipsFromWords?: 'dates' | 'none';
   // Type chips are a reading's (D386), rather than the grammar's exact ones.
   readingTypes?: boolean;
   // The words as typed when a reading's chips stand for some of them. They rank as words do, none of
@@ -146,9 +147,9 @@ interface Parsed {
   none: SearchMatches;
 }
 
-/** A word's emails: those the index has it for, and with `byType` those of the type it names. */
-function emailsWith(store: Store, filter: Filter, word: SearchWord, byType: boolean): Set<number> {
-  const type = byType ? TYPE_WORDS[word.term] : undefined;
+/** A word's emails: those the index has it for, and those of the type it names. */
+function emailsWith(store: Store, filter: Filter, word: SearchWord): Set<number> {
+  const type = TYPE_WORDS[word.term];
   const rows = store.sqlite.prepare(`
     SELECT m.id FROM messages m
     WHERE (m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)${type ? ' OR m.type = ?' : ''}) AND ${filter.sql.join(' AND ')}`)
@@ -201,7 +202,7 @@ function rankEmails({store, none}: Parsed, ranking: SearchWord[], words: SearchW
 }
 
 /** The field's search: every word but filler, and failing that the rarest words any email has. */
-function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string, {chipsFromWords = 'all', rankText}: MatchOptions): SearchMatches {
+function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string, {rankText}: MatchOptions): SearchMatches {
   const {store, filter, none} = parsed;
   const lastWord = (value: string) => fold(value).match(/[\p{L}\p{N}]+$/u)?.[0];
   const typing = lastWord(input.text) !== undefined && lastWord(input.text) === lastWord(text);
@@ -210,13 +211,11 @@ function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: 
   const ranking = rankText === undefined ? words : searchWords(withoutExcluded(rankText).text, {typing, dropAllFiller});
   const everyRow = () => (store.sqlite.prepare(`SELECT m.id, m.received_at FROM messages m WHERE ${filter.sql.join(' AND ')}`).all(...filter.args) as Candidate[]);
   if (!ranking.length) return inOrder(none, everyRow().sort(newestFirst));
-  const holders = words.map(word => emailsWith(store, filter, word, chipsFromWords !== 'all'));
+  const holders = words.map(word => emailsWith(store, filter, word));
   const every = words.length ? [...holders[0]!].filter(id => holders.every(emails => emails.has(id))) : everyRow().map(row => row.id);
   const partial = !every.length && words.length > 0;
   if (partial && holders.every(emails => !emails.size)) return none;
-  if (none.order === 'match') return rankEmails(parsed, ranking, words, holders, every, partial);
-  const ids = partial ? [...new Set(holders.flatMap(emails => [...emails]))] : every;
-  return {...inOrder(none, rankedRows(store, ids).sort(newestFirst)), terms: words.map(word => word.term), partial};
+  return rankEmails(parsed, ranking, words, holders, every, partial);
 }
 
 /** Matches with one section, in the order given. */
@@ -244,22 +243,23 @@ function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches
 
 /** Every email a search matches, in its order. */
 export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, options: MatchOptions = {}): SearchMatches {
-  const {matching = 'ranked', chipsFromWords = 'all', readingTypes = false, rankText} = options;
+  const {matching = 'ranked', chipsFromWords = 'none', readingTypes = false, rankText} = options;
+  const broad = matching === 'broad';
   const vocabulary = chipVocabulary(store);
-  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone, fromWords: chipsFromWords});
+  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone, fromWords: broad ? 'all' : chipsFromWords});
   const chips: SearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
   const {text, excluded} = withoutExcluded(parsed.text);
   const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded, readingTypes);
   const hasWords = textTerms(rankText ?? text).length > 0;
-  // Leaving out alone doesn't rank: words with only Not chips still order by the best field. Chips
-  // leave the order to the words once words don't form them, a reading's as much as a date.
-  const ordering = chipsFromWords === 'all' && chips.some(chip => !isNot(chip));
+  // Chips leave the order to the words, a reading's as much as a date. Only Alfred's take it over,
+  // and leaving out alone doesn't: words with only Not chips still order by the best field.
+  const ordering = broad && chips.some(chip => !isNot(chip));
   const order = ordering || !hasWords ? 'newest' : 'match';
   const none: SearchMatches = {chips, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0, readingTypes};
   if (filter.empty || (!chips.length && !hasWords && !excluded.length)) return none;
   const search = {store, filter, none};
-  return matching === 'broad' ? broadSearch(search, text) : rankedSearch(search, input, text, options);
+  return broad ? broadSearch(search, text) : rankedSearch(search, input, text, options);
 }
 
 const TEXT_LABELS = {sender: 'Sender', organisation: 'Org', subject: 'Subject', body: 'Body'} as const;

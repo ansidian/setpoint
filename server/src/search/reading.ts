@@ -20,6 +20,7 @@ import {MAX_SEARCH_CHIPS} from '@setpoint/shared';
 import type {MessageType, SearchChip, SearchOut, SearchReadingFallback} from '@setpoint/shared';
 import type {SearchReadingLog} from '../db/schema.ts';
 import {fold, isNot, keptTokens, sameChip, TYPE_LABELS, wordsOf} from '../domain/searchChips.ts';
+import {textTerms} from '../domain/searchMatch.ts';
 import {localDay} from '../domain/time.ts';
 import {AI_ENDPOINTS, modelClient} from '../providers/ai/index.ts';
 import type {AiEndpoints} from '../providers/ai/index.ts';
@@ -85,7 +86,8 @@ export interface KeptSearch {
 /** Chips as they stand, with what they leave out of the words as typed. No model is asked. */
 export function keptSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, typed: string): KeptSearch {
   const matches = matchSearch(store, input, {chipsFromWords: 'none', readingTypes: true, rankText: typed});
-  if (!input.chips.some(isReadingFilter)) return {matches, left: {...matches, ids: [], first: 0}};
+  // With no words left, nothing can be said to match them.
+  if (!input.chips.some(isReadingFilter) || !textTerms(typed).length) return {matches, left: {...matches, ids: [], first: 0}};
   const words = matchSearch(store, {...input, text: typed, chips: input.chips.filter(chip => !isReadingFilter(chip))}, {chipsFromWords: 'none'});
   const kept = new Set(matches.ids);
   const inLeft = (id: number) => !kept.has(id);
@@ -116,7 +118,8 @@ export function applyReading(store: Store, input: SearchRequest, plan: ReadingPl
   const words = reading && !reading.isDate && plan.dates.length ? matchSearch(store, {...input, chips: held}, {chipsFromWords: 'none'}) : plan.dated;
   const typed = words.text;
   const given = input.chips.filter(isReadingFilter);
-  const settled = (text: string, filters: SearchChip[]) => keptSearch(store, {...input, text, chips: withoutRepeats([...words.chips, ...filters])}, typed);
+  // The chips as the field draws them: organisations, types, then dates and what's left out.
+  const settled = (text: string, filters: SearchChip[]) => keptSearch(store, {...input, text, chips: withoutRepeats([...filters, ...words.chips])}, typed);
   // Always few enough to send back.
   const filters = reading ? readingChips(store, reading).slice(0, Math.max(0, MAX_SEARCH_CHIPS - words.chips.length - given.length)) : [];
   if (reading && filters.length) {

@@ -31,7 +31,7 @@ import {
 } from '../api/mail.ts';
 import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} from '../logic/all.ts';
 import type {Place} from '../logic/all.ts';
-import {readerMarks, resultSections} from '../logic/search.ts';
+import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
   codeExpired, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
@@ -63,7 +63,8 @@ import {SearchField, SearchResults} from './search/Search.tsx';
 import {LoadFailed, useAfter, useArrival, useLoadFailed} from './states/Loading.tsx';
 import {AllSkeleton, SearchSkeleton} from './states/Skeletons.tsx';
 import {skeleton} from '../tokens.ts';
-import {useAlfred, useSearch} from './search/state.ts';
+import {useSearch} from './search/mailSearch.ts';
+import {useAlfred} from './search/state.ts';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 
@@ -223,7 +224,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const days = useMemo(() => (ready ? groupByDay(allRows, zone, new Set([...fresh, ...attention].map(row => row.id))) : []), [ready, allRows, zone, fresh, attention]);
   const dayViews = useMemo(() => days.map(day => dayView(day, noiseOpen.has(day.date))), [days, noiseOpen]);
   // Results in Trash leave the search's list until Undo (UX #9).
-  const sections = useMemo(() => resultSections(search.results, search.out, search.mentions, trashing), [search.results, search.out, search.mentions, trashing]);
+  const sections = useMemo(() => ({...resultSections(search.results, search.out, search.mentions, trashing), leftOut: leftOutSection(search.results, search.out, search.leftOut, trashing)}),
+    [search.results, search.out, search.mentions, search.leftOut, trashing]);
   const stops = useMemo(() => (searching ? searchStops(sections) : dayStops(dayViews, shelf, {fresh: freshView, attention})),
     [searching, sections, dayViews, shelf, freshView, attention]);
   // The cursor, kept with the stops it was set among, so when the list changes it lands on the stop
@@ -325,7 +327,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
   // An email's row, from the open email or the list it's in (the Inbox's, a day's or search's).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
-    ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...search.results.filter(result => !trashing.has(result.id))].find(row => row.id === id);
+    ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...search.listed.filter(result => !trashing.has(result.id))].find(row => row.id === id);
   // The open email's subject, from its row until the email itself is in (#229).
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
@@ -576,6 +578,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (cursorStop?.kind === 'row') run(() => openEmail(cursorStop.id, cursorStop.key));
         else if (cursorStop?.kind === 'noise') run(() => toggleNoise(cursorStop.date));
         else if (cursorStop?.kind === 'mentions') run(search.toggleMentions);
+        else if (cursorStop?.kind === 'leftOut') run(search.toggleLeftOut);
       } else if (plainKey(event, 'h')) run(actions.done, 'h');
       else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
@@ -712,7 +715,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         )}
         {open !== null && (
           <Reader id={open} travel={travelled?.id === open ? travelled.travel : null} row={rowOf(open)} accounts={accounts} now={now} timeZone={zone} actions={actions} onOpen={id => openEmail(id)} back={searching ? 'Search' : 'Inbox'}
-            marks={searching ? readerMarks(open, search.results, alfred.turns) : []}
+            marks={searching ? readerMarks(open, search.listed, alfred.turns) : []}
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}

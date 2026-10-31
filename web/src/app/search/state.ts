@@ -1,20 +1,19 @@
-// The search field's state and Alfred's thread, for the Inbox page and the reader; SV-23 runs the
-// calendar's search on the same field, and N5 News's.
+// The calendar's and News's search fields (SV-23, N5) and Alfred's thread; mail's field is
+// mailSearch.ts, whose chips come from Enter.
 //
-// Search runs as the user types (a short pause), with the chips already in the field and the words
-// after them. The server answers with every chip in force; the field takes them once a word is
-// finished (a space, Enter) so a word isn't chipped while it's still being typed ("mar" → "march").
-// A pause chips the finished words before the last one too, though no pause came after their
-// spaces. Results show at once either way.
-import type {AnswerOut, AskStep, CalendarSearchChip, CalendarSearchOut, CalendarSearchResultOut, SearchChip, SearchOut, SearchResultOut, StoryRowOut} from '@setpoint/shared';
+// The calendar's search runs as the user types (a short pause), with the chips already in the field
+// and the words after them. The server answers with every chip in force; the field takes them once a
+// word is finished (a space, Enter) so a word isn't chipped while it's still being typed ("mar" →
+// "march"). A pause chips the finished words before the last one too, though no pause came after
+// their spaces. Results show at once either way.
+import type {AnswerOut, AskStep, CalendarSearchChip, CalendarSearchOut, CalendarSearchResultOut, StoryRowOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import {ApiFailure} from '../../api/client.ts';
 import {searchNews} from '../../api/news.ts';
-import {alfredStep, askAlfred, searchCalendar, searchMail, searchOpened} from '../../api/search.ts';
-import {alfredQuestion, finishedWords, foldFor, isSearching, toggledFold, typedAfter, withStep} from '../../logic/search.ts';
-import type {MentionsFold} from '../../logic/search.ts';
+import {alfredStep, askAlfred, searchCalendar} from '../../api/search.ts';
+import {finishedWords, isSearching, withStep} from '../../logic/search.ts';
 
-const TYPING_MS = 120;
+export const TYPING_MS = 120;
 const STEP_POLL_MS = 400;
 
 /** A page of answers: the chips in force, the words left, this page's results and the next page's offset. */
@@ -24,6 +23,9 @@ interface Page<C, R> {
   results: R[];
   next_offset: number | null;
 }
+
+/** What Enter came to: the first result, if any. Null when it was dropped, the field having moved on. */
+export type Settled<R> = {first: R | null} | null;
 
 /** The field and its results, as mail's and the calendar's searches share them. */
 export interface SearchFieldState<C, O, R> {
@@ -36,29 +38,14 @@ export interface SearchFieldState<C, O, R> {
   // A search is on its way (search-03): the field's glyph turns once it has taken a moment.
   pending: boolean;
   setText: (text: string) => void;
-  /** Takes the chips the server found now (Enter); resolves with the first result, if any. */
-  settle: () => Promise<R | null>;
+  /** Enter: takes the chips the server found, and resolves once that's done, ready for the keys to leave the field. */
+  settle: () => Promise<Settled<R>>;
   removeChip: (index: number) => void;
   clearText: () => void;
   clear: () => void;
   loadMore: () => void;
   /** Changes the results shown, as the user acts on them. */
   update: (change: (results: R[]) => R[]) => void;
-  /** The field's words in the order typed, or null once an edit lost it (src/logic/search.ts › typedAfter). */
-  typed: () => string | null;
-}
-
-export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchResultOut> {
-  // What the answers are for: another search's fold is drawn afresh, without motion.
-  answering: string;
-  // Whether the results that only mention the search show (logic/search.ts › foldFor).
-  mentions: boolean;
-  toggleMentions: () => void;
-  /** The search log: the user opened this result, at its place in the list. */
-  opened: (id: number) => void;
-  /** A result as an action left it: read once opened, Done (UX #9). */
-  mark: (id: number, change: Partial<SearchResultOut>) => void;
-  question: () => string;
 }
 
 /**
@@ -80,14 +67,12 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   useEffect(() => {
     field.current = {chips, text};
   });
-  // The words as typed: chips leave the text where they form, so Alfred is asked these instead.
-  const typed = useRef<string | null>('');
   const timer = useRef<number | undefined>(undefined);
   // The offset of the page on its way, so nearing the end twice asks for it once.
   const paging = useRef<number | null>(null);
   const active = isSearching(chips, text);
 
-  function run(nextChips: C[], nextText: string, settle: boolean): Promise<R | null> {
+  function run(nextChips: C[], nextText: string, settle: boolean): Promise<Settled<R>> {
     window.clearTimeout(timer.current);
     const id = ++latest.current;
     setAsked(id);
@@ -96,7 +81,7 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
       setResults([]);
       setError(null);
       setAnswered(id);
-      return Promise.resolve(null);
+      return Promise.resolve({first: null});
     }
     // Words finished before the one still being typed: their chips first, then the whole search
     // with them, so the search log's last row is the whole search.
@@ -116,7 +101,7 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
     return search(id, nextChips, nextText, settle);
   }
 
-  function search(id: number, nextChips: C[], nextText: string, settle: boolean): Promise<R | null> {
+  function search(id: number, nextChips: C[], nextText: string, settle: boolean): Promise<Settled<R>> {
     return fetch(nextText, nextChips, null).then(answer => {
       if (id !== latest.current) return null;
       setOut(answer);
@@ -129,13 +114,12 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
         setChips(answer.chips);
         setTextState(answer.text ? `${answer.text}${settle ? '' : ' '}` : '');
       }
-      return answer.results[0] ?? null;
+      return {first: answer.results[0] ?? null};
     }, (failure: Error) => {
-      if (id === latest.current) {
-        setError(failure.message);
-        setAnswered(id);
-      }
-      return null;
+      if (id !== latest.current) return null;
+      setError(failure.message);
+      setAnswered(id);
+      return {first: null};
     });
   }
 
@@ -144,7 +128,6 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
   return {
     chips, text, active, out, results, error, pending: active && asked !== answered,
     setText(next) {
-      typed.current = chips.length === 0 ? next : typedAfter(typed.current, text, next);
       setTextState(next);
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => void run(chips, next, false), TYPING_MS);
@@ -152,23 +135,19 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
     settle: () => run(chips, text, true),
     removeChip(index) {
       const next = chips.filter((_, at) => at !== index);
-      typed.current = next.length === 0 ? text : null;
       setChips(next);
       void run(next, text, false);
     },
     clearText() {
-      typed.current = chips.length === 0 ? '' : null;
       setTextState('');
       void run(chips, '', false);
     },
     clear() {
-      typed.current = '';
       setChips([]);
       setTextState('');
       void run([], '', false);
     },
     update: change => setResults(change),
-    typed: () => typed.current,
     loadMore() {
       if (!out || out.next_offset === null || paging.current === out.next_offset) return;
       paging.current = out.next_offset;
@@ -179,31 +158,6 @@ function useSearchField<C, R, O extends Page<C, R>>(fetch: (text: string, chips:
         setResults(current => [...current, ...answer.results]);
       }, () => {});
     },
-  };
-}
-
-/** Mail's search under the header; a `plain` one (the phone's) leaves the words as typed, never chips. */
-export function useSearch(account: number | null, plain = false): Search {
-  const search = useSearchField<SearchChip, SearchResultOut, SearchOut>((text, chips, after) => searchMail({
-    text, chips, account, ...(after ? {page: {search_id: after.search_id, offset: after.next_offset!}} : {}),
-  }), plain);
-  const [fold, setFold] = useState<MentionsFold | null>(null);
-  const current = foldFor(fold, search.out);
-  if (current !== fold) setFold(current);
-  return {
-    ...search,
-    answering: JSON.stringify([search.out?.chips, search.out?.text]),
-    mentions: current?.open ?? false,
-    toggleMentions: () => setFold(last => last && toggledFold(last)),
-    opened(id) {
-      // `results` are in the server's order, the fold's rows after what's above it, loaded or shown
-      // or not, so this is the place the list shows it at.
-      const position = search.results.findIndex(result => result.id === id);
-      // Best effort: the open is only logged for search's ranking, and the email opens either way.
-      if (search.out && position >= 0) void searchOpened(search.out.search_id, id, position).catch(() => {});
-    },
-    mark: (id, change) => search.update(results => results.map(result => (result.id === id ? {...result, ...change} : result))),
-    question: () => alfredQuestion(search.chips, search.text, search.typed()),
   };
 }
 

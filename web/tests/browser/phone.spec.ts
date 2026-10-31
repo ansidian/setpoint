@@ -259,6 +259,10 @@ test('the account filter, and plain search with no chips and no Alfred', async (
     await page.locator('.ph-account select').selectOption({label: 'All accounts'});
     await until('every account', () => page.locator('.list .row .ac .label').allTextContents(), labels => labels.includes('Personal'));
 
+    const reads: string[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/api/search') reads.push((request.postDataJSON() as {read?: string}).read ?? 'words');
+    });
     await page.locator('.search input').tap();
     await page.keyboard.type('northwind interview ');
     await page.locator('.search-list .result').first().waitFor();
@@ -270,6 +274,7 @@ test('the account filter, and plain search with no chips and no Alfred', async (
     await page.waitForTimeout(500);
     await setpoint.idle();
     assert.equal(await page.locator('.search .qchip').count(), 0, 'no chips');
+    assert.ok(reads.length > 0 && reads.every(read => read === 'words'), `its searches ask for no reading: ${reads.join()}`);
     assert.equal(await page.locator('.search input').inputValue(), 'northwind interview ');
     assert.equal(await page.locator('.search-list .ask').isVisible(), false, 'no Ask Alfred');
     await page.locator('.search-list .result').first().tap();

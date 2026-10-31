@@ -7,7 +7,6 @@ import {searchInput} from '@setpoint/shared';
 import {applyReading, planReading} from '../search/reading.ts';
 import {readingOf} from '../search/readingPrompt.ts';
 import {matchSearch} from '../search/search.ts';
-import type {MatchOptions} from '../search/search.ts';
 import {termsOf, termsText} from '../search/termsPrompt.ts';
 import type {Store} from '../store.ts';
 
@@ -108,13 +107,10 @@ export function summarise(scores: SearchScore[]): ScoreSummary {
   };
 }
 
-/**
- * Runs each search through the field's real matching, with nothing filtered by hand and no account.
- * `options` scores another way of reading it: chips from dates alone, for one.
- */
-export function scoreSearches(store: Store, searches: TestSearch[], options?: MatchOptions): SearchScore[] {
+/** Runs each search through the field's real matching as it's typed, with nothing filtered by hand and no account. */
+export function scoreSearches(store: Store, searches: TestSearch[]): SearchScore[] {
   return searches.map(search => {
-    const {ids, first} = matchSearch(store, {text: search.text, chips: [], account_id: undefined}, options);
+    const {ids, first} = matchSearch(store, {text: search.text, chips: [], account_id: undefined});
     return scoreList(search, ids, first);
   });
 }
