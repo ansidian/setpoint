@@ -78,6 +78,9 @@ export function useSearch(account: number | null, plain = false): Search {
   const timer = useRef<number | undefined>(undefined);
   // The offset of the page on its way, so nearing the end twice asks for it once.
   const paging = useRef<number | null>(null);
+  // The request the list answers: while a newer one is on its way, there's no next page of this one
+  // to want, and its rows would land under the new answer's.
+  const listedBy = useRef(0);
   // The list's answer as it last came, and the field it answers.
   const shown = useRef<SearchOut | null>(null);
   const landed = useRef<FieldAt | null>(null);
@@ -100,6 +103,7 @@ export function useSearch(account: number | null, plain = false): Search {
     return searchMail(query).then(found => {
       if (id !== latest.current) return null;
       paging.current = null;
+      listedBy.current = id;
       shown.current = found;
       landed.current = at;
       setOut(found);
@@ -293,9 +297,9 @@ export function useSearch(account: number | null, plain = false): Search {
     },
     update,
     loadMore() {
-      if (!out || out.next_offset === null || paging.current === out.next_offset) return;
-      paging.current = out.next_offset;
       const id = latest.current;
+      if (!out || out.next_offset === null || paging.current === out.next_offset || listedBy.current !== id) return;
+      paging.current = out.next_offset;
       const kept = out.reading ? {read: 'kept' as const, typed: out.reading.typed} : {};
       searchMail({text: out.text, chips: out.chips, account, ...kept, page: {search_id: out.search_id, offset: out.next_offset}}).then(page => {
         if (id !== latest.current) return;
