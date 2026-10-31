@@ -5,9 +5,9 @@
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
-// Each check's pages record a trace (SV-75), and a check that fails, or that its timeout cancels,
-// keeps it under test-results/browser/traces/, saying where in the run's output, to open with
-// `npx playwright-core show-trace <file>`; a passing check's is dropped.
+// A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts,
+// SV-144), kept under test-results/browser/traces/, saying where in the run's output, to open with
+// `npx playwright-core show-trace <file>` (SV-75). A stress run keeps its own, lighter, the first time.
 // `rested` takes a one-shot read of a computed style or box once nothing on the check's pages is
 // moving (the lint asks).
 import {spawn, spawnSync} from 'node:child_process';
@@ -88,11 +88,18 @@ export async function closeBrowser() {
 
 // Each check with the contexts and pages it opened, for its traces and for `rested`. A spec file's
 // checks run side by side (SV-102), so the check a page belongs to is the one whose body is running,
-// kept in async context rather than in one variable. Every context records a trace
-// (SETPOINT_BROWSER_TRACE=0 turns that off); a failed or timed-out check's is kept.
-const TRACE = process.env.SETPOINT_BROWSER_TRACE !== '0';
+// kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE says what a context
+// records, a failed or timed-out check's being kept: 1 the whole trace, `light` its DOM at each step
+// without the screencast, 0 nothing. Whole traces were a third of a run's CPU, and light ones a fifth,
+// so nothing is the default, with what failed run again whole (run.ts); stress hunts what fails only
+// some of the time, which might not fail again, so it keeps light ones (SV-144).
+const TRACE = process.env.SETPOINT_BROWSER_TRACE ?? (STRESS ? 'light' : '0');
+// Where a failed check is noted, for run.ts.
+const FAILED = process.env.SETPOINT_BROWSER_FAILED;
 interface Check {
   name: string;
+  title: string;
+  file: string | undefined;
   contexts: Set<BrowserContext>;
   pages: Set<Page>;
   finished: boolean;
@@ -102,7 +109,7 @@ const checks = new AsyncLocalStorage<Check>();
 
 /** Runs a check's body as its own Check: keeps its traces if it fails, and closes its contexts after. */
 async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promise<void> {
-  const check: Check = {name: t.fullName, contexts: new Set(), pages: new Set(), finished: false, kept: null};
+  const check: Check = {name: t.fullName, title: t.name, file: t.filePath, contexts: new Set(), pages: new Set(), finished: false, kept: null};
   const close = () => Promise.all([...check.contexts].map(context => context.close().catch(() => {})));
   // node --test cancels a check at its timeout by aborting its signal; it aborts the signal after
   // every check too, so a finished one is left alone. Closing the contexts ends what the body still
@@ -164,6 +171,7 @@ export function describe(name: string, body: () => void): void {
 /** Writes the check's traces under test-results/browser/traces/, once, and says where (the reporter has the failure's words by then). */
 function keepTraces(check: Check): Promise<string[]> {
   check.kept ??= (async () => {
+    if (FAILED) fs.appendFileSync(FAILED, `${JSON.stringify({file: check.file, name: check.title})}\n`);
     const files: string[] = [];
     const slug = check.name.replace(/\W+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
     fs.mkdirSync(TRACES, {recursive: true});
@@ -419,7 +427,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         timezoneId: 'America/Los_Angeles', locale: 'en-US', colorScheme: 'dark',
       });
       contexts.push(context);
-      if (TRACE) await context.tracing.start({screenshots: true, snapshots: true});
+      if (TRACE !== '0') await context.tracing.start({screenshots: TRACE !== 'light', snapshots: true});
       checks.getStore()?.contexts.add(context);
       if (cookie) await context.addCookies([{name: cookie.name, value: cookie.value, url: base}]);
       if (STRESS) {

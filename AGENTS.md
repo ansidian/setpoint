@@ -44,13 +44,17 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   release:check). A file's checks run side by side, sharing the run's six slots, so one file is
   about as quick as its slowest few checks (SV-102); a check therefore keeps nothing in module
   state that another check reads. One browser run at a time on this machine: a run waits for
-  another session's, saying whose, and stops at 15 minutes. It ends with its time and slowest
+  another session's, saying whose, and stops at 15 minutes (25 under stress). It ends with its time and slowest
   checks; past its budget, look there before adding checks. A direct
   `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
   and each of them waits while a checkout from before the lock has a browser open.
-- A check that fails or times out keeps a trace of its pages under `test-results/browser/traces/`,
-  and the run says where: `npx playwright-core show-trace <file>` replays every action, with the
-  screen and the DOM at each step, before guessing at what was mid-flight (SV-75).
+- Checks run without traces, a third of a run's CPU, so a check that fails or times out runs again
+  with one (up to ten checks), kept under `test-results/browser/traces/`, and the run says where:
+  `npx playwright-core show-trace <file>` replays every action, with the screen and the DOM at each
+  step, before guessing at what was mid-flight (SV-75, SV-144). One that passes the second time says
+  so and leaves none, and the run has still failed. A stress run keeps a lighter trace the first
+  time, its DOM at each step without the screencast. `SETPOINT_BROWSER_TRACE` (1, `light` or 0) sets
+  what any run records.
 - Stress, the page screenshots and the board audit run at release, not per change (D281). A spec
   file that is new or largely rewritten runs once under stress before its commit
   (`npm run test:browser:stress -- mail`), so a check that reads before what it reads has come is
@@ -61,8 +65,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   reads has come fails every time), the page screenshots (`npm run test:pages`) and the board
   audit, each only where it hasn't already passed on HEAD's exact content. Every passing run records
   itself by the working tree's content, so the runs before a commit count, spec file by spec file,
-  and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes 5
-  to 10 minutes.
+  and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
+  about 13 minutes.
 - When Andy says a release is coming, the session that pushes its commit runs
   `npm run release:check` in the background straight after, so the release finds it done. Each of
   its checks takes the test lock while it runs.
