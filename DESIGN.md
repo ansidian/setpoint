@@ -1058,9 +1058,10 @@ desktop and keeps it (D325).
     and scrolls back to the row. The body is 14 apart while it's open.
   - `O` still opens the original, which may be gone; the kept text never changes.
 - **No JD found** (38b, D320): under a **Job description** label, a 44 px card (radius 12, an `edge`
-  ring, padding 0 14, `ink3`): `search_off` 16, "No JD found" in `ink2`, "· Breezy and a web search
-  had nothing for it on Oct 1", then an outline small **Look it up** (`search`) and a quiet small
-  **Paste the posting** (`edit_note`), under the line when they don't fit beside it. Jobs never
+  ring, padding 0 14, `ink3`): `search_off` 16, "No JD found" in `ink2`, "Breezy and a web search
+  had nothing for it on Oct 1" under it at 12.5, then an outline small **Look it up** (`search`) and
+  a quiet small **Paste the posting** (`edit_note`) at the card's right, or under the words and in
+  line with them when the pane is too narrow. Jobs never
   retries on its own; a lookup that errored is retried and never shows this. A posting the user
   picked that Jobs couldn't read says so instead (#276), and there Paste the posting leads, filled,
   with a quiet Look it up after it (#278).

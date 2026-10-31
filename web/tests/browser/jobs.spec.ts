@@ -360,6 +360,14 @@ test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Past
     await card.waitFor();
     assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
     assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
+    // The buttons sit beside the words rather than dropping to a row of their own, and the card holds them.
+    const fit = await rested(() => card.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const words = element.querySelector('.words')!.getBoundingClientRect();
+      const acts = element.querySelector('.acts')!.getBoundingClientRect();
+      return {beside: acts.top < words.bottom && acts.left >= words.right, inside: acts.right <= box.right && acts.bottom <= box.bottom};
+    }));
+    assert.deepEqual(fit, {beside: true, inside: true});
     // Paste leads, filled; Look it up steps back, quiet.
     const pasteButton = pane.getByRole('button', {name: 'Paste the posting'});
     assert.equal(await rested(() => pasteButton.evaluate(button => getComputedStyle(button).backgroundColor)), await rested(() => fillOf(page, 'var(--ink)')));

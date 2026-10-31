@@ -272,10 +272,19 @@
 .jb-nojd > .line { display: flex; align-items: center; gap: 10px; max-width: 100%; }
 .jb-nojd .words { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jb-nojd .ink2 { color: var(--ink2); }
-/* Beside the line while they fit, else under it at the card's right. */
+/* Beside the line while it fits, else under it at the card's right. */
 .jb-nojd .acts { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
 /* Paste the posting (SV-140): in the JD section, under where it stands. */
-.jb-paste { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; max-width: 600px; }
+/* With two actions the words take two lines of their own, so the buttons stay beside them, or under
+   them in line with the words when the pane is too narrow (SV-140). */
+.jb-nojd.stacked { gap: 10px 16px; padding: 10px 12px 10px 14px; }
+.jb-nojd.stacked > .line { flex: 1 1 280px; align-items: flex-start; }
+.jb-nojd.stacked > .line > .icon { margin-top: calc((1lh - 16px) / 2); }
+.jb-nojd.stacked .words { white-space: normal; overflow: visible; display: flex; flex-direction: column; gap: 2px; }
+.jb-nojd.stacked .sep { display: none; }
+.jb-nojd.stacked .num { font-size: 12.5px; text-wrap: balance; }
+.jb-nojd.stacked .acts { margin-left: 26px; gap: 8px; }
+.jb-paste { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .jb-paste .input { height: 200px; padding: 10px 12px; font-family: inherit; line-height: 1.5; resize: vertical; }
 .jb-paste .refused { color: var(--alert); font-size: 12.5px; }
 .jb-paste .acts { display: flex; align-items: center; gap: 6px; }
