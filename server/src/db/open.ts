@@ -35,11 +35,22 @@ export function openDatabase(file: string): OpenDatabase {
   }
   const sqlite = new Database(file);
   if (file !== ':memory:') sqlite.pragma('journal_mode = WAL');
+  const opened = connected(sqlite);
+  migrate(opened.db, {migrationsFolder: MIGRATIONS});
+  return opened;
+}
+
+/**
+ * An in-memory copy of a database from its `sqlite.serialize()`, as it stood: nothing migrates, and
+ * writes reach only the copy. Tests start from one, since migrating and seeding each time was most
+ * of what a seeded test cost (SV-143).
+ */
+export const openImage = (image: Buffer): OpenDatabase => connected(new Database(image));
+
+function connected(sqlite: Database.Database): OpenDatabase {
   sqlite.pragma('synchronous = NORMAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
-  const db = drizzle(sqlite, {schema});
   registerMigrationFunctions(sqlite);
-  migrate(db, {migrationsFolder: MIGRATIONS});
-  return {sqlite, db};
+  return {sqlite, db: drizzle(sqlite, {schema})};
 }

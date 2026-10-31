@@ -5,7 +5,7 @@ import {onTestFinished} from 'vitest';
 import {createApp} from '../src/api/app.ts';
 import type {AppOptions} from '../src/api/app.ts';
 import {claimOwner, issueSetupToken} from '../src/auth/owner.ts';
-import {openDatabase} from '../src/db/open.ts';
+import {openDatabase, openImage} from '../src/db/open.ts';
 import {seedSampleData} from '../src/dev/sample.ts';
 import {LiveFeed} from '../src/live/feed.ts';
 import type {FeedEvent} from '../src/live/feed.ts';
@@ -25,8 +25,24 @@ export interface World {
   events: FeedEvent[];
 }
 
+// The migrated database, with and without the seed, once per test file: a world starts from a copy
+// (SV-143). One seeded with News's image files is seeded for itself, so they're written each time.
+const images = new Map<boolean, Buffer>();
+
+function image(seed: boolean): Buffer {
+  let made = images.get(seed);
+  if (!made) {
+    const database = openDatabase(':memory:');
+    if (seed) seedSampleData(database);
+    made = database.sqlite.serialize();
+    database.sqlite.close();
+    images.set(seed, made);
+  }
+  return made;
+}
+
 export function world({seed = false, now = SEED_NOW, newsImagesDir = null}: {seed?: boolean; now?: string; newsImagesDir?: string | null} = {}): World {
-  const {sqlite, db} = openDatabase(':memory:');
+  const {sqlite, db} = openImage(image(seed && !newsImagesDir));
   onTestFinished(() => {
     sqlite.close();
   });
@@ -36,7 +52,7 @@ export function world({seed = false, now = SEED_NOW, newsImagesDir = null}: {see
   live.subscribe(event => events.push(event));
   const store: Store = {sqlite, db, timeZone: 'America/Los_Angeles', now: () => new Date(clock), live, keyring: keyringFrom(TEST_KEY)};
   // News's images go to `newsImagesDir`; without one only their rows are kept.
-  if (seed) seedSampleData({sqlite, db}, {newsImagesDir});
+  if (seed && newsImagesDir) seedSampleData({sqlite, db}, {newsImagesDir});
   return {
     store, events,
     at: iso => (clock = Date.parse(iso)),
