@@ -306,8 +306,8 @@ describe('unsure (decision 54)', () => {
       kind: 'jd_to_confirm', reason: 'unsure_posting', company: 'Lucerne Publishing', title: 'Junior Developer', platform: 'Greenhouse', application_id: id,
       at: '2026-10-05T17:20:00.000Z', subject: null, event_kind: null, from_history: false,
       candidates: [
-        {id: expect.any(Number), title: 'Junior Developer', location: 'New York, NY', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520391'},
-        {id: expect.any(Number), title: 'Junior Developer, Digital', location: 'Remote', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520412'},
+        {id: expect.any(Number), title: 'Junior Developer', location: 'New York, NY', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520391', unreadable: false},
+        {id: expect.any(Number), title: 'Junior Developer, Digital', location: 'Remote', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520412', unreadable: false},
       ],
     })]);
     const event = liveEvents(s.w).filter(each => each.type === 'jobs').at(-1)!;
@@ -333,7 +333,7 @@ describe('unsure (decision 54)', () => {
     s.answers({submit_posting_search: () => searched([{url: 'https://fabrikam.example/careers/data-analyst-2291', title: 'Data Analyst', location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict: 'match'}])});
     await s.drain();
     expect(s.posting(id)).toBeUndefined();
-    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{title: 'Data Analyst', platform: 'Fabrikam Careers'}]});
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{title: 'Data Analyst', platform: 'Fabrikam Careers', unreadable: true}]});
   });
 });
 
@@ -522,6 +522,9 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     expect(s.posting(id)).toBeUndefined();
     expect(links(s, id)).toEqual([one(2).url, one(3).url]);
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'candidates', candidates: 2});
+    // Both came back unreadable, which is what the picker says of them (SV-140).
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([true, true]);
+    expect(jobsPage(s.store).needs_you[0]!.candidates.map(candidate => candidate.unreadable)).toEqual([true, true]);
   });
 
   test('a page that reads goes to Haiku: no drops it, and maybe or match only stays a maybe', async () => {
@@ -594,6 +597,8 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     await s.drain();
     expect(s.posting(id)).toBeUndefined();
     expect(links(s, id)).toEqual([one(1).url, one(2).url]);
+    // One read, so Haiku saw it; one didn't.
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([false, true]);
   });
 
   test('a failure on one candidate keeps it offered and doesn\'t fail the lookup', async () => {
@@ -606,6 +611,8 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     await s.drain();
     expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
     expect(links(s, id)).toEqual([one(1).url, one(2).url, one(3).url]);
+    // A failure says nothing about the page, so none of them is marked (SV-140).
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.unreadable)).toEqual([false, false, false]);
   });
 
   test('a sole match that fails is offered rather than searched for again', async () => {
@@ -617,6 +624,7 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
     expect(s.asked()).toEqual(['submit_posting_search']);
     expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
     expect(links(s, id)).toEqual([one(1).url]);
+    expect(applicationDetail(s.store, id).candidates[0]!.unreadable).toBe(false);
   });
 
   test('a lookup stopped while it opens them ends there, offering nothing', async () => {

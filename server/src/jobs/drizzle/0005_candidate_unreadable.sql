@@ -1,0 +1,1 @@
+ALTER TABLE `jobs_jd_candidates` ADD `unreadable` integer DEFAULT false NOT NULL;

@@ -70,6 +70,8 @@
 .jb-cand .pick > .icon { color: var(--ink3); flex: none; transition: color var(--dur-fast) var(--ease); }
 .jb-cand .t { color: var(--ink); }
 .jb-cand .ell { flex: 1 1 auto; }
+/* What it adds of one Jobs can't read (SV-140): never the part the ellipsis takes. */
+.jb-cand .cant { flex: none; white-space: nowrap; }
 .jb-cand > .ibtn { color: var(--ink3); }
 .jb-cands:not(.picked) .jb-cand.cur { background: var(--sub2); }
 .jb-cands:not(.picked) .jb-cand.cur .pick > .icon { color: var(--ink2); }
