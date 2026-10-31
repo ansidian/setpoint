@@ -154,33 +154,33 @@ describe('the results by section, and the fold', () => {
 
   describe('a search\'s fold', () => {
     const answer = (text: string, first_section: number, chips: SearchChip[] = []) => ({text, first_section, chips});
-    const thin = foldFor(null, answer('sgv', 1))!;
+    const thin = foldFor(null, answer('fhw', 1))!;
 
     test('the same search keeps its own, whatever a later answer says', () => {
-      expect(foldFor(thin, answer('sgv', 9))).toBe(thin);
+      expect(foldFor(thin, answer('fhw', 9))).toBe(thin);
       const closed = toggledFold(thin);
-      expect(foldFor(closed, answer('SGV', 1))).toBe(closed);
+      expect(foldFor(closed, answer('FHW', 1))).toBe(closed);
     });
 
     test('a new search decides again, across the threshold either way', () => {
-      expect(foldFor(thin, answer('sgv invoice', 9))).toMatchObject({open: false, closed: false});
-      expect(foldFor(foldFor(null, answer('sgv', 9)), answer('sgv invoice', 4))).toMatchObject({open: true, closed: false});
+      expect(foldFor(thin, answer('fhw invoice', 9))).toMatchObject({open: false, closed: false});
+      expect(foldFor(foldFor(null, answer('fhw', 9)), answer('fhw invoice', 4))).toMatchObject({open: true, closed: false});
     });
 
     test('a close holds while the same words are refined, and goes with them', () => {
       const closed = toggledFold(thin);
       expect(closed).toMatchObject({open: false, closed: true});
-      const longer = foldFor(closed, answer('sgv invoice', 2))!;
-      expect(longer).toMatchObject({open: false, closed: true, text: 'sgv invoice'});
-      expect(foldFor(longer, answer('sgv inv', 3))).toMatchObject({open: false, closed: true});
+      const longer = foldFor(closed, answer('fhw invoice', 2))!;
+      expect(longer).toMatchObject({open: false, closed: true, text: 'fhw invoice'});
+      expect(foldFor(longer, answer('fhw inv', 3))).toMatchObject({open: false, closed: true});
       expect(foldFor(longer, answer('water', 2))).toMatchObject({open: true, closed: false});
-      expect(foldFor(longer, answer('sgv invoice', 2, [{kind: 'type', value: 'statement', label: 'Statement'}]))).toMatchObject({open: true, closed: false});
+      expect(foldFor(longer, answer('fhw invoice', 2, [{kind: 'type', value: 'statement', label: 'Statement'}]))).toMatchObject({open: true, closed: false});
     });
 
     test('opening it again by hand takes the close back, and opening one by hand is for that search', () => {
       const reopened = toggledFold(toggledFold(thin));
       expect(reopened).toMatchObject({open: true, closed: false});
-      expect(foldFor(reopened, answer('sgv invoice', 9))).toMatchObject({open: false});
+      expect(foldFor(reopened, answer('fhw invoice', 9))).toMatchObject({open: false});
       const opened = toggledFold(foldFor(null, answer('renewal', 9))!);
       expect(opened).toMatchObject({open: true, closed: false});
       expect(foldFor(opened, answer('renewals', 9))).toMatchObject({open: false});
