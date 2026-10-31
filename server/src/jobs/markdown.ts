@@ -12,7 +12,7 @@ import {parseDocument} from 'htmlparser2';
 
 /** Below this a page gave a teaser or a wall, not a posting. */
 export const MIN_POSTING_CHARS = 200;
-/** A posting's text is kept up to this long. */
+/** A posting's text read from the web is kept up to this long. */
 export const MAX_POSTING_CHARS = 60_000;
 
 // Furniture that is never a posting's words.
@@ -136,7 +136,7 @@ function blocksOf(root: Document | Element): Block[] {
 }
 
 /** Blocks as markdown: a blank line between blocks, list items of one list together. */
-function render(blocks: Block[]): string {
+function render(blocks: Block[], limit = MAX_POSTING_CHARS): string {
   const lines: string[] = [];
   let previous: Block['kind'] | null = null;
   for (const block of blocks) {
@@ -152,13 +152,13 @@ function render(blocks: Block[]): string {
   }
   // A heading with nothing under it at the very end is the page's, not the posting's.
   while (lines.length && (lines.at(-1)!.startsWith('## ') || !lines.at(-1)!.trim())) lines.pop();
-  return cap(lines.join('\n'));
+  return cap(lines.join('\n'), limit);
 }
 
 /** Cut at a block boundary past the limit. */
-function cap(markdown: string): string {
-  if (markdown.length <= MAX_POSTING_CHARS) return markdown;
-  const cut = markdown.slice(0, MAX_POSTING_CHARS);
+function cap(markdown: string, limit: number): string {
+  if (markdown.length <= limit) return markdown;
+  const cut = markdown.slice(0, limit);
   return cut.slice(0, Math.max(cut.lastIndexOf('\n'), 0)).trimEnd();
 }
 
@@ -190,9 +190,9 @@ const NUMBERED = /^(\d+)[.)]\s+(.*)$/;
 /**
  * Plain text (a platform's plain description, a page with no markup worth keeping) as markdown:
  * bullets as `- ` items, a short line standing alone before others as a heading, blank lines between
- * paragraphs.
+ * paragraphs. Cut at `limit`, as a page is; what the user pasted is refused rather than cut (SV-140).
  */
-export function plainToMarkdown(text: string): string {
+export function plainToMarkdown(text: string, limit = MAX_POSTING_CHARS): string {
   const blocks: Block[] = [];
   const paragraphs = text.replace(/\r\n?/g, '\n').split(/\n\s*\n/);
   for (const paragraph of paragraphs) {
@@ -228,5 +228,5 @@ export function plainToMarkdown(text: string): string {
     });
     flushProse();
   }
-  return render(blocks);
+  return render(blocks, limit);
 }

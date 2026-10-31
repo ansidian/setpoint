@@ -5,7 +5,7 @@
 // leaves them. The Done-when list: confident, unsure (three at most), not found and failed, a failed
 // lookup retrying while a not-found one doesn't, a saved JD never overwritten, Look it up by hand on a
 // closed application, and the seed loading with its numbers and triggering nothing.
-import {jobsPageSchema, SEED_NOW} from '@setpoint/shared';
+import {jobsChangeSchema, jobsPageSchema, MAX_PASTED_CHARS, SEED_NOW} from '@setpoint/shared';
 import {and, asc, eq, like, lte} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import {FAKE_KEYS, fakeModels} from '../../../tests/fakeModels.ts';
@@ -18,12 +18,15 @@ import {SyncEngine} from '../../sync/engine.ts';
 import {upsertMessages} from '../../sync/mailMirror.ts';
 import {Adapters} from '../../sync/registry.ts';
 import {jobsApi} from '../api.ts';
+import {pastePosting} from '../corrections.ts';
 import {jobsDb} from '../db.ts';
-import {LOOKUP_COOL_OFF_MS, lookUpJd, lookupKey, queueDueLookups, requestLookup} from '../lookup.ts';
+import {LOOKUP_COOL_OFF_MS, lookUpJd, lookupKey, pastedKey, queueDueLookups, requestLookup} from '../lookup.ts';
+import {MAX_POSTING_CHARS} from '../markdown.ts';
 import {NO_JOBS_KEY} from '../models.ts';
 import {applicationDetail, jobsPage} from '../queries.ts';
 import {JobsReader} from '../reader.ts';
 import * as j from '../schema.ts';
+import {undoCorrection} from '../undo.ts';
 import {fakeWeb, fixture, htmlPage, serveFixtures, TEST_APIS, TEST_GOVERNMENT_JOBS} from './fakeWeb.ts';
 
 // Real HTTP round trips to the fakes, a few dozen per test.
@@ -765,6 +768,280 @@ describe('not found (D320)', () => {
     await s.drain();
     expect(s.asked()).toEqual(['submit_posting_search', 'submit_posting_search']);
     expect(applicationDetail(s.store, id).jd.state).toBe('not_found');
+  });
+});
+
+describe('the posting pasted in (SV-140)', () => {
+  const TEXT = `About the role\n\n${'We need an analyst who builds the weekly reports the whole company reads, and the pipelines behind them. '.repeat(3)}\n\nWhat you'll need:\n- SQL\n- Clear writing`;
+  const READ = {summary: 'An analyst for the weekly reports.', location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: '2 days', salary: '$70,000–$82,000', must_haves: ['SQL'], nice_to_haves: ['Python']};
+  const LINK = 'https://www.glassdoor.example/job-listing/data-analyst-2291';
+  type S = Awaited<ReturnType<typeof setup>>;
+  const clients = new WeakMap<S, ReturnType<typeof signedIn>>();
+  const routes = (s: S) => {
+    if (!clients.has(s)) clients.set(s, signedIn(s.w, {routes: [jobsApi(s.store)]}));
+    return clients.get(s)!;
+  };
+  const paste = async (s: S, id: number, text: string) => (await routes(s)).send('POST', `/api/jobs/applications/${id}/jd/paste`, {body: {text}});
+  const undo = async (s: S, token: number) => (await routes(s)).send('POST', `/api/jobs/undo/${token}`);
+  const readingJobs = (s: S, posting: number) => s.store.db.select().from(t.jobs).where(eq(t.jobs.key, pastedKey(posting))).orderBy(asc(t.jobs.id)).all();
+
+  /** An application at `not_found` holding the pick Jobs couldn't read, and another candidate. */
+  async function failedPick(s: S) {
+    const other = 'https://fabrikam.example/careers/jobs/7';
+    s.web.serve(LINK, FORBIDDEN);
+    s.web.serve(other, FORBIDDEN);
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: null});
+    s.answers({submit_posting_search: () => searched([LINK, other].map(url => ({url, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Glassdoor', verdict: 'maybe'})))});
+    await s.drain();
+    const {candidates} = applicationDetail(s.store, id);
+    await (await routes(s)).send('POST', `/api/jobs/applications/${id}/jd/pick`, {body: {candidate: candidates[0]!.id}});
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: LINK});
+    s.models.requests.length = 0;
+    return id;
+  }
+
+  test('saved at once with the model failing, the pick\'s link kept and an empty reading; retried on the one policy, and filled when the model answers', async () => {
+    const s = await setup();
+    const id = await failedPick(s);
+    s.answers({submit_posting_reading: () => 'overloaded'});
+    const answer = await paste(s, id, `\n\n  ${TEXT}  \n`);
+    expect(answer.status).toBe(200);
+    expect(jobsChangeSchema.parse(answer.body)).toEqual({undo: expect.any(Number), application: id});
+
+    const detail = applicationDetail(s.store, id);
+    expect(detail.jd).toMatchObject({state: 'found', source: 'pasted', platform: null, link: LINK, found_at: SEED_NOW});
+    expect(detail.posting).toEqual({
+      summary: '', location: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [],
+      full_text: expect.stringMatching(/^## About the role\n\nWe need an analyst[^]*\n\n## What you'll need\n\n- SQL\n- Clear writing$/), link: LINK, source: 'pasted', platform: null, found_at: SEED_NOW,
+    });
+    expect(jobsPage(s.store).rows.find(row => row.id === id)!.jd).toMatchObject({state: 'found', source: 'pasted', link: LINK});
+
+    await s.drain();
+    const posting = s.posting(id)!;
+    expect(readingJobs(s, posting.id)).toEqual([expect.objectContaining({state: 'queued', attempts: 1, lastError: 'Anthropic: Overloaded (529)'})]);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({summary: '', source: 'pasted', full_text: detail.posting!.full_text});
+
+    s.answers({submit_posting_reading: reading(READ)});
+    const before = liveEvents(s.w).length;
+    s.w.advance(30_000);
+    await s.drain();
+    expect(s.models.requests.at(-1)!.model).toBe('claude-haiku-5-5');
+    expect(s.models.requests.at(-1)!.input).toMatch(/^Employer: Fabrikam\nPosting: Data Analyst\n\n## About the role/);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({
+      summary: READ.summary, location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: '2 days', salary: '$70,000–$82,000', must_haves: ['SQL'], nice_to_haves: ['Python'],
+      full_text: detail.posting!.full_text, link: LINK, source: 'pasted', platform: null, found_at: SEED_NOW,
+    });
+    expect(readingJobs(s, posting.id).map(job => job.state)).toEqual(['done']);
+    // On the ledger as a reading, and an open detail told it landed.
+    expect(s.ledger().at(-1)).toMatchObject({purpose: 'jobs_reading_jds'});
+    expect(liveEvents(s.w).slice(before).filter(event => event.type === 'jobs')).toEqual([{type: 'jobs', applications: [id], needs_you: []}]);
+  });
+
+  test('with no pick the link is null, and six failures leave the JD saved without a reading', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    s.answers({submit_posting_reading: () => 'overloaded'});
+    expect((await paste(s, id, TEXT)).status).toBe(200);
+    const posting = s.posting(id)!;
+    expect(posting).toMatchObject({link: null, summary: ''});
+    for (let round = 0; round < 8; round += 1) {
+      await s.drain();
+      s.w.advance(60 * 60_000);
+    }
+    expect(readingJobs(s, posting.id)).toEqual([expect.objectContaining({state: 'failed'})]);
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'found', source: 'pasted', link: null}, posting: {summary: '', link: null}});
+  });
+
+  test('an answer the reading can\'t use, or no key at all, leaves it saved as it is', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    s.answers({submit_posting_reading: reading({nonsense: true})});
+    await paste(s, id, TEXT);
+    await s.drain();
+    expect(s.posting(id)).toMatchObject({summary: '', source: 'pasted'});
+    expect(readingJobs(s, s.posting(id)!.id).map(job => job.state)).toEqual(['done']);
+
+    const none = await setup({key: false});
+    const other = none.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    expect((await paste(none, other, TEXT)).status).toBe(200);
+    await none.drain();
+    expect(readingJobs(none, none.posting(other)!.id)).toEqual([expect.objectContaining({state: 'failed', lastError: NO_JOBS_KEY})]);
+    expect(none.posting(other)).toMatchObject({source: 'pasted'});
+  });
+
+  test('the reading needs no web: a dev run fills it in too', async () => {
+    const s = await setup();
+    const reader = new JobsReader({store: s.store, endpoints: s.models.endpoints, timeoutMs: 2000});
+    const engine = new SyncEngine({store: s.store, adapters: new Adapters(), workers: [reader]});
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    s.answers({submit_posting_reading: reading(READ)});
+    await paste(s, id, TEXT);
+    await engine.tick();
+    await engine.settled();
+    expect(s.posting(id)).toMatchObject({summary: READ.summary});
+    expect(s.web.asked()).toEqual([]);
+  });
+
+  test.each([
+    ['too short', 'A role.', 'That\'s too short to be a posting, paste its whole text.'],
+    ['too short once it\'s cleaned', `A role${' '.repeat(300)}here.`, 'That\'s too short to be a posting, paste its whole text.'],
+    ['nothing but space', ' \n '.repeat(100), 'That\'s too short to be a posting, paste its whole text.'],
+    ['too long', 'a'.repeat(MAX_PASTED_CHARS + 1), 'That\'s too long for a posting, Jobs keeps 100,000 characters at most.'],
+  ])('%s is refused with a plain message, and nothing is saved', async (_, text, message) => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    const answer = await paste(s, id, text);
+    expect(answer.status).toBe(400);
+    expect(answer.body.error.message).toBe(message);
+    expect(s.posting(id)).toBeUndefined();
+    expect(applicationDetail(s.store, id).jd.state).toBe('not_found');
+  });
+
+  test('a long posting is saved whole, past what a page is kept to; only over the cap is it refused', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    const line = `${'All of this is the posting, kept as it was pasted, and none of it is cut off at all. '.repeat(10)}\n\n`;
+    const text = line.repeat(Math.ceil(MAX_PASTED_CHARS / line.length)).slice(0, MAX_PASTED_CHARS - 1).trim();
+    expect(text.length).toBeGreaterThan(MAX_POSTING_CHARS);
+    expect((await paste(s, id, `  ${text}  `)).status).toBe(200);
+    expect(s.posting(id)!.fullText.length).toBeGreaterThan(MAX_POSTING_CHARS);
+    expect(s.posting(id)!.fullText.endsWith(text.slice(-40).trim())).toBe(true);
+  });
+
+  test('a JD already saved is refused, as a pick is, and an application that isn\'t there is a 404', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    await paste(s, id, TEXT);
+    const again = await paste(s, id, `${TEXT} And more.`);
+    expect(again.status).toBe(409);
+    expect(again.body.error).toMatchObject({code: 'jd_saved', message: 'This application has its JD already, Not this posting takes it away first.'});
+    expect(s.posting(id)!.fullText).not.toContain('And more.');
+    expect((await paste(s, 999_999, TEXT)).status).toBe(404);
+  });
+
+  test('Undo takes it away and puts the failed pick back as it was, and a reading that comes late writes nothing', async () => {
+    const s = await setup();
+    const id = await failedPick(s);
+    const before = applicationDetail(s.store, id);
+    s.answers({submit_posting_reading: reading(READ)});
+    const {body} = await paste(s, id, TEXT);
+    const posting = s.posting(id)!;
+    expect((await undo(s, body.undo)).status).toBe(200);
+    expect(s.posting(id)).toBeUndefined();
+    expect(applicationDetail(s.store, id)).toEqual(before);
+
+    await s.drain();
+    expect(s.asked()).toEqual([]);
+    expect(readingJobs(s, posting.id).map(job => job.state)).toEqual(['done']);
+    expect(s.posting(id)).toBeUndefined();
+  });
+
+  test('a reading under way when it\'s undone writes nothing, and pasting again reads the new one, not doubled', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    const {body} = await paste(s, id, TEXT);
+    const first = s.posting(id)!;
+    s.answers({submit_posting_reading: () => {
+      // The answer's on its way as the toast's Undo lands.
+      undoCorrection(s.store, body.undo);
+      return reading(READ)();
+    }});
+    await s.drain();
+    expect(s.posting(id)).toBeUndefined();
+
+    s.answers({submit_posting_reading: reading(READ)});
+    await paste(s, id, `${TEXT} The second one.`);
+    const second = s.posting(id)!;
+    expect(second.id).not.toBe(first.id);
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_reading', 'submit_posting_reading']);
+    expect(s.posting(id)).toMatchObject({summary: READ.summary});
+    expect(readingJobs(s, second.id)).toHaveLength(1);
+  });
+
+  test('a merge takes the JD with it, and the reading lands on the application it\'s on now', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    const other = s.make({company: 'Trey Research', title: 'Data Engineer', platform: 'Breezy', jdLookup: 'not_found'});
+    await paste(s, id, TEXT);
+    s.answers({submit_posting_reading: reading(READ)});
+    await (await routes(s)).send('POST', `/api/jobs/applications/${other}/merge`, {body: {other: id}});
+    await s.drain();
+    expect(applicationDetail(s.store, other).posting).toMatchObject({summary: READ.summary, source: 'pasted'});
+  });
+
+  test('a lookup can\'t replace it: one queued when it was pasted, one under way, and Look it up by hand', async () => {
+    const s = await setup();
+    // Queued when it's pasted.
+    const queued = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday'});
+    expect(queueDueLookups(s.store)).toEqual([queued]);
+    await paste(s, queued, TEXT);
+    s.answers({submit_posting_reading: reading(READ)});
+    await s.drain();
+    expect(s.asked()).toEqual(['submit_posting_reading']);
+    expect(s.posting(queued)).toMatchObject({source: 'pasted', link: null, summary: READ.summary});
+    expect(s.lookupJobs(queued).map(job => job.state)).toEqual(['done']);
+
+    // Under way: the search is out when the text comes in.
+    const running = s.make({company: 'Proseware', title: 'Data Analyst', platform: 'Workday'});
+    s.web.serve('https://fabrikam.example/careers/jobs/9', htmlPage(fixture('posting-page.html')));
+    s.answers({
+      submit_posting_search: () => {
+        pastePosting(s.store, running, TEXT);
+        return searched([{url: 'https://fabrikam.example/careers/jobs/9', title: 'Data Analyst', location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict: 'match'}]);
+      },
+      submit_posting_reading: reading(READ),
+    });
+    await lookUpJd(s.store, running, s.options);
+    await s.drain();
+    expect(s.posting(running)).toMatchObject({source: 'pasted', link: null});
+    expect(s.posting(running)!.fullText).toContain('We need an analyst');
+
+    // By hand.
+    expect((await (await routes(s)).send('POST', `/api/jobs/applications/${queued}/lookup`)).status).toBe(409);
+    expect(requestLookup(s.store, queued)).toBe('saved');
+    expect(s.posting(queued)).toMatchObject({source: 'pasted'});
+  });
+
+  test('a JD to confirm still waiting is answered by it, its candidates kept for Not this posting', async () => {
+    const s = await setup();
+    const id = s.make(LUCERNE);
+    s.answers({submit_posting_check: match(['maybe', 'maybe'])});
+    await s.drain();
+    const [item] = jobsPage(s.store).needs_you;
+    s.answers({submit_posting_reading: reading(READ)});
+    await paste(s, id, TEXT);
+    expect(jobsPage(s.store).needs_you.map(each => each.id)).not.toContain(item!.id);
+    const c = await routes(s);
+    await c.send('POST', `/api/jobs/applications/${id}/not-this-posting`);
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 2}, posting: null});
+  });
+
+  test('Not this posting takes it away as any other: the pick\'s link turned down, the other candidate offered; with no link it\'s No JD found', async () => {
+    const s = await setup();
+    const id = await failedPick(s);
+    await paste(s, id, TEXT);
+    expect((await (await routes(s)).send('POST', `/api/jobs/applications/${id}/not-this-posting`)).status).toBe(200);
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, posting: null, candidates: [{link: 'https://fabrikam.example/careers/jobs/7'}]});
+    expect(s.db.select().from(j.jobsRejectedPostings).where(eq(j.jobsRejectedPostings.applicationId, id)).all().map(row => row.link)).toEqual([LINK]);
+
+    const plain = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    await paste(s, plain, TEXT);
+    expect((await (await routes(s)).send('POST', `/api/jobs/applications/${plain}/not-this-posting`)).status).toBe(200);
+    expect(applicationDetail(s.store, plain)).toMatchObject({jd: {state: 'not_found', link: null}, posting: null});
+    expect(s.db.select().from(j.jobsRejectedPostings).where(eq(j.jobsRejectedPostings.applicationId, plain)).all()).toEqual([]);
+  });
+
+  test('Look it up after a failed pick, then paste: no pick left, so no link', async () => {
+    const s = await setup();
+    const id = await failedPick(s);
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await (await routes(s)).send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: null});
+    await paste(s, id, TEXT);
+    expect(s.posting(id)).toMatchObject({link: null, source: 'pasted'});
   });
 });
 

@@ -39,8 +39,8 @@ export const STATUS_OF_JOB_EVENT = {
 
 export const isQuietJobEvent = (kind: JobEventKind): kind is QuietJobEventKind => (QUIET_JOB_EVENT_KINDS as readonly string[]).includes(kind);
 
-/** How a JD was found (decision 54): the email's own link, the hiring platform's API, or a web search. */
-export const JD_SOURCES = ['email_link', 'platform', 'search'] as const;
+/** How a JD was found (decision 54): the email's own link, the hiring platform's API or a web search; or the user pasted it (SV-140). */
+export const JD_SOURCES = ['email_link', 'platform', 'search', 'pasted'] as const;
 export type JdSource = (typeof JD_SOURCES)[number];
 
 /**

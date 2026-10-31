@@ -60,6 +60,10 @@ import type {FoundPosting, GovernmentJob, JobsWeb, OpenedLink} from './web.ts';
 export const LOOKUP_KEY_PREFIX = 'jobs_jd:';
 export const lookupKey = (applicationId: number) => `${LOOKUP_KEY_PREFIX}${applicationId}`;
 
+export const PASTED_KEY_PREFIX = 'jobs_pasted:';
+/** The job reading a pasted posting, by the posting: it can't double up, and it follows the JD through a merge. */
+export const pastedKey = (postingId: number) => `${PASTED_KEY_PREFIX}${postingId}`;
+
 /**
  * A lookup that failed for good (six tries, or no key) is queued again by the rescan after this
  * long, so it's still never "No JD found" and an outage costs a few tries an hour, not one a tick.
@@ -469,6 +473,54 @@ export function savePosting(store: Store, applicationId: number, found: FoundPos
     db.update(j.jobsApplications).set({jdLookup: 'none', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
     return true;
+  });
+}
+
+/**
+ * The posting the user pasted (SV-140), inside its correction: saved at once as the JD with an empty
+ * reading, the pick's link if there is one, so it never waits on a model. It's refused over a saved
+ * JD, a lookup still running can't write over it (`savePosting`), and its job reads it. The other
+ * candidates stay for Not this posting. Returns the JD to confirm it answered.
+ */
+export function savePasted(store: Store, applicationId: number, text: string, now: string): number[] {
+  const db = jobsDb(store.sqlite);
+  if (hasPosting(store, applicationId)) throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
+  const reading = postingReadingOf(null, null);
+  const posting = db.insert(j.jobsPostings).values({
+    applicationId, fullText: text, summary: reading.summary, location: reading.location, workplace: reading.workplace, workplaceDetail: reading.workplaceDetail,
+    salary: reading.salary, mustHaves: reading.mustHaves, niceToHaves: reading.niceToHaves, link: pickedCandidate(store, applicationId)?.link ?? null, source: 'pasted',
+    platform: null, foundAt: now,
+  }).returning({id: j.jobsPostings.id}).get();
+  db.update(j.jobsJdCandidates).set({pickedAt: null}).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
+  const answered = answerJdItems(store, applicationId, 'found', now);
+  db.update(j.jobsApplications).set({jdLookup: 'none', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
+  enqueueJob(store, {kind: 'jobs_read', key: pastedKey(posting.id)});
+  return answered;
+}
+
+/**
+ * Haiku reads a pasted posting, filling in only what it read (decision 53: the text is never touched).
+ * A JD taken away meanwhile (Undo, Not this posting) is left alone. Throws a ProviderError when it
+ * failed, for the job to retry; the JD stays saved without its reading.
+ */
+export async function readPasted(store: Store, postingId: number, {endpoints, timeoutMs, signal}: Omit<LookupOptions, 'web'>): Promise<void> {
+  const db = jobsDb(store.sqlite);
+  const held = () => db.select({text: j.jobsPostings.fullText, applicationId: j.jobsPostings.applicationId}).from(j.jobsPostings).where(eq(j.jobsPostings.id, postingId)).get();
+  const posting = held();
+  if (!posting) return;
+  const haiku = jobsModelClient(store, endpoints, 'reading', timeoutMs);
+  if (!haiku) throw new ProviderError('auth', NO_JOBS_KEY);
+  const application = db.select({company: j.jobsApplications.company, title: j.jobsApplications.title}).from(j.jobsApplications).where(eq(j.jobsApplications.id, posting.applicationId)).get();
+  if (!application) return;
+  const reading = await readPosting(store, haiku, application, {title: application.title, location: null, facts: [], text: posting.text}, signal);
+  transaction(store, () => {
+    const still = held();
+    if (!still) return;
+    db.update(j.jobsPostings).set({
+      summary: reading.summary, location: reading.location, workplace: reading.workplace, workplaceDetail: reading.workplace === 'hybrid' ? reading.workplaceDetail : null,
+      salary: reading.salary, mustHaves: reading.mustHaves, niceToHaves: reading.niceToHaves,
+    }).where(eq(j.jobsPostings.id, postingId)).run();
+    noteLive(store, {type: 'jobs', applications: [still.applicationId], needs_you: []});
   });
 }
 

@@ -15,14 +15,17 @@
 //   gone, so a later email can make it again.
 // - Not this posting: the JD goes and its link is turned down; the other candidates are offered again,
 //   or it's No JD found.
+// - Paste the posting: the user's copy is the JD, read afterwards (SV-140).
 // A merge, a move or an event taken off settles the status from the emails again, unless the user set it.
-import {isQuietJobEvent, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
+import {isQuietJobEvent, MAX_PASTED_CHARS, PASTED_TOO_LONG, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobEventKind, JobHandField, JobStatus, JobsEdit} from '@setpoint/shared';
 import {and, asc, eq, inArray, isNull} from 'drizzle-orm';
 import {conflict, invalid, notFound} from '../errors.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
+import {savePasted} from './lookup.ts';
+import {MIN_POSTING_CHARS, plainToMarkdown} from './markdown.ts';
 import {statusAfter, statusFromEvents, titleKey} from './rules.ts';
 import * as j from './schema.ts';
 import {addAlias, emailSetsStatus, rejectLinks, rejectedLinks, setByHand} from './stick.ts';
@@ -275,6 +278,21 @@ export function notThisPosting(store: Store, id: number): Change {
     db.delete(j.jobsPostings).where(eq(j.jobsPostings.id, posting.id)).run();
     const item = offerCandidates(store, application, now);
     return {application: id, created: item === null ? {} : {needsYou: [item]}};
+  });
+}
+
+/**
+ * POST /api/jobs/applications/:id/jd/paste: the user's own copy of the posting, saved at once as its
+ * JD with Undo, then read by its job (lookup.ts `savePasted`). It's cleaned as a page's text is but
+ * never cut: past the most it takes, or too little to be a posting, it's refused in words for the page.
+ */
+export function pastePosting(store: Store, id: number, pasted: string): Change {
+  if (pasted.length > MAX_PASTED_CHARS) throw invalid(PASTED_TOO_LONG);
+  const text = plainToMarkdown(pasted, Infinity);
+  if (text.length < MIN_POSTING_CHARS) throw invalid('That\'s too short to be a posting, paste its whole text.');
+  return corrected(store, {applications: [id]}, now => {
+    applicationOf(store, id);
+    return {application: id, changed: {needsYou: savePasted(store, id, text, now)}};
   });
 }
 
