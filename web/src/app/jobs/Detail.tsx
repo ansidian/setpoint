@@ -281,10 +281,10 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   return (
     <div className="jb-arrive" key={detail.jd.state}>
       <h2 className="jb-label">Job description</h2>
-      <div className="jb-nojd">
+      <div className={notFound ? 'jb-nojd stacked' : 'jb-nojd'}>
         <span className="grow line">
           <Icon name={line.icon} size={16} />
-          <span className="words"><span className="ink2">{line.lead}</span><span className="num"> · {line.rest}</span></span>
+          <span className="words"><span className="ink2">{line.lead}</span><span className="num"><span className="sep"> · </span>{line.rest}</span></span>
         </span>
         {!(notFound && pasting) && detail.jd.state !== 'candidates' && (
           <span className="acts">
