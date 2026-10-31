@@ -8,14 +8,14 @@ import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
 import {
-  jobsAssignInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
+  jobsAssignInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPasteInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
 } from '@setpoint/shared';
 import type {JobsChangeOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
 import {conflict, invalid, notFound, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup} from './lookup.ts';
 import {
-  deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, setStatus,
+  deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, pastePosting, setStatus,
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
 import {jobsAi} from './models.ts';
@@ -65,6 +65,7 @@ export function jobsApi(store: Store) {
   const change = (answer: JobsChangeOut) => answer;
   api.post('/jobs/applications/:id/jd/pick', async c => c.json(change(pickCandidate(store, id(c.req.param('id')), parse(jobsPickInput, await body(c)).candidate))));
   api.post('/jobs/applications/:id/jd/none', c => c.json(change(noneOfThese(store, id(c.req.param('id'))))));
+  api.post('/jobs/applications/:id/jd/paste', async c => c.json(change(pastePosting(store, id(c.req.param('id')), parse(jobsPasteInput, await body(c)).text))));
   api.post('/jobs/needs-you/:id/assign', async c => c.json(change(assignItem(store, id(c.req.param('id')), parse(jobsAssignInput, await body(c)).application))));
   api.post('/jobs/needs-you/:id/track', c => c.json(change(trackItem(store, id(c.req.param('id'))))));
   api.post('/jobs/needs-you/:id/not-a-job', c => c.json(change(notAJob(store, id(c.req.param('id'))))));

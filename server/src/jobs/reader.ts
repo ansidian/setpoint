@@ -34,7 +34,7 @@ import {emailReadingOf, JOBS_MAX_OUTPUT_TOKENS, JOBS_PROMPT_VERSION, JOBS_SYSTEM
 import type {EmailReading} from './prompt.ts';
 import {announceHistory, finishHistory, HISTORY_KEY, resumeHistory} from './history.ts';
 import {historyRow, historyStatus, historyWindow} from './historyState.ts';
-import {LOOKUP_KEY_PREFIX, lookUpJd, queueDueLookups} from './lookup.ts';
+import {LOOKUP_KEY_PREFIX, lookUpJd, PASTED_KEY_PREFIX, queueDueLookups, readPasted} from './lookup.ts';
 import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts';
 import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
 import type {Plan, ReadMatchEmail} from './rules.ts';
@@ -265,6 +265,7 @@ export class JobsReader implements JobWorker {
 
   async run(job: Job, signal: AbortSignal) {
     if (job.key.startsWith(LOOKUP_KEY_PREFIX)) return this.lookUp(job, signal);
+    if (job.key.startsWith(PASTED_KEY_PREFIX)) return this.readPasted(job, signal);
     if (job.key === HISTORY_KEY) return this.readHistory(job, signal);
     const store = this.store;
     const window = readWindow(store);
@@ -327,6 +328,20 @@ export class JobsReader implements JobWorker {
     } catch (caught) {
       const error = asProviderError(caught);
       console.error(`Jobs couldn't look up application ${applicationId}'s JD, ${error.message}`);
+      failJob(store, job, error);
+    }
+  }
+
+  /** One pasted posting's reading (SV-140): done, or failed by the one retry policy, its JD saved either way. It needs no web. */
+  private async readPasted(job: Job, signal: AbortSignal) {
+    const store = this.store;
+    const postingId = Number(job.key.slice(PASTED_KEY_PREFIX.length));
+    try {
+      await readPasted(store, postingId, {endpoints: this.endpoints, timeoutMs: this.timeoutMs, signal});
+      finishJob(store, job.id);
+    } catch (caught) {
+      const error = asProviderError(caught);
+      console.error(`Jobs couldn't read pasted posting ${postingId}, ${error.message}`);
       failJob(store, job, error);
     }
   }

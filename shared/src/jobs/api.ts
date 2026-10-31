@@ -16,6 +16,7 @@
 // J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
 //   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
 //   POST   /api/jobs/applications/:id/jd/none           None of these
+//   POST   /api/jobs/applications/:id/jd/paste          jobsPasteInput (Paste the posting)
 //   POST   /api/jobs/needs-you/:id/assign               jobsAssignInput (Assign to…, Another application…)
 //   POST   /api/jobs/needs-you/:id/track                Track this (decision 69)
 //   POST   /api/jobs/needs-you/:id/not-a-job            Not about a job
@@ -215,7 +216,7 @@ export const jobsPageSchema = z.strictObject({
 });
 export type JobsPageOut = z.infer<typeof jobsPageSchema>;
 
-/** A saved JD (decision 53): kept as it was, never overwritten. */
+/** A saved JD (decision 53): kept as it was, never overwritten. One pasted is saved before it's read, so its reading can be empty (SV-140). */
 export const postingSchema = z.strictObject({
   // The three-line what-they-want summary.
   summary: z.string(),
@@ -229,9 +230,10 @@ export const postingSchema = z.strictObject({
   nice_to_haves: z.array(z.string()),
   // The posting's full text, cleaned to markdown.
   full_text: z.string(),
+  // Null for a posting pasted with no pick behind it (SV-140).
   link: z.url().nullable(),
   source: z.enum(JD_SOURCES),
-  // The platform it was found on ("Greenhouse"); null for a search.
+  // The platform it was found on ("Greenhouse"); null for a search or one pasted.
   platform: z.string().nullable(),
   found_at: instant,
 });
@@ -406,6 +408,11 @@ export type JobsUndoneOut = z.infer<typeof jobsUndoneSchema>;
 
 /** A candidate picked as the posting. */
 export const jobsPickInput = z.strictObject({candidate: id});
+/** The most Paste the posting takes: refused, never cut. */
+export const MAX_PASTED_CHARS = 100_000;
+export const PASTED_TOO_LONG = 'That\'s too long for a posting, Jobs keeps 100,000 characters at most.';
+/** Paste the posting: its text, trimmed; how long it may be is the route's to say, in words for the page. */
+export const jobsPasteInput = z.strictObject({text: z.string().trim()});
 /** Assign to…: the application an update is about. */
 export const jobsAssignInput = z.strictObject({application: id});
 /** Move to…: the application an event belongs to instead. */
