@@ -669,7 +669,7 @@ describe('a search\'s candidates are opened before they\'re offered (D388)', () 
 });
 
 describe('not found (D320)', () => {
-  test('a pick Jobs can\'t read keeps its link and asks nothing more, and Look it up searches again', async () => {
+  test('a pick Jobs can\'t read keeps its link and asks nothing more, and Look it up turns that link down, so the search can\'t offer it again (SV-140)', async () => {
     const s = await setup();
     const link = 'https://www.glassdoor.example/job-listing/data-analyst-2291';
     s.web.serve(link, {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}});
@@ -684,10 +684,53 @@ describe('not found (D320)', () => {
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link});
     expect(s.lookupJobs(id).at(-1)!.state).toBe('done');
 
+    // The same link comes back from the search, with the application's next best.
+    const other = 'https://fabrikam.example/careers/jobs/7';
+    s.web.serve(other, FORBIDDEN);
+    s.answers({submit_posting_search: () => searched([{url: link, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Glassdoor', verdict: 'match'}, {url: other, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Fabrikam Careers', verdict: 'maybe'}])});
+    const asked = s.web.asked().length;
+    await c.send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    // Not opened, not offered: only the other.
+    expect(s.web.asked().slice(asked).filter(path => path.includes('glassdoor'))).toEqual([]);
+    expect(applicationDetail(s.store, id)).toMatchObject({jd: {state: 'candidates', candidates: 1}, candidates: [{link: other}]});
+  });
+
+  test('a failed pick\'s link is lost as Open posting when the search after it finds nothing, and only that link is turned down (SV-140)', async () => {
+    const s = await setup();
+    const [failed, kept] = ['https://www.glassdoor.example/job-listing/1', 'https://www.glassdoor.example/job-listing/2'];
+    s.web.serve(failed, FORBIDDEN);
+    s.web.serve(kept, FORBIDDEN);
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: null});
+    const offered = [failed, kept].map(url => ({url, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Glassdoor', verdict: 'maybe'}));
+    s.answers({submit_posting_search: () => searched(offered)});
+    await s.drain();
+    const c = await signedIn(s.w, {routes: [jobsApi(s.store)]});
+    await c.send('POST', `/api/jobs/applications/${id}/jd/pick`, {body: {candidate: applicationDetail(s.store, id).candidates[0]!.id}});
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: failed});
+    await c.send('POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    // The candidate that wasn't picked can come back.
+    expect(applicationDetail(s.store, id).candidates.map(candidate => candidate.link)).toEqual([kept]);
+
     s.answers({submit_posting_search: () => searched([], 3)});
     await c.send('POST', `/api/jobs/applications/${id}/lookup`);
     await s.drain();
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: null});
+  });
+
+  test('a lookup still under way doesn\'t count as a failed pick: its link isn\'t turned down (SV-140)', async () => {
+    const s = await setup();
+    const link = 'https://www.glassdoor.example/job-listing/3';
+    s.web.serve(link, FORBIDDEN);
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: null});
+    s.answers({submit_posting_search: () => searched([{url: link, title: 'Data Analyst', location: 'Atlanta, GA', site: 'Glassdoor', verdict: 'maybe'}])});
+    await s.drain();
+    const c = await signedIn(s.w, {routes: [jobsApi(s.store)]});
+    await c.send('POST', `/api/jobs/applications/${id}/jd/pick`, {body: {candidate: applicationDetail(s.store, id).candidates[0]!.id}});
+    expect(requestLookup(s.store, id)).toBe('looking');
+    expect(s.db.select().from(j.jobsRejectedPostings).where(eq(j.jobsRejectedPostings.applicationId, id)).all()).toEqual([]);
   });
 
   test('"No JD found" after the platforms and a search missed, never retried on its own; Look it up tries again', async () => {
