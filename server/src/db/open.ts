@@ -27,7 +27,12 @@ export function registerMigrationFunctions(sqlite: Database.Database) {
 
 /** Opens (creating if needed) and migrates the database. Pass ':memory:' for tests. */
 export function openDatabase(file: string): OpenDatabase {
-  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), {recursive: true});
+  if (file !== ':memory:') {
+    fs.mkdirSync(path.dirname(file), {recursive: true});
+    // A large migration's temporary data sits beside the database: the image's /tmp is a small
+    // tmpfs, which filled at 0022's rewrite of every email (SQLITE_FULL, with the disk half empty).
+    process.env.SQLITE_TMPDIR ??= path.dirname(file);
+  }
   const sqlite = new Database(file);
   if (file !== ':memory:') sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('synchronous = NORMAL');

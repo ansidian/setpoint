@@ -19,7 +19,7 @@ healthcheck.
 ## The data volume
 
 `SETPOINT_DATA_DIR` (`/data` in the image) holds `setpoint.sqlite` and its WAL files. Mount it as a
-volume writable by uid 1000. Migrations run at every start, inside a transaction. Back up the whole
+volume writable by uid 1000. Migrations run at every start, inside a transaction, with SQLite's temporary files in this directory (`SQLITE_TMPDIR` moves them), so a large one needs about the database's size free here. Back up the whole
 directory. The encryption key must not live in it, so a backup alone can't open the credentials.
 
 ## Settings
