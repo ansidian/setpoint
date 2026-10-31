@@ -251,7 +251,8 @@ third, because it ranked importance above match.
 - Free text without chips requires every word but filler and ranks by how well they matched: sender,
   then subject, then across the email's fields, then close together in the body, newest first
   within each. No importance boost. Emails about the search come first; those that only mention it
-  fold away under "12 more mention these words". When no email has every word, the rarest words each
+  fold away under "12 more mention these words", unless fewer than 5 come first, when search isn't
+  sure and hides nothing. When no email has every word, the rarest words each
   has rank them, and the list says so. Alfred keeps a broader search of its own (SV-137).
 - The body search sees leaves out links and footers, keeping each link's domain as a word, and an
   email's summary counts as body (SV-135). The reader, triage and Alfred still read the whole body.

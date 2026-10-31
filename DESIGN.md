@@ -400,8 +400,11 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
   pointing right. Under the pointer it's `sub`, under the keyboard's cursor `sub2`, pressed `sub3`.
   J and K stop on it, open or not, so Enter closes it too, and the list runs on through its rows.
   The results line counts what's above it. It waits for its rows' pages until it opens, and shows
-  once everything above it has loaded. A new search starts folded. When nothing is about the search,
-  there's no line: what matched is the list.
+  once everything above it has loaded. With 5 rows or more above it a new search starts folded; with
+  1 to 4 search isn't sure, so it starts open, its rows paging in with no click, and its line still
+  closes it. Each search decides for itself with its answer, drawn with no motion, and a close holds
+  while the same words are refined. When nothing is about the search, there's no line: what matched
+  is the list.
 - **No email has every word:** "No email has every word · 3 have some of them", ranked by the rarest
   words each has; the line under them reads "12 more mention some of these words".
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
@@ -3422,8 +3425,8 @@ it changes what's on screen.
     4. every word across the sender, subject, summary and search terms, or a type a word names;
     5. a phrase in the body, or the words within 8 of each other there.
 
-    The rest fold away: other body matches, then a word only partly matched in the body, then a word
-    only in a link's domain. The sender and subject take a word's start; the summary, search terms
+    The rest fold away, unless fewer than 5 rows sit above them: other body matches, then a word
+    only partly matched in the body, then a word only in a link's domain. The sender and subject take a word's start; the summary, search terms
     and body want it whole, except the word being typed and a phrase. A type's word, and `bill` for
     a statement, brings that type's emails first within a tier. Alfred keeps its own broad search
     (filler counts, any one word will do), so its answers don't change.
