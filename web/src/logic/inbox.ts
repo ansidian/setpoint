@@ -88,10 +88,19 @@ export function withoutEmails(groups: InboxGroupOut[], ids: ReadonlySet<number>)
  * Where J and K stop: each row shown (the list's under the group 'all', the shelf's under 'pinned'),
  * and a folded Noise line (Enter opens it).
  */
-export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'noise'; date: string};
+export type Stop = {key: string; kind: 'row'; group: InboxGroup | 'all'; id: number} | {key: string; kind: 'noise'; date: string} | {key: string; kind: 'mentions'};
 
 /** All's stops: every row, newest first, by its id. */
 export const allStops = (rows: MessageRowOut[]): Stop[] => rows.map(row => ({key: `all:${row.id}`, kind: 'row', group: 'all', id: row.id}));
+
+export const MENTIONS_KEY = 'mentions';
+
+/** Search's stops: what's about the search, its fold, open or not, so Enter closes what it opened, then the rows it opened. */
+export const searchStops = ({about, more, mentions}: {about: MessageRowOut[]; more: number; mentions: MessageRowOut[]}): Stop[] => [
+  ...allStops(about),
+  ...(more > 0 ? [{key: MENTIONS_KEY, kind: 'mentions'} satisfies Stop] : []),
+  ...allStops(mentions),
+];
 
 export const rowKey = (group: InboxGroup, id: number) => `${group}:${id}`;
 export const groupKey = (group: InboxGroup) => `group:${group}`;

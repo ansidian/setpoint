@@ -10,7 +10,7 @@ import {openDatabase} from '../../db/open.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
-import {codeExpiring, coffeeHtml, lastYear, newDigest, newsletterHtml, recoveryHtml, secondPin} from './mailBoards.ts';
+import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, secondPin} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
 import {linkPlaces} from './linkPlaces.ts';
@@ -34,6 +34,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'link-places': {board: 'detail checks', apply: linkPlaces},
   // Not a board: search's rows and Alfred's sources hold an age with its year.
   'last-year': {board: 'search checks', apply: lastYear},
+  // Not a board: search's fold, with more above it than a page holds and more under it than one.
+  'ledger-audit': {board: 'search checks', apply: ledgerAudit},
   // F7 (states.ts): health states and Settings' contents.
   'needs-reconnect': {board: '17, 19a', apply: needsReconnect},
   'stale-personal': {board: '17', apply: stalePersonal},

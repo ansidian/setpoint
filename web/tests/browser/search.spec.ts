@@ -12,7 +12,7 @@ import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from 
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred} from './fakeAlfred.ts';
-import {cleanUp, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -134,6 +134,130 @@ test('search: words become chips, results replace the list, J / K / Enter open t
     await page.locator('.list .gh.new').click();
     await page.keyboard.press('Meta+f');
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Search mail');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('what only mentions the search folds under a line: it opens in place, J / K cross it, an open logs the place it shows at, and each search starts folded', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    await page.keyboard.press('/');
+    await page.keyboard.type('renewal');
+    await page.keyboard.press('Enter');
+    const rows = page.locator('.arow.result');
+    const fold = page.locator('.search-list .mentions');
+    await fold.waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '3 results');
+    assert.equal(await rows.count(), 3);
+    assert.equal(await fold.textContent(), '1 more mentions these words');
+    assert.equal(await fold.getAttribute('aria-expanded'), 'false');
+    // J stops on the fold, under its fill; Enter opens it in place, the cursor on the row it opened.
+    const fill = (token: string) => page.evaluate(name => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = `var(--${name})`;
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return colour;
+    }, token);
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.locator('.search-list .mentions.cur').waitFor();
+    assert.equal(await rested(() => fold.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => fill('sub2')));
+    await page.keyboard.press('Enter');
+    await until('the fold opened', () => fold.getAttribute('aria-expanded'), expanded => expanded === 'true');
+    await until('its row', () => rows.count(), count => count === 4);
+    // The list runs on over it, K back as J on, and an open logs the place shown.
+    await page.locator('.search-list .mentions.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur', {hasText: 'October rent received'}).waitFor();
+    await page.keyboard.press('k');
+    await page.locator('.search-list .mentions.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur', {hasText: 'October rent received'}).waitFor();
+    const opened = page.waitForRequest(request => request.url().endsWith('/api/search/opened'));
+    await page.keyboard.press('Enter');
+    await page.locator('.rd-subj', {hasText: 'October rent received'}).waitFor();
+    assert.equal((JSON.parse((await opened).postData()!) as {position: number}).position, 3);
+    await page.keyboard.press('Escape');
+    await page.locator('.rd-subj').waitFor({state: 'detached'});
+    // A click folds it again, its row folding out, and the pointer takes the cursor as a row's does.
+    await fold.click();
+    await until('the row gone', () => rows.count(), count => count === 3);
+    assert.equal(await fold.getAttribute('aria-expanded'), 'false');
+    await page.keyboard.press('k');
+    await page.locator('.arow.result.cur').waitFor();
+    await point(fold);
+    await page.locator('.search-list .mentions.cur').waitFor();
+    // Another search starts folded.
+    await fold.click();
+    await until('the row back', () => rows.count(), count => count === 4);
+    await page.keyboard.press('/');
+    await page.keyboard.type('renewals');
+    await page.keyboard.press('Enter');
+    await page.locator('.search-list .mentions[aria-expanded="false"]').waitFor();
+    await until('its rows', () => rows.count(), count => count === 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('search\'s fold across pages: what\'s above it pages in, nothing under it is asked for until it opens, then its pages come', async () => {
+  const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
+  try {
+    const page = await load(setpoint);
+    const searches: {offset?: number}[] = [];
+    page.on('request', request => {
+      if (request.url().endsWith('/api/search')) searches.push(JSON.parse(request.postData()!) as {offset?: number});
+    });
+    await page.keyboard.press('/');
+    await page.keyboard.type('ledger audit');
+    await page.keyboard.press('Enter');
+    const rows = page.locator('.arow.result');
+    const fold = page.locator('.search-list .mentions');
+    await rows.nth(49).waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
+    assert.equal(await rows.count(), 50);
+    assert.equal(await fold.count(), 0);
+    // To the list's end: the rest of the first section, and only then the fold under it.
+    await rows.last().scrollIntoViewIfNeeded();
+    await fold.waitFor();
+    assert.equal(await rows.count(), 60);
+    assert.equal(await fold.textContent(), '60 more mention these words');
+    assert.equal(await rows.last().locator('.l2').textContent(), 'Ledger audit, part 1');
+    await fold.scrollIntoViewIfNeeded();
+    // A pause for a "nothing happened" check: the page under the fold isn't asked for.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.deepEqual(searches.map(search => search.offset ?? 0).filter(offset => offset > 0), [50]);
+    // J from the last row above stops on the fold; Enter opens it, and the rows loaded with the last page show at once.
+    await rows.last().hover();
+    await page.locator('.arow.result.cur').waitFor();
+    await page.keyboard.press('j');
+    await page.locator('.search-list .mentions.cur').waitFor();
+    await page.keyboard.press('Enter');
+    await until('the rows under it', () => rows.count(), count => count > 60);
+    assert.equal((await rows.nth(60).locator('.l2').textContent()), 'Quarter notes, part 60');
+    // J goes on through them, and an open logs the place the row shows at, the fold's line uncounted.
+    const second = await rows.nth(61).locator('.l2').textContent();
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.locator('.arow.result.cur .l2').getByText(second!, {exact: true}).waitFor();
+    const opened = page.waitForRequest(request => request.url().endsWith('/api/search/opened'));
+    await page.keyboard.press('Enter');
+    await page.locator('.rd-subj').waitFor();
+    const log = JSON.parse((await opened).postData()!) as {position: number};
+    assert.equal(log.position, 61);
+    await page.keyboard.press('Escape');
+    await page.locator('.rd-subj').waitFor({state: 'detached'});
+    // Their last page comes as the list nears its end.
+    await rows.last().scrollIntoViewIfNeeded();
+    await until('every row', () => rows.count(), count => count === 120);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

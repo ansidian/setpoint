@@ -48,7 +48,12 @@ export interface SearchFieldState<C, O, R> {
 }
 
 export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchResultOut> {
-  /** The search log: the user opened this result. */
+  // What the answers are for: the same words and chips keep their fold, and others start folded.
+  answering: string;
+  // Whether the results that only mention the search show.
+  mentions: boolean;
+  toggleMentions: () => void;
+  /** The search log: the user opened this result, at its place in the list. */
   opened: (id: number) => void;
   /** A result as an action left it: read once opened, Done (UX #9). */
   mark: (id: number, change: Partial<SearchResultOut>) => void;
@@ -181,9 +186,16 @@ export function useSearch(account: number | null, plain = false): Search {
   const search = useSearchField<SearchChip, SearchResultOut, SearchOut>((text, chips, after) => searchMail({
     text, chips, account, ...(after ? {page: {search_id: after.search_id, offset: after.next_offset!}} : {}),
   }), plain);
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const answering = JSON.stringify([search.out?.chips, search.out?.text]);
   return {
     ...search,
+    answering,
+    mentions: openFor === answering,
+    toggleMentions: () => setOpenFor(openFor === answering ? null : answering),
     opened(id) {
+      // `results` are in the server's order, the fold's rows after what's above it, loaded or shown
+      // or not, so this is the place the list shows it at.
       const position = search.results.findIndex(result => result.id === id);
       // Best effort: the open is only logged for search's ranking, and the email opens either way.
       if (search.out && position >= 0) void searchOpened(search.out.search_id, id, position).catch(() => {});

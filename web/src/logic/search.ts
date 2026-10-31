@@ -99,6 +99,28 @@ export function resultsLine(out: Pick<SearchOut, 'total'> & Partial<Pick<SearchO
   return [...count, ...(out.order === 'newest' ? ['newest first'] : [])];
 }
 
+/** How many results the list shows before its fold: all of them when none is about the search. */
+export const firstSection = (out: Pick<SearchOut, 'total' | 'first_section'>) => out.first_section || out.total;
+
+/**
+ * The results as the list shows them: those about the search, then, once they're all here, a fold
+ * with how many `more` only mention it, and their rows once it's `open`. The server's order runs
+ * straight through, so a result's index among all the results is its place in the list however it's
+ * folded. `gone` are rows taken out meanwhile (Trash), which leave a section without moving the fold.
+ */
+export function resultSections<R extends {id: number}>(results: readonly R[], out: Pick<SearchOut, 'total' | 'first_section'> | null, open: boolean, gone: ReadonlySet<number>): {about: R[]; more: number; mentions: R[]} {
+  const first = out ? firstSection(out) : results.length;
+  const here = (result: R) => !gone.has(result.id);
+  const about = results.slice(0, first).filter(here);
+  if (results.length < first) return {about, more: 0, mentions: []};
+  const after = results.slice(first);
+  const mentions = after.filter(here);
+  return {about, more: (out?.total ?? results.length) - first - (after.length - mentions.length), mentions: open ? mentions : []};
+}
+
+/** The fold's line: "12 more mention these words". */
+export const mentionsLine = (more: number, partial: boolean) => `${more} more ${more === 1 ? 'mentions' : 'mention'} ${partial ? 'some of ' : ''}these words`;
+
 /** "Indexing · 62% · showing what's indexed so far", during the first backfill. */
 export const indexingLine = (indexing: SearchOut['indexing']) =>
   indexing ? `Indexing · ${Math.round(indexing.progress * 100)}% · showing what’s indexed so far` : null;

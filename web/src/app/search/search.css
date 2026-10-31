@@ -19,7 +19,7 @@
 .list.search-wait { opacity: .55; transition: opacity var(--dur-fast) var(--ease); }
 .search-list.arrive { animation: sk-arrive var(--dur-fast) var(--ease); }
 .search-list > .arow.result { transition: opacity var(--dur-fast) var(--ease); }
-.search-list.pending > .arow.result { opacity: .55; transition-delay: var(--skel-delay); }
+.search-list.pending > :is(.arow.result, .mentions) { opacity: .55; transition-delay: var(--skel-delay); }
 .search .qchip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 4px 0 8px; border-radius: 999px; background: var(--sub2); color: var(--ink); font-size: 12.5px; white-space: nowrap; flex: none; }
 .search .qchip.sel { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 .search .qchip .k { color: var(--ink3); font-size: 11px; }
@@ -39,6 +39,15 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
+/* The fold over what only mentions the search: the results line's words, a Noise line's answers
+   (#158) and its one chevron, turned to point right while folded (#198). */
+.search-list .mentions { transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12.5px; text-align: left; }
+.search-list .mentions .chev { display: grid; margin-left: auto; }
+.search-list .mentions .chev .icon { transition: transform var(--dur-fast) var(--ease); }
+.search-list .mentions.collapsed .chev .icon { transform: rotate(-90deg); }
+.search-list .mentions.cur, .search-list .mentions:focus-visible { background: var(--sub2); }
+@media (hover: hover) { .search-list .mentions:not(.cur):hover { background: var(--sub); } }
+.search-list .mentions:active { background: var(--sub3); transition-duration: var(--dur-press); }
 /* The first backfill's line (states-15, search-12): the shared spinner before its words, in the line's ink3,
    and its progress along its foot (states.css › .progress). */
 .search-list .bar .spin { margin-left: 0; vertical-align: 0; color: inherit; }

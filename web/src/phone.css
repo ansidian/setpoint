@@ -90,7 +90,8 @@
      pointer that hovers, styles.css). */
   .row.cur:not(.open), .arow.cur:not(.open) { background: none; }
   .gh.collapsed.cur { box-shadow: none; }
-  .nfold.cur { background: none; }
+  .nfold.cur, .search-list .mentions.cur { background: none; }
+  .search-list .mentions { min-height: 44px; }
   /* A tap lands at once, `sub2` under the thumb, and its release fades over 180 ms, as a native list's;
      the reader's bottom bar takes the fill in its 14 px shape and its glyph gives a little, as do the
      tabs'. Back and Pin press as every button does (styles.css). Nothing stays lit after (polish audit

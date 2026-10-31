@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  firstSection, mentionsLine, resultSections, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -110,9 +110,47 @@ describe('the results line and the indexing line', () => {
     expect(resultsLine({total: 1, order: 'match', partial: true})).toEqual(['No email has every word', '1 has some of them']);
     expect(resultsLine({total: 3, order: 'newest', partial: true})).toEqual(['No email has every word', '3 have some of them', 'newest first']);
   });
+  test('the results above the fold, with none about the search being a plain list', () => {
+    expect(firstSection({total: 18, first_section: 6})).toBe(6);
+    expect(firstSection({total: 18, first_section: 18})).toBe(18);
+    expect(firstSection({total: 18, first_section: 0})).toBe(18);
+  });
   test('indexing', () => {
     expect(indexingLine({progress: 0.62})).toBe('Indexing · 62% · showing what’s indexed so far');
     expect(indexingLine(null)).toBeNull();
+  });
+});
+
+describe('the results by section, and the fold', () => {
+  const rows = [1, 2, 3, 4, 5].map(id => ({id}));
+  const none = new Set<number>();
+
+  test.each<[string, number, number, boolean, ReadonlySet<number>, number[], number, number[]]>([
+    ['folded, the rows under it held back', 5, 2, false, none, [1, 2], 3, []],
+    ['opened, they follow in the server\'s order', 5, 2, true, none, [1, 2], 3, [3, 4, 5]],
+    ['opened with a page still to come, it counts them', 12, 2, true, none, [1, 2], 10, [3, 4, 5]],
+    ['more above it than have come: no fold yet', 12, 8, true, none, [1, 2, 3, 4, 5], 0, []],
+    ['nothing under it', 5, 5, false, none, [1, 2, 3, 4, 5], 0, []],
+    ['nothing about the search: a plain list, no fold', 5, 0, false, none, [1, 2, 3, 4, 5], 0, []],
+    ['Trash takes a row above it without moving a row up', 5, 2, false, new Set([1]), [2], 3, []],
+    ['Trash takes one under it from the count', 5, 2, true, new Set([4]), [1, 2], 2, [3, 5]],
+  ])('%s', (_, total, first_section, open, gone, about, more, mentions) => {
+    const sections = resultSections(rows, {total, first_section}, open, gone);
+    expect(sections.about.map(row => row.id)).toEqual(about);
+    expect(sections.more).toBe(more);
+    expect(sections.mentions.map(row => row.id)).toEqual(mentions);
+  });
+
+  test('no answer yet shows what\'s there', () => {
+    expect(resultSections(rows, null, false, none)).toEqual({about: rows, more: 0, mentions: []});
+  });
+
+  test.each<[number, boolean, string]>([
+    [12, false, '12 more mention these words'],
+    [1, false, '1 more mentions these words'],
+    [12, true, '12 more mention some of these words'],
+  ])('%i, partial %s', (more, partial, line) => {
+    expect(mentionsLine(more, partial)).toBe(line);
   });
 });
 

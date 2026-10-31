@@ -193,6 +193,24 @@ export const secondPin = ({db}: OpenDatabase) =>
 export const codeExpiring = ({db}: OpenDatabase) =>
   db.update(t.messages).set({codeExpiresAt: new Date(Date.parse(SEED_NOW) + 12_000).toISOString()}).where(eq(t.messages.id, bySubject(db, 'Your code is 482913').id)).run();
 
+/** 60 emails about "ledger audit", more than a page, then 60 that only mention it, for search's fold. */
+export function ledgerAudit({db}: OpenDatabase) {
+  const jobs = db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get();
+  if (!jobs) throw new Error('The ledger-audit fixture needs the seed\'s Jobs account: run `npm run seed` first.');
+  const email = (at: number, subject: string, body: string, day: string) => {
+    const bodyText = `${body}\n\nThis is number ${at}.`;
+    return {
+      accountId: jobs.id, providerId: `fixture-ledger-${at}`, threadId: `fixture-ledger-${at}-thread`, fromName: 'Fourth Coffee', fromAddress: 'books@fourthcoffee.example',
+      subject, snippet: body, bodyText, searchBody: searchBody(bodyText), receivedAt: zoned(day, `${String(8 + at % 10).padStart(2, '0')}:${String(at % 60).padStart(2, '0')}`), unread: false, lane: 'fyi' as const,
+    };
+  };
+  const rows = Array.from({length: 60}, (_, at) => [
+    email(at, `Ledger audit, part ${at + 1}`, 'The figures for this part.', '2026-08-14'),
+    email(at + 60, `Quarter notes, part ${at + 1}`, 'A ledger came up in the meeting, and later on there may well be an audit.', '2026-08-13'),
+  ]).flat();
+  db.insert(t.messages).values(rows).run();
+}
+
 export function lastYear({db}: OpenDatabase) {
   const jobs = db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get();
   if (!jobs) throw new Error('The last-year fixture needs the seed\'s Jobs account: run `npm run seed` first.');

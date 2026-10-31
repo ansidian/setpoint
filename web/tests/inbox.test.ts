@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -165,6 +165,23 @@ describe('rowLine', () => {
     ['a security row keeps its fact over a summary', row({organisation: 'Google', fact: 'New sign-in · Pixel', summary: 'A new phone signed in'}), {from: 'Google', subject: 'New sign-in', summary: 'Pixel', code: null, title: null}],
   ])('%s', (_name, item, expected) => {
     expect(rowLine(item)).toEqual(expected);
+  });
+});
+
+describe('search\'s stops', () => {
+  const row = (id: number) => ({id}) as MessageRowOut;
+  const keys = (stops: Stop[]) => stops.map(stop => stop.key);
+
+  test('the fold is a stop, open or not, between what\'s about the search and what it opened', () => {
+    expect(keys(searchStops({about: [row(1), row(2)], more: 3, mentions: []}))).toEqual(['all:1', 'all:2', MENTIONS_KEY]);
+    expect(keys(searchStops({about: [row(1), row(2)], more: 2, mentions: [row(3), row(4)]}))).toEqual(['all:1', 'all:2', MENTIONS_KEY, 'all:3', 'all:4']);
+    expect(keys(searchStops({about: [row(1)], more: 0, mentions: []}))).toEqual(['all:1']);
+  });
+
+  test('folding it from a row it opened leaves the cursor on the fold', () => {
+    const folded = searchStops({about: [row(1)], more: 2, mentions: []});
+    const opened = searchStops({about: [row(1)], more: 2, mentions: [row(2), row(3)]});
+    expect(keepCursor(opened, folded, 'all:3')).toBe(MENTIONS_KEY);
   });
 });
 

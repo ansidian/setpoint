@@ -31,9 +31,9 @@ import {
 } from '../api/mail.ts';
 import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} from '../logic/all.ts';
 import type {Place} from '../logic/all.ts';
-import {readerMarks} from '../logic/search.ts';
+import {readerMarks, resultSections} from '../logic/search.ts';
 import {
-  allStops, codeExpired, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
+  codeExpired, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
 import {readerActions} from '../logic/reader.ts';
 import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
@@ -223,9 +223,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const days = useMemo(() => (ready ? groupByDay(allRows, zone, new Set([...fresh, ...attention].map(row => row.id))) : []), [ready, allRows, zone, fresh, attention]);
   const dayViews = useMemo(() => days.map(day => dayView(day, noiseOpen.has(day.date))), [days, noiseOpen]);
   // Results in Trash leave the search's list until Undo (UX #9).
-  const results = useMemo(() => search.results.filter(result => !trashing.has(result.id)), [search.results, trashing]);
-  const stops = useMemo(() => (searching ? allStops(results) : dayStops(dayViews, shelf, {fresh: freshView, attention})),
-    [searching, results, dayViews, shelf, freshView, attention]);
+  const sections = useMemo(() => resultSections(search.results, search.out, search.mentions, trashing), [search.results, search.out, search.mentions, trashing]);
+  const stops = useMemo(() => (searching ? searchStops(sections) : dayStops(dayViews, shelf, {fresh: freshView, attention})),
+    [searching, sections, dayViews, shelf, freshView, attention]);
   // The cursor, kept with the stops it was set among, so when the list changes it lands on the stop
   // that took its place.
   const [track, setTrack] = useState<{stops: Stop[]; cursor: string | null}>({stops, cursor: null});
@@ -325,7 +325,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
   // An email's row, from the open email or the list it's in (the Inbox's, a day's or search's).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
-    ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...results].find(row => row.id === id);
+    ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...search.results.filter(result => !trashing.has(result.id))].find(row => row.id === id);
   // The open email's subject, from its row until the email itself is in (#229).
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
@@ -575,6 +575,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'Enter')) {
         if (cursorStop?.kind === 'row') run(() => openEmail(cursorStop.id, cursorStop.key));
         else if (cursorStop?.kind === 'noise') run(() => toggleNoise(cursorStop.date));
+        else if (cursorStop?.kind === 'mentions') run(search.toggleMentions);
       } else if (plainKey(event, 'h')) run(actions.done, 'h');
       else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && undos.length) run(undos.at(-1)!);
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
@@ -694,7 +695,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
-          <SearchResults search={{...search, results}} cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
+          <SearchResults search={search} sections={sections} cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone}
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (

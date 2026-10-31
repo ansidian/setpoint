@@ -1,18 +1,21 @@
 // Search (DESIGN.md › Search; board 06): the header's field with its chips, and the results that
 // replace the list: Alfred's Answer card above them, the results line, each result with why it
-// matched and its matches highlighted, Ask Alfred ⌘Enter last, and the no-results line with each
-// chip removable. Kept thin: the rules are logic/search.ts's, and the state is state.ts's.
+// matched and its matches highlighted, the fold over those that only mention the search, Ask Alfred
+// ⌘Enter last, and the no-results line with each chip removable. Kept thin: the rules are
+// logic/search.ts's, and the state is state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
-import {Fragment, useEffect, useId, useRef, useState} from 'react';
+import {Fragment, useEffect, useId, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
-import {fieldSegments, indexingLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
+import type {Entry, Fold, Folded, FoldRules} from '../../logic/fold.ts';
+import {MENTIONS_KEY} from '../../logic/inbox.ts';
+import {fieldSegments, firstSection, indexingLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {keepTextUnselected} from '../../ui/keys.ts';
 import {dotStyle} from '../accounts.ts';
-import {leaveCopy} from '../fold.ts';
+import {FOLD_HOLD_MS, foldDelays, foldRef, leaveCopy, useFold} from '../fold.ts';
 import {usePhone} from '../Phone.tsx';
 import type {Search, SearchFieldState} from './state.ts';
 import './search.css';
@@ -179,6 +182,8 @@ export function NoResults({lead, search}: {lead: string; search: Pick<SearchFiel
 
 export interface ResultsProps {
   search: Search;
+  // The results by section (logic/search.ts › resultSections), without those in Trash.
+  sections: {about: SearchResultOut[]; more: number; mentions: SearchResultOut[]};
   cursor: string | null;
   openId: number | null;
   // The emails selected (#249), drawn as the open one is.
@@ -197,14 +202,18 @@ export interface ResultsProps {
 const resultKey = (id: number) => `all:${id}`;
 
 export function SearchResults(props: ResultsProps) {
-  const {search, card} = props;
-  const {out, results} = search;
+  const {search, sections, card} = props;
+  const {out} = search;
   const end = useRef<HTMLDivElement>(null);
-  // The next page as the list nears its end.
+  // The next page as the list nears its end, which is the fold while it's folded: the rows under it
+  // aren't asked for until they'd show.
+  const ended = out !== null && !search.mentions && search.results.length >= firstSection(out);
   useEffect(() => {
     const target = end.current;
-    if (!target) return;
-    const observer = new IntersectionObserver(entries => entries.some(entry => entry.isIntersecting) && search.loadMore(), {rootMargin: '400px'});
+    if (!target || ended) return;
+    // The list is the root: its margin means nothing for a box scrolling inside the page, and at the
+    // very end a fraction of a pixel can leave the empty marker just outside what the list shows.
+    const observer = new IntersectionObserver(entries => entries.some(entry => entry.isIntersecting) && search.loadMore(), {root: target.parentElement, rootMargin: '400px'});
     observer.observe(target);
     return () => observer.disconnect();
   });
@@ -234,22 +243,68 @@ export function SearchResults(props: ResultsProps) {
       {search.error && <div className="bar muted failing"><Icon name="warning" size={16} />{search.error}</div>}
       {out && out.total > 0 && (
         <div className={card ? 'bar muted after-card' : 'bar muted'}>
-          {resultsLine(out).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span className="num">{part}</span></Fragment>)}
+          {resultsLine({...out, total: firstSection(out)}).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span className="num">{part}</span></Fragment>)}
         </div>
       )}
-      {results.map(result => <ResultRow key={result.id} result={result} {...props} />)}
+      {sections.about.map(result => <ResultRow key={result.id} result={result} {...props} />)}
+      {/* A new search's fold is its own: no rows folding between one search's and the next's. */}
+      {sections.more > 0 && <Mentions key={search.answering} {...props} />}
       {out && out.total === 0 && <NoResults lead="No emails match" search={search} />}
       <div ref={end} />
     </section>
   );
 }
 
-function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, onPoint, onOpen}: ResultsProps & {result: SearchResultOut}) {
+type Part = {kind: 'fold'; open: boolean} | {kind: 'row'; result: SearchResultOut};
+// Its rows open and close as a group's do (#198); a page arriving under it just comes.
+const FOLD_RULES: FoldRules<Part> = {
+  folds: () => true,
+  arrives: () => true,
+  opens: (_, was) => {
+    const fold = was(MENTIONS_KEY)?.item;
+    return fold?.kind === 'fold' && !fold.open;
+  },
+};
+const inFold = (entry: Folded<Part>) => (entry.item.kind === 'row' ? MENTIONS_KEY : null);
+
+/** The fold, "12 more mention these words", and its rows, which open in place on a click or Enter. */
+function Mentions(props: ResultsProps) {
+  const {search, sections, cursor, onPoint} = props;
+  const open = search.mentions;
+  const entries = useMemo((): Entry<Part>[] => [
+    {key: MENTIONS_KEY, id: null, item: {kind: 'fold', open}},
+    ...sections.mentions.map((result): Entry<Part> => ({key: resultKey(result.id), id: result.id, item: {kind: 'row', result}})),
+  ], [open, sections.mentions]);
+  const shown = useFold(entries, FOLD_RULES, FOLD_HOLD_MS);
+  const delays = foldDelays(shown, inFold);
+  const line = useRef<HTMLButtonElement>(null);
+  // Opened at the foot of the list, its rows come into view once they're in (#70).
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => line.current?.nextElementSibling?.scrollIntoView({block: 'nearest'}), FOLD_HOLD_MS);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+  return shown.map(({key, item, fold}) => {
+    if (item.kind === 'row') return <ResultRow key={key} {...props} result={item.result} fold={fold} delay={delays.get(key)} />;
+    return (
+      <button key={key} ref={line} type="button" className={['mentions', !item.open && 'collapsed', cursor === key && 'cur'].filter(Boolean).join(' ')} aria-expanded={item.open}
+        data-key={key} onMouseMove={() => key !== cursor && onPoint(key)} onClick={search.toggleMentions}>
+        <span className="num">{mentionsLine(sections.more, search.out?.partial ?? false)}</span>
+        {/* One chevron, turned to point right while it's folded, as a group's. */}
+        <span className="chev"><Icon name="expand_more" /></span>
+      </button>
+    );
+  });
+}
+
+function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, onPoint, onOpen, fold = null, delay}: ResultsProps & {result: SearchResultOut; fold?: Fold; delay?: number}) {
   const key = resultKey(result.id);
   const reasons = shownReasons(result);
-  const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open', selected?.has(result.id) && 'sel'].filter(Boolean).join(' ');
+  const leaving = fold === 'out';
+  const classes = ['arow', 'result', result.unread && 'unread', result.done && 'done', result.protected && 'protected', cursor === key && 'cur', openId === result.id && 'open', selected?.has(result.id) && 'sel', leaving && 'leaving'].filter(Boolean).join(' ');
   return (
-    <div className={classes} data-key={key} data-id={result.id} onMouseMove={() => onPoint(key)} onMouseDown={keepTextUnselected} onClick={event => onOpen(result.id, key, event)}>
+    <div ref={foldRef(fold, delay)} className={classes} data-key={leaving ? undefined : key} data-id={leaving ? undefined : result.id} aria-hidden={leaving || undefined} onMouseMove={leaving ? undefined : () => onPoint(key)} onMouseDown={keepTextUnselected}
+      onClick={leaving ? undefined : event => onOpen(result.id, key, event)}>
       <span className="ud" />
       <div className="l1">
         <span className="from"><Marked parts={resultSender(result)} /></span>
