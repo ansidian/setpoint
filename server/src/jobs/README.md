@@ -31,8 +31,8 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   and `4` ([`Nav.tsx`](../../../web/src/app/jobs/Nav.tsx)), its calls through `web/src/api/client.ts`
   ([`api.ts`](../../../web/src/app/jobs/api.ts)), what it writes ([`words.ts`](../../../web/src/app/jobs/words.ts))
   and its styles ([`jobs.css`](../../../web/src/app/jobs/jobs.css)) (J5); J6's menus ([`Menu.tsx`](../../../web/src/app/jobs/Menu.tsx),
-  what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, and the
-  toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); J7's fillers of mail's slots, the JD chip with its
+  what they hold in [`menus.ts`](../../../web/src/app/jobs/menus.ts)), the candidate picker, the field in place, the area that takes a pasted posting
+  ([`PastePosting.tsx`](../../../web/src/app/jobs/PastePosting.tsx), SV-140), and the toast with Undo ([`act.ts`](../../../web/src/app/jobs/act.ts)); J7's fillers of mail's slots, the JD chip with its
   popover and Applied before ([`InMail.tsx`](../../../web/src/app/jobs/InMail.tsx)); J8's states, the history pass's
   and the AI down's lines and Jobs off ([`States.tsx`](../../../web/src/app/jobs/States.tsx)), and Settings › Jobs with
   Settings › AI's Jobs group ([`JobsSettings.tsx`](../../../web/src/app/jobs/JobsSettings.tsx)). The shell imports only
@@ -57,7 +57,7 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
-| `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, and each JD lookup (J3) |
+| `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, each JD lookup (J3) and each pasted posting's reading (SV-140) |
 | `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
 | `server/src/triage/worker.ts`, the `onSorted` option (J2) | the generic hook the line above uses: told after each email is sorted; it names no module, so it can stay |
 | `server/src/db/schema.ts`, `JOB_KINDS`, and `server/drizzle/0021_jobs_reading.sql` (J2) | `'jobs_read'` is a kind of engine job (the migration rebuilds `jobs` for its CHECK) |
@@ -162,8 +162,9 @@ the lint rule still refuses an import of Jobs from triage.
 - **What the search offers is opened (D388):** a sole `match` that reads is saved with no check.
   Otherwise each candidate is opened (web.ts `openLink`): one that's gone (a 404, a 410, a platform
   saying it isn't there) is dropped; one Jobs can't read (a 403, a non-HTML answer, a page drawn by
-  script) stays, since the user can open it in a browser, and so does one whose page failed (the
-  network, a 5xx, a 429, a timeout), which doesn't fail the lookup; and those that read go to Haiku
+  script) stays, since the user can open it in a browser, marked `jobs_jd_candidates.unreadable` for
+  the picker to say so (SV-140), and so does one whose page failed (the network, a 5xx, a 429, a
+  timeout), unmarked, which doesn't fail the lookup; and those that read go to Haiku
   in one call, whose `no` drops one and whose `maybe` or `match` leaves it a maybe. Haiku never
   saves a candidate. A failed check fails the lookup, like any model call, and its retry searches
   again.
@@ -225,7 +226,8 @@ the lint rule still refuses an import of Jobs from triage.
 ## Needs you's answers and the corrections (J6)
 
 - **The routes** (each answers `JobsChangeOut`, `{undo, application}`): a candidate picked
-  (`POST /applications/:id/jd/pick`) or None of these (`…/jd/none`); Assign to…, Track this and Not
+  (`POST /applications/:id/jd/pick`), None of these (`…/jd/none`) or the posting pasted
+  (`…/jd/paste`, SV-140); Assign to…, Track this and Not
   about a job (`POST /needs-you/:id/assign|track|not-a-job`); the title or company
   (`PATCH /applications/:id`), Set status and Let emails decide (`POST …/status`, `{status: null}`),
   Merge with… (`…/merge`), Not this posting, Not an application (`POST …/not-this-posting|not-an-application`)
@@ -250,7 +252,18 @@ the lint rule still refuses an import of Jobs from triage.
   replays one the user moved, assigned or took off.
 - **A pick** (lookup.ts `requestPick`) marks the candidate and queues the application's lookup job,
   which reads that one link and saves it with Haiku's reading and no check; the other candidates stay
-  for Not this posting. Without a web (a dev run) it stays `looking`, as any lookup does.
+  for Not this posting. Without a web (a dev run) it stays `looking`, as any lookup does. One it
+  can't read ends `not_found` with the pick as its link (SV-132), and Look it up then turns that link
+  down before it clears the candidates, so that search can't offer it again (SV-140).
+- **The posting pasted** (`POST …/jd/paste`, corrections.ts `pastePosting`, SV-140): trimmed, refused
+  under `MIN_POSTING_CHARS` once cleaned or over `MAX_PASTED_CHARS` (a message for the page, never
+  cut, unlike a page's 60,000), or with a JD saved (409). Otherwise it's the JD at once: markdown from
+  `plainToMarkdown`, the pick's link or null, an empty reading, source `pasted`. A `jobs_read` job
+  keyed `jobs_pasted:<posting>` then has Haiku fill the reading (lookup.ts `readPasted`) on the one
+  retry policy, with no web needed, on the ledger as `jobs_reading_jds`, and sends the `jobs` event
+  as it lands. It writes only the reading, and nothing once the posting has gone (Undo, Not this
+  posting), and a reading that fails for good leaves the JD saved without it. By the posting's id,
+  a second paste after Undo has its own job and a merge carries it along.
 - **Track this** makes the application from the email: Applied on its date, First seen, In process
   (Offer for an offer), and requests its lookup.
 - **A merge, a move or Not about this** settles the status from the emails again (rules.ts

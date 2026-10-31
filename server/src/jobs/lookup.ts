@@ -20,12 +20,16 @@
 //   each candidate is opened: gone is dropped, one Jobs can't read or couldn't reach stays offered,
 //   and one that reads goes to Haiku, who can only drop it, never save it. One that came back
 //   `unreadable` is recorded so, and the picker says so (SV-140); one it couldn't reach isn't.
-// - The saved JD (decision 53): its full text as markdown, its link, when and how it was found, and
-//   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
+// - The saved JD (decision 53): its full text as markdown, its link (none for one pasted with no
+//   pick), when and how it was found, and what Haiku 5.5 read in it. It's never overwritten: only Not
+//   this posting (J6) takes one away.
 // - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
 //   turned down is never saved or offered again, and a lookup writes only while its application is
 //   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link (SV-132),
 //   and Look it up turns that link down before it starts, so it can't fail the same way (SV-140).
+// - Pasted (SV-140): the user's own copy is saved at once as the JD, whatever the models are doing,
+//   the pick's link kept (`savePasted`), and its own job, keyed `jobs_pasted:<posting>`, has Haiku
+//   fill the reading (`readPasted`). A reading that fails leaves it saved without one.
 // - Cost: no cap (decision 61). Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';

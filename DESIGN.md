@@ -887,6 +887,9 @@ desktop and keeps it (D325).
     `radio_button_checked` in `ink`. ↑ ↓ choose and Enter picks.
   - Picked, the group takes `good` at 10% with a 35% `good` ring, and the row reads `check_circle`
     in `good`, "Junior Developer · JD saved".
+  - A candidate Jobs opened and can't read adds "Jobs can't read this one" in `ink3`, kept whole
+    while its line gives way, and its arrow still opens it. Picked, it reads "Link kept", in its row
+    and the toast, never "JD saved" (#278).
 - **An update to assign** ("Thank you for your interest in the Software Engineer II role · Humongous
   Insurance via iCIMS"):
   - "A rejection · it could be either Humongous application", then an outline small **Assign to…**
@@ -928,7 +931,8 @@ desktop and keeps it (D325).
     each candidate a 44 px item with `description` and two lines (the role over "New York, NY ·
     Greenhouse" in `ink3` 12) and its 26 px `open_in_new`, then a divider and **None of these**
     (`block`). A pick saves the JD and the row folds away as an answered item does, with "JD saved
-    for Lucerne Publishing · Undo" (#266).
+    for Lucerne Publishing · Undo" (#266). A candidate Jobs can't read says so after its second
+    line, and "Link kept" for the toast (#278).
   - Dismiss all folds the rows away together (180 ms), then the line, and says "Dismissed 6 from
     history · Undo" (D324).
 
@@ -969,8 +973,8 @@ desktop and keeps it (D325).
   Never a lower opacity, which means a change waiting for its provider.
 - **JD** in `ink3` 12.5, its 16 px glyph in `ink3`, then how it was found, or a glyph alone with
   that as its tooltip beside the detail:
-  - `description` with "Search", "Greenhouse", "The email's link" (tooltip "Search · found 7h ago",
-    "Greenhouse · found Oct 1")
+  - `description` with "Search", "Greenhouse", "The email's link", "Pasted" (tooltip "Search · found
+    7h ago", "Greenhouse · found Oct 1", "Pasted by you · 2h ago")
   - `pending` "In Needs you" (tooltip "2 candidates in Needs you")
   - `remove` "No JD found"
   - `progress_activity` "Looking it up…" while it's looked up (tooltip "Looking for the posting")
@@ -1055,9 +1059,19 @@ desktop and keeps it (D325).
   - `O` still opens the original, which may be gone; the kept text never changes.
 - **No JD found** (38b, D320): under a **Job description** label, a 44 px card (radius 12, an `edge`
   ring, padding 0 14, `ink3`): `search_off` 16, "No JD found" in `ink2`, "· Breezy and a web search
-  had nothing for it on Oct 1", and a quiet small **Look it up** (`search`). Jobs never retries on
-  its own; a lookup that errored is retried and never shows this. A posting the user picked that
-  Jobs couldn't read says so instead (#276).
+  had nothing for it on Oct 1", then an outline small **Look it up** (`search`) and a quiet small
+  **Paste the posting** (`edit_note`), under the line when they don't fit beside it. Jobs never
+  retries on its own; a lookup that errored is retried and never shows this. A posting the user
+  picked that Jobs couldn't read says so instead (#276), and there Paste the posting leads, filled,
+  with a quiet Look it up after it (#278).
+- **Paste the posting** (#278): in place under the card, never a modal, the actions leaving it: a
+  200 px area, max 600, focused, then Save, a quiet Cancel and "⌘Enter to save · Esc" in `ink3`. A
+  refusal stays there in `alert` with the text kept. Saved, it says "JD saved for Fabrikam · Undo".
+  The JD shows the moment it's saved with only its Full posting row, "Pasted by you · Oct 31, 9:12
+  AM", and What they want, the facts and the lists fill in when Haiku has read it; a reading that
+  fails leaves it so, claiming no "Salary not stated". The pick's link stays its Open posting, and
+  with no pick there's none. Mail's popover and the phone never offer it, and keep showing Couldn't
+  read with the link.
 - **Looking it up** (34c): the Full posting row outlined instead of filled (an `edge` ring): the
   shared spinner (`progress_activity` 16 in `ink3`, 900 ms a turn), "Looking for the posting…" in
   `ink2`, "LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
@@ -3365,9 +3379,23 @@ it changes what's on screen.
     "Couldn't read the posting you picked · glassdoor.com gave Jobs no text on Oct 1", the row
     "Couldn't read", and the pick stays the application's link, so Open posting, `O` and the row's
     menu open it. A 403, a page drawn by script and a posting that's gone all read the same: Jobs
-    can't tell them apart, and the link shows which. Look it up forgets the pick and searches again.
+    can't tell them apart, and the link shows which. Look it up turns the pick down and searches
+    again (#278).
 277. **A long fact wraps** (Andy, 2026-10-30; darma SV-129): a salary or location too long for the
     line wraps inside its box, in the detail and in the JD popover, its glyph level with the first
     line, and the short facts stay on one line each. Jobs keeps 240 characters of a salary and 200
     of a location. The source facts over the unfolded posting stay on one line, the link cut by its
     ellipsis.
+278. **A posting Jobs can't read says so, and can be pasted in** (Andy, 2026-10-31; darma SV-140):
+    a search candidate that opened as unreadable (a 403, a non-HTML answer, a page with no text Jobs
+    can use) adds "Jobs can't read this one" to its line wherever candidates are listed, and picked
+    says "Link kept", not "JD saved"; one that only failed to answer isn't marked, and rows from
+    before aren't. The job still tries the read once, and it ends at #276 or saves if it now reads.
+    At `not_found` the detail offers Paste the posting: the main action after a failed pick, with
+    Look it up quiet after it; beside an outlined Look it up on a plain No JD found. It's saved at
+    once as the JD, whether or not a model answers, with the pick's link if there is one, then read
+    by Haiku. It's the user's: no lookup replaces it, and Not this posting and Undo take it away as
+    any other. It takes 100,000 characters, refused rather than cut, and at least what a page must
+    give. The JD column says "Pasted", Full posting "Pasted by you". Look it up after a failed pick
+    turns that link down first, so it can't fail the same way; the link is then lost as Open posting
+    if the search finds nothing.
