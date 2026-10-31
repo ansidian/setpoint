@@ -25,7 +25,7 @@ test('a passkey: added in Settings › Security, then used to sign in, after the
   try {
     const port = new URL(setpoint.base).port;
     const local = `http://localhost:${port}`;
-    const password = `${PASSWORD} ${port}`;
+    const password = PASSWORD;
     const page = await setpoint.page('target');
     // Signed in at localhost too, with the session the harness claimed with.
     await page.context().addCookies([{...setpoint.cookie!, url: local}]);

@@ -7,7 +7,7 @@ import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, describe, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {SizeName} from './harness.ts';
 
 after(cleanUp);
@@ -53,7 +53,6 @@ test('the sign-in card claims Setpoint with the setup token, then signs in with 
 test('the sign-in card answers: a refusal shakes it once over 260 ms and selects what was typed; Use a passkey leads while nothing is typed; signed in, it scales away as the app fades in (the polish audit\'s states-14)', async () => {
   const setpoint = await startSetpoint();
   try {
-    const port = new URL(setpoint.base).port;
     const page = await setpoint.page('target');
     // Passkeys registered: the harness answers the card's status with one, so the card offers it.
     await page.route('**/api/auth/status', async route => {
@@ -107,8 +106,8 @@ test('the sign-in card answers: a refusal shakes it once over 260 ms and selects
       options: {duration: 260, easing: 'cubic-bezier(.2,0,0,1)'},
     }]);
     assert.deepEqual(await page.getByLabel('Password').evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd, input.value.length]), [0, 16, 16]);
-    await page.keyboard.type(`browser checks only ${port}`);
-    assert.equal(await page.getByLabel('Password').inputValue(), `browser checks only ${port}`, 'typing replaced it');
+    await page.keyboard.type(PASSWORD);
+    assert.equal(await page.getByLabel('Password').inputValue(), PASSWORD, 'typing replaced it');
 
     // Signed in: the card scales to .98 and fades over 180 ms while the app fades in under it, then goes.
     await rested(() => page.evaluate(() => {

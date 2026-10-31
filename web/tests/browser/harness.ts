@@ -254,10 +254,16 @@ function run(args: string[], env: NodeJS.ProcessEnv): string {
 // once per check. The run's global setup (globalSetup.ts) shares one directory of them across spec
 // files; a spec run on its own keeps its own, removed when it exits.
 let templateRoot = process.env.SETPOINT_BROWSER_TEMPLATES ?? null;
-const templates = new Map<string, {dataDir: string; setupToken: string}>();
+const templates = new Map<string, Template>();
 
-function template(fixtures: string[], env: NodeJS.ProcessEnv): {dataDir: string; setupToken: string} {
-  const key = ['seed', ...fixtures].join('+');
+interface Template {
+  dataDir: string;
+  setupToken: string;
+  cookie: Setpoint['cookie'];
+}
+
+function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): Template {
+  const key = ['seed', ...fixtures, ...(claim ? ['claimed'] : [])].join('+');
   const known = templates.get(key);
   if (known) return known;
   if (!templateRoot) {
@@ -275,6 +281,8 @@ function template(fixtures: string[], env: NodeJS.ProcessEnv): {dataDir: string;
     if (fixtures.length) run(['server/src/dev/fixtures/index.ts', ...fixtures], buildEnv);
     const setupToken = run(['server/src/cli.ts', 'setup-token'], buildEnv).trim().split('\n').at(-1)!.trim();
     fs.writeFileSync(path.join(building, 'setup-token'), setupToken);
+    // Claimed here, once, so a check has its signed-in session without a claim of its own (SV-143).
+    if (claim) fs.writeFileSync(path.join(building, 'cookie.json'), run(['server/src/dev/claim.ts', setupToken, PASSWORD], buildEnv));
     try {
       fs.renameSync(building, dir);
     } catch {
@@ -282,7 +290,10 @@ function template(fixtures: string[], env: NodeJS.ProcessEnv): {dataDir: string;
       fs.rmSync(building, {recursive: true, force: true});
     }
   }
-  const made = {dataDir: path.join(dir, 'data'), setupToken: fs.readFileSync(path.join(dir, 'setup-token'), 'utf8')};
+  const made: Template = {
+    dataDir: path.join(dir, 'data'), setupToken: fs.readFileSync(path.join(dir, 'setup-token'), 'utf8'),
+    cookie: claim ? JSON.parse(fs.readFileSync(path.join(dir, 'cookie.json'), 'utf8')) as Setpoint['cookie'] : null,
+  };
   templates.set(key, made);
   return made;
 }
@@ -302,10 +313,14 @@ export interface StartOptions {
 export async function startSetpoint({claim = true, fixtures = [], clock = 'seed', env: extra = {}}: StartOptions = {}): Promise<Setpoint & {setupToken: string}> {
   if (!fs.existsSync(path.join(WEB_DIST, 'index.html'))) throw new Error('web/dist has no build: run `npm run build` first.');
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-browser-'));
-  const env: NodeJS.ProcessEnv = {...process.env, SETPOINT_DATA_DIR: dataDir, SETPOINT_CLOCK: clock, SETPOINT_WEB_DIR: WEB_DIST, ...extra};
+  // The compile cache takes about a quarter off the CPU of a server's boot, and a check boots one (SV-143).
+  const env: NodeJS.ProcessEnv = {
+    NODE_COMPILE_CACHE: path.join(ROOT, 'node_modules', '.cache', 'node-compile'),
+    ...process.env, SETPOINT_DATA_DIR: dataDir, SETPOINT_CLOCK: clock, SETPOINT_WEB_DIR: WEB_DIST, ...extra,
+  };
   delete env.NODE_ENV;
   delete env.SETPOINT_PUBLIC_URL;
-  const seeded = template(fixtures, env);
+  const seeded = template(fixtures, claim, env);
   // The database and News's image copies (news-images/).
   fs.cpSync(seeded.dataDir, dataDir, {recursive: true, mode: fs.constants.COPYFILE_FICLONE});
   const {setupToken} = seeded;
@@ -352,7 +367,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   }
   const base = `http://127.0.0.1:${port}`;
 
-  let cookie: Setpoint['cookie'] = null;
+  let cookie = seeded.cookie;
   const api = async <T,>(method: string, apiPath: string, body?: unknown): Promise<T> => {
     const response = await fetch(`${base}/api${apiPath}`, {
       method,
@@ -365,8 +380,6 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
     if (!response.ok) throw new Error(`${method} ${apiPath}: ${response.status} ${text}`);
     return (text ? JSON.parse(text) : undefined) as T;
   };
-  if (claim) await api('POST', '/auth/claim', {setup_token: setupToken, password: `${PASSWORD} ${port}`});
-
   const contexts: BrowserContext[] = [];
   // Each page's /api requests in flight (the live stream aside).
   const loadingByPage = new Map<Page, Set<Request>>();
