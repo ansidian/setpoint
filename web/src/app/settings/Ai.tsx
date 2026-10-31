@@ -3,7 +3,8 @@
 // each changeable at will (triage's cheap and strong, the history pass, and Alfred; Default is the
 // built-in choice for the keys that are set); News's group (N5): its two models, fixed (D90), the
 // monthly cap, and this month's spend on its meter, saying so at the cap; Jobs's group (J8, board 39b,
-// from jobs/, a wiring point); then this month's usage, Triage, Alfred, News and Jobs in their parts.
+// from jobs/, a wiring point); then this month's usage, Triage, Search terms, Alfred, News and Jobs in
+// their parts.
 import type {AiModelChoiceOut, AiOut, SecretName, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -108,6 +109,7 @@ export function AiPage() {
       <Section label="Usage this month" right={usage && jobsSpend !== undefined && <span className="num ink2">{dollars(monthTotal(usage) + jobsSpend, true)}</span>}>
         {!usage ? <SkeletonRows count={3} /> : <div className="set-group">
           <Row title="Triage" sub={usage ? usageLine(usage.triage) : ''}>{usage && <span className="cost num">{dollars(usage.triage.cost_usd, true)}</span>}</Row>
+          <Row title="Search terms" sub={usage ? usageLine(usage.search_terms) : ''}>{usage && <span className="cost num">{dollars(usage.search_terms.cost_usd, true)}</span>}</Row>
           <Row title="Alfred" sub={usage ? usageLine(usage.alfred) : ''}>{usage && <span className="cost num">{dollars(usage.alfred.cost_usd, true)}</span>}</Row>
           <Row title="News" sub={usage ? newsUsageParts(usage.news) : ''}>{usage && <span className="cost num">{dollars(usage.news.cost_usd, true)}</span>}</Row>
           <JobsUsageRow />

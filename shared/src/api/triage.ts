@@ -202,10 +202,12 @@ export interface AiOut {
   usage_30_days: {calls: number; input_tokens: number; output_tokens: number; cost_usd: number};
   // N3: Settings › AI's News group (board 30b).
   news: NewsAiOut;
-  // N3: "Usage this month" (since local midnight on the 1st): Triage, Alfred and News, News in its parts.
+  // N3: "Usage this month" (since local midnight on the 1st): Triage, search terms (SV-136), Alfred
+  // and News, News in its parts.
   usage_this_month: {
     since: string;
     triage: AiUsageOut;
+    search_terms: AiUsageOut;
     alfred: AiUsageOut;
     news: AiUsageOut & {articles: AiUsageOut; grouping: AiUsageOut; stories: AiUsageOut; ranking: AiUsageOut};
   };

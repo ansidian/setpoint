@@ -1,10 +1,10 @@
 // Search (BRIEF.md › Search; DESIGN.md › Search): the field's words become chips that filter exactly
 // (src/domain/searchChips.ts); whatever's left is free text over the full-text index, which holds an
-// email's summary and its body without links or footers (src/domain/searchBody.ts). With any chip,
-// results come newest first. Free text alone ranks by the best field a word matched — sender (and
-// organisation), then subject, then body — and newest first within each, with no importance boost
-// (decision 9). Search covers All's mail: archived mail is in (D14), trashed mail is out. A Not chip
-// or a "!word" leaves out what it matches (SV-31).
+// email's summary, its search terms (src/search/terms.ts) and its body without links or footers
+// (src/domain/searchBody.ts). With any chip, results come newest first. Free text alone ranks by the
+// best field a word matched — sender (and organisation), then subject, then body — and newest first
+// within each, with no importance boost (decision 9). Search covers All's mail: archived mail is in
+// (D14), trashed mail is out. A Not chip or a "!word" leaves out what it matches (SV-31).
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.

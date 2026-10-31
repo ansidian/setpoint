@@ -449,6 +449,7 @@ function snapshotOrSample(store: Store, dir: string, imagesDir: string | null) {
  */
 const SAMPLE_USAGE: {purpose: typeof t.aiUsage.$inferInsert.purpose; model: string; calls: number; dollars: number; input: number; output: number}[] = [
   {purpose: 'triage', model: 'claude-haiku-5-5', calls: 1214, dollars: 2.1, input: 1950, output: 40},
+  {purpose: 'search_terms', model: 'claude-haiku-5-5', calls: 312, dollars: 0.04, input: 1500, output: 35},
   {purpose: 'alfred', model: 'claude-sonnet-5-5', calls: 18, dollars: 0.85, input: 6200, output: 420},
   {purpose: 'news_articles', model: 'claude-haiku-5-5', calls: 7, dollars: 1.9, input: 210_000, output: 18_000},
   {purpose: 'news_grouping', model: 'claude-haiku-5-5', calls: 7, dollars: 1.2, input: 140_000, output: 9000},

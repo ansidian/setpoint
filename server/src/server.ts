@@ -30,6 +30,7 @@ import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
 import {SyncEngine} from './sync/engine.ts';
 import {Adapters} from './sync/registry.ts';
+import {SearchTermsWorker} from './search/terms.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
 import {JobsReader, jobsApi, jobsWeb, migrateJobs} from './jobs/index.ts';
@@ -64,7 +65,12 @@ const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl, openai: confi
 // Jobs reads what triage sorts in the accounts it lists (J2): triage's onSorted nudges its worker.
 // Its JD lookups (J3) read the hiring platforms and posting pages only in production.
 const jobsReader = new JobsReader({store, endpoints: aiEndpoints, ...(config.production ? {web: jobsWeb()} : {})});
-const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier, onSorted: () => jobsReader.nudge()});
+// Search terms are written for what triage has sorted (SV-136).
+const searchTerms = new SearchTermsWorker({store, endpoints: aiEndpoints});
+const triage = new TriageWorker({store, endpoints: aiEndpoints, notifier, onSorted: () => {
+  jobsReader.nudge();
+  searchTerms.nudge();
+}});
 // And, once backfills are done and a key is set, the one-time model pass over history (D20).
 const history = new HistoryExtractor({store, endpoints: aiEndpoints});
 // News: its sources read on the same engine through their adapters (N2), each new article's page
@@ -75,7 +81,7 @@ const news = new NewsWorker({store, imagesDir: newsImages, ...(config.production
 // N3: what News reads is sorted, grouped, written and ranked on the same engine, with the keys in
 // Settings › AI (D90); a dev run asks the loopback fake, if anything.
 const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
-const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, news, newsSort, jobsReader]});
+const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
 const app = createApp({

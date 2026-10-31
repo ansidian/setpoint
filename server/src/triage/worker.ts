@@ -4,7 +4,7 @@
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
 // models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
 // sorted, each lane as Settings › Notifications allows (SV-96).
-import type {AiProvider} from '@setpoint/shared';
+import type {AiProvider, AiPurpose} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
@@ -50,9 +50,9 @@ export interface TriageWorkerOptions {
 const MAIL_NOTIFY_WITHIN_MS = 60 * 60_000;
 
 /** Writes a model call to the AI usage ledger: what it was for, its tokens and its cost. */
-export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null) {
+export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null, purpose: Extract<AiPurpose, 'triage' | 'search_terms'> = 'triage') {
   store.db.insert(t.aiUsage).values({
-    at: isoNow(store), provider: answer.provider, model: answer.model, purpose: 'triage', messageId,
+    at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,
     costMicros: costMicros(answer.provider, answer.model, answer.usage) ?? 0,
   }).run();

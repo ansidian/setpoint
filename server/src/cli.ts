@@ -12,6 +12,7 @@
 //                                            trusted senders and pins (src/importV1.ts has the format)
 //   npm run cli -- import-v1-triage <file>   only v1's triage rules and lane corrections
 //   npm run cli -- triage-history   start or resume the one-time model pass over backfilled history
+//   npm run cli -- search-terms     how much mail has search terms (SV-136); --apply gives the go-ahead to read the rest
 //   npm run cli -- jobs-reread      what Jobs would read again now it reads HTML (SV-128); --apply does it
 //   npm run cli -- jobs-repair-facts   the JDs' salaries and locations that were cut (SV-129); --apply reads them again
 //   npm run cli -- jobs-repair-postings   the application pages saved as JDs (SV-130); --apply takes them away and looks each up again
@@ -32,6 +33,7 @@ import {importV1} from './importV1.ts';
 import {jobsWeb, repairFactsPlan, repairFactsWithHaiku, repairPostings, repairPostingsPlan, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
 import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {sourceList} from './queries/sources.ts';
+import {searchTermsProgress, startSearchTermsPass} from './search/terms.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import type {Store} from './store.ts';
 import {rereadCodes} from './triage/codes.ts';
@@ -51,13 +53,14 @@ const USAGE = `Usage:
   jobs-repair-facts [--apply]   the JDs' salaries and locations that were cut; --apply reads them again from the saved JDs
   jobs-repair-postings [--apply]   the application pages saved as JDs; --apply takes them away and looks each up again (the server does)
   triage-history  start or resume the model pass over backfilled history (needs an AI key; the server runs it)
+  search-terms [--apply]   how much mail has search terms; --apply gives the go-ahead to read the rest (the server does)
   codes           list sorted emails whose verification code reading again would change, and code emails with none
   codes --apply   write those changes`;
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
-    || ((command === 'codes' || command === 'jobs-reread' || command === 'jobs-repair-facts' || command === 'jobs-repair-postings') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
+    || ((command === 'codes' || command === 'search-terms' || command === 'jobs-reread' || command === 'jobs-repair-facts' || command === 'jobs-repair-postings') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0)
     || ((command === 'import-v1' || command === 'import-v1-triage') && rest.length === 1);
   if (!command || !valid) {
@@ -97,6 +100,13 @@ async function main(argv: string[]): Promise<number> {
       console.log(state === 'waiting_for_key'
         ? `Started, but there's no AI key yet: add one in Settings › AI and the server reads ${total - done} emails.`
         : `${done} of ${total} backfilled emails read; ${queued} more queued for the server to read.`);
+      return 0;
+    }
+    if (command === 'search-terms') {
+      const {done, total, behind, key} = rest[0] === '--apply' ? startSearchTermsPass(store) : searchTermsProgress(store);
+      console.log(`${done} of ${total} emails have search terms from this prompt; ${behind} wait for the go-ahead.`);
+      if (!key) console.log('There\'s no Anthropic key: add one in Settings › AI and the server reads them.');
+      else console.log(rest[0] === '--apply' ? 'The server reads them as it comes to them, newest first.' : 'Nothing changed. Run with --apply to read them.');
       return 0;
     }
     if (command === 'jobs-reread') {

@@ -108,8 +108,13 @@ export const messages = sqliteTable('messages', {
   // ---- SV-135 · Search: what the index holds in place of `body_text` ----
   // `body_text` without its links and footers (src/domain/searchBody.ts), written with it.
   searchBody: text('search_body').notNull().default(''),
-  // Words for what the email is about, written after it arrives. Null until then.
+  // Words for what the email is about, written after it arrives (SV-136, src/search/terms.ts). Null
+  // until then, and for an email the model had none for.
   searchTerms: text('search_terms'),
+  // The prompt version that last read it, whatever came back, so it's charged for once per version.
+  // Null for new mail, which is read on its own; 0 for mail from before terms, read only once the
+  // user says so, as is mail read by an older prompt.
+  searchTermsVersion: integer('search_terms_version'),
 
   // ---- B3 · Triage: how the lane was decided, once per email ----
   // What decided it (a rule, a learned rule, a model, the unsure default, the history pass), the
@@ -442,8 +447,9 @@ export const syncCursors = sqliteTable('sync_cursors', {
 // `extract` (one backfilled email through the history extraction pass); N1 `news` (one News source's
 // fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly ranking,
 // run by src/news/sortWorker.ts); Jobs's `jobs_read` (J2, a wiring point: Jobs reading what triage
-// sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value).
-export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read'] as const;
+// sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value);
+// SV-136's `search_terms` (one email's search terms, run by src/search/terms.ts).
+export const JOB_KINDS = ['sync', 'sweep', 'push', 'command', 'triage', 'extract', 'news', 'news_sort', 'jobs_read', 'search_terms'] as const;
 export const JOB_STATES = ['queued', 'running', 'done', 'failed'] as const;
 
 /**
