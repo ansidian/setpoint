@@ -57,6 +57,7 @@ export async function undoChange(change: JobsChangeOut): Promise<void> {
 
 export const pickCandidate = (application: number, candidate: number) => change('POST', `${applicationPath(application)}/jd/pick`, {candidate});
 export const noneOfThese = (application: number) => change('POST', `${applicationPath(application)}/jd/none`);
+export const pastePosting = (application: number, text: string) => change('POST', `${applicationPath(application)}/jd/paste`, {text});
 export const assignItem = (item: number, application: number) => change('POST', `/jobs/needs-you/${item}/assign`, {application});
 export const trackItem = (item: number) => change('POST', `/jobs/needs-you/${item}/track`);
 export const notAJob = (item: number) => change('POST', `/jobs/needs-you/${item}/not-a-job`);

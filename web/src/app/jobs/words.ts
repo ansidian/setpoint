@@ -72,9 +72,10 @@ function foundWhen(at: string, now: number, timeZone: string): string {
   return minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
 }
 
-/** How a saved JD was found, in the JD column's words: the platform's name, "Search", "The email's link". */
+/** How a saved JD was found, in the JD column's words: the platform's name, "Search", "The email's link", "Pasted". */
 export function foundBy(jd: Pick<JdSummaryOut, 'source' | 'platform'>): string {
   if (jd.source === 'platform') return jd.platform ?? 'The platform';
+  if (jd.source === 'pasted') return 'Pasted';
   return jd.source === 'search' ? 'Search' : 'The email\'s link';
 }
 
@@ -83,7 +84,8 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
   switch (jd.state) {
     case 'found': {
       const text = foundBy(jd);
-      return {icon: 'description', text, title: jd.found_at ? `${text} · found ${foundWhen(jd.found_at, now, timeZone)}` : text};
+      const found = jd.source === 'pasted' ? 'Pasted by you · ' : `${text} · found `;
+      return {icon: 'description', text, title: jd.found_at ? `${found}${foundWhen(jd.found_at, now, timeZone)}` : text};
     }
     case 'candidates':
       return {icon: 'pending', text: 'In Needs you', title: `${jd.candidates} ${jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`};
@@ -98,13 +100,16 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
   }
 }
 
-/** The full posting's row and head: "Found on Greenhouse · Oct 1, 10:41 AM", "Found by search · Sep 30, 2:18 PM". */
+/** The full posting's row and head: "Found on Greenhouse · Oct 1, 10:41 AM", "Found by search · Sep 30, 2:18 PM", "Pasted by you · Oct 31, 9:12 AM". */
 const foundHow = (posting: Pick<PostingOut, 'source' | 'platform'>) =>
-  (posting.source === 'platform' ? `Found on ${posting.platform ?? 'the platform'}` : posting.source === 'search' ? 'Found by search' : 'Found from the email\'s link');
+  (posting.source === 'platform' ? `Found on ${posting.platform ?? 'the platform'}` : posting.source === 'search' ? 'Found by search' : posting.source === 'pasted' ? 'Pasted by you' : 'Found from the email\'s link');
 
 export function foundLine(posting: Pick<PostingOut, 'source' | 'platform' | 'found_at'>, timeZone: string, today: string): string {
   return `${foundHow(posting)} · ${stampWord(posting.found_at, timeZone, today)}`;
 }
+
+/** Whether a saved JD has been read: one pasted is saved first, and a reading that failed leaves it as it was (SV-140). */
+export const hasReading = (posting: PostingOut) => Boolean(posting.summary || posting.location || posting.workplace || posting.salary || posting.must_haves.length || posting.nice_to_haves.length);
 
 /** A link's host, the full posting's tool ("greenhouse.example"). */
 export function hostOf(link: string): string {

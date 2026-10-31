@@ -3,20 +3,24 @@
 // title's field (boards 34a, 35a, 35b); J7's JD chip with its popover and Applied before, as mail's
 // slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
 // lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
-// wrapping in their boxes (SV-129). What they do with the props and the pointer or keys they're
+// wrapping in their boxes (SV-129); the area that takes a pasted posting and a candidate Jobs can't
+// read (SV-140). What they do with the props and the pointer or keys they're
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
   ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, PostingOut,
 } from '@setpoint/shared';
+import {MAX_PASTED_CHARS, PASTED_TOO_LONG} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
+import {ApiFailure} from '../../src/api/client.ts';
 import '../../src/app/jobs/jobs.css';
 import {CandidatePicker} from '../../src/app/jobs/CandidatePicker.tsx';
 import {JdFacts} from '../../src/app/jobs/Detail.tsx';
 import {EditField} from '../../src/app/jobs/EditField.tsx';
+import {PastePosting} from '../../src/app/jobs/PastePosting.tsx';
 import {FullPosting} from '../../src/app/jobs/FullPosting.tsx';
 import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
 import {readsWith} from '../../src/app/jobs/JobsSettings.tsx';
@@ -27,7 +31,7 @@ import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
-import {fromHistorySetting, historyLine, historySetting, historyShare, jobsUsageParts, pickWords, readingLine} from '../../src/app/jobs/words.ts';
+import {foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, jobsUsageParts, pickWords, readingLine} from '../../src/app/jobs/words.ts';
 import {colour} from './colour.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -376,6 +380,104 @@ test('while its item has the page\'s cursor, ↑ ↓ and Enter reach it from the
   expect(document.querySelector('.jb-cand.cur')?.textContent).toBe('None of these');
   await userEvent.keyboard('{Enter}');
   expect(onNone).toHaveBeenCalledTimes(1);
+});
+
+// ---- Paste the posting (SV-140) ----
+
+test('the area takes the focus as it opens; ⌘Enter saves what\'s typed and Esc cancels, each going no further', async () => {
+  const onSave = vi.fn(() => Promise.resolve());
+  const onCancel = vi.fn();
+  const onKey = vi.fn();
+  await render(<div onKeyDown={event => onKey(event.key)}><PastePosting onSave={onSave} onCancel={onCancel} /></div>);
+  const area = page.getByRole('textbox', {name: 'The posting\'s text'});
+  await expect.element(area).toHaveFocus();
+  // Enter alone is a new line.
+  await userEvent.keyboard('A role{Enter}at Fabrikam');
+  expect(onSave).not.toHaveBeenCalled();
+  expect((area.element() as HTMLTextAreaElement).value).toBe('A role\nat Fabrikam');
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  expect(onSave.mock.calls).toEqual([['A role\nat Fabrikam']]);
+  await userEvent.keyboard('{Escape}');
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  // Neither reaches the page (Esc would close the pane).
+  expect(onKey.mock.calls.filter(([key]) => key === 'Escape')).toEqual([]);
+  expect(onKey.mock.calls.filter(([key]) => key === 'Enter')).toHaveLength(1);
+});
+
+test('Save and Cancel do the same, Save once while it\'s on its way', async () => {
+  let saved = () => {};
+  const onSave = vi.fn(() => new Promise<void>(resolve => {
+    saved = resolve;
+  }));
+  const onCancel = vi.fn();
+  await render(<PastePosting onSave={onSave} onCancel={onCancel} />);
+  await userEvent.keyboard('A role at Fabrikam');
+  await page.getByRole('button', {name: 'Save'}).click();
+  await expect.element(page.getByRole('button', {name: 'Save'})).toBeDisabled();
+  await page.getByRole('textbox', {name: 'The posting\'s text'}).click();
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  expect(onSave).toHaveBeenCalledTimes(1);
+  saved();
+  await page.getByRole('button', {name: 'Cancel'}).click();
+  expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
+test('a refusal stays in place in alert with the text kept, the field marked and focused, and goes on the next try', async () => {
+  const onSave = vi.fn<(text: string) => Promise<void>>()
+    .mockRejectedValueOnce(new ApiFailure(400, 'invalid', 'That\'s too short to be a posting, paste its whole text.'))
+    .mockResolvedValueOnce(undefined);
+  await render(<PastePosting onSave={onSave} onCancel={() => {}} />);
+  const area = page.getByRole('textbox', {name: 'The posting\'s text'});
+  await userEvent.keyboard('A role.{Meta>}{Enter}{/Meta}');
+  const alert = page.getByRole('alert');
+  await expect.element(alert).toHaveTextContent('That\'s too short to be a posting, paste its whole text.');
+  expect(getComputedStyle(alert.element()).color).toBe(colour('var(--alert)'));
+  await expect.element(area).toHaveAttribute('aria-invalid', 'true');
+  await expect.element(area).toHaveValue('A role.');
+  await expect.element(area).toHaveFocus();
+  await expect.element(page.getByRole('button', {name: 'Save'})).toBeEnabled();
+  await userEvent.keyboard('{Meta>}{Enter}{/Meta}');
+  await expect.element(alert).not.toBeInTheDocument();
+});
+
+test('too long is said here, without sending it', async () => {
+  const onSave = vi.fn(() => Promise.resolve());
+  await render(<PastePosting onSave={onSave} onCancel={() => {}} />);
+  const area = page.getByRole('textbox', {name: 'The posting\'s text'});
+  await area.fill('a'.repeat(MAX_PASTED_CHARS + 1));
+  await page.getByRole('button', {name: 'Save'}).click();
+  await expect.element(page.getByRole('alert')).toHaveTextContent(PASTED_TOO_LONG);
+  expect(onSave).not.toHaveBeenCalled();
+});
+
+const PASTED: PostingOut = {summary: '', location: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [], full_text: '## The role\n\nWeekly reports.', link: null, source: 'pasted', platform: null, found_at: '2026-10-07T16:12:00.000Z'};
+
+test('a JD pasted says so in the full posting and the column, and shows no link it hasn\'t got', async () => {
+  await render(<FullPosting posting={PASTED} title="Data Analyst" company="Fabrikam" timeZone={ZONE} today={TODAY} />);
+  const row = page.getByRole('group', {name: 'Full posting'});
+  await expect.element(row).toHaveTextContent('Full postingPasted by you · Oct 7, 9:12 AMShow');
+  expect(row.element().querySelector('a')).toBeNull();
+  expect(foundShort(PASTED, ZONE, TODAY)).toBe('Pasted by you · Oct 7');
+  expect(foundBy(PASTED)).toBe('Pasted');
+  const jd = {state: 'found', source: 'pasted', platform: null, found_at: PASTED.found_at, candidates: 0, looked_at: null, link: null} as const;
+  expect(jdCell(jd, Date.parse('2026-10-07T18:12:00.000Z'), ZONE)).toMatchObject({text: 'Pasted', title: 'Pasted by you · 2h ago'});
+});
+
+test('a JD not read yet has no reading to show: the popover says nothing of a salary', async () => {
+  const {button} = await chip(NORTHWIND, detailOf(PASTED));
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.element(popover.getByRole('button', {name: 'Full posting'})).toBeInTheDocument();
+  expect(popover.element().textContent).toBe('Northwind Talent· via GreenhouseSoftware Engineer IIn process· Applied Oct 1Pasted by you · Oct 7Full postingOpen in Jobs');
+});
+
+test('what it has read shows as any JD\'s does', async () => {
+  const {button} = await chip(NORTHWIND, detailOf({...PASTED, summary: 'Weekly reports for the whole company.', location: 'Atlanta, GA'}));
+  await button.click();
+  const popover = page.getByRole('dialog', {name: 'Job description'});
+  await expect.element(popover.getByRole('button', {name: 'Full posting'})).toBeInTheDocument();
+  expect(popover.element().textContent).toContain('What they wantWeekly reports for the whole company.Atlanta, GASalary not stated');
+  expect([PASTED, {...PASTED, nice_to_haves: ['Python']}, {...PASTED, salary: '$70,000'}].map(hasReading)).toEqual([false, true, true]);
 });
 
 // ---- The title in place (35a) ----

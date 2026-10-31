@@ -55,6 +55,8 @@ interface SeedCandidate {
   location: string;
   platform: string;
   link: string;
+  // Opened and came back as nothing Jobs can read (SV-140).
+  unreadable?: true;
 }
 
 interface SeedApplication {
@@ -66,7 +68,8 @@ interface SeedApplication {
   events: SeedEvent[];
   // Set by hand (D322): Alpine Ski House's Withdrawn on Sep 10.
   byHand?: {status: JobStatus; at: [string, string]};
-  jd: SeedPosting | {candidates: SeedCandidate[]} | 'not_found' | null;
+  // `picked`: the user picked the first, and Jobs couldn't read it (SV-132, SV-140).
+  jd: SeedPosting | {candidates: SeedCandidate[]; picked?: true} | 'not_found' | null;
   reappliedFrom?: string;
 }
 
@@ -325,7 +328,7 @@ const TABLE: SeedApplication[] = [
  * The 45 the table leaves out (D319), each [company, title, platform, applied, rejected or withdrawn
  * by hand]. Mostly Ghosted or Rejected; six still at Applied inside 30 days, so 18 of Applied's 31
  * are Ghosted. Wingtip Toys' two, Adventure Works' and Margie's Travel's are the ones From history
- * names.
+ * names. The Phone Company's Support Engineer is a pick Jobs couldn't read, below the table's fold.
  */
 type Older = [company: string, title: string, platform: string, applied: [string, string], end?: {rejected: string} | {withdrawn: string}];
 const OLDER: Older[] = [
@@ -384,9 +387,13 @@ const OLDER_CANDIDATES: Record<string, SeedCandidate[]> = {
   ],
   'Margie\'s Travel': [
     {title: 'Associate Developer', location: 'Chicago, IL', platform: 'Greenhouse', link: 'https://greenhouse.example/margiestravel/jobs/3301847'},
-    {title: 'Associate Software Developer', location: 'Remote', platform: 'LinkedIn', link: 'https://linkedin.example/jobs/view/3712094381'},
+    {title: 'Associate Software Developer', location: 'Remote', platform: 'LinkedIn', link: 'https://linkedin.example/jobs/view/3712094381', unreadable: true},
     {title: 'Associate Developer, Bookings', location: 'Chicago, IL', platform: 'Indeed', link: 'https://indeed.example/viewjob?jk=2b90d4e1c7a8'},
   ],
+};
+
+const OLDER_FAILED_PICKS: Record<string, SeedCandidate> = {
+  'The Phone Company': {title: 'Support Engineer', location: 'Remote', platform: 'Glassdoor', link: 'https://www.glassdoor.example/job-listing/support-engineer-2291', unreadable: true},
 };
 
 const PLACES: [string, JobWorkplace, string | null][] = [
@@ -400,6 +407,7 @@ function olderApplication([company, title, platform, appliedOn, end]: Older, ind
   const events: SeedEvent[] = [applied(appliedOn[0], appliedOn[1], company)];
   if (end && 'rejected' in end) events.push(rejected(end.rejected, '10:00', company));
   const closedBeforeSeptember = end && 'rejected' in end && appliedOn[0] < '09-01';
+  const failedPick = !end ? OLDER_FAILED_PICKS[company] : undefined;
   const [location, workplace, salary] = PLACES[index % PLACES.length]!;
   const source: JdSource = ['Greenhouse', 'Lever', 'Ashby'].includes(platform) ? 'platform' : platform === 'Indeed' ? 'email_link' : 'search';
   const host = source === 'search' ? `${slug(company)}.example/careers` : `${slug(platform)}.example/${slug(company)}`;
@@ -408,7 +416,7 @@ function olderApplication([company, title, platform, appliedOn, end]: Older, ind
     events,
     ...(end && 'withdrawn' in end ? {byHand: {status: 'withdrawn' as const, at: [end.withdrawn, '20:00'] as [string, string]}} : {}),
     // Closed before Jobs looked: none (D311); From history's two wait as candidates; the rest found.
-    jd: OLDER_CANDIDATES[company] && !end ? {candidates: OLDER_CANDIDATES[company]} : closedBeforeSeptember ? null
+    jd: failedPick && failedPick.title === title ? {candidates: [failedPick], picked: true} : OLDER_CANDIDATES[company] && !end ? {candidates: OLDER_CANDIDATES[company]} : closedBeforeSeptember ? null
       : posting(company, title, {source, platform: source === 'search' ? null : platform, link: `https://${host}/${slug(title)}-${1000 + index}`, location, workplace, salary}),
   };
 }
@@ -529,7 +537,7 @@ export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.
         company: application.company, title: application.title, titleKey: titleKey(application.title), platform: application.platform,
         accountId: accounts.get(application.account ?? 'Jobs') ?? null, appliedAt, status, statusSetBy: application.byHand ? 'user' : 'email', statusSetAt,
         step, stepAt: step ? last.instant : null, reappliedFromId: application.reappliedFrom ? ids.get(application.reappliedFrom)! : null,
-        jdLookup: jd === 'not_found' ? 'not_found' : jd && 'candidates' in jd ? 'candidates' : 'none',
+        jdLookup: jd === 'not_found' || (jd && 'picked' in jd) ? 'not_found' : jd && 'candidates' in jd ? 'candidates' : 'none',
         jdLookupAt: jd === null ? null : minutesAfter(appliedAt, 4 + (jd !== 'not_found' && 'candidates' in jd ? 0 : 3)),
         createdAt: appliedAt, updatedAt: statusSetAt,
       }).returning({id: j.jobsApplications.id}).get();
@@ -550,7 +558,7 @@ export function seedJobs({sqlite, db: mailDb, usage = false}: {sqlite: Database.
       if (jd && jd !== 'not_found') {
         if ('candidates' in jd) {
           jd.candidates.forEach((candidate, position) => db.insert(j.jobsJdCandidates).values({
-            applicationId: row.id, ...candidate, position, foundAt: minutesAfter(appliedAt, 4),
+            applicationId: row.id, ...candidate, position, foundAt: minutesAfter(appliedAt, 4), pickedAt: 'picked' in jd ? minutesAfter(appliedAt, 5) : null,
           }).run());
         } else {
           db.insert(j.jobsPostings).values({

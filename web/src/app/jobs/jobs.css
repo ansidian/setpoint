@@ -268,9 +268,18 @@
 .jb-skel .sk-bar:last-child { margin-top: 10px; }
 .jb-arrive { animation: jb-fade var(--dur-fast) var(--ease); }
 /* No JD found (38b), and the other ways a JD can stand without one. */
-.jb-nojd { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); margin-top: 8px; }
-.jb-nojd > .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jb-nojd { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-height: 44px; padding: 8px 8px 8px 14px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink3); margin-top: 8px; }
+.jb-nojd > .line { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.jb-nojd .words { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jb-nojd .ink2 { color: var(--ink2); }
+/* Beside the line while they fit, else under it at the card's right. */
+.jb-nojd .acts { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
+/* Paste the posting (SV-140): in the JD section, under where it stands. */
+.jb-paste { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; max-width: 600px; }
+.jb-paste .input { height: 200px; padding: 10px 12px; font-family: inherit; line-height: 1.5; resize: vertical; }
+.jb-paste .refused { color: var(--alert); font-size: 12.5px; }
+.jb-paste .acts { display: flex; align-items: center; gap: 6px; }
+.jb-paste .jb-hint { margin: 0 0 0 4px; }
 /* Unfolded in place (33): the row becomes the section's sticky head, the text unfolding under it. */
 .jb-fullhead { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 12px; color: var(--ink2); flex: none;
   /* sub2 laid on the page, so the text scrolling under the sticky head doesn't show through. */

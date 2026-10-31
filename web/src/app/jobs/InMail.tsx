@@ -30,7 +30,7 @@ import {Bar, Sk} from '../states/Loading.tsx';
 import type {MailSlots} from '../slots.tsx';
 import {applicationPath, mailPath, NAV_PATH} from './api.ts';
 import {JdFacts, JdLists} from './Detail.tsx';
-import {appliedLine, appliedStanding, chipRole, foundLine, foundShort, lookingWhere, markLabel, markOf, notFoundWords, titleOf} from './words.ts';
+import {appliedLine, appliedStanding, chipRole, foundLine, foundShort, hasReading, lookingWhere, markLabel, markOf, notFoundWords, titleOf} from './words.ts';
 
 /** What the list last knew of each email, so the reader's chip draws with its head. */
 const known = new Map<number, JobsMailMessageOut | null>();
@@ -235,11 +235,13 @@ function JdPopover({application, detail, today, timeZone, onLeave}: {
           <Sk kind="jobs-pop" className="jb-skel"><Bar w="92%" h={10} /><Bar w="86%" h={10} /><Bar w="54%" h={10} /></Sk>
         ) : posting ? (
           <>
-            <div>
-              <h2 className="jb-label">What they want</h2>
-              <p className="want">{posting.summary}</p>
-            </div>
-            <JdFacts posting={posting} />
+            {posting.summary && (
+              <div>
+                <h2 className="jb-label">What they want</h2>
+                <p className="want">{posting.summary}</p>
+              </div>
+            )}
+            {hasReading(posting) && <JdFacts posting={posting} />}
             <JdLists posting={posting} />
           </>
         ) : <NoJd detail={detail} timeZone={timeZone} today={today} />}
