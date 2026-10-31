@@ -5,12 +5,13 @@ import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {useEffect, useRef, useState} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
 import {isTyping} from '../../ui/keys.ts';
-import {candidateWhere} from './menus.ts';
+import {candidateWhere, CANT_READ} from './menus.ts';
 
 /**
  * A JD's candidates (34a): a group of radios, the last None of these, each candidate's arrow opening
  * its posting without picking it. ↑ ↓ choose and Enter picks, in the group or, while its item has the
  * page's cursor (`active`), from the page. Picked, the group takes `good` and the row reads "JD saved".
+ * One Jobs can't read says so after its line, which gives way to it (SV-140).
  */
 export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
   candidates: JdCandidateOut[];
@@ -77,6 +78,7 @@ export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
         <>
           <Icon name="radio_button_unchecked" size={16} />
           <span className="ell"><span className="t">{candidate.title}</span> <span className="ink3">· {candidateWhere(candidate)}</span></span>
+          {candidate.unreadable && <span className="ink3 cant">{CANT_READ}</span>}
         </>
       ), candidate))}
       {row(candidates.length, (

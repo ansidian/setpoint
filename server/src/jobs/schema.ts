@@ -123,6 +123,9 @@ export const jobsJdCandidates = sqliteTable('jobs_jd_candidates', {
   source: text('source', {enum: JD_SOURCES}),
   // The user picked it (J6): the lookup reads this one and saves it.
   pickedAt: text('picked_at'),
+  // Opening it came back `unreadable` (a 403, a non-HTML answer, a page with no text Jobs can use),
+  // so the picker says so; a failure to reach it says nothing about the page, and leaves this false.
+  unreadable: integer('unreadable', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   uniqueIndex('jobs_jd_candidates_link').on(table.applicationId, table.link),
 ]);

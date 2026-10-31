@@ -85,13 +85,16 @@ export function assignMenu(item: NeedsYouItemOut, rows: ApplicationRowOut[], tod
 /** A candidate's second line: "New York, NY · Greenhouse". */
 export const candidateWhere = (candidate: JdCandidateOut) => [candidate.location, candidate.platform].filter(Boolean).join(' · ');
 
+/** What a candidate's line adds when opening it came back as nothing Jobs can read (SV-140). */
+export const CANT_READ = 'Jobs can\'t read this one';
+
 /** From history's Choose… (#266): each candidate with its open_in_new, then None of these. */
 export function chooseMenu(candidates: JdCandidateOut[], on: {pick: (candidate: JdCandidateOut) => void; none: () => void}): MenuSpec {
   return {
     label: 'Choose the posting', width: 330,
     entries: [
       ...candidates.map((candidate): MenuEntry => ({
-        kind: 'item', id: `c${candidate.id}`, icon: 'description', label: candidate.title, sub: candidateWhere(candidate), peek: candidate.link, run: () => on.pick(candidate),
+        kind: 'item', id: `c${candidate.id}`, icon: 'description', label: candidate.title, sub: [candidateWhere(candidate), candidate.unreadable && CANT_READ].filter(Boolean).join(' · '), peek: candidate.link, run: () => on.pick(candidate),
       })),
       {kind: 'sep'},
       {kind: 'item', id: 'none', icon: 'block', label: 'None of these', run: on.none},

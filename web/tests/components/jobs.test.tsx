@@ -22,6 +22,7 @@ import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
 import {readsWith} from '../../src/app/jobs/JobsSettings.tsx';
 import {JobsMenu} from '../../src/app/jobs/Menu.tsx';
 import type {MenuSpec} from '../../src/app/jobs/Menu.tsx';
+import {chooseMenu} from '../../src/app/jobs/menus.ts';
 import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
@@ -292,8 +293,8 @@ test('← in a submenu without a field goes back to its item', async () => {
 // ---- A JD to confirm's candidates (34a) ----
 
 const CANDIDATES: JdCandidateOut[] = [
-  {id: 1, title: 'Junior Developer', location: 'New York, NY', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520391'},
-  {id: 2, title: 'Junior Developer, Digital', location: 'Remote', platform: 'LinkedIn', link: 'https://linkedin.example/jobs/view/3981204417'},
+  {id: 1, title: 'Junior Developer', location: 'New York, NY', platform: 'Greenhouse', link: 'https://greenhouse.example/lucernepublishing/jobs/5520391', unreadable: false},
+  {id: 2, title: 'Junior Developer, Digital', location: 'Remote', platform: 'LinkedIn', link: 'https://linkedin.example/jobs/view/3981204417', unreadable: false},
 ];
 
 function Picked({active, onPick, onNone}: {active: boolean; onPick: (candidate: JdCandidateOut) => void; onNone: () => void}) {
@@ -332,6 +333,33 @@ test('the candidates are radios, the last None of these; ↑ ↓ choose and Ente
   await userEvent.keyboard('{ArrowDown}{Enter}');
   expect(onPick).toHaveBeenCalledTimes(1);
   expect(onNone).not.toHaveBeenCalled();
+});
+
+const UNREADABLE: JdCandidateOut = {id: 3, title: 'Junior Developer', location: 'New York, NY', platform: 'Glassdoor', link: 'https://www.glassdoor.example/job-listing/2291', unreadable: true};
+
+test('a candidate Jobs can\'t read says so in ink3, however long its title, and its arrow still opens it (SV-140)', async () => {
+  const long = {...UNREADABLE, title: 'Junior Developer, Reading Apps and the Services Behind Them, New York or Remote'};
+  await render(<div style={{width: 420}}><CandidatePicker candidates={[CANDIDATES[0]!, long]} active={false} picked={null} onPick={() => {}} onNone={() => {}} /></div>);
+  const group = page.getByRole('radiogroup', {name: 'Is this the posting?'});
+  expect(group.getByRole('radio').first().element().textContent).toBe('Junior Developer · New York, NY · Greenhouse');
+  const note = group.getByText('Jobs can\'t read this one', {exact: true});
+  await expect.element(note).toBeVisible();
+  expect(note.element().closest('[role="radio"]')).toBe(group.getByRole('radio').nth(1).element());
+  expect(getComputedStyle(note.element()).color).toBe(colour('var(--ink3)'));
+  // The title gives way, never the note.
+  expect(note.element().getBoundingClientRect().right).toBeLessThanOrEqual(group.getByRole('radio').nth(1).element().getBoundingClientRect().right);
+  expect(note.element().scrollWidth).toBeLessThanOrEqual(note.element().clientWidth);
+  await expect.element(group.getByRole('link', {name: `Look at ${long.title}`})).toHaveAttribute('href', UNREADABLE.link);
+});
+
+test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there (SV-140)', () => {
+  const entries = chooseMenu([CANDIDATES[0]!, UNREADABLE], {pick: () => {}, none: () => {}}).entries;
+  expect(entries.map(entry => (entry.kind === 'item' ? [entry.sub, entry.peek] : entry.kind))).toEqual([
+    ['New York, NY · Greenhouse', CANDIDATES[0]!.link],
+    ['New York, NY · Glassdoor · Jobs can\'t read this one', UNREADABLE.link],
+    'sep',
+    [undefined, undefined],
+  ]);
 });
 
 test('while its item has the page\'s cursor, ↑ ↓ and Enter reach it from the page: up from the top is None of these', async () => {

@@ -78,7 +78,7 @@ function loadRows(store: Store) {
 const newestFirst = (a: Application, b: Application) => b.appliedAt.localeCompare(a.appliedAt) || b.id - a.id;
 
 const candidateOut = (candidate: Candidate): JdCandidateOut => ({
-  id: candidate.id, title: candidate.title, location: candidate.location, platform: candidate.platform, link: candidate.link,
+  id: candidate.id, title: candidate.title, location: candidate.location, platform: candidate.platform, link: candidate.link, unreadable: candidate.unreadable,
 });
 
 /** GET /api/jobs. */

@@ -18,7 +18,8 @@
 //   retry policy and never shown as not found.
 // - Opening what the search offers (D388): a sole match that reads is saved with no check. Otherwise
 //   each candidate is opened: gone is dropped, one Jobs can't read or couldn't reach stays offered,
-//   and one that reads goes to Haiku, who can only drop it, never save it.
+//   and one that reads goes to Haiku, who can only drop it, never save it. One that came back
+//   `unreadable` is recorded so, and the picker says so (SV-140); one it couldn't reach isn't.
 // - The saved JD (decision 53): its full text as markdown, its link, when and how it was found, and
 //   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
 // - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
@@ -185,6 +186,8 @@ interface Offer {
   site: string;
   link: string;
   source: JdSource;
+  // Opened and came back `unreadable` (SV-140).
+  unreadable?: boolean;
 }
 
 type Step = StepOutcome<Offer> | {is: 'failed'; error: ProviderError};
@@ -387,14 +390,15 @@ async function fromGovernmentJobs(
 
 /**
  * A search candidate opened. One that failed (the network, a 5xx, a 429, a timeout) stays offered, as
- * one Jobs can't read does, rather than paying for the search again over one page.
+ * one Jobs can't read does, rather than paying for the search again over one page, but it's `failed`,
+ * which says nothing about the page, so it isn't marked as one Jobs can't read (SV-140).
  */
-async function openCandidate(web: JobsWeb, link: string, signal: AbortSignal): Promise<OpenedLink> {
+async function openCandidate(web: JobsWeb, link: string, signal: AbortSignal): Promise<OpenedLink | {is: 'failed'}> {
   try {
     return await openLink(web, link, signal);
   } catch {
     signal.throwIfAborted();
-    return {is: 'unreadable'};
+    return {is: 'failed'};
   }
 }
 
@@ -415,7 +419,7 @@ async function fromSearch(
   const candidates = searchCandidatesOf(answer.toolInput).filter(candidate => fresh(candidate.url));
   const offers = candidates.map((candidate): Offer => ({found: null, title: candidate.title, location: candidate.location, site: candidate.site, link: candidate.url, source: 'search'}));
   const outcome = outcomeOf(offers.map((candidate, index) => ({candidate, verdict: candidates[index]!.verdict})));
-  const reads = new Map<Offer, OpenedLink>();
+  const reads = new Map<Offer, Awaited<ReturnType<typeof openCandidate>>>();
   if (outcome.is === 'confident') {
     const read = await openCandidate(web, outcome.posting.link, signal);
     if (read.is === 'read') return {is: 'confident', posting: {...outcome.posting, found: read.posting}};
@@ -424,7 +428,7 @@ async function fromSearch(
   for (const offer of offers) if (!reads.has(offer)) reads.set(offer, await openCandidate(web, offer.link, signal));
   const left = offers.flatMap((offer): Offer[] => {
     const read = reads.get(offer)!;
-    return read.is === 'gone' ? [] : read.is === 'read' ? [{...offer, found: read.posting}] : [offer];
+    return read.is === 'gone' ? [] : read.is === 'read' ? [{...offer, found: read.posting}] : [{...offer, unreadable: read.is === 'unreadable'}];
   });
   const readable = left.filter(offer => offer.found);
   const verdicts = readable.length ? await verdictsOn(store, haiku, context, readable, signal) : [];
@@ -473,7 +477,7 @@ function saveCandidates(store: Store, applicationId: number, offers: Offer[]) {
     const answered = answerJdItems(store, applicationId, 'looked_up_again', now);
     db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     offers.slice(0, 3).forEach((offer, position) => db.insert(j.jobsJdCandidates).values({
-      applicationId, title: offer.title, location: offer.location, platform: offer.site, link: offer.link, position, foundAt: now, source: offer.source,
+      applicationId, title: offer.title, location: offer.location, platform: offer.site, link: offer.link, position, foundAt: now, source: offer.source, unreadable: offer.unreadable ?? false,
     }).onConflictDoNothing().run());
     const item = db.insert(j.jobsNeedsYou).values({
       kind: 'jd_to_confirm', reason: 'unsure_posting', fromHistory: application.jdLookupFromHistory, applicationId, company: application.company, title: application.title || null,

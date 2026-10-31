@@ -110,6 +110,8 @@ export const jdCandidateSchema = z.strictObject({
   // Where it was seen ("Greenhouse", "LinkedIn").
   platform: z.string(),
   link: z.url(),
+  // Opened and came back as nothing Jobs can read, so a pick keeps its link and can't save a JD (SV-140).
+  unreadable: z.boolean(),
 });
 export type JdCandidateOut = z.infer<typeof jdCandidateSchema>;
 
