@@ -12,21 +12,33 @@ import {colour} from './colour.ts';
 const toast = page.getByRole('status');
 const style = (element: Element, property: string, pseudo?: string) => getComputedStyle(element, pseudo).getPropertyValue(property);
 
+interface Worn {
+  name: string;
+  // On the test's clock, which runs on by itself, so a time is measured here rather than bounded by
+  // what the test advanced: on a busy machine a read can come seconds of that clock late (SV-144).
+  at: number;
+}
+
 /** Every class the toast wears from now on, so a fade too short to poll for is still seen. */
-function classes(): () => string[] {
-  const seen: string[] = [];
+function classes(): () => Worn[] {
+  const seen: Worn[] = [];
   const observer = new MutationObserver(() => {
     const pill = document.querySelector('.toast');
-    if (pill && seen.at(-1) !== pill.className) seen.push(pill.className);
+    if (pill && seen.at(-1)?.name !== pill.className) seen.push({name: pill.className, at: Date.now()});
   });
   observer.observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
   return () => seen;
 }
-const fadedOut = (seen: string[]) => seen.some(name => name.split(' ').includes('leaving'));
+const wearing = (worn: Worn, name: string) => worn.name.split(' ').includes(name);
+const fadedOut = (seen: Worn[]) => seen.some(worn => wearing(worn, 'leaving'));
+/** The clock up to a moment and not past it, so a fade that starts there is drawn and seen. */
+const advanceTo = (moment: number) => vi.advanceTimersByTime(Math.max(0, moment - Date.now()));
 
 beforeEach(async () => {
   // Its clock runs on with the real one, so the locators' own retries still come round.
   vi.useFakeTimers({shouldAdvanceTime: true});
+  // The pointer starts away from where a toast comes, or a slow frame lets it hold the toast.
+  await userEvent.hover(page.elementLocator(document.documentElement), {position: {x: 0, y: 0}});
   await render(<ToastPill />);
 });
 
@@ -63,10 +75,15 @@ test('a new line replaces the last as a new toast, so it drops in afresh, and it
 });
 
 test('under the pointer it waits, its hairline held, past its time; left, it runs on with what it had left, then fades out before it goes', async () => {
+  const seen = classes();
+  const shown = Date.now();
   showToast('Moved to Trash', {label: 'Undo', run: () => {}});
   await expect.element(toast).toBeVisible();
+  // Only the test moves the clock until the pointer is on it, or a busy machine could run it out.
+  vi.setTimerTickMode('manual');
   vi.advanceTimersByTime(UNDO_MS - 2000);
   await userEvent.hover(toast);
+  vi.setTimerTickMode('interval');
   await expect.element(toast).toHaveClass('held');
   expect(style(toast.element(), 'animation-play-state', '::after')).toBe('paused');
   vi.advanceTimersByTime(UNDO_MS * 2);
@@ -75,15 +92,13 @@ test('under the pointer it waits, its hairline held, past its time; left, it run
 
   await userEvent.unhover(toast);
   await expect.element(toast).not.toHaveClass('held');
-  // It had two seconds left; the clock also runs on by itself between steps, so the bounds have room.
-  const seen = classes();
-  vi.advanceTimersByTime(1000);
-  await expect.element(toast).toBeInTheDocument();
-  expect(fadedOut(seen())).toBe(false);
-  // Up to its end only, not on past its fade as well.
-  vi.advanceTimersToNextTimer();
+  // Its six seconds, less the time under the pointer: neither started again nor cut short.
+  const held = seen().find(worn => wearing(worn, 'held'))!;
+  const left = seen().find(worn => worn.at >= held.at && !wearing(worn, 'held'))!;
+  advanceTo(left.at + UNDO_MS - (held.at - shown));
   await expect.element(toast).not.toBeInTheDocument();
-  expect(fadedOut(seen())).toBe(true);
+  const leaving = seen().find(worn => wearing(worn, 'leaving'))!;
+  expect(Math.abs(held.at - shown + leaving.at - left.at - UNDO_MS)).toBeLessThan(1000);
 });
 
 test('its action runs once, and the toast goes with it', async () => {
@@ -98,6 +113,8 @@ test('its action runs once, and the toast goes with it', async () => {
 });
 
 test('a failure leads with `error` in `alert`, wears an `alert` ring and wash, its words in `ink`, stays eight seconds, and has no hairline', async () => {
+  const seen = classes();
+  const shown = Date.now();
   showToast('Couldn\'t pin it, Gmail didn\'t answer in time.', null, 'failed');
   await expect.element(toast).toHaveClass('failed');
   const pill = toast.element();
@@ -106,12 +123,7 @@ test('a failure leads with `error` in `alert`, wears an `alert` ring and wash, i
   expect(style(pill, 'background-color')).toBe(colour('color-mix(in oklch, var(--alert) 8%, var(--cardOn))'));
   expect(style(pill.querySelector('span:not(.tone)')!, 'color')).toBe(colour('var(--ink)'));
   expect(style(pill, 'content', '::after')).toBe('none');
-  const seen = classes();
-  vi.advanceTimersByTime(UNDO_MS + 1000);
-  await expect.element(toast).toBeInTheDocument();
-  expect(fadedOut(seen())).toBe(false);
-  // Up to its end only, not on past its fade as well.
-  vi.advanceTimersToNextTimer();
+  advanceTo(shown + 8000);
   await expect.element(toast).not.toBeInTheDocument();
-  expect(fadedOut(seen())).toBe(true);
+  expect(Math.abs(seen().find(worn => wearing(worn, 'leaving'))!.at - shown - 8000)).toBeLessThan(1000);
 });
