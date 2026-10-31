@@ -248,12 +248,16 @@ third, because it ranked importance above match.
 - As Andy types, words become **chips**: an organisation, a type, a date or range ("march", "last
   week"), an account, a kind. `northwind rejection march` becomes **Northwind · Rejection ·
   Mar 2026**. Chips filter exactly; results are **newest first**.
-- Free text without chips matches sender, then subject, then body, then date. No importance boost.
+- Free text without chips requires every word but filler and ranks by how well they matched: sender,
+  then subject, then across the email's fields, then close together in the body, newest first
+  within each. No importance boost. Emails about the search come first; those that only mention it
+  fold away under "12 more mention these words". When no email has every word, the rarest words each
+  has rank them, and the list says so. Alfred keeps a broader search of its own (SV-137).
 - The body search sees leaves out links and footers, keeping each link's domain as a word, and an
   email's summary counts as body (SV-135). The reader, triage and Alfred still read the whole body.
 - Andy often searches by what an email is about, in words it doesn't use. Claude Haiku 5.5 writes
-  each email's **search terms** once, as its own durable job, and they count as body for now
-  (SV-136). Trashed mail isn't read. Mail from before terms, and mail an older prompt read, wait for
+  each email's **search terms** once, as its own durable job, and they rank with the subject when
+  one term holds the words (SV-136, SV-137). Trashed mail isn't read. Mail from before terms, and mail an older prompt read, wait for
   `search-terms --apply`. With no Anthropic key, terms stay empty and search works without them.
 - Each result shows why it matched, with the matching words highlighted.
 - Searches and the position of the opened result are logged, so ranking can be measured against

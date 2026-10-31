@@ -391,6 +391,19 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
 - A results line: "2 results · newest first". Each result shows why it matched ("Type Rejection",
   `ink3` 12) where its lines don't already show it (#212), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
   yellow in Light, #172).
+- **Free text ranks by how well the words matched**, newest first within each tier, with no
+  importance boost (#279). Every word but filler is required, and a word in capitals isn't filler
+  (`IT Specialist`). With a chip in force, results stay newest first in one list.
+- **Emails about the search come first; those that only mention it fold away** under a 32 px line
+  after them, "12 more mention these words" (`ink3` 12.5), with `expand_more`. The line opens in
+  place on a click or Enter, its rows folding in as a group's do (#198), the chevron turning from
+  pointing right. Under the pointer it's `sub`, under the keyboard's cursor `sub2`, pressed `sub3`.
+  J and K stop on it, open or not, so Enter closes it too, and the list runs on through its rows.
+  The results line counts what's above it. It waits for its rows' pages until it opens, and shows
+  once everything above it has loaded. A new search starts folded. When nothing is about the search,
+  there's no line: what matched is the list.
+- **No email has every word:** "No email has every word · 3 have some of them", ranked by the rarest
+  words each has; the line under them reads "12 more mention some of these words".
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
   after it in `ink3` (#173).
@@ -3400,3 +3413,17 @@ it changes what's on screen.
     give. The JD column says "Pasted", Full posting "Pasted by you". Look it up after a failed pick
     turns that link down first, so it can't fail the same way; the link is then lost as Open posting
     if the search finds nothing.
+279. **Search ranks by match quality and folds what only mentions it** (Andy, 2026-10-30; darma
+    SV-133, SV-137, amending Search's "free text matches sender, then subject, then body"). The tiers,
+    best first:
+    1. every word in the sender or organisation;
+    2. a phrase in the subject or in one search term, or one word whole in the subject;
+    3. every word in the subject, or every word in one search term;
+    4. every word across the sender, subject, summary and search terms, or a type a word names;
+    5. a phrase in the body, or the words within 8 of each other there.
+
+    The rest fold away: other body matches, then a word only partly matched in the body, then a word
+    only in a link's domain. The sender and subject take a word's start; the summary, search terms
+    and body want it whole, except the word being typed and a phrase. A type's word, and `bill` for
+    a statement, brings that type's emails first within a tier. Alfred keeps its own broad search
+    (filler counts, any one word will do), so its answers don't change.
