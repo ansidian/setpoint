@@ -10,7 +10,7 @@ import {describe, expect, onTestFinished, test} from 'vitest';
 import {openDatabase} from '../src/db/open.ts';
 import * as t from '../src/db/schema.ts';
 import {seedSampleData} from '../src/dev/sample.ts';
-import {scoreList, scoreReport, scoreSearches, searchTest, summarise} from '../src/dev/searchScore.ts';
+import {loadTerms, scoreList, scoreReport, scoreSearches, searchTest, summarise} from '../src/dev/searchScore.ts';
 import type {TestSearch} from '../src/dev/searchScore.ts';
 import {world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -98,6 +98,21 @@ describe('the test file', () => {
   });
 });
 
+describe('loadTerms', () => {
+  const inIndex = (w: World, word: string) => w.store.sqlite.prepare('SELECT count(*) AS n FROM messages_fts WHERE messages_fts MATCH ?').pluck().get(word);
+
+  test('writes terms as the job does, so the index has them; a later line wins and mail that isn\'t there is left out', () => {
+    const w = world({seed: true});
+    const id = idOf(w, 'Lease renewal terms');
+    const first = `${JSON.stringify({id, terms: ['Old Word']})}\n`;
+    const second = `${JSON.stringify({id, terms: ['Tenancy  Agreement', 'tenancy agreement']})}\n\n${JSON.stringify({id: 999_999, terms: ['nowhere']})}\n`;
+    expect(loadTerms(w.store.sqlite, [first, second])).toBe(1);
+    expect(w.store.db.select().from(t.messages).where(eq(t.messages.id, id)).get()?.searchTerms).toBe('tenancy agreement');
+    expect(inIndex(w, 'tenancy')).toBe(1);
+    expect(inIndex(w, 'nowhere')).toBe(0);
+  });
+});
+
 // Each run starts a Node process, which a machine that's busy can take seconds over.
 const SPAWNING = 30_000;
 
@@ -123,5 +138,18 @@ describe('scoreSearch.ts', () => {
     expect(fs.readFileSync(file).equals(before)).toBe(true);
     expect(allRow(run())).toBe(allRow(run('--migrate')));
     expect(fs.readdirSync(dir).sort()).toEqual(['mail.sqlite', 'test.json']);
+
+    // Terms go into the scratch copy, beside the file, and are gone with it.
+    const terms = path.join(dir, 'terms.jsonl');
+    const other = (sqliteId: number) => JSON.stringify({searches: [{group: 'topic', text: 'tenancy', wanted: [sqliteId]}] satisfies TestSearch[]});
+    fs.writeFileSync(test, other(id));
+    expect(allRow(run('--migrate'))).toMatch(/^all\s+1\s+0\.000\s/);
+    fs.writeFileSync(terms, `${JSON.stringify({id, terms: ['tenancy agreement']})}\n`);
+    const scored = run('--migrate', '--terms', terms);
+    expect(scored).toContain('Search terms on 1 emails');
+    expect(allRow(scored)).toMatch(/^all\s+1\s+1\.000\s/);
+    expect(fs.readFileSync(file).equals(before)).toBe(true);
+    expect(fs.readdirSync(dir).sort()).toEqual(['mail.sqlite', 'terms.jsonl', 'test.json']);
+    expect(() => execFileSync(process.execPath, ['--no-warnings', script, test, '--terms', terms], {env: {...process.env, SETPOINT_DB: file}, stdio: 'pipe'})).toThrow(/--terms needs --migrate/);
   }, SPAWNING);
 });

@@ -73,7 +73,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   searches in `data/search-test/test.json` and prints numbers and search text only. `--migrate`
   scores the local snapshot (`server/src/dev/exportSearchSnapshot.ts`, the mail of prod with nothing
   secret in it) on a scratch copy at this checkout's migrations, so unreleased code can be scored
-  before anything is deployed. Both files stay out of git, under `data/`, in the main checkout.
+  before anything is deployed, and `--terms <file>` writes search terms into that copy first. All of
+  it stays out of git, under `data/`, in the main checkout.
 
 ## Tests own behaviour
 

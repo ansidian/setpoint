@@ -1,9 +1,14 @@
 // How well search does on the searches a private test file marks (src/dev/searchScore.ts), through
 // the real matchSearch, as numbers and search text. It only reads the database. Against the local
 // snapshot (src/dev/exportSearchSnapshot.ts), where the code may be ahead of the data, --migrate
-// scores a scratch copy brought up to this checkout's migrations and leaves the snapshot as it was:
+// scores a scratch copy brought up to this checkout's migrations and leaves the snapshot as it was.
+// The copy sits beside the snapshot, so real mail stays under `data/`:
 //
 //   SETPOINT_DB=data/search-test/mail-snapshot.sqlite node server/src/dev/scoreSearch.ts data/search-test/test.json --migrate
+//
+// With --migrate, --terms <file> (any number of them) writes search terms into the scratch copy
+// before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
+// email replacing an earlier one. Terms for mail that isn't there are left out.
 //
 // Inside the app's container, the test file comes on stdin:
 //
@@ -11,19 +16,23 @@
 //
 // SETPOINT_DB moves it off the container's database. The test file and the snapshot stay out of git.
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import {parseArgs} from 'node:util';
 import Database from 'better-sqlite3';
 import {drizzle} from 'drizzle-orm/better-sqlite3';
 import {openDatabase} from '../db/open.ts';
 import * as schema from '../db/schema.ts';
 import type {Store} from '../store.ts';
-import {scoreReport, scoreSearches, searchTest} from './searchScore.ts';
+import {loadTerms, scoreReport, scoreSearches, searchTest} from './searchScore.ts';
 
-const args = process.argv.slice(2);
-const migrate = args.includes('--migrate');
-const testFile = args.find(arg => arg !== '--migrate');
-if (!testFile) throw new Error('Usage: scoreSearch.ts <test file, or - for stdin> [--migrate]');
+const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--migrate [--terms <file>]...]';
+const {values: {migrate, terms: termFiles = []}, positionals: [testFile]} = parseArgs({
+  allowPositionals: true,
+  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}},
+});
+if (!testFile) throw new Error(usage);
+// Search terms only ever go into a scratch copy, never the database named.
+if (termFiles.length && !migrate) throw new Error(`--terms needs --migrate. ${usage}`);
 
 const {searches} = searchTest.parse(JSON.parse(fs.readFileSync(testFile === '-' ? 0 : testFile, 'utf8')));
 const file = process.env.SETPOINT_DB ?? '/data/setpoint.sqlite';
@@ -37,11 +46,12 @@ function scoreOn(sqlite: Database.Database) {
 }
 
 if (migrate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-search-score-'));
+  const dir = fs.mkdtempSync(path.join(path.dirname(file), 'score-'));
   try {
     const copy = path.join(dir, 'mail.sqlite');
     fs.copyFileSync(file, copy);
     const {sqlite} = openDatabase(copy);
+    if (termFiles.length) console.log(`Search terms on ${loadTerms(sqlite, termFiles.map(terms => fs.readFileSync(terms, 'utf8')))} emails`);
     scoreOn(sqlite);
     sqlite.close();
   } finally {

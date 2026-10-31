@@ -1,8 +1,10 @@
 // A search's score against the emails marked right for it (src/dev/scoreSearch.ts). Every number is
 // per search, then the plain mean over searches, so a search with 15 right emails counts as much as
 // one with 1.
+import type Database from 'better-sqlite3';
 import {z} from 'zod';
 import {matchSearch} from '../search/search.ts';
+import {termsOf, termsText} from '../search/termsPrompt.ts';
 import type {Store} from '../store.ts';
 
 const GROUPS = ['sender', 'topic', 'meaning'] as const;
@@ -22,6 +24,24 @@ export const searchTest = z.object({
 });
 
 export type TestSearch = z.output<typeof searchTest>['searches'][number];
+
+const termsLine = z.object({id: z.number().int(), terms: z.array(z.string())});
+
+/**
+ * Writes files of search terms into the database as the job would, one {id, terms} a line, the
+ * triggers indexing them. A later line for an email wins. Returns how many emails got terms.
+ */
+export function loadTerms(sqlite: Database.Database, files: string[]): number {
+  const terms = new Map<number, string | null>();
+  for (const file of files) {
+    for (const line of file.split('\n').filter(line => line.trim())) {
+      const {id, terms: written} = termsLine.parse(JSON.parse(line));
+      terms.set(id, termsText(termsOf({terms: written})));
+    }
+  }
+  const write = sqlite.prepare('UPDATE messages SET search_terms = ? WHERE id = ?');
+  return sqlite.transaction(() => [...terms].reduce((changed, [id, text]) => changed + write.run(text, id).changes, 0))();
+}
 
 export interface SearchScore {
   group: SearchGroup;
