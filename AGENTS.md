@@ -33,11 +33,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - `npm test` (lint, typecheck, Vitest, its component tests in Chromium too) passes before every
   commit, and `npm run test:browser` (build and Playwright) for the spec files covering what the
   change touches; a change to the harness or the shared styles runs them all. Say what ran.
-- A whole `npm test` and every browser run share one lock (web/tests/browser/lock.ts), so each waits
-  for the other's run, in any session, saying whose, for up to 45 minutes: run them in the
-  background when another session may be testing. `npm test -- <args>` doesn't wait. Vitest runs as
-  many workers as a Mac has performance cores (vitest.config.ts), since one on an efficiency core
-  can pass a time limit with the Mac idle.
+- Browser runs share one lock (web/tests/browser/lock.ts), so each waits for another's, in any
+  session, saying whose, for up to 45 minutes: run them in the background when another session may
+  be testing. `npm test` takes no lock and passes beside a browser run, each slower (SV-144). Vitest
+  runs as many workers as a Mac has performance cores (vitest.config.ts), since one on an efficiency
+  core can pass a time limit with the Mac idle.
 - `npm run test:browser -- mail search` runs only those spec files, and
   `npm run test:browser -- mail --only "S8"` only the checks whose names start that way: iterate on
   the one check, then run its files before the commit (a run with `--only` isn't recorded for

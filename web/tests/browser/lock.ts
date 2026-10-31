@@ -1,10 +1,9 @@
-// One test run at a time on this machine (SV-39): other sessions run the checks too, and two runs
+// One browser run at a time on this machine (SV-39): other sessions run the checks too, and two runs
 // side by side slow each other into failing. The lock is a file in /tmp, not the session's own
 // temp directory, so every session sees it; a lock whose process has gone is taken over. Every way
 // in takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global
-// setup in its globalSetup, anything else (a bare `node --test` of a spec, the board audit) when it
-// first launches Chromium (harness.ts › launchBrowser), and a whole `npm test` (unit.ts) from its
-// start. A checkout from before the lock doesn't take it, so a run also waits while a Playwright
+// setup in its globalSetup, and anything else (a bare `node --test` of a spec, the board audit) when
+// it first launches Chromium (harness.ts › launchBrowser). `npm test` doesn't. A checkout from before the lock doesn't take it, so a run also waits while a Playwright
 // Chromium outside it is open.
 import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
