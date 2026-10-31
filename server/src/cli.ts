@@ -103,10 +103,10 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     if (command === 'search-terms') {
-      const {done, total, behind, key} = rest[0] === '--apply' ? startSearchTermsPass(store) : searchTermsProgress(store);
-      console.log(`${done} of ${total} emails have search terms from this prompt; ${behind} wait for the go-ahead.`);
+      const {done, total, behind, started, key} = rest[0] === '--apply' ? startSearchTermsPass(store) : searchTermsProgress(store);
+      console.log(`${done} of ${total} emails have search terms from this prompt; ${behind} ${started ? 'left to read' : 'wait for the go-ahead'}.`);
       if (!key) console.log('There\'s no Anthropic key: add one in Settings › AI and the server reads them.');
-      else console.log(rest[0] === '--apply' ? 'The server reads them as it comes to them, newest first.' : 'Nothing changed. Run with --apply to read them.');
+      else if (behind) console.log(started ? 'The server reads them as it comes to them, newest first.' : 'Nothing changed. Run with --apply to read them.');
       return 0;
     }
     if (command === 'jobs-reread') {
