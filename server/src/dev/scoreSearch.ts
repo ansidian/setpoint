@@ -10,8 +10,9 @@
 // before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
 // email replacing an earlier one. Terms for mail that isn't there are left out.
 //
-// Each search's "about" and "right" columns are the rows in the first section, and the share of its
-// right emails there.
+// --no-chips scores with typed words forming date chips only, the rest staying words to rank, as the
+// field will once chips come from the server (SV-139). Each search's "about" and "right" columns are
+// the rows in the first section, and the share of its right emails there.
 //
 // Inside the app's container, the test file comes on stdin:
 //
@@ -28,10 +29,10 @@ import * as schema from '../db/schema.ts';
 import type {Store} from '../store.ts';
 import {loadTerms, scoreReport, scoreSearches, searchTest} from './searchScore.ts';
 
-const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--migrate [--terms <file>]...]';
-const {values: {migrate, terms: termFiles = []}, positionals: [testFile]} = parseArgs({
+const usage = 'Usage: scoreSearch.ts <test file, or - for stdin> [--no-chips] [--migrate [--terms <file>]...]';
+const {values: {migrate, terms: termFiles = [], 'no-chips': noChips}, positionals: [testFile]} = parseArgs({
   allowPositionals: true,
-  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}},
+  options: {migrate: {type: 'boolean'}, terms: {type: 'string', multiple: true}, 'no-chips': {type: 'boolean'}},
 });
 if (!testFile) throw new Error(usage);
 // Search terms only ever go into a scratch copy, never the database named.
@@ -45,7 +46,7 @@ function scoreOn(sqlite: Database.Database) {
   const {newest} = sqlite.prepare('SELECT max(received_at) AS newest FROM messages').get() as {newest: string};
   // The newest email is "now", so the same data scores the same on any day.
   const store: Store = {sqlite, db, timeZone: process.env.SETPOINT_TZ ?? 'America/Los_Angeles', now: () => new Date(newest), keyring: null};
-  console.log(scoreReport(scoreSearches(store, searches)));
+  console.log(scoreReport(scoreSearches(store, searches, noChips ? {chipsFromWords: 'dates'} : {})));
 }
 
 if (migrate) {

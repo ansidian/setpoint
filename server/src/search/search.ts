@@ -15,7 +15,7 @@ import type {MatchReasonOut, HighlightOut, SearchChip, SearchOut, SearchResultOu
 import {asc} from 'drizzle-orm';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
-import {dayLabel, fold, isNot, parseQuery, sameChip, wordsOf} from '../domain/searchChips.ts';
+import {dayLabel, fold, isNot, parseQuery, sameChip, TYPE_WORDS, wordsOf} from '../domain/searchChips.ts';
 import {withoutLinks} from '../domain/searchBody.ts';
 import {excerptOf, FIELD_TIERS, ftsExpression, isLinkOnly, matchTier, mergeRuns, namesType, phraseRuns, searchWords, termRuns, textLadder, textMatches, textTerms, TIER, withoutExcluded} from '../domain/searchMatch.ts';
 import type {RankedRow, SearchWord} from '../domain/searchMatch.ts';
@@ -120,6 +120,9 @@ export interface MatchOptions {
   // 'ranked' is the field's search. 'broad' is Alfred's: every word counts, filler too, any one word
   // will do when no email has them all, and the best field any word matched orders them.
   matching?: 'ranked' | 'broad';
+  // 'dates': typed words form only date chips, and the rest stay words to rank (for SV-139, and the
+  // score's --no-chips). A word naming a type then finds that type too, and dates don't reorder.
+  chipsFromWords?: 'all' | 'dates';
 }
 
 interface Parsed {
@@ -129,9 +132,14 @@ interface Parsed {
   none: SearchMatches;
 }
 
-/** A word's emails. */
-function emailsWith(store: Store, filter: Filter, word: SearchWord): Set<number> {
-  return new Set(textCandidates(store, filter, ftsExpression([word.term], 'and')).map(row => row.id));
+/** A word's emails: those the index has it for, and with `byType` those of the type it names. */
+function emailsWith(store: Store, filter: Filter, word: SearchWord, byType: boolean): Set<number> {
+  const type = byType ? TYPE_WORDS[word.term] : undefined;
+  const rows = store.sqlite.prepare(`
+    SELECT m.id FROM messages m
+    WHERE (m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)${type ? ' OR m.type = ?' : ''}) AND ${filter.sql.join(' AND ')}`)
+    .all(ftsExpression([word.term], 'and'), ...(type ? [type] : []), ...filter.args) as {id: number}[];
+  return new Set(rows.map(row => row.id));
 }
 
 type Ranked = Candidate & RankedRow;
@@ -177,7 +185,7 @@ function rankEmails({store, none}: Parsed, words: SearchWord[], holders: Set<num
 }
 
 /** The field's search: every word but filler, and failing that the rarest words any email has. */
-function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string): SearchMatches {
+function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string, {chipsFromWords = 'all'}: MatchOptions): SearchMatches {
   const {store, filter, none} = parsed;
   const lastWord = (value: string) => fold(value).match(/[\p{L}\p{N}]+$/u)?.[0];
   const typing = lastWord(input.text) !== undefined && lastWord(input.text) === lastWord(text);
@@ -186,7 +194,7 @@ function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: 
     const rows = store.sqlite.prepare(`SELECT m.id, m.received_at FROM messages m WHERE ${filter.sql.join(' AND ')}`).all(...filter.args) as Candidate[];
     return inOrder(none, rows.sort(newestFirst));
   }
-  const holders = words.map(word => emailsWith(store, filter, word));
+  const holders = words.map(word => emailsWith(store, filter, word, chipsFromWords === 'dates'));
   const every = [...holders[0]!].filter(id => holders.every(emails => emails.has(id)));
   const partial = !every.length;
   if (partial && holders.every(emails => !emails.size)) return none;
@@ -219,20 +227,23 @@ function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches
 }
 
 /** Every email a search matches, in its order. */
-export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, {matching = 'ranked'}: MatchOptions = {}): SearchMatches {
+export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, options: MatchOptions = {}): SearchMatches {
+  const {matching = 'ranked', chipsFromWords = 'all'} = options;
   const vocabulary = chipVocabulary(store);
-  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone});
+  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone, datesOnly: chipsFromWords === 'dates'});
   const chips: SearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
   const {text, excluded} = withoutExcluded(parsed.text);
   const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded);
   const hasWords = textTerms(text).length > 0;
-  // Leaving out alone doesn't rank: words with only Not chips still order by the best field.
-  const order = chips.some(chip => !isNot(chip)) || !hasWords ? 'newest' : 'match';
+  // Leaving out alone doesn't rank: words with only Not chips still order by the best field. Chips
+  // only of dates leave the order to the words once dates are all that words form.
+  const ordering = chipsFromWords === 'dates' ? false : chips.some(chip => !isNot(chip));
+  const order = ordering || !hasWords ? 'newest' : 'match';
   const none: SearchMatches = {chips, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0};
   if (filter.empty || (!chips.length && !hasWords && !excluded.length)) return none;
   const search = {store, filter, none};
-  return matching === 'broad' ? broadSearch(search, text) : rankedSearch(search, input, text);
+  return matching === 'broad' ? broadSearch(search, text) : rankedSearch(search, input, text, options);
 }
 
 const TEXT_LABELS = {sender: 'Sender', organisation: 'Org', subject: 'Subject', body: 'Body'} as const;

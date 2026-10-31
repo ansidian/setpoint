@@ -9,7 +9,7 @@ import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {searchLogEntry} from '../src/search/log.ts';
-import {searchMail} from '../src/search/search.ts';
+import {matchSearch, searchMail} from '../src/search/search.ts';
 import {startBackfill} from '../src/sync/cursors.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
 import {signedIn, world} from './helpers.ts';
@@ -217,6 +217,29 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     const source = w.store.db.select().from(t.sources).where(eq(t.sources.provider, 'gmail')).get()!;
     startBackfill(w.store, source.id, 100, null);
     expect(search(w, 'jobs').indexing).toEqual({progress: 0});
+  });
+});
+
+describe('chips from dates alone, for a search of words', () => {
+  const words = (w: World, text: string) => matchSearch(w.store, {text, chips: [], account_id: undefined}, {chipsFromWords: 'dates'});
+
+  test('an organisation, a type and a kind stay words, and a type\'s word also finds that type', () => {
+    const w = world({seed: true});
+    const chipped = search(w, 'northwind rejection');
+    expect(chipped.chips.map(chip => chip.kind)).toEqual(['organisation', 'type']);
+    const out = words(w, 'northwind rejection');
+    expect(out).toMatchObject({chips: [], order: 'match'});
+    expect(out.ids).toEqual(expect.arrayContaining(chipped.results.map(result => result.id)));
+    expect(words(w, 'career').chips).toEqual([]);
+  });
+
+  test('a date still filters, and doesn\'t take over the order', () => {
+    const w = world({seed: true});
+    const out = words(w, 'northwind march');
+    expect(out.chips.map(chip => chip.label)).toEqual(['Mar 2026']);
+    expect(out.order).toBe('match');
+    expect(out.ids.length).toBeGreaterThan(0);
+    expect(out.ids.length).toBeLessThan(words(w, 'northwind').ids.length);
   });
 });
 

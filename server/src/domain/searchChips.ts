@@ -28,6 +28,8 @@ export interface ChipVocabulary {
 export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
+  // Words form only dates; every other word stays text, for search to rank (SV-137, for SV-139).
+  datesOnly?: boolean;
 }
 
 export interface ParsedQuery {
@@ -295,6 +297,7 @@ function chipFor(words: string[], raw: string, context: ChipContext, today: stri
   const phrase = words.join(' ');
   const date = dateChip(words, raw, today);
   if (date) return {kind: 'date', from: date.from, to: date.to, label: date.label};
+  if (context.datesOnly) return null;
   const type = TYPE_WORDS[phrase];
   if (type) return {kind: 'type', value: type, label: TYPE_LABELS[type]};
   const kind = KIND_WORDS[phrase];

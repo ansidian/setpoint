@@ -71,6 +71,15 @@ describe('scoring the real search over the seed', () => {
   });
 });
 
+test('--no-chips\'s option reaches the matching: organisations and types stay words', () => {
+  const w = world({seed: true});
+  const wanted = [{group: 'topic' as const, text: 'career', wanted: [idOf(w, 'Update on your application')]}];
+  const [chips] = scoreSearches(w.store, wanted);
+  const [words] = scoreSearches(w.store, wanted, {chipsFromWords: 'dates'});
+  expect(chips!.anywhere).toBe(1);
+  expect(words!.listed).not.toBe(chips!.listed);
+});
+
 describe('the report', () => {
   test('sets out every group and search, and says no subject or sender', () => {
     const w = world({seed: true});
