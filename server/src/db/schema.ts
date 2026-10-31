@@ -15,7 +15,7 @@ import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
   NEWS_ADAPTERS, NEWS_SECTIONS, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
-  type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type RuleMatch, type SearchChip, type SecurityFacts,
+  type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
 import type {SenderAuthentication} from '../domain/senderAuthentication.ts';
@@ -722,6 +722,21 @@ export const triageHealth = sqliteTable('triage_health', {
 
 // ---- B4 · Search and Alfred: the search log and Alfred's short threads ----
 
+/** Which reading a search used (SV-138), as the search log holds it: what the model said, and what became of it. */
+export interface SearchReadingLog {
+  // 'model' asked it, 'cache' reused its last answer, 'kept' came with the request, null read nothing.
+  source: 'model' | 'cache' | 'kept' | null;
+  fallback: SearchReadingFallback | null;
+  prompt: number;
+  organisations: string[];
+  types: string[];
+  keywords: string;
+  is_date: boolean;
+  more: number;
+  // Time from the request to the answer.
+  ms: number;
+}
+
 /**
  * Each search from the field (BRIEF.md › Search: logged so ranking can be measured against real
  * searches): what was typed, the chips in force, the free text left, and the ids it returned in
@@ -739,6 +754,8 @@ export const searchLog = sqliteTable('search_log', {
   order: text('order', {enum: ['newest', 'match']}).notNull(),
   total: integer('total').notNull(),
   resultIds: text('result_ids', {mode: 'json'}).$type<number[]>().notNull(),
+  // SV-138: how the search was read, for a search that asked; null for one that didn't.
+  reading: text('reading', {mode: 'json'}).$type<SearchReadingLog>(),
 }, table => [
   index('search_log_at').on(table.at),
   check('search_log_order', sql`${table.order} in ('newest', 'match')`),
@@ -752,6 +769,14 @@ export const searchOpens = sqliteTable('search_opens', {
   position: integer('position').notNull(),
   at: text('at').notNull(),
 }, table => [index('search_opens_search').on(table.searchId)]);
+
+/** A chip taken off a search (SV-138): what a wrong reading looks like in the log. */
+export const searchChipRemovals = sqliteTable('search_chip_removals', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  searchId: integer('search_id').notNull().references(() => searchLog.id, {onDelete: 'cascade'}),
+  chip: text('chip', {mode: 'json'}).$type<SearchChip>().notNull(),
+  at: text('at').notNull(),
+}, table => [index('search_chip_removals_search').on(table.searchId)]);
 
 /**
  * One of Alfred's short threads (BRIEF.md › Alfred: the Answer card's follow-ups), held so a

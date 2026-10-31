@@ -2,7 +2,7 @@
 // the words the field requires and the tiers they rank by, the index expressions, field matching in
 // BRIEF.md's order, highlight runs and the excerpt.
 import {describe, expect, test} from 'vitest';
-import {excerptOf, ftsExpression, isLinkOnly, matchTier, mergeRuns, phraseRuns, pluralVariants, searchWords, termRuns, textLadder, textMatches, TIER, withoutExcluded} from '../src/domain/searchMatch.ts';
+import {excerptOf, ftsExpression, isLinkOnly, matchTier, mergeRuns, phraseRuns, pluralVariants, searchWords, termRuns, textLadder, textMatches, TIER, typeWordsExpression, typeWordsIn, withoutExcluded} from '../src/domain/searchMatch.ts';
 import type {RankedRow} from '../src/domain/searchMatch.ts';
 
 describe('pluralVariants (v1)', () => {
@@ -128,6 +128,23 @@ describe('withoutExcluded: "!word"s leave out the mail that has them (SV-31)', (
     ['', '', []],
   ])('%s', (text, kept, excluded) => {
     expect(withoutExcluded(text)).toEqual({text: kept, excluded});
+  });
+});
+
+describe('a reading\'s type chip looks for the type\'s own words (D386)', () => {
+  test('whole words and their plurals, in the subject, summary and terms only', () => {
+    expect(typeWordsExpression(['statement'])).toBe('{subject summary search_terms} : ("statement" OR "statements" OR "bill" OR "bills")');
+    expect(typeWordsExpression(['statement', 'statement'])).toBe('{subject summary search_terms} : ("statement" OR "statements" OR "bill" OR "bills")');
+    expect(typeWordsExpression(['receipt', 'shipping'])).toBe('{subject summary search_terms} : ("receipt" OR "receipts" OR "shipping" OR "shippings" OR "shipped" OR "shippeds" OR "shipment" OR "shipments")');
+  });
+
+  test.each([
+    [{subject: 'Your bills', summary: null, searchTerms: null}, {field: 'subject', words: ['bills']}],
+    [{subject: 'Billing update', summary: 'A statement', searchTerms: null}, {field: 'body', words: ['statement']}],
+    [{subject: 'Update', summary: null, searchTerms: 'phone\nmonthly bill'}, {field: 'body', words: ['bill']}],
+    [{subject: 'Billing update', summary: 'Billing', searchTerms: 'billed'}, null],
+  ])('%o says %o', (row, found) => {
+    expect(typeWordsIn(row, 'statement')).toEqual(found);
   });
 });
 

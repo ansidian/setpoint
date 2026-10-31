@@ -127,7 +127,7 @@ export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
  */
 export const AI_PROVIDERS = ['anthropic', 'openai'] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
-export const AI_PURPOSES = ['triage', 'alfred', 'news_articles', 'news_grouping', 'news_stories', 'news_ranking', 'jobs_emails', 'jobs_finding_jds', 'jobs_reading_jds', 'search_terms'] as const;
+export const AI_PURPOSES = ['triage', 'alfred', 'news_articles', 'news_grouping', 'news_stories', 'news_ranking', 'jobs_emails', 'jobs_finding_jds', 'jobs_reading_jds', 'search_terms', 'search_reading'] as const;
 export type AiPurpose = (typeof AI_PURPOSES)[number];
 
 /**
@@ -142,6 +142,22 @@ export type SecretName = (typeof SECRET_NAMES)[number];
 /** Search chips (BRIEF.md › Search): recognised words that filter exactly. */
 export const SEARCH_CHIP_KINDS = ['organisation', 'type', 'date', 'account', 'kind'] as const;
 export type SearchChipKind = (typeof SEARCH_CHIP_KINDS)[number];
+
+/**
+ * SV-138: what a search asks of the reading. `ask` has the model read it (Enter); `kept` keeps the
+ * chips given, with no model call (a later page, or a chip removed); `left_out` lists what they left
+ * out ("6 more emails match your words").
+ */
+export const SEARCH_READS = ['ask', 'kept', 'left_out'] as const;
+export type SearchRead = (typeof SEARCH_READS)[number];
+
+/**
+ * SV-138: why a search that asked for a reading has the word results: no Anthropic key, the model
+ * was too slow or failed, the reading's filters left nothing, or nothing in it was there to read
+ * (quotes, "!" words or a date alone).
+ */
+export const SEARCH_READING_FALLBACKS = ['no_key', 'slow', 'failed', 'left_nothing', 'nothing_to_read'] as const;
+export type SearchReadingFallback = (typeof SEARCH_READING_FALLBACKS)[number];
 
 /** Why a search result matched: a chip, or free text in sender, then subject, then body, then date. */
 export const MATCH_FIELDS = ['organisation', 'type', 'date', 'account', 'kind', 'sender', 'subject', 'body'] as const;

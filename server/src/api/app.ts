@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchInput, searchOpenedInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -58,9 +58,10 @@ import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
 import {allMail, inbox, indexing, mailCounts, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
-import {recordOpened} from '../search/log.ts';
+import {recordChipRemoved, recordOpened} from '../search/log.ts';
 import {searchCalendar} from '../search/calendar.ts';
-import {searchMail} from '../search/search.ts';
+import {SearchReader} from '../search/reading.ts';
+import type {SearchReaderOptions} from '../search/reading.ts';
 import {enqueueJob} from '../sync/jobs.ts';
 import {ProviderError} from '../sync/errors.ts';
 import {accountList, reorderAccounts, sourceList, updateAccount} from '../queries/sources.ts';
@@ -125,6 +126,8 @@ export interface AppOptions {
   triage?: Pick<TriageWorker, 'configurationChanged'> | null;
   // B4: Alfred's model endpoints (tests: a fake on 127.0.0.1).
   alfred?: AlfredOptions;
+  // SV-138: the search reading's, likewise.
+  reading?: Omit<SearchReaderOptions, 'store'>;
   // N1: where News's image copies are (the data directory's news-images/).
   news?: NewsApiOptions;
   // N3: told when the AI keys or settings change, so articles waiting Unsorted are sorted at once.
@@ -153,8 +156,9 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, news = {}, newsSort = null, routes = []}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, reading = {}, news = {}, newsSort = null, routes = []}: AppOptions) {
   const app = new Hono<Env>();
+  const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
   const origin = (c: Context) => publicUrl ?? new URL(c.req.url).origin;
   const ownPage = (c: Context) => {
@@ -578,9 +582,13 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   // ---- Search (B4), Alfred and proposals (B4), and Places (B5) ----
 
-  app.post('/api/search', async c => c.json(searchMail(store, parse(searchInput, await body(c)))));
+  app.post('/api/search', async c => c.json(await searchReader.search(parse(searchInput, await body(c)))));
   app.post('/api/search/opened', async c => {
     recordOpened(store, parse(searchOpenedInput, await body(c)));
+    return c.body(null, 204);
+  });
+  app.post('/api/search/chip-removed', async c => {
+    recordChipRemoved(store, parse(searchChipRemovedInput, await body(c)));
     return c.body(null, 204);
   });
   app.post('/api/proposals/from-message', async c => {

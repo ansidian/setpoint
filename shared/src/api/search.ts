@@ -3,6 +3,7 @@
 //
 //   POST /api/search                        SearchInput        SearchOut
 //   POST /api/search/opened                 SearchOpenedInput  204 (the search log's "opened result N")
+//   POST /api/search/chip-removed           SearchChipRemovedInput 204 (the search log's "chip removed")
 //   POST /api/alfred/ask                    AskInput           AnswerOut
 //   GET  /api/alfred/conversations/:id                         ConversationOut (the thread so far)
 //   GET  /api/alfred/asks/:ask_id                              AskStepOut (what Alfred is doing for it)
@@ -12,8 +13,8 @@
 // Nothing here creates anything: a proposal's `item` is what POST /api/items takes, and only Create
 // sends it.
 import {z} from 'zod';
-import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_CHIP_KINDS} from '../enums.ts';
-import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
+import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_CHIP_KINDS, SEARCH_READS} from '../enums.ts';
+import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind, SearchReadingFallback} from '../enums.ts';
 import {id, localDate} from './common.ts';
 import type {ItemOut} from './items.ts';
 import type {MessageRowOut} from './mail.ts';
@@ -43,21 +44,33 @@ export type SearchChip = z.infer<typeof searchChipSchema>;
 export type SearchChipKindCheck = SearchChip['kind'] extends SearchChipKind ? true : never;
 export const searchChipKindSchema = z.enum(SEARCH_CHIP_KINDS);
 
+export const MAX_SEARCH_CHIPS = 10;
+
 /**
  * The field: the chips it already shows, and the text typed after them. The server turns any
  * recognised words in `text` into more chips and returns them; words in "quotes" always stay text.
  * A word after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it.
  * A later page of the same search passes `search_id` and `offset` (`next_offset` from the last page).
+ *
+ * SV-138: `read` is D385's Enter, and only a request that says so can reach the model, so typing
+ * never does. Without it the chip grammar runs as it always has. `ask` reads the search: dates from
+ * the grammar, organisations and types from the model, as `chips`, with `text` the keywords left and
+ * `reading.typed` the words as typed. With `kept` or `left_out` the client sends those back and
+ * nothing is read again: `text` and `chips` for a later page, `typed` as well for what the chips left
+ * out. A chip removed sends `reading.typed` as `text` too, so the word it stood for is a word again.
  */
 export const searchInput = z.strictObject({
   text: z.string().max(500),
-  chips: z.array(searchChipSchema).max(10).default([]),
+  chips: z.array(searchChipSchema).max(MAX_SEARCH_CHIPS).default([]),
   // The sidebar's account, when search runs inside one (as an account chip would).
   account_id: id.optional(),
   limit: z.int().min(1).max(200).default(50),
   // B4: paging.
   offset: z.int().min(0).default(0),
   search_id: id.optional(),
+  read: z.enum(SEARCH_READS).optional(),
+  // With `read`: the words as typed, which the chips' "more" number counts from. `text` when left out.
+  typed: z.string().max(500).optional(),
 });
 export type SearchInput = z.input<typeof searchInput>;
 
@@ -87,6 +100,20 @@ export interface SearchResultOut extends MessageRowOut {
   highlights: HighlightOut[];
 }
 
+/**
+ * SV-138: how a search with `read` was read. `used` is 'reading' when the model's reading was applied
+ * or kept, even one that made no chip, and 'words' for the plain word results, with `fallback` saying
+ * why.
+ */
+export interface SearchReadingOut {
+  used: 'reading' | 'words';
+  fallback: SearchReadingFallback | null;
+  // Emails matching the words the chips left out: "6 more emails match your words". `read: 'left_out'` lists them.
+  more: number;
+  // The words as typed, without the dates that became chips: `typed` on the next request.
+  typed: string;
+}
+
 export interface SearchOut {
   // The search log's id, for SearchOpenedInput and later pages.
   search_id: number;
@@ -96,6 +123,7 @@ export interface SearchOut {
   text: string;
   // B4: "newest" when any chip is in force (chips filter exactly; "2 results · newest first"); "match"
   // for free text alone, ordered by how well the words matched, each tier newest first (SV-137).
+  // A reading's chips narrow and keep that order (SV-138).
   order: 'newest' | 'match';
   // B4: every match; `results` is this page of them.
   total: number;
@@ -111,10 +139,15 @@ export interface SearchOut {
   next_offset: number | null;
   // During the first backfill: "Indexing · 62% · showing what's indexed so far".
   indexing: {progress: number} | null;
+  // SV-138: null unless the request had `read`.
+  reading: SearchReadingOut | null;
 }
 
 /** The search log: which result was opened, and where it was in the list (0-based). */
 export const searchOpenedInput = z.strictObject({search_id: id, message_id: id, position: z.int().min(0)});
+
+/** The search log: a chip the user took off a search (SV-138), so a wrong reading can be seen. */
+export const searchChipRemovedInput = z.strictObject({search_id: id, chip: searchChipSchema});
 
 /**
  * Alfred: a question, a follow-up in the same conversation (`conversation_id`), or one scoped to an

@@ -50,7 +50,7 @@ export interface TriageWorkerOptions {
 const MAIL_NOTIFY_WITHIN_MS = 60 * 60_000;
 
 /** Writes a model call to the AI usage ledger: what it was for, its tokens and its cost. */
-export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null, purpose: Extract<AiPurpose, 'triage' | 'search_terms'> = 'triage') {
+export function recordUsage(store: Store, answer: ModelAnswer, messageId: number | null, purpose: Extract<AiPurpose, 'triage' | 'search_terms' | 'search_reading'> = 'triage') {
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,

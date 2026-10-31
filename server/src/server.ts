@@ -86,7 +86,7 @@ const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== nul
 const reminders = new ReminderScheduler({store, notifier});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
-  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
+  providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
   routes: [jobsApi(store)],
 });
 // Gmail's push: pulls v2's own Pub/Sub subscription and queues each account's sync.

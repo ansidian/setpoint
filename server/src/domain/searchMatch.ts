@@ -17,7 +17,7 @@
 // above the match (decision 9). Broad free text alone ranks by the best field any word matched,
 // sender (and organisation) before subject before body, then newest first.
 import type {MatchField, MessageType} from '@setpoint/shared';
-import {fold, NEGATED, TYPE_WORDS, wordsOf} from './searchChips.ts';
+import {fold, NEGATED, TYPE_CHIP_WORDS, TYPE_WORDS, wordsOf} from './searchChips.ts';
 
 /** v1's filler words (FTS_QUERY_STOPWORDS), plus "need", which questions to Alfred are full of. */
 export const FILLER_WORDS = new Set([
@@ -120,6 +120,26 @@ const termExpression = (term: string) => {
 export function ftsExpression(terms: string[], mode: 'and' | 'or', columns?: string[]): string {
   const body = terms.map(termExpression).join(mode === 'and' ? ' AND ' : ' OR ');
   return columns ? `{${columns.join(' ')}} : (${body})` : body;
+}
+
+const typeForms = (type: MessageType) => TYPE_CHIP_WORDS[type].flatMap(word => formsOf(word));
+
+/**
+ * What a reading's type chip finds beyond the classified type (D386): one of the type's words, whole,
+ * in the subject, summary or search terms. Never the body, or newsletters that mention it come back.
+ */
+export const typeWordsExpression = (types: MessageType[]) => `{subject summary search_terms} : (${[...new Set(types.flatMap(typeForms))].map(form => `"${form}"`).join(' OR ')})`;
+
+/** Where an email says it's of a type: the field and words a reason gives, or null. */
+export function typeWordsIn(row: Pick<TextRow, 'subject' | 'summary' | 'searchTerms'>, type: MessageType): {field: 'subject' | 'body'; words: string[]} | null {
+  const found = (value: string) => {
+    const own = new Set<string>(wordsOf(value));
+    return typeForms(type).filter(form => own.has(form));
+  };
+  const subject = found(row.subject);
+  if (subject.length) return {field: 'subject', words: subject};
+  const words = found(`${row.summary ?? ''}\n${row.searchTerms ?? ''}`);
+  return words.length ? {field: 'body', words} : null;
 }
 
 /**

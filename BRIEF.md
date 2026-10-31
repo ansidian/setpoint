@@ -260,9 +260,17 @@ third, because it ranked importance above match.
   each email's **search terms** once, as its own durable job, and they rank with the subject when
   one term holds the words (SV-136, SV-137). Trashed mail isn't read. Mail from before terms, and mail an older prompt read, wait for
   `search-terms --apply`. With no Anthropic key, terms stay empty and search works without them.
+- On Enter the server can read the whole search (SV-138, D385, D386): Claude Haiku 5.5 is given the
+  search, today's date and the organisations and types in its best keyword matches, and says which
+  of them the search asks for. Dates stay the grammar's. Its chips only narrow, each list keeping
+  the words' order, and the answer counts what they left out ("6 more emails match your words") and
+  can list it. "!" words and quotes never reach the model. With no key, no answer in 2 seconds, a
+  failed call or filters that leave nothing, the answer is the word results, marked as such. Typing
+  never reaches the model. The web's Enter is SV-139.
 - Each result shows why it matched, with the matching words highlighted.
 - Searches and the position of the opened result are logged, so ranking can be measured against
-  real searches rather than made-up ones.
+  real searches rather than made-up ones, with which reading each used and each chip removed
+  (SV-138).
 - No results: "No emails match **Northwind · Rejection · Mar 2026**", each chip removable.
 
 ### Alfred

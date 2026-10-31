@@ -4,7 +4,7 @@
 import type {SearchChip} from '@setpoint/shared';
 import {SEED_NOW} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {parseQuery} from '../src/domain/searchChips.ts';
+import {keptTokens, parseQuery} from '../src/domain/searchChips.ts';
 
 const VOCABULARY = {
   organisations: ['Northwind Talent', 'Northwind Engineering', 'Parkside Apartments', 'Contoso Insurance', 'Contoso Coffee', 'Contoso University', 'Google', 'Wingtip Toys', 'The Home Depot'],
@@ -96,6 +96,34 @@ describe('parseQuery: "!" leaves out what a word names (SV-31)', () => {
     ['quoted words stay text', '!"confirmation"', [], '! "confirmation"'],
   ])('%s', (_, query, chips, text) => {
     expect(parse(query)).toEqual({chips, text});
+  });
+});
+
+describe('parseQuery: what words form when a reading owns the rest (SV-138)', () => {
+  const read = (text: string, fromWords: 'dates' | 'none') => {
+    const parsed = parseQuery(text, {...VOCABULARY, now: SEED_NOW, timeZone: TIME_ZONE, fromWords});
+    return {chips: parsed.chips.map(show), left: parsed.text};
+  };
+
+  test.each([
+    ['northwind rejection march', 'dates', ['Date Mar 2026 [2026-03-01, 2026-04-01)'], 'northwind rejection'],
+    ['northwind rejection march', 'none', [], 'northwind rejection march'],
+    ['rent !rejection', 'dates', ['Not Type Rejection'], 'rent'],
+    ['rent !rejection', 'none', ['Not Type Rejection'], 'rent'],
+    ['rent !northwind', 'none', ['Not Org Northwind'], 'rent'],
+    ['rent !march', 'none', ['Not Date Mar 2026 [2026-03-01, 2026-04-01)'], 'rent'],
+    ['rent !zebrafish', 'none', [], 'rent !zebrafish'],
+    ['"northwind" rent', 'none', [], '"northwind" rent'],
+  ] as const)('%s, %s: %j leaving %s', (text, fromWords, chips, left) => {
+    expect(read(text, fromWords)).toEqual({chips, left});
+  });
+});
+
+describe('keptTokens: a search\'s words, whole', () => {
+  test('keeps quotes and "!words" as they were typed', () => {
+    expect(keptTokens('lease "renewal terms" !parkside  signed', token => !token.quoted && !token.negated)).toBe('lease signed');
+    expect(keptTokens('lease "renewal terms" !parkside', token => token.quoted || token.negated)).toBe('"renewal terms" !parkside');
+    expect(keptTokens('IT liaison', token => token.word === 'it')).toBe('IT');
   });
 });
 

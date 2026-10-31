@@ -28,8 +28,10 @@ export interface ChipVocabulary {
 export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
-  // Words form only dates; every other word stays text, for search to rank (SV-137, for SV-139).
-  datesOnly?: boolean;
+  // What plain words form: every chip, only dates, the rest staying text for search to rank (SV-137,
+  // for SV-139), or nothing. A word after "!" is the whole grammar's in each, since it says what it
+  // leaves out as exactly as it did (SV-31, SV-138).
+  fromWords?: 'all' | 'dates' | 'none';
 }
 
 export interface ParsedQuery {
@@ -68,6 +70,11 @@ export const TYPE_WORDS: Record<string, MessageType> = {
   alert: 'alert', alerts: 'alert',
   newsletter: 'newsletter', newsletters: 'newsletter',
   statement: 'statement', statements: 'statement',
+};
+/** The words that say an email is of a type, as a reading's type chip looks for them (D386). */
+export const TYPE_CHIP_WORDS: Record<MessageType, string[]> = {
+  confirmation: ['confirmation', 'confirmed'], rejection: ['rejection', 'rejected'], receipt: ['receipt'], shipping: ['shipping', 'shipped', 'shipment'], deadline: ['deadline'],
+  reminder: ['reminder'], verification_code: ['verification', 'code'], alert: ['alert'], newsletter: ['newsletter'], statement: ['statement', 'bill'],
 };
 export const TYPE_LABELS: Record<MessageType, string> = {
   confirmation: 'Confirmation', rejection: 'Rejection', receipt: 'Receipt', shipping: 'Shipping', deadline: 'Deadline',
@@ -293,11 +300,13 @@ function organisationChip(words: string[], organisations: string[]): string | nu
   return null;
 }
 
-function chipFor(words: string[], raw: string, context: ChipContext, today: string): SearchChip | null {
+function chipFor(words: string[], raw: string, context: ChipContext, today: string, negated: boolean): SearchChip | null {
+  const fromWords = negated ? 'all' : context.fromWords ?? 'all';
+  if (fromWords === 'none') return null;
   const phrase = words.join(' ');
   const date = dateChip(words, raw, today);
   if (date) return {kind: 'date', from: date.from, to: date.to, label: date.label};
-  if (context.datesOnly) return null;
+  if (fromWords === 'dates') return null;
   const type = TYPE_WORDS[phrase];
   if (type) return {kind: 'type', value: type, label: TYPE_LABELS[type]};
   const kind = KIND_WORDS[phrase];
@@ -336,6 +345,9 @@ interface Token {
 /** A word typed after "!": "!confirmation", not "!" alone or "wow!". */
 export const NEGATED = /^![\p{L}\p{N}]/u;
 
+/** The tokens of `text` that `keep` keeps, spaced as one: words, "quotes" and "!words" whole. */
+export const keptTokens = (text: string, keep: (token: {raw: string; quoted: boolean; negated: boolean; word: string}) => boolean) => tokens(text).filter(keep).map(token => token.raw).join(' ');
+
 function tokens(text: string): Token[] {
   return [...text.matchAll(/"([^"]*)"?|[^\s"]+/g)].map(match => {
     const quoted = match[0].startsWith('"');
@@ -352,7 +364,7 @@ export function parseQuery(text: string, context: ChipContext): ParsedQuery {
   // Longer names first, so "Contoso Insurance" is preferred for "contoso insurance".
   const organisations = [...new Set(context.organisations.filter(Boolean))].sort((a, b) => wordsOf(b).length - wordsOf(a).length || a.localeCompare(b));
   const vocabulary = {...context, organisations};
-  return parseChips(text, (words, raw) => chipFor(words, raw, vocabulary, today), chip => ({...chip, not: true}));
+  return parseChips(text, (words, raw, negated) => chipFor(words, raw, vocabulary, today, negated), chip => ({...chip, not: true}));
 }
 
 /**
@@ -360,7 +372,7 @@ export function parseQuery(text: string, context: ChipContext): ParsedQuery {
  * `negate`, a phrase starting with "!" gives its chips negated, and never takes in a later "!" word;
  * without it, "!" is punctuation.
  */
-export function parseChips<C extends SearchChip | CalendarSearchChip>(text: string, chipFor: (words: string[], raw: string) => C | C[] | null, negate?: (chip: C) => C): {chips: C[]; text: string} {
+export function parseChips<C extends SearchChip | CalendarSearchChip>(text: string, chipFor: (words: string[], raw: string, negated: boolean) => C | C[] | null, negate?: (chip: C) => C): {chips: C[]; text: string} {
   const all = tokens(text);
   const chips: C[] = [];
   const left: string[] = [];
@@ -379,8 +391,9 @@ export function parseChips<C extends SearchChip | CalendarSearchChip>(text: stri
       if (window.length < length || window.some(item => item.quoted) || !window.at(-1)!.word) continue;
       if (negate && window.slice(1).some(item => item.negated)) continue;
       const raw = window.map(item => item.raw).join(' ');
-      const chip = chipFor(window.flatMap(item => (item.word ? [item.word] : [])), negate && token.negated ? raw.slice(1) : raw);
-      if (chip) found = {length, chips: ([chip].flat() as C[]).map(each => (negate && token.negated ? negate(each) : each))};
+      const negated = negate !== undefined && token.negated;
+      const chip = chipFor(window.flatMap(item => (item.word ? [item.word] : [])), negated ? raw.slice(1) : raw, negated);
+      if (chip) found = {length, chips: ([chip].flat() as C[]).map(each => (negated ? negate(each) : each))};
     }
     if (found) {
       for (const each of found.chips) if (!chips.some(chip => sameChip(chip, each))) chips.push(each);
