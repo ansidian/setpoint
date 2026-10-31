@@ -237,18 +237,19 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
       [await rested(() => computed(page, 'background', 'var(--sub2)')), neutral]);
     assert.equal(await rested(() => amount.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--ink)')));
 
-    // Usage this month: Triage, Search terms, Alfred, News and Jobs, News and Jobs in their parts.
+    // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
     await usage.scrollIntoViewIfNeeded();
     assert.deepEqual(await usage.locator('.set-row').evaluateAll(rows => rows.map(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.cost')?.textContent])), [
       ['Triage', '1,214 calls · 2.4M tokens in · 49k out', '$2.10'],
       ['Search terms', '312 calls · 468k tokens in · 11k out', '$0.04'],
+      ['Search reading', '48 calls · 60k tokens in · 2k out', '$0.01'],
       ['Alfred', '18 calls · 112k tokens in · 8k out', '$0.85'],
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
       ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
     ]);
     // The month's total in the label, each cost in ink at 500.
-    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.24');
+    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
     assert.deepEqual(await rested(() => usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight])), [await rested(() => computed(page, 'color', 'var(--ink)')), '500']);
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it

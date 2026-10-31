@@ -230,7 +230,7 @@ export function withPatch(settings: Settings, patch: SettingsPatch): Settings {
 const tokens = (count: number) => (count >= 1_000_000 ? `${(count / 1_000_000).toFixed(1)}M` : count >= 1000 ? `${Math.round(count / 1000)}k` : String(count));
 
 /** The month's AI spend, Triage, Alfred and News together, for Usage this month's label. */
-export const monthTotal = (usage: Record<'triage' | 'search_terms' | 'alfred' | 'news', {cost_usd: number}>) => usage.triage.cost_usd + usage.search_terms.cost_usd + usage.alfred.cost_usd + usage.news.cost_usd;
+export const monthTotal = (usage: Record<'triage' | 'search_terms' | 'search_reading' | 'alfred' | 'news', {cost_usd: number}>) => usage.triage.cost_usd + usage.search_terms.cost_usd + usage.search_reading.cost_usd + usage.alfred.cost_usd + usage.news.cost_usd;
 
 /** Settings › AI's usage, naming what's counted: "1,204 calls · 2.4M tokens in · 48k out" (#73). */
 export function usageLine(usage: {calls: number; input_tokens: number; output_tokens: number}): string {

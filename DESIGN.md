@@ -817,7 +817,7 @@ Board 28 replaces All's list.
   - **Monthly cap** ($40)
   - **This month**: a 160 × 6 meter, `ink3` on a `sub2` track, `caution` from 90% of the cap, then
     "$18.40 of $40" in `ink` (#134)
-  - **Usage this month** lists Triage, Search terms, Alfred and News, with News broken into articles, grouping,
+  - **Usage this month** lists Triage, Search terms, Search reading, Alfred and News, with News broken into articles, grouping,
     stories and ranking, each cost in `ink` 500; its label carries the month's total (#134).
 
 ### Keys and behaviour

@@ -354,7 +354,7 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, this month
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
       ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
     ]);
-    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.24');
+    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
     for (const [scheme, theme] of THEMES) {
       await inTheme(page, scheme, theme);
       assert.deepEqual(await rested(() => Promise.all([jobs.locator('.jb-spent'), jobs.locator('.val').first()].map(value => value.evaluate(element => getComputedStyle(element).color)))),
