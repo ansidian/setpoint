@@ -24,7 +24,8 @@
 //   what Haiku 5.5 read in it. It's never overwritten: only Not this posting (J6) takes one away.
 // - J6: a candidate the user picks is read and saved without a check (`requestPick`); what the user
 //   turned down is never saved or offered again, and a lookup writes only while its application is
-//   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link (SV-132).
+//   still `looking` (./stick.ts). One that can't be read stays `not_found` with its link (SV-132),
+//   and Look it up turns that link down before it starts, so it can't fail the same way (SV-140).
 // - Cost: no cap (decision 61). Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
@@ -52,7 +53,7 @@ import type {JobPlatform, StepOutcome, Verdict} from './lookupRules.ts';
 import {lookupEmail} from './mail.ts';
 import {jobsModelClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
 import * as j from './schema.ts';
-import {rejectedLinks, stillLooking} from './stick.ts';
+import {rejectedLinks, rejectLinks, stillLooking} from './stick.ts';
 import {boardPostings, governmentJobsSearch, openLink, readLink} from './web.ts';
 import type {FoundPosting, GovernmentJob, JobsWeb, OpenedLink} from './web.ts';
 
@@ -80,6 +81,10 @@ function answerJdItems(store: Store, applicationId: number, resolution: string, 
   return open;
 }
 
+/** The candidate the user picked, while the application has one. */
+const pickedCandidate = (store: Store, applicationId: number) => jobsDb(store.sqlite).select().from(j.jobsJdCandidates)
+  .where(and(eq(j.jobsJdCandidates.applicationId, applicationId), isNotNull(j.jobsJdCandidates.pickedAt))).get();
+
 /** Queues the application's lookup now: a new one, or the one waiting out a retry, brought forward. */
 function queueLookup(store: Store, applicationId: number) {
   const key = lookupKey(applicationId);
@@ -91,15 +96,18 @@ function queueLookup(store: Store, applicationId: number) {
  * Starts a lookup on any application, open or closed, whoever asks (D320's Look it up, J6's Track
  * this): it's `looking` at once, its unanswered candidates go, and the job runs as
  * soon as the engine takes it. A saved JD is never replaced (decision 53): Not this posting (J6)
- * comes first, so this answers `saved` and changes nothing.
+ * comes first, so this answers `saved` and changes nothing. A pick Jobs couldn't read is turned down
+ * first, so this search can't offer it again and fail the same way (SV-140).
  */
 export function requestLookup(store: Store, applicationId: number): 'looking' | 'saved' {
   const db = jobsDb(store.sqlite);
   return transaction(store, () => {
-    const application = db.select({id: j.jobsApplications.id}).from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get();
+    const application = db.select({jdLookup: j.jobsApplications.jdLookup}).from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get();
     if (!application) throw notFound('No such application.');
     if (hasPosting(store, applicationId)) return 'saved';
     const now = isoNow(store);
+    const picked = application.jdLookup === 'not_found' ? pickedCandidate(store, applicationId) : undefined;
+    if (picked) rejectLinks(store, applicationId, [picked.link], now);
     const answered = answerJdItems(store, applicationId, 'looked_up_again', now);
     db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     // Asked for now, so what it's unsure of is today's, whoever made the application.
@@ -227,7 +235,7 @@ export async function lookUpJd(store: Store, applicationId: number, {web, endpoi
   if (!haiku || !sonnet) throw new ProviderError('auth', NO_JOBS_KEY);
 
   // The user picked a candidate (J6): read that posting and save it, with no check, since they chose it.
-  const picked = db.select().from(j.jobsJdCandidates).where(and(eq(j.jobsJdCandidates.applicationId, applicationId), isNotNull(j.jobsJdCandidates.pickedAt))).get();
+  const picked = pickedCandidate(store, applicationId);
   if (picked) {
     const found = await readLink(web, picked.link, signal);
     if (!found) {
