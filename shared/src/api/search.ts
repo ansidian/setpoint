@@ -118,13 +118,13 @@ export interface SearchReadingOut {
 export interface SearchOut {
   // The search log's id, for SearchOpenedInput and later pages.
   search_id: number;
-  // Every chip in force (the input's and the ones the text became), so the field can show them.
+  // Every chip in force: the input's, a "!word"'s, and with `read: 'ask'` the reading's.
   chips: SearchChip[];
   // Free text left after the chips.
   text: string;
-  // B4: "newest" when any chip is in force (chips filter exactly; "2 results · newest first"); "match"
-  // for free text alone, ordered by how well the words matched, each tier newest first (SV-137).
-  // A reading's chips narrow and keep that order (SV-138).
+  // B4: "newest" with no words to order by ("2 results · newest first"), or for Alfred's search with a
+  // chip; "match" for words, ordered by how well they matched, each tier newest first (SV-137). A
+  // reading's chips narrow and keep that order (SV-138).
   order: 'newest' | 'match';
   // B4: every match; `results` is this page of them.
   total: number;

@@ -1036,8 +1036,8 @@ export const BOARDS: Board[] = [
       {why: '… and plain text has no styled signature, as in 01', from: '<p style="color: var(--ink2)">Thanks,', to: '<p>Thanks,'},
     ],
   },
-  // F3: boards 06, 07 and 08. 06 types `northwind rejection march`, takes the chips (Enter), opens
-  // the first result and focuses the field again (/). 07 asks the lease question with ⌘Enter against
+  // F3: boards 06, 07 and 08. 06 types `northwind rejection march`, takes the fake model's reading
+  // (Enter, boards.spec.ts), opens the first result and focuses the field again (/). 07 asks the lease question with ⌘Enter against
   // a fake Anthropic (fakeAlfred.ts), opens the source and asks the follow-up. 08 opens the Contoso University
   // email and Add to calendar.
   {
@@ -1048,7 +1048,11 @@ export const BOARDS: Board[] = [
       readerDate('Mar 14', 'Mar 14, 3:22 PM'),
       {why: 'A real field\'s caret blinks, and the screenshot leaves it out', from: '      <span class="caret"></span>\n', to: ''},
       {why: 'Ask Alfred names the query as the field holds it, the chips\' labels (the board paraphrases it)',
-        from: '<span class="ink3">· Northwind rejections in March</span>', to: '<span class="ink3">· Northwind · Rejection · Mar 2026</span>'},
+        from: '<span class="ink3">· Northwind rejections in March</span>', to: '<span class="ink3">· Northwind Talent · Rejection · Mar 2026</span>'},
+      {why: 'Override 38: a reading\'s organisation chip is the whole name it read',
+        from: '<span class="k">Org</span>Northwind<button class="x" aria-label="Remove Northwind">', to: '<span class="k">Org</span>Northwind Talent<button class="x" aria-label="Remove Northwind Talent">'},
+      {why: 'Override 38: chips keep the words\' order, so the line doesn\'t say newest first',
+        from: '<span class="num">2 results</span><span>·</span><span>newest first</span>', to: '<span class="num">2 results</span>'},
       {why: 'Override 12 and B4\'s reasons: one case style, and the date reason names itself ("Type Rejection · Date Mar 3")',
         from: '<span>type <b>Rejection</b></span><span>·</span><span class="num">Mar 3</span>', to: '<span>Type <b>Rejection</b></span><span>·</span><span>Date <b>Mar 3</b></span>'},
       {why: 'Override 12 and B4\'s reasons: one case style, and the date reason names itself ("Type Rejection · Date Mar 14")',

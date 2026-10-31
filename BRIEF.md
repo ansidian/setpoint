@@ -1216,7 +1216,7 @@ read-only: about 1,700 triaged emails over 120 days.
    no Yesterday group; **All** is the history by day.
 7. **Read syncs both ways** with Gmail and iCloud.
 8. **Read only by opening or Mark all as read.** Never on scroll, never Noise automatically.
-9. **Search finds an email by organisation, type and date**, using chips and match order. v1 ranked
+9. **Search finds an email by organisation, type and date**, using chips and date order. v1 ranked
    importance (+60) above an exact match (+45), so the right email was around third.
 10. **Organisation, type and key date are extracted at triage**, once per email.
 11. **Alfred stays**, inside search (the Answer card, with **follow-up turns**) and the reader, not as

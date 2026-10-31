@@ -271,7 +271,7 @@ describe('a chip\'s word back', () => {
 
   test.each<[string, string, string, SearchChip[], string]>([
     // name, the words as typed, the field's text, the chips left, the text
-    ['the last chip off: every word', 'car insurance', '', [], 'car insurance'],
+    ['the last chip off: every word', 'gadget warranty', '', [], 'gadget warranty'],
     ['words a chip left still says stay out', 'northwind rejections', '', [type], 'northwind'],
     ['by its whole name, in any case', 'Northwind rejections', '', [organisation], 'rejections'],
     ['a word the chip doesn\'t say comes back beside it', 'bill from northwind', '', [organisation], 'bill from'],

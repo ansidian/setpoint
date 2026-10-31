@@ -1543,6 +1543,10 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 37. **The boards from before Jobs draw it as it now is** (J8, as override 24 did for News): on 01–31
     the sidebar lists **Jobs** (`work`) under News with its Needs you count in `ink2` (the seed's 3),
     and on 17, 18a, 18b, 30a and 30b Settings' nav lists **Jobs** between News and AI.
+38. **Board 06's chips are a reading's** (#280): the organisation's is its whole name, "Org Northwind
+    Talent", highlighted whole in the row; the results line has no "newest first", since chips keep
+    the words' order. The field, chips and rows are otherwise as drawn. "6 more emails match your
+    words", which only shows when the chips hid something, has no board: it draws the fold's line.
 
 ## Not designed yet
 
@@ -3449,8 +3453,7 @@ it changes what's on screen.
     a statement, brings that type's emails first within a tier. Alfred keeps its own broad search
     (filler counts, any one word will do), so its answers don't change.
 280. **Chips come on Enter, from a reading of the whole search** (Andy, 2026-10-30; darma D385, D386,
-    SV-133, SV-138, SV-139, amending Search's "recognised words become chips" and #80's word-by-word
-    forming of them). Typing runs the words alone and never reaches a model. Enter asks once:
+    SV-133, SV-138, SV-139, amending Search's "recognised words become chips"). Typing runs the words alone and never reaches a model. Enter asks once:
     organisations and types from Claude Haiku 5.5, dates from the grammar, in that order in the field.
     A date is a plain word until Enter, whatever client asked, so a phone's text-only search filters
     by nothing it can't see. Chips filter, and keep the words' order, with each word as typed still

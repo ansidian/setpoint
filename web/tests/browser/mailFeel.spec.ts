@@ -569,8 +569,11 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
     assert.equal(await page.locator('.arow.result .why').count(), 0);
 
     // No results: each part is the field's own chip, with no dots between them; a Not chip keeps its Not.
-    await page.locator('.search input').fill('northwind !confirmation zebra');
+    await page.locator('.search input').fill('!confirmation march');
     await page.keyboard.press('Enter');
+    await until('their chips', () => page.locator('.search .qchip').count(), count => count === 2);
+    await page.locator('.search input').click();
+    await page.keyboard.type('zebra');
     const parts = page.locator('.no-results .part');
     await until('no results', () => parts.count(), count => count >= 2);
     assert.equal(await page.locator('.no-results .ink3').count(), 0);
