@@ -54,7 +54,7 @@ const FILLER = new Set([
   'is', 'are', 'was', 'were', 'be', 'am', 'do', 'does', 'did', 'can', 'could', 'will', 'would', 'should', 'have', 'has', 'had',
 ]);
 
-const TYPE_WORDS: Record<string, MessageType> = {
+export const TYPE_WORDS: Record<string, MessageType> = {
   confirmation: 'confirmation', confirmations: 'confirmation',
   rejection: 'rejection', rejections: 'rejection', rejected: 'rejection',
   receipt: 'receipt', receipts: 'receipt',

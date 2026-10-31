@@ -2,17 +2,22 @@
 // › Search and Override 12). Pure: the search query (src/search/search.ts) runs these over the
 // full-text index's candidates.
 //
-// Harvested from v1's email search (SV-5): the query's words as prefix terms with their singular or
-// plural form (`email-search-query` pluralVariants), and v1's zero-result ladder, so one stray word
-// degrades a search instead of emptying it: every word must match, and when none do, any word but
-// filler ("When does my lease renewal need to be signed?" finds lease, renewal or signed, as board
-// 07's results show). v1's middle step (every word but filler) is left out: a question's words
-// broaden the search for Alfred's card rather than narrow it. v1's scoring (`email-search-ranking`)
-// is not carried: it ranked lane, urgency and deadlines above the match (decision 9). Free text
-// alone ranks by the best field any word matched, sender (and organisation) before subject before
-// body, then newest first.
-import type {MatchField} from '@setpoint/shared';
-import {fold, NEGATED} from './searchChips.ts';
+// The field's search (SV-137) requires every word but filler, a word's prefix or plural anywhere in
+// the index, so ranking only orders and sections what today's every-word search finds. How well a
+// word matched decides its tier (matchTier): an email about the search comes before one that only
+// mentions it, newest first within each, with no importance boost (decision 9).
+//
+// Alfred's broad search keeps what's harvested from v1's email search (SV-5): the query's words as
+// prefix terms with their singular or plural form (`email-search-query` pluralVariants), and v1's
+// zero-result ladder, so one stray word degrades a search instead of emptying it: every word must
+// match, and when none do, any word but filler ("When does my lease renewal need to be signed?"
+// finds lease, renewal or signed, as board 07's results show). v1's middle step (every word but
+// filler) is left out: a question's words broaden the search for Alfred's card rather than narrow
+// it. v1's scoring (`email-search-ranking`) is not carried: it ranked lane, urgency and deadlines
+// above the match (decision 9). Broad free text alone ranks by the best field any word matched,
+// sender (and organisation) before subject before body, then newest first.
+import type {MatchField, MessageType} from '@setpoint/shared';
+import {fold, NEGATED, TYPE_WORDS, wordsOf} from './searchChips.ts';
 
 /** v1's filler words (FTS_QUERY_STOPWORDS), plus "need", which questions to Alfred are full of. */
 export const FILLER_WORDS = new Set([
@@ -70,6 +75,39 @@ export function textLadder(text: string): {step: LadderStep; terms: string[]; mo
   const steps: {step: LadderStep; terms: string[]; mode: 'and' | 'or'}[] = [{step: 'all', terms: all, mode: 'and'}];
   if (meaningful.length > 1 || (meaningful.length === 1 && all.length > 1)) steps.push({step: 'any_but_filler', terms: meaningful, mode: 'or'});
   return steps;
+}
+
+/** A word a search requires. */
+export interface SearchWord {
+  term: string;
+  forms: string[];
+  // Finds the start of a word in folded text with one of its forms.
+  starts: RegExp;
+  // Still being typed, so a whole word's matches take its start too.
+  typing: boolean;
+  // The type it names ("rejections", "bill"), which also counts as the word in a tier.
+  type: MessageType | null;
+}
+
+// Words that name a type without being a chip's: only for ranking, so nothing joins the list by them.
+const RANKING_TYPE_WORDS: Record<string, MessageType> = {bill: 'statement', bills: 'statement'};
+
+/**
+ * The words the field's search requires: all but filler, once each. A word in capitals isn't filler
+ * ("IT Specialist"), unless the whole search is in capitals. A search of filler alone requires it
+ * all, or, with `dropAllFiller` (a chip already says what's wanted), nothing.
+ */
+export function searchWords(text: string, {typing = false, dropAllFiller = false} = {}): SearchWord[] {
+  const typed = text.match(/[\p{L}\p{N}]+/gu) ?? [];
+  const shouted = typed.length > 1 && !/\p{Ll}/u.test(text);
+  const isFiller = (word: string) => FILLER_WORDS.has(fold(word)) && (shouted || !/^\p{Lu}{2,}$/u.test(word));
+  const kept = typed.some(word => !isFiller(word)) ? typed.filter(word => !isFiller(word)) : dropAllFiller ? [] : typed;
+  const terms = [...new Set(kept.map(fold))];
+  const last = typed.length && typing ? fold(typed.at(-1)!) : null;
+  return terms.map(term => ({
+    term, forms: formsOf(term), starts: new RegExp(`(?<![\\p{L}\\p{N}])(?:${formsOf(term).join('|')})`, 'u'),
+    typing: term === last, type: RANKING_TYPE_WORDS[term] ?? TYPE_WORDS[term] ?? null,
+  }));
 }
 
 const quote = (term: string) => `"${term.replace(/"/g, '""')}"*`;
@@ -140,6 +178,92 @@ export interface TextRow {
   summary: string | null;
   searchTerms: string | null;
   searchBody: string;
+}
+
+export type RankedRow = TextRow & {type: MessageType | null};
+
+// Words between two a search has for them to still read as one thing, in the body.
+const NEAR_WORDS = 8;
+
+/** The field's tiers, best first; each is newest first (DESIGN.md › Search). */
+export const TIER = {
+  sender: 0,
+  phrase: 1,
+  subject: 2,
+  across: 3,
+  body: 4,
+  // From here on an email only mentions the search.
+  mention: 5,
+  partOfWord: 6,
+  link: 7,
+} as const;
+
+const startsWithForm = (token: string, {forms}: SearchWord) => forms.some(form => token.startsWith(form));
+const isWhole = (token: string, word: SearchWord) => (word.typing ? startsWithForm(token, word) : word.forms.includes(token));
+
+/** Tokens that hold the word, its start being enough. */
+const hasStart = (tokens: string[], word: SearchWord) => tokens.some(token => startsWithForm(token, word));
+
+/** Tokens that hold the word whole; the word being typed may still be only its start. */
+const hasWhole = (tokens: string[], word: SearchWord) => tokens.some(token => isWhole(token, word));
+
+/** Two or more words side by side in order, each by its start: "follow up" in "following up". */
+function hasPhrase(tokens: string[], words: SearchWord[]): boolean {
+  if (words.length < 2) return false;
+  for (let at = 0; at + words.length <= tokens.length; at += 1) {
+    if (words.every((word, index) => startsWithForm(tokens[at + index]!, word))) return true;
+  }
+  return false;
+}
+
+/** Two or more words, each whole, in any order, with at most NEAR_WORDS words from the first to the last. */
+function isNear(tokens: string[], words: SearchWord[]): boolean {
+  if (words.length < 2) return false;
+  const last = new Array<number>(words.length).fill(Number.NEGATIVE_INFINITY);
+  for (const [at, token] of tokens.entries()) {
+    let seen = false;
+    words.forEach((word, index) => {
+      if (isWhole(token, word)) {
+        last[index] = at;
+        seen = true;
+      }
+    });
+    if (seen && at - Math.min(...last) <= NEAR_WORDS) return true;
+  }
+  return false;
+}
+
+/**
+ * How well an email matches the words: the best of TIER that holds. The sender and subject take a
+ * word's start; the summary, search terms and body want it whole, since an ending there is how a
+ * short word lands in unrelated mail. A phrase is rare enough by itself to take each word's start.
+ * A word that's one email's only evidence isn't a phrase or a search term's whole point, so one
+ * word needs the subject or the sender for the top tiers, and is a mention in the body alone.
+ */
+export function matchTier(row: RankedRow, words: SearchWord[]): number {
+  const sender = wordsOf(`${row.fromName} ${row.fromAddress} ${row.organisation ?? ''}`);
+  if (words.every(word => hasStart(sender, word))) return TIER.sender;
+  const subject = wordsOf(row.subject);
+  const terms = (row.searchTerms ?? '').split('\n').map(wordsOf);
+  const whole = words.length === 1 && hasWhole(subject, words[0]!);
+  if (whole || hasPhrase(subject, words) || terms.some(term => hasPhrase(term, words))) return TIER.phrase;
+  if (words.every(word => hasStart(subject, word)) || (words.length > 1 && terms.some(term => words.every(word => hasWhole(term, word))))) return TIER.subject;
+  const summary = wordsOf(row.summary ?? '');
+  const allTerms = terms.flat();
+  const inFields = (word: SearchWord) => namesType(word, row) || hasStart(sender, word) || hasStart(subject, word) || hasWhole(summary, word) || hasWhole(allTerms, word);
+  if (words.every(inFields)) return TIER.across;
+  const body = wordsOf(row.searchBody);
+  if (hasPhrase(body, words) || isNear(body, words)) return TIER.body;
+  return words.every(word => inFields(word) || hasWhole(body, word)) ? TIER.mention : TIER.partOfWord;
+}
+
+/** Whether the word names the email's type. */
+export const namesType = (word: SearchWord, row: Pick<RankedRow, 'type'>) => word.type !== null && word.type === row.type;
+
+/** Whether some word is only in what a link left: `said` is the body without its links. */
+export function isLinkOnly(row: RankedRow, words: SearchWord[], said: string): boolean {
+  const text = fold([row.fromName, row.fromAddress, row.organisation, row.subject, row.summary, row.searchTerms, said].filter(Boolean).join(' '));
+  return words.some(word => !namesType(word, row) && !word.starts.test(text));
 }
 
 /**

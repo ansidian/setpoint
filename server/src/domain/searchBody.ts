@@ -92,6 +92,9 @@ function footerLines(lines: string[]): Set<number> {
   return footer;
 }
 
+/** The body with nothing a link left, footers and all: the words the email says itself. */
+export const withoutLinks = (body: string) => body.split(/\r?\n/).map(line => replaceLinks(line, () => '')).join('\n');
+
 /** The body as search indexes it: no links or footers, each link's domain kept once as a word. */
 export function searchBody(body: string): string {
   const lines = body.replace(/\bmailto:/gi, '').split(/\r?\n/);

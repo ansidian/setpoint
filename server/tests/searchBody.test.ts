@@ -1,7 +1,7 @@
 // What search indexes of a body (SV-135): links become their domain, once; plain boilerplate near
 // the end goes; everything else stays as it was written.
 import {describe, expect, test} from 'vitest';
-import {searchBody} from '../src/domain/searchBody.ts';
+import {searchBody, withoutLinks} from '../src/domain/searchBody.ts';
 
 const lines = (count: number, word = 'Line') => Array.from({length: count}, (_, at) => `${word} ${at + 1}.`).join('\n');
 
@@ -32,6 +32,10 @@ describe('links', () => {
   ])('%s', (_, body, expected) => {
     expect(searchBody(body)).toBe(expected);
   });
+});
+
+test('withoutLinks leaves what the email says itself, and no domain', () => {
+  expect(withoutLinks('Pay at https://fhwbilling.example/pay/8842 today.\nContoso (https://contoso.example/a) wrote.')).toBe('Pay at  today.\nContoso  wrote.');
 });
 
 describe('footers', () => {

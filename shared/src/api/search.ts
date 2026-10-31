@@ -95,10 +95,14 @@ export interface SearchOut {
   // Free text left after the chips.
   text: string;
   // B4: "newest" when any chip is in force (chips filter exactly; "2 results · newest first"); "match"
-  // for free text alone, ordered sender, then subject, then body matches, each newest first.
+  // for free text alone, ordered by how well the words matched, each tier newest first (SV-137).
   order: 'newest' | 'match';
-  // B4: every match, for "2 results"; `results` is this page of them.
+  // B4: every match; `results` is this page of them.
   total: number;
+  // SV-137: how many of the matches, from the top, are about the search. The rest only mention it
+  // and may be folded away ("12 more mention these words"). `total` when nothing's in the second
+  // section, and 0 when everything is, which shows as a plain list.
+  first_section: number;
   // No email had every word, so these have some of them ("No email has every word · 1 has some of
   // them", UX #10).
   partial: boolean;

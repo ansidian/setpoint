@@ -56,10 +56,13 @@ export interface SearchScore {
   // Right emails anywhere in the list, of all of them.
   anywhere: number;
   listed: number;
+  // Rows in the section the list shows first, and the right emails among them, of all of them.
+  firstSection: number;
+  rightInFirst: number;
 }
 
-/** One search's list against its right emails. */
-export function scoreList(search: TestSearch, ids: number[]): SearchScore {
+/** One search's list against its right emails; its first `section` rows are the first section. */
+export function scoreList(search: TestSearch, ids: number[], section = ids.length): SearchScore {
   const wanted = new Set(search.wanted);
   const rightIn = (rows: number[]) => rows.filter(id => wanted.has(id)).length;
   const first = ids.findIndex(id => wanted.has(id));
@@ -72,6 +75,8 @@ export function scoreList(search: TestSearch, ids: number[]): SearchScore {
     top10: rightIn(ids.slice(0, SHOWN)) / Math.min(wanted.size, SHOWN),
     anywhere: rightIn(ids) / wanted.size,
     listed: ids.length,
+    firstSection: section,
+    rightInFirst: rightIn(ids.slice(0, section)) / wanted.size,
   };
 }
 
@@ -99,9 +104,12 @@ export function summarise(scores: SearchScore[]): ScoreSummary {
   };
 }
 
-/** Runs each search through the real matching, with nothing filtered by hand and no account. */
+/** Runs each search through the field's real matching, with nothing filtered by hand and no account. */
 export function scoreSearches(store: Store, searches: TestSearch[]): SearchScore[] {
-  return searches.map(search => scoreList(search, matchSearch(store, {text: search.text, chips: [], account_id: undefined}).ids));
+  return searches.map(search => {
+    const {ids, first} = matchSearch(store, {text: search.text, chips: [], account_id: undefined});
+    return scoreList(search, ids, first);
+  });
 }
 
 const percent = (share: number) => `${(share * 100).toFixed(0)}%`.padStart(5);
@@ -110,8 +118,8 @@ function summaryRow(label: string, {searches, mrr, rankedFirst, foundNone, preci
   return `${label.padEnd(9)}${String(searches).padStart(3)}  ${mrr.toFixed(3)}  ${String(rankedFirst).padStart(5)}  ${String(foundNone).padStart(4)}  ${precisionTop5.toFixed(2)}  ${percent(top10)}  ${percent(anywhere)}`;
 }
 
-function searchRow({firstRight, precisionTop5, top10, anywhere, listed, group, text}: SearchScore) {
-  return `${String(firstRight ?? '-').padStart(5)}  ${precisionTop5.toFixed(2)}  ${percent(top10)}  ${percent(anywhere)}  ${String(listed).padStart(5)}  ${group.padEnd(8)} ${text}`;
+function searchRow({firstRight, precisionTop5, top10, anywhere, listed, firstSection, rightInFirst, group, text}: SearchScore) {
+  return `${String(firstRight ?? '-').padStart(5)}  ${precisionTop5.toFixed(2)}  ${percent(top10)}  ${percent(anywhere)}  ${String(listed).padStart(5)}  ${String(firstSection).padStart(5)}  ${percent(rightInFirst)}  ${group.padEnd(8)} ${text}`;
 }
 
 /** Numbers and search text only, never a subject or a sender. */
@@ -121,7 +129,7 @@ export function scoreReport(scores: SearchScore[]): string {
     summaryRow('all', summarise(scores)),
     ...GROUPS.map(group => summaryRow(group, summarise(scores.filter(score => score.group === group)))),
     '',
-    `first   P@5  top10    any  listed  search`,
+    `first   P@5  top10    any  listed  about  right  search`,
     ...scores.map(searchRow),
   ].join('\n');
 }

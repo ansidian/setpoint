@@ -1,20 +1,24 @@
 // Search (BRIEF.md › Search; DESIGN.md › Search): the field's words become chips that filter exactly
 // (src/domain/searchChips.ts); whatever's left is free text over the full-text index, which holds an
 // email's summary, its search terms (src/search/terms.ts) and its body without links or footers
-// (src/domain/searchBody.ts). With any chip, results come newest first. Free text alone ranks by the
-// best field a word matched — sender (and organisation), then subject, then body — and newest first
-// within each, with no importance boost (decision 9). Search covers All's mail: archived mail is in
-// (D14), trashed mail is out. A Not chip or a "!word" leaves out what it matches (SV-31).
+// (src/domain/searchBody.ts). With any chip, results come newest first. Free text alone ranks by how
+// well the words matched (src/domain/searchMatch.ts › matchTier), newest first within each tier, with
+// no importance boost (decision 9): what's about the search comes first, and `first` counts it, then
+// what only mentions it. Search covers All's mail: archived mail is in (D14), trashed mail is out. A
+// Not chip or a "!word" leaves out what it matches (SV-31).
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
 // records its position (src/search/log.ts), so ranking can be measured against real searches.
-// Alfred runs the same search through its tool, unlogged.
+// Alfred runs the broad search through its tool, unlogged: its words each widen the search on their
+// own, so its answers stay what they were (matching: 'broad').
 import type {MatchReasonOut, HighlightOut, SearchChip, SearchOut, SearchResultOut, searchInput} from '@setpoint/shared';
 import {asc} from 'drizzle-orm';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
 import {dayLabel, fold, isNot, parseQuery, sameChip, wordsOf} from '../domain/searchChips.ts';
-import {excerptOf, FIELD_TIERS, ftsExpression, mergeRuns, phraseRuns, termRuns, textLadder, textMatches, withoutExcluded} from '../domain/searchMatch.ts';
+import {withoutLinks} from '../domain/searchBody.ts';
+import {excerptOf, FIELD_TIERS, ftsExpression, isLinkOnly, matchTier, mergeRuns, namesType, phraseRuns, searchWords, termRuns, textLadder, textMatches, textTerms, TIER, withoutExcluded} from '../domain/searchMatch.ts';
+import type {RankedRow, SearchWord} from '../domain/searchMatch.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {indexing, messageRows} from '../queries/mail.ts';
 import {isoNow} from '../store.ts';
@@ -100,48 +104,135 @@ function textCandidates(store: Store, filter: Filter, expression: string): Candi
 
 export interface SearchMatches {
   chips: SearchChip[];
-  // Free text left after the chips, and the terms the matching ladder step used.
+  // Free text left after the chips, and the words the matches were found by.
   text: string;
   terms: string[];
   order: 'newest' | 'match';
-  // The ladder fell back from every word to any word (UX #10).
+  // No email had every word, so these have some of them (UX #10).
   partial: boolean;
   // Every match, in order.
   ids: number[];
+  // How many of `ids`, from the top, are about the search; the rest only mention it.
+  first: number;
 }
 
-/** Every email a search matches, in its order. */
-export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>): SearchMatches {
-  const vocabulary = chipVocabulary(store);
-  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone});
-  const chips: SearchChip[] = [];
-  for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
-  const {text, excluded} = withoutExcluded(parsed.text);
-  const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded);
-  const ladder = textLadder(text);
-  // Leaving out alone doesn't rank: words with only Not chips still order by the best field.
-  const order = chips.some(chip => !isNot(chip)) || !ladder.length ? 'newest' : 'match';
-  const none = {chips, text: parsed.text, terms: [], order, partial: false, ids: []} as SearchMatches;
-  if (filter.empty || (!chips.length && !ladder.length && !excluded.length)) return none;
+export interface MatchOptions {
+  // 'ranked' is the field's search. 'broad' is Alfred's: every word counts, filler too, any one word
+  // will do when no email has them all, and the best field any word matched orders them.
+  matching?: 'ranked' | 'broad';
+}
 
-  if (!ladder.length) {
+interface Parsed {
+  store: Store;
+  filter: Filter;
+  // Results with no ranking to do: the order of `none`.
+  none: SearchMatches;
+}
+
+/** A word's emails. */
+function emailsWith(store: Store, filter: Filter, word: SearchWord): Set<number> {
+  return new Set(textCandidates(store, filter, ftsExpression([word.term], 'and')).map(row => row.id));
+}
+
+type Ranked = Candidate & RankedRow;
+
+function rankedRows(store: Store, ids: number[]): Ranked[] {
+  return store.sqlite.prepare(`
+    SELECT id, received_at, type, from_name AS fromName, from_address AS fromAddress, organisation, subject, summary, search_terms AS searchTerms, search_body AS searchBody
+    FROM messages WHERE id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(ids)) as Ranked[];
+}
+
+/** Moves those of the emails that match only by a link's domain to the links' tier. */
+function placeLinks(store: Store, emails: {row: Ranked; words: SearchWord[]; tier: number}[]) {
+  const mentions = emails.filter(email => email.tier >= TIER.mention);
+  const bodies = new Map((store.sqlite.prepare('SELECT id, body_text AS body FROM messages WHERE id IN (SELECT value FROM json_each(?))')
+    .all(JSON.stringify(mentions.map(email => email.row.id))) as {id: number; body: string}[]).map(row => [row.id, row.body]));
+  for (const email of mentions) if (isLinkOnly(email.row, email.words, withoutLinks(bodies.get(email.row.id) ?? ''))) email.tier = TIER.link;
+}
+
+/**
+ * The words' matches in the field's order, by each one's tier, then a word the search names the type
+ * of, then newest first. When no email has every word, the rarest words an email has rank it, and
+ * only what has the rarest word found can be about the search.
+ */
+function rankEmails({store, none}: Parsed, words: SearchWord[], holders: Set<number>[], partial: boolean): SearchMatches {
+  const found = words.map((word, at) => ({word, emails: holders[at]!})).filter(({emails}) => emails.size);
+  const rarest = [...found].sort((a, b) => a.emails.size - b.emails.size);
+  const ids = [...new Set(found.flatMap(({emails}) => [...emails]))].filter(id => partial || found.every(({emails}) => emails.has(id)));
+  const emails = rankedRows(store, ids).map(row => {
+    // In the order typed, for a phrase.
+    const had = found.filter(({emails}) => emails.has(row.id)).map(({word}) => word);
+    return {
+      row, words: had, tier: matchTier(row, had),
+      // Each rarer word outweighs all the commoner ones together.
+      rarity: rarest.reduce((sum, {emails}) => sum * 2 + (emails.has(row.id) ? 1 : 0), 0),
+      about: rarest[0]!.emails.has(row.id),
+      names: words.some(word => namesType(word, row)),
+    };
+  });
+  placeLinks(store, emails);
+  const isFirst = (email: (typeof emails)[number]) => email.about && email.tier < TIER.mention;
+  const order = (a: (typeof emails)[number], b: (typeof emails)[number]) => Number(isFirst(b)) - Number(isFirst(a)) || b.rarity - a.rarity || a.tier - b.tier || Number(b.names) - Number(a.names) || newestFirst(a.row, b.row);
+  return {...none, terms: words.map(word => word.term), partial, ids: emails.sort(order).map(email => email.row.id), first: emails.filter(isFirst).length};
+}
+
+/** The field's search: every word but filler, and failing that the rarest words any email has. */
+function rankedSearch(parsed: Parsed, input: Pick<SearchRequest, 'text'>, text: string): SearchMatches {
+  const {store, filter, none} = parsed;
+  const lastWord = (value: string) => fold(value).match(/[\p{L}\p{N}]+$/u)?.[0];
+  const typing = lastWord(input.text) !== undefined && lastWord(input.text) === lastWord(text);
+  const words = searchWords(text, {typing, dropAllFiller: none.chips.some(chip => !isNot(chip))});
+  if (!words.length) {
     const rows = store.sqlite.prepare(`SELECT m.id, m.received_at FROM messages m WHERE ${filter.sql.join(' AND ')}`).all(...filter.args) as Candidate[];
-    return {...none, ids: rows.sort(newestFirst).map(row => row.id)};
+    return inOrder(none, rows.sort(newestFirst));
   }
+  const holders = words.map(word => emailsWith(store, filter, word));
+  const every = [...holders[0]!].filter(id => holders.every(emails => emails.has(id)));
+  const partial = !every.length;
+  if (partial && holders.every(emails => !emails.size)) return none;
+  if (none.order === 'match') return rankEmails(parsed, words, holders, partial);
+  const ids = partial ? [...new Set(holders.flatMap(emails => [...emails]))] : every;
+  return {...inOrder(none, rankedRows(store, ids).sort(newestFirst)), terms: words.map(word => word.term), partial};
+}
+
+/** Matches with one section, in the order given. */
+const inOrder = (none: SearchMatches, rows: Candidate[]): SearchMatches => ({...none, ids: rows.map(row => row.id), first: rows.length});
+
+/** Alfred's search: every word, then any word but filler, by the best field any word matched. */
+function broadSearch({store, filter, none}: Parsed, text: string): SearchMatches {
+  const ladder = textLadder(text);
+  if (!ladder.length) return inOrder(none, (store.sqlite.prepare(`SELECT m.id, m.received_at FROM messages m WHERE ${filter.sql.join(' AND ')}`).all(...filter.args) as Candidate[]).sort(newestFirst));
   for (const step of ladder) {
     const rows = textCandidates(store, filter, ftsExpression(step.terms, step.mode));
     if (!rows.length) continue;
     const partial = step.step !== 'all';
-    if (order === 'newest') return {...none, terms: step.terms, partial, ids: rows.sort(newestFirst).map(row => row.id)};
+    if (none.order === 'newest') return {...inOrder(none, rows.sort(newestFirst)), terms: step.terms, partial};
     // Free text alone: the best field any word matched, then newest first.
     const tierOf = new Map<number, number>();
     FIELD_TIERS.forEach(({columns}, tier) => {
       for (const row of textCandidates(store, filter, ftsExpression(step.terms, 'or', columns))) if (!tierOf.has(row.id)) tierOf.set(row.id, tier);
     });
     const tier = (row: Candidate) => tierOf.get(row.id) ?? FIELD_TIERS.length;
-    return {...none, terms: step.terms, partial, ids: rows.sort((a, b) => tier(a) - tier(b) || newestFirst(a, b)).map(row => row.id)};
+    return {...inOrder(none, rows.sort((a, b) => tier(a) - tier(b) || newestFirst(a, b))), terms: step.terms, partial};
   }
   return none;
+}
+
+/** Every email a search matches, in its order. */
+export function matchSearch(store: Store, input: Pick<SearchRequest, 'text' | 'chips' | 'account_id'>, {matching = 'ranked'}: MatchOptions = {}): SearchMatches {
+  const vocabulary = chipVocabulary(store);
+  const parsed = parseQuery(input.text, {...vocabulary, now: isoNow(store), timeZone: store.timeZone});
+  const chips: SearchChip[] = [];
+  for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);
+  const {text, excluded} = withoutExcluded(parsed.text);
+  const filter = chipFilter(store, chips, input.account_id, vocabulary.organisations, excluded);
+  const hasWords = textTerms(text).length > 0;
+  // Leaving out alone doesn't rank: words with only Not chips still order by the best field.
+  const order = chips.some(chip => !isNot(chip)) || !hasWords ? 'newest' : 'match';
+  const none: SearchMatches = {chips, text: parsed.text, terms: [], order, partial: false, ids: [], first: 0};
+  if (filter.empty || (!chips.length && !hasWords && !excluded.length)) return none;
+  const search = {store, filter, none};
+  return matching === 'broad' ? broadSearch(search, text) : rankedSearch(search, input, text);
 }
 
 const TEXT_LABELS = {sender: 'Sender', organisation: 'Org', subject: 'Subject', body: 'Body'} as const;
@@ -199,14 +290,14 @@ export function presentResult(store: Store, {row, out}: Row, matches: SearchMatc
   return {...out, reasons, excerpt, highlights};
 }
 
-export interface SearchOptions {
+export interface SearchOptions extends MatchOptions {
   // Alfred's searches aren't logged.
   log?: boolean;
 }
 
 /** POST /api/search: a page of results, the chips in force, and the search log's id. */
-export function searchMail(store: Store, input: SearchRequest, {log = true}: SearchOptions = {}): SearchOut {
-  const matches = matchSearch(store, input);
+export function searchMail(store: Store, input: SearchRequest, {log = true, ...options}: SearchOptions = {}): SearchOut {
+  const matches = matchSearch(store, input, options);
   const pageIds = matches.ids.slice(input.offset, input.offset + input.limit);
   const rows = messageRows(store, pageIds);
   const results = pageIds.flatMap(id => {
@@ -216,7 +307,7 @@ export function searchMail(store: Store, input: SearchRequest, {log = true}: Sea
   const searchId = log ? logSearch(store, input, matches, pageIds) : 0;
   const next = input.offset + input.limit;
   return {
-    search_id: searchId, chips: matches.chips, text: matches.text, order: matches.order, total: matches.ids.length, partial: matches.partial, results,
+    search_id: searchId, chips: matches.chips, text: matches.text, order: matches.order, total: matches.ids.length, first_section: matches.first, partial: matches.partial, results,
     next_offset: next < matches.ids.length ? next : null, indexing: indexing(store).indexing,
   };
 }

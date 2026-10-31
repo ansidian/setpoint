@@ -10,6 +10,9 @@
 // before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
 // email replacing an earlier one. Terms for mail that isn't there are left out.
 //
+// Each search's "about" and "right" columns are the rows in the first section, and the share of its
+// right emails there.
+//
 // Inside the app's container, the test file comes on stdin:
 //
 //   docker compose exec -T app node server/src/dev/scoreSearch.ts - < data/search-test/test.json

@@ -34,6 +34,11 @@ describe('scoreList', () => {
     expect(scoreList(search(wanted), ids)).toMatchObject({...scores, listed: ids.length});
   });
 
+  test('how many rows are in the first section, and the right emails among them', () => {
+    expect(scoreList(search([1, 3, 9]), range(1, 10), 3)).toMatchObject({firstSection: 3, rightInFirst: 2 / 3, anywhere: 1});
+    expect(scoreList(search([1]), range(1, 2))).toMatchObject({firstSection: 2, rightInFirst: 1});
+  });
+
   test('a partly right email scores as wrong', () => {
     expect(scoreList(search([3], [1, 2]), [1, 2, 3])).toMatchObject({firstRight: 3, precisionTop5: 0.2});
   });
@@ -57,8 +62,8 @@ describe('scoring the real search over the seed', () => {
 
   test.each([
     {text: 'northwind rejection march', subjects: ['Update on your application', 'Your application for Data Engineer Intern'], firstRight: 1, precisionTop5: 0.4, top10: 1, anywhere: 1},
-    {text: lease, subjects: ['October rent received'], firstRight: 4, precisionTop5: 0.2, top10: 1, anywhere: 1},
-    {text: lease, subjects: ['Lease renewal terms', 'Update on your application'], firstRight: 1, precisionTop5: 0.2, top10: 0.5, anywhere: 0.5},
+    {text: 'renewal', subjects: ['October rent received'], firstRight: 4, precisionTop5: 0.2, top10: 1, anywhere: 1, firstSection: 3, rightInFirst: 0},
+    {text: lease, subjects: ['Lease renewal terms', 'Update on your application'], firstRight: 1, precisionTop5: 0.2, top10: 0.5, anywhere: 0.5, listed: 1},
   ])('$text → $subjects', ({text, subjects, ...scores}) => {
     const w = world({seed: true});
     const [score] = scoreSearches(w.store, [{group: 'topic', text, wanted: subjects.map(subject => idOf(w, subject))}]);

@@ -60,7 +60,7 @@ function searchTool(context: ToolContext, input: Record<string, unknown>): ToolO
   const query = text(input.query);
   if (!query) return fail('query is required: the words to search for.');
   const offset = Math.max(0, integer(input.offset) ?? 0);
-  const out = searchMail(context.store, searchInput.parse({text: query, offset, limit: SEARCH_PAGE}), {log: false});
+  const out = searchMail(context.store, searchInput.parse({text: query, offset, limit: SEARCH_PAGE}), {log: false, matching: 'broad'});
   const searched = [...out.chips.map(chipWords), out.text].filter(Boolean).join(' · ');
   if (searched && !context.searched.includes(searched)) context.searched.push(searched);
   const accounts = accountLabels(context.store);

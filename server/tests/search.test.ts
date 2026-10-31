@@ -1,7 +1,8 @@
 // Search over the seed (BRIEF.md › Search, boards 06 and 07): chips filter exactly and come newest
-// first; free text alone ranks sender, then subject, then body, newest first within each, with no
-// importance boost; each result says why it matched and what to highlight; All's mail is covered
-// (archived in, trashed out); and the log keeps each search and the position of the result opened.
+// first; free text alone ranks by how well the words matched, newest first within each tier, with
+// no importance boost, and counts what's about the search; each result says why it matched and what
+// to highlight; All's mail is covered (archived in, trashed out); and the log keeps each search and
+// the position of the result opened. Alfred's broad search is here too: it isn't to change.
 import type {SearchOut, SearchResultOut} from '@setpoint/shared';
 import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
@@ -10,6 +11,7 @@ import * as t from '../src/db/schema.ts';
 import {searchLogEntry} from '../src/search/log.ts';
 import {searchMail} from '../src/search/search.ts';
 import {startBackfill} from '../src/sync/cursors.ts';
+import {upsertMessages} from '../src/sync/mailMirror.ts';
 import {signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
@@ -22,6 +24,18 @@ const highlighted = (result: SearchResultOut, field: 'from_name' | 'organisation
   const value = field === 'excerpt' ? result.excerpt : result[field] ?? '';
   return result.highlights.filter(run => run.field === field).map(run => value.slice(run.start, run.end));
 };
+
+let sent = 0;
+/** An invented email, in the seed's first account, newer than the seed's. */
+function sentEmail(w: World, subject: string, bodyText: string) {
+  sent += 1;
+  const accountId = w.store.db.select().from(t.accounts).get()!.id;
+  return upsertMessages(w.store, accountId, [{
+    providerId: `search-${sent}`, threadId: `search-thread-${sent}`, rfc822Id: null, fromName: 'Billing Desk', fromAddress: 'billing@notices.example',
+    subject, snippet: '', bodyText, bodyHtml: null, receivedAt: `2026-10-09T1${sent % 10}:00:00.000Z`, senderAuth: null, attachments: [],
+    unread: true, trashed: false, archived: false,
+  }]).inserted[0]!;
+}
 
 describe('search over the seed: the brief\'s and the boards\' examples', () => {
   test('northwind rejection march → Northwind · Rejection · Mar 2026, "Update on your application" first (board 06)', () => {
@@ -41,38 +55,86 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     expect(second!.excerpt).toBe('Thank you for applying to Northwind. Unfortunately, we won\'t be moving forward with your application for the Data Engineer Intern role.');
   });
 
-  test('the lease question finds Parkside\'s renewal terms first, by subject, then body (board 07)', () => {
+  test('the lease question, without its filler, is Parkside\'s renewal terms alone (board 07)', () => {
     const w = world({seed: true});
     const out = search(w, 'When does my lease renewal need to be signed?');
-    expect(out).toMatchObject({chips: [], order: 'match'});
-    expect(subjects(out)).toEqual(['Lease renewal terms', 'Car registration renewal notice', 'Your renters policy renewal is coming up', 'October rent received']);
-    expect(out.results.map(reasons)).toEqual(['Subject lease renewal · Body signed', 'Subject renewal', 'Subject renewal', 'Body lease renewal']);
+    expect(out).toMatchObject({chips: [], order: 'match', total: 1, partial: false});
+    expect(subjects(out)).toEqual(['Lease renewal terms']);
+    expect(out.results.map(reasons)).toEqual(['Subject lease renewal · Body signed']);
     const [lease] = out.results;
     expect(highlighted(lease!, 'subject')).toEqual(['Lease', 'renewal']);
     expect(lease!.excerpt).toContain('once it\'s signed, your new term starts Dec 1');
     expect(highlighted(lease!, 'excerpt')).toContain('signed');
   });
 
-  test('free text alone: sender before subject before body, newest first within each, no importance boost', () => {
+  test('free text alone: by tier, newest first within each, no importance boost', () => {
     const w = world({seed: true});
     // "Parkside" in quotes stays text: the sender and organisation tier, newest first.
     expect(subjects(search(w, '"parkside"'))).toEqual(['October rent received', 'Lease renewal terms']);
-    // Renewal: three subjects, newest first, then the rent email that says it in the body. The
+    // Renewal: three subjects, newest first, then the rent email that only says it in the body. The
     // pinned, read-and-Done or attention state of an email changes nothing.
     const renewal = search(w, 'renewal');
     expect(subjects(renewal)).toEqual(['Lease renewal terms', 'Car registration renewal notice', 'Your renters policy renewal is coming up', 'October rent received']);
+    expect(renewal).toMatchObject({total: 4, first_section: 3});
     w.store.db.update(t.messages).set({lane: 'attention', unread: true}).where(eq(t.messages.subject, 'October rent received')).run();
     expect(subjects(search(w, 'renewal'))).toEqual(subjects(renewal));
   });
 
-  test('every word must match before any word will, and plurals find singulars', () => {
+  test('every word but filler is required, and plurals find singulars', () => {
     const w = world({seed: true});
     expect(subjects(search(w, 'lease renewal'))).toEqual(['Lease renewal terms', 'October rent received']);
     expect(subjects(search(w, 'final exams'))).toEqual(['Final exam schedule · CS 101']);
+    expect(subjects(search(w, 'the final exams for me'))).toEqual(['Final exam schedule · CS 101']);
     expect(search(w, 'zebra quokka').total).toBe(0);
   });
 
-  test('a search that fell back to any word says so (UX #10)', () => {
+  test('a word in capitals isn\'t filler, as "it" would be', () => {
+    const w = world({seed: true});
+    const role = sentEmail(w, 'A role at Fabrikam', 'Fabrikam is hiring an IT technician for the help desk.');
+    const hours = sentEmail(w, 'Desk hours', 'The help desk is open, and nothing of the kind is needed.');
+    expect(search(w, 'it desk').results.map(result => result.id)).toEqual(expect.arrayContaining([hours, role]));
+    const capitals = search(w, 'IT desk').results;
+    expect(capitals.map(result => result.id)).toContain(role);
+    expect(capitals.map(result => result.id)).not.toContain(hours);
+    expect(reasons(capitals.find(result => result.id === role)!)).toBe('Sender desk · Body IT');
+  });
+
+  test('a word no email has no longer empties the list, nor passes for a match: the rarest word found ranks it', () => {
+    const w = world({seed: true});
+    // Lease is the rarer word and renewal the commoner, and no email has zebra.
+    const out = search(w, 'zebra lease renewal');
+    expect(out).toMatchObject({partial: true});
+    expect(subjects(out).slice(0, 2)).toEqual(['Lease renewal terms', 'October rent received']);
+    // What has the rarest word and says it well is about the search; what has less only follows.
+    expect(subjects(out).slice(out.first_section)).toEqual(expect.arrayContaining(['Car registration renewal notice', 'Your renters policy renewal is coming up']));
+    expect(out.first_section).toBeGreaterThan(0);
+    expect(search(w, 'zebra quokka')).toMatchObject({partial: false, total: 0, first_section: 0});
+  });
+
+  test('a link\'s domain is findable, last, and a whole list of mentions is still a list', () => {
+    const w = world({seed: true});
+    const linked = sentEmail(w, 'Your weekly digest', 'Have a look at this week at https://www.quokkamail.example/week');
+    const said = sentEmail(w, 'A note', 'Quokkamail wrote to say the order is on its way.');
+    const out = search(w, 'quokkamail');
+    expect(out.results.map(result => result.id)).toEqual([said, linked]);
+    expect(out).toMatchObject({total: 2, first_section: 0});
+  });
+
+  test('a chip keeps newest first, in one section, and every page says the same first section', () => {
+    const w = world({seed: true});
+    expect(search(w, 'northwind rejection march')).toMatchObject({total: 2, first_section: 2, order: 'newest'});
+    const words = search(w, 'northwind application zebra');
+    expect(words).toMatchObject({order: 'newest', partial: true, first_section: words.total});
+    expect(search(w, 'renewal', {limit: 2})).toMatchObject({total: 4, first_section: 3, next_offset: 2});
+    expect(search(w, 'renewal', {limit: 2, offset: 2})).toMatchObject({total: 4, first_section: 3, next_offset: null});
+  });
+
+  test('with a chip in force, leftover filler asks nothing of the mail', () => {
+    const w = world({seed: true});
+    expect(search(w, 'northwind rejection march the').results.map(result => result.subject)).toEqual(['Update on your application', 'Your application for Data Engineer Intern']);
+  });
+
+  test('a search no email fully matches says so (UX #10)', () => {
     const w = world({seed: true});
     expect(search(w, 'lease renewal').partial).toBe(false);
     const tokyo = search(w, 'flight to tokyo');
@@ -155,6 +217,24 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     const source = w.store.db.select().from(t.sources).where(eq(t.sources.provider, 'gmail')).get()!;
     startBackfill(w.store, source.id, 100, null);
     expect(search(w, 'jobs').indexing).toEqual({progress: 0});
+  });
+});
+
+describe('Alfred\'s broad search, an option apart', () => {
+  const broad = (w: World, text: string) => searchMail(w.store, searchInput.parse({text}), {log: false, matching: 'broad'});
+
+  test('filler counts, any one word will do, and the best field any word matched orders them', () => {
+    const w = world({seed: true});
+    const out = broad(w, 'When does my lease renewal need to be signed?');
+    expect(out).toMatchObject({chips: [], order: 'match', partial: true});
+    expect(subjects(out)).toEqual(['Lease renewal terms', 'Car registration renewal notice', 'Your renters policy renewal is coming up', 'October rent received']);
+    expect(out.results.map(reasons)).toEqual(['Subject lease renewal · Body signed', 'Subject renewal', 'Subject renewal', 'Body lease renewal']);
+    expect(subjects(search(w, 'When does my lease renewal need to be signed?'))).toEqual(['Lease renewal terms']);
+  });
+
+  test('its chips are the grammar\'s', () => {
+    const w = world({seed: true});
+    expect(broad(w, 'northwind rejection march').chips.map(chip => chip.label)).toEqual(['Northwind', 'Rejection', 'Mar 2026']);
   });
 });
 
