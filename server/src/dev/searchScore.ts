@@ -4,7 +4,7 @@
 import type Database from 'better-sqlite3';
 import {z} from 'zod';
 import {searchInput} from '@setpoint/shared';
-import {applyReading, planReading} from '../search/reading.ts';
+import {applyReading, planReading, suggestionOf, SUGGESTION_HIDES} from '../search/reading.ts';
 import {readingOf} from '../search/readingPrompt.ts';
 import {matchSearch} from '../search/search.ts';
 import {termsOf, termsText} from '../search/termsPrompt.ts';
@@ -117,12 +117,15 @@ export function scoreSearches(store: Store, searches: TestSearch[]): SearchScore
 
 /** One search's prompt for the model, built by the real code: `null` when it wouldn't ask. */
 export function readingPrompts(store: Store, searches: Pick<TestSearch, 'text'>[]): {text: string; input: string | null}[] {
-  return searches.map(({text}) => ({text, input: planReading(store, searchInput.parse({text, read: 'ask'})).prompt}));
+  return searches.map(({text}) => ({text, input: planReading(store, searchInput.parse({text})).prompt}));
 }
 
 export interface ReadingScore extends SearchScore {
   chips: string[];
   fallback: string | null;
+  // Whether the field would offer it, and the share of the word results it would hide.
+  shown: boolean;
+  share: number;
   // What the words find, and what the chips leave out of that: the "more" number.
   words: number;
   more: number;
@@ -133,19 +136,20 @@ export interface ReadingScore extends SearchScore {
 
 /** A model's answer, as the tool's input, applied by the real code. An answer of null is no reading. */
 export function readingScore(store: Store, search: TestSearch, answer: Record<string, unknown> | null): ReadingScore {
-  const input = searchInput.parse({text: search.text, read: 'ask'});
+  const input = searchInput.parse({text: search.text});
   const plan = planReading(store, input);
   const reading = readingOf(answer);
-  const {kept: {matches, left}, fallback} = applyReading(store, input, plan, reading, reading ? null : 'failed');
+  const applied = applyReading(store, input, plan, reading, reading ? null : 'failed');
+  const {kept: {matches, left}, fallback} = applied;
   const shown = new Set(matches.ids);
   const leftOut = new Set(left.ids);
   // The word results asked for afresh, so the "more" number is checked rather than restated.
-  const wordResults = matchSearch(store, input, {chipsFromWords: reading?.isDate === false ? 'none' : 'dates'});
-  const words = new Set(wordResults.ids);
+  const words = new Set(matchSearch(store, input).ids);
   const hidden = search.wanted.filter(id => words.has(id) && !shown.has(id));
   return {
     ...scoreList(search, matches.ids, matches.first),
     chips: matches.chips.map(chip => chip.label), fallback, words: words.size, more: left.ids.length,
+    shown: suggestionOf(input, applied) !== null, share: words.size ? left.ids.length / words.size : 0,
     hidden: hidden.length, counted: hidden.filter(id => leftOut.has(id)).length,
   };
 }
@@ -174,8 +178,8 @@ export function scoreReport(scores: SearchScore[]): string {
 
 /** The score with readings, and what the reading did to each search. Numbers, search text and chips. */
 export function readingReport(scores: ReadingScore[]): string {
-  const row = ({firstRight, top10, anywhere, listed, firstSection, words, more, hidden, counted, chips, fallback, text}: ReadingScore) =>
-    `${String(firstRight ?? '-').padStart(5)}  ${percent(top10)}  ${percent(anywhere)}  ${String(listed).padStart(5)}  ${String(firstSection).padStart(5)}  ${String(words).padStart(5)}  ${String(more).padStart(4)}  ${`${counted}/${hidden}`.padStart(6)}  ${text} [${chips.join(', ')}]${fallback ? ` (${fallback})` : ''}`;
+  const row = ({firstRight, top10, anywhere, listed, firstSection, words, more, share, shown, hidden, counted, chips, fallback, text}: ReadingScore) =>
+    `${String(firstRight ?? '-').padStart(5)}  ${percent(top10)}  ${percent(anywhere)}  ${String(listed).padStart(5)}  ${String(firstSection).padStart(5)}  ${String(words).padStart(5)}  ${String(more).padStart(4)}  ${percent(share)}  ${(shown ? 'yes' : 'no').padStart(5)}  ${`${counted}/${hidden}`.padStart(6)}  ${text} [${chips.join(', ')}]${fallback ? ` (${fallback})` : ''}`;
   const hiddenAll = scores.reduce((sum, {hidden}) => sum + hidden, 0);
   const countedAll = scores.reduce((sum, {counted}) => sum + counted, 0);
   return [
@@ -183,8 +187,9 @@ export function readingReport(scores: ReadingScore[]): string {
     summaryRow('all', summarise(scores)),
     '',
     `Right emails hidden by chips: ${hiddenAll}, counted in "more": ${countedAll}`,
+    `Would show a suggestion at ${percent(SUGGESTION_HIDES).trim()}: ${scores.filter(score => score.shown).length} of ${scores.length}`,
     '',
-    'first  top10    any  listed  about  words  more  hidden  search [chips]',
+    'first  top10    any  listed  about  words  more   hide  shown  hidden  search [chips]',
     ...scores.map(row),
   ].join('\n');
 }

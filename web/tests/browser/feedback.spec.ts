@@ -289,7 +289,7 @@ test('a search chip answers as a whole under its ×, pops in and collapses away;
     await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('march');
-    await page.keyboard.press('Enter');
+    await page.locator('.suggest').click();
     const chip = page.locator('.search .qchip:not([aria-hidden])', {hasText: 'Mar 2026'});
     await chip.waitFor();
     assert.deepEqual([await rested(() => chip.evaluate(element => getComputedStyle(element).animationName)), await rested(() => chip.evaluate(element => getComputedStyle(element).animationDuration))], ['qchip-in', '0.12s']);

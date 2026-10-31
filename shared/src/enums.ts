@@ -144,17 +144,17 @@ export const SEARCH_CHIP_KINDS = ['organisation', 'type', 'date', 'account', 'ki
 export type SearchChipKind = (typeof SEARCH_CHIP_KINDS)[number];
 
 /**
- * SV-138: what a search asks of the reading. `ask` has the model read it (Enter); `kept` keeps the
- * chips given, with no model call (a later page, or a chip removed); `left_out` lists what they left
- * out ("6 more emails match your words").
+ * SV-138: a search with chips a suggestion made (D392). `kept` applies the chips given, with no model
+ * call (accepting it, a later page, a chip removed); `left_out` lists what they left out ("6 more
+ * emails match your words"). The model is reached only by POST /api/search/suggestion.
  */
-export const SEARCH_READS = ['ask', 'kept', 'left_out'] as const;
+export const SEARCH_READS = ['kept', 'left_out'] as const;
 export type SearchRead = (typeof SEARCH_READS)[number];
 
 /**
- * SV-138: why a search that asked for a reading has the word results: no Anthropic key, the model
- * was too slow or failed, the reading's filters left nothing, or nothing in it was there to read
- * (quotes, "!" words or a date alone).
+ * SV-138: why a suggestion has no reading in it: no Anthropic key, the model was too slow or failed,
+ * its filters left nothing, or nothing in the search was there to read (quotes, "!" words or a date
+ * alone).
  */
 export const SEARCH_READING_FALLBACKS = ['no_key', 'slow', 'failed', 'left_nothing', 'nothing_to_read'] as const;
 export type SearchReadingFallback = (typeof SEARCH_READING_FALLBACKS)[number];

@@ -570,7 +570,7 @@ test('search-11, -13, -15: a reason shows only when the row doesn\'t; no results
 
     // No results: each part is the field's own chip, with no dots between them; a Not chip keeps its Not.
     await page.locator('.search input').fill('!confirmation march');
-    await page.keyboard.press('Enter');
+    await page.locator('.suggest').click();
     await until('their chips', () => page.locator('.search .qchip').count(), count => count === 2);
     await page.locator('.search input').click();
     await page.keyboard.type('zebra');

@@ -245,12 +245,16 @@ third, because it ranked importance above match.
 
 - `/` or ⌘F focuses search in the header. **Results replace the list**; the reading pane and
   `J`/`K` work the same.
-- As Andy types, results update and **no chip forms** (D385, SV-139): every word stays a word, a
-  date's too. On **Enter** the whole search is read into removable **chips**: an organisation, a type,
-  a date or range ("march", "last week"). `northwind rejection march` becomes **Northwind Talent ·
-  Rejection · Mar 2026**. Chips filter and keep the list's order, and clear with the search. A chip's
-  × puts its word back as plain text, and a line under the results says what they left out and shows
-  it. `!word` leaves out what it names, as it's typed. Enter never runs Alfred; ⌘Enter does.
+- Results are the words' results, the same with or without Enter (D392): as Andy types they update,
+  **no chip forms** and every word stays a word, a date's too. On a pause, about 700 ms, the field
+  offers a **suggestion** beside the results line: an organisation, a type, a date or range ("march",
+  "last week"), which `northwind rejection march` reads as **Only Northwind Talent · Rejection · Mar
+  2026 · 2 emails**. The first change to the field takes it away, and it shows only if it hides a
+  real share of the list, starting at a fifth, and leaves a row. A click, or Tab in the field, makes
+  it removable **chips**, which filter, keep the list's order and clear with the search. A chip's ×
+  puts its word back as plain text, the suggestion stays away for those words, and a line under the
+  results says what the chips left out and shows it. `!word` leaves out what it names, as it's typed.
+  Enter only moves into the results and never runs Alfred; ⌘Enter does.
 - Free text requires every word but filler and ranks by how well they matched: sender,
   then subject, then across the email's fields, then close together in the body, newest first
   within each. No importance boost. Emails about the search come first; those that only mention it
@@ -263,17 +267,18 @@ third, because it ranked importance above match.
   each email's **search terms** once, as its own durable job, and they rank with the subject when
   one term holds the words (SV-136, SV-137). Trashed mail isn't read. Mail from before terms, and mail an older prompt read, wait for
   `search-terms --apply`. With no Anthropic key, terms stay empty and search works without them.
-- Enter's reading is the server's (SV-138, D385, D386): Claude Haiku 5.5 is given the search, today's
+- The reading is the server's (SV-138, D386, D392): Claude Haiku 5.5 is given the search, today's
   date and the organisations and types in its best keyword matches, and says which of them the
-  search asks for. Dates stay the grammar's. Its chips only narrow, each list keeping the words'
-  order, and the answer counts what they left out ("6 more emails match your words") and can list
-  it. "!" words and quotes never reach the model. With no key, no answer in 2 seconds, a failed call
-  or filters that leave nothing, nothing changes on screen and the word results stay. Typing never
-  reaches the model.
+  search asks for. Dates stay the grammar's, so a date is suggested at once and with no key. Its chips
+  only narrow, each list keeping the words' order, and the answer counts what they left out ("6 more
+  emails match your words") and can list it. "!" words and quotes never reach the model. With no key,
+  no answer in 2 seconds, a failed call or filters that leave nothing, there's no suggestion from it
+  and nothing else changes. Typing reaches the model only on a pause, for the field's exact text;
+  accepting never does, and the same words are held for 10 minutes.
 - Each result shows why it matched, with the matching words highlighted.
 - Searches and the position of the opened result are logged, so ranking can be measured against
-  real searches rather than made-up ones, with which reading each used and each chip removed
-  (SV-138).
+  real searches rather than made-up ones, with each suggestion offered, shown and accepted and each
+  chip removed (SV-138, D392).
 - No results: "No emails match **Northwind Talent · Rejection · Mar 2026**", each chip removable.
 
 ### Alfred
@@ -753,8 +758,8 @@ later is layout work only.
   Mark all as read.
 - The reader full width, with Back.
 - A read-only agenda: today and the next 7 days, tapping an item opens its detail.
-- Plain search box: words only, with no filter of any kind from what's typed (no chips yet: SI-64,
-  D387). No calendar editing, no Alfred, Settings only to sign in.
+- Plain search box: words only, with no filter of any kind from what's typed (no suggestions or
+  chips yet: SI-64). No calendar editing, no Alfred, Settings only to sign in.
 - ntfy notifications open the exact email or item.
 - No News (D85): it's left out of the phone's navigation until it proves it's used on the desktop.
 - No Jobs (decision 49), for the same reason; the layout sweep's phone pass skips it.

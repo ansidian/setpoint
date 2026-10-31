@@ -261,7 +261,9 @@ test('the account filter, and plain search with no chips and no Alfred', async (
 
     const reads: string[] = [];
     page.on('request', request => {
-      if (new URL(request.url()).pathname === '/api/search') reads.push((request.postDataJSON() as {read?: string}).read ?? 'words');
+      const path = new URL(request.url()).pathname;
+      if (path === '/api/search') reads.push((request.postDataJSON() as {read?: string}).read ?? 'words');
+      if (path === '/api/search/suggestion') reads.push('suggestion');
     });
     await page.locator('.search input').tap();
     await page.keyboard.type('northwind interview ');
@@ -270,8 +272,8 @@ test('the account filter, and plain search with no chips and no Alfred', async (
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     assert.equal(await page.locator('.hd .apill, .hd .ph-count').count(), 0);
     await page.keyboard.press('Enter');
-    // Nothing happens to wait for: Enter makes no chips on the phone.
-    await page.waitForTimeout(500);
+    // Nothing happens to wait for: Enter makes no chips on the phone, and no pause asks for a suggestion.
+    await page.waitForTimeout(900);
     await setpoint.idle();
     assert.equal(await page.locator('.search .qchip').count(), 0, 'no chips');
     assert.ok(reads.length > 0 && reads.every(read => read === 'words'), `its searches ask for no reading: ${reads.join()}`);

@@ -1,6 +1,6 @@
 // A fake Anthropic on 127.0.0.1 for the browser checks (server/tests/fakeModels.ts is the full one):
 // Anthropic's Messages API answering Alfred's turns with the tool calls a test scripts, so board 07
-// can show Alfred answering, and Enter's reading of a search with invented readings of the seed's mail
+// can show Alfred answering, and a suggestion's reading of a search with invented readings of the seed's mail
 // (`SEED_READINGS`). Setpoint reaches it through SETPOINT_DEV_AI_URL, which only a dev run accepts;
 // with the key set, triage and the history pass ask it too, and are told it's overloaded, so they
 // change nothing. No check reaches a real model provider.
@@ -37,6 +37,8 @@ export const SEED_READINGS: Record<string, FakeReading> = {
   'renewal': {organisations: ['Parkside Apartments'], keywords: 'renewal'},
   'google': {organisations: ['Google'], keywords: ''},
   'contoso policy': {organisations: ['Contoso Insurance'], keywords: 'policy'},
+  'rent': {organisations: ['Parkside Apartments'], keywords: 'rent'},
+  'application': {organisations: ['Northwind Talent'], keywords: 'application'},
 };
 
 export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0, readings = SEED_READINGS}: {delayMs?: number; readings?: Record<string, FakeReading>} = {}) {

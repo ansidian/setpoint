@@ -1036,8 +1036,8 @@ export const BOARDS: Board[] = [
       {why: '… and plain text has no styled signature, as in 01', from: '<p style="color: var(--ink2)">Thanks,', to: '<p>Thanks,'},
     ],
   },
-  // F3: boards 06, 07 and 08. 06 types `northwind rejection march`, takes the fake model's reading
-  // (Enter, boards.spec.ts), opens the first result and focuses the field again (/). 07 asks the lease question with ⌘Enter against
+  // F3: boards 06, 07 and 08. 06 types `northwind rejection march`, takes the fake model's suggestion
+  // (Tab, boards.spec.ts), opens the first result and focuses the field again (/). 07 asks the lease question with ⌘Enter against
   // a fake Anthropic (fakeAlfred.ts), opens the source and asks the follow-up. 08 opens the Contoso University
   // email and Add to calendar.
   {

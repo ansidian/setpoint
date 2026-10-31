@@ -38,7 +38,7 @@ function sentEmail(w: World, subject: string, bodyText: string) {
   }]).inserted[0]!;
 }
 
-// Board 06's chips, as Enter's reading gives them and the field sends them back.
+// Board 06's chips, as a suggestion gives them and the field sends them back.
 const NORTHWIND = {kind: 'organisation', value: 'Northwind', label: 'Northwind'};
 const REJECTION = {kind: 'type', value: 'rejection', label: 'Rejection'};
 const BOARD_CHIPS = [NORTHWIND, REJECTION, {kind: 'date', from: '2026-03-01', to: '2026-04-01', label: 'Mar 2026'}];
@@ -238,7 +238,7 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
   });
 });
 
-describe('dates alone from the words, for Enter\'s reading', () => {
+describe('dates alone from the words, for a suggestion', () => {
   const words = (w: World, text: string) => matchSearch(w.store, {text, chips: [], account_id: undefined}, {chipsFromWords: 'dates'});
 
   test('an organisation, a type and a kind stay words, and a type\'s word also finds that type', () => {

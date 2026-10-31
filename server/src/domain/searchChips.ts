@@ -4,8 +4,8 @@
 // "quotes". A "!" before a word negates it (SV-31): `!confirmation` is a Not Type Confirmation chip,
 // and a "!word" that forms no chip stays in the text, where search leaves out the mail that has it.
 //
-// Mail's field no longer runs all of it: a word typed there stays a word (D385, SV-139). What's left
-// is a "!word", any time; dates on Enter (src/search/reading.ts); and Alfred's searches, whole.
+// Mail's field no longer runs all of it: a word typed there stays a word (D392). What's left is a
+// "!word", any time; dates for a suggestion (src/search/reading.ts); and Alfred's searches, whole.
 // Calendar search keeps its own words on `parseChips` below.
 //
 // Pure: the known organisations and accounts come in as a vocabulary, and dates resolve against the
@@ -32,7 +32,7 @@ export interface ChipContext extends ChipVocabulary {
   now: string;
   timeZone: string;
   // What plain words form: every chip (Alfred's), only dates, the rest staying text for search to
-  // rank (Enter's reading), or nothing (the field). A word after "!" is the whole grammar's in each,
+  // rank (a suggestion), or nothing (the field). A word after "!" is the whole grammar's in each,
   // since it says what it leaves out as exactly as it did (SV-31, SV-138).
   fromWords?: 'all' | 'dates' | 'none';
 }

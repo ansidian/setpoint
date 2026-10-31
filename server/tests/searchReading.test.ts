@@ -1,13 +1,14 @@
-// The server's reading of a whole search on Enter (SV-138, D385, D386), with Haiku faked at the HTTP
-// boundary: what it's given, how its answer becomes chips, what those leave out, and every way it can
-// fall back to the word results. All searches and names here are invented.
+// The server's reading of a whole search, offered as a suggestion (SV-138, SV-142, D386, D392), with
+// Haiku faked at the HTTP boundary: what it's given, how its answer becomes chips once accepted, what
+// those leave out, when a suggestion is worth offering, and every way a reading can fail to come. All
+// searches and names here are invented.
 import type {SearchOut} from '@setpoint/shared';
-import {searchInput} from '@setpoint/shared';
+import {searchInput, searchSuggestionInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {searchLogEntry} from '../src/search/log.ts';
-import {READING_HELD_MS, SearchReader} from '../src/search/reading.ts';
+import {READING_HELD_MS, SearchReader, SUGGESTION_HIDES} from '../src/search/reading.ts';
 import {FACET_MATCHES, readingFacets, readingOf, SEARCH_READING_MODEL, SEARCH_READING_PROMPT_VERSION, SEARCH_READING_SYSTEM, SEARCH_READING_TOOL, searchReadingInput} from '../src/search/readingPrompt.ts';
 import {searchMail} from '../src/search/search.ts';
 import {setSecret} from '../src/secrets/store.ts';
@@ -41,12 +42,21 @@ async function setup({key = true, waitMs = 2000} = {}) {
   const w = world({seed: true});
   if (key) setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
   const reader = new SearchReader({store: w.store, endpoints: fake.endpoints, waitMs});
-  const read = (text: string, extra: Record<string, unknown> = {}) => reader.search(searchInput.parse({text, read: 'ask', ...extra}));
+  // A search read and accepted, whatever the share it hides, as the web sends it back: the chips and
+  // words the reading came to, with `read: 'kept'`, and no model. `fallback` says why there's no reading.
+  const read = async (text: string, {limit, ...extra}: Record<string, unknown> = {}) => {
+    const input = searchSuggestionInput.parse({text, ...extra});
+    const {applied: {kept: {matches}, typed, fallback}} = await reader.read(input);
+    const out = await reader.search(searchInput.parse({text: matches.text, chips: matches.chips, typed, read: 'kept', account_id: input.account_id, limit}));
+    return {...out, fallback};
+  };
+  const suggest = (text: string, extra: Record<string, unknown> = {}) => reader.suggest(searchSuggestionInput.parse({text, ...extra}));
   const ledger = () => w.store.db.select().from(t.aiUsage).where(eq(t.aiUsage.purpose, 'search_reading')).all();
-  return {fake, w, reader, read, ledger};
+  return {fake, w, reader, read, suggest, ledger};
 }
 
 const ids = (out: SearchOut) => out.results.map(result => result.id);
+const suggestions = (w: World) => w.store.db.select().from(t.searchSuggestions).orderBy(t.searchSuggestions.id).all();
 const labels = (out: SearchOut) => out.chips.map(chip => chip.label);
 const reasons = (out: SearchOut, id: number) => out.results.find(result => result.id === id)!.reasons.map(reason => reason.label).join(' · ');
 /** A later page or a chip removed, as the client sends them: what the answer gave back. */
@@ -112,8 +122,7 @@ describe('what the model is given', () => {
     expect(fake.requests[0]!.input).toMatch(/Search: lease$/);
     fake.requests.length = 0;
     for (const text of ['"lease renewal"', '!parkside', 'march', '"lease" last week']) {
-      const out = await read(text);
-      expect(out.reading).toMatchObject({used: 'words', fallback: 'nothing_to_read'});
+      expect((await read(text)).fallback).toBe('nothing_to_read');
     }
     expect(fake.requests).toEqual([]);
   });
@@ -135,7 +144,7 @@ describe('filters from the model', () => {
     const out = await read('premium');
     expect(labels(out)).toEqual(['Contoso Insurance']);
     expect(ids(out).sort()).toEqual([...chosen].sort());
-    expect(out).toMatchObject({text: 'premium', total: 2, reading: {used: 'reading', fallback: null, more: 3, typed: 'premium'}});
+    expect(out).toMatchObject({text: 'premium', total: 2, fallback: null, reading: {more: 3, typed: 'premium'}});
     const left = await reader.search(searchInput.parse({...kept(out), read: 'left_out'}));
     expect(ids(left).sort()).toEqual([...others].sort());
     expect(left).toMatchObject({total: 3, chips: [], reading: {more: 3}});
@@ -157,7 +166,7 @@ describe('filters from the model', () => {
     const {fake, w, read} = await setup();
     const id = mail(w, 'Premium notice', {organisation: 'Contoso Insurance'});
     fake.answer(() => answer({organisations: ['Nobody Holdings'], keywords: 'premium'}));
-    expect(await read('premium')).toMatchObject({chips: [], reading: {used: 'reading', more: 0}});
+    expect(await read('premium')).toMatchObject({chips: [], fallback: null, reading: {more: 0}});
     fake.answer(() => answer({organisations: ['CONTOSO INSURANCE'], keywords: 'premium'}));
     const out = await read('premium notice');
     expect(ids(out)).toEqual([id]);
@@ -194,7 +203,7 @@ describe('filters from the model', () => {
     expect(ids(out)[0]).toBe(billed);
   });
 
-  test('both filters and a date apply together, and the date stays outside the "more" number', async () => {
+  test('both filters and a date apply together, and the "more" number counts what any of them hid', async () => {
     const {fake, w, read} = await setup();
     const inMonth = mail(w, 'Gadget receipt', {organisation: 'Proseware', receivedAt: '2026-08-12T17:00:00.000Z'});
     mail(w, 'Gadget receipt late', {organisation: 'Proseware', receivedAt: '2026-09-12T17:00:00.000Z'});
@@ -203,12 +212,15 @@ describe('filters from the model', () => {
     const out = await read('gadget receipts from proseware august');
     expect(labels(out)).toEqual(['Proseware', 'Receipt', 'Aug 2026']);
     expect(ids(out)).toEqual([inMonth]);
-    expect(out.reading!.more).toBe(0);
     fake.answer(() => answer({organisations: ['Proseware'], keywords: 'gadget receipt'}));
-    const narrower = await read('gadget receipt august');
-    expect(labels(narrower)).toEqual(['Proseware', 'Aug 2026']);
-    expect(ids(narrower)).toEqual([inMonth]);
+    const narrower = await read('gadget receipt');
     expect(narrower.reading!.more).toBe(1);
+    const dated = await read('gadget receipt august');
+    expect(labels(dated)).toEqual(['Proseware', 'Aug 2026']);
+    expect(ids(dated)).toEqual([inMonth]);
+    // No email has the word "august", so the words as typed find those with some of them, the seed's
+    // receipts among them, and the chips hid those too.
+    expect(dated.reading).toMatchObject({more: 4, typed: 'gadget receipt august'});
     expect(otherOrg).toBeGreaterThan(0);
   });
 
@@ -229,7 +241,7 @@ describe('filters from the model', () => {
     fake.answer(() => answer({organisations: names, types: ['verification_code'], keywords: 'gadget'}));
     const out = await read(`gadget ${nots}`);
     expect(out.chips.length).toBe(10);
-    await expect(reader.search(searchInput.parse({...kept(out), read: 'kept'}))).resolves.toMatchObject({reading: {used: 'reading'}});
+    await expect(reader.search(searchInput.parse({...kept(out), read: 'kept'}))).resolves.toMatchObject({chips: out.chips});
   });
 
   test('a reading only narrows: what stays keeps the words\' order', async () => {
@@ -266,7 +278,7 @@ describe('dates stay the grammar\'s', () => {
     fake.answer(() => answer({organisations: ['Billing Desk'], keywords: 'gadget rebate march'}));
     const out = await read('gadget rebate march');
     expect(labels(out)).toEqual(['Mar 2026']);
-    expect(out).toMatchObject({text: 'gadget rebate', reading: {used: 'reading', more: 0, typed: 'gadget rebate'}});
+    expect(out).toMatchObject({text: 'gadget rebate', fallback: null, reading: {more: 1, typed: 'gadget rebate march'}});
     expect(ids(out)).toEqual([id]);
     expect(fake.requests[0]!.input).toContain('The app found a date in this search: Mar 2026');
   });
@@ -276,7 +288,7 @@ describe('dates stay the grammar\'s', () => {
     const id = mail(w, 'March gadget finals', {receivedAt: '2026-10-05T17:00:00.000Z'});
     fake.answer(() => answer({is_date: false, keywords: 'march gadget'}));
     const out = await read('march gadget');
-    expect(out).toMatchObject({chips: [], text: 'march gadget', reading: {used: 'reading', typed: 'march gadget'}});
+    expect(out).toMatchObject({chips: [], text: 'march gadget', reading: {typed: 'march gadget'}});
     expect(ids(out)).toEqual([id]);
   });
 
@@ -287,6 +299,15 @@ describe('dates stay the grammar\'s', () => {
     const out = await read('gadget rebate march');
     expect(labels(out)).toEqual(['Mar 2026']);
     expect(ids(out)).toEqual([id]);
+  });
+
+  test('a date alone reads newest first, its word no rank, though it\'s the word × gives back', async () => {
+    const {w, read} = await setup({key: false});
+    mail(w, 'A March note', {receivedAt: '2026-03-02T17:00:00.000Z'});
+    const newest = mail(w, 'A quiet note', {receivedAt: '2026-03-20T17:00:00.000Z'});
+    const out = await read('march');
+    expect(out).toMatchObject({text: '', order: 'newest', reading: {typed: 'march'}});
+    expect(ids(out)[0]).toBe(newest);
   });
 });
 
@@ -332,23 +353,23 @@ describe('falling back to the word results', () => {
     const {fake, w, read} = await setup({key: false});
     const out = await read('lease renewal');
     expect(fake.requests).toEqual([]);
-    expect(out).toMatchObject({chips: [], reading: {used: 'words', fallback: 'no_key', more: 0, typed: 'lease renewal'}});
+    expect(out).toMatchObject({chips: [], fallback: 'no_key', reading: {more: 0, typed: 'lease renewal'}});
     expect(ids(out)).toEqual(words(w, 'lease renewal'));
   });
 
-  test.each(['overloaded', 'server_error', 'no_tool', 'broken_arguments'] as const)('%s: the word results, and the next Enter asks again', async answerWith => {
+  test.each(['overloaded', 'server_error', 'no_tool', 'broken_arguments'] as const)('%s: the word results, and the next pause asks again', async answerWith => {
     const {fake, w, read, ledger} = await setup();
     fake.answer(() => answerWith);
     const out = await read('lease renewal');
-    expect(out).toMatchObject({chips: [], reading: {used: 'words', fallback: 'failed', more: 0}});
+    expect(out).toMatchObject({chips: [], fallback: 'failed', reading: {more: 0}});
     expect(ids(out)).toEqual(words(w, 'lease renewal'));
     fake.answer(() => answer());
-    expect(await read('lease renewal')).toMatchObject({reading: {used: 'reading', fallback: null}});
+    expect(await read('lease renewal')).toMatchObject({fallback: null});
     expect(fake.requests).toHaveLength(2);
     expect(ledger().length).toBeLessThanOrEqual(2);
   });
 
-  test('slow: the words come when the wait is up, and the late answer lands in the ledger and the next Enter', async () => {
+  test('slow: the words come when the wait is up, and the late answer lands in the ledger and the next pause', async () => {
     const {fake, w, read, ledger} = await setup({waitMs: 40});
     const id = mail(w, 'Premium notice', {organisation: 'Contoso Insurance'});
     mail(w, 'Premium offer', {organisation: 'Fourth Coffee'});
@@ -364,17 +385,16 @@ describe('falling back to the word results', () => {
     fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
     try {
       const out = await read('premium');
-      expect(out).toMatchObject({chips: [], total: 2, reading: {used: 'words', fallback: 'slow'}});
+      expect(out).toMatchObject({chips: [], total: 2, fallback: 'slow'});
     } finally {
       globalThis.fetch = slowFetch;
       release();
     }
     await expect.poll(() => ledger().length).toBe(1);
     const next = await read('premium');
-    expect(next).toMatchObject({reading: {used: 'reading', fallback: null}, total: 1});
+    expect(next).toMatchObject({fallback: null, total: 1});
     expect(ids(next)).toEqual([id]);
     expect(fake.requests).toHaveLength(1);
-    expect(searchLogEntry(w.store, next.search_id)!.reading).toMatchObject({source: 'cache', more: 1});
   });
 
   test('filters that leave nothing: the word results, with no chips and nothing to say is more', async () => {
@@ -383,7 +403,7 @@ describe('falling back to the word results', () => {
     mail(w, 'Premium notice', {organisation: 'Contoso Insurance'});
     fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'home plumbing'}));
     const out = await read('home plumbing');
-    expect(out).toMatchObject({chips: [], text: 'home plumbing', total: 1, reading: {used: 'words', fallback: 'left_nothing', more: 0}});
+    expect(out).toMatchObject({chips: [], text: 'home plumbing', total: 1, fallback: 'left_nothing', reading: {more: 0}});
   });
 
   test('filters that leave nothing keep the date the grammar read', async () => {
@@ -392,7 +412,7 @@ describe('falling back to the word results', () => {
     fake.answer(() => answer({organisations: ['Parkside Apartments'], keywords: 'gadget rebate'}));
     const out = await read('gadget rebate march');
     expect(labels(out)).toEqual(['Mar 2026']);
-    expect(out).toMatchObject({total: 1, reading: {fallback: 'left_nothing'}});
+    expect(out).toMatchObject({total: 1, fallback: 'left_nothing'});
   });
 });
 
@@ -422,7 +442,7 @@ describe('asking only when the search says so', () => {
     const first = await read('gadget receipts', {limit: 2});
     expect(first).toMatchObject({total: 3, next_offset: 2, text: 'gadget', reading: {more: 1}});
     const second = await reader.search(searchInput.parse({...kept(first), read: 'kept', search_id: first.search_id, offset: 2, limit: 2}));
-    expect(second).toMatchObject({search_id: first.search_id, total: 3, next_offset: null, reading: {more: 1, used: 'reading'}});
+    expect(second).toMatchObject({search_id: first.search_id, total: 3, next_offset: null, reading: {more: 1}});
     expect([...ids(first), ...ids(second)].sort()).toEqual([...chosen].sort());
     expect(searchLogEntry(w.store, first.search_id)!.resultIds).toHaveLength(3);
     // Org Proseware off: the words as typed, with the type chip left.
@@ -443,14 +463,15 @@ describe('asking only when the search says so', () => {
     mail(w, 'Gadget notice 2', {organisation: 'Fourth Coffee'});
     const out = await read('gadget', {chips: [{kind: 'organisation', value: 'Proseware', label: 'Proseware'}]});
     expect(ids(out)).toEqual([id]);
-    expect(out.reading).toMatchObject({used: 'words', fallback: 'no_key', more: 1});
+    expect(out).toMatchObject({fallback: 'no_key', reading: {more: 1}});
   });
 });
 
 describe('readings held briefly', () => {
   test('a repeat, spaced or cased differently, asks nothing and gets the same chips, and is logged as held', async () => {
-    const {fake, w, read, ledger} = await setup();
+    const {fake, w, read, suggest, ledger} = await setup();
     mail(w, 'Premium notice', {organisation: 'Contoso Insurance'});
+    mail(w, 'Premium offer', {organisation: 'Fourth Coffee'});
     let answers = 0;
     fake.answer(() => {
       answers += 1;
@@ -461,7 +482,8 @@ describe('readings held briefly', () => {
     expect(labels(repeat)).toEqual(labels(first));
     expect(fake.requests).toHaveLength(1);
     expect(ledger()).toHaveLength(1);
-    expect(searchLogEntry(w.store, repeat.search_id)!.reading).toMatchObject({source: 'cache'});
+    const {suggestion} = await suggest('premium');
+    expect(suggestions(w).find(row => row.id === suggestion!.id)!.reading).toMatchObject({source: 'cache'});
   });
 
   test('a repeat at the same moment shares one call', async () => {
@@ -500,29 +522,22 @@ describe('the ledger and the log', () => {
     expect(usage.search_terms.calls).toBe(0);
   });
 
-  test('the log says which reading was used, what the model said and what came of it', async () => {
-    const {fake, w, read} = await setup();
+  test('the log holds each suggestion with what the model said and what came of it; a search without one holds no reading', async () => {
+    const {fake, w, reader, suggest} = await setup();
     mail(w, 'Premium notice', {organisation: 'Contoso Insurance'});
     mail(w, 'Premium offer', {organisation: 'Fourth Coffee'});
-    fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
-    const out = await read('premium');
-    expect(searchLogEntry(w.store, out.search_id)).toMatchObject({
-      query: 'premium', freeText: 'premium', chips: out.chips,
-      reading: {source: 'model', fallback: null, prompt: SEARCH_READING_PROMPT_VERSION, organisations: ['Contoso Insurance'], types: [], keywords: 'premium', is_date: true, more: 1},
-    });
-    expect(searchLogEntry(w.store, out.search_id)!.reading!.ms).toBeGreaterThanOrEqual(0);
-  });
-
-  test('a fallback is logged with why, a search that didn\'t ask with no reading, and Enter replaces what typing logged', async () => {
-    const {w, read, reader} = await setup({key: false});
-    const typing = await reader.search(searchInput.parse({text: 'lease renew'}));
+    const typing = await reader.search(searchInput.parse({text: 'premium'}));
     expect(searchLogEntry(w.store, typing.search_id)!.reading).toBeNull();
-    const out = await read('lease renewal');
-    expect(out.search_id).toBe(typing.search_id);
-    expect(searchLogEntry(w.store, out.search_id)).toMatchObject({query: 'lease renewal', reading: {source: null, fallback: 'no_key'}});
+    fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
+    const {suggestion} = await suggest('premium');
+    expect(suggestions(w)).toMatchObject([{
+      id: suggestion!.id, query: 'premium', chips: suggestion!.chips, words: 2, hides: 1, total: 1, shownAt: null, acceptedAt: null, searchId: null,
+      reading: {source: 'model', fallback: null, prompt: SEARCH_READING_PROMPT_VERSION, organisations: ['Contoso Insurance'], types: [], keywords: 'premium', is_date: true, more: 1},
+    }]);
+    expect(suggestions(w)[0]!.reading!.ms).toBeGreaterThanOrEqual(0);
   });
 
-  test('POST /api/search reads with `read`, records a chip removed, and is checked as ever', async () => {
+  test('POST /api/search/suggestion reads, /api/search takes what it said with `read: kept`, and the log hears shown, accepted and a chip removed', async () => {
     const fake = await fakeModels();
     const w = world({seed: true});
     setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
@@ -530,17 +545,119 @@ describe('the ledger and the log', () => {
     const c = await signedIn(w, {reading: {endpoints: fake.endpoints}});
     expect((await c.send('POST', '/api/search', {body: {text: 'renewal'}})).body.reading).toBeNull();
     expect(fake.requests).toEqual([]);
-    const {body: out, status} = await c.send('POST', '/api/search', {body: {text: 'renewal', read: 'ask'}});
+    const {body: first} = await c.send('POST', '/api/search/suggestion', {body: {text: 'renewal', model: false}});
+    expect(first).toEqual({suggestion: null, reads: true});
+    expect(fake.requests).toEqual([]);
+    const {body: {suggestion}, status} = await c.send('POST', '/api/search/suggestion', {body: {text: 'renewal'}});
     expect(status).toBe(200);
-    expect(out.chips).toEqual([{kind: 'organisation', value: 'Parkside Apartments', label: 'Parkside Apartments'}]);
+    expect(suggestion.offers).toEqual([{kind: 'organisation', value: 'Parkside Apartments', label: 'Parkside Apartments'}]);
     expect(fake.requests).toHaveLength(1);
+    expect((await c.send('POST', '/api/search/suggestion-log', {body: {id: suggestion.id, event: 'shown'}})).status).toBe(204);
+    const {body: out} = await c.send('POST', '/api/search', {body: {text: suggestion.text, chips: suggestion.chips, typed: suggestion.typed, read: 'kept'}});
+    expect(out.total).toBe(suggestion.total);
+    expect(fake.requests).toHaveLength(1);
+    expect(searchLogEntry(w.store, out.search_id)).toMatchObject({query: 'renewal', reading: {source: 'kept', more: suggestion.hides}});
+    expect((await c.send('POST', '/api/search/suggestion-log', {body: {id: suggestion.id, event: 'accepted', search_id: out.search_id}})).status).toBe(204);
+    const [logged] = suggestions(w);
+    expect(logged).toMatchObject({searchId: out.search_id});
+    expect(logged!.shownAt && logged!.acceptedAt).toBeTruthy();
     const chip = out.chips[0];
     expect((await c.send('POST', '/api/search/chip-removed', {body: {search_id: out.search_id, chip}})).status).toBe(204);
     expect(searchLogEntry(w.store, out.search_id)).toMatchObject({removed: [chip]});
     expect((await c.send('POST', '/api/search/chip-removed', {body: {search_id: 9999, chip}})).status).toBe(404);
     expect((await c.send('POST', '/api/search/chip-removed', {body: {search_id: out.search_id, chip: {kind: 'type', value: 'memo', label: 'Memo'}}})).status).toBe(400);
-    expect((await c.send('POST', '/api/search', {body: {text: 'renewal', read: 'guess'}})).status).toBe(400);
+    expect((await c.send('POST', '/api/search/suggestion-log', {body: {id: 9999, event: 'shown'}})).status).toBe(404);
+    expect((await c.send('POST', '/api/search/suggestion-log', {body: {id: suggestion.id, event: 'liked'}})).status).toBe(400);
+    expect((await c.send('POST', '/api/search', {body: {text: 'renewal', read: 'ask'}})).status).toBe(400);
     expect((await c.send('POST', '/api/search/opened', {body: {search_id: out.search_id, message_id: out.results[0].id, position: 0}})).status).toBe(204);
+  });
+});
+
+describe('when a suggestion is worth offering', () => {
+  /** `premium` found in `chosen` emails from Contoso Insurance and `others` from elsewhere. */
+  async function premium(chosen: number, others: number) {
+    const set = await setup();
+    for (let at = 0; at < chosen; at += 1) mail(set.w, `Premium notice ${at}`, {organisation: 'Contoso Insurance'});
+    for (let at = 0; at < others; at += 1) mail(set.w, `Premium offer ${at}`, {organisation: 'Fourth Coffee'});
+    set.fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
+    return set;
+  }
+
+  test.each([
+    ['hiding exactly the share', 4, 1, true],
+    ['hiding a little more', 3, 1, true],
+    ['hiding a little less', 5, 1, false],
+    ['hiding nothing', 3, 0, false],
+    ['leaving one of two', 1, 1, true],
+  ])('%s: %i kept, %i hidden', async (_case, chosen, others, offered) => {
+    expect(SUGGESTION_HIDES).toBe(0.2);
+    const {suggest} = await premium(chosen, others);
+    const {suggestion} = await suggest('premium');
+    expect(suggestion !== null).toBe(offered);
+    if (offered) expect(suggestion).toMatchObject({total: chosen, hides: others, words: chosen + others, offers: [{label: 'Contoso Insurance'}], text: 'premium', typed: 'premium'});
+  });
+
+  test('a filter that would leave nothing isn\'t offered, whatever it would hide', async () => {
+    const {fake, w, suggest} = await setup();
+    mail(w, 'Premium notice', {organisation: 'Fourth Coffee'});
+    mail(w, 'A note', {organisation: 'Contoso Insurance'});
+    fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
+    expect((await suggest('premium')).suggestion).toBeNull();
+  });
+
+  test('nothing to narrow but a date is a suggestion with no model, and with no word results any date that finds mail is one', async () => {
+    const {fake, w, suggest} = await setup({key: false});
+    mail(w, 'A quiet note', {receivedAt: '2026-03-12T17:00:00.000Z'});
+    const first = await suggest('march', {model: false});
+    expect(first).toMatchObject({reads: false, suggestion: {offers: [{label: 'Mar 2026'}], hides: 0, words: 0, text: '', typed: 'march', undated: ''}});
+    expect(fake.requests).toEqual([]);
+    expect((await suggest('2019')).suggestion).toBeNull();
+  });
+
+  test('a date first by itself, then with the reading; a name the model says it is takes the date away', async () => {
+    const {fake, w, suggest} = await setup();
+    mail(w, 'March gadget notice', {organisation: 'Proseware', receivedAt: '2026-03-12T17:00:00.000Z'});
+    mail(w, 'March gadget note', {organisation: 'Fourth Coffee', receivedAt: '2026-03-13T17:00:00.000Z'});
+    mail(w, 'March gadget again', {organisation: 'Proseware', receivedAt: '2026-04-13T17:00:00.000Z'});
+    expect(await suggest('gadget march', {model: false})).toMatchObject({reads: true, suggestion: {offers: [{label: 'Mar 2026'}], total: 2}});
+    expect(fake.requests).toEqual([]);
+    fake.answer(() => answer({organisations: ['Proseware'], keywords: 'gadget'}));
+    expect(await suggest('gadget march')).toMatchObject({reads: false, suggestion: {offers: [{label: 'Proseware'}, {label: 'Mar 2026'}], total: 1, text: 'gadget', typed: 'gadget march', undated: 'gadget'}});
+    fake.answer(() => answer({is_date: false, keywords: 'gadget march'}));
+    expect((await suggest('march gadget')).suggestion).toBeNull();
+  });
+
+  test('a date hides by what the words find, not by what fills the month', async () => {
+    const {w, suggest} = await setup({key: false});
+    mail(w, 'Gadget one', {receivedAt: '2026-03-12T17:00:00.000Z'});
+    for (let at = 0; at < 4; at += 1) mail(w, `Gadget in spring ${at}`, {receivedAt: '2026-03-20T17:00:00.000Z'});
+    expect((await suggest('gadget march')).suggestion).toBeNull();
+    mail(w, 'March gadget', {receivedAt: '2026-05-20T17:00:00.000Z'});
+    mail(w, 'March gadget too', {receivedAt: '2026-05-20T17:00:00.000Z'});
+    expect((await suggest('gadget march')).suggestion).toMatchObject({offers: [{label: 'Mar 2026'}], total: 5, hides: 2, words: 2});
+  });
+
+  test('no key, a failed call, or quotes and "!words" alone: nothing to say and no call', async () => {
+    const noKey = await setup({key: false});
+    mail(noKey.w, 'Premium notice', {organisation: 'Contoso Insurance'});
+    expect(await noKey.suggest('premium', {model: false})).toEqual({suggestion: null, reads: false});
+    const {fake, w, suggest} = await premium(1, 3);
+    fake.answer(() => 'overloaded');
+    expect(await suggest('premium')).toEqual({suggestion: null, reads: false});
+    fake.requests.length = 0;
+    for (const text of ['"premium notice"', '!premium']) expect(await suggest(text, {model: false})).toMatchObject({suggestion: null, reads: false});
+    expect(suggestions(w)).toEqual([]);
+  });
+
+  test('a "!word"\'s chip stays what the user typed: in force, kept, and never what\'s offered', async () => {
+    const {fake, w, reader, suggest} = await premium(2, 2);
+    mail(w, 'Premium alert', {organisation: 'Contoso Insurance', type: 'alert'});
+    fake.answer(() => answer({organisations: ['Contoso Insurance'], keywords: 'premium'}));
+    const {suggestion} = await suggest('premium !alert');
+    expect(suggestion).toMatchObject({offers: [{label: 'Contoso Insurance'}], total: 2, hides: 2, text: 'premium', typed: 'premium'});
+    expect(suggestion!.chips.map(chip => chip.label)).toEqual(['Contoso Insurance', 'Alert']);
+    const out = await reader.search(searchInput.parse({text: suggestion!.text, chips: suggestion!.chips, typed: suggestion!.typed, read: 'kept'}));
+    expect(out).toMatchObject({total: 2, reading: {more: 2}});
   });
 });
 

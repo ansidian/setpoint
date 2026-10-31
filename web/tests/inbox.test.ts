@@ -178,7 +178,7 @@ describe('search\'s stops', () => {
     expect(keys(searchStops({about: [row(1)], more: 0, mentions: []}))).toEqual(['all:1']);
   });
 
-  test('what Enter\'s chips left out comes last, its line a stop, and only when there is any', () => {
+  test('what a suggestion\'s chips left out comes last, its line a stop, and only when there is any', () => {
     const leftOut = {more: 2, rows: [row(5), row(6)]};
     expect(keys(searchStops({about: [row(1)], more: 2, mentions: [row(2)], leftOut}))).toEqual(['all:1', MENTIONS_KEY, 'all:2', LEFT_OUT_KEY, 'all:5', 'all:6']);
     expect(keys(searchStops({about: [row(1)], more: 0, mentions: [], leftOut: {more: 2, rows: []}}))).toEqual(['all:1', LEFT_OUT_KEY]);

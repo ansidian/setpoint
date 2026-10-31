@@ -1,12 +1,13 @@
 // The search log (BRIEF.md › Search: "Searches and the position of the opened result are logged, so
 // ranking can be measured against real searches rather than made-up ones"): each search's text, its
-// chips, the ids it returned in order, each result opened with its position, and since SV-138 which
-// reading a search used and each chip taken off it, so wrong readings can be seen.
+// chips, the ids it returned in order, each result opened with its position, and since SV-138 each
+// chip taken off it, so wrong readings can be seen. Since D392, each suggestion offered, with whether
+// it was shown and accepted, so suggestions can be judged.
 //
 // The field searches as the user types, so a search that only extends or trims the one before it, within
 // a few seconds and with nothing opened from it, replaces that row rather than adding one: the log
 // keeps "northwind rejection march", not "nor", "northw", "northwind r"….
-import type {searchChipRemovedInput, SearchChip, searchInput} from '@setpoint/shared';
+import type {searchChipRemovedInput, SearchChip, searchInput, searchSuggestionLogInput} from '@setpoint/shared';
 import {desc, eq} from 'drizzle-orm';
 import type {z} from 'zod';
 import * as t from '../db/schema.ts';
@@ -33,7 +34,7 @@ export function logSearch(store: Store, input: z.output<typeof searchInput>, mat
     return row.id;
   }
   const values = {
-    at: now, query: input.text, freeText: matches.text, chips: matches.chips, accountId: input.account_id ?? null,
+    at: now, query: input.typed ?? input.text, freeText: matches.text, chips: matches.chips, accountId: input.account_id ?? null,
     order: matches.order, total: matches.ids.length, resultIds: pageIds, reading,
   };
   const last = store.db.select().from(t.searchLog).orderBy(desc(t.searchLog.id)).limit(1).get();
@@ -48,6 +49,18 @@ export function logSearch(store: Store, input: z.output<typeof searchInput>, mat
     }
   }
   return store.db.insert(t.searchLog).values(values).returning({id: t.searchLog.id}).get().id;
+}
+
+/** A suggestion as the server offers it, not yet on screen. */
+export function logSuggestion(store: Store, values: Pick<typeof t.searchSuggestions.$inferInsert, 'query' | 'accountId' | 'chips' | 'words' | 'hides' | 'total' | 'reading'>): number {
+  return store.db.insert(t.searchSuggestions).values({...values, at: isoNow(store)}).returning({id: t.searchSuggestions.id}).get().id;
+}
+
+/** POST /api/search/suggestion-log: a suggestion reached the screen, or was accepted. */
+export function recordSuggestion(store: Store, {id, event, search_id: searchId}: z.output<typeof searchSuggestionLogInput>) {
+  const at = isoNow(store);
+  const change = event === 'shown' ? {shownAt: at} : {acceptedAt: at, ...(searchId === undefined ? {} : {searchId})};
+  if (!store.db.update(t.searchSuggestions).set(change).where(eq(t.searchSuggestions.id, id)).returning({id: t.searchSuggestions.id}).get()) throw notFound('No such suggestion.');
 }
 
 /** POST /api/search/opened: the user opened the result at `position` (0-based) of a logged search. */

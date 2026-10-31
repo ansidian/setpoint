@@ -39,6 +39,21 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
+/* A suggestion (D392): the end of the results line, its filters in ink2 and its count in ink3, so it
+   reads as an offer rather than as what's in force; `sub` under the pointer, as the fold's line is. It
+   takes the line's height and no more. The line stays one line whatever comes: its own words give way
+   first by an ellipsis and, in a list too narrow for both, beside an open email, altogether, so the
+   suggestion's filters stay whole. Tab is said only while the field has the keys. */
+.search-list .bar.muted { container-type: inline-size; }
+.search-list .bar > .num { flex: 0 100 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-list .bar > span:not(.num, .spin) { flex: none; }
+@container (max-width: 560px) { .search-list .bar:has(.suggest) > span { display: none; } }
+.search-list .suggest { margin-left: auto; flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; margin-right: -8px; border-radius: var(--r-row); color: var(--ink2); font-size: 12.5px; white-space: nowrap; transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); animation: sk-arrive var(--dur-fast) var(--ease); }
+.search-list .suggest .num { flex: none; }
+.search-list .suggest .kbd { display: none; }
+:root:has(.search input:focus) .search-list .suggest .kbd { display: inline-flex; }
+@media (hover: hover) { .search-list .suggest:hover { background: var(--sub); color: var(--ink); } }
+.search-list .suggest:active { background: var(--sub3); transition-duration: var(--dur-press); }
 /* The fold over what only mentions the search: the results line's words, a Noise line's answers
    (#158) and its one chevron, turned to point right while folded (#198). */
 .search-list .mentions { transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12.5px; text-align: left; }

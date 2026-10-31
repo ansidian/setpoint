@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, worthAskingAgain, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -226,9 +226,9 @@ describe('what the field asks', () => {
   });
 });
 
-describe('what Enter\'s chips left out', () => {
+describe('what a suggestion\'s chips left out', () => {
   const rows = [{id: 1}, {id: 2}, {id: 3}];
-  const reading = (more: number) => ({used: 'reading', fallback: null, more, typed: 'renewal'}) as const;
+  const reading = (more: number) => ({more, typed: 'renewal'}) as const;
   const out = (more: number) => ({total: 3, first_section: 3, reading: reading(more)});
   const none = new Set<number>();
 
@@ -252,11 +252,50 @@ describe('what Enter\'s chips left out', () => {
     expect(leftOutSection(rows.slice(0, 2), out(6), null, none).more).toBe(0);
     expect(leftOutSection(rows, out(6), {open: true, rows: [{id: 9}, {id: 10}]}, new Set([9]))).toEqual({more: 5, rows: [{id: 10}]});
   });
+});
 
-  test('a reading that didn\'t come is worth another Enter; one that came to nothing isn\'t', () => {
-    expect(['slow', 'failed'].map(fallback => worthAskingAgain(fallback as 'slow'))).toEqual([true, true]);
-    expect(['no_key', 'left_nothing', 'nothing_to_read'].map(fallback => worthAskingAgain(fallback as 'no_key'))).toEqual([false, false, false]);
-    expect(worthAskingAgain(null)).toBe(false);
+describe('a suggestion', () => {
+  const organisation = chips[0]!;
+  const type = chips[1]!;
+  const date = chips[2]!;
+  const not = {...type, not: true} as SearchChip;
+  const nothing = new Set<string>();
+
+  test.each<[string, SearchChip[], string, ReadonlySet<string>, boolean]>([
+    // name, the field's chips, its text, what was turned down, whether a pause asks
+    ['words', [], 'renewal', nothing, true],
+    ['three letters are enough', [], 'jam', nothing, true],
+    ['two aren\'t', [], 'hr', nothing, false],
+    ['nor are spaces and marks', [], ' a - b ', nothing, false],
+    ['a word in another script counts by its letters', [], 'ヤマト', nothing, true],
+    ['a chip a suggestion left stands for the search\'s one reading', [organisation], 'renewal', nothing, false],
+    ['a date chip the same', [date], 'renewal', nothing, false],
+    ['a Not chip is the user\'s own, and asks', [not], 'renewal', nothing, true],
+    ['text turned down', [], ' Renewal  terms ', new Set(['renewal terms']), false],
+    ['other text', [], 'renewal', new Set(['renewal terms']), true],
+  ])('%s', (_name, field, text, declined, asks) => {
+    expect(asksForSuggestion(field, text, declined)).toBe(asks);
+  });
+
+  test('words a user turned down are the same words, spaced or cased otherwise', () => {
+    expect(suggestionKey('  Lease   Renewal ')).toBe('lease renewal');
+  });
+
+  test.each<[string, SearchChip[], number, {filters: string; count: string}]>([
+    ['one filter', [organisation], 7, {filters: 'Only Northwind', count: '7 emails'}],
+    ['one email', [organisation], 1, {filters: 'Only Northwind', count: '1 email'}],
+    ['several read as the Ask Alfred line does', [organisation, type, date], 2, {filters: 'Only Northwind · Rejection · Mar 2026', count: '2 emails'}],
+  ])('its words: %s', (_name, offers, total, line) => {
+    expect(suggestionLine({offers, total})).toEqual(line);
+  });
+
+  test('the same chips for the same rows are the same offer, whatever it\'s called in the log', () => {
+    const offer = {id: 1, chips: [date], text: '', typed: 'march', undated: '', offers: [date], total: 2, hides: 1, words: 3};
+    expect(sameSuggestion(offer, {...offer, id: 2})).toBe(true);
+    expect(sameSuggestion(offer, {...offer, total: 3})).toBe(false);
+    expect(sameSuggestion(offer, {...offer, chips: [organisation, date]})).toBe(false);
+    expect(sameSuggestion(offer, null)).toBe(false);
+    expect(sameSuggestion(null, null)).toBe(true);
   });
 });
 
@@ -265,8 +304,8 @@ describe('a chip\'s word back', () => {
   const type = chips[1]!;
   const date = chips[2]!;
 
-  test('only a reading\'s filters stood for words', () => {
-    expect(([organisation, type, date, {...type, not: true}] as SearchChip[]).map(standsForWords)).toEqual([true, true, false, false]);
+  test('what a suggestion makes stood for words, a date too; a Not chip is the user\'s own', () => {
+    expect(([organisation, type, date, {...type, not: true}, {...date, not: true}] as SearchChip[]).map(standsForWords)).toEqual([true, true, true, false, false]);
   });
 
   test.each<[string, string, string, SearchChip[], string]>([
@@ -276,7 +315,8 @@ describe('a chip\'s word back', () => {
     ['by its whole name, in any case', 'Northwind rejections', '', [organisation], 'rejections'],
     ['a word the chip doesn\'t say comes back beside it', 'bill from northwind', '', [organisation], 'bill from'],
     ['a word the reading kept stays, whatever the chips say', 'rejection letter', 'rejection', [type], 'rejection letter'],
-    ['a date stays out of the words: `typed` never had it', 'rent', 'rent', [date], 'rent'],
+    ['a date left says its month, so it stays out', 'rent march', 'rent', [date], 'rent'],
+    ['a date gone gives its word back', 'northwind march', '', [organisation], 'march'],
     ['"quotes" and "!words" stay whole', '"lease renewal" !proseware northwind', '"lease renewal" !proseware', [], '"lease renewal" !proseware northwind'],
   ])('%s', (_name, typed, text, left, back) => {
     expect(wordsBack(typed, text, left)).toBe(back);

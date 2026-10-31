@@ -1,8 +1,8 @@
 // Search (DESIGN.md › Search; board 06): the header's field with its chips, and the results that
 // replace the list: Alfred's Answer card above them, the results line, each result with why it
 // matched and its matches highlighted, the fold over those that only mention the search, the line of
-// what Enter's chips left out, Ask Alfred ⌘Enter last, and the no-results line with each chip
-// removable. Kept thin: the rules are logic/search.ts's, and the state is mailSearch.ts's and
+// what a suggestion's chips left out, the suggestion itself in the results line, and the no-results
+// line with each chip removable. Kept thin: the rules are logic/search.ts's, and the state is mailSearch.ts's and
 // state.ts's.
 import type {AccountOut, CalendarSearchChip, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {Fragment, useEffect, useId, useMemo, useRef, useState} from 'react';
@@ -10,7 +10,7 @@ import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Entry, Fold, FoldRules} from '../../logic/fold.ts';
 import {LEFT_OUT_KEY, MENTIONS_KEY} from '../../logic/inbox.ts';
-import {fieldSegments, firstSection, indexingLine, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons} from '../../logic/search.ts';
+import {fieldSegments, firstSection, indexingLine, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons, suggestionLine} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -36,7 +36,7 @@ export function Account({account}: {account: AccountOut | undefined}) {
   return <><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></>;
 }
 
-type FieldSearch<R> = Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, R>, 'chips' | 'text' | 'active' | 'setText' | 'settle' | 'removeChip' | 'clear'> & {pending?: boolean};
+type FieldSearch<R> = Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, R>, 'chips' | 'text' | 'active' | 'setText' | 'settle' | 'removeChip' | 'clear'> & {pending?: boolean; suggestion?: unknown; acceptSuggestion?: () => void};
 
 interface SearchFieldProps<R> {
   search: FieldSearch<R>;
@@ -64,9 +64,9 @@ export function selectSearch() {
 }
 
 /**
- * The header's field. `/` or ⌘F focuses it, selecting the query; Enter takes the chips and, once they're in, hands the keys
- * to the results (J, K, Enter), the cursor on the first; ⌘Enter asks Alfred; Esc clears the search; Backspace in an empty
- * field removes the last chip.
+ * The header's field. `/` or ⌘F focuses it, selecting the query; Enter hands the keys to the results (J, K, Enter), the
+ * cursor on the first; Tab takes a suggestion that's showing, and otherwise moves on as it does anywhere; ⌘Enter asks
+ * Alfred; Esc clears the search; Backspace in an empty field removes the last chip.
  */
 export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', arrowDown = false, onEscape, autoFocus}: SearchFieldProps<R>) {
   const input = useRef<HTMLInputElement>(null);
@@ -109,10 +109,13 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       if (search.active && onAsk) onAsk();
+    } else if (event.key === 'Tab' && !event.shiftKey && search.suggestion) {
+      event.preventDefault();
+      search.acceptSuggestion?.();
     } else if (event.key === 'Enter' || (arrowDown && event.key === 'ArrowDown')) {
       event.preventDefault();
-      // The keys stay here until the answer's in, so what's typed meanwhile is typed, and a row doesn't
-      // move under J or K. Not if the user has gone elsewhere since.
+      // The keys stay here until the answer's in, if the pause hadn't run out, so what's typed meanwhile
+      // is typed. Not if the user has gone elsewhere since.
       void search.settle().then(settled => {
         if (!settled || document.activeElement !== input.current) return;
         input.current?.blur();
@@ -171,7 +174,7 @@ export function SearchField<R>({search, onAsk, onEnter, label = 'Search mail', a
  * "No emails match", then each chip and the words as the same chips the field draws, each knocked off
  * by its × (search-13); a Not chip keeps its "Not" label.
  */
-export function NoResults({lead, search}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>}) {
+export function NoResults({lead, search, children}: {lead: string; search: Pick<SearchFieldState<SearchChip | CalendarSearchChip, unknown, unknown>, 'chips' | 'text' | 'removeChip' | 'clearText'>; children?: ReactNode}) {
   return (
     <div className="no-results">
       <Icon name="search_off" size={20} />
@@ -185,6 +188,7 @@ export function NoResults({lead, search}: {lead: string; search: Pick<SearchFiel
       {search.text.trim() && (
         <span className="part">{search.text.trim()}<button className="x" type="button" aria-label={`Remove ${search.text.trim()}`} onClick={search.clearText}><Icon name="close" size={14} /></button></span>
       )}
+      {children}
     </div>
   );
 }
@@ -210,6 +214,23 @@ export interface ResultsProps {
 
 const resultKey = (id: number) => `all:${id}`;
 
+/**
+ * What the search could narrow to (D392), at the end of the results line, a place that's already
+ * there, so nothing moves as it comes and goes. Its press leaves the keys in the field. Tab is said
+ * only while the field has them (search.css).
+ */
+function Suggestion({search}: {search: Search}) {
+  if (!search.suggestion) return null;
+  const {filters, count} = suggestionLine(search.suggestion);
+  return (
+    <button className="suggest" type="button" title={`${filters} · ${count}`} onMouseDown={event => event.preventDefault()} onClick={search.acceptSuggestion}>
+      <span className="ell">{filters}</span>
+      <span className="num ink3">· {count}</span>
+      <span className="kbd">Tab</span>
+    </button>
+  );
+}
+
 export function SearchResults(props: ResultsProps) {
   const {search, sections, card} = props;
   const {out} = search;
@@ -233,10 +254,9 @@ export function SearchResults(props: ResultsProps) {
   const indexed = out?.indexing ? `${Math.round(out.indexing.progress * 1000) / 10}%` : null;
   const parts = queryParts(search.chips, search.text);
   // It shows once the first answer is in (InboxPage keeps the list until then), and fades in; a
-  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235), where
-  // Enter's reading doesn't: only the field's glyph says it's coming.
+  // refinement on its way dims what it replaces, once it's taken a moment (search-03, #235).
   return (
-    <section className={search.pending && !search.reading ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
+    <section className={search.pending ? 'list search-list arrive pending' : 'list search-list arrive'} aria-label="Search results">
       {card}
       {/* Ask Alfred leads the results, where the Answer card stands once asked (board 06). */}
       {out && !card && (
@@ -257,6 +277,7 @@ export function SearchResults(props: ResultsProps) {
       {out && out.total > 0 && (
         <div className={card ? 'bar muted after-card' : 'bar muted'}>
           {resultsLine({...out, total: firstSection(out)}).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span className="num">{part}</span></Fragment>)}
+          <Suggestion search={search} />
         </div>
       )}
       {sections.about.map(result => <ResultRow key={result.id} result={result} {...props} />)}
@@ -264,7 +285,7 @@ export function SearchResults(props: ResultsProps) {
       {sections.more > 0 && (
         <Folding key={search.answering} {...props} line={MENTIONS_KEY} rows={sections.mentions} open={search.mentions} toggle={search.toggleMentions} words={mentionsLine(sections.more, out?.partial ?? false)} />
       )}
-      {out && out.total === 0 && <NoResults lead="No emails match" search={search} />}
+      {out && out.total === 0 && <NoResults lead="No emails match" search={search}><Suggestion search={search} /></NoResults>}
       {/* Past the chips, under whatever they let through: the fold is what they kept and only mentions the words. */}
       {sections.leftOut.more > 0 && (
         <Folding key={`left:${search.answering}`} {...props} line={LEFT_OUT_KEY} rows={sections.leftOut.rows} open={search.leftOut?.open ?? false} toggle={search.toggleLeftOut} words={leftOutLine(sections.leftOut.more)} />

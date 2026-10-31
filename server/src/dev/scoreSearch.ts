@@ -10,15 +10,16 @@
 // before scoring, as the job would: one {"id": 1, "terms": ["..."]} a line, a later line for an
 // email replacing an earlier one. Terms for mail that isn't there are left out.
 //
-// With no other flag it scores the words as typed, which form no chips (D385, SV-139). Each search's
+// With no other flag it scores the words as typed, which form no chips (D392). Each search's
 // "about" and "right" columns are the rows in the first section, and the share of its right emails
 // there.
 //
 // --reading-prompts <file> writes what the model would be asked for each search, by the real code, as
 // JSON ({model, system, tool, max_output_tokens, searches: [{text, input}]}), and scores nothing. A
-// script that can reach the model answers them. --readings <file> then scores Enter: those answers
-// through the real code, one {"text": "...", "reading": {...}} a line, the tool's input or null for
-// none, reporting list sizes and the right emails the chips hide. Both files stay out of git.
+// script that can reach the model answers them. --readings <file> then scores those answers accepted
+// as suggestions, through the real code, one {"text": "...", "reading": {...}} a line, the tool's input
+// or null for none, reporting list sizes, what each would hide, whether the field would show it, and
+// the right emails the chips hide. Both files stay out of git.
 //
 // Inside the app's container, the test file comes on stdin:
 //

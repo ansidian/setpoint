@@ -190,8 +190,11 @@ test('board 06: search with chips, the first result open', async () => {
     await page.locator('.today-row').first().waitFor();
     await page.keyboard.press('/');
     await page.keyboard.type('northwind rejection march');
-    await page.keyboard.press('Enter');
+    await page.locator('.suggest', {hasText: 'Rejection'}).waitFor();
+    await page.keyboard.press('Tab');
     await until('the chips', () => page.locator('.search .qchip').count(), count => count === 3);
+    await page.locator('.search-list .bar', {hasText: '2 results'}).waitFor();
+    await page.keyboard.press('Enter');
     await page.locator('.arow.result.cur').waitFor();
     await page.keyboard.press('Enter');
     await page.locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();

@@ -754,7 +754,7 @@ export const searchLog = sqliteTable('search_log', {
   order: text('order', {enum: ['newest', 'match']}).notNull(),
   total: integer('total').notNull(),
   resultIds: text('result_ids', {mode: 'json'}).$type<number[]>().notNull(),
-  // SV-138: how the search was read, for a search that asked; null for one that didn't.
+  // SV-138: `source: 'kept'` for a search with a suggestion's chips; null for one without.
   reading: text('reading', {mode: 'json'}).$type<SearchReadingLog>(),
 }, table => [
   index('search_log_at').on(table.at),
@@ -769,6 +769,27 @@ export const searchOpens = sqliteTable('search_opens', {
   position: integer('position').notNull(),
   at: text('at').notNull(),
 }, table => [index('search_opens_search').on(table.searchId)]);
+
+/**
+ * A suggestion offered for the field's text (D392), and whether it reached the screen and was accepted,
+ * so acceptance can be judged. `reading` is what the model said, for one with a reading in it.
+ */
+export const searchSuggestions = sqliteTable('search_suggestions', {
+  id: integer('id').primaryKey({autoIncrement: true}),
+  at: text('at').notNull(),
+  query: text('query').notNull(),
+  accountId: integer('account_id').references(() => accounts.id, {onDelete: 'set null'}),
+  chips: text('chips', {mode: 'json'}).$type<SearchChip[]>().notNull(),
+  // The word results' rows, those it would hide, and the rows it would leave.
+  words: integer('words').notNull(),
+  hides: integer('hides').notNull(),
+  total: integer('total').notNull(),
+  reading: text('reading', {mode: 'json'}).$type<SearchReadingLog>(),
+  shownAt: text('shown_at'),
+  acceptedAt: text('accepted_at'),
+  // The search accepting it ran, whose chip removals say what became of it.
+  searchId: integer('search_id').references(() => searchLog.id, {onDelete: 'set null'}),
+}, table => [index('search_suggestions_at').on(table.at)]);
 
 /** A chip taken off a search (SV-138): what a wrong reading looks like in the log. */
 export const searchChipRemovals = sqliteTable('search_chip_removals', {

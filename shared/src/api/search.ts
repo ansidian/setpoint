@@ -2,6 +2,8 @@
 // Proposal). B1 wrote the first shapes; B4 built them and changed them where noted.
 //
 //   POST /api/search                        SearchInput        SearchOut
+//   POST /api/search/suggestion             SearchSuggestionInput SearchSuggestOut (a reading of the field, offered as a suggestion)
+//   POST /api/search/suggestion-log         SearchSuggestionLogInput 204 (the search log's "shown" and "accepted")
 //   POST /api/search/opened                 SearchOpenedInput  204 (the search log's "opened result N")
 //   POST /api/search/chip-removed           SearchChipRemovedInput 204 (the search log's "chip removed")
 //   POST /api/alfred/ask                    AskInput           AnswerOut
@@ -14,7 +16,7 @@
 // sends it.
 import {z} from 'zod';
 import {ITEM_KINDS, KINDS, MESSAGE_TYPES, SEARCH_CHIP_KINDS, SEARCH_READS} from '../enums.ts';
-import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind, SearchReadingFallback} from '../enums.ts';
+import type {CalendarMatchField, ItemKind, MatchField, SearchChipKind} from '../enums.ts';
 import {id, localDate} from './common.ts';
 import type {ItemOut} from './items.ts';
 import type {MessageRowOut} from './mail.ts';
@@ -48,17 +50,15 @@ export const MAX_SEARCH_CHIPS = 10;
 
 /**
  * The field: the chips it already shows, and the text typed after them. Words stay words, a date's
- * too (D385, SV-139), so a phone sending only `text` gets keyword results and no filter it can't see.
- * A word after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it.
- * Words in "quotes" always stay text.
+ * too (D392), so a phone sending only `text` gets keyword results and no filter it can't see. A word
+ * after "!" leaves out what it names: a Not chip, or, staying text, the mail that has it. Words in
+ * "quotes" always stay text.
  * A later page of the same search passes `search_id` and `offset` (`next_offset` from the last page).
  *
- * SV-138: `read` is D385's Enter, and only a request that says so can reach the model, so typing
- * never does. `ask` reads the search: dates from the grammar, organisations and types from the
- * model, as `chips`, with `text` the keywords left and `reading.typed` the words as typed. With
- * `kept` or `left_out` the client sends those back and nothing is read again: `text` and `chips` for
- * a later page, `typed` as well for what the chips left out. A chip removed puts the word it stood
- * for back in `text`, from `reading.typed`, so it's a word again.
+ * With `read` the chips are ones a suggestion made, and nothing is read: `kept` applies them, `left_out`
+ * lists what they hid. `typed` is the words as typed, which rank and which the "more" number counts
+ * from (`SearchSuggestionOut.typed`, then what's typed after it). A chip removed puts the word it
+ * stood for back in `text`, so it's a word again.
  */
 export const searchInput = z.strictObject({
   text: z.string().max(500),
@@ -70,7 +70,7 @@ export const searchInput = z.strictObject({
   offset: z.int().min(0).default(0),
   search_id: id.optional(),
   read: z.enum(SEARCH_READS).optional(),
-  // With `read`: the words as typed, which the chips' "more" number counts from. `text` when left out.
+  // With `read`: the words as typed, which rank and which the "more" number counts from. `text` when left out.
   typed: z.string().max(500).optional(),
 });
 export type SearchInput = z.input<typeof searchInput>;
@@ -101,24 +101,18 @@ export interface SearchResultOut extends MessageRowOut {
   highlights: HighlightOut[];
 }
 
-/**
- * SV-138: how a search with `read` was read. `used` is 'reading' when the model's reading was applied
- * or kept, even one that made no chip, and 'words' for the plain word results, with `fallback` saying
- * why.
- */
+/** SV-138: what a search with `read` says of its chips. */
 export interface SearchReadingOut {
-  used: 'reading' | 'words';
-  fallback: SearchReadingFallback | null;
   // Emails matching the words the chips left out: "6 more emails match your words". `read: 'left_out'` lists them.
   more: number;
-  // The words as typed, without the dates that became chips: `typed` on the next request.
+  // The words as typed: `typed` on the next request.
   typed: string;
 }
 
 export interface SearchOut {
   // The search log's id, for SearchOpenedInput and later pages.
   search_id: number;
-  // Every chip in force: the input's, a "!word"'s, and with `read: 'ask'` the reading's.
+  // Every chip in force: the input's and a "!word"'s.
   chips: SearchChip[];
   // Free text left after the chips.
   text: string;
@@ -143,6 +137,54 @@ export interface SearchOut {
   // SV-138: null unless the request had `read`.
   reading: SearchReadingOut | null;
 }
+
+/**
+ * D392: asks for a suggestion for the field's exact text. Only this route can reach the model. With
+ * `model: false` it says at once what the date grammar alone would suggest, and whether a reading is
+ * worth asking for (`reads`); with `model` it answers with both. `chips` are the field's Not chips.
+ */
+export const searchSuggestionInput = z.strictObject({
+  text: z.string().max(500),
+  chips: z.array(searchChipSchema).max(MAX_SEARCH_CHIPS).default([]),
+  account_id: id.optional(),
+  model: z.boolean().default(true),
+});
+export type SearchSuggestionInput = z.input<typeof searchSuggestionInput>;
+
+/**
+ * What the field would become, all of it here so that accepting asks the model nothing: POST
+ * /api/search with `read: 'kept'` and these. "Only Northwind Talent · 7 emails".
+ */
+export interface SearchSuggestionOut {
+  // The search log's row for it, for SearchSuggestionLogInput.
+  id: number;
+  // Every chip in force once accepted, and the words left after them.
+  chips: SearchChip[];
+  text: string;
+  // The words as typed, `typed` on later requests, and those words less any a date chip stands for,
+  // which is what a chip's × gives back while a date chip stays.
+  typed: string;
+  undated: string;
+  // The chips this adds to the field, as the suggestion's words.
+  offers: SearchChip[];
+  // Rows it would leave, the word results' rows it would hide, and how many rows those are.
+  total: number;
+  hides: number;
+  words: number;
+}
+
+export interface SearchSuggestOut {
+  suggestion: SearchSuggestionOut | null;
+  // After `model: false`: a reading might add to this, so it's worth asking with `model`.
+  reads: boolean;
+}
+
+/** The search log: a suggestion on screen, or accepted, and the search that accepting ran. */
+export const searchSuggestionLogInput = z.strictObject({
+  id,
+  event: z.enum(['shown', 'accepted']),
+  search_id: id.optional(),
+});
 
 /** The search log: which result was opened, and where it was in the list (0-based). */
 export const searchOpenedInput = z.strictObject({search_id: id, message_id: id, position: z.int().min(0)});

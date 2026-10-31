@@ -3,10 +3,11 @@
 // links or footers (src/domain/searchBody.ts). They rank by how well they matched
 // (src/domain/searchMatch.ts › matchTier), newest first within each tier, with no importance boost
 // (decision 9): what's about the search comes first, and `first` counts it, then what only mentions
-// it. Words never become chips as they're typed (D385, SV-139): chips come on Enter, from a model's
-// reading of the whole search and the date grammar (src/search/reading.ts), and a client sends them
-// back. They narrow the list and keep its order. A "!word" alone still forms a chip here, a Not chip,
-// since it says exactly what it leaves out, or stays text and leaves out the mail with it (SV-31).
+// it. Words never become chips by themselves (D392): chips come from a suggestion the user accepted,
+// a model's reading of the whole search and the date grammar (src/search/reading.ts), and a client
+// sends them back. They narrow the list and keep its order. A "!word" alone still forms a chip here,
+// a Not chip, since it says exactly what it leaves out, or stays text and leaves out the mail with
+// it (SV-31).
 // Search covers All's mail: archived mail is in (D14), trashed mail is out.
 //
 // Each search from the field is logged with its chips and the ids it returned, and opening a result
@@ -131,12 +132,13 @@ export interface MatchOptions {
   // form every chip the grammar knows.
   matching?: 'ranked' | 'broad';
   // What the words of a ranked search form: nothing, as the field's typing and what's left of a
-  // reading, or dates for Enter's reading. A word naming a type also finds that type (SV-137).
+  // reading, or dates for what a suggestion might offer. A word naming a type also finds that type
+  // (SV-137).
   chipsFromWords?: 'dates' | 'none';
   // Type chips are a reading's (D386), rather than the grammar's exact ones.
   readingTypes?: boolean;
   // The words as typed when a reading's chips stand for some of them. They rank as words do, none of
-  // them required, so a reading narrows the list and what stays keeps its order (D385).
+  // them required, so a reading narrows the list and what stays keeps its order (D392).
   rankText?: string;
 }
 

@@ -37,7 +37,14 @@ export function refuseWrites(reason: string | null) {
 // Writes made since a load began can't be in its answer, so a load only stands if none came after.
 let writes = 0;
 
-async function request<T>(method: string, path: string, body?: unknown, {quiet401 = false, keepalive = false} = {}, again = false): Promise<T> {
+interface RequestOptions {
+  quiet401?: boolean;
+  keepalive?: boolean;
+  // An answer no longer wanted: its fetch stops, and it fails as an unreachable server does.
+  signal?: AbortSignal;
+}
+
+async function request<T>(method: string, path: string, body?: unknown, {quiet401 = false, keepalive = false, signal}: RequestOptions = {}, again = false): Promise<T> {
   let response: Response;
   let json: unknown;
   try {
@@ -47,6 +54,7 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
       body: body === undefined ? undefined : JSON.stringify(body),
       // A change sent as the page goes away (a delete still waiting out its Undo) outlives it.
       keepalive,
+      signal,
     });
     json = response.status === 204 ? undefined : await response.json().catch(() => undefined);
   } catch {
@@ -55,7 +63,7 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
   // A change in Settings › Security ends every session and answers with a new one, so a request that
   // left under the old one and reached the server after the change is refused though this browser is
   // still signed in: then it's asked once more, under the new one.
-  if (response.status === 401 && !quiet401 && !again && await unauthorized()) return request<T>(method, path, body, {quiet401, keepalive}, true);
+  if (response.status === 401 && !quiet401 && !again && await unauthorized()) return request<T>(method, path, body, {quiet401, keepalive, signal}, true);
   if (!response.ok) {
     const error = (json as ApiError | undefined)?.error;
     throw new ApiFailure(response.status, error?.code ?? 'http_error', error?.message ?? response.statusText, error?.details);
@@ -65,7 +73,7 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
 
 export const getJson = <T>(path: string, options?: {quiet401?: boolean}) => request<T>('GET', path, undefined, options);
 
-export async function sendJson<T>(method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown, options?: {quiet401?: boolean; keepalive?: boolean}): Promise<T> {
+export async function sendJson<T>(method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown, options?: RequestOptions): Promise<T> {
   if (refusal) throw new ApiFailure(0, 'offline', refusal);
   writes += 1;
   try {

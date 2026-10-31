@@ -1,7 +1,7 @@
 // Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
 // card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
 // what the reader highlights, and how a proposal's time reads.
-import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchReadingFallback, SearchResultOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
 import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
@@ -153,7 +153,7 @@ export const toggledFold = (fold: MentionsFold): MentionsFold => ({...fold, open
 /** The fold's line: "12 more mention these words". */
 export const mentionsLine = (more: number, partial: boolean) => `${more} more ${more === 1 ? 'mentions' : 'mention'} ${partial ? 'some of ' : ''}these words`;
 
-/** The rows Enter's chips hid, as far as the user has asked for them (D385). */
+/** The rows a suggestion's chips hid, as far as the user has asked for them (D392). */
 export interface LeftOut<R> {
   open: boolean;
   rows: readonly R[];
@@ -175,11 +175,31 @@ export function leftOutSection<R extends {id: number}>(results: readonly R[], ou
 /** The line itself: "6 more emails match your words", the same words a search of them would find. */
 export const leftOutLine = (more: number) => `${more} more ${more === 1 ? 'email matches' : 'emails match'} your words`;
 
-/** A reading that didn't come in time, or at all, is worth another Enter: a slow one is held for it. */
-export const worthAskingAgain = (fallback: SearchReadingFallback | null) => fallback === 'slow' || fallback === 'failed';
+/** A chip that stood for words in the search: what a suggestion makes. A Not chip stands for no word in `typed`. */
+export const standsForWords = (chip: SearchChip) => !chip.not && (chip.kind === 'organisation' || chip.kind === 'type' || chip.kind === 'date');
 
-/** A chip a reading made, which stood for words in the search. A date or a Not chip stands for no word in `reading.typed`. */
-export const standsForWords = (chip: SearchChip) => !chip.not && (chip.kind === 'organisation' || chip.kind === 'type');
+// Text with fewer letters or digits than this means too little to read: it's a word on its way.
+const SUGGEST_MIN_LETTERS = 3;
+
+/** A search's text as the suggestions the user turned down remember it. */
+export const suggestionKey = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
+
+/**
+ * Whether a pause on the field's text asks for a suggestion (D392): not with chips a suggestion left
+ * in the field, which are the search's one reading, not for text too short to mean anything, and not
+ * for text the user turned one down for. A "!word"'s Not chip is what they typed, and doesn't count.
+ */
+export const asksForSuggestion = (chips: readonly SearchChip[], text: string, declined: ReadonlySet<string>) =>
+  !chips.some(standsForWords) && (text.match(/[\p{L}\p{N}]/gu)?.length ?? 0) >= SUGGEST_MIN_LETTERS && !declined.has(suggestionKey(text));
+
+/** Tab or a click would apply this: the same chips, for the same number of rows. */
+export const sameSuggestion = (a: SearchSuggestionOut | null, b: SearchSuggestionOut | null) => a?.total === b?.total && JSON.stringify(a?.chips) === JSON.stringify(b?.chips);
+
+/** The suggestion's words: "Only Northwind Talent · Rejection" and "2 emails". */
+export const suggestionLine = ({offers, total}: Pick<SearchSuggestionOut, 'offers' | 'total'>) => ({
+  filters: `Only ${offers.map(chip => chip.label).join(' · ')}`,
+  count: `${total} ${total === 1 ? 'email' : 'emails'}`,
+});
 
 const foldedWord = (word: string) => word.normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
@@ -210,9 +230,8 @@ export const chipWords = (chip: SearchChip) => (chip.not ? `!${chip.label}` : ch
 export const queryParts = (chips: readonly SearchChip[], text: string) => [...chips.map(chipWords), ...(text.trim() ? [text.trim()] : [])];
 
 /**
- * What ⌘Enter asks Alfred, and Enter reads anew: the words in the field, in the order they were typed
- * when the field still knows it (`typed`), since a chip leaves the text where it formed and sits
- * first. Without that order, chips go back first as their words, which the grammar reads as the same
+ * What ⌘Enter asks Alfred: the words in the field, in the order they were typed when the field
+ * still knows it (`typed`), since a chip leaves the text where it formed and sits first. Without that order, chips go back first as their words, which the grammar reads as the same
  * chips.
  */
 export const alfredQuestion = (chips: readonly SearchChip[], text: string, typed: string | null = null) =>

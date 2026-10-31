@@ -98,7 +98,7 @@ export const LEFT_OUT_KEY = 'left-out';
 
 /**
  * Search's stops: what's about the search, its fold, open or not, so Enter closes what it opened,
- * then the rows it opened; then the same for the line of what Enter's chips left out.
+ * then the rows it opened; then the same for the line of what a suggestion's chips left out.
  */
 export const searchStops = ({about, more, mentions, leftOut}: {about: MessageRowOut[]; more: number; mentions: MessageRowOut[]; leftOut?: {more: number; rows: MessageRowOut[]}}): Stop[] => [
   ...allStops(about),

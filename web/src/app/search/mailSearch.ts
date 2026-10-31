@@ -1,32 +1,38 @@
-// Mail's search field (DESIGN.md › Search; D385). Typing runs a keyword search after a short pause,
-// and its words stay words. Enter asks the server to read the whole search into chips, and that one
-// answer updates the list. The field keeps the keys until it lands, so J and K can't land on a row
-// that moves, and typing meanwhile drops it. A reading that fell back changes nothing on screen.
+// Mail's search field (DESIGN.md › Search; D392). Typing runs a keyword search after a short pause,
+// and its words stay words: the results are the words' results, the same with or without Enter, which
+// only moves the keyboard into them.
 //
-// Chips in the field stay in force while the words around them change (`read: 'kept'`), so nothing
-// but Enter reads again, and a chip taken off stays off though the same reading is held on the server.
-// A later Enter on other words reads the whole search anew, in the order typed.
+// A longer pause asks for a suggestion for the field's exact text: the grammar's date at once, then a
+// reading from the model. Results don't wait for it and it never changes them. The first change to
+// the field takes it away and drops whatever was on its way. It says everything accepting needs, so
+// that asks no model and can't rest on a partial search: a click or Tab makes its chips the field's
+// (`read: 'kept'`), and those filter until they're taken off. A chip's × puts its word back, and a
+// suggestion the user turned down doesn't return for those words.
 //
-// The phone's field is `plain` (D387 is SI-64's): its words stay words and Enter only hands it the
-// results.
-import type {SearchChip, SearchOut, SearchReadingFallback, SearchResultOut} from '@setpoint/shared';
+// The phone's field is `plain` (SI-64 comes later): its words stay words and no suggestion is asked.
+import type {SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
-import {searchChipRemoved, searchMail, searchOpened} from '../../api/search.ts';
+import {searchChipRemoved, searchMail, searchOpened, searchSuggestion, searchSuggestionLog} from '../../api/search.ts';
 import type {SearchQuery} from '../../api/search.ts';
-import {alfredQuestion, foldFor, isSearching, standsForWords, toggledFold, typedAfter, wordsBack, worthAskingAgain} from '../../logic/search.ts';
+import {alfredQuestion, asksForSuggestion, foldFor, isSearching, sameSuggestion, standsForWords, suggestionKey, toggledFold, typedAfter, wordsBack} from '../../logic/search.ts';
 import type {LeftOut, MentionsFold} from '../../logic/search.ts';
 import {TYPING_MS} from './state.ts';
 import type {SearchFieldState, Settled} from './state.ts';
 
+// How long typing must stop before a suggestion is asked for: long enough that it never reaches for a
+// word still being typed, short enough to be there by the time the results have been looked at.
+export const SUGGESTION_PAUSE_MS = 700;
+
 export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchResultOut> {
-  // Enter's reading is on its way: the field's glyph turns, and nothing else moves.
-  reading: boolean;
+  // A narrowing to offer, for the field exactly as it is.
+  suggestion: SearchSuggestionOut | null;
+  acceptSuggestion: () => void;
   // What the answers are for: another search's fold is drawn afresh, without motion.
   answering: string;
   // Whether the results that only mention the search show (logic/search.ts › foldFor).
   mentions: boolean;
   toggleMentions: () => void;
-  // What Enter's chips left out, once the user has opened its line: `read: 'left_out'`.
+  // What a suggestion's chips left out, once the user has opened its line: `read: 'left_out'`.
   leftOut: LeftOut<SearchResultOut> | null;
   toggleLeftOut: () => void;
   // Another page of them is there to ask for.
@@ -41,7 +47,7 @@ export interface Search extends SearchFieldState<SearchChip, SearchOut, SearchRe
   question: () => string;
 }
 
-/** The field as an answer left it, to tell whether Enter has anything left to do. */
+/** The field as an answer left it, to tell whether the list answers what's in it. */
 interface FieldAt {
   chips: SearchChip[];
   text: string;
@@ -63,7 +69,7 @@ export function useSearch(account: number | null, plain = false): Search {
   const [out, setOut] = useState<SearchOut | null>(null);
   const [results, setResults] = useState<SearchResultOut[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [reading, setReading] = useState(false);
+  const [suggestion, setSuggestion] = useState<SearchSuggestionOut | null>(null);
   // The latest request, so an older answer never replaces a newer one.
   const latest = useRef(0);
   // The latest request asked, and the latest answered (or refused): a search is pending between them.
@@ -72,25 +78,29 @@ export function useSearch(account: number | null, plain = false): Search {
   const timer = useRef<number | undefined>(undefined);
   // The offset of the page on its way, so nearing the end twice asks for it once.
   const paging = useRef<number | null>(null);
-  // The list's rows as of the last answer, for an Enter that hands the keys over without asking.
-  const shown = useRef<SearchResultOut[]>([]);
-  // The field the list answers.
+  // The list's answer as it last came, and the field it answers.
+  const shown = useRef<SearchOut | null>(null);
   const landed = useRef<FieldAt | null>(null);
-  // The field as Enter or a × left it, and the fallback of a reading that didn't come. Typing away
-  // and back is still that field, so a chip taken off doesn't return on an Enter there.
-  const settled = useRef<FieldAt & {fallback: SearchReadingFallback | null} | null>(null);
-  // The Enter on its way, which a second one joins.
-  const asking = useRef<Promise<Settled<SearchResultOut>> | null>(null);
-  // The whole search in the order typed, for Alfred and a new reading; null once an edit lost it.
+  // The words' answer on its way, which a suggestion waits for: it speaks of the list on screen.
+  const wordsIn = useRef<Promise<unknown>>(Promise.resolve());
+  // The pause before a suggestion, the suggestion on its way, and the one showing.
+  const pause = useRef<number | undefined>(undefined);
+  const suggesting = useRef<AbortController | null>(null);
+  const offered = useRef<SearchSuggestionOut | null>(null);
+  // The text a suggestion was turned down for, by taking its chip off, for as long as the page stays.
+  const declined = useRef(new Set<string>());
+  // The whole search in the order typed, for Alfred; null once an edit lost it.
   const typed = useRef<string | null>('');
-  // The words the chips' "more" number counts from: `reading.typed`, and what's typed after it.
+  // The words the chips' "more" number counts from: a suggestion's `typed`, and what's typed after it.
+  // And the same less the words a date chip stands for, which × gives back only with the date.
   const keptTyped = useRef('');
+  const keptUndated = useRef('');
 
   function answer(id: number, query: SearchQuery, at: FieldAt): Promise<SearchOut | null> {
     return searchMail(query).then(found => {
       if (id !== latest.current) return null;
       paging.current = null;
-      shown.current = found.results;
+      shown.current = found;
       landed.current = at;
       setOut(found);
       setResults(found.results);
@@ -109,81 +119,87 @@ export function useSearch(account: number | null, plain = false): Search {
   const wordsOf = (nextChips: SearchChip[], nextText: string, kept: boolean): SearchQuery =>
     (kept ? {text: nextText, chips: nextChips, account, read: 'kept', typed: keptTyped.current} : {text: nextText, chips: [], account});
 
-  function run(nextChips: SearchChip[], nextText: string, kept = nextChips.length > 0) {
+  function run(nextChips: SearchChip[], nextText: string, kept = nextChips.length > 0): Promise<SearchOut | null> {
     window.clearTimeout(timer.current);
     const id = ++latest.current;
     setAsked(id);
     if (!isSearching(nextChips, nextText)) {
-      shown.current = [];
+      shown.current = null;
       landed.current = null;
-      settled.current = null;
       setOut(null);
       setResults([]);
       setError(null);
       setAnswered(id);
-      return;
+      return Promise.resolve(null);
     }
-    void answer(id, wordsOf(nextChips, nextText, kept), {chips: nextChips, text: nextText});
+    const found = answer(id, wordsOf(nextChips, nextText, kept), {chips: nextChips, text: nextText});
+    wordsIn.current = found;
+    return found;
   }
 
-  /** The field moved on, so Enter's answer, if one is coming, is no longer wanted. */
-  function dropReading() {
-    latest.current += 1;
-    asking.current = null;
-    setReading(false);
+  /** What's asked or shown for the field as it was is gone: it speaks only of that text. */
+  function dropSuggestion() {
+    window.clearTimeout(pause.current);
+    suggesting.current?.abort();
+    suggesting.current = null;
+    offered.current = null;
+    setSuggestion(null);
   }
 
-  function read(id: number): Promise<Settled<SearchResultOut>> {
-    // The words as typed read whole, chips and all, unless an edit lost their order.
-    const question = typed.current?.trim() ? {text: typed.current, chips: []} : {text, chips};
-    const stayed = (fallback: SearchReadingFallback | null): Settled<SearchResultOut> => {
-      asking.current = null;
-      setReading(false);
-      setAnswered(id);
-      settled.current = {chips, text, fallback};
-      return {first: shown.current[0] ?? null};
-    };
-    return searchMail({...question, account, read: 'ask'}).then(found => {
-      if (id !== latest.current) return null;
-      const fallback = found.reading?.fallback ?? null;
-      // Only what needed no model takes effect without one: a date alone, or a "!word".
-      if (fallback && fallback !== 'nothing_to_read' && landed.current) {
-        setOut(now => now && {...now, search_id: found.search_id});
-        return stayed(fallback);
-      }
-      const at = {chips: found.chips, text: found.text};
-      keptTyped.current = found.reading?.typed ?? found.text;
-      paging.current = null;
-      shown.current = found.results;
-      landed.current = at;
-      settled.current = {...at, fallback};
-      asking.current = null;
-      setChips(found.chips);
-      setTextState(found.text);
-      setOut(found);
-      setResults(found.results);
-      setError(null);
-      setAnswered(id);
-      setReading(false);
-      return {first: found.results[0] ?? null};
-    }, () => (id === latest.current ? stayed('failed') : null));
+  /** Shows what came, once the list it speaks of is on screen. A later answer replaces it, unless it says the same. */
+  function offer(found: SearchSuggestionOut | null, at: FieldAt, asking: AbortController) {
+    return wordsIn.current.then(() => {
+      if (asking.signal.aborted || !atField(landed.current, at.chips, at.text) || sameSuggestion(found, offered.current)) return;
+      offered.current = found;
+      setSuggestion(found);
+      // The search log, best effort.
+      if (found) void searchSuggestionLog(found.id, 'shown').catch(() => {});
+    });
   }
 
+  function suggest(at: FieldAt) {
+    const asking = new AbortController();
+    suggesting.current = asking;
+    const query = {...at, account};
+    // A slow or failed one, or no key, is no suggestion and says nothing.
+    searchSuggestion(query, false, asking.signal).then(async first => {
+      await offer(first.suggestion, at, asking);
+      if (!first.reads || asking.signal.aborted) return;
+      await offer((await searchSuggestion(query, true, asking.signal)).suggestion, at, asking);
+    }).catch(() => {});
+  }
+
+  function suggestAfterPause(nextChips: SearchChip[], nextText: string) {
+    window.clearTimeout(pause.current);
+    suggesting.current?.abort();
+    if (plain || !asksForSuggestion(nextChips, nextText, declined.current)) return;
+    pause.current = window.setTimeout(() => suggest({chips: nextChips, text: nextText}), SUGGESTION_PAUSE_MS);
+  }
+
+  /** A "!word" that formed a Not chip moves into the field as one, as the list already has it. */
+  function takeNotChips(found: SearchOut) {
+    if (found.chips.length === chips.length) return;
+    landed.current = {chips: found.chips, text: found.text};
+    keptTyped.current = found.text;
+    keptUndated.current = found.text;
+    setChips(found.chips);
+    setTextState(found.text);
+    if (!offered.current) suggestAfterPause(found.chips, found.text);
+  }
+
+  /** Enter: the words' answer, if the pause hadn't run out, and then it's the keys' turn. It asks no model. */
   function settle(): Promise<Settled<SearchResultOut>> {
     if (!isSearching(chips, text)) return Promise.resolve({first: null});
-    if (asking.current) return asking.current;
-    const nothingToRead = plain || (settled.current !== null && atField(settled.current, chips, text) && !worthAskingAgain(settled.current.fallback));
-    const inPlace = atField(landed.current, chips, text);
-    if (nothingToRead && inPlace) return Promise.resolve({first: shown.current[0] ?? null});
-    window.clearTimeout(timer.current);
-    const id = ++latest.current;
-    setAsked(id);
-    // The words' own answer first, if the pause hadn't run out: those show as soon as they would have.
-    const words = inPlace ? Promise.resolve() : answer(id, wordsOf(chips, text, chips.length > 0), {chips, text});
-    if (nothingToRead) return words.then(() => (id === latest.current ? {first: shown.current[0] ?? null} : null));
-    setReading(true);
-    asking.current = words.then(() => (id === latest.current ? read(id) : null));
-    return asking.current;
+    if (atField(landed.current, chips, text)) {
+      if (shown.current) takeNotChips(shown.current);
+      return Promise.resolve({first: shown.current?.results[0] ?? null});
+    }
+    const id = latest.current + 1;
+    return run(chips, text).then(found => {
+      if (id !== latest.current) return null;
+      if (found) takeNotChips(found);
+      return {first: shown.current?.results[0] ?? null};
+    });
   }
 
   const [fold, setFold] = useState<MentionsFold | null>(null);
@@ -210,49 +226,70 @@ export function useSearch(account: number | null, plain = false): Search {
     });
   }
 
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => () => {
+    window.clearTimeout(timer.current);
+    window.clearTimeout(pause.current);
+    suggesting.current?.abort();
+  }, []);
 
   const update = (change: (rows: SearchResultOut[]) => SearchResultOut[]) => setResults(change);
   return {
-    chips, text, out, results, error, reading, answering,
+    chips, text, out, results, error, suggestion, answering,
     active: isSearching(chips, text),
     pending: isSearching(chips, text) && asked !== answered,
     setText(next) {
       typed.current = chips.length === 0 ? next : typedAfter(typed.current, text, next);
       keptTyped.current = typedAfter(keptTyped.current, text, next) ?? next;
-      dropReading();
+      keptUndated.current = typedAfter(keptUndated.current, text, next) ?? next;
+      dropSuggestion();
       setTextState(next);
       window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => run(chips, next), TYPING_MS);
+      timer.current = window.setTimeout(() => void run(chips, next), TYPING_MS);
+      suggestAfterPause(chips, next);
     },
     settle,
+    acceptSuggestion() {
+      if (!suggestion) return;
+      const {id, chips: accepted, text: left, typed: words, undated} = suggestion;
+      keptTyped.current = words;
+      keptUndated.current = undated;
+      dropSuggestion();
+      setChips(accepted);
+      setTextState(left);
+      // The search log, best effort: the chips are in the field either way.
+      void run(accepted, left, true).then(found => (found ? searchSuggestionLog(id, 'accepted', found.search_id) : undefined)).catch(() => {});
+    },
     removeChip(index) {
       const chip = chips[index]!;
       const next = chips.filter((_, at) => at !== index);
-      const back = standsForWords(chip) ? wordsBack(keptTyped.current, text, next) : text;
+      const stands = standsForWords(chip);
+      const back = stands ? wordsBack(next.some(rest => rest.kind === 'date' && !rest.not) ? keptUndated.current : keptTyped.current, text, next) : text;
       // The search log, best effort: the chip comes off either way.
       if (out) void searchChipRemoved(out.search_id, chip).catch(() => {});
-      if (!standsForWords(chip)) typed.current = next.length === 0 ? back : null;
-      settled.current = {chips: next, text: back, fallback: null};
-      dropReading();
+      if (!stands) typed.current = next.length === 0 ? back : null;
+      else for (const words of [back, keptTyped.current]) declined.current.add(suggestionKey(words));
+      dropSuggestion();
       setChips(next);
       setTextState(back);
-      run(next, back, true);
+      void run(next, back, true);
+      suggestAfterPause(next, back);
     },
     clearText() {
       typed.current = chips.length === 0 ? '' : null;
       keptTyped.current = '';
-      dropReading();
+      keptUndated.current = '';
+      dropSuggestion();
       setTextState('');
-      run(chips, '');
+      void run(chips, '');
     },
     clear() {
       typed.current = '';
       keptTyped.current = '';
-      dropReading();
+      keptUndated.current = '';
+      dropSuggestion();
       setChips([]);
       setTextState('');
-      run([], '');
+      void run([], '');
     },
     update,
     loadMore() {
@@ -283,7 +320,7 @@ export function useSearch(account: number | null, plain = false): Search {
     opened(id) {
       // `results` are in the server's order, the fold's rows after what's above it, loaded or shown
       // or not, so this is the place the list shows it at. What the chips left out comes after all
-      // of those: a place past `total`, so the log tells an open that the reading had hidden.
+      // of those: a place past `total`, so the log tells an open that a chip had hidden.
       const position = results.findIndex(result => result.id === id);
       const beyond = shownLeft?.rows.findIndex(result => result.id === id) ?? -1;
       // Best effort: the open is only logged for search's ranking, and the email opens either way.

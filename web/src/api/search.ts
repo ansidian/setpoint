@@ -1,7 +1,7 @@
 // Search, Alfred and proposals (shared/src/api/search.ts has the routes). None of these is cached:
 // a search, an answer and a proposal belong to the screen that asked for them. Create is the one
 // change here, a command: pending until its provider confirms it, failed with the provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut, SearchRead} from '@setpoint/shared';
+import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
 import {untilSettled} from './items.ts';
 
@@ -11,9 +11,9 @@ export interface SearchQuery {
   text: string;
   chips: SearchChip[];
   account: number | null;
-  // Enter's reading of the search, or what it left: the only way a search reaches the model (D390).
+  // A suggestion's chips, kept or what they left out (D392).
   read?: SearchRead;
-  // With `read`: the words as typed, which the chips' "more" number counts from.
+  // With `read`: the words as typed, which rank and which the chips' "more" number counts from.
   typed?: string;
   // A later page of the same search.
   page?: {search_id: number; offset: number};
@@ -21,6 +21,17 @@ export interface SearchQuery {
 
 export const searchMail = ({text, chips, account, read, typed, page}: SearchQuery) =>
   sendJson<SearchOut>('POST', '/search', {text, chips, ...(account ? {account_id: account} : {}), ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
+
+/**
+ * A suggestion for the field's exact text (D392): the grammar's date alone without `model`, and with
+ * it a reading too, the only way a search reaches a model. `signal` drops it once the text has moved on.
+ */
+export const searchSuggestion = ({text, chips, account}: Pick<SearchQuery, 'text' | 'chips' | 'account'>, model: boolean, signal: AbortSignal) =>
+  sendJson<SearchSuggestOut>('POST', '/search/suggestion', {text, chips, ...(account ? {account_id: account} : {}), model}, {signal});
+
+/** The search log: a suggestion on screen, or accepted, so suggestions can be judged. */
+export const searchSuggestionLog = (id: number, event: 'shown' | 'accepted', searchId?: number) =>
+  sendJson<void>('POST', '/search/suggestion-log', {id, event, ...(searchId === undefined ? {} : {search_id: searchId})});
 
 /** The search log: a chip the user took off a search, so a wrong reading can be seen. */
 export const searchChipRemoved = (searchId: number, chip: SearchChip) => sendJson<void>('POST', '/search/chip-removed', {search_id: searchId, chip});

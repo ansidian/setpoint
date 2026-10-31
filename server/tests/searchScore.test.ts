@@ -85,7 +85,7 @@ describe('scoring with readings', () => {
     const w = world({seed: true});
     const hiddenOne = idOf(w, 'October rent received');
     const score = readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Lease renewal terms'), hiddenOne, 987_654]}, reading({organisations: ['Parkside Apartments']}));
-    expect(score).toMatchObject({chips: ['Parkside Apartments'], fallback: null, listed: 2, words: 4, more: 2, hidden: 0, counted: 0});
+    expect(score).toMatchObject({chips: ['Parkside Apartments'], fallback: null, listed: 2, words: 4, more: 2, share: 0.5, shown: true, hidden: 0, counted: 0});
     const hiding = readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Car registration renewal notice')]}, reading({organisations: ['Parkside Apartments']}));
     expect(hiding).toMatchObject({firstRight: null, hidden: 1, counted: 1});
   });
@@ -96,9 +96,10 @@ describe('scoring with readings', () => {
       readingScore(w.store, {group: 'topic', text: 'renewal', wanted: [idOf(w, 'Lease renewal terms')]}, null),
       readingScore(w.store, {group: 'topic', text: 'lease', wanted: [idOf(w, 'Lease renewal terms')]}, reading({organisations: ['Parkside Apartments'], keywords: 'lease'})),
     ];
-    expect(scores[0]).toMatchObject({fallback: 'failed', chips: [], listed: 4, more: 0});
+    expect(scores[0]).toMatchObject({fallback: 'failed', chips: [], listed: 4, more: 0, share: 0, shown: false});
     const report = readingReport(scores);
     expect(report).toContain('Right emails hidden by chips: 0, counted in "more": 0');
+    expect(report).toContain('Would show a suggestion at 20%: ');
     expect(report).toContain('renewal [] (failed)');
     expect(report).toContain('lease [Parkside Apartments]');
     expect(report).not.toContain('Lease renewal terms');

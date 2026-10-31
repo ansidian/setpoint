@@ -8,7 +8,7 @@ import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
   confirmPasswordInput, credentialsInput, doneInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
-  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
+  askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
 } from '@setpoint/shared';
 import type {
   ApiError, AccountOut, AuthStatusOut, GmailAuthorizeOut, HaStatusOut, ICloudConnectInput, MarkAllReadOut, MeOut, PairingOut, PairOut, ReadyOut, RecoveryCodesOut, SecretName, SecurityOut, SignInOut,
@@ -58,7 +58,7 @@ import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
 import {allMail, inbox, indexing, mailCounts, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
-import {recordChipRemoved, recordOpened} from '../search/log.ts';
+import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
 import {searchCalendar} from '../search/calendar.ts';
 import {SearchReader} from '../search/reading.ts';
 import type {SearchReaderOptions} from '../search/reading.ts';
@@ -583,6 +583,11 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   // ---- Search (B4), Alfred and proposals (B4), and Places (B5) ----
 
   app.post('/api/search', async c => c.json(await searchReader.search(parse(searchInput, await body(c)))));
+  app.post('/api/search/suggestion', async c => c.json(await searchReader.suggest(parse(searchSuggestionInput, await body(c)))));
+  app.post('/api/search/suggestion-log', async c => {
+    recordSuggestion(store, parse(searchSuggestionLogInput, await body(c)));
+    return c.body(null, 204);
+  });
   app.post('/api/search/opened', async c => {
     recordOpened(store, parse(searchOpenedInput, await body(c)));
     return c.body(null, 204);

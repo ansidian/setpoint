@@ -74,9 +74,10 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   scores the local snapshot (`server/src/dev/exportSearchSnapshot.ts`, the mail of prod with nothing
   secret in it) on a scratch copy at this checkout's migrations, so unreleased code can be scored
   before anything is deployed, and `--terms <file>` writes search terms into that copy first.
-  With no other flag it scores the words as typed, which form no chips (SV-139). `--reading-prompts
-  <file>` writes the model's prompts from the real code, and `--readings <file>` scores Enter, on
-  answers brought back from wherever a key is, with no model run here (SV-138). All of it stays
+  With no other flag it scores the words as typed, which form no chips (D392). `--reading-prompts
+  <file>` writes the model's prompts from the real code, and `--readings <file>` scores those answers
+  as accepted suggestions, brought back from wherever a key is, with no model run here, and says which
+  searches would show one and what each would hide (SV-138, SV-142). All of it stays
   out of git, under `data/`, in the main checkout.
 
 ## Tests own behaviour

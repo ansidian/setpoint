@@ -382,23 +382,31 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
 - `/` or ⌘F focuses the header field (focused: `edgeFocus` border, `cardOn` fill, its hint `Esc`;
   #172). Results replace the
   list; the reading pane and `J` / `K` work the same.
-- **Typing never makes a chip** (#280): results update as the words are typed, and every word stays
-  a word, a date's too, so nothing filters that the field doesn't show.
-- **Enter reads the whole search** (#280) into **chips** in the field (22 px, `sub2`), each with a
-  small label in `ink3` and an ×: "Org Northwind Talent ×", "Type Rejection ×", "Date Mar 2026 ×".
-  One case style: the label capitalised. The list updates once, then stays, and only then do the keys
-  go to it, the cursor on the first result. A date alone needs no reading and takes its chip at once.
-  While a reading is on its way, at most about 2 seconds, the field's glyph turns and nothing else
-  moves; typing meanwhile drops it. A reading that doesn't come changes nothing on screen, and Enter
-  still hands over the keys. Enter on what's already read asks nothing and does the same; after a
-  reading that was slow or failed it asks again.
-- **A chip's ×** removes the filter and puts its word back as plain text; Backspace in the empty field
-  does the same for the last chip. A date's or a Not chip's goes with its words. The chip doesn't
-  return by itself: chips stay in force as the words around them change, and only the next Enter on
-  other words reads again, the whole search in the order typed.
-- **"!" before a word leaves out what it names** (#85), as it's typed: on Enter one that forms a chip
-  gives a **Not** chip ("Not Type Confirmation ×"); one that doesn't stays in the field as typed
-  ("!proseware") and leaves out the mail that has it.
+- **The results are the words' results** (#281), the same with or without Enter: they update as the
+  words are typed, every word stays a word, a date's too, and nothing filters that the field doesn't
+  show. **Enter** only hands the keys to the results, the cursor on the first. It asks no model and
+  changes no row, and if the words' short pause hadn't run out it waits for that answer alone.
+- **A suggestion** comes on a pause in typing, about 700 ms after the last key (#281): what the search
+  could narrow to, at the end of the results line, "Only Northwind Talent · Rejection · Mar 2026 · 2
+  emails", its filters in `ink2`, its count in `ink3`, then a `Tab` keycap while the field has the
+  keys. A date comes at once, from the grammar with no model; a reading joins it in the same place
+  when it comes. It shows only if it hides at least a fifth of the words' results and leaves a row,
+  and it holds no place of its own, so nothing moves as it comes and goes. The first change to the
+  field takes it away, and an answer for older text is dropped. No key, or a reading slow or failed,
+  is no suggestion, and nothing says so.
+- **A click on it, or Tab in the field,** applies it: its filters become **chips** in the field (22
+  px, `sub2`), each with a small label in `ink3` and an ×: "Org Northwind Talent ×", "Type Rejection
+  ×", "Date Mar 2026 ×". One case style: the label capitalised. The chips filter until they're taken
+  off, and the keys stay where they were. It asks no model, so it can't rest on a partial search.
+  Under the pointer it's `sub`, pressed `sub3`. With the keys in the list it's the pointer's: Tab
+  isn't said, and J and K stop on rows.
+- **A chip's ×** removes the filter and puts its word back as plain text, a date's too; Backspace in
+  the empty field does the same for the last chip. A Not chip has no word to give back. The suggestion
+  doesn't return for those words. Words typed under chips stay words, and no suggestion is asked
+  while chips stand.
+- **"!" before a word leaves out what it names** (#85), as it's typed: Enter moves one that forms a
+  chip into the field as a **Not** chip ("Not Type Confirmation ×"), the list as it was; one that
+  doesn't stays in the field as typed ("!proseware") and leaves out the mail that has it.
 - A results line: "2 results", with "· newest first" for chips with no words. Each result shows why it matched ("Type Rejection",
   `ink3` 12) where its lines don't already show it (#212), and highlights matches (`hl`: `sun` at 26% in Night, a highlighter
   yellow in Light, #172).
@@ -418,19 +426,19 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
   is the list.
 - **No email has every word:** "No email has every word · 3 have some of them", ranked by the rarest
   words each has; the line under them reads "12 more mention some of these words".
-- **What the chips left out** (#280) is a line of its own, last, under the results and under the fold:
+- **What the chips left out** (#280, #281) is a line of its own, last, under the results and under the fold:
   "6 more emails match your words". It looks and answers as the fold's line does, starts closed
   whatever the fold does, and only shows when there are some. It opens in place, its rows after it, and
   a new answer closes it. The fold is what the chips kept and only mentions the words; this is what
-  they hid, so a reading that narrowed too far can be seen and undone from there.
+  they hid, so a suggestion that narrowed too far can be seen and undone from there.
 - The first row offers **Ask Alfred ⌘Enter**, above the results line, as board 06 draws it
   ([Decided while building](#decided-while-building) #80), in `ink` with Alfred's mark, its words
   after it in `ink3` (#173).
 - No results: "No emails match" and each chip as the field draws it, removable by its × (#213),
   after a 20 px `search_off` (#124).
 - **On its way** (#235): until the first answer the list stays at .55, then the results' skeleton;
-  the field's glyph turns while a search is on its way; a refinement dims the results it replaces, and
-  Enter's reading doesn't.
+  the field's glyph turns while a search is on its way, and a refinement dims the results it replaces.
+  A suggestion on its way shows nothing.
 
 ### Alfred's Answer card
 
@@ -1371,8 +1379,8 @@ Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the 
 (New, Attention, Pinned, the days, #243), its rows with the account label; the reader full width with
 Back; a read-only agenda for today and the next 7 days, empty days collapsed. Actions: Done (on
 Attention mail, #93), Trash,
-Mark read, Mark unread, Mark all as read. Plain search: words stay words, and Return only hands over
-to the results, until the phone gets Enter's chips (SI-64, D387). No calendar editing, no Alfred,
+Mark read, Mark unread, Mark all as read. Plain search: words stay words, Return only hands over to the
+results, and no suggestion is asked, until the phone gets them (SI-64). No calendar editing, no Alfred,
 Settings only to sign in. Dates never wrap.
 
 It feels like an installed app (each line's [Decided while building](#decided-while-building) entry has its values):
@@ -1547,6 +1555,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     Talent", highlighted whole in the row; the results line has no "newest first", since chips keep
     the words' order. The field, chips and rows are otherwise as drawn. "6 more emails match your
     words", which only shows when the chips hid something, has no board: it draws the fold's line.
+39. **Board 06 draws a suggestion already taken** (#281): its chips are in the field, so what's new
+    has no board. A suggestion sits at the end of the results line the board draws, in its 12.5 px,
+    `ink2` and `ink3`, with the keycap Ask Alfred's row draws above it.
 
 ## Not designed yet
 
@@ -3453,7 +3464,8 @@ it changes what's on screen.
     a statement, brings that type's emails first within a tier. Alfred keeps its own broad search
     (filler counts, any one word will do), so its answers don't change.
 280. **Chips come on Enter, from a reading of the whole search** (Andy, 2026-10-30; darma D385, D386,
-    SV-133, SV-138, SV-139, amending Search's "recognised words become chips"). Typing runs the words alone and never reaches a model. Enter asks once:
+    SV-133, SV-138, SV-139, amending Search's "recognised words become chips"; #281 replaces Enter's
+    part: what reads and how a chip comes). Typing runs the words alone and never reaches a model. Enter asks once:
     organisations and types from Claude Haiku 5.5, dates from the grammar, in that order in the field.
     A date is a plain word until Enter, whatever client asked, so a phone's text-only search filters
     by nothing it can't see. Chips filter, and keep the words' order, with each word as typed still
@@ -3471,3 +3483,31 @@ it changes what's on screen.
     J and K stop on it; its rows open under it from `read: 'left_out'`, an open there logged at a place
     past the results'. `/` or ⌘F and a new word, Esc and another account all end the search and its
     chips (the Inbox of another account is another page).
+281. **A reading is a suggestion, not a filter** (Andy, 2026-10-30; darma D392, SV-142, amending #280
+    and D385). Results are the words' results, the same with or without Enter, and no list changes
+    after it has looked finished. About 700 ms after typing stops (`SUGGESTION_PAUSE_MS`), the web
+    asks for the field's exact text: first what the date grammar alone finds, which needs no model
+    or key and shows at once, then, if there's a key and anything to read, the reading, which replaces
+    it with both (and takes it away when the model says the date is a name). Text with fewer than 3
+    letters or digits asks nothing; nor does a field holding a suggestion's chips, which are the
+    search's one reading, nor text one was turned down for. A Not chip is what the user typed and
+    doesn't count. Results never wait, the first change to the field drops what's asked as well as
+    what's shown, and each pause costs at most one model call, the 10-minute hold saving a repeat of
+    the same words. A suggestion shows when it hides at least 20% of the rows typing shows
+    (`SUGGESTION_HIDES`, an exact fifth counts), counted through the fold, and leaves at least one
+    row; the rows of the words' list it hides are the measure, not how long its list is, since a
+    date alone or a type can reach mail the words don't. With no word results there's nothing to
+    hide, and it shows if it finds anything, in the no-results line: a date no email says. Its
+    place is the results line's far end rather than the Ask Alfred row: that row is one button, says
+    Alfred, and gives way to the Answer card, while the results line stays and says what's being
+    narrowed. The line never wraps: its own words take an ellipsis first and go altogether in a list
+    under 560 px, beside an open email, so the filters stay whole. Several filters read as the Ask
+    Alfred line does, with a middle dot, "Only Northwind Talent · Rejection · Mar 2026 · 2 emails",
+    and a Not chip isn't named, since it's in force already. Accepting sends `read: 'kept'` and what
+    the answer said, so it asks no model; the press leaves the keys in the field, and Tab there takes
+    it, otherwise moving on as Tab does anywhere. Enter hands over the keys and, for a "!word" that
+    forms one, moves its Not chip into the field, the list unchanged. × gives back a date's word too,
+    the "more" line counts from the words as typed, a date's among them, and a date alone reads newest
+    first with no fold. A chip taken off turns its suggestion down for those words for as long as the
+    page stays, Esc or no Esc. Every suggestion offered is logged in `search_suggestions`, with what
+    the model said and when it was shown and accepted, beside the chip removals.
