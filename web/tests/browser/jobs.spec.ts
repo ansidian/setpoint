@@ -7,6 +7,7 @@
 // a job, Track this, Choose…, Dismiss all) and each correction (the title, the company, Set status and
 // Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
+// SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
 // picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
 // each correction keeps, and that it sticks, the server's (server/src/jobs/tests/corrections.test.ts).
@@ -347,23 +348,123 @@ test('the status filter: In process shows its three, and All all 62', async () =
   }
 });
 
-test('a pick Jobs couldn\'t read says so, and Open posting opens it (SV-132)', async () => {
+test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Paste the posting leads and saves the JD, Undo takes it away, and Full posting shows it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const phone = await applicationId(setpoint, 'The Phone Company', 'Support Engineer');
+    const link = 'https://www.glassdoor.example/job-listing/support-engineer-2291';
+    await page.goto(`${setpoint.base}/jobs/${phone}`);
+    const pane = page.locator('.jb-pane');
+    const card = pane.locator('.jb-nojd');
+    await card.waitFor();
+    assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
+    assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
+    // Paste leads, filled; Look it up steps back, quiet.
+    const pasteButton = pane.getByRole('button', {name: 'Paste the posting'});
+    assert.equal(await rested(() => pasteButton.evaluate(button => getComputedStyle(button).backgroundColor)), await rested(() => fillOf(page, 'var(--ink)')));
+    assert.equal(await rested(() => pane.getByRole('button', {name: 'Look it up'}).evaluate(button => getComputedStyle(button).backgroundColor)), 'rgba(0, 0, 0, 0)');
+
+    // Esc cancels and stops there: the pane stays.
+    await pasteButton.click();
+    const area = pane.getByRole('textbox', {name: 'The posting\'s text'});
+    await until('the area focused', () => area.evaluate(element => element === document.activeElement), focused => focused);
+    assert.equal(await pane.getByRole('button', {name: 'Look it up'}).count(), 0);
+    await page.keyboard.press('Escape');
+    await until('the area gone', () => area.count(), count => count === 0);
+    assert.equal(await pane.count(), 1);
+
+    // Too little is refused in place, the words kept.
+    await pasteButton.click();
+    await area.fill('Support engineer.');
+    await page.keyboard.press('Meta+Enter');
+    await pane.getByRole('alert').waitFor();
+    assert.equal(await pane.getByRole('alert').textContent(), 'That\'s too short to be a posting, paste its whole text.');
+    assert.equal(await area.inputValue(), 'Support engineer.');
+
+    const text = `About the role\n\n${'You answer the phones and fix what the customers ring about, then write down what you learned. '.repeat(4)}`;
+    await area.fill(text);
+    await pane.getByRole('button', {name: 'Save'}).click();
+    await until('the toast', () => toast(page).textContent(), value => value === 'JD saved for The Phone CompanyUndo');
+    const full = pane.getByRole('group', {name: 'Full posting'});
+    await full.waitFor();
+    // Undo while the toast offers it, its text gone with it; pasted again for the rest.
+    await undo(page);
+    await card.waitFor();
+    assert.equal(await card.textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Aug 12Paste the postingLook it up');
+    assert.equal(await area.count(), 0);
+    await pasteButton.click();
+    assert.equal(await area.inputValue(), '');
+    await area.fill(text);
+    await page.keyboard.press('Meta+Enter');
+    await full.waitFor();
+    assert.match((await full.textContent())!, /^Full postingPasted by you · Oct 7, \d+:\d\d [AP]Mglassdoor\.exampleShow$/);
+    await until('its row', () => row(page, phone).locator('.jd').textContent(), value => value === 'Pasted');
+    // Nothing read yet, so nothing claimed: no empty summary, no "Salary not stated".
+    assert.equal(await pane.locator('.jb-want').count(), 0);
+    assert.equal(await pane.locator('.jb-facts').count(), 0);
+    assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
+    await full.getByRole('button', {name: 'Show'}).click();
+    await pane.locator('.jb-full').getByText('You answer the phones', {exact: false}).waitFor();
+    await pane.getByRole('button', {name: 'Collapse'}).click();
+    await full.waitFor();
+
+    // The reading lands: an open detail fills in on the `jobs` event.
+    jobsChange(setpoint, `UPDATE jobs_postings SET summary = 'Answering the phones.', salary = '$60,000' WHERE application_id = ${phone}`);
+    const trey = await applicationId(setpoint, 'Trey Research', 'Data Engineer I');
+    await setpoint.api('POST', `/jobs/applications/${trey}/lookup`);
+    await pane.locator('.jb-want').waitFor();
+    assert.equal(await pane.locator('.jb-want').textContent(), 'Answering the phones.');
+    await pane.locator('.jb-facts').getByText('$60,000').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a candidate Jobs can\'t read says so, and picked it keeps the link rather than say a JD was saved (SV-140)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const margies = await applicationId(setpoint, 'Margie\'s Travel', 'Associate Developer');
+    await page.goto(`${setpoint.base}/jobs/${margies}`);
+    const pane = page.locator('.jb-pane');
+    const candidate = pane.getByRole('radio', {name: /^Associate Software Developer/});
+    await candidate.waitFor();
+    assert.equal(await candidate.textContent(), 'Associate Software Developer · Remote · LinkedInJobs can\'t read this one');
+    await candidate.click();
+    await until('the toast', () => toast(page).textContent(), value => value === 'Link kept for Margie\'s TravelUndo');
+    await pane.locator('.jb-src.looking').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('No JD found (SV-140): Paste the posting beside Look it up, which stays the main one; a posting with no link has no Open posting', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     const trey = await applicationId(setpoint, 'Trey Research', 'Data Engineer I');
-    const link = 'https://www.glassdoor.example/job-listing/2291';
-    // The seed has no pick; the server's side of one is lookup.test.ts's.
-    await page.route(`**/api/jobs/applications/${trey}`, async route => {
-      const response = await route.fetch();
-      const body = await response.json() as {jd: {link: string | null}};
-      await route.fulfill({response, json: {...body, jd: {...body.jd, link}}});
-    });
     await page.goto(`${setpoint.base}/jobs/${trey}`);
     const pane = page.locator('.jb-pane');
-    await pane.locator('.jb-nojd').waitFor();
-    assert.equal(await pane.locator('.jb-nojd').textContent(), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Oct 1Look it up');
-    assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
+    const card = pane.locator('.jb-nojd');
+    await card.waitFor();
+    assert.equal(await card.textContent(), 'No JD found · Breezy and a web search had nothing for it on Oct 1Look it upPaste the posting');
+    // Beside each other, the outlined one first and the quiet one after it.
+    const [look, paste] = [pane.getByRole('button', {name: 'Look it up'}), pane.getByRole('button', {name: 'Paste the posting'})];
+    assert.ok(await rested(() => look.evaluate(button => getComputedStyle(button).boxShadow !== 'none')));
+    assert.equal(await rested(() => paste.evaluate(button => getComputedStyle(button).boxShadow)), 'none');
+    await paste.click();
+    await pane.getByRole('textbox', {name: 'The posting\'s text'}).fill(`The data team\n\n${'You build the pipelines the analysts rely on, and you keep them running through the night. '.repeat(4)}`);
+    await page.keyboard.press('Meta+Enter');
+    await until('the toast', () => toast(page).textContent(), value => value === 'JD saved for Trey ResearchUndo');
+    await pane.getByRole('group', {name: 'Full posting'}).waitFor();
+    assert.equal(await pane.locator('.rd-tools a[data-hint="o"]').count(), 0);
+    assert.equal(await pane.getByRole('group', {name: 'Full posting'}).locator('a').count(), 0);
+    // A saved JD offers neither.
+    assert.equal(await pane.getByRole('button', {name: 'Paste the posting'}).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
@@ -377,7 +478,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     await page.goto(`${setpoint.base}/jobs/${trey}`);
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-nojd').waitFor();
-    assert.equal(await pane.locator('.jb-nojd').textContent(), 'No JD found · Breezy and a web search had nothing for it on Oct 1Look it up');
+    assert.equal(await pane.locator('.jb-nojd').textContent(), 'No JD found · Breezy and a web search had nothing for it on Oct 1Look it upPaste the posting');
     // No posting link: no Open posting.
     assert.equal(await pane.locator('.rd-tools .tool').count(), 0);
     await pane.getByRole('button', {name: 'Look it up'}).click();
@@ -677,7 +778,7 @@ test('From history (D364): Choose… is a menu of the candidates, each opening i
     const menu = page.getByRole('menu', {name: 'Choose the posting'});
     await menu.waitFor();
     assert.deepEqual(await menu.locator('button[role="menuitem"]').allTextContents(), [
-      'Associate DeveloperChicago, IL · Greenhouse', 'Associate Software DeveloperRemote · LinkedIn', 'Associate Developer, BookingsChicago, IL · Indeed', 'None of these',
+      'Associate DeveloperChicago, IL · Greenhouse', 'Associate Software DeveloperRemote · LinkedIn · Jobs can\'t read this one', 'Associate Developer, BookingsChicago, IL · Indeed', 'None of these',
     ]);
     // Each candidate's arrow opens its posting without picking it.
     assert.equal(await menu.getByRole('menuitem', {name: 'Look at Associate Developer, Bookings'}).getAttribute('href'), 'https://indeed.example/viewjob?jk=2b90d4e1c7a8');

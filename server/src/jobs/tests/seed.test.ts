@@ -165,6 +165,10 @@ describe('the table (BRIEF.md › Sample data › Jobs)', () => {
     expect(jd('Tailspin Toys', 'Full Stack Developer')).toEqual(['found', 'email_link', 'Indeed']);
     expect(detail.get(row('Tailspin Toys', 'Full Stack Developer').id)!.posting).toMatchObject({salary: '$85,000–$105,000', workplace: 'hybrid'});
     expect(row('Trey Research', 'Data Engineer I').jd).toMatchObject({state: 'not_found', looked_at: expect.stringMatching(/^2026-10-01/)});
+    // A pick Jobs couldn't read, its link kept (SV-140).
+    expect(row('The Phone Company', 'Support Engineer').jd).toMatchObject({state: 'not_found', link: 'https://www.glassdoor.example/job-listing/support-engineer-2291', looked_at: expect.stringMatching(/^2026-08-12/)});
+    expect(detail.get(row('The Phone Company', 'Support Engineer').id)!.candidates).toMatchObject([{platform: 'Glassdoor', unreadable: true}]);
+    expect(page.from_history.find(item => item.company === 'Margie\'s Travel')!.candidates.map(candidate => candidate.unreadable)).toEqual([false, true, false]);
     expect(jd('Humongous Insurance', 'Software Engineer II, Claims')).toEqual(['found', 'search', null]);
     expect(jd('Litware', 'QA Engineer')).toEqual(['found', 'platform', 'Ashby']);
     expect(jd('Proseware', 'Software Engineer, Platform')).toEqual(['found', 'platform', 'Lever']);

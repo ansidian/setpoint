@@ -18,15 +18,20 @@ export interface Said {
   undone?: () => void;
 }
 
+/** Sends it and says what it did with Undo. A refusal is thrown, for a widget that shows it in place. */
+export async function actInPlace(send: () => Promise<JobsChangeOut>, said: Omit<Said, 'failed'>): Promise<JobsChangeOut> {
+  const change = await send();
+  showToast(said.done, {
+    label: 'Undo',
+    run: () => void undoChange(change).then(said.undone, toastFailure('Couldn\'t undo it')),
+  }, said.tone ?? 'done');
+  return change;
+}
+
 /** Sends it; says what it did with Undo, or what failed. Answers the change, or null when it was refused. */
 export async function act(send: () => Promise<JobsChangeOut>, said: Said): Promise<JobsChangeOut | null> {
   try {
-    const change = await send();
-    showToast(said.done, {
-      label: 'Undo',
-      run: () => void undoChange(change).then(said.undone, toastFailure('Couldn\'t undo it')),
-    }, said.tone ?? 'done');
-    return change;
+    return await actInPlace(send, said);
   } catch (error) {
     toastFailure(said.failed)(error);
     return null;

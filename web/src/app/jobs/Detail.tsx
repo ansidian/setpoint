@@ -5,7 +5,8 @@
 // email"); then the JD first (D307): what they want, the facts, both lists and the full posting one
 // step away, or where the JD stands (looking, No JD found with Look it up, candidates in Needs you);
 // the timeline, each event opening its email; Applied before at the company, and its other
-// applications. J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
+// applications. At not_found, Paste the posting (SV-140): the main action after a pick Jobs couldn't
+// read, beside Look it up otherwise; a JD pasted shows what Haiku has read of it so far. J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
 // place (and the company, from More), the status chip's Set status, Not this posting's candidates
 // offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
 // right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
@@ -25,7 +26,8 @@ import {PaneEdge} from '../Reader.tsx';
 import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import {Bar, Sk} from '../states/Loading.tsx';
 import {toastFailure} from '../toast.ts';
-import {applicationPath, lookUp} from './api.ts';
+import {actInPlace} from './act.ts';
+import {applicationPath, lookUp, pastePosting} from './api.ts';
 import {FullPosting} from './FullPosting.tsx';
 import type {FullPostingHandle} from './FullPosting.tsx';
 import {JobsMenu} from './Menu.tsx';
@@ -34,7 +36,8 @@ import {eventMenu, moreMenu, statusMenu} from './menus.ts';
 import type {CorrectionActions} from './menus.ts';
 import {CandidatePicker} from './CandidatePicker.tsx';
 import {EditField} from './EditField.tsx';
-import {appliedLine, dayWord, latestStep, lookingWhere, markLabel, markOf, notFoundWords, STATUS_LABELS, titleOf} from './words.ts';
+import {PastePosting} from './PastePosting.tsx';
+import {appliedLine, dayWord, hasReading, latestStep, lookingWhere, markLabel, markOf, notFoundWords, STATUS_LABELS, titleOf} from './words.ts';
 
 const EVENT_KINDS: Partial<Record<JobEventOut['kind'], string>> = {applied: 'Applied', assessment: 'Assessment', interview: 'Interview', offer: 'Offer', rejection: 'Rejected'};
 
@@ -211,19 +214,25 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
   onPick: (candidate: JdCandidateOut | null) => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const [pasting, setPasting] = useState(false);
+  const paste = (text: string) => actInPlace(() => pastePosting(detail.id, text), {done: `JD saved for ${detail.company}`});
   const lookItUp = () => {
     setAsking(true);
     void lookUp(detail.id).catch(toastFailure('Couldn\'t look it up')).finally(() => setAsking(false));
   };
   const saved = detail.posting;
+  // The area stays until the JD has come, and doesn't come back with Undo.
+  if (saved && pasting) setPasting(false);
   if (saved) {
     return (
       <>
-        <div className="jb-arrive">
-          <h2 className="jb-label">What they want</h2>
-          <p className="jb-want">{saved.summary}</p>
-        </div>
-        <JdFacts posting={saved} />
+        {saved.summary && (
+          <div className="jb-arrive">
+            <h2 className="jb-label">What they want</h2>
+            <p className="jb-want">{saved.summary}</p>
+          </div>
+        )}
+        {hasReading(saved) && <JdFacts posting={saved} />}
         <JdLists posting={saved} />
         <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
       </>
@@ -259,16 +268,33 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
     : detail.jd.state === 'candidates'
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${detail.jd.candidates} ${detail.jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
+  const notFound = detail.jd.state === 'not_found';
+  // After a pick Jobs couldn't read, the text is what's left, so Paste leads and Look it up steps back;
+  // with nothing found, another look still costs the user less (SV-140).
+  const pasteFirst = notFound && detail.jd.link !== null;
+  const lookUpButton = (
+    <button className={`btn ${notFound && !pasteFirst ? 'out' : 'quiet'} sm`} type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
+  );
+  const pasteButton = (
+    <button className={`btn ${pasteFirst ? '' : 'quiet '}sm`} type="button" onClick={() => setPasting(true)}><Icon name="edit_note" size={16} />Paste the posting</button>
+  );
   return (
     <div className="jb-arrive" key={detail.jd.state}>
       <h2 className="jb-label">Job description</h2>
       <div className="jb-nojd">
-        <Icon name={line.icon} size={16} />
-        <span className="grow"><span className="ink2">{line.lead}</span><span className="num"> · {line.rest}</span></span>
-        {detail.jd.state !== 'candidates' && (
-          <button className="btn quiet sm" type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
+        <span className="grow line">
+          <Icon name={line.icon} size={16} />
+          <span className="words"><span className="ink2">{line.lead}</span><span className="num"> · {line.rest}</span></span>
+        </span>
+        {!(notFound && pasting) && detail.jd.state !== 'candidates' && (
+          <span className="acts">
+            {pasteFirst && pasteButton}
+            {lookUpButton}
+            {notFound && !pasteFirst && pasteButton}
+          </span>
         )}
       </div>
+      {notFound && pasting && <PastePosting onSave={paste} onCancel={() => setPasting(false)} />}
     </div>
   );
 }
