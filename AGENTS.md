@@ -47,7 +47,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   another session's, saying whose, and stops at 15 minutes (25 under stress). It ends with its time and slowest
   checks; past its budget, look there before adding checks. A direct
   `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
-  and each of them waits while a checkout from before the lock has a browser open.
+  and each of them waits while a checkout from before the lock has a browser open. A run's server
+  is a bundle made after the web build (`web/tests/browser/bundle.ts`, SV-145), a third of the boot
+  and half the memory, and its native packages stay out of it; a stress run, a direct `node --test`
+  and the board audit run the source, so a release has run the entry point production runs. A new
+  native package goes in the bundle's `external`.
 - Checks run without traces, a third of a run's CPU, so a check that fails or times out runs again
   with one (up to ten checks), kept under `test-results/browser/traces/`, and the run says where:
   `npx playwright-core show-trace <file>` replays every action, with the screen and the DOM at each

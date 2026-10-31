@@ -12,11 +12,13 @@
 // screenshots (pages.ts), and those compare them. `-- settings --only "board 17"` runs only the
 // checks whose names start that way, and isn't recorded. A file's checks run side by side, as many as
 // SLOTS shared out over the files run (SV-102): one file uses every slot, a whole run one each.
+// Each check boots its server from a bundle made here (bundle.ts), but under stress from the source.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {record, specName, treeOf} from '../passes.ts';
+import {bundleServer} from './bundle.ts';
 import {acquire, clock, handDown, release} from './lock.ts';
 import {COMPARING, PAGES} from './pages.ts';
 
@@ -128,6 +130,7 @@ async function main(): Promise<number> {
   try {
     const built = await run('npm', ['run', 'build']);
     if (built !== 0) return built;
+    if (!STRESS) process.env.SETPOINT_BROWSER_BUNDLE = await bundleServer(ROOT);
     const building = Date.now() - started;
     const code = await checks(only, files);
     const took = Date.now() - started;

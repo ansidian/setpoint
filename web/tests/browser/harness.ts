@@ -1,7 +1,8 @@
 // The browser checks' harness (`npm run test:browser`; BUILD-PLAN.md › Rules for every slice).
 // Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
-// server on a free port serving the production build (web/dist) with the seed's clock, claimed with
-// a setup token from the CLI so the browser starts signed in. Spec files run side by side (six at
+// server on a free port serving the production build (web/dist) with the seed's clock, claimed in
+// its template so the browser starts signed in. Under run.ts the server is a bundle of the source
+// (bundle.ts), which is a third of the boot; stress runs the source. Spec files run side by side (six at
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
@@ -251,6 +252,11 @@ export interface Setpoint {
   stop: () => Promise<void>;
 }
 
+// The bundles of this run, from run.ts (bundle.ts); anything else runs the source.
+const BUNDLE = process.env.SETPOINT_BROWSER_BUNDLE;
+const SERVER = BUNDLE ? path.join(BUNDLE, 'server.mjs') : 'server/src/server.ts';
+const TEMPLATE = BUNDLE ? path.join(BUNDLE, 'template.mjs') : 'server/src/dev/template.ts';
+
 function run(args: string[], env: NodeJS.ProcessEnv): string {
   const result = spawnSync(process.execPath, args, {cwd: ROOT, env, encoding: 'utf8'});
   if (result.status !== 0) throw new Error(`node ${args.join(' ')} failed:\n${result.stderr}`);
@@ -284,13 +290,9 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
     // Built aside and renamed into place, so spec files building the same set at once don't collide.
     const building = fs.mkdtempSync(`${dir}.building-`);
     const buildEnv = {...env, SETPOINT_DATA_DIR: path.join(building, 'data')};
-    // The sample's News, never the checkout's snapshot of real news: the checks and goldens are the sample's.
-    run(['server/src/seed.ts', '--sample-news'], buildEnv);
-    if (fixtures.length) run(['server/src/dev/fixtures/index.ts', ...fixtures], buildEnv);
-    const setupToken = run(['server/src/cli.ts', 'setup-token'], buildEnv).trim().split('\n').at(-1)!.trim();
-    fs.writeFileSync(path.join(building, 'setup-token'), setupToken);
-    // Claimed here, once, so a check has its signed-in session without a claim of its own (SV-143).
-    if (claim) fs.writeFileSync(path.join(building, 'cookie.json'), run(['server/src/dev/claim.ts', setupToken, PASSWORD], buildEnv));
+    // The sample's News, never the checkout's snapshot of real news: the checks and goldens are the
+    // sample's. Claimed here, so a check has its signed-in session without a claim of its own (SV-143).
+    fs.writeFileSync(path.join(building, 'template.json'), run([TEMPLATE, ...(claim ? ['--claim', PASSWORD] : []), ...fixtures], buildEnv));
     try {
       fs.renameSync(building, dir);
     } catch {
@@ -298,10 +300,7 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
       fs.rmSync(building, {recursive: true, force: true});
     }
   }
-  const made: Template = {
-    dataDir: path.join(dir, 'data'), setupToken: fs.readFileSync(path.join(dir, 'setup-token'), 'utf8'),
-    cookie: claim ? JSON.parse(fs.readFileSync(path.join(dir, 'cookie.json'), 'utf8')) as Setpoint['cookie'] : null,
-  };
+  const made: Template = {dataDir: path.join(dir, 'data'), ...JSON.parse(fs.readFileSync(path.join(dir, 'template.json'), 'utf8')) as Omit<Template, 'dataDir'>};
   templates.set(key, made);
   return made;
 }
@@ -343,7 +342,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
   for (let attempt = 1; ; attempt += 1) {
     port = await freePort();
     env.SETPOINT_PORT = String(port);
-    server = spawn(process.execPath, ['server/src/server.ts'], {cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe']});
+    server = spawn(process.execPath, [SERVER], {cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe']});
     errors = '';
     server.stderr!.on('data', chunk => (errors += chunk));
     const listening = `Setpoint listening on http://127.0.0.1:${port} `;
