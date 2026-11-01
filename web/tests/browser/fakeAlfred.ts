@@ -41,10 +41,14 @@ export const SEED_READINGS: Record<string, FakeReading> = {
   'application': {organisations: ['Northwind Talent'], keywords: 'application'},
 };
 
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0, readings = SEED_READINGS}: {delayMs?: number; readings?: Record<string, FakeReading>} = {}) {
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0, readings = SEED_READINGS, holdAnswer = false}: {delayMs?: number; readings?: Record<string, FakeReading>; holdAnswer?: boolean} = {}) {
   let ids = 0;
   // Every search the model was asked to read, in turn.
   const read: string[] = [];
+  // With `holdAnswer`, the turn that answers waits for `releaseAnswer`, so a check can read the card
+  // as Alfred works with nothing landing under the read.
+  let releaseAnswer = () => {};
+  const held = holdAnswer ? new Promise<void>(resolve => (releaseAnswer = resolve)) : null;
   const server = http.createServer((request, response) => {
     let raw = '';
     request.on('data', chunk => (raw += chunk));
@@ -77,7 +81,9 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
       const question = blocks(users.at(-1)!.content).filter(block => block.type === 'text').map(block => block.text).join('')
         || [...users].reverse().map(message => blocks(message.content).filter(block => block.type === 'text').map(block => block.text).join('')).find(Boolean) || '';
       const results = body.messages.flatMap(message => blocks(message.content).filter(block => block.type === 'tool_result').map(block => JSON.parse(String(block.content)) as Record<string, unknown>));
-      called(answer({question, results}), delayMs);
+      const call = answer({question, results});
+      if (held && call.name === 'answer') void held.then(() => called(call, delayMs));
+      else called(call, delayMs);
     });
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -85,7 +91,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
   // running: the socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
-  return {url: `http://127.0.0.1:${port}`, read, close: () => new Promise<void>(resolve => {
+  return {url: `http://127.0.0.1:${port}`, read, releaseAnswer, close: () => new Promise<void>(resolve => {
     server.close(() => resolve());
     server.closeAllConnections();
   })};

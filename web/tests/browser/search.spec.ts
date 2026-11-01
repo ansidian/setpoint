@@ -1172,7 +1172,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
 });
 
 test('Alfred: the card says what Alfred is doing as it works, the steps it took above it (search-04); a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
-  const fake = await fakeAlfred(listAlfred, {delayMs: 1500});
+  const fake = await fakeAlfred(listAlfred, {delayMs: 1500, holdAnswer: true});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
     throw error;
@@ -1197,6 +1197,8 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     assert.deepEqual(await rested(() => waiting.locator('.now').evaluate(now => [getComputedStyle(now).animationName, getComputedStyle(now).animationDuration, getComputedStyle(now).backgroundClip])), ['alfred-shimmer', '1.6s', 'text']);
     assert.equal(await page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), 2);
     assert.deepEqual(await rested(() => page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection])), ['twinkle', '1.2s', 'alternate']);
+    // The fake held the answer for those reads: landing under one, it removes what's being read (SV-115).
+    fake.releaseAnswer();
     await page.locator('.answer .ans').waitFor({timeout: 10_000});
     // The answer fades up where its place was held; the trail folds away.
     assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'turn-in');
