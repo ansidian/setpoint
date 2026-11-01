@@ -1,6 +1,6 @@
 // The table (DESIGN.md › The table; boards 32, 34a, 36a, 36b; D309, D314): a header row whose labels
 // sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
-// application, 56 when its status's note wraps (SV-141): company, role, platform, Applied, the status
+// application, 54 when its status's note wraps (SV-141): company, role, platform, Applied, the status
 // with its mark and step, and how its JD was found. Closed and Ghosted rows step down a shade. Search's rows highlight what matched, and a
 // match only in a JD's text adds the line it matched under its row. A row a correction takes away
 // (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a

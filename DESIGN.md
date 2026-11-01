@@ -995,7 +995,7 @@ desktop and keeps it (D325).
   pressed). A click sorts by it and a second flips it; the sorted label is `ink2` with a 14 px
   `arrow_downward` or `arrow_upward`. Newest first by Applied, by default (D314). JD's tooltip is
   "Job description".
-- **A row** is 36 px, `hair` below, or 56 when its status's note wraps (#283):
+- **A row** is 36 px, `hair` below, or 54 when its status's note wraps (#283):
   - Company in `ink`, Role in `ink2`, Platform in `ink3` 12.5, Applied in `ink2` 12.5 tabular
     ("Today", "Oct 6", "Feb 9"), each ending in an ellipsis. The 12 px gutter stays empty.
   - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
@@ -3541,6 +3541,6 @@ it changes what's on screen.
     stop at the line. With a pane open, the pane is the page's end and the header runs to it. Under
     1100 wide on Jobs, the narrower columns fill the row, so there's no line. Calendar and Settings
     keep their own layouts. Status stays 300 wide, since one column shouldn't take that much of a
-    row (Andy, darma D399): a long note wraps to two lines, its row growing to 56 and the rest
+    row (Andy, darma D399): a long note wraps to two lines, its row growing to 54 and the rest
     staying 36, every other cell on the first line. The narrower columns wrap the same way. Past
     two lines it ends in an ellipsis, with the whole note in its tooltip.

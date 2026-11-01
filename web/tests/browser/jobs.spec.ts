@@ -601,13 +601,14 @@ test('SV-141: a long note wraps to two lines and only its row grows, its other c
     const measure = (id: number) => rested(() => row(page, id).evaluate(element => {
       const middle = (cell: string) => {
         const box = element.querySelector(cell)!.getClientRects()[0]!;
-        return Math.round(box.top + box.height / 2);
+        return box.top + box.height / 2;
       };
       const text = element.querySelector('.st-t')!;
+      const middles = ['.co', '.ro', '.pl', '.ap', '.sl', '.sd'].map(middle);
       return {
         // Rounded: the wide zoom draws the 1 px hairline a whole pixel, a quarter short of its 1.25.
         height: Math.round(element.getBoundingClientRect().height),
-        firstLine: [...new Set(['.co', '.ro', '.pl', '.ap', '.sl', '.sd'].map(middle))].length,
+        firstLine: Math.max(...middles) - Math.min(...middles),
         clipped: text.scrollHeight > text.clientHeight,
         status: element.querySelector('.st')!.getBoundingClientRect().width,
       };
@@ -617,16 +618,16 @@ test('SV-141: a long note wraps to two lines and only its row grows, its other c
     const plain = await measure(fabrikam);
     assert.equal(plain.height, 36 * zoom, 'an ordinary row keeps its height');
     const wrapped = await measure(northwind);
-    assert.equal(wrapped.height, 56 * zoom, 'a note that needs it takes a second line');
+    assert.ok(Math.abs(wrapped.height - 54 * zoom) <= 1, `a note that needs it takes a second line: ${wrapped.height}`);
     assert.equal(wrapped.status, 300 * zoom, 'Status keeps its width');
-    assert.equal(wrapped.firstLine, 1, 'the other cells level with the note\'s first line');
+    assert.ok(wrapped.firstLine <= 1, `the other cells level with the note's first line: ${wrapped.firstLine}`);
     assert.equal(wrapped.clipped, false, 'two lines hold this note whole');
 
     const note = `Case study: ${'submit the write-up and the slides to the panel before the next call, '.repeat(4)}`.trim();
     jobsChange(setpoint, `UPDATE jobs_applications SET step = '${note}' WHERE id = ${northwind}`);
     await page.reload();
     const long = await measure(northwind);
-    assert.equal(long.height, 56 * zoom, 'never past two lines');
+    assert.ok(Math.abs(long.height - 54 * zoom) <= 1, `never past two lines: ${long.height}`);
     assert.equal(long.clipped, true, 'the rest ends in an ellipsis');
     assert.equal(await row(page, northwind).locator('.step').getAttribute('title'), note, 'the whole note on hover');
 
@@ -638,7 +639,39 @@ test('SV-141: a long note wraps to two lines and only its row grows, its other c
     const narrow = await setpoint.page({width: 1024, height: 768});
     await narrow.goto(`${setpoint.base}/jobs`);
     const beside = await rested(() => row(narrow, northwind).evaluate(element => element.getBoundingClientRect().height));
-    assert.equal(beside, 56, 'the narrower columns wrap it the same way');
+    assert.equal(beside, 54, 'the narrower columns wrap it the same way');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-141: a one-line row stays centred now that a note can wrap: every cell\'s text and the JD glyph on the row\'s middle, with its words beside it or alone in the narrower columns, and in the wide zoom', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const fabrikam = await applicationId(setpoint, 'Fabrikam', 'Data Analyst');
+    const off = (page: Page) => rested(() => row(page, fabrikam).evaluate(element => {
+      const box = element.getBoundingClientRect();
+      const zoom = box.height / (element as HTMLElement).offsetHeight;
+      const middle = box.top + (box.height - zoom) / 2;
+      const of = (rect: DOMRect) => Math.abs(rect.top + rect.height / 2 - middle) / zoom;
+      const ink = (cell: string) => {
+        const found = element.querySelector(cell)!;
+        if (getComputedStyle(found).display === 'none') return 0;
+        const range = document.createRange();
+        range.selectNodeContents(found);
+        return of(range.getBoundingClientRect());
+      };
+      return {
+        ...Object.fromEntries(['.co', '.ro', '.pl', '.ap', '.sl', '.jd .t'].map(cell => [cell, ink(cell)])),
+        glyph: of(element.querySelector('.jd .icon')!.getBoundingClientRect()),
+        mark: of(element.querySelector('.sd')!.getBoundingClientRect()),
+      };
+    }));
+    for (const width of [1024, 1677, 2655]) {
+      const page = await setpoint.page({width, height: 1000});
+      await page.goto(`${setpoint.base}/jobs`);
+      for (const [cell, distance] of Object.entries(await off(page))) assert.ok(distance <= 1, `${cell} is ${distance} px off the row's middle at ${width}`);
+    }
   } finally {
     await setpoint.stop();
   }
