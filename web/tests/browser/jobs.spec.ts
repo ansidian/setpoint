@@ -875,7 +875,8 @@ test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick mov
     await need(page, 'Lucerne').getByRole('radio', {name: 'None of these'}).click();
     // The last item leaving folds the band, header and all.
     await until('the band gone', () => page.locator('.jb-band').count(), count => count === 0);
-    assert.equal(await navCount(setpoint), 0);
+    // The band folds at 360 ms, with its answer still on its way.
+    await until('the server agrees', () => navCount(setpoint), count => count === 0);
     await until('no count in the sidebar', () => page.locator('aside.sb .nav.jobs .cnt').count(), count => count === 0);
     assert.equal(await page.locator('.jb-th').getAttribute('class'), 'jb-th first');
     assert.deepEqual(setpoint.pageErrors, []);
