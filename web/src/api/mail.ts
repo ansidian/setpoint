@@ -96,16 +96,17 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
   return edit(id);
 }
 
-/** Loads the lists and counts again, after a change. */
-export function refreshMail() {
-  for (const path of [...inboxPaths(), COUNTS_PATH, ...cachedPaths('/mail/all')]) refreshIfShown(path);
-}
+// What a change to an email shows at once in. A load asked while the change is on its way can be
+// answered from before the server has it, so these hold their answers until it's in (SV-150).
+const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH];
 
+/** Sends a change with the lists and counts held; the release loads them again. */
 async function change<T>(send: () => Promise<T>): Promise<T> {
+  const release = holdLoads(MAIL_LOADS);
   try {
     return await send();
   } finally {
-    refreshMail();
+    release();
   }
 }
 
@@ -116,7 +117,7 @@ async function change<T>(send: () => Promise<T>): Promise<T> {
  * always has. Each one's outcome.
  */
 export async function changeEach<T>(ids: number[], change: (id: number) => Promise<T>): Promise<PromiseSettledResult<T>[]> {
-  const release = ids.length > 1 ? holdLoads(['/mail/inbox', '/mail/all', COUNTS_PATH]) : () => undefined;
+  const release = ids.length > 1 ? holdLoads(MAIL_LOADS) : () => undefined;
   try {
     return await Promise.allSettled(ids.map(id => change(id)));
   } finally {

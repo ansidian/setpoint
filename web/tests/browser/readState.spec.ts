@@ -293,3 +293,43 @@ test('mail read and Done elsewhere keeps its rows in New until the user leaves; 
     await setpoint.stop();
   }
 });
+
+test('SV-150: a change on its way keeps its count: counts asked meanwhile, from before the server has it, don\'t bring the old one back', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint, 'target');
+    const {google, exams} = await ids(setpoint);
+    await setpoint.idle();
+    // Each change is held on its way out, as a slow connection can, so the server hasn't got it when the counts are asked.
+    const gate = Promise.withResolvers<void>();
+    await page.route(/\/api\/mail\/messages\/\d+\/(done|open)$/, async route => {
+      await gate.promise;
+      await route.continue();
+    });
+    const askMeanwhile = async () => {
+      const answered = page.waitForResponse(/\/api\/mail\/counts$/);
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await answered;
+      // The answer is in; the next frame has drawn what the cache made of it.
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    };
+    // Done: the server still says 3 in Attention.
+    await point(row(page, `attention:${exams}`));
+    await page.keyboard.press('h');
+    await until('the pill drops to 2', () => sidebar(page), shown => shown?.pill === '2');
+    await askMeanwhile();
+    assert.equal((await sidebar(page))?.pill, '2', 'the pill stays down while Done is on its way');
+    assert.equal(await page.title(), '(2) Inbox');
+    // An open: the server still says 19 unread.
+    await row(page, `new:${google}`).click();
+    await until('unread drops to 18', () => sidebar(page), shown => shown?.unread === '18');
+    await askMeanwhile();
+    assert.equal((await sidebar(page))?.unread, '18', 'unread stays down while the open is on its way');
+    gate.resolve();
+    await until('the server agrees', () => counts(setpoint), value => value.attention === 2 && value.unread === 18);
+    await until('the sidebar agrees', () => sidebar(page), shown => shown?.pill === '2' && shown.unread === '18');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
