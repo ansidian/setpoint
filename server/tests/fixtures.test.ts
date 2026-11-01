@@ -58,9 +58,10 @@ describe('the mail boards\' fixtures', () => {
     ['coffee-html', 'The Contoso Coffee Journal · October', /cdn\.contosocoffee\.example/],
     ['recovery-html', 'Your recovery email was changed', /Check activity/],
     ['newsletter-html', 'The Contoso Coffee Journal · October', /files\.mailing\.example/],
+    ['stitched-html', 'Statement ready', /please don't reply/],
   ] as const)('%s: the HTML body the board draws', (name, subject, html) => {
     const w = seededWith(name);
-    const id = [...rowsOf(w, 'noise'), ...rowsOf(w, 'attention')].find(row => row.subject === subject)!.id;
+    const id = inbox(w.store).groups.flatMap(group => group.rows).find(row => row.subject === subject)!.id;
     expect(messageDetail(w.store, id).body_html).toMatch(html);
     expect(mailCounts(w.store).unread).toBe(19);
   });
@@ -72,7 +73,7 @@ describe('the mail boards\' fixtures', () => {
     expect(rowsOf(w, 'security').some(row => row.code)).toBe(false);
   });
 
-  test.each([['coffee-html'], ['recovery-html'], ['newsletter-html'], ['new-digest'], ['second-pin'], ['code-expiring']])('%s needs the seed', name => {
+  test.each([['coffee-html'], ['recovery-html'], ['newsletter-html'], ['stitched-html'], ['new-digest'], ['second-pin'], ['code-expiring']])('%s needs the seed', name => {
     const w = world();
     expect(() => FIXTURES[name]!.apply({sqlite: w.store.sqlite, db: w.store.db})).toThrow(/npm run seed/);
   });

@@ -12,6 +12,8 @@
 //   code-expiring   mail checks: Contoso Insurance's code expires 12 seconds after the seed's moment
 //   newsletter-html mail checks: Contoso Coffee's newsletter as a mailing service builds one, mostly
 //                   images with only a width, in a shell wider than the frame
+//   stitched-html   mail checks: Woodgrove Bank's statement as three whole HTML documents, one after
+//                   the other
 //   last-year       search checks: a Northwind rejection from Dec 20, 2025, so a row's age carries its
 //                   year ("Dec 20, 2025"), the longest it gets
 import {SEED_NOW} from '@setpoint/shared';
@@ -142,6 +144,24 @@ export const IMAGE_NEWSLETTER_HTML = `<!doctype html>
 </div>
 </body></html>`;
 
+// The shape a bank's mail system gives a notice (SV-127): three whole documents, one after the other,
+// each with its own head and body: a banner with the top of a card over it, the message, the footer.
+const stitched = (style: string, rows: string) => `<html><head><style>body { background-color: #edf0f2; margin: 0; } ${style}</style></head>
+<body style="background-color: #edf0f2"><table width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table></body></html>`;
+export const STITCHED_NOTICE_HTML = stitched('.band { height: 120px; }', `
+  <tr><td class="band" colspan="3" style="background-color: #1f4e79"></td></tr>
+  <tr><td style="background-color: #1f4e79"></td><td width="800" style="background-color: #ffffff; padding: 42px 30px; font: 22px Georgia, serif">Woodgrove Bank</td><td style="background-color: #1f4e79"></td></tr>`)
+  + stitched('.notice-head { color: #1f4e79; font-size: 28px; }', `
+  <tr><td></td><td width="800" style="background-color: #ffffff; padding: 25px 40px">
+    <h1 class="notice-head">Your statement is ready</h1>
+    <p>Your statement for checking ending in 1234 is ready to view.</p>
+    <p>Sign in to Woodgrove Bank to read it.</p>
+  </td><td></td></tr>`)
+  + stitched('.notice-foot { font-size: 12px; }', `
+  <tr><td></td><td width="800" class="notice-foot" style="background-color: #f5f5f5; padding: 40px">
+    <p>This mailbox isn't read, so please don't reply to this email.</p>
+  </td><td></td></tr>`);
+
 const bySubject = (db: Db, subject: string) => {
   const row = db.select().from(t.messages).where(eq(t.messages.subject, subject)).get();
   if (!row) throw new Error(`The seed has no email "${subject}": run \`npm run seed\` first.`);
@@ -154,6 +174,8 @@ const setHtml = (db: Db, subject: string, html: string) =>
 export const coffeeHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso Coffee Journal · October', CONTOSO_COFFEE_HTML);
 
 export const newsletterHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso Coffee Journal · October', IMAGE_NEWSLETTER_HTML);
+
+export const stitchedHtml = ({db}: OpenDatabase) => setHtml(db, 'Statement ready', STITCHED_NOTICE_HTML);
 
 export const recoveryHtml = ({db}: OpenDatabase) => setHtml(db, 'Your recovery email was changed', GOOGLE_RECOVERY_HTML);
 

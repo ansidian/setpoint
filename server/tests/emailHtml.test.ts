@@ -33,6 +33,27 @@ describe('what never reaches the frame', () => {
   });
 });
 
+describe('what a browser would show', () => {
+  // A browser folds an email's documents into one body; the reader's page holds what's in all of them (SV-127).
+  test.each([
+    ['one document', '<!doctype html><html><head><title>T</title></head><body><p>One</p></body></html>', '<p>One</p>'],
+    ['a fragment', '<p>One</p> <p>Two</p>', '<p>One</p> <p>Two</p>'],
+    ['documents one after the other', '<html><body><p>One</p></body></html><html><head><title>T</title></head><body><p>Two</p></body></html><html><body><p>Three</p></body></html>', '<p>One</p><p>Two</p><p>Three</p>'],
+    ['a doctype before each', '<!doctype html><html><body><p>One</p></body></html><!doctype html><html><body><p>Two</p></body></html>', '<p>One</p><p>Two</p>'],
+    ['a second document left inside the first', '<html><body><p>One</p><html><body><p>Two</p></body></html>', '<p>One</p><p>Two</p>'],
+    ['words before the document', '<p>Scanned by the gateway</p><html><body><p>One</p></body></html>', '<p>Scanned by the gateway</p><p>One</p>'],
+    ['words after it', '<html><body><p>One</p></body></html><p>Sent from a phone</p>', '<p>One</p><p>Sent from a phone</p>'],
+    ['a head left open', '<html><head><style>p { margin: 0; }</style><body><p>One</p></body></html>', '<p>One</p>'],
+  ])('%s', (_name, html, safe) => {
+    expect(body(html)).toBe(safe);
+  });
+
+  test('each document\'s styles come along, in order, and what each must never do stays out', () => {
+    const email = safeEmail('<html><head><style>p { margin: 0; }</style></head><body><p>One</p></body></html><html><head><style>h1 { margin: 0; }</style></head><body onload="steal()"><h1>Two</h1><script>steal()</script></body></html>', false);
+    expect(email).toEqual({styles: ['p { margin: 0; }', 'h1 { margin: 0; }'], body: '<p>One</p><h1>Two</h1>'});
+  });
+});
+
 describe('remote content', () => {
   test.each([
     ['an image becomes its placeholder, with its alt text and size', '<img src="https://cdn.example/hero.jpg" alt="Hero image" width="600" height="130" style="display: block">',

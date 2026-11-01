@@ -12,7 +12,7 @@
 // lets none run. Pure: a string in, a page out.
 import {createHash} from 'node:crypto';
 import render from 'dom-serializer';
-import {Element, Text} from 'domhandler';
+import {Element, isDirective, Text} from 'domhandler';
 import type {ChildNode, Document} from 'domhandler';
 import {findAll, removeElement, replaceElement} from 'domutils';
 import {parseDocument} from 'htmlparser2';
@@ -75,6 +75,19 @@ function placeholder(image: Element): Element | null {
   return span;
 }
 
+/** The tags a browser folds into the one body it builds. */
+const DOCUMENT_TAGS = new Set(['html', 'head', 'body']);
+
+/**
+ * All of the email, as a browser would show it: an email can be whole documents one after the other,
+ * each with its own head and body (a bank's notice is three, SV-127), and everything in them is the
+ * email, as is anything around them.
+ */
+const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
+  if (isDirective(node)) return [];
+  return node instanceof Element && DOCUMENT_TAGS.has(node.name) ? shown(node.children) : [node];
+});
+
 export interface SafeEmail {
   styles: string[];
   body: string;
@@ -114,8 +127,7 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
     removeElement(style);
     return loadImages ? text : text.replace(REMOTE_URL, 'none');
   });
-  const body = elements(doc, item => item.name === 'body')[0];
-  return {styles, body: render(body ? body.children : doc.children, {encodeEntities: 'utf8'})};
+  return {styles, body: render(shown(doc.children), {encodeEntities: 'utf8'})};
 }
 
 /**

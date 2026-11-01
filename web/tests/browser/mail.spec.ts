@@ -779,6 +779,45 @@ test('on the phone, a newsletter wider than the screen is zoomed to fit it, as t
   }
 });
 
+/** Waits for the stitched notice to fit its frame; says what sits where, in the page's order. */
+async function stitchedNotice(page: Page) {
+  const frame = page.frameLocator('iframe.mailframe');
+  await frame.getByText('please don\'t reply').waitFor();
+  await until('the notice fits its frame', () => fit(page), fits);
+  const box = (await rested(() => page.locator('iframe.mailframe').boundingBox()))!;
+  const top = (text: string) => rested(() => frame.getByText(text, {exact: true}).boundingBox());
+  return {box, tops: [(await top('Woodgrove Bank'))!.y, (await top('Your statement is ready'))!.y, (await top('This mailbox isn\'t read, so please don\'t reply to this email.'))!.y]};
+}
+
+test('an email of three whole documents shows all three, in order, as tall as they are (SV-127)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['stitched-html']});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, 'Statement ready')})}`);
+    const {box, tops} = await stitchedNotice(page);
+    assert.deepEqual([...tops].sort((a, b) => a - b), tops);
+    // The first document alone is 240 px, where the frame used to end.
+    assert.ok(box.height > 400, `the frame is ${box.height} px tall`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('on the phone, an email of three whole documents shows all three too (SV-127)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['stitched-html']});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, 'Statement ready')})}`);
+    const {box, tops} = await stitchedNotice(page);
+    assert.deepEqual([...tops].sort((a, b) => a - b), tops);
+    assert.equal(box.width, 350);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the facts card and protected line on security mail, and no Add to calendar there', async () => {
   const setpoint = await startSetpoint();
   try {
