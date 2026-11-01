@@ -41,7 +41,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - `npm run test:browser -- mail search` runs only those spec files, and
   `npm run test:browser -- mail --only "S8"` only the checks whose names start that way: iterate on
   the one check, then run its files before the commit (a run with `--only` isn't recorded for
-  release:check). A file's checks run side by side, sharing the run's six slots, so one file is
+  release:check). A file's checks run side by side, sharing the run's eight slots, so one file is
   about as quick as its slowest few checks (SV-102); a check therefore keeps nothing in module
   state that another check reads. One browser run at a time on this machine: a run waits for
   another session's, saying whose, and stops at 15 minutes (25 under stress). It ends with its time and slowest

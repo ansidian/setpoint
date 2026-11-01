@@ -2,7 +2,7 @@
 // Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
 // server on a free port serving the production build (web/dist) with the seed's clock, claimed in
 // its template so the browser starts signed in. Under run.ts the server is a bundle of the source
-// (bundle.ts), which is a third of the boot; stress runs the source. Spec files run side by side (six at
+// (bundle.ts), which is a third of the boot; stress runs the source. Spec files run side by side (eight at
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
@@ -131,7 +131,7 @@ async function asCheck(t: TestContext, body: (t: TestContext) => unknown): Promi
 }
 
 // How many of a spec file's checks run at once: run.ts sets it from how many files it runs, so a run
-// of one file uses every slot and a whole run stays at about six checks at a time (SV-102).
+// of one file uses every slot and a whole run stays at about eight checks at a time (SV-102).
 const WIDTH = Math.max(1, Number(process.env.SETPOINT_FILE_CONCURRENCY ?? 1));
 const queued: (() => void)[] = [];
 let replaying = false;

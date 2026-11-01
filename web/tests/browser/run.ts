@@ -1,5 +1,5 @@
 // `npm run test:browser [-- mail search ...]`: builds the web app and runs the browser checks, all
-// spec files or the ones named, six at a time, one run at a time on this machine (lock.ts): a run
+// spec files or the ones named, eight at a time, one run at a time on this machine (lock.ts): a run
 // waits for the lock, saying whose run it waits for. The build and the checks together get LIMIT
 // minutes, then everything is stopped, so a hung run can't sit for hours. At the end it prints the
 // run's time against BUDGET and the slowest checks (slowest.ts). Checks run without traces, so what
@@ -30,8 +30,9 @@ const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
 const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', STRESS ? 25 : 15);
 // A full run alone, with some room; past it, the run says so (it doesn't fail).
 const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
-// Checks at once on this machine (the six files a whole run runs side by side).
-const SLOTS = 6;
+// Checks at once on this machine (the files a whole run runs side by side): 10 and 12 took about
+// 2m20s, against 8's 2m34s and 6's 3m04s, at a higher peak (SV-146).
+const SLOTS = 8;
 // A failure past this many is the harness or the build, not something a trace of each would show.
 const RETRACED = 10;
 const FAILED = path.join(ROOT, 'test-results', 'browser', 'failed.jsonl');
