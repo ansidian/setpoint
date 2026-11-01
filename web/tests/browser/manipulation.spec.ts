@@ -14,8 +14,8 @@ import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
-// A delete is sent once its Undo has gone; then the server and the dev provider (600 ms) have it.
-const AFTER_UNDO = UNDO_MS + 10_000;
+// Past its Undo, a delete goes to the server and the dev provider (600 ms).
+const AFTER_UNDO = 10_000;
 
 after(cleanUp);
 
@@ -41,6 +41,15 @@ async function openCalendar(page: Page, base: string) {
 }
 
 /** Presses a chip and carries it to another day's cell, `held` true to stop before letting go. */
+/**
+ * Runs the page's clock (a check that installs one) past the Undo of the delete its toast names, as
+ * 6 s waited out are the most a check here spends; the timer starts as the toast comes.
+ */
+async function passUndo(page: Page, toast: string) {
+  await page.locator('.toast', {hasText: toast}).waitFor();
+  await page.clock.fastForward(UNDO_MS);
+}
+
 async function drag(page: Page, from: Locator, to: string, {held = false} = {}) {
   const box = (await rested(() => from.boundingBox()))!;
   const target = (await rested(() => page.locator(`.cell[data-date="${to}"]`).boundingBox()))!;
@@ -229,6 +238,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await openCalendar(page, setpoint.base);
     const dentists = async (date: string) => (await items(setpoint, date)).filter(item => item.title === 'Dentist');
 
@@ -258,6 +268,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await chip(page, '2026-10-13', 'Dentist').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Delete');
+    await passUndo(page, 'Deleted Dentist');
     await until('the delete, once its Undo has gone', () => dentists('2026-10-13'), list => list.length === 0, AFTER_UNDO);
 
     // Multi-select: ⌘ alone puts the card away and keeps Dinner selected; ⌘-click a second, no card;
@@ -286,6 +297,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await chip(page, '2026-10-20', 'Dinner with Sam').click();
     await chip(page, '2026-10-26', 'Career fair').click({modifiers: ['Meta']});
     await page.keyboard.press('Delete');
+    await passUndo(page, 'Deleted 2 items');
     await until('both copies gone', async () => [...await items(setpoint, '2026-10-20'), ...await items(setpoint, '2026-10-26')].filter(item => !item.recurring), list => list.length === 0, AFTER_UNDO);
 
     // Deleting one Gym asks which; This event takes Friday's alone.
@@ -293,6 +305,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await page.locator('.fd').getByRole('button', {name: 'Delete'}).click();
     await page.locator('.scope-card', {hasText: 'Delete recurring event'}).waitFor();
     await page.keyboard.press('Enter');
+    await passUndo(page, 'Deleted Gym');
     await until('Friday\'s Gym gone', async () => (await titles(setpoint, '2026-10-16')).filter(title => title.startsWith('Gym')), list => list.length === 0, AFTER_UNDO);
     assert.deepEqual((await titles(setpoint, '2026-10-14')).filter(title => title.startsWith('Gym')), ['Gym 7:00 AM']);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -350,6 +363,7 @@ test('a delete and a completion show at once, before the server has them', async
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await openCalendar(page, setpoint.base);
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -380,6 +394,7 @@ test('a delete and a completion show at once, before the server has them', async
     assert.equal((await items(setpoint, '2026-10-07')).find(item => item.title === 'Pay rent')!.done, false, 'the server doesn\'t have it yet');
 
     release();
+    await page.clock.fastForward(UNDO_MS);
     await until('the delete lands', async () => (await titles(setpoint, '2026-10-09')).filter(title => title.startsWith('Dinner with Sam')), list => list.length === 0, AFTER_UNDO);
     await until('the completion lands', async () => (await items(setpoint, '2026-10-07')).find(item => item.title === 'Pay rent')!, task => task.done && !task.command);
     assert.equal(await chip(page, '2026-10-09', 'Dinner with Sam').count(), 0, 'and Dinner stays gone');
@@ -394,6 +409,7 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await openCalendar(page, setpoint.base);
     const dentists = async () => (await items(setpoint, '2026-10-07')).filter(item => item.title === 'Dentist');
 
@@ -409,7 +425,7 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await page.locator('.toast').getByRole('button', {name: 'Undo'}).click();
     await chip(page, '2026-10-07', 'Dentist').waitFor();
     // Nothing happens to wait for: past the 6 s Undo, the delete is never sent.
-    await page.waitForTimeout(UNDO_MS + 1000);
+    await page.clock.fastForward(UNDO_MS + 1000);
     await setpoint.idle();
     assert.equal((await dentists()).length, 1, 'the delete was never sent');
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 1);
@@ -425,6 +441,7 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await chip(page, '2026-10-07', 'Dentist').click();
     await page.keyboard.press('Delete');
     assert.equal((await dentists()).length, 1, 'held while Undo is offered');
+    await passUndo(page, 'Deleted Dentist');
     await until('the delete is sent', dentists, list => list.length === 0, AFTER_UNDO);
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);

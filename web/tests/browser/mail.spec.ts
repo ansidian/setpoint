@@ -11,6 +11,7 @@ import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
 import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
+import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, point, readSecurity, rested, startSetpoint, still, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -138,7 +139,10 @@ test('UX #2: with an email open, J and K open the next and previous email, so H,
 test('Trash opens the next email, and Undo brings the trashed one back to the reader', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await load(setpoint);
+    const page = await setpoint.page('target');
+    await page.clock.install();
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
     // Each Trash the page sends, and below each the route holds: the server once had Consolidated Messenger's Trash
     // although its route was held (Thread A's timing report, seen once at 737333e and not since), so
     // a failure says which it was: sent before the route, sent past it, or never sent.
@@ -183,7 +187,8 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     release();
     await until('trashed at the provider', () => inAll(setpoint, ups), present => !present, 5000);
     assert.equal(await page.locator('.row[title="Out for delivery"]').count(), 0, 'and it stays gone');
-    await until('the toast goes after 6 seconds', () => page.locator('.toast').count(), count => count === 0, 8000);
+    await page.clock.fastForward(UNDO_MS);
+    await until('the toast goes after 6 seconds', () => page.locator('.toast').count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

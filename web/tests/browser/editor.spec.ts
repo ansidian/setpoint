@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {UNDO_MS} from '../../src/app/toast.ts';
 import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -333,6 +334,7 @@ test('SV-29: New, C and D leave a started draft be and say so; a folded draft go
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await openCalendar(page, setpoint.base);
     // An empty draft is a ghost on its day, as "New event".
     await page.keyboard.press('c');
@@ -352,6 +354,7 @@ test('SV-29: New, C and D leave a started draft be and say so; a folded draft go
       assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-label')), 'Describe the event', 'back in the line');
       await page.locator('.cell[data-date="2026-10-14"]').click({position: {x: 70, y: 150}});
       // The next press's toast is its own: the same words in the same place, so this one goes first.
+      await page.clock.fastForward(UNDO_MS);
       await toast.waitFor({state: 'detached'});
     }
     // Add another makes a batch on purpose; × takes a folded draft out, its ghost with it.
