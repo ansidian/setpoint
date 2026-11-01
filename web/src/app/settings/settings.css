@@ -226,6 +226,7 @@
 /* Appearance: the chosen theme's row is filled as the nav's current page is, its icon tile inverted and
    its check `good` (DESIGN.md › Decided while building #155). */
 .settings [role="radiogroup"] .set-row[aria-checked="true"] { background: var(--sub2); }
+.settings [role="radiogroup"] .set-row[aria-checked="true"] .s { color: var(--ink2); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] .aico { background: var(--ink); color: var(--onInk); }
 .settings [role="radiogroup"] .set-row[aria-checked="true"] > .icon { color: var(--good); }
 

@@ -123,8 +123,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   at 1677, 1100 and 820 wide and on the phone. At rest it fails on anything that scrolls sideways,
   text an `overflow: hidden` box cuts (an ellipsis is meant), an interactive element covered at its
   centre (a pane lying over the page is meant), a broken image, a font not loaded, a failed request
-  or a console error. Then axe runs on the same pages per theme, by rule and element; its contrast
-  floor is 3:1 for now (D283, SV-100). A finding is fixed, with "the sweep caught it" or "axe caught
+  or a console error. Then axe runs on the same pages per theme, by rule and element, at its own
+  contrast floor of 4.5:1 (D400). A finding is fixed, with "the sweep caught it" or "axe caught
   it" in the commit, or decided in darma and left out in the spec by name.
 - At release, ten whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
   News, Jobs and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside

@@ -82,7 +82,7 @@
   box-shadow: inset 3px 0 0 var(--c, var(--cool)); padding: 3px 7px 3px 9px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; z-index: 1;
   animation: wk-fade var(--weekFade) var(--ease); }
 .wb .wb-title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wb .t { display: block; font-weight: 400; opacity: .8; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wb .t { display: block; font-weight: 400; opacity: .96; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wb.short { padding-top: 2px; padding-bottom: 0; white-space: nowrap; text-overflow: ellipsis; }
 .wb.short .wb-title, .wb.short .t { display: inline; }
 /* Sharing the column, a tall enough block's title wraps to two lines, as board 16's lanes do; every

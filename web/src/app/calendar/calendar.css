@@ -89,7 +89,7 @@
 .ev { height: var(--calendarChip); line-height: var(--calendarChip); display: block; padding: 0 6px 0 9px; border-radius: 6px; color: oklch(from var(--c, var(--cool)) min(l, var(--tintL)) c h);
   background: color-mix(in oklch, var(--c, var(--cool)) var(--evtint), transparent); box-shadow: inset 3px 0 0 var(--c, var(--cool));
   font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; min-width: 0; }
-.ev .t { font-weight: 400; opacity: .8; font-variant-numeric: tabular-nums; margin-right: 5px; }
+.ev .t { font-weight: 400; opacity: .96; font-variant-numeric: tabular-nums; margin-right: 5px; }
 .ev.sel { background: var(--c, var(--cool)); color: var(--onInk); box-shadow: none; }
 .ev.past { color: var(--ink3); background: color-mix(in oklch, var(--c, var(--cool)) calc(var(--evtint) / 2), transparent); box-shadow: inset 3px 0 0 color-mix(in oklch, var(--c, var(--cool)) 45%, transparent); }
 .ev.past .t { opacity: 1; }

@@ -17,7 +17,7 @@ export const colour = {
   modal: '#0c0d0f',
   ink: '#ecebe7',
   ink2: '#a3a4a8',
-  ink3: '#7d7f84',
+  ink3: '#8b8d92',
   onInk: '#050506',
   onAccent: '#050506',
   onAlert: '#1a0806',
@@ -81,7 +81,7 @@ export const lightColour: Record<ColourToken, string> = {
   modal: '#ffffff',
   ink: '#1d1e21',
   ink2: '#4b4d52',
-  ink3: '#6d6f74',
+  ink3: '#606267',
   onInk: '#ffffff',
   onAccent: '#ffffff',
   onAlert: '#ffffff',
@@ -116,7 +116,7 @@ export const lightColour: Record<ColourToken, string> = {
   dayOff: 'rgba(29,30,33,.028)',
   dayOut: 'rgba(29,30,33,.048)',
   remind: 'oklch(0.55 0.14 345)',
-  inProcess: 'oklch(0.52 0.16 258)',
+  inProcess: 'oklch(0.5 0.16 258)',
 };
 
 /** Overlay shadows; shadows only on overlays. */

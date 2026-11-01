@@ -109,12 +109,12 @@ describe('a Google calendar\'s colour as a swatch', () => {
     expect(swatchFor(hex)).toBe(swatch);
     expect(swatchFor(hex.toUpperCase())).toBe(swatch);
   });
-  // What an earlier build wrote, before the polish audit moved the swatch (Night ink3, SV-58): calendars
+  // What an earlier build wrote, before the swatch moved (Night ink3, SV-58 and D400): calendars
   // already carrying it still read back as it.
-  test.each([['#707277', 'ink3'], ['#57d4d4', 'cyan']])('%s, written before, still reads back as %s', (hex, swatch) => {
+  test.each([['#707277', 'ink3'], ['#7d7f84', 'ink3'], ['#57d4d4', 'cyan']])('%s, written before, still reads back as %s', (hex, swatch) => {
     expect(swatchFor(hex)).toBe(swatch);
   });
-  test.each([['#71c9fa', '#000000'], ['#f7cd3a', '#000000'], ['#a3a4a8', '#000000'], ['#7d7f84', '#ffffff']])('text on %s is %s', (hex, foreground) => {
+  test.each([['#71c9fa', '#000000'], ['#f7cd3a', '#000000'], ['#a3a4a8', '#000000'], ['#8b8d92', '#000000'], ['#7d7f84', '#ffffff']])('text on %s is %s', (hex, foreground) => {
     expect(foregroundFor(hex)).toBe(foreground);
   });
 });

@@ -100,12 +100,12 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('the ink ladder and the panel: Night ink3 #7d7f84 and panel #0b0c0e; Light ink2 #4b4d52, and its toast on white (#157, #158)', async () => {
+test('the ink ladder and the panel: Night ink3 #8b8d92 and panel #0b0c0e; Light ink2 #4b4d52, and its toast on white (#157, #158)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await inbox(page, setpoint.base, 'night');
-    assert.equal(await rested(() => style(page.locator('.list .row .age').first(), 'color')), 'rgb(125, 127, 132)', 'Night ink3: an age');
+    assert.equal(await rested(() => style(page.locator('.list .row .age').first(), 'color')), 'rgb(139, 141, 146)', 'Night ink3: an age');
     assert.equal(await rested(() => style(page.locator('aside.sb'), 'backgroundColor')), 'rgb(11, 12, 14)', 'Night panel: the sidebar');
 
     await inbox(page, setpoint.base, 'light');

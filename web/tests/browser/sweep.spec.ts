@@ -264,11 +264,8 @@ async function sweepAt(page: Page, route: Route, theme: typeof THEMES[number], w
   return [...await rested(() => page.evaluate(sweepPage)), ...heard()].map(problem => `${where}: ${problem}`);
 }
 
-// axe's color-contrast holds text to 3:1 for now, not WCAG AA's 4.5 (D283, SV-100): `ink3` on a raised
-// surface (a selected row, a keycap, a Light event chip) measures 3.2 to 4.4, the palette's quiet
-// ink as the boards draw it, and lifting it changes every page screenshot, which is the user's to look at.
-// Under 3:1 is a colour gone wrong. The mini-month's days outside its month are dim on purpose.
-const CONTRAST_FLOOR = 3;
+// axe's own color-contrast floor, WCAG AA's 4.5 (D400). The mini-month's days outside its month are dim on purpose.
+const CONTRAST_FLOOR = 4.5;
 const DIM_ON_PURPOSE = '.mini > .o';
 
 /** axe's violations, as rule and element. */

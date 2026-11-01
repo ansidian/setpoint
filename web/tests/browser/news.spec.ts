@@ -230,7 +230,7 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     await page.locator('.pane .src-row').first().waitFor();
     await page.locator('.pane .st-img .nw-img').evaluate((image: HTMLImageElement) => image.decode());
     assert.equal(await rested(() => style('.st-new', 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))')));
-    assert.equal(await rested(() => style('.st-new .lab', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
+    assert.equal(await rested(() => style('.st-new .lab', 'color')), await rested(() => colourOf(page, 'oklch(from var(--accent) min(l, var(--tintL)) c h)')));
     assert.equal(await rested(() => style('.src-list', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--sub)')));
     await seenSettled(page, setpoint);
     await settle(page);

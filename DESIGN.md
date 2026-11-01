@@ -66,7 +66,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `cardOn` | `#131417` | `#ffffff` | focused search and fields, toast, drag tip, News's pill; in Night the proposal and Answer card |
 | `chip` | `#0f1013` | `#ffffff` | inputs, tags |
 | `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
-| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#7d7f84` | `#1d1e21` / `#4b4d52` / `#6d6f74` | primary / secondary / tertiary text and icons |
+| `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1d1e21` / `#4b4d52` / `#606267` | primary / secondary / tertiary text and icons |
 | `onInk` | `#050506` | `#ffffff` | text on `ink`, on the attention pill and on solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
@@ -92,7 +92,7 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `navOn` / `navOnEdge` | `rgba(255,255,255,.10)` / `rgba(255,255,255,.07)` | `#ffffff` / `rgba(29,30,33,.10)` | the current page in a nav: its fill / its inset hairline |
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 | `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled (#258) |
-| `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.52 0.16 258)` | Jobs's In process: its mark, its label and its events' node (#264) |
+| `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.5 0.16 258)` | Jobs's In process: its mark, its label and its events' node (#264) |
 
 - **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
@@ -481,7 +481,7 @@ offered for protected mail.
   `alert` disc with `onAlert` 600 (#165); "Oct 1" and "Nov 1" at 500), and the weather icon at the end (16 px:
   sun `sunGlyph`, cloud `ink2`, rain `cool`), after the high in `ink2` and the low in `ink3` (#174).
 - **Events** are **tinted chips** (decision 38): 20 px, radius 6, the calendar colour as text, its
-  lightness capped at `--tintL` (#159) (12 / 500, the time at 400 and .8), a 3 px inset left bar, and
+  lightness capped at `--tintL` (#159) (12 / 500, the time at 400 and .96), a 3 px inset left bar, and
   the colour at `--evtint` as fill. The **selected item turns solid** (colour fill, `onInk` text, no
   bar) and is the only selection mark: no outline ring. **Past** items turn grey: `ink3` text and time,
   the colour's bar at 45% and its fill at half `--evtint` (#161). Titles end in "…".
@@ -632,7 +632,7 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 - **Opening scroll:** this week puts the now-line about a third down; another week an hour before
   its first timed item, else 7 AM. Paging keeps the scroll.
 - **Blocks:** the month chip's tint, bar and colours (`.wb` in board 16): the title at 500, the time
-  under it at 400 and .8; at least 20 px; under 50 minutes (no room for a second line) the time follows the title on one
+  under it at 400 and .96; at least 20 px; under 50 minutes (no room for a second line) the time follows the title on one
   line ("Standup, 9:00 AM"), and the place shows under the time where a whole line is left for it; in a
   lane a block gives its start alone, as a month chip does ("7 PM"), and one with room for four
   lines wraps its title to two; no line is drawn cut off; titles end in "…" (override 10). Selected solid, past grey as a chip (#161), pending .5 with
@@ -1555,8 +1555,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 **The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #157–#176).
 
-31. **Some tokens' values are the audit's:** Night `ink3` `#7d7f84` (the export's `#707277`), Light
-    `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
+31. **Some tokens' values are the audit's:** Night `ink3` `#8b8d92` (the export's `#707277`, #286), Light
+    `ink3` `#606267` (`#6d6f74`, #286), Light `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
     its values; the board audit draws every board with these.
@@ -2467,8 +2467,8 @@ it changes what's on screen.
     ringed in itself (1.5 px, 4.5 px clear of its dot) rather than sitting on a `sub2` disc, and a
     dot swells to 1.25 under the pointer over 120 ms, so the choice and the pointer never look alike;
     an account's icons sit under a hairline after its options. In Appearance the chosen theme's row
-    is filled `sub2`, its icon tile `ink` with an `onInk` glyph, its check `good` (Andy, 2026-10-11,
-    polish audit settings-09, settings-12).
+    is filled `sub2`, its sub-line `ink2` (#286), its icon tile `ink` with an `onInk` glyph, its check
+    `good` (Andy, 2026-10-11, polish audit settings-09, settings-12).
 156. **The glide carries its content across** (amending The glide, override 30): the old content
     fades out over 0–120 ms and the new fades in over 70–220 ms, overlapping by 50 ms, so the card is
     never an empty slab mid-flight; the 6 px slide, position, height and selection timings stay
@@ -3369,7 +3369,7 @@ it changes what's on screen.
     draw the buttons live and More, the pencil and the ··· on hover.
 264. **In process is cobalt** (Andy, 2026-10-29; darma SV-123, D362): its mark, its label and an In
     process event's node take `inProcess`, a cobalt of its own (Night `oklch(0.7 0.15 258)`, Light
-    `oklch(0.52 0.16 258)`), picked from a mock beside `accent`, periwinkle, teal and violet. It is
+    `oklch(0.5 0.16 258)` since #286), picked from a mock beside `accent`, periwinkle, teal and violet. It is
     deeper than `accent`, so an open In process row's bar and its mark never read as one. The other
     statuses keep D309's colours. Board audit: the boards draw In process in `ink`.
 265. **Rejected and Ghosted take colour, and no dot follows "Full posting"** (Andy, 2026-10-29;
@@ -3580,3 +3580,19 @@ it changes what's on screen.
     of a company's applications an update belongs to takes reading what each one was, so each
     application offers its email, the one that started it, and the menu stays open beside it. Andy
     chose the email over the application's detail: it's the email he was hunting for in the Inbox.
+
+286. **Quiet text clears 4.5:1 on every surface it sits on** (Andy, 2026-11-01; darma D400, SV-100,
+    superseding D283's 3:1 floor). `ink3` moves to the smallest value that clears a selected row
+    (`sub2`, the hardest surface it sits on across the pages): Night `#8b8d92` (from `#7d7f84`) and
+    Light `#606267` (from `#6d6f74`), still 24 and 21 steps short of `ink2`. A chip's time and a week
+    block's move from opacity .8 to .96 in both themes, since Light's read 3.7–4.3:1 at .8, and .96
+    is the least that clears every swatch on every day's fill, a grey `ink3` calendar in Night the
+    last of them; the title stays the stronger by its weight, and the tints don't move. Past chips needed nothing but `ink3`. Three others its pages caught: the chosen row in
+    Appearance is `sub2` on Settings' raised group, the highest surface `ink3` met, 3.34:1 in Night,
+    so its sub-line takes `ink2`; News's Updated tag and New since you looked are `accent` on its own
+    tint, so they cap at `--tintL` as #159 does; and Light's `inProcess` goes from .52 to .5, for its
+    label on a selected row. Google's copy of the swatch follows Night's `ink3`, with black text on
+    it, and a calendar already carrying the old grey still reads back as `ink3`. The sweep holds
+    this at rest; a Light chip under the pointer is not covered, since `--evhover` lies over its text
+    and takes it to about 3.8–4.1:1, a moment's state and the tint's to change. The mini-month's days
+    outside its month stay dim on purpose.
