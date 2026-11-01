@@ -110,7 +110,13 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   if (menu && reading && !menu.owner.endsWith(`:${reading.item}`)) setMenu(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(timer => window.clearTimeout(timer)), []);
-  const later = (ms: number, run: () => void) => timers.current.push(window.setTimeout(run, ms));
+  const later = (ms: number, run: () => void) => {
+    const timer = window.setTimeout(run, ms);
+    timers.current.push(timer);
+    return timer;
+  };
+  // Each answer's fold, by item: an answer undone or refused inside its 360 ms keeps the item.
+  const folds = useRef(new Map<number, number>());
   const today = localDate(now, timeZone);
 
   const todayEntries = useMemo(() => shownItems(items, answered, gone, false), [items, answered, gone]);
@@ -125,6 +131,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   if (!band.shown) return null;
 
   const drop = (id: number) => {
+    window.clearTimeout(folds.current.get(id));
     setAnswered(map => {
       const next = new Map(map);
       next.delete(id);
@@ -148,11 +155,11 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     }));
     let folding = false;
     let made: number | null | undefined;
-    later(ANSWERED_MS, () => {
+    folds.current.set(item.id, later(ANSWERED_MS, () => {
       folding = true;
       setGone(set => new Set(set).add(item.id));
       if (made !== undefined) after?.(made);
-    });
+    }));
     void send().then(change => {
       if (!change) return drop(item.id);
       made = change.application;

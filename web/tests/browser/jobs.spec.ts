@@ -1125,6 +1125,35 @@ test('D402: an application in Assign to… opens its first email beside the menu
   }
 });
 
+test('an answer undone at once, or refused, leaves the item for good: the fold it had coming doesn\'t take it away', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/jobs`);
+    const item = need(page, 'Wide World');
+    // Undo inside the 360 ms the answer shows for.
+    await item.getByRole('button', {name: 'Not about a job'}).click();
+    await undo(page);
+    await until('the answer undone', () => navCount(setpoint), count => count === 3);
+    // Nothing happened: past the 360 ms and the 180 ms fold it had coming.
+    await page.waitForTimeout(700);
+    await setpoint.idle();
+    assert.equal(await item.getByRole('button', {name: 'Not about a job'}).count(), 1);
+    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
+
+    await page.route('**/api/jobs/needs-you/*/not-a-job', route => route.fulfill({status: 500, json: {error: {code: 'server', message: 'No'}}}));
+    await item.getByRole('button', {name: 'Not about a job'}).click();
+    await until('the refusal', () => toast(page).textContent(), text => Boolean(text?.startsWith('Couldn\'t set it aside')));
+    // Nothing happened: past the 360 ms and the 180 ms fold it had coming.
+    await page.waitForTimeout(700);
+    await setpoint.idle();
+    assert.equal(await item.getByRole('button', {name: 'Not about a job'}).count(), 1);
+    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Track this (34c, decision 69): the application lands at its email\'s date, opens with First seen and its JD looked up, In process, and the numbers move', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
