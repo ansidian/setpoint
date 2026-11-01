@@ -11,9 +11,12 @@
 //
 // On the phone (DESIGN.md › Phone; board 21) it covers the page: Back and Pin at the top, the email
 // full width, and Done (on Attention mail), Trash, Mark unread (then Mark read) and Open in Gmail at the bottom.
+//
+// EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
+// body, with no tools, actions, slot or commands of its own.
 import type {AccountOut, ItemKind, MessageOut, MessageRowOut, ProposalOut} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useRef, useState} from 'react';
-import type {CSSProperties} from 'react';
+import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
 import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
@@ -75,10 +78,6 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   back?: 'Inbox' | 'Search';
 }) {
   const width = useReadingPaneWidth();
-  // The email the pane opened on arrives with the pane (its slide in), not as a swap; every one after it swaps.
-  const [arrived] = useState(id);
-  const [moved, setMoved] = useState(false);
-  if (!moved && id !== arrived) setMoved(true);
   const messageLoad = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
   const {data} = messageLoad;
   const message = data?.id === id ? data : undefined;
@@ -98,11 +97,6 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   const pinned = listed?.pinned ?? false;
   const provider = listed ? accounts.get(listed.account_id)?.provider : undefined;
   const gmail = message ? message.open_url !== null : provider === undefined ? null : provider === 'gmail';
-  // Each email opens at its top, one shown before (straight from the cache) too.
-  const scroller = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (scroller.current) scroller.current.scrollTop = 0;
-  }, [id]);
   const phone = usePhone();
   // Mark unread on the phone keeps the email open and offers Mark read; the subject shows the unread
   // dot meanwhile. Each tap pops the swapped icon in (`toggles` keys it), the first draw doesn't.
@@ -161,15 +155,10 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
           </span>
         )}
       </div>
-      <div className="rd-scroll" ref={scroller}>
-        {/* Each email swaps in from the side the user stepped from (reader-03): up 8 px from below
-            going down the list, down from above going up, a fade for a click; the email the pane
-            opened on arrives with the pane. The tools stay still. */}
-        <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>
-          {/* The head from the email's row at once; only the body waits for the email (reader-01, #229). */}
-          <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />
-        </div>
-      </div>
+      <Swap id={id} travel={travel}>
+        {/* The head from the email's row at once; only the body waits for the email (reader-01, #229). */}
+        <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />
+      </Swap>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
           email and its account are known, so none moves in or along when the email arrives; until
           then the bar stays empty. Done leads, the phone's main job on Attention mail. */}
@@ -189,6 +178,44 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The pane's scroller. Each email opens at its top, one shown before (straight from the cache) too,
+ * and swaps in from the side the user stepped from (reader-03): up 8 px from below going down the
+ * list, down from above going up, a fade for a click; the email the pane opened on arrives with the
+ * pane (its slide in), not as a swap. The tools stay still.
+ */
+function Swap({id, travel, children}: {id: number; travel: Travel | null; children: ReactNode}) {
+  const [arrived] = useState(id);
+  const [moved, setMoved] = useState(false);
+  if (!moved && id !== arrived) setMoved(true);
+  const scroller = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = 0;
+  }, [id]);
+  return (
+    <div className="rd-scroll" ref={scroller}>
+      <div key={id} className="rd-swap" data-swap={moved ? travel ?? 'fade' : undefined}>{children}</div>
+    </div>
+  );
+}
+
+/** The email alone, for a pane on another page. Reading it here turns nothing read. */
+export function EmailOnly({id, travel = null, accounts, now, timeZone}: {
+  id: number;
+  travel?: Travel | null;
+  accounts: Map<number, AccountOut>;
+  now: number;
+  timeZone: string;
+}) {
+  const load = {path: messagePath(id), ...useResource<MessageOut>(messagePath(id))};
+  const message = load.data?.id === id ? load.data : undefined;
+  return (
+    <Swap id={id} travel={travel}>
+      <Email key={id} listed={message} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={[]} />
+    </Swap>
   );
 }
 
@@ -303,11 +330,7 @@ function MoreMenu({actions, onClose}: {actions: MenuAction[]; onClose: () => voi
   );
 }
 
-/**
- * The open email: its card, its head and its body. The head draws from the email's row (`listed`)
- * until the email itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an
- * attachment's card when it has one), or why it couldn't load (reader-01, phone-04, #229).
- */
+/** The open email: its card, and the email under it. */
 function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread}: {
   id: number;
   listed: MessageRowOut | undefined;
@@ -323,8 +346,6 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   unread: boolean;
 }) {
   const {panel, alfred} = cards;
-  const failed = useLoadFailed([load]);
-  const arrived = useArrival(message !== undefined);
   return (
     <>
       {panel && panel.kind !== 'ask' && panel.proposal && (
@@ -333,6 +354,32 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
       {panel?.kind === 'ask' && alfred.open && (
         <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
       )}
+      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} />
+    </>
+  );
+}
+
+/**
+ * The email: its head and its body. The head draws from the email's row (`listed`) until the email
+ * itself is in, so it's there at once; the body waits, a skeleton meanwhile (with an attachment's
+ * card when it has one), or why it couldn't load (reader-01, phone-04, #229). With no `cards`, it's
+ * the email alone: no slot and no actions.
+ */
+function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false}: {
+  listed: MessageRowOut | undefined;
+  message: MessageOut | undefined;
+  load: Load;
+  accounts: Map<number, AccountOut>;
+  now: number;
+  timeZone: string;
+  marks: string[];
+  cards?: Cards;
+  unread?: boolean;
+}) {
+  const failed = useLoadFailed([load]);
+  const arrived = useArrival(message !== undefined);
+  return (
+    <>
       {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} /> : <HeadSkeleton />}
       {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
         <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
@@ -348,17 +395,14 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
   accounts: Map<number, AccountOut>;
   now: number;
   timeZone: string;
-  cards: Cards;
+  cards: Cards | undefined;
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
 }) {
   const account = accounts.get(listed.account_id);
-  const {panel} = cards;
-  const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
   const colour = colourVar(account?.colour);
   const who = listed.organisation ?? listed.from_name;
   const line = senderLine(message ?? listed);
-  const offers = readerActions(listed);
   const summary = readerSummary(listed);
   return (
     <div className="rd-head">
@@ -393,16 +437,29 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
           </dl>
         </div>
       )}
-      <ReaderSlot row={listed} />
-      <div className="rd-acts">
-        {offers.proposals === 'buttons' && (
-          <>
-            <button className={held('event')} type="button" onClick={() => cards.propose('event')}><Icon name="event" size={17} />Add to calendar</button>
-            <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
-          </>
-        )}
-        <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
-      </div>
+      {cards && (
+        <>
+          <ReaderSlot row={listed} />
+          <Actions listed={listed} cards={cards} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The actions under the head: the proposals where they're offered, then Ask about this email. */
+function Actions({listed, cards}: {listed: MessageRowOut; cards: Cards}) {
+  const {panel} = cards;
+  const held = (kind: Exclude<Panel, null>['kind']) => (panel?.kind === kind ? 'btn ghost' : 'btn out');
+  return (
+    <div className="rd-acts">
+      {readerActions(listed).proposals === 'buttons' && (
+        <>
+          <button className={held('event')} type="button" onClick={() => cards.propose('event')}><Icon name="event" size={17} />Add to calendar</button>
+          <button className={held('task')} type="button" onClick={() => cards.propose('task')}><Icon name="task_alt" size={17} />Add as task</button>
+        </>
+      )}
+      <button className={held('ask')} type="button" onClick={cards.ask}><Icon name="auto_awesome" size={17} alfred />Ask about this email</button>
     </div>
   );
 }

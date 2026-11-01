@@ -4,11 +4,11 @@
 // slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
 // lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
 // wrapping in their boxes (SV-129); the area that takes a pasted posting and a candidate Jobs can't
-// read (SV-140). What they do with the props and the pointer or keys they're
+// read (SV-140); an item's subject, which opens its email (D401). What they do with the props and the pointer or keys they're
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
-  ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, PostingOut,
+  ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {MAX_PASTED_CHARS, PASTED_TOO_LONG} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
@@ -28,6 +28,7 @@ import {JobsMenu} from '../../src/app/jobs/Menu.tsx';
 import type {MenuSpec} from '../../src/app/jobs/Menu.tsx';
 import {chooseMenu} from '../../src/app/jobs/menus.ts';
 import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
+import {NeedsYou} from '../../src/app/jobs/NeedsYou.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
@@ -748,4 +749,52 @@ test('Reads (#273, D383): an account changed in place, added at the end, or take
   expect(readsWith(listed, 2, 'career')).toEqual([...listed, {account_id: 2, reads: 'career'}]);
   expect(readsWith(listed, 4, 'off')).toEqual([{account_id: 1, reads: 'career'}]);
   expect(readsWith(listed, 3, 'off')).toEqual(listed);
+});
+
+const ITEM: NeedsYouItemOut = {
+  id: 1, kind: 'update_to_assign', reason: 'matches_several', from_history: false, company: 'Humongous Insurance', title: null, platform: 'iCIMS',
+  subject: 'Thank you for your interest', sender: 'Humongous Insurance', event_kind: 'rejection', line: null, account_id: null, at: '2026-10-06T12:00:00.000Z',
+  message_id: 40, application_id: null, candidates: [],
+};
+
+function needsYou(items: NeedsYouItemOut[], history: NeedsYouItemOut[], reading: number | null, onRead: (item: NeedsYouItemOut) => void) {
+  return render(<NeedsYou items={items} history={history} rows={[]} accounts={new Map()} cursor={null} folded={false} now={Date.parse('2026-10-07T12:00:00Z')} timeZone={ZONE}
+    unfoldHistory={1} reading={reading} onPoint={() => {}} onOpen={() => {}} onRead={onRead} />);
+}
+
+test('D401: a subject with an email is a button that says so, on an item and on a From history row; one with no email isn\'t', async () => {
+  const onRead = vi.fn();
+  const gone = {...ITEM, id: 2, subject: 'Its email is gone', message_id: null};
+  const jd = {...ITEM, id: 3, kind: 'jd_to_confirm' as const, title: 'Junior Developer', subject: null, message_id: null};
+  const old = {...ITEM, id: 4, from_history: true, subject: 'From the history pass', message_id: 41};
+  await needsYou([ITEM, gone, jd], [old], null, onRead);
+  await page.getByRole('button', {name: 'Thank you for your interest'}).click();
+  expect(onRead).toHaveBeenCalledExactlyOnceWith(ITEM);
+  await page.getByRole('button', {name: 'From the history pass'}).click();
+  expect(onRead).toHaveBeenLastCalledWith(old);
+  await expect.element(page.getByText('Its email is gone')).toBeVisible();
+  expect(page.getByRole('button', {name: 'Its email is gone'}).elements()).toHaveLength(0);
+  expect(page.getByRole('button', {name: /Humongous Insurance · Junior Developer/}).elements()).toHaveLength(0);
+});
+
+test('D401: the item whose email is open shows as pressed, its fill the open row\'s, and its line of actions stays', async () => {
+  await needsYou([ITEM, {...ITEM, id: 2, subject: 'Another'}], [], 1, () => {});
+  const open = page.getByRole('button', {name: 'Thank you for your interest'});
+  await expect.element(open).toHaveAttribute('aria-pressed', 'true');
+  await expect.element(page.getByRole('button', {name: 'Another'})).toHaveAttribute('aria-pressed', 'false');
+  const item = open.element().closest<HTMLElement>('.jb-need')!;
+  await expect.poll(() => getComputedStyle(item).backgroundColor).toBe(colour('var(--sub3)'));
+  expect(page.getByRole('button', {name: 'Assign to…'}).elements()).toHaveLength(2);
+});
+
+test('D401: a long subject ends in an ellipsis as the span did, inside its line', async () => {
+  const long = {...ITEM, subject: 'A subject long enough to need an ellipsis '.repeat(4)};
+  await needsYou([long], [], null, () => {});
+  const line = page.getByText(/^A subject long enough/);
+  await expect.element(line).toBeInTheDocument();
+  const subject = line.element() as HTMLElement;
+  expect(subject.tagName).toBe('BUTTON');
+  const box = subject.closest('.l1')!.getBoundingClientRect();
+  expect(subject.getBoundingClientRect().right).toBeLessThanOrEqual(box.right);
+  expect(getComputedStyle(subject).textOverflow).toBe('ellipsis');
 });

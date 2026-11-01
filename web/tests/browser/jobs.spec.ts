@@ -8,6 +8,7 @@
 // Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
 // SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
+// D401: an item's email opening where the detail sits, and Esc leaving the item unanswered.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
 // picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
 // each correction keeps, and that it sticks, the server's (server/src/jobs/tests/corrections.test.ts).
@@ -17,7 +18,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {ApplicationOut, JobsNavOut, JobsPageOut} from '@setpoint/shared';
+import type {ApplicationOut, JobsNavOut, JobsPageOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
 import {cleanUp, matchGolden, rested, startSetpoint, test, until, watch} from './harness.ts';
@@ -876,6 +877,186 @@ test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick mov
     assert.equal(await navCount(setpoint), 0);
     await until('no count in the sidebar', () => page.locator('aside.sb .nav.jobs .cnt').count(), count => count === 0);
     assert.equal(await page.locator('.jb-th').getAttribute('class'), 'jb-th first');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// The seed's items have no email in mail's sample: these stand in as theirs (D401), the first two
+// unread, the last from history.
+const ITEM_EMAILS = `
+  UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Application received') WHERE subject = 'Thank you for your interest in the Software Engineer II role';
+  UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Interview availability for Software Engineer I') WHERE subject = 'Can we set up a call this week?';
+  UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Update on your application') WHERE subject = 'Thanks for your interest in the Support Specialist role';
+  UPDATE jobs_needs_you SET message_id = (SELECT id FROM messages WHERE subject = 'Your application for Data Engineer Intern') WHERE subject = 'Your application to Wingtip Toys'`;
+
+const itemEmail = (page: Page) => page.getByRole('region', {name: 'Email', exact: true});
+const itemSubject = (page: Page, text: string) => page.locator('.jb-band').getByRole('button', {name: text});
+const unreadInbox = async (setpoint: Setpoint) => (await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread;
+
+test('D401: an item\'s subject opens its email where the detail sits, the email alone, unread as it was; Esc leaves the item unanswered with the cursor on it, and a JD has no email to open', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    jobsChange(setpoint, ITEM_EMAILS);
+    const page = await setpoint.page('target');
+    const {needs_you: [, update]} = await setpoint.api<JobsPageOut>('GET', '/jobs');
+    const unread = await unreadInbox(setpoint);
+    await page.goto(`${setpoint.base}/jobs`);
+    const item = need(page, 'Software Engineer II role');
+    assert.equal(await need(page, 'Lucerne').locator('button.what').count(), 0, 'a JD to confirm has no email');
+
+    await item.locator('button.what').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    await itemEmail(page).locator('.rd-body .mailtext, .rd-body iframe').waitFor();
+    // Where the detail sits and as wide, with the band beside it and Assign to… reachable.
+    const [pane, band] = await rested(() => Promise.all([itemEmail(page).boundingBox(), page.locator('.jb-band').boundingBox()]));
+    assert.equal(pane!.width, layout.readingPane);
+    assert.ok(band!.x + band!.width <= pane!.x, 'the band beside the pane');
+    assert.equal(await item.getAttribute('class'), 'jb-need cur reading');
+    assert.equal(await item.locator('button.what').getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(await rested(() => item.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element, '::before').backgroundColor])),
+      [await rested(() => fillOf(page, 'var(--sub3)')), await rested(() => fillOf(page, 'var(--accent)'))]);
+    // The email alone: none of the reader's tools or actions, and nothing of Jobs's chip.
+    assert.deepEqual(await itemEmail(page).locator('.rd-tools button:visible').evaluateAll(all => all.map(one => one.textContent || one.getAttribute('aria-label'))), ['Open in Inbox', 'Previous email', 'Next email']);
+    assert.equal(await itemEmail(page).locator('.rd-acts, .jb-chip, .jb-badge').count(), 0);
+    // Reading it changes nothing in mail: it stays unread, here and in the Inbox's counts (D313).
+    assert.equal((await setpoint.api<MessageOut>('GET', `/mail/messages/${update!.message_id!}`)).unread, true);
+    assert.equal(await unreadInbox(setpoint), unread);
+    assert.equal(new URL(page.url()).pathname, '/jobs');
+
+    await page.keyboard.press('Escape');
+    await until('the email closed', () => itemEmail(page).count(), count => count === 0);
+    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
+    assert.equal(await navCount(setpoint), 3);
+    await item.getByRole('button', {name: 'Assign to…'}).waitFor();
+    assert.equal(await item.getAttribute('class'), 'jb-need cur', 'the cursor stays on the item');
+    assert.equal(new URL(page.url()).pathname, '/jobs');
+
+    // Its subject again, or another's, closes or swaps it.
+    await item.locator('button.what').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    await item.locator('button.what').click();
+    await until('its subject closes it', () => itemEmail(page).count(), count => count === 0);
+
+    // J to the item and Enter opens it, Assign to…'s focus keeping its own Enter.
+    await page.mouse.move(0, 0);
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('j');
+    await page.keyboard.press('j');
+    await page.keyboard.press('Enter');
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    await page.keyboard.press('Escape');
+    await until('closed', () => itemEmail(page).count(), count => count === 0);
+    await item.getByRole('button', {name: 'Assign to…'}).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('menu', {name: 'Assign to'}).waitFor();
+    assert.equal(await itemEmail(page).count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('D401: with the email open Assign to… works beside it: Esc takes the menu first, a subject pressed closes a menu, J / K step through the items\' emails, and answering closes it, Undo leaving it closed', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    jobsChange(setpoint, ITEM_EMAILS);
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/jobs`);
+    const item = need(page, 'Software Engineer II role');
+    const assign = item.getByRole('button', {name: 'Assign to…'});
+    const menu = page.getByRole('menu', {name: 'Assign to'});
+
+    // An open menu closes as the subject is pressed, and the email opens.
+    await assign.click();
+    await menu.waitFor();
+    await item.locator('button.what').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.equal(await menu.count(), 0);
+
+    await assign.click();
+    await menu.waitFor();
+    await page.keyboard.press('Escape');
+    await until('the menu closed', () => menu.count(), count => count === 0);
+    assert.equal(await itemEmail(page).count(), 1, 'Esc takes the menu first');
+
+    // J / K step through the emails, past the JD, which has none, and the cursor goes along.
+    const previous = itemEmail(page).getByRole('button', {name: 'Previous email'});
+    const next = itemEmail(page).getByRole('button', {name: 'Next email'});
+    assert.deepEqual([await previous.isDisabled(), await next.isDisabled()], [true, false]);
+    await page.keyboard.press('j');
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.equal(await need(page, 'Wide World').getAttribute('class'), 'jb-need cur reading');
+    assert.equal(await next.isDisabled(), true);
+    await page.keyboard.press('k');
+    await page.keyboard.press('k');
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.equal(await item.getAttribute('class'), 'jb-need cur reading', 'the first stays');
+
+    await assign.click();
+    await menu.getByRole('menuitem', {name: /\(Java\)/}).click();
+    await until('the email closed with its item', () => itemEmail(page).count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Assigned to Software Engineer II (Java)Undo');
+    await until('the item folded away', () => page.locator('.jb-band .gh').textContent(), text => text === 'Needs you 2');
+    await undo(page);
+    await until('the item back', () => page.locator('.jb-band .gh').textContent(), text => text === 'Needs you 3');
+    assert.equal(await itemEmail(page).count(), 0);
+
+    // An application takes the pane, and a subject takes it back.
+    const northwind = await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I');
+    await item.locator('button.what').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    await row(page, northwind).click();
+    await page.getByRole('region', {name: 'Application', exact: true}).waitFor();
+    assert.equal(await itemEmail(page).count(), 0);
+    await item.locator('button.what').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.equal(await page.getByRole('region', {name: 'Application', exact: true}).count(), 0);
+    assert.equal(new URL(page.url()).pathname, '/jobs');
+    // Open in Inbox is the way to the rest of what mail does with it.
+    const {needs_you: [, update]} = await setpoint.api<JobsPageOut>('GET', '/jobs');
+    await itemEmail(page).getByRole('button', {name: 'Open in Inbox'}).click();
+    await until('the Inbox', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === `/inbox/${update!.message_id}`);
+    await page.getByRole('region', {name: 'Reading pane'}).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('D401: From history\'s subject opens its email too, J / K staying among From history\'s; in a narrow window the email lies over the table and Back leaves the item unanswered', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    jobsChange(setpoint, ITEM_EMAILS);
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/jobs`);
+    await page.locator('.jb-fold-t').click();
+    const history = page.locator('.jb-hist', {hasText: 'Support Specialist'});
+    await itemSubject(page, 'Thanks for your interest in the Support Specialist role').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Update on your application'}).waitFor();
+    assert.equal(await history.getAttribute('class'), 'jb-hist reading');
+    await page.keyboard.press('j');
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Your application for Data Engineer Intern'}).waitFor();
+    assert.equal(await itemEmail(page).getByRole('button', {name: 'Next email'}).isDisabled(), true);
+    await page.keyboard.press('Escape');
+    await until('closed', () => itemEmail(page).count(), count => count === 0);
+    // Its subject comes first and its reason gives way, one line as it was.
+    const line = await rested(() => history.locator('.what').evaluate(what => {
+      const [subject, why] = [what.querySelector('button')!.getBoundingClientRect(), what.querySelector('.why')!.getBoundingClientRect()];
+      return {after: why.left === subject.right, height: what.getBoundingClientRect().height, text: what.textContent};
+    }));
+    assert.equal(line.after, true);
+    assert.ok(line.height < 20);
+    assert.ok(line.text!.startsWith('Thanks for your interest in the Support Specialist role · '), line.text!);
+
+    await page.setViewportSize({width: 1024, height: 768});
+    await itemSubject(page, 'Thank you for your interest in the Software Engineer II role').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.deepEqual(await rested(() => itemEmail(page).boundingBox()), {x: layout.rail, y: layout.header, width: 1024 - layout.rail, height: 768 - layout.header});
+    await itemEmail(page).getByRole('button', {name: 'Back'}).click();
+    await until('Back closes it', () => itemEmail(page).count(), count => count === 0);
+    assert.equal(await navCount(setpoint), 3);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

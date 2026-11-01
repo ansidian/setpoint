@@ -54,9 +54,15 @@
   transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-need:hover { background: var(--sub); } }
 .jb-need.cur { background: var(--sub2); }
+/* The item whose email is open beside it, as the table's open row. */
+.jb-need.reading, .jb-hist.reading { position: relative; background: var(--sub3); transition: none; }
+.jb-need.reading::before, .jb-hist.reading::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
 .jb-need > .g { grid-column: 2; grid-row: 1; height: 18px; display: grid; place-items: center; color: var(--ink3); }
 .jb-need .l1 { grid-column: 3; display: flex; align-items: center; gap: 8px; min-width: 0; height: 18px; }
 .jb-need .l1 .what { color: var(--ink); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* A subject that opens its email (D401): the same line, underlined under the pointer, the item's fill being the row's. */
+.jb-need .l1 button.what { flex: 0 1 auto; text-align: left; }
+.jb-need button.what:hover, .jb-hist .what.opens button:hover { text-decoration: underline; text-underline-offset: 2px; }
 .jb-need .l1 .from { color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 .jb-need .r1 { grid-column: 4; display: flex; align-items: center; gap: 8px; height: 18px; color: var(--ink3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .jb-need .acts { grid-column: 3 / 5; display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -117,6 +123,10 @@
 .jb-hist > .icon { color: var(--ink3); }
 .jb-hist .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-hist .what b { color: var(--ink); font-weight: 400; }
+/* The subject comes first and its reason gives way, as one line's ellipsis would. */
+.jb-hist .what.opens { display: flex; align-items: baseline; }
+.jb-hist .what.opens button { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--ink); text-align: left; }
+.jb-hist .what.opens .why { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
 .jb-hist .when { color: var(--ink3); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .jb-hist .acts { display: flex; gap: 4px; }
 .jb-hist .acts .btn { height: 24px; font-size: 12px; padding: 0 9px; }

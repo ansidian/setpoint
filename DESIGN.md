@@ -920,7 +920,22 @@ desktop and keeps it (D325).
     dot and the email's age ("Yesterday", "1h"), or "Applied Oct 5" on a JD.
   - Line two: why it's here in `ink2` 12.5, then its actions as 28 px small buttons.
   - Hover `sub`. J / K reach the items before the table, the cursor `sub2`. The item isn't a button;
-    its actions are.
+    its subject, when it has an email, and its actions are (D401).
+- **An item's email** (D401, D403, [Decided while building](#decided-while-building) #284): its
+  subject, underlined under the pointer, opens the email where the detail sits and as wide, or closes
+  it if it's the one open. Enter does the same for the item under the cursor. A JD to confirm has no
+  email, and neither has an item whose email Gmail no longer has, so theirs stays text.
+  - It's the email alone: its head and body, no reader's tools or actions, no JD chip and nothing in
+    ⌘K. Its tools are **Open in Inbox** (`inbox`), previous and next, and Back in a narrow window.
+  - Reading it answers nothing and changes nothing in mail: the email stays unread (D313). Esc closes
+    it, leaving the item unanswered with the cursor on it.
+  - The item shows as the table's open row: `sub3`, with a 2 px `accent` bar at its left edge. Beside
+    the pane, its actions stay in reach down to the narrowest window that has one (1100); in a narrow
+    window the pane lies over the table, as the detail does.
+  - J / K step through the emails of the list it came from, Needs you's or From history's, skipping
+    what has none. Pressing the subject closes an open menu. Answering closes the email with the
+    item, and Undo leaves it closed. An application opening takes the pane. It isn't in the address,
+    so a reload doesn't bring it back.
 - **A JD to confirm** ("Lucerne Publishing · Junior Developer · Is this the posting?"):
   - The candidates as a `sub` group (radius 12, at most 560 px wide) of 32 px rows, padding 0 6 0
     12, 10 apart: `radio_button_unchecked` 16 in `ink3`; "Junior Developer" in `ink` and "· New
@@ -1295,7 +1310,7 @@ Offer). A theme switch fades every colour over 180 ms, as everywhere.
 ### Keys and behaviour
 
 - **Keys:** `4` Jobs; `J` / `K` move, through Needs you's items and then the table's rows; Enter
-  opens the application; ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
+  opens the application, or an item's email; ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
   it; `/` searches Jobs; `O` opens the posting's link. Esc goes from the title's field, a menu, the
   full posting or (in a narrow window) the detail back a step, then closes the pane; in search, it
   clears the query, then leaves search.
@@ -3544,3 +3559,9 @@ it changes what's on screen.
     row (Andy, darma D399): a long note wraps to two lines, its row growing to 54 and the rest
     staying 36, every other cell on the first line. The narrower columns wrap the same way. Past
     two lines it ends in an ellipsis, with the whole note in its tooltip.
+
+284. **A Needs you item's email opens on Jobs** (Andy, 2026-11-01; darma D401 and D403, SV-147,
+    amending "The item isn't a button; its actions are"). Its subject opens the email in the pane an
+    application uses, rather than sending the user to the Inbox to hunt for it by date. It's a look,
+    not mail: the email alone, unread as it was, since Jobs never touches the Inbox's counts (D313),
+    and Open in Inbox is the way to what mail does with it. It isn't in the address.

@@ -7,6 +7,8 @@
 //   about a job), and Not about a job.
 // - An email to track: Track this (decision 69), which makes the application and opens it.
 // - From history: each row's two buttons (Choose… is a menu, #266), and Dismiss all with its Undo.
+// - An item with an email: its subject opens that email where the detail sits (D401). The page holds
+//   which, and the item shows it as the table shows its open row; reading it answers nothing.
 //
 // Answered (34b, as the Today block's task): the press lands, line two crossfades to the outcome
 // (120 out, 120 in), and at 360 ms the item folds away (180 ms), the count changing as it starts; the
@@ -66,7 +68,7 @@ function shownItems(items: NeedsYouItemOut[], answered: ReadonlyMap<number, Answ
   return list.filter(item => !gone.has(item.id)).map(item => ({key: needKey(item.id), id: item.id, item}));
 }
 
-export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, unfoldHistory = 0, onPoint, onOpen}: {
+export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, unfoldHistory = 0, reading = null, onPoint, onOpen, onRead}: {
   items: NeedsYouItemOut[];
   history: NeedsYouItemOut[];
   // The table's rows, for Assign to…'s applications.
@@ -79,9 +81,13 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   timeZone: string;
   // How many times Settings › Jobs's Show has asked for From history (J8): each ask unfolds it.
   unfoldHistory?: number;
+  // The item whose email is open beside it, if any.
+  reading?: number | null;
   onPoint: (key: string) => void;
   // Track this opens the application it made (34c).
   onOpen: (id: number) => void;
+  // An item's subject: its email opens, or closes if it's the one open.
+  onRead: (item: NeedsYouItemOut) => void;
 }) {
   const [open, setOpen] = useState(unfoldHistory > 0);
   const [asked, setAsked] = useState(unfoldHistory);
@@ -183,13 +189,18 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     });
   };
 
-  const handlers = {pick, none, notJob, track, assignTo, choose};
+  // The press away has closed any menu; Enter on the subject, with the menu's focus gone, hasn't.
+  const read = (item: NeedsYouItemOut) => {
+    setMenu(null);
+    onRead(item);
+  };
+  const handlers = {pick, none, notJob, track, assignTo, choose, read};
   return (
     <div className={folded || band.closing ? 'jb-band folded' : 'jb-band'} inert={folded || band.closing}>
       <div>
         {live.length > 0 && <div className="gh first"><Icon name="pending_actions" size={14} />Needs you <span className="n">{live.length}</span></div>}
         {todays.map(({key, item, fold}) => (
-          <Item key={key} item={item} account={item.account_id !== null ? accounts.get(item.account_id) : undefined} cur={cursor === needKey(item.id)}
+          <Item key={key} item={item} account={item.account_id !== null ? accounts.get(item.account_id) : undefined} cur={cursor === needKey(item.id)} reading={reading === item.id}
             answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
             now={now} timeZone={timeZone} today={today} onPoint={onPoint} on={handlers} />
         ))}
@@ -213,7 +224,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
               <div className={open ? 'jb-hist-wrap open' : 'jb-hist-wrap'} inert={!open}>
                 <div>
                   {olds.map(({key, item, fold}) => (
-                    <HistoryRow key={key} item={item} answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
+                    <HistoryRow key={key} item={item} reading={reading === item.id} answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
                       today={today} timeZone={timeZone} on={handlers} />
                   ))}
                 </div>
@@ -234,6 +245,7 @@ interface Handlers {
   track: (item: NeedsYouItemOut) => void;
   assignTo: (item: NeedsYouItemOut, element: HTMLElement) => void;
   choose: (item: NeedsYouItemOut, element: HTMLElement) => void;
+  read: (item: NeedsYouItemOut) => void;
 }
 
 /** The outcome in line two's place: a filled `check_circle` in `good`, what happened in `ink`, the rest in `ink3`. */
@@ -247,10 +259,11 @@ function Done({outcome}: {outcome: Outcome}) {
   );
 }
 
-function Item({item, account, cur, answered, fold, menuOpen, now, timeZone, today, onPoint, on}: {
+function Item({item, account, cur, reading, answered, fold, menuOpen, now, timeZone, today, onPoint, on}: {
   item: NeedsYouItemOut;
   account: AccountOut | undefined;
   cur: boolean;
+  reading: boolean;
   answered: Answered | undefined;
   fold: 'in' | 'out' | null;
   menuOpen: boolean;
@@ -264,13 +277,15 @@ function Item({item, account, cur, answered, fold, menuOpen, now, timeZone, toda
   const jd = item.kind === 'jd_to_confirm';
   const leaving = fold === 'out';
   const done = answered?.phase === 'done';
-  const classes = ['jb-need', cur && !leaving && 'cur', answered && 'answered', leaving && 'leaving'].filter(Boolean).join(' ');
+  const classes = ['jb-need', cur && !leaving && 'cur', reading && 'reading', answered && 'answered', leaving && 'leaving'].filter(Boolean).join(' ');
   return (
     <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : key} data-need={item.id}
       aria-hidden={leaving || undefined} inert={Boolean(answered) || leaving} onMouseMove={() => !cur && !leaving && onPoint(key)}>
       <span className="g"><Icon name={KIND_GLYPHS[item.kind]} size={16} /></span>
       <div className="l1">
-        <span className="what">{itemWhat(item)}</span>
+        {item.message_id !== null
+          ? <button className="what" type="button" title="Read this email" aria-pressed={reading} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          : <span className="what">{itemWhat(item)}</span>}
         <span className="from">· {jd ? 'Is this the posting?' : itemFrom(item)}</span>
       </div>
       <div className="r1">
@@ -301,8 +316,9 @@ function Item({item, account, cur, answered, fold, menuOpen, now, timeZone, toda
   );
 }
 
-function HistoryRow({item, answered, fold, menuOpen, today, timeZone, on}: {
+function HistoryRow({item, reading, answered, fold, menuOpen, today, timeZone, on}: {
   item: NeedsYouItemOut;
+  reading: boolean;
   answered: Answered | undefined;
   fold: 'in' | 'out' | null;
   menuOpen: boolean;
@@ -314,10 +330,15 @@ function HistoryRow({item, answered, fold, menuOpen, today, timeZone, on}: {
   const day = dayWord(localDate(item.at, timeZone), today);
   const leaving = fold === 'out';
   return (
-    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={answered ? 'jb-hist answered' : 'jb-hist'} data-need={item.id}
+    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={['jb-hist', reading && 'reading', answered && 'answered'].filter(Boolean).join(' ')} data-need={item.id}
       aria-hidden={leaving || undefined} inert={Boolean(answered) || leaving}>
       <Icon name={KIND_GLYPHS[item.kind]} size={16} />
-      {answered?.phase === 'done' ? <span className="what"><Done outcome={answered.outcome} /></span> : <span className="what"><b>{itemWhat(item)}</b> · {historyWhy(item)}</span>}
+      {answered?.phase === 'done' ? <span className="what"><Done outcome={answered.outcome} /></span> : item.message_id !== null ? (
+        <span className="what opens">
+          <button type="button" title="Read this email" aria-pressed={reading} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          <span className="why"> · {historyWhy(item)}</span>
+        </span>
+      ) : <span className="what"><b>{itemWhat(item)}</b> · {historyWhy(item)}</span>}
       <span className="when">{jd ? `Applied ${day}` : day}</span>
       <span className="acts">
         {jd ? (

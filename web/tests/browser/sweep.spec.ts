@@ -2,8 +2,8 @@
 // D281): the main pages (the Inbox with an email open, with its JD popover open, and with the
 // Contoso Pharmaceuticals match email's Applied before on its row and in the reader (J7), the
 // calendar's month and week, the editor, News
-// with a story open, Jobs with an application open, and with its menus open (Assign to…, and More with
-// Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
+// with a story open, Jobs with an application open, with a Needs you item's email open (D401), and
+// with its menus open (Assign to…, and More with Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
 // and Jobs off (J8), the phone's Inbox; Jobs isn't on the phone, decision 49) in Night and Light, at the design target,
 // 1100 and 820 wide and on the phone. On each, at rest: nothing scrolls sideways, no text is cut by an
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
@@ -171,6 +171,14 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
   const application = rows.find(row => row.company === 'Northwind Talent' && row.title === 'Software Engineer I')!.id;
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
   const match = all.days.flatMap(day => day.rows).find(row => row.subject === 'Associate Software Engineer @ Contoso Pharmaceuticals')!.id;
+  // The seed's items have no email in mail's sample: one stands in, so Needs you's subject opens it (D401).
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    database.exec(`UPDATE jobs_needs_you SET message_id = ${email} WHERE kind = 'update_to_assign'`);
+  } finally {
+    database.close();
+  }
   return [
     {name: 'the Inbox, an email open', path: `/inbox/${email}`, shows: '.rd-subj'},
     // Each open is run again after a resize, so it opens only what isn't open yet.
@@ -193,6 +201,11 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
     {name: 'Jobs, Assign to… open', path: '/jobs', shows: '.jb-need', open: async page => {
       await page.locator('.jb-need .btn.out', {hasText: 'Assign to…'}).click();
       await page.getByRole('menu', {name: 'Assign to'}).waitFor();
+    }},
+    {name: 'Jobs, an item\'s email open', path: '/jobs', shows: '.jb-need', open: async page => {
+      const subject = page.locator('.jb-need button.what').first();
+      if (await subject.getAttribute('aria-pressed') !== 'true') await subject.click();
+      await page.locator('.jb-pane .rd-body').waitFor();
     }},
     {name: 'Jobs, More and Merge with… open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want', open: async page => {
       await page.locator('.jb-pane').getByRole('button', {name: 'More'}).click();
