@@ -592,6 +592,58 @@ test('SV-141: Role stops at its longest title and the page ends at the table\'s 
   }
 });
 
+test('SV-141: a long note wraps to two lines and only its row grows, its other cells on the first line; past two it ends in an ellipsis with the whole note on hover; J reaches it, and it wraps under 1100 too', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const northwind = await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I');
+    const fabrikam = await applicationId(setpoint, 'Fabrikam', 'Data Analyst');
+    const page = await setpoint.page({width: 2655, height: 1000});
+    const measure = (id: number) => rested(() => row(page, id).evaluate(element => {
+      const middle = (cell: string) => {
+        const box = element.querySelector(cell)!.getClientRects()[0]!;
+        return Math.round(box.top + box.height / 2);
+      };
+      const text = element.querySelector('.st-t')!;
+      return {
+        // Rounded: the wide zoom draws the 1 px hairline a whole pixel, a quarter short of its 1.25.
+        height: Math.round(element.getBoundingClientRect().height),
+        firstLine: [...new Set(['.co', '.ro', '.pl', '.ap', '.sl', '.sd'].map(middle))].length,
+        clipped: text.scrollHeight > text.clientHeight,
+        status: element.querySelector('.st')!.getBoundingClientRect().width,
+      };
+    }));
+    await page.goto(`${setpoint.base}/jobs`);
+    const zoom = 1.25;
+    const plain = await measure(fabrikam);
+    assert.equal(plain.height, 36 * zoom, 'an ordinary row keeps its height');
+    const wrapped = await measure(northwind);
+    assert.equal(wrapped.height, 56 * zoom, 'a note that needs it takes a second line');
+    assert.equal(wrapped.status, 300 * zoom, 'Status keeps its width');
+    assert.equal(wrapped.firstLine, 1, 'the other cells level with the note\'s first line');
+    assert.equal(wrapped.clipped, false, 'two lines hold this note whole');
+
+    const note = `Case study: ${'submit the write-up and the slides to the panel before the next call, '.repeat(4)}`.trim();
+    jobsChange(setpoint, `UPDATE jobs_applications SET step = '${note}' WHERE id = ${northwind}`);
+    await page.reload();
+    const long = await measure(northwind);
+    assert.equal(long.height, 56 * zoom, 'never past two lines');
+    assert.equal(long.clipped, true, 'the rest ends in an ellipsis');
+    assert.equal(await row(page, northwind).locator('.step').getAttribute('title'), note, 'the whole note on hover');
+
+    const steps = await rows(page).evaluateAll((all, id) => all.findIndex(each => (each as HTMLElement).dataset.application === String(id)), northwind);
+    await rows(page).first().hover();
+    for (let press = 0; press < steps; press += 1) await page.keyboard.press('j');
+    await until('the cursor on its row', () => page.locator('.jb-tr.cur').getAttribute('data-application'), id => id === String(northwind));
+
+    const narrow = await setpoint.page({width: 1024, height: 768});
+    await narrow.goto(`${setpoint.base}/jobs`);
+    const beside = await rested(() => row(narrow, northwind).evaluate(element => element.getBoundingClientRect().height));
+    assert.equal(beside, 56, 'the narrower columns wrap it the same way');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a narrow window, at 1024 (32b): Jobs in the rail with a neutral badge, the header keeping both numbers, and the detail over the table led by Back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

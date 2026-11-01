@@ -995,12 +995,14 @@ desktop and keeps it (D325).
   pressed). A click sorts by it and a second flips it; the sorted label is `ink2` with a 14 px
   `arrow_downward` or `arrow_upward`. Newest first by Applied, by default (D314). JD's tooltip is
   "Job description".
-- **A row** is 36 px, `hair` below:
+- **A row** is 36 px, `hair` below, or 56 when its status's note wraps (#283):
   - Company in `ink`, Role in `ink2`, Platform in `ink3` 12.5, Applied in `ink2` 12.5 tabular
     ("Today", "Oct 6", "Feb 9"), each ending in an ellipsis. The 12 px gutter stays empty.
   - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
     its left edge.
-- **Status** (D309): a 7 px mark, the status, then its step in `ink3` (an ellipsis when it's long).
+- **Status** (D309): a 7 px mark, the status, then its step in `ink3`, wrapping under the status to
+  a second line, then ending in an ellipsis, with the whole step in its tooltip. The other cells
+  stay on the first line.
   Existing colours, but In process's cobalt (#264, D362) and Rejected's and Ghosted's marks (#265, D363):
 
   | Status | Mark | Label | Step |
@@ -3538,4 +3540,7 @@ it changes what's on screen.
     loading skeletons (`--row-end`). The header's search field counts as content, so it and Per week
     stop at the line. With a pane open, the pane is the page's end and the header runs to it. Under
     1100 wide on Jobs, the narrower columns fill the row, so there's no line. Calendar and Settings
-    keep their own layouts. Status's notes still clip at 300.
+    keep their own layouts. Status stays 300 wide, since one column shouldn't take that much of a
+    row (Andy, darma D399): a long note wraps to two lines, its row growing to 56 and the rest
+    staying 36, every other cell on the first line. The narrower columns wrap the same way. Past
+    two lines it ends in an ellipsis, with the whole note in its tooltip.

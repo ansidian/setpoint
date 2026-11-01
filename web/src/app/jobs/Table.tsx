@@ -1,7 +1,7 @@
 // The table (DESIGN.md › The table; boards 32, 34a, 36a, 36b; D309, D314): a header row whose labels
 // sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
-// application: company, role, platform, Applied, the status with its mark and step, and how its JD
-// was found. Closed and Ghosted rows step down a shade. Search's rows highlight what matched, and a
+// application, 56 when its status's note wraps (SV-141): company, role, platform, Applied, the status
+// with its mark and step, and how its JD was found. Closed and Ghosted rows step down a shade. Search's rows highlight what matched, and a
 // match only in a JD's text adds the line it matched under its row. A row a correction takes away
 // (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
 // right-click opens its actions at the pointer (#268).
@@ -122,9 +122,11 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
       <span className="ap">{appliedWord(row.applied_on, today)}</span>
       <span className={mark === 'proc' ? 'st proc' : 'st'}>
         <i className={`sd ${mark}`} />
-        <span className={`sl ${mark}`}>{markLabel(row)}</span>
-        {step && <span className="step" title={step}>· {step}</span>}
-        {row.status_set_by === 'user' && <span className="by" title={setByYou(row, today)}><Icon name="edit" size={14} /></span>}
+        <span className="st-t">
+          <span className={`sl ${mark}`}>{markLabel(row)}</span>
+          {step && <span className="step" title={step}>· {step}</span>}
+          {row.status_set_by === 'user' && <span className="by" title={setByYou(row, today)}><Icon name="edit" size={14} /></span>}
+        </span>
       </span>
       <span className="jd" title={jd?.title}>
         {jd && (jd.spin ? <span className="spin"><Icon name={jd.icon} size={16} /></span> : <Icon name={jd.icon} size={16} />)}
