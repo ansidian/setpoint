@@ -264,9 +264,11 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await until('the colour', async () => (await items(setpoint, '2026-10-09')).find(item => item.title === 'Dinner with Sam')!, item => item.colour === 'good' && !item.command);
     assert.match(await chip(page, '2026-10-09', 'Dinner with Sam').evaluate(element => (element as HTMLElement).style.getPropertyValue('--c')), /good/);
 
-    // Delete the pasted Dentist with the key.
+    // Delete the pasted Dentist with the key, once the browser draws it saved: Delete leaves pending items.
+    await until('Dentist drawn saved', () => chip(page, '2026-10-13', 'Dentist').evaluateAll(chips => chips.map(one => one.classList.contains('pending'))), pending => pending.join() === 'false');
     await chip(page, '2026-10-13', 'Dentist').click();
-    await page.locator('.fd').waitFor();
+    // Its own card, as Dinner's is still open until the selection has moved, and Delete takes what's selected.
+    await page.locator('.fd', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('Delete');
     await passUndo(page, 'Deleted Dentist');
     await until('the delete, once its Undo has gone', () => dentists('2026-10-13'), list => list.length === 0, AFTER_UNDO);
