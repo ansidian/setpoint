@@ -121,6 +121,8 @@ async function main(): Promise<number> {
   handDown();
   fs.rmSync(path.join(ROOT, 'test-results', 'browser', 'traces'), {recursive: true, force: true});
   fs.rmSync(FAILED, {force: true});
+  // A new checkout has no folder yet, and a check that fails notes itself here before anything else.
+  fs.mkdirSync(path.dirname(FAILED), {recursive: true});
   process.env.SETPOINT_BROWSER_FAILED = FAILED;
   const tree = process.env.SETPOINT_UPDATE_GOLDENS === '1' ? null : treeOf();
   const started = Date.now();
