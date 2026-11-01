@@ -318,7 +318,7 @@ day. There is no Unread or All to choose between, and going to the Inbox always 
   gutter (12), sender or organisation (200, ellipsis), subject then " · " and the summary in `ink3`
   (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, dropped
   only while the list is filtered to one account, #207), the age or time (72, right, `ink3` 12).
-  Past a row 1480 wide, the spare width sits after the age (#282).
+  The list's content stops 1480 from its left, and the header's with it (#283).
   Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
   account never does, the kind becomes a subheading (#237), and the sender narrows to a quarter of
@@ -709,8 +709,8 @@ navigation.
     | text, 18 apart, padding 16 16 16 12; the image 320 × 180; the headline 19 at 1.3, −.01em, max
     760; the summary 13.5 / 1.5, three lines, max 680 (#127).
 - **Story row:**
-  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below. Past a row
-    1480 wide, the spare width sits after the thumbnail (#282).
+  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below. The list's
+    content stops 1480 from its left, and the header's with it (#283).
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
   - Under it, the summary in `ink3` 12.5, one line, ellipsis. In a list under 480 px the headline
     wraps to two 18 px lines instead and the summary goes; the row keeps its height (#128).
@@ -983,9 +983,10 @@ desktop and keeps it (D325).
 
 - **Columns,** with the detail closed (34a): a 12 px gutter | Company 220 | Role | Platform 120 |
   Applied 72 | Status 300 | JD 128, 12 apart, padding 0 16 0 12. Role is as wide as the longest
-  title among all applications plus 32, or what's left when that doesn't fit, and any spare width
-  sits past JD, so a filter or a search doesn't move the columns
-  ([Decided while building](#decided-while-building) #282).
+  title among all applications plus 32, or what's left when that doesn't fit, so a filter or a
+  search doesn't move the columns, and the end of JD is the page's right edge: Needs you, From
+  history and the header stop there too
+  ([Decided while building](#decided-while-building) #282, #283).
 - **Beside the detail** (32): Platform drops and JD is a glyph alone, as mail drops its chips beside
   the reader: 12 | 156 | Role | 60 | 214 | 18. It re-lays in the frame the pane opens, with no width
   tween, and Platform comes back in the frame it closes.
@@ -3527,3 +3528,14 @@ it changes what's on screen.
     up to there and a row's fill and hairline still run the full width. That's a cap rather than a
     fit to the text, since a subject or a headline with its summary has no useful longest line, and
     the text column stays flexible so the columns after it line up from row to row.
+
+283. **A page has one right edge** (Andy, 2026-11-01; darma D398, SV-141, amending #282). All of a
+    page's content stops at the same line, dates, dots, chevrons and actions included, and bands,
+    fills and hairlines still run the full width. On the Inbox and News the line is 1480 from the
+    list's left (`layout.listRowMax`, so nothing moves up to about 1744 wide); on Jobs it's the end
+    of JD, which moves with Role, so from Needs you to the header everything stops with the table.
+    It covers group headers and folds, the list's foot, search's rows, Alfred's card and the
+    loading skeletons (`--row-end`). The header's search field counts as content, so it and Per week
+    stop at the line. With a pane open, the pane is the page's end and the header runs to it. Under
+    1100 wide on Jobs, the narrower columns fill the row, so there's no line. Calendar and Settings
+    keep their own layouts. Status's notes still clip at 300.

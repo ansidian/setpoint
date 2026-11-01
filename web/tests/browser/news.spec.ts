@@ -11,7 +11,7 @@ import {after} from 'node:test';
 import type {MissedOut, NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, still, test, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, rested, SIZES, startSetpoint, still, test, until, watch} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -241,23 +241,26 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
   }
 });
 
-test('SV-141: a row reaches its end at the design target, and past its most a very wide window leaves the spare width after the thumbnail, every row\'s lined up', async () => {
+test('SV-141: News has one right edge: at the design target it\'s the row\'s end, and on a very wide window the thumbnails, Upcoming, Catch up, Missed\'s day and the search field all stop at it, a story\'s pane taking the header to its end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    const list = (page: Page) => rested(() => page.evaluate(() => {
-      const all = [...document.querySelectorAll('.nw-row')];
-      const thumbnails = [...new Set(all.flatMap(row => [...row.querySelectorAll('img, .nw-hz')]).map(image => image.getBoundingClientRect().right))];
-      return {thumbnails, right: all[0]!.getBoundingClientRect().right - 16 * (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom!};
-    }));
+    const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
+    const ENDS = '.nw-row img, .nw-up .btn, .nw-missed .btn, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/news`);
-    const atTarget = await list(target);
-    assert.deepEqual(atTarget.thumbnails, [atTarget.right], 'the thumbnails at the row\'s end');
-    const wide = await setpoint.page({width: 2655, height: 1000});
+    assert.deepEqual(await rights(target, '.nw-row img, .nw-up .btn, .hd .search'), [SIZES.target.width - 16], 'the row\'s end, as ever');
+    const width = 2655;
+    const wide = await setpoint.page({width, height: 1400});
     await wide.goto(`${setpoint.base}/news`);
-    const atWide = await list(wide);
-    assert.equal(atWide.thumbnails.length, 1, `the thumbnails in one column: ${atWide.thumbnails.join()}`);
-    assert.ok(atWide.right - atWide.thumbnails[0]! > 300, `spare width after the thumbnail: ${atWide.right - atWide.thumbnails[0]!}`);
+    const ends = await rights(wide, ENDS);
+    assert.equal(ends.length, 1, `one right edge: ${ends.join()}`);
+    assert.ok(width - ends[0]! > 300, `spare width past it: ${width - ends[0]!}`);
+    await wide.locator('.nw-row').first().click();
+    await wide.locator('.pane').waitFor();
+    assert.deepEqual(await rights(wide, '.hd .search'), [width - 20], 'beside the pane the header runs to its end');
+    await wide.goto(`${setpoint.base}/news/missed`);
+    await wide.locator('.nw-back .n').waitFor();
+    assert.deepEqual(await rights(wide, '.nw-back .n, .nw-sec .day'), ends, 'Missed\'s count and days stop there too');
   } finally {
     await setpoint.stop();
   }

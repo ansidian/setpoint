@@ -35,7 +35,7 @@
 mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding: 0 1px; }
 
 /* ---------- Results ---------- */
-.search-list .bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px 0 24px; }
+.search-list .bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 var(--row-end) 0 24px; }
 .search-list .bar.muted { color: var(--ink3); min-height: 32px; font-size: 12.5px; border-bottom: 1px solid var(--hair); }
 .search-list .bar.after-card { border-top: 1px solid var(--hair); }
 .search-list .bar.failing { color: var(--caution); }
@@ -56,7 +56,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .search-list .suggest:active { background: var(--sub3); transition-duration: var(--dur-press); }
 /* The fold over what only mentions the search: the results line's words, a Noise line's answers
    (#158) and its one chevron, turned to point right while folded (#198). */
-.search-list .mentions { transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12.5px; text-align: left; }
+.search-list .mentions { transition: background-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 var(--row-end) 0 24px; border-top: 1px solid var(--hair); color: var(--ink3); font-size: 12.5px; text-align: left; }
 .search-list .mentions .chev { display: grid; margin-left: auto; }
 .search-list .mentions .chev .icon { transition: transform var(--dur-fast) var(--ease); }
 .search-list .mentions.collapsed .chev .icon { transform: rotate(-90deg); }
@@ -72,7 +72,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .arow .why { grid-column: 2 / 4; font-size: 12px; color: var(--ink3); display: flex; align-items: center; gap: 6px; padding-top: 2px; white-space: nowrap; overflow: hidden; }
 .arow .why b { font-weight: 400; color: var(--ink2); }
 /* Ask Alfred reads in ink, his mark in its gradient; no tinted hover, as the AI has no hue of its own (#173). */
-.ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
+.ask { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 var(--row-end) 0 24px; color: var(--ink); border-bottom: 1px solid var(--hair); flex: none; text-align: left; }
 .ask:hover { background: var(--sub); }
 .no-results { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 16px 16px 24px; color: var(--ink2); flex: none; border-bottom: 1px solid var(--hair); }
 /* Nothing found leads with search_off, 20 px in ink3, 12 px before the words (#124). */
@@ -98,7 +98,7 @@ mark.hl { background: var(--hl); color: var(--ink); border-radius: 3px; padding:
 .failed-line .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* The Answer card (board 07): above the results, or at the top of the reading pane. */
-.answer { margin: 14px 16px 12px 24px; }
+.answer { margin: 14px var(--row-end) 12px 24px; }
 .pane .answer { margin: 16px 20px 0; }
 .answer .card-h > .icon { color: var(--ink); }
 .ans { margin: 0; max-width: 620px; font-size: 15px; line-height: 1.45; color: var(--ink); user-select: text; -webkit-user-select: text; }

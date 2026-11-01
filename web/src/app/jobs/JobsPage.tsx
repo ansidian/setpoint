@@ -148,6 +148,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // A filtered view holds its rows for the visit: one an email moves out of the filter stays put.
   const rows = useMemo(() => page?.rows ?? [], [page]);
   const roleFit = useRoleFit(rows);
+  const roleStyle = {'--role-fit': roleFit} as CSSProperties;
   const [hold, setHold] = useState<{filter: Filter; ids: ReadonlySet<number>}>({filter: 'all', ids: new Set()});
   const held = useMemo(() => (hold.filter === filter ? hold.ids : new Set<number>()), [hold, filter]);
   // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
@@ -343,7 +344,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   return (
     <>
-      <header className="hd jb-hd">
+      <header className="hd jb-hd ends" style={roleStyle}>
         <h1 className="hd-title" key={searching ? 'search' : 'jobs'}>{searching ? 'Search' : 'Jobs'}</h1>
         {!searching && page?.enabled && <StatusFilter counts={page.counts} value={filter} onChange={setFilter} />}
         <span className="grow" />
@@ -373,10 +374,10 @@ export function JobsPage({route}: {route: JobsRoute}) {
         )}
       </header>
       <div className="content">
-        <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
+        <section className="jb-col" style={roleStyle} aria-label={q ? `Applications matching ${q}` : 'Applications'}>
           {page?.enabled && !q && <JobsLines page={page} now={now} timeZone={zone} />}
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
-            <div className="jb-scroll jb-tbl" ref={scroller} style={{'--role-fit': roleFit} as CSSProperties}>
+            <div className="jb-scroll jb-tbl" ref={scroller}>
               <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
                 unfoldHistory={historyAsks.count} onPoint={onPoint} onOpen={openAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />

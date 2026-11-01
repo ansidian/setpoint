@@ -671,7 +671,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header className="hd ends">
         {phone && <Mark />}
         {/* A filtered Inbox names its account, so the filter isn't only the sidebar's (UX #15); the phone's account button already does. */}
         <h1 className="hd-title">{searching ? 'Search' : filteredTo && !phone ? `Inbox · ${filteredTo}` : 'Inbox'}</h1>

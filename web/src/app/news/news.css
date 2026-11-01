@@ -4,7 +4,7 @@
 .nw-list { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; container-type: inline-size; }
 .nw-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .nw-body > .list { flex: 1 1 auto; min-height: 0; }
-.nw-missed { flex: none; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px 0 22px; color: var(--ink); background: color-mix(in oklch, var(--accent) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--accent) 22%, transparent); }
+.nw-missed { flex: none; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 max(12px, calc(100% - var(--listRowMax))) 0 22px; color: var(--ink); background: color-mix(in oklch, var(--accent) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--accent) 22%, transparent); }
 .nw-missed > .icon { color: var(--accent); }
 .nw-missed b { font-weight: 500; }
 /* The pill drops in 8 px as it fades in over 180 ms, and under the pointer its ring and arrow deepen (#131). */
@@ -18,7 +18,7 @@
 }
 .nw-pill .upd { color: var(--accent); }
 
-.nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+.nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
 /* Each section's glyph before its name (#120), Missed's days on `history`: ink3, its optical edge on the list's 24 px line. */
 .nw-sec > .icon { color: var(--ink3); margin-left: -2px; }
 .nw-sec.first { border-top: 0; }
@@ -26,7 +26,7 @@
 
 /* N5's states (DESIGN.md › States; boards 29a, 29b): the Unsorted line in `caution` with Show headlines, the
    first run's muted line, a whole section's line under its header, and a section with nothing to show. */
-.nw-state, .nw-line { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.nw-state, .nw-line { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 var(--row-end) 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
 .nw-state.failing, .nw-line.failing { color: var(--caution); }
 .nw-state.muted, .nw-line.stale { color: var(--ink3); }
 .nw-state .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -35,7 +35,7 @@
 .nw-state .spin, .nw-empty .spin { margin-left: 0; vertical-align: 0; color: inherit; }
 .nw-empty { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; color: var(--ink3); flex: none; }
 /* Show headlines: what waits Unsorted, each its outlet's link. */
-.nw-raw { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; column-gap: 12px; align-items: center; min-height: 36px; padding: 0 max(16px, calc(100% - var(--listRowMax))) 0 24px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none; }
+.nw-raw { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; column-gap: 12px; align-items: center; min-height: 36px; padding: 0 var(--row-end) 0 24px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none; }
 .nw-raw .hl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nw-raw > .icon { color: var(--ink3); }
 .nw-raw:hover { background: var(--sub); color: var(--ink); }
@@ -66,7 +66,7 @@
 .nw-ph > .nw-img { position: relative; }
 
 /* A block's top story. */
-.nw-lead { display: grid; grid-template-columns: 12px 232px minmax(0, 1fr); column-gap: 14px; padding: 14px 16px 14px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
+.nw-lead { display: grid; grid-template-columns: 12px 232px minmax(0, 1fr); column-gap: 14px; padding: 14px var(--row-end) 14px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
 .nw-lead.noimg { grid-template-columns: 12px minmax(0, 1fr); }
 .nw-lead:hover { background: var(--sub); }
 .nw-lead.cur, .nw-lead.open { background: var(--sub2); }
@@ -80,7 +80,7 @@
 .nw-lead .nw-meta { margin-top: auto; }
 
 /* Every other story. */
-.nw-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 72px; column-gap: 12px; align-items: center; padding: 9px max(16px, calc(100% - var(--listRowMax))) 9px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
+.nw-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto 72px; column-gap: 12px; align-items: center; padding: 9px var(--row-end) 9px 12px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
 .nw-row:hover { background: var(--sub); }
 .nw-row.cur, .nw-row.open { background: var(--sub2); }
 .nw-row .nd { align-self: start; }
@@ -100,7 +100,7 @@
 .nw-meta .upd { color: var(--accent); }
 
 /* Upcoming, under Tech's header. */
-.nw-up { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 max(16px, calc(100% - var(--listRowMax))) 0 24px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
+.nw-up { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 var(--row-end) 0 24px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }
 .nw-up .ico { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: color-mix(in oklch, var(--accent) 14%, transparent); color: var(--accent); flex: none; }
 .nw-up .what { color: var(--ink); font-weight: 500; }
 .nw-up .lab { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
@@ -121,7 +121,7 @@
 /* A list 1000 px or wider (nothing open at the design target): the lead grows, so the biggest story
    looks big rather than sparse (#127). Narrower lists keep 232 × 130. */
 @container (min-width: 1000px) {
-  .nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px 16px 16px 12px; }
+  .nw-lead { grid-template-columns: 12px 320px minmax(0, 1fr); column-gap: 18px; padding: 16px var(--row-end) 16px 12px; }
   .nw-lead .nw-ph { width: 320px; height: 180px; }
   .nw-lead .nd { height: 25px; }
   .nw-lead .hl { font-size: 19px; line-height: 1.3; letter-spacing: -.01em; max-width: 760px; }
@@ -148,7 +148,7 @@
 .nw-more { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 16px 0 24px; color: var(--ink2); font-size: 12.5px; flex: none; width: 100%; text-align: left; }
 .nw-more:hover { color: var(--ink); background: var(--sub); }
 .nw-more .icon { color: var(--ink3); }
-.nw-back { flex: none; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 14px; border-bottom: 1px solid var(--hair); }
+.nw-back { flex: none; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 14px; border-bottom: 1px solid var(--hair); }
 .nw-back .t { font-size: 14px; font-weight: 500; color: var(--ink); }
 .nw-back .n { color: var(--ink3); font-size: 12.5px; }
 

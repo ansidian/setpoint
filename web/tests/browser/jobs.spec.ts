@@ -537,13 +537,13 @@ test('an event opens its email in the mail reader; one whose email is gone says 
   }
 });
 
-test('SV-141: Role stops at its longest title, whatever the window, the columns stay beside it and spare width sits past JD; a filter doesn\'t move them, and at 1024 the row still fills', async () => {
+test('SV-141: Role stops at its longest title and the page ends at the table\'s JD edge, the Needs you dates, the fold and the search field with it, through a filter; a detail takes the header to its end, and at 1024 the rows still fill', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const columns = (page: Page) => rested(() => page.evaluate(() => {
       const all = [...document.querySelectorAll('.jb-scroll .jb-tr')];
       const first = all[0]!;
-      const box = (cell: string) => first.querySelector(cell)!.getBoundingClientRect();
+      const right = (cell: string) => [...document.querySelectorAll(cell)].map(each => Math.round(each.getBoundingClientRect().right));
       const inks = all.map(each => {
         const range = document.createRange();
         range.selectNodeContents(each.querySelector('.ro')!);
@@ -551,11 +551,11 @@ test('SV-141: Role stops at its longest title, whatever the window, the columns 
       });
       return {
         longest: Math.max(...inks),
-        role: box('.ro').right,
-        platform: box('.pl').left,
-        applied: box('.ap').left,
-        jd: box('.jd').right,
-        row: first.getBoundingClientRect().right,
+        role: first.querySelector('.ro')!.getBoundingClientRect().right,
+        platform: first.querySelector('.pl')?.getBoundingClientRect().left,
+        edge: right('.jb-tr .jd')[0]!,
+        ends: [...new Set([...right('.jb-need .r1 > :last-child'), ...right('.jb-fold-t'), ...right('.hd .search')])],
+        row: Math.round(first.getBoundingClientRect().right),
         padding: parseFloat(getComputedStyle(first).paddingRight),
         clipped: all.filter(each => each.querySelector('.ro')!.scrollWidth > each.querySelector('.ro')!.clientWidth).length,
       };
@@ -567,15 +567,26 @@ test('SV-141: Role stops at its longest title, whatever the window, the columns 
       assert.equal(at.clipped, 0, 'every title whole');
       const room = at.role - at.longest;
       assert.ok(room >= 16 * zoom && room <= 48 * zoom, `Role keeps a comfortable margin past its longest title, no more: ${room}`);
-      assert.ok(at.row - at.jd > 200, `spare width past JD: ${at.row - at.jd}`);
+      assert.ok(at.row - at.edge > 200, `spare width past JD: ${at.row - at.edge}`);
+      assert.deepEqual(at.ends, [at.edge], 'Needs you, the fold and the search field end at JD');
       await page.locator('.jb-status button', {hasText: 'In process'}).click();
       await until('In process\'s rows', () => rows(page).count(), count => count === 3);
-      assert.equal((await columns(page)).platform, at.platform, 'the filter leaves the columns where they are');
+      const filtered = await columns(page);
+      assert.deepEqual([filtered.platform, filtered.edge, filtered.ends], [at.platform, at.edge, at.ends], 'the filter leaves the columns and the edge where they are');
+      await page.locator('.jb-status button', {hasText: 'All'}).click();
+      await until('all the rows', () => rows(page).count(), count => count === 62);
+      if (width === 2655) {
+        await rows(page).first().click();
+        await page.locator('.jb-pane').waitFor();
+        const search = await rested(() => page.locator('.hd .search').boundingBox());
+        assert.equal(Math.round(search!.x + search!.width), width - 16 * zoom, 'beside a detail the header runs to the pane\'s end');
+      }
     }
     const narrow = await setpoint.page({width: 1024, height: 768});
     await narrow.goto(`${setpoint.base}/jobs`);
     const fitted = await columns(narrow);
-    assert.equal(fitted.jd, fitted.row - fitted.padding, 'at 1024 the columns still fill the row');
+    assert.equal(fitted.edge, fitted.row - fitted.padding, 'at 1024 the columns still fill the row');
+    assert.deepEqual(fitted.ends, [fitted.edge], 'and Needs you and the header end with them');
   } finally {
     await setpoint.stop();
   }

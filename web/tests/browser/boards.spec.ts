@@ -8,7 +8,7 @@ import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
-import {cleanUp, matchGolden, readSecurity, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, matchGolden, readSecurity, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -39,24 +39,29 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('SV-141: a row reaches its end at the design target, and past its most a very wide window leaves the spare width after the age, every row\'s account and age lined up', async () => {
+test('SV-141: the Inbox has one right edge: at the design target it\'s the row\'s end, and on a very wide window the ages, the accounts\' column, the fold\'s chevron, Mark all as read, the search field and a search\'s rows all stop at it, a reading pane taking the header to its end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    const list = (page: Page) => rested(() => page.locator('.list.all').evaluate(element => {
-      const all = [...element.querySelectorAll('.row')];
-      const edge = (cell: string) => [...new Set(all.map(row => row.querySelector(cell)!.getBoundingClientRect().right))];
-      return {accounts: edge('.ac'), ages: edge('.age'), right: all[0]!.getBoundingClientRect().right - 16 * (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom!};
-    }));
+    const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
+    const ENDS = '.row .age, .nfold .chev .icon, .listfoot .lnk, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/inbox`);
-    const atTarget = await list(target);
-    assert.deepEqual(atTarget.ages, [atTarget.right], 'the age at the row\'s end');
-    const wide = await setpoint.page({width: 2655, height: 1000});
+    assert.deepEqual(await rights(target, ENDS), [SIZES.target.width - 16], 'the row\'s end, as ever');
+    const width = 2655;
+    const wide = await setpoint.page({width, height: 1400});
     await wide.goto(`${setpoint.base}/inbox`);
-    const atWide = await list(wide);
-    assert.equal(atWide.accounts.length, 1, 'the accounts in one column');
-    assert.equal(atWide.ages.length, 1, 'the ages in one column');
-    assert.ok(atWide.right - atWide.ages[0]! > 300, `spare width after the age: ${atWide.right - atWide.ages[0]!}`);
+    const ends = await rights(wide, ENDS);
+    assert.equal(ends.length, 1, `one right edge: ${ends.join()}`);
+    assert.ok(width - ends[0]! > 300, `spare width past it: ${width - ends[0]!}`);
+    assert.equal((await rights(wide, '.row .ac')).length, 1, 'the accounts in one column');
+    await wide.locator('.list.all .row').first().click();
+    await wide.locator('.pane').waitFor();
+    assert.deepEqual(await rights(wide, '.hd .search'), [width - 20], 'beside the pane the header runs to its end');
+    await wide.goto(`${setpoint.base}/inbox`);
+    await wide.keyboard.press('/');
+    await wide.keyboard.type('northwind');
+    await wide.locator('.arow.result').first().waitFor();
+    assert.deepEqual(await rights(wide, '.arow.result .age, .hd .search'), ends, 'a search\'s rows stop there too');
   } finally {
     await setpoint.stop();
   }

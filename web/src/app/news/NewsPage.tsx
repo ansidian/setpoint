@@ -314,7 +314,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   return (
     <>
-      <header className="hd">
+      <header className="hd ends">
         <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
         {!searching && (
           <span className="seg" ref={segThumb}>
