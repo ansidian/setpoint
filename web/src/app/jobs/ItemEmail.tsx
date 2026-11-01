@@ -1,6 +1,7 @@
-// A Needs you item's email (DESIGN.md › Needs you, D401): where the detail sits and as wide, so the
-// item and its Assign to… stay beside it. The email alone: reading it here turns nothing read and
-// changes nothing in mail (D313), and Open in Inbox is the way to everything else mail does with it.
+// An email for a Needs you item (DESIGN.md › Needs you, D401, D402), its own or that of an application
+// in its Assign to…: where the detail sits and as wide, so the item and its menu stay beside it. The
+// email alone: reading it here turns nothing read and changes nothing in mail (D313), and Open in
+// Inbox is the way to everything else mail does with it. A press in it leaves an open menu open.
 import type {AccountOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {Icon} from '../../ui/Icon.tsx';
@@ -8,8 +9,10 @@ import {EmailOnly, PaneEdge} from '../Reader.tsx';
 import type {Travel} from '../Reader.tsx';
 import {useReadingPaneWidth} from '../readingPane.ts';
 
-export function ItemEmail({id, travel, accounts, now, timeZone, leaving, canStep, onStep, onClose, onInbox}: {
+export function ItemEmail({id, of, travel, accounts, now, timeZone, leaving, canStep, onStep, onClose, onInbox}: {
   id: number;
+  // The application it's the email of; null for the item's own.
+  of: string | null;
   // How the user stepped to it, for its swap; null for a click.
   travel: Travel | null;
   accounts: Map<number, AccountOut>;
@@ -23,11 +26,12 @@ export function ItemEmail({id, travel, accounts, now, timeZone, leaving, canStep
 }) {
   const width = useReadingPaneWidth();
   return (
-    <section className={leaving ? 'pane jb-pane leaving' : 'pane jb-pane'} aria-label="Email" inert={leaving} style={{'--readingPane': `${width}px`} as CSSProperties}>
+    <section className={leaving ? 'pane jb-pane leaving' : 'pane jb-pane'} aria-label="Email" data-keeps-menu inert={leaving} style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
       <div className="rd-tools">
         <button className="ibtn rd-back" type="button" aria-label="Back" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         <button className="tool" type="button" onClick={onInbox}><Icon name="inbox" />Open in Inbox</button>
+        {of && <span className="jb-of" title={of}><Icon name="work" size={16} /><span className="ell">{of}</span></span>}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous email" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next email" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>

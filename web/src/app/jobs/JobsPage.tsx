@@ -8,8 +8,9 @@
 // right-click opens its actions at the pointer (#268), and More's Edit company and Edit title (or the
 // right-click's) open the application with that field in edit.
 //
-// A Needs you item's subject opens its email where the detail sits (D401, ItemEmail.tsx), held here
-// rather than in the address: it's a look at the email, and nothing comes back to it on a reload.
+// A Needs you item's subject opens its email where the detail sits (D401, ItemEmail.tsx), and an
+// application in its Assign to… opens that application's first email there (D402). Held here rather
+// than in the address: it's a look at an email, and nothing comes back to it on a reload.
 //
 // Keys: `J` / `K` move through Needs you's items and then the table's rows (with an application open,
 // they open the next and previous one; with an item's email open, the next and previous email of its
@@ -33,7 +34,7 @@ import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, Job
 import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone as userZone} from '../../api/auth.ts';
-import {updateCached, useResource} from '../../api/client.ts';
+import {getJson, updateCached, useResource} from '../../api/client.ts';
 import {localDate} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {motion, news as arrivals} from '../../tokens.ts';
@@ -194,7 +195,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   // The item whose email is open where the detail sits. An application opening takes the pane, and an
   // item answered takes its email with it once it's left the page's answer; refused, it never left.
-  const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null} | null>(null);
+  const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null; of: string | null} | null>(null);
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
   const email = useExit(reading, compact ? motion.medium : motion.fast);
 
@@ -219,8 +220,20 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const read = (item: NeedsYouItemOut, travel: Travel | null = null) => {
     if (item.message_id === null) return;
     go(null);
-    setReading({item: item.id, message: item.message_id, history: item.from_history, travel});
+    setReading({item: item.id, message: item.message_id, history: item.from_history, travel, of: null});
     if (!item.from_history) setCursor(needKey(item.id));
+  };
+  /** An application's first email, the one that started it, for the item being assigned; the last asked wins. */
+  const looking = useRef(0);
+  const lookAt = (item: NeedsYouItemOut, row: ApplicationRowOut) => {
+    const ask = ++looking.current;
+    void getJson<ApplicationOut>(applicationPath(row.id)).then(detail => {
+      if (ask !== looking.current) return;
+      const message = detail.timeline.find(event => event.message_id !== null)?.message_id ?? null;
+      if (message === null) return void showToast(`No email left for ${titleOf(row)}`);
+      go(null);
+      setReading({item: item.id, message, history: item.from_history, travel: null, of: titleOf(row)});
+    }, toastFailure(`Couldn't open the email for ${titleOf(row)}`));
   };
   // The emails J / K step through: those of the list the open one came from.
   const emails = (reading?.history ? page?.from_history : page?.needs_you)?.filter(item => item.message_id !== null) ?? [];
@@ -415,8 +428,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
             <div className="jb-scroll jb-tbl" ref={scroller}>
               <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
-                unfoldHistory={historyAsks.count} reading={reading?.item ?? null} onPoint={onPoint} onOpen={openAt}
-                onRead={item => (item.id === reading?.item ? setReading(null) : read(item))} />
+                unfoldHistory={historyAsks.count} reading={reading} onPoint={onPoint} onOpen={openAt}
+                onRead={item => (item.id === reading?.item && reading.of === null ? setReading(null) : read(item))} onLook={lookAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />
               {!results && historyRuns(page.history) && <HistorySkeleton />}
               {results ? (
@@ -442,7 +455,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
             onEdit={field => setEditing(field === null ? null : {id: open, field})} onSave={save} onMove={move} onNotAboutThis={takeOff} onPick={pick} />
         )}
         {email.shown !== null && open === null && (
-          <ItemEmail id={email.shown.message} travel={email.shown.travel} accounts={accounts} now={now} timeZone={zone} leaving={email.closing}
+          <ItemEmail id={email.shown.message} of={email.shown.of} travel={email.shown.travel} accounts={accounts} now={now} timeZone={zone} leaving={email.closing}
             canStep={{previous: emailBeside(-1) !== null, next: emailBeside(1) !== null}} onStep={stepEmail} onClose={() => setReading(null)}
             onInbox={() => navigate({page: 'inbox', account: null, open: email.shown!.message})} />
         )}

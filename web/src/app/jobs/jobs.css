@@ -221,6 +221,9 @@
 .jb-pane.leaving > :not(.pane-edge) { animation: jb-leave var(--dur-fast) var(--ease) forwards; }
 @keyframes jb-leave { to { opacity: 0; } }
 .jb-pane .rd-scroll { scroll-behavior: auto; }
+/* Whose email this is, when it's an application's rather than the item's own (D402). */
+.jb-of { display: inline-flex; align-items: center; gap: 6px; min-width: 0; margin-left: 6px; color: var(--ink3); font-size: 12.5px; }
+.jb-of .icon { flex: none; }
 .jb-head { padding: 20px 28px 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
 .jb-co { display: flex; align-items: center; gap: 8px; color: var(--ink3); font-size: 13px; min-height: 20px; min-width: 0; white-space: nowrap; }
 .jb-co .name { color: var(--ink2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -466,6 +469,7 @@
 .jb-mrow { display: flex; align-items: center; gap: 2px; }
 .jb-mrow > .menu-i { flex: 1 1 auto; min-width: 0; }
 .jb-mrow > .ibtn { color: var(--ink3); }
+.jb-mrow > .ibtn.on { color: var(--ink); background: var(--sub3); }
 
 /* ---------- In mail (J7, 37a–37c, D306): the JD chip and its popover, Applied before ---------- */
 /* The chip draws with the reader's head, under the sender's line and above the actions, with no

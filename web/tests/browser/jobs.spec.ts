@@ -8,7 +8,8 @@
 // Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
 // SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
-// D401: an item's email opening where the detail sits, and Esc leaving the item unanswered.
+// D401: an item's email opening where the detail sits, and Esc leaving the item unanswered. D402: an
+// application's email opening from Assign to…, the menu staying beside it.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
 // picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
 // each correction keeps, and that it sticks, the server's (server/src/jobs/tests/corrections.test.ts).
@@ -846,7 +847,7 @@ test('an update to assign (34a): Assign to… lists Humongous\'s two, a pick mov
     await menu.waitFor();
     assert.equal(await assign.getAttribute('aria-expanded'), 'true');
     assert.equal(await menu.locator('.jb-mlab').first().textContent(), 'Humongous Insurance');
-    assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
+    assert.deepEqual(await menu.locator('.menu-i').allTextContents(), [
       'Software Engineer II, ClaimsApplied Sep 30 · Applied', 'Software Engineer II (Java)Applied Sep 28 · Applied', 'Another application…', 'Not about a job',
     ]);
     // It grows from the button's bottom-left corner.
@@ -1057,6 +1058,67 @@ test('D401: From history\'s subject opens its email too, J / K staying among Fro
     await itemEmail(page).getByRole('button', {name: 'Back'}).click();
     await until('Back closes it', () => itemEmail(page).count(), count => count === 0);
     assert.equal(await navCount(setpoint), 3);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('D402: an application in Assign to… opens its first email beside the menu, which stays through a press and a scroll in the pane; Esc takes the menu, a subject shows the item\'s own, and picking closes it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    jobsChange(setpoint, ITEM_EMAILS);
+    jobsChange(setpoint, `UPDATE jobs_events SET message_id = (SELECT id FROM messages WHERE subject = 'Thanks for applying')
+      WHERE application_id = (SELECT id FROM jobs_applications WHERE title = 'Software Engineer II, Claims')`);
+    const page = await setpoint.page('target');
+    const unread = await unreadInbox(setpoint);
+    await page.goto(`${setpoint.base}/jobs`);
+    const item = need(page, 'Software Engineer II role');
+    const subject = item.locator('button.what');
+    const menu = page.getByRole('menu', {name: 'Assign to'});
+    const look = (role: string) => menu.locator('.jb-mrow', {hasText: role}).getByRole('menuitem', {name: 'Read its email'});
+    await item.getByRole('button', {name: 'Assign to…'}).click();
+    await look('Claims').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Thanks for applying'}).waitFor();
+    await menu.waitFor();
+    assert.equal(await itemEmail(page).locator('.jb-of').textContent(), 'Software Engineer II, Claims');
+    assert.equal(await look('Claims').getAttribute('class'), 'ibtn sm on');
+    assert.equal(await item.getAttribute('class').then(names => names?.includes('reading')), true, 'the item being assigned stays marked');
+    assert.equal(await subject.getAttribute('aria-pressed'), 'false', 'but it isn\'t its own email');
+    assert.equal(await unreadInbox(setpoint), unread);
+    assert.equal(new URL(page.url()).pathname, '/jobs');
+
+    // Reading doesn't cost the menu: a press and a scroll in the pane leave it open.
+    await itemEmail(page).locator('.rd-subj').click();
+    await itemEmail(page).locator('.rd-scroll').evaluate(scroller => scroller.scrollBy(0, 40));
+    await setpoint.idle();
+    assert.equal(await menu.count(), 1);
+    // Esc takes the menu first though the focus went to the pane, then the email.
+    await page.keyboard.press('Escape');
+    await until('the menu closed', () => menu.count(), count => count === 0);
+    assert.equal(await itemEmail(page).count(), 1);
+
+    // → reads the item under the cursor; one with no email says so and the pane stays.
+    await item.getByRole('button', {name: 'Assign to…'}).click();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowRight');
+    await until('the toast', () => toast(page).textContent(), text => text === 'No email left for Software Engineer II (Java)');
+    assert.equal(await itemEmail(page).locator('.rd-subj').textContent(), 'Thanks for applying');
+    await page.keyboard.press('Escape');
+    await until('the menu closed', () => menu.count(), count => count === 0);
+
+    // The item's subject shows its own email rather than closing the pane.
+    await subject.click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
+    assert.equal(await itemEmail(page).locator('.jb-of').count(), 0);
+    assert.equal(await subject.getAttribute('aria-pressed'), 'true');
+
+    await item.getByRole('button', {name: 'Assign to…'}).click();
+    await look('Claims').click();
+    await itemEmail(page).locator('.rd-subj', {hasText: 'Thanks for applying'}).waitFor();
+    await menu.getByRole('menuitem', {name: /Claims/}).click();
+    await until('the email closed with its item', () => itemEmail(page).count(), count => count === 0);
+    await until('the toast', () => toast(page).textContent(), text => text === 'Assigned to Software Engineer II, ClaimsUndo');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

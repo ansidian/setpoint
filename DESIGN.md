@@ -936,6 +936,16 @@ desktop and keeps it (D325).
     what has none. Pressing the subject closes an open menu. Answering closes the email with the
     item, and Undo leaves it closed. An application opening takes the pane. It isn't in the address,
     so a reload doesn't bring it back.
+- **An application's email** (D402, [Decided while building](#decided-while-building) #285): in
+  Assign to… and Another application…, an application's `mail`, or `→` on it, opens the first email
+  on its timeline that Gmail still has in the same pane, and the menu stays open, so one can be read,
+  then the next, before picking.
+  - The menu's `mail` stays held (`sub3`, `ink`), the pane's tools name the application (`work`, in
+    `ink3`), and the item keeps the open row's fill. Its subject then shows its own email.
+  - A press or a scroll in the pane leaves the menu. Esc takes the menu first, wherever the focus is,
+    then the pane. Beside a pane that opens under it, the menu moves with its button; in a narrow
+    window it floats over the email.
+  - One with no email left says so in the toast: "No email left for Software Engineer II (Java)".
 - **A JD to confirm** ("Lucerne Publishing · Junior Developer · Is this the posting?"):
   - The candidates as a `sub` group (radius 12, at most 560 px wide) of 32 px rows, padding 0 6 0
     12, 10 apart: `radio_button_unchecked` 16 in `ink3`; "Junior Developer" in `ink` and "· New
@@ -956,7 +966,7 @@ desktop and keeps it (D325).
   - Assign to… (312 wide) grows from the button's bottom-left corner: the company as a label
     ("HUMONGOUS INSURANCE", 26 px, 11.5 uppercase `ink3`), its applications as 44 px items with
     `work` and two lines ("Software Engineer II, Claims" over "Applied Sep 30 · Applied" in `ink3`
-    12), a divider, **Another application…** (`search`) and **Not about a job** (`block`). A pick or
+    12), each with a 26 px `mail` beside it, a divider, **Another application…** (`search`) and **Not about a job** (`block`). A pick or
     Esc closes it at once.
 - **An email to track** ("Can we set up a call this week? · Wide World Importers"): "An interview
   request with no application", then **Track this** (`add`), a solid small button, the page's only
@@ -3565,3 +3575,8 @@ it changes what's on screen.
     application uses, rather than sending the user to the Inbox to hunt for it by date. It's a look,
     not mail: the email alone, unread as it was, since Jobs never touches the Inbox's counts (D313),
     and Open in Inbox is the way to what mail does with it. It isn't in the address.
+
+285. **An application's email from Assign to…** (Andy, 2026-11-01; darma D402, SV-147). Telling which
+    of a company's applications an update belongs to takes reading what each one was, so each
+    application offers its email, the one that started it, and the menu stays open beside it. Andy
+    chose the email over the application's detail: it's the email he was hunting for in the Inbox.

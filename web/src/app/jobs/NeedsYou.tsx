@@ -4,7 +4,8 @@
 // - A JD to confirm: its candidates as a group, ↑ ↓ choosing and Enter picking while the item has the
 //   cursor; each candidate's arrow opens its posting without picking it; None of these last.
 // - An update to assign: Assign to… (the company's applications first, Another application…, Not
-//   about a job), and Not about a job.
+//   about a job), and Not about a job. Each application offers its email (D402), opening beside the
+//   menu, which stays, so the update can be told from them before it's assigned.
 // - An email to track: Track this (decision 69), which makes the application and opens it.
 // - From history: each row's two buttons (Choose… is a menu, #266), and Dismiss all with its Undo.
 // - An item with an email: its subject opens that email where the detail sits (D401). The page holds
@@ -68,7 +69,7 @@ function shownItems(items: NeedsYouItemOut[], answered: ReadonlyMap<number, Answ
   return list.filter(item => !gone.has(item.id)).map(item => ({key: needKey(item.id), id: item.id, item}));
 }
 
-export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, unfoldHistory = 0, reading = null, onPoint, onOpen, onRead}: {
+export function NeedsYou({items, history, rows, accounts, cursor, folded, now, timeZone, unfoldHistory = 0, reading = null, onPoint, onOpen, onRead, onLook}: {
   items: NeedsYouItemOut[];
   history: NeedsYouItemOut[];
   // The table's rows, for Assign to…'s applications.
@@ -81,13 +82,15 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   timeZone: string;
   // How many times Settings › Jobs's Show has asked for From history (J8): each ask unfolds it.
   unfoldHistory?: number;
-  // The item whose email is open beside it, if any.
-  reading?: number | null;
+  // The item an email is open for: its own, or (with `of`) that of an application in its Assign to….
+  reading?: {item: number; of: string | null} | null;
   onPoint: (key: string) => void;
   // Track this opens the application it made (34c).
   onOpen: (id: number) => void;
   // An item's subject: its email opens, or closes if it's the one open.
   onRead: (item: NeedsYouItemOut) => void;
+  // An application's email, for this item, from Assign to… (D402).
+  onLook: (item: NeedsYouItemOut, row: ApplicationRowOut) => void;
 }) {
   const [open, setOpen] = useState(unfoldHistory > 0);
   const [asked, setAsked] = useState(unfoldHistory);
@@ -103,6 +106,8 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const [answered, setAnswered] = useState<ReadonlyMap<number, Answered>>(new Map());
   const [gone, setGone] = useState<ReadonlySet<number>>(new Set());
   const [menu, setMenu] = useState<{spec: MenuSpec; anchor: MenuAnchor; owner: string} | null>(null);
+  // J / K to another item's email takes its menu away; a pane opening moves what the menu hangs from.
+  if (menu && reading && !menu.owner.endsWith(`:${reading.item}`)) setMenu(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(timer => window.clearTimeout(timer)), []);
   const later = (ms: number, run: () => void) => timers.current.push(window.setTimeout(run, ms));
@@ -172,7 +177,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const openMenu = (owner: string, spec: MenuSpec, element: HTMLElement) =>
     setMenu(current => (current?.owner === owner ? null : {spec, anchor: {element, corner: 'left'}, owner}));
   const assignTo = (item: NeedsYouItemOut, element: HTMLElement) =>
-    openMenu(`assign:${item.id}`, assignMenu(item, rows, today, {assign: row => assign(item, row), notAJob: () => notJob(item)}), element);
+    openMenu(`assign:${item.id}`, assignMenu(item, rows, today, {assign: row => assign(item, row), look: row => onLook(item, row), notAJob: () => notJob(item)}), element);
   const choose = (item: NeedsYouItemOut, element: HTMLElement) =>
     openMenu(`choose:${item.id}`, chooseMenu(item.candidates, {pick: candidate => pick(item, candidate), none: () => none(item)}), element);
 
@@ -200,7 +205,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
       <div>
         {live.length > 0 && <div className="gh first"><Icon name="pending_actions" size={14} />Needs you <span className="n">{live.length}</span></div>}
         {todays.map(({key, item, fold}) => (
-          <Item key={key} item={item} account={item.account_id !== null ? accounts.get(item.account_id) : undefined} cur={cursor === needKey(item.id)} reading={reading === item.id}
+          <Item key={key} item={item} account={item.account_id !== null ? accounts.get(item.account_id) : undefined} cur={cursor === needKey(item.id)} reading={reading?.item === item.id} own={reading?.of === null}
             answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
             now={now} timeZone={timeZone} today={today} onPoint={onPoint} on={handlers} />
         ))}
@@ -224,7 +229,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
               <div className={open ? 'jb-hist-wrap open' : 'jb-hist-wrap'} inert={!open}>
                 <div>
                   {olds.map(({key, item, fold}) => (
-                    <HistoryRow key={key} item={item} reading={reading === item.id} answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
+                    <HistoryRow key={key} item={item} reading={reading?.item === item.id} own={reading?.of === null} answered={answered.get(item.id)} fold={fold} menuOpen={menu?.owner.endsWith(`:${item.id}`) ?? false}
                       today={today} timeZone={timeZone} on={handlers} />
                   ))}
                 </div>
@@ -233,7 +238,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
           </div>
         )}
       </div>
-      {menu && <JobsMenu spec={menu.spec} anchor={menu.anchor} onClose={() => setMenu(null)} />}
+      {menu && <JobsMenu spec={menu.spec} anchor={menu.anchor} shifted={reading ? 1 : 0} onClose={() => setMenu(null)} />}
     </div>
   );
 }
@@ -259,11 +264,13 @@ function Done({outcome}: {outcome: Outcome}) {
   );
 }
 
-function Item({item, account, cur, reading, answered, fold, menuOpen, now, timeZone, today, onPoint, on}: {
+function Item({item, account, cur, reading, own, answered, fold, menuOpen, now, timeZone, today, onPoint, on}: {
   item: NeedsYouItemOut;
   account: AccountOut | undefined;
   cur: boolean;
   reading: boolean;
+  // That what's open is this item's own email, not one of its applications'.
+  own: boolean;
   answered: Answered | undefined;
   fold: 'in' | 'out' | null;
   menuOpen: boolean;
@@ -284,7 +291,7 @@ function Item({item, account, cur, reading, answered, fold, menuOpen, now, timeZ
       <span className="g"><Icon name={KIND_GLYPHS[item.kind]} size={16} /></span>
       <div className="l1">
         {item.message_id !== null
-          ? <button className="what" type="button" title="Read this email" aria-pressed={reading} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          ? <button className="what" type="button" title="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
           : <span className="what">{itemWhat(item)}</span>}
         <span className="from">· {jd ? 'Is this the posting?' : itemFrom(item)}</span>
       </div>
@@ -316,9 +323,10 @@ function Item({item, account, cur, reading, answered, fold, menuOpen, now, timeZ
   );
 }
 
-function HistoryRow({item, reading, answered, fold, menuOpen, today, timeZone, on}: {
+function HistoryRow({item, reading, own, answered, fold, menuOpen, today, timeZone, on}: {
   item: NeedsYouItemOut;
   reading: boolean;
+  own: boolean;
   answered: Answered | undefined;
   fold: 'in' | 'out' | null;
   menuOpen: boolean;
@@ -335,7 +343,7 @@ function HistoryRow({item, reading, answered, fold, menuOpen, today, timeZone, o
       <Icon name={KIND_GLYPHS[item.kind]} size={16} />
       {answered?.phase === 'done' ? <span className="what"><Done outcome={answered.outcome} /></span> : item.message_id !== null ? (
         <span className="what opens">
-          <button type="button" title="Read this email" aria-pressed={reading} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          <button type="button" title="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
           <span className="why"> · {historyWhy(item)}</span>
         </span>
       ) : <span className="what"><b>{itemWhat(item)}</b> · {historyWhy(item)}</span>}

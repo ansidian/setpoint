@@ -18,10 +18,10 @@ export function sameCompany(a: string, b: string): boolean {
 const newestFirst = (a: ApplicationRowOut, b: ApplicationRowOut) => b.applied_at.localeCompare(a.applied_at) || b.id - a.id;
 
 /** An application as a 44 px item: its role over "Applied Sep 30 · Applied" (or its company first, outside its company's group). */
-function applicationItem(row: ApplicationRowOut, today: string, withCompany: boolean, run: () => void): MenuItem {
+function applicationItem(row: ApplicationRowOut, today: string, withCompany: boolean, run: () => void, look?: () => void): MenuItem {
   return {
     kind: 'item', id: `a${row.id}`, icon: 'work', label: withCompany ? `${row.company} · ${titleOf(row)}` : titleOf(row),
-    sub: `Applied ${appliedWord(row.applied_on, today).replace(/^Today$/, 'today')} · ${markLabel(row)}`, run,
+    sub: `Applied ${appliedWord(row.applied_on, today).replace(/^Today$/, 'today')} · ${markLabel(row)}`, run, look,
   };
 }
 
@@ -36,13 +36,15 @@ function matchesQuery(row: ApplicationRowOut, query: string): boolean {
  * Another application… (and Merge with…): a search over every application but these, by company or
  * role; before a word is typed, the company's own first (when there's a company), then the six newest.
  */
-export function searchApplications(label: string, rows: ApplicationRowOut[], {except, company, today, placeholder, run}: {
+export function searchApplications(label: string, rows: ApplicationRowOut[], {except, company, today, placeholder, run, look}: {
   except: number[];
   company: string | null;
   today: string;
   placeholder: string;
   run: (row: ApplicationRowOut) => void;
+  look?: (row: ApplicationRowOut) => void;
 }): MenuSpec {
+  const item = (row: ApplicationRowOut, withCompany: boolean) => applicationItem(row, today, withCompany, () => run(row), look && (() => look(row)));
   const others = rows.filter(row => !except.includes(row.id)).sort(newestFirst);
   return {
     label, width: 330, entries: [],
@@ -51,13 +53,13 @@ export function searchApplications(label: string, rows: ApplicationRowOut[], {ex
       entries: query => {
         if (query.trim()) {
           const found = others.filter(row => matchesQuery(row, query)).slice(0, 8);
-          return found.length ? found.map(row => applicationItem(row, today, true, () => run(row))) : [{kind: 'label', label: 'No application matches'}];
+          return found.length ? found.map(row => item(row, true)) : [{kind: 'label', label: 'No application matches'}];
         }
         const own = company ? others.filter(row => sameCompany(row.company, company)) : [];
         const recent = others.filter(row => !own.includes(row)).slice(0, 6);
         return [
-          ...(own.length ? [{kind: 'label', label: company!} as const, ...own.map(row => applicationItem(row, today, false, () => run(row)))] : []),
-          ...(recent.length ? [{kind: 'label', label: 'Recent'} as const, ...recent.map(row => applicationItem(row, today, true, () => run(row)))] : []),
+          ...(own.length ? [{kind: 'label', label: company!} as const, ...own.map(row => item(row, false))] : []),
+          ...(recent.length ? [{kind: 'label', label: 'Recent'} as const, ...recent.map(row => item(row, true))] : []),
         ];
       },
     },
@@ -66,17 +68,17 @@ export function searchApplications(label: string, rows: ApplicationRowOut[], {ex
 
 /**
  * Assign to… (34a, 312 wide): the company's applications first under its name, then Another
- * application… and Not about a job.
+ * application… and Not about a job. Each application offers its email beside it (D402).
  */
-export function assignMenu(item: NeedsYouItemOut, rows: ApplicationRowOut[], today: string, on: {assign: (row: ApplicationRowOut) => void; notAJob: () => void}): MenuSpec {
+export function assignMenu(item: NeedsYouItemOut, rows: ApplicationRowOut[], today: string, on: {assign: (row: ApplicationRowOut) => void; look: (row: ApplicationRowOut) => void; notAJob: () => void}): MenuSpec {
   const own = rows.filter(row => sameCompany(row.company, item.company)).sort(newestFirst);
   return {
     label: 'Assign to', width: 312,
     entries: [
-      ...(own.length ? [{kind: 'label', label: item.company} as const, ...own.map(row => applicationItem(row, today, false, () => on.assign(row)))] : []),
+      ...(own.length ? [{kind: 'label', label: item.company} as const, ...own.map(row => applicationItem(row, today, false, () => on.assign(row), () => on.look(row)))] : []),
       ...(own.length ? [{kind: 'sep'} as const] : []),
       {kind: 'item', id: 'another', icon: 'search', label: 'Another application…',
-        submenu: () => searchApplications('Another application', rows, {except: own.map(row => row.id), company: null, today, placeholder: 'Search applications', run: on.assign})},
+        submenu: () => searchApplications('Another application', rows, {except: own.map(row => row.id), company: null, today, placeholder: 'Search applications', run: on.assign, look: on.look})},
       {kind: 'item', id: 'not-a-job', icon: 'block', label: 'Not about a job', run: on.notAJob},
     ],
   };

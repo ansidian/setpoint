@@ -10,6 +10,10 @@
 // closes the menu and gives focus back to what opened it, and Tab closes it. A submenu opens to the
 // left of its item at its height (to the right where there's no room), and under the pointer as it
 // rests on its item. A press outside, a scroll, the window resizing or losing focus closes it all.
+//
+// Assign to…'s applications each offer their email beside them (D402): `→` or the 26 px button opens it
+// in the pane and the menu stays, so one can be read, then the next, before picking. A press in that
+// pane (data-keeps-menu) leaves the menu open, and with the focus gone there, Esc still takes the menu.
 // It's drawn in the page's main landmark, beside the page, so a band or a pane that clips can't cut it.
 import type {ReactNode} from 'react';
 import {useEffect, useId, useLayoutEffect, useRef, useState} from 'react';
@@ -34,6 +38,8 @@ export interface MenuItem {
   title?: string;
   // A posting to look at first, without picking it: a 26 px open_in_new beside it (Choose…).
   peek?: string;
+  // An email to read first, without picking it or closing the menu: a 26 px `mail` beside it (Assign to…).
+  look?: () => void;
   run?: () => void;
   submenu?: () => MenuSpec;
 }
@@ -98,7 +104,13 @@ function placeBeside(item: HTMLElement, parent: HTMLElement, size: {width: numbe
   return {left, top, up: false, right};
 }
 
-export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuAnchor; onClose: () => void}) {
+export function JobsMenu({spec, anchor, shifted = 0, onClose}: {
+  spec: MenuSpec;
+  anchor: MenuAnchor;
+  // Changed as what it hangs from moves without a scroll (a pane opening beside it): it's placed again.
+  shifted?: number;
+  onClose: () => void;
+}) {
   const tree = useId();
   const latest = useRef(onClose);
   useEffect(() => {
@@ -117,6 +129,13 @@ export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuA
     const press = (event: PointerEvent) => {
       if (inside(event.target)) return;
       if ('element' in anchor && anchor.element.contains(event.target as Node)) return;
+      if (event.target instanceof Element && event.target.closest('[data-keeps-menu]')) return;
+      latest.current();
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || inside(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
       latest.current();
     };
     // A scroll that moves what it hangs from closes it; one that was already under way as it opened
@@ -138,11 +157,13 @@ export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuA
       latest.current();
     };
     document.addEventListener('pointerdown', press, true);
+    document.addEventListener('keydown', escape, true);
     window.addEventListener('scroll', away, true);
     window.addEventListener('resize', away);
     window.addEventListener('blur', away);
     return () => {
       document.removeEventListener('pointerdown', press, true);
+      document.removeEventListener('keydown', escape, true);
       window.removeEventListener('scroll', away, true);
       window.removeEventListener('resize', away);
       window.removeEventListener('blur', away);
@@ -150,13 +171,14 @@ export function JobsMenu({spec, anchor, onClose}: {spec: MenuSpec; anchor: MenuA
   }, [anchor, tree]);
 
   // Drawn in the page's main landmark, as the toast is, beside the page rather than inside what clips it.
-  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} onBack={null} onClose={close} />, document.querySelector('main') ?? document.body);
+  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} shifted={shifted} onBack={null} onClose={close} />, document.querySelector('main') ?? document.body);
 }
 
-function Level({spec, tree, place, onBack, onClose}: {
+function Level({spec, tree, place, shifted = 0, onBack, onClose}: {
   spec: MenuSpec;
   tree: string;
   place: (size: {width: number; height: number}) => {left: number; top: number; up: boolean; right: boolean};
+  shifted?: number;
   // A submenu's way back to its parent (← or Esc); null for the menu itself.
   onBack: (() => void) | null;
   onClose: (giveBack: boolean) => void;
@@ -170,14 +192,20 @@ function Level({spec, tree, place, onBack, onClose}: {
   const current = items[Math.min(cursor, items.length - 1)];
   const [sub, setSub] = useState<{id: string; spec: MenuSpec; item: HTMLElement} | null>(null);
   const [where, setWhere] = useState<{left: number; top: number; up: boolean; right: boolean} | null>(null);
+  // The item whose email was last opened from here.
+  const [looked, setLooked] = useState<string | null>(null);
+  const look = (item: MenuItem) => {
+    setLooked(item.id);
+    item.look?.();
+  };
 
   // Placed once measured, before it's drawn; then it takes the keys.
   useLayoutEffect(() => {
     const element = box.current;
     if (!element) return;
     setWhere(place({width: element.offsetWidth, height: element.offsetHeight}));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- placed once, where it opened
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- placed where it opened, and again only if that moved
+  }, [shifted]);
   const placed = where !== null;
   useLayoutEffect(() => {
     if (!placed) return;
@@ -230,6 +258,9 @@ function Level({spec, tree, place, onBack, onClose}: {
           } else if (event.key === 'ArrowRight' && !typing && current?.submenu) {
             event.preventDefault();
             openSub(current, itemElement(current.id));
+          } else if (event.key === 'ArrowRight' && !typing && current?.look) {
+            event.preventDefault();
+            look(current);
           } else if (event.key === 'ArrowLeft' && !typing && onBack) {
             event.preventDefault();
             onBack();
@@ -247,13 +278,13 @@ function Level({spec, tree, place, onBack, onClose}: {
             }} />
           </label>
         )}
-        <Entries entries={entries} current={current} sub={sub?.id ?? null} role={spec.search ? 'menu' : undefined} label={spec.label}
+        <Entries entries={entries} current={current} sub={sub?.id ?? null} looked={looked} role={spec.search ? 'menu' : undefined} label={spec.label}
           onPoint={(item, element) => {
             setCursor(items.indexOf(item));
             if (item.submenu) openSub(item, element);
             else closeSub();
           }}
-          onPick={pick} />
+          onPick={pick} onLook={look} />
       </div>
       {sub && (
         <Level key={sub.id} spec={sub.spec} tree={tree} place={size => placeBeside(sub.item, box.current!, size)} onClose={onClose}
@@ -263,14 +294,16 @@ function Level({spec, tree, place, onBack, onClose}: {
   );
 }
 
-function Entries({entries, current, sub, role, label, onPoint, onPick}: {
+function Entries({entries, current, sub, looked, role, label, onPoint, onPick, onLook}: {
   entries: MenuEntry[];
   current: MenuItem | undefined;
   sub: string | null;
+  looked: string | null;
   role: 'menu' | undefined;
   label: string;
   onPoint: (item: MenuItem, element: HTMLElement) => void;
   onPick: (item: MenuItem) => void;
+  onLook: (item: MenuItem) => void;
 }) {
   const list: ReactNode = entries.map((entry, index) => {
     if (entry.kind === 'sep') return <div key={`sep-${index}`} className="menu-sep" role="separator" />;
@@ -289,6 +322,15 @@ function Entries({entries, current, sub, role, label, onPoint, onPick}: {
         {entry.submenu && <Icon name="chevron_right" size={16} className="after" />}
       </button>
     );
+    if (entry.look) {
+      return (
+        <div key={entry.id} className="jb-mrow">
+          {button}
+          <button type="button" role="menuitem" className={looked === entry.id ? 'ibtn sm on' : 'ibtn sm'} aria-label="Read its email" title="Read its email · →" tabIndex={-1}
+            onClick={() => onLook(entry)}><Icon name="mail" size={16} /></button>
+        </div>
+      );
+    }
     if (!entry.peek) return button;
     return (
       <div key={entry.id} className="jb-mrow">

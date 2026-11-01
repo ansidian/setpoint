@@ -759,7 +759,7 @@ const ITEM: NeedsYouItemOut = {
 
 function needsYou(items: NeedsYouItemOut[], history: NeedsYouItemOut[], reading: number | null, onRead: (item: NeedsYouItemOut) => void) {
   return render(<NeedsYou items={items} history={history} rows={[]} accounts={new Map()} cursor={null} folded={false} now={Date.parse('2026-10-07T12:00:00Z')} timeZone={ZONE}
-    unfoldHistory={1} reading={reading} onPoint={() => {}} onOpen={() => {}} onRead={onRead} />);
+    unfoldHistory={1} reading={reading === null ? null : {item: reading, of: null}} onPoint={() => {}} onOpen={() => {}} onRead={onRead} onLook={() => {}} />);
 }
 
 test('D401: a subject with an email is a button that says so, on an item and on a From history row; one with no email isn\'t', async () => {
@@ -797,4 +797,50 @@ test('D401: a long subject ends in an ellipsis as the span did, inside its line'
   const box = subject.closest('.l1')!.getBoundingClientRect();
   expect(subject.getBoundingClientRect().right).toBeLessThanOrEqual(box.right);
   expect(getComputedStyle(subject).textOverflow).toBe('ellipsis');
+});
+
+test('D402: an application\'s email button, and → on it, run its look and leave the menu open; Enter still picks it', async () => {
+  const look = vi.fn();
+  const run = vi.fn();
+  const spec: MenuSpec = {label: 'Assign to', width: 312, entries: [
+    {kind: 'item', id: 'a1', label: 'Claims', sub: 'Applied Sep 30', look, run},
+    {kind: 'item', id: 'not', label: 'Not about a job', run: () => {}},
+  ]};
+  const anchor = document.body.appendChild(document.createElement('button'));
+  const onClose = vi.fn();
+  await render(<JobsMenu spec={spec} anchor={{element: anchor, corner: 'left'}} onClose={onClose} />);
+  const email = page.getByRole('menuitem', {name: 'Read its email'});
+  await email.click();
+  expect(look).toHaveBeenCalledTimes(1);
+  expect(onClose).not.toHaveBeenCalled();
+  await expect.poll(() => email.element().className).toContain('on');
+  (document.querySelector('.jb-menu') as HTMLElement).focus();
+  await userEvent.keyboard('{ArrowRight}');
+  expect(look).toHaveBeenCalledTimes(2);
+  expect(run).not.toHaveBeenCalled();
+  await userEvent.keyboard('{Enter}');
+  expect(run).toHaveBeenCalledTimes(1);
+  expect(onClose).toHaveBeenCalledTimes(1);
+  anchor.remove();
+});
+
+test('D402: a press in what keeps the menu leaves it open, and Esc with the focus there closes it before the page sees the key', async () => {
+  const beside = document.body.appendChild(document.createElement('div'));
+  beside.dataset.keepsMenu = '';
+  beside.textContent = 'The email';
+  const pageKey = vi.fn();
+  document.addEventListener('keydown', pageKey);
+  const anchor = document.body.appendChild(document.createElement('button'));
+  const onClose = vi.fn();
+  await render(<JobsMenu spec={{label: 'Assign to', width: 312, entries: [{kind: 'item', id: 'a', label: 'Claims', run: () => {}}]}} anchor={{element: anchor, corner: 'left'}} onClose={onClose} />);
+  await expect.element(page.getByRole('menu', {name: 'Assign to'})).toBeVisible();
+  await userEvent.click(beside);
+  expect(onClose).not.toHaveBeenCalled();
+  (document.activeElement as HTMLElement | null)?.blur();
+  await userEvent.keyboard('{Escape}');
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(pageKey).not.toHaveBeenCalled();
+  document.removeEventListener('keydown', pageKey);
+  beside.remove();
+  anchor.remove();
 });
