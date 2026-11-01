@@ -318,6 +318,7 @@ day. There is no Unread or All to choose between, and going to the Inbox always 
   gutter (12), sender or organisation (200, ellipsis), subject then " · " and the summary in `ink3`
   (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, dropped
   only while the list is filtered to one account, #207), the age or time (72, right, `ink3` 12).
+  Past a row 1480 wide, the spare width sits after the age (#282).
   Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
   account never does, the kind becomes a subheading (#237), and the sender narrows to a quarter of
@@ -708,7 +709,8 @@ navigation.
     | text, 18 apart, padding 16 16 16 12; the image 320 × 180; the headline 19 at 1.3, −.01em, max
     760; the summary 13.5 / 1.5, three lines, max 680 (#127).
 - **Story row:**
-  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below.
+  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below. Past a row
+    1480 wide, the spare width sits after the thumbnail (#282).
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
   - Under it, the summary in `ink3` 12.5, one line, ellipsis. In a list under 480 px the headline
     wraps to two 18 px lines instead and the summary goes; the row keeps its height (#128).
@@ -980,7 +982,10 @@ desktop and keeps it (D325).
 ### The table
 
 - **Columns,** with the detail closed (34a): a 12 px gutter | Company 220 | Role | Platform 120 |
-  Applied 72 | Status 300 | JD 128, 12 apart, padding 0 16 0 12.
+  Applied 72 | Status 300 | JD 128, 12 apart, padding 0 16 0 12. Role is as wide as the longest
+  title among all applications plus 32, or what's left when that doesn't fit, and any spare width
+  sits past JD, so a filter or a search doesn't move the columns
+  ([Decided while building](#decided-while-building) #282).
 - **Beside the detail** (32): Platform drops and JD is a glyph alone, as mail drops its chips beside
   the reader: 12 | 156 | Role | 60 | 214 | 18. It re-lays in the frame the pane opens, with no width
   tween, and Platform comes back in the frame it closes.
@@ -3511,3 +3516,14 @@ it changes what's on screen.
     first with no fold. A chip taken off turns its suggestion down for those words for as long as the
     page stays, Esc or no Esc. Every suggestion offered is logged in `search_suggestions`, with what
     the model said and when it was shown and accepted, beside the chip removals.
+
+282. **Very wide windows keep a row's columns together** (Andy, 2026-11-01; darma D397, SV-141). Jobs's Role
+    stops at its longest title plus 32, at every width with the full set of columns, so the table
+    changes at the design target too, with blank space past JD; the title is measured across all
+    applications, so filtering or searching doesn't move a column. With the narrower columns (a
+    table under 1100, or beside the detail there) Role still takes what's left. Widths are automatic
+    for now, with no dragging. An Inbox or News row's columns stop at 1480 wide (`layout.listRowMax`),
+    the row's width at 1728, and the spare width is its right padding, so both pages are unchanged
+    up to there and a row's fill and hairline still run the full width. That's a cap rather than a
+    fit to the text, since a subject or a headline with its summary has no useful longest line, and
+    the text column stays flexible so the columns after it line up from row to row.

@@ -26,7 +26,7 @@
 // place by the sort and settles from `sub2` over 900 ms; a row an email moves on crossfades its status
 // and settles the same way. In a filtered view a row stays put until the next visit.
 import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, JobsPageOut, JobsSearchOut} from '@setpoint/shared';
-import type {MouseEvent as ReactMouseEvent} from 'react';
+import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone as userZone} from '../../api/auth.ts';
 import {updateCached, useResource} from '../../api/client.ts';
@@ -57,7 +57,7 @@ import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
 import {HistorySkeleton, JobsLines, JobsOff} from './States.tsx';
-import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
+import {HeaderRow, rowKey, Rows, takenAway, useRoleFit} from './Table.tsx';
 import {DEFAULT_SORT, historyRuns, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import './jobs.css';
@@ -147,6 +147,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   // A filtered view holds its rows for the visit: one an email moves out of the filter stays put.
   const rows = useMemo(() => page?.rows ?? [], [page]);
+  const roleFit = useRoleFit(rows);
   const [hold, setHold] = useState<{filter: Filter; ids: ReadonlySet<number>}>({filter: 'all', ids: new Set()});
   const held = useMemo(() => (hold.filter === filter ? hold.ids : new Set<number>()), [hold, filter]);
   // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
@@ -375,7 +376,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
         <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
           {page?.enabled && !q && <JobsLines page={page} now={now} timeZone={zone} />}
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
-            <div className="jb-scroll jb-tbl" ref={scroller}>
+            <div className="jb-scroll jb-tbl" ref={scroller} style={{'--role-fit': roleFit} as CSSProperties}>
               <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
                 unfoldHistory={historyAsks.count} onPoint={onPoint} onOpen={openAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />

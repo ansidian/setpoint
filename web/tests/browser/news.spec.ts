@@ -241,6 +241,28 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
   }
 });
 
+test('SV-141: a row reaches its end at the design target, and past its most a very wide window leaves the spare width after the thumbnail, every row\'s lined up', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const list = (page: Page) => rested(() => page.evaluate(() => {
+      const all = [...document.querySelectorAll('.nw-row')];
+      const thumbnails = [...new Set(all.flatMap(row => [...row.querySelectorAll('img, .nw-hz')]).map(image => image.getBoundingClientRect().right))];
+      return {thumbnails, right: all[0]!.getBoundingClientRect().right - 16 * (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom!};
+    }));
+    const target = await setpoint.page('target');
+    await target.goto(`${setpoint.base}/news`);
+    const atTarget = await list(target);
+    assert.deepEqual(atTarget.thumbnails, [atTarget.right], 'the thumbnails at the row\'s end');
+    const wide = await setpoint.page({width: 2655, height: 1000});
+    await wide.goto(`${setpoint.base}/news`);
+    const atWide = await list(wide);
+    assert.equal(atWide.thumbnails.length, 1, `the thumbnails in one column: ${atWide.thumbnails.join()}`);
+    assert.ok(atWide.right - atWide.thumbnails[0]! > 300, `spare width after the thumbnail: ${atWide.right - atWide.thumbnails[0]!}`);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph in a caution tile; as a lead, before its headline', async () => {
   const setpoint = await startSetpoint();
   try {

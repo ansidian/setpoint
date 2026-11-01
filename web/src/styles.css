@@ -232,7 +232,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    page, drawn as an inset fill so they fade over 120 ms as every fill does. */
 .gh { box-shadow: inset 0 0 0 100vmax transparent; }
 .gh.collapsed.cur { box-shadow: inset 0 0 0 100vmax var(--sub2); }
-.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
+.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 max(16px, calc(100% - var(--listRowMax))) 0 12px; color: var(--ink2); position: relative; flex: none; }
 @media (hover: hover) { .row:hover { background: var(--sub); } }
 .row.cur { background: var(--sub2); }
 .ud { width: 12px; flex: none; display: grid; place-items: center; }

@@ -8,7 +8,7 @@ import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred} from './fakeAlfred.ts';
-import {cleanUp, matchGolden, readSecurity, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, matchGolden, readSecurity, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -34,6 +34,29 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
     await settle(page);
     await matchGolden(page, '01-inbox-a-typical-morning');
     assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-141: a row reaches its end at the design target, and past its most a very wide window leaves the spare width after the age, every row\'s account and age lined up', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const list = (page: Page) => rested(() => page.locator('.list.all').evaluate(element => {
+      const all = [...element.querySelectorAll('.row')];
+      const edge = (cell: string) => [...new Set(all.map(row => row.querySelector(cell)!.getBoundingClientRect().right))];
+      return {accounts: edge('.ac'), ages: edge('.age'), right: all[0]!.getBoundingClientRect().right - 16 * (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom!};
+    }));
+    const target = await setpoint.page('target');
+    await target.goto(`${setpoint.base}/inbox`);
+    const atTarget = await list(target);
+    assert.deepEqual(atTarget.ages, [atTarget.right], 'the age at the row\'s end');
+    const wide = await setpoint.page({width: 2655, height: 1000});
+    await wide.goto(`${setpoint.base}/inbox`);
+    const atWide = await list(wide);
+    assert.equal(atWide.accounts.length, 1, 'the accounts in one column');
+    assert.equal(atWide.ages.length, 1, 'the ages in one column');
+    assert.ok(atWide.right - atWide.ages[0]! > 300, `spare width after the age: ${atWide.right - atWide.ages[0]!}`);
   } finally {
     await setpoint.stop();
   }

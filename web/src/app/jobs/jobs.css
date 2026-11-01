@@ -120,8 +120,9 @@
 /* ---------- The table (D309, D314) ---------- */
 /* Its columns with the detail closed (34a); a table narrower than they need (beside the detail, as at
    board 32, or a narrow window) drops Platform and draws JD as a glyph, as mail drops its chips beside
-   the reader. It re-lays in the frame the pane opens, with no width tween. */
-.jb-tbl { --cols: 12px 220px minmax(0, 1fr) 120px 72px 300px 128px; --gap: 12px; }
+   the reader. It re-lays in the frame the pane opens, with no width tween. Role stops at its longest
+   title and the spare width sits past JD (--role-fit, Table.tsx › useRoleFit; SV-141). */
+.jb-tbl { --cols: 12px 220px minmax(0, var(--role-fit, 1fr)) 120px 72px 300px 128px; --gap: 12px; }
 @container jbcol (max-width: 1099.98px) {
   .jb-tbl { --cols: 12px 156px minmax(0, 1fr) 60px 214px 18px; }
   .jb-tbl :is(.jb-th, .jb-tr) > .c-plat, .jb-tr .jd .t { display: none; }

@@ -1,7 +1,7 @@
 // Jobs (J5, J6; DESIGN.md › Jobs, boards 32–36, 38b, 40) against the seed's sample (BRIEF.md › Sample
 // data › Jobs): the shell's item and `4`, the two numbers and the table, Needs you with From history
 // unfolding, an application's detail, J / K, the full posting, Look it up on Trey Research, search
-// (humongous, kubernetes by its JD, wide world loosely), the status filter, a narrow window at 1024,
+// (humongous, kubernetes by its JD, wide world loosely), the status filter, Role's width (SV-141), a narrow window at 1024,
 // Esc's order, an event opening its email and one whose email is gone, a `jobs` event landing a row,
 // and board 40's Light. J6: each Needs you kind answered (a pick, None of these, Assign to…, Not about
 // a job, Track this, Choose…, Dismiss all) and each correction (the title, the company, Set status and
@@ -532,6 +532,50 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     await until('the email', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === `/inbox/${interview.message_id}`);
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-141: Role stops at its longest title, whatever the window, the columns stay beside it and spare width sits past JD; a filter doesn\'t move them, and at 1024 the row still fills', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const columns = (page: Page) => rested(() => page.evaluate(() => {
+      const all = [...document.querySelectorAll('.jb-scroll .jb-tr')];
+      const first = all[0]!;
+      const box = (cell: string) => first.querySelector(cell)!.getBoundingClientRect();
+      const inks = all.map(each => {
+        const range = document.createRange();
+        range.selectNodeContents(each.querySelector('.ro')!);
+        return range.getBoundingClientRect().right;
+      });
+      return {
+        longest: Math.max(...inks),
+        role: box('.ro').right,
+        platform: box('.pl').left,
+        applied: box('.ap').left,
+        jd: box('.jd').right,
+        row: first.getBoundingClientRect().right,
+        padding: parseFloat(getComputedStyle(first).paddingRight),
+        clipped: all.filter(each => each.querySelector('.ro')!.scrollWidth > each.querySelector('.ro')!.clientWidth).length,
+      };
+    }));
+    for (const [width, zoom] of [[1677, 1], [2655, 1.25]] as const) {
+      const page = await setpoint.page({width, height: 1000});
+      await page.goto(`${setpoint.base}/jobs`);
+      const at = await columns(page);
+      assert.equal(at.clipped, 0, 'every title whole');
+      const room = at.role - at.longest;
+      assert.ok(room >= 16 * zoom && room <= 48 * zoom, `Role keeps a comfortable margin past its longest title, no more: ${room}`);
+      assert.ok(at.row - at.jd > 200, `spare width past JD: ${at.row - at.jd}`);
+      await page.locator('.jb-status button', {hasText: 'In process'}).click();
+      await until('In process\'s rows', () => rows(page).count(), count => count === 3);
+      assert.equal((await columns(page)).platform, at.platform, 'the filter leaves the columns where they are');
+    }
+    const narrow = await setpoint.page({width: 1024, height: 768});
+    await narrow.goto(`${setpoint.base}/jobs`);
+    const fitted = await columns(narrow);
+    assert.equal(fitted.jd, fitted.row - fitted.padding, 'at 1024 the columns still fill the row');
   } finally {
     await setpoint.stop();
   }

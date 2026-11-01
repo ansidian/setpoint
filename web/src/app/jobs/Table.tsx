@@ -7,7 +7,7 @@
 // right-click opens its actions at the pointer (#268).
 import type {ApplicationRowOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
-import {useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {foldIn, foldOut, useFold} from '../fold.ts';
@@ -16,6 +16,33 @@ import {appliedWord, jdCell, markLabel, markOf, marks, nextSort, recedes, setByY
 import type {Sort, SortKey} from './words.ts';
 
 export const rowKey = (id: number) => `r:${id}`;
+
+// What Role keeps past its longest title, so that title doesn't crowd Platform.
+const ROLE_ROOM = 32;
+
+/**
+ * Role's column: the longest title drawn in the table's font, and ROLE_ROOM. It reads every
+ * application rather than the rows shown, so a filter or a search doesn't move the columns.
+ */
+export function useRoleFit(rows: ApplicationRowOut[]): string | undefined {
+  const font = useMemo(() => `13px ${getComputedStyle(document.body).fontFamily}`, []);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void document.fonts?.load(font).then(() => live && setLoaded(true), () => {});
+    return () => {
+      live = false;
+    };
+  }, [font]);
+  return useMemo(() => {
+    const context = document.createElement('canvas').getContext('2d');
+    if (!context || !rows.length) return undefined;
+    context.font = font;
+    return `${Math.ceil(Math.max(...rows.map(row => context.measureText(titleOf(row)).width))) + ROLE_ROOM}px`;
+    // `loaded` measures again once the webfont is in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, font, loaded]);
+}
 
 /**
  * The applications a correction is taking away just now, so their rows fold out rather than vanish;
