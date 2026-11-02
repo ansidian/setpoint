@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, still, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -160,6 +160,10 @@ test('inbox-09, -10: a pin out of the shelf\'s sight says so and lands on the sh
 
     // With the shelf in view, a pin needs no toast. Its first row can still be the unpinned one
     // folding away, which is dropped mid-scroll, so the scroll goes to one that stays (stress caught it).
+    // The Undo's lists are in and its fold done first: one landing after the scroll moved the list
+    // back up, the shelf below sight, so the pin rightly said Pinned (1 run in 7).
+    await setpoint.idle();
+    await still(page);
     const exams = page.locator('.row:not(.shelf)', {hasText: 'Contoso University'}).first();
     await page.locator('.row.shelf:not(.leaving)').first().scrollIntoViewIfNeeded();
     await point(exams);
