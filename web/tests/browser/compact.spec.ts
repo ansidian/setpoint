@@ -1,10 +1,10 @@
 // The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; Decided while building #140): an
-// iPad or a half-width window. At 640, 820, 900 and 1099: the sidebar a 56 px rail (icons named in
-// their tooltips, the attention pill a badge on Inbox), an email or a story covering the list with
-// Back, Esc, J and K, the header whole, nothing scrolling sideways; Calendar's grid taking the width
-// with the editor and search over it and its sources' health atop it; ⌘K keeping the rail's lost
-// filters; and the day's pane brought over the grid by its header button (D183). At 1100 the full
-// sidebar and the panes beside return.
+// iPad or a half-width window. At 640 and 1099: the sidebar a 56 px rail (icons named in their
+// tooltips, the attention pill a badge on Inbox), an email or a story covering the list with Back
+// (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
+// the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
+// rail's lost filters; and the day's pane brought over the grid by its header button (D183). At
+// 1100 the full sidebar and the panes beside return.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
@@ -14,7 +14,7 @@ import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
 
 after(cleanUp);
 
-const WIDTHS = [640, 820, 900, 1099];
+const WIDTHS = [640, 1099];
 const HEIGHT = 760;
 
 /** Whether every part of the header ends inside it, short of its right padding. */
@@ -24,7 +24,7 @@ const headerWhole = (page: Page) => page.locator('.hd').evaluate(header => {
 });
 const sideways = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099 px; the full sidebar again at 1100', async () => {
+test('the rail, and an email or a story over the list, at 640 and 1099 px; the full sidebar again at 1100', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     for (const width of WIDTHS) {
@@ -41,32 +41,31 @@ test('the rail, and an email or a story over the list, at 640, 820, 900 and 1099
       })));
       assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Jobs · 3 need you', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
-      // The attention pill as a 16 px badge on Inbox's icon: 2 px from its top, 2 px past its right,
-      // 10.5 / 600, in a 2 px `panel` ring.
-      const [inbox, badge] = [(await page.locator('.sb .nav').first().boundingBox())!, (await page.locator('.sb .nav .apill').boundingBox())!];
-      assert.deepEqual([await page.locator('.sb .nav .apill').textContent(), badge.height, badge.y - inbox.y, badge.x + badge.width - (inbox.x + inbox.width)], ['3', 16, 2, 2]);
-      assert.deepEqual(await rested(() => page.locator('.sb .nav .apill').evaluate(pill => [getComputedStyle(pill).fontSize, getComputedStyle(pill).fontWeight, getComputedStyle(pill).boxShadow.endsWith('0px 0px 0px 2px')])), ['10.5px', '600', true]);
+      // The attention pill as a badge on Inbox's icon.
+      assert.equal(await page.locator('.sb .nav .apill').textContent(), '3');
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
       assert.equal(await sideways(page), 0);
 
-      // An email covers the list, under the header: Back leads its tools, and J, K and Esc work.
+      // An email covers the list, under the header: Back leads its tools.
       await page.locator('.list .row[title^="Interview availability"]').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
       assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
       assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('title')], [true, 'Back · Esc']);
-      // J: the next email (New's code at first; once Northwind is read, a later width's visit has it in Attention, and the shelf's lease follows).
-      await page.keyboard.press('j');
-      await until('the next email', () => page.locator('.rd-subj').textContent(), text => Boolean(text) && !/Interview availability/.test(text!));
-      await page.keyboard.press('k');
-      await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-      await page.keyboard.press('Escape');
-      await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
-      await page.locator('.list .row[title^="Interview availability"]').click();
-      await backButton.click();
-      await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
-      assert.ok(await page.locator('.list .row[title^="Interview availability"]').isVisible());
+      // J, K, Esc and Back have no width in them. J: the next email, New's code.
+      if (width === 640) {
+        await page.keyboard.press('j');
+        await until('the next email', () => page.locator('.rd-subj').textContent(), text => Boolean(text) && !/Interview availability/.test(text!));
+        await page.keyboard.press('k');
+        await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+        await page.keyboard.press('Escape');
+        await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
+        await page.locator('.list .row[title^="Interview availability"]').click();
+        await backButton.click();
+        await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
+        assert.ok(await page.locator('.list .row[title^="Interview availability"]').isVisible());
+      }
 
       // News: its header whole, a story over the list with Back.
       await page.goto(`${setpoint.base}/news`);

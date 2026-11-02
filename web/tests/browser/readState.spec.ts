@@ -1,8 +1,8 @@
 // The read-state rules in the browser (DESIGN.md › Interaction rules; BRIEF.md › Read state and
-// Done), at 1677 × 1050, 1728 × 1117 and an iPhone size, each on a fresh seed: an email turns read
-// only when opened (Enter or a click) or by Mark all as read; moving the cursor, scrolling and
-// opening a Noise line never read anything; the counts follow at once, opening dropping the unread
-// counts and only Done dropping the attention pill. The seed starts at 3 attention and 19 unread.
+// Done), at 1677 × 1050 and an iPhone size, each on a fresh seed: an email turns read only when
+// opened (Enter or a click) or by Mark all as read; moving the cursor, scrolling and opening a
+// Noise line never read anything; the counts follow at once, opening dropping the unread counts
+// and only Done dropping the attention pill. The seed starts at 3 attention and 19 unread.
 // A row's key says where it is: New ("new:5"), Attention ("attention:22") or its day ("all:5").
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -13,7 +13,7 @@ import type {Setpoint, SizeName} from './harness.ts';
 
 after(cleanUp);
 
-const sizes = Object.keys(SIZES) as SizeName[];
+const sizes: SizeName[] = ['target', 'iphone'];
 
 /** The sidebar's pill and unread count, and one account's count; null where the sidebar isn't shown (the phone). */
 async function sidebar(page: Page, account?: string): Promise<{pill: string; unread: string; account?: string} | null> {

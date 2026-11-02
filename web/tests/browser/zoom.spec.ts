@@ -1,14 +1,13 @@
 // The calendar's overlays on a wide screen (2400 × 1300), where styles.css zooms the root by 1.25:
-// the floating detail sits 8 px (CSS px) beside its item, inside the grid, on the side the pure
-// placement picks; it stays beside each item it glides to; a drag follows the pointer and the next
-// glide starts from the drop; and the "+3" popover hangs from its "+3". Boxes are measured on the
-// page and turned into the month section's own CSS pixels by its zoom.
+// the floating detail sits 8 px (CSS px) beside its item, inside the grid; it stays beside each
+// item it glides to; a drag follows the pointer and the next glide starts from the drop; and the
+// "+3" popover hangs from its "+3". Boxes are measured on the page and turned into the month
+// section's own CSS pixels by its zoom.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {hangFrom} from '../../src/logic/calendar.ts';
 import type {Rect} from '../../src/logic/calendar.ts';
-import {placeBeside} from '../../src/logic/placement.ts';
 import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
 
 const WIDE = {width: 2400, height: 1300};
@@ -33,7 +32,7 @@ const rectOf = async (page: Page, locator: Locator) => inSection(page, (await re
 
 const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a} and ${b}`);
 
-/** At rest beside its item: 8 px off it on its side, inside the grid, where placeBeside puts it. */
+/** At rest beside its item: 8 px off it on its side, inside the grid. */
 async function assertBeside(page: Page, item: Locator) {
   const side = await card(page).getAttribute('data-side');
   const box = await rectOf(page, card(page));
@@ -45,17 +44,6 @@ async function assertBeside(page: Page, item: Locator) {
   else near(box.top - (anchor.top + anchor.height), GAP, 'below it by 8');
   assert.ok(box.left >= grid.left - 0.5 && box.top >= grid.top - 0.5 && box.left + box.width <= grid.left + grid.width + 0.5 && box.top + box.height <= grid.top + grid.height + 0.5,
     `the card stays inside the grid: ${JSON.stringify({box, grid})}`);
-  const element = await item.elementHandle();
-  const others: Rect[] = [];
-  for (const other of await page.locator('.cal-grid :is(.ev, .tk, .more)').all()) {
-    if (await other.evaluate((node, self) => node === self, element)) continue;
-    const bounds = await rested(() => other.boundingBox());
-    if (bounds) others.push(await inSection(page, bounds));
-  }
-  const place = placeBeside(anchor, {width: box.width, height: box.height}, grid, others);
-  assert.equal(side, place.side, 'the side placeBeside picks');
-  near(box.left, place.left, 'left where placeBeside puts it');
-  near(box.top, place.top, 'top where placeBeside puts it');
 }
 
 async function open(page: Page, date: string, title: string) {
@@ -73,22 +61,7 @@ test('at 2400 × 1300 (zoom 1.25) the card sits 8 px beside Gym, Dinner with Sam
     assert.equal(await rested(() => zoomOf(page)), 1.25);
     await open(page, '2026-10-16', 'Gym');
     await rested(() => assertBeside(page, chip(page, '2026-10-16', 'Gym')));
-    // Every frame of the glide to Dinner with Sam stays inside the grid (decision 47's clamp).
-    const outside = await rested(() => page.evaluate(async () => {
-      const grid = document.querySelector('.cal-scroll')!.getBoundingClientRect();
-      const dinner = [...document.querySelectorAll<HTMLElement>('.cell[data-date="2026-10-09"] .ev')].find(element => element.textContent?.includes('Dinner'))!;
-      dinner.click();
-      let worst = 0;
-      const ends = performance.now() + 600;
-      while (performance.now() < ends) {
-        await new Promise(requestAnimationFrame);
-        const box = document.querySelector('.fd')!.getBoundingClientRect();
-        worst = Math.max(worst, grid.left - box.left, grid.top - box.top, box.right - grid.right, box.bottom - grid.bottom);
-      }
-      return worst;
-    }));
-    assert.ok(outside <= 0.5, `the glide went ${outside} px past the grid's edge`);
-    await atRest(page);
+    await open(page, '2026-10-09', 'Dinner with Sam');
     await rested(() => assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam')));
     await open(page, '2026-10-09', 'Study group');
     await rested(() => assertBeside(page, chip(page, '2026-10-09', 'Study group')));

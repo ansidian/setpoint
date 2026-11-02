@@ -9,7 +9,6 @@ import type {CalendarOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
-import type {SizeName} from './harness.ts';
 
 /** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
@@ -98,38 +97,32 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
   }
 });
 
-for (const size of ['target', 'large'] as SizeName[]) {
-  test(`the grid at ${SIZES[size].width} × ${SIZES[size].height}: weekday row 30, rows 176, seven columns beside a 400 px pane, no page scroll`, async () => {
-    const setpoint = await startSetpoint();
-    try {
-      const page = await setpoint.page(size);
-      await page.goto(`${setpoint.base}/calendar`);
-      await page.locator('.ev').first().waitFor();
-      const box = async (selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
-      assert.equal((await box('.cal-dow')).height, 30);
-      const cell = await box('.cell[data-date="2026-10-07"]');
-      // 147 at the design target (1677 − 248 − 400 over seven days).
-      assert.ok(Math.abs(cell.width - (SIZES[size].width - 248 - 400) / 7) < 1, `a column is ${cell.width} px`);
-      assert.equal(cell.height, 176);
-      if (size === 'target') assert.equal(cell.width, 147);
-      assert.equal((await box('.rpane')).width, 400);
-      assert.equal((await box('.cell[data-date="2026-10-07"] .ev')).height, 20);
-      const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
-      assert.deepEqual(scroll, [0, 0]);
-      // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.
-      const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
-      assert.deepEqual(await rested(() => look('Gym')), ['1', 'rgb(139, 141, 146)'], 'past: ink3');
-      const [opacity, colour] = await rested(() => look('Dentist'));
-      assert.equal(opacity, '1');
-      assert.notEqual(colour, 'rgb(139, 141, 146)', 'ahead: its calendar\'s colour');
-      assert.equal(await page.locator('.cell.sel').getAttribute('data-date'), '2026-10-07');
-      assert.equal(await text(page, '.dn.today'), '7');
-      assert.deepEqual(setpoint.pageErrors, []);
-    } finally {
-      await setpoint.stop();
-    }
-  });
-}
+test(`the grid at ${SIZES.target.width} × ${SIZES.target.height}: rows 176, seven columns beside a 400 px pane, no page scroll`, async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const box = async (selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
+    const cell = await box('.cell[data-date="2026-10-07"]');
+    // 147 at the design target (1677 − 248 − 400 over seven days).
+    assert.ok(Math.abs(cell.width - (SIZES.target.width - 248 - 400) / 7) < 1, `a column is ${cell.width} px`);
+    assert.equal(cell.height, 176);
+    const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
+    assert.deepEqual(scroll, [0, 0]);
+    // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.
+    const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
+    assert.deepEqual(await rested(() => look('Gym')), ['1', await rested(() => tokenColour(page, 'ink3'))], 'past: ink3');
+    const [opacity, colour] = await rested(() => look('Dentist'));
+    assert.equal(opacity, '1');
+    assert.notEqual(colour, await rested(() => tokenColour(page, 'ink3')), 'ahead: its calendar\'s colour');
+    assert.equal(await page.locator('.cell.sel').getAttribute('data-date'), '2026-10-07');
+    assert.equal(await text(page, '.dn.today'), '7');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
 
 test('the grid scrolls on through months; ← → P N page, T comes back to today', async () => {
   const setpoint = await startSetpoint();

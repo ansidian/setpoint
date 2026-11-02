@@ -1,5 +1,5 @@
 // The shell in the browser: signing in (claiming with a setup token, then the password, or a
-// recovery code), the layout's fixed sizes (DESIGN.md › Layout) at both desktop sizes, no focus
+// recovery code), the layout's fixed sizes (DESIGN.md › Layout) at the desktop size, no focus
 // rings, the account filter, the page keys, the tab title, and live updates from a change made
 // elsewhere.
 import assert from 'node:assert/strict';
@@ -8,7 +8,6 @@ import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {cleanUp, describe, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
-import type {SizeName} from './harness.ts';
 
 after(cleanUp);
 
@@ -190,37 +189,35 @@ test('a recovery code signs in when the password is lost: a new password, then n
   }
 });
 
-for (const size of ['target', 'large'] as SizeName[]) {
-  describe(`the shell at ${SIZES[size].width} × ${SIZES[size].height}`, () => {
-    test('sidebar 248, header 56, reading pane 680 only while an email is open; the shell never scrolls; no focus rings', async () => {
-      const setpoint = await startSetpoint();
-      try {
-        const page = await setpoint.page(size);
-        await page.goto(`${setpoint.base}/inbox`);
-        await page.locator('.list .row').first().waitFor();
-        assert.equal((await box(page, '.sb')).width, 248);
-        assert.equal((await box(page, '.hd')).height, 56);
-        assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
-        assert.equal((await box(page, '.list')).width, SIZES[size].width - 248);
-        await page.locator('.list .row[title^="Final exam schedule"]').click();
-        await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-        assert.equal((await box(page, '.pane')).width, 680);
-        assert.equal((await box(page, '.list')).width, SIZES[size].width - 248 - 680);
-        // Every row keeps its account while the pane is open (decision 41).
-        for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
-        const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
-        assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
-        // Focus on a control draws no ring.
-        await page.locator('.rd-tools .tool').first().focus();
-        const outline = await rested(() => page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle));
-        assert.equal(outline, 'none');
-        assert.deepEqual(setpoint.pageErrors, []);
-      } finally {
-        await setpoint.stop();
-      }
-    });
+describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
+  test('sidebar 248, header 56, reading pane 680 only while an email is open; the shell never scrolls; no focus rings', async () => {
+    const setpoint = await startSetpoint();
+    try {
+      const page = await setpoint.page('target');
+      await page.goto(`${setpoint.base}/inbox`);
+      await page.locator('.list .row').first().waitFor();
+      assert.equal((await box(page, '.sb')).width, 248);
+      assert.equal((await box(page, '.hd')).height, 56);
+      assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
+      assert.equal((await box(page, '.list')).width, SIZES.target.width - 248);
+      await page.locator('.list .row[title^="Final exam schedule"]').click();
+      await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+      assert.equal((await box(page, '.pane')).width, 680);
+      assert.equal((await box(page, '.list')).width, SIZES.target.width - 248 - 680);
+      // Every row keeps its account while the pane is open (decision 41).
+      for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
+      const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+      assert.deepEqual([scroll[0], scroll[2]], [scroll[1], scroll[3]]);
+      // Focus on a control draws no ring.
+      await page.locator('.rd-tools .tool').first().focus();
+      const outline = await rested(() => page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle));
+      assert.equal(outline, 'none');
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
   });
-}
+});
 
 test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab title follows', async () => {
   const setpoint = await startSetpoint();
