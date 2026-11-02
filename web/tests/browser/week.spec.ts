@@ -54,6 +54,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     const column = (await rested(() => page.locator('.wk-col[data-date="2026-10-07"]').boundingBox()))!;
     assert.ok(Math.abs(column.width - 139) <= 2, `a day is ${column.width} px`);
     assert.equal(await page.locator('.wk-now').count(), 1);
+    assert.equal(await page.locator('.wk-cols > .wk-nowx').count(), 1, 'now across the week');
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');
     // Tasks sit in the all-day row; the mini-month marks the week.
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
@@ -63,6 +64,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     // Paging keeps the view and the address; Today comes back.
     await page.keyboard.press('ArrowRight');
     await until('the next week', () => page.locator('.hd-title').textContent(), title => title === 'Oct 11 – 17, 2026');
+    assert.equal(await page.locator('.wk-nowx').count(), 0, 'another week has none');
     await page.keyboard.press('t');
     await until('this week again', () => page.locator('.hd-title').textContent(), title => title === 'Oct 4 – 10, 2026');
 

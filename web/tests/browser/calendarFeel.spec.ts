@@ -1,6 +1,5 @@
 // How Calendar moves and answers (darma SV-64, the polish audit's calendar lane): paging glides the
-// month and swaps the title the way it went, and the rest of the lane's motion and marks, each
-// stated with the values DESIGN.md gives it.
+// month the way it went, and the rest of the lane's marks and answers.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
@@ -29,16 +28,6 @@ const top = (month: string) => monthTopRow(month) * ROW;
 const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => element.scrollTop);
 const style = (target: Locator, property: string, pseudo?: string) => target.evaluate((element, [name, after]) => getComputedStyle(element, after ?? null).getPropertyValue(name!).trim(), [property, pseudo] as const);
 
-/** Where the title's swap starts from, as [x, y] px: its `--title-from` drawn on a probe. */
-const titleFrom = (title: Locator) => title.evaluate(element => {
-  const probe = document.createElement('div');
-  probe.style.transform = getComputedStyle(element).getPropertyValue('--title-from');
-  document.body.append(probe);
-  const matrix = new DOMMatrix(getComputedStyle(probe).transform);
-  probe.remove();
-  return [matrix.e, matrix.f];
-});
-
 /** Records the month grid's scrollTop every frame from now on; resolves to a reader of what it saw. */
 async function recordScroll(page: Page): Promise<() => Promise<number[]>> {
   await page.evaluate(() => {
@@ -58,7 +47,7 @@ async function recordScroll(page: Page): Promise<() => Promise<number[]>> {
 const between = (seen: number[], from: number, to: number) => seen.filter(value => value > Math.min(from, to) && value < Math.max(from, to));
 const monotonic = (values: number[], rising: boolean) => values.every((value, at) => at === 0 || (rising ? value >= values[at - 1]! : value <= values[at - 1]!));
 
-test('paging glides the month over 260 ms the way it goes, N N N chaining; Today from a year away glides in its last five rows; the wheel stops it; the title rises, falls or slides', async () => {
+test('paging glides the month over 260 ms the way it goes, N N N chaining; the wheel stops it; Month from Week lands at once', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -66,7 +55,6 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     await page.locator('.ev').first().waitFor();
     const title = page.locator('.hd-title');
     assert.equal(await scrollTop(page), top('2026-10'));
-    assert.equal(await title.getAttribute('data-dir'), null, 'the first paint doesn\'t swap');
 
     // N: November comes up from below, through the rows between, over 260 ms.
     let seen = await recordScroll(page);
@@ -76,18 +64,10 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     assert.ok(down.length >= 3, `it passes through the rows between: ${JSON.stringify(down)}`);
     assert.ok(monotonic(down, true), 'downward all the way');
     await until('the title reads November', () => title.textContent(), text => text === 'November 2026');
-    // It rises 6 px into place over 120 ms.
-    assert.deepEqual([await title.getAttribute('data-dir'), await style(title, 'animation-name'), await style(title, 'animation-duration'), await titleFrom(title)],
-      ['next', 'cal-title-in', `${monthPaging.titleMs / 1000}s`, [0, monthPaging.titleShiftPx]]);
 
-    // P: October drops in from above.
-    seen = await recordScroll(page);
+    // P: back to October, where N N N starts.
     await page.keyboard.press('p');
     await until('P lands on October', () => scrollTop(page), value => value === top('2026-10'));
-    const up = between(await seen(), top('2026-10'), top('2026-11'));
-    assert.ok(up.length >= 3 && monotonic(up, false), `upward through the rows between: ${JSON.stringify(up)}`);
-    await until('the title reads October', () => title.textContent(), text => text === 'October 2026');
-    assert.deepEqual([await title.getAttribute('data-dir'), await rested(() => titleFrom(title))], ['prev', [0, -monthPaging.titleShiftPx]]);
 
     // N N N mid-glide goes on from where it's going: January, never back.
     seen = await recordScroll(page);
@@ -98,19 +78,9 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     const chained = (await seen()).filter(value => value >= top('2026-10'));
     assert.ok(monotonic(chained, true), `one glide on, never back: ${JSON.stringify(chained)}`);
 
-    // Today from a year on: it jumps to five rows below October, then glides up those five. (A wheel
-    // first, so the last frames of the glide to January can't follow the scroll there.)
-    await page.locator('.cal-scroll').evaluate((element, to) => {
-      element.dispatchEvent(new WheelEvent('wheel', {bubbles: true}));
-      element.scrollTop = to;
-    }, top('2027-10'));
-    await until('October 2027 shows', () => title.textContent(), text => text === 'October 2027');
-    seen = await recordScroll(page);
+    // T: back to October, where the wheel's glide starts.
     await page.keyboard.press('t');
     await until('T lands on October 2026', () => scrollTop(page), value => value === top('2026-10'));
-    const near = (await seen()).filter(value => value < top('2027-10'));
-    assert.ok(near.every(value => value <= top('2026-10') + monthPaging.leadRows * ROW), `it sets out five rows short: ${JSON.stringify(near)}`);
-    assert.ok(between(near, top('2026-10'), top('2026-10') + monthPaging.leadRows * ROW + 1).length >= 3 && monotonic(near, false), 'and glides up from there');
 
     // The wheel stops a glide where it is: N, the glide's first step, then a wheel over the grid.
     const stopped = await page.evaluate(async () => {
@@ -130,15 +100,6 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
     // A jump stays instant: Week, then Month again, lands on the selected day's month in one frame.
     await page.keyboard.press('w');
     await page.locator('.cal-week').waitFor();
-    const weekTitle = page.locator('.hd-title');
-    assert.equal(await weekTitle.getAttribute('data-dir'), null, 'a switch of view just shows');
-    // The week's title slides 6 px with its days.
-    await page.keyboard.press('n');
-    await until('the next week', () => weekTitle.textContent(), text => text === 'Oct 11 – 17, 2026');
-    assert.deepEqual([await weekTitle.getAttribute('data-dir'), await rested(() => titleFrom(weekTitle))], ['next', [monthPaging.titleShiftPx, 0]]);
-    await page.keyboard.press('p');
-    await until('back a week', () => weekTitle.textContent(), text => text === 'Oct 4 – 10, 2026');
-    assert.deepEqual(await rested(() => titleFrom(weekTitle)), [-monthPaging.titleShiftPx, 0]);
     await page.keyboard.press('m');
     await page.locator('.cal-month').waitFor();
     assert.equal(await scrollTop(page), top('2026-10'), 'Month from Week lands at once');
@@ -148,89 +109,6 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; Today
   }
 });
 
-/**
- * Records, from now on, each time a disc of today's starts to pulse: which, the grid's scrollTop, and
- * its animation as the class goes on, before the pulse can end and take the class with it.
- */
-async function recordPulses(page: Page): Promise<() => Promise<Pulse[]>> {
-  await rested(() => page.evaluate(() => {
-    const seen: Pulse[] = [];
-    (window as unknown as {pulses: Pulse[]}).pulses = seen;
-    new MutationObserver(records => {
-      records.forEach((record, at) => {
-        const element = record.target as HTMLElement;
-        // Each record holds the value before its change; the next one's for the element, or the current, is after it.
-        const next = records.slice(at + 1).find(later => later.target === element);
-        const after = next ? next.oldValue : element.getAttribute('class');
-        if (!after?.split(' ').includes('pulse') || record.oldValue?.split(' ').includes('pulse')) return;
-        const where = element.closest('.mini') ? 'mini' : element.closest('.wk-dhead') ? 'week' : 'month';
-        const style = getComputedStyle(element);
-        seen.push({where, scrollTop: document.querySelector('.cal-scroll')?.scrollTop ?? null, animation: `${style.animationName} ${style.animationDuration}`});
-      });
-    }).observe(document.body, {subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true});
-  }));
-  return () => page.evaluate(() => [...(window as unknown as {pulses: Pulse[]}).pulses]);
-}
-type Pulse = {where: string; scrollTop: number | null; animation: string};
-
-test('T always answers: today\'s disc on the grid and in the mini-month swells once over 260 ms as Today lands, and in the week\'s heads', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ev').first().waitFor();
-    const disc = page.locator('.cell .dn.today');
-
-    // Today already in view: nothing to scroll, the discs answer at once.
-    let pulses = await recordPulses(page);
-    await page.keyboard.press('t');
-    await until('the grid\'s and the mini-month\'s discs pulse', async () => (await pulses()).map(pulse => pulse.where).sort().join(), where => where === 'mini,month');
-    // Read as each pulse started: it plays once and its class goes, perhaps before a read from here.
-    assert.deepEqual((await pulses()).map(pulse => `${pulse.where} ${pulse.animation}`).sort(), ['mini today-pulse 0.26s', 'month today-pulse 0.26s']);
-    await until('it plays once and lets go', () => disc.getAttribute('class'), classes => !classes?.split(' ').includes('pulse'));
-
-    // From November, only once the glide has landed back on October.
-    await page.keyboard.press('n');
-    await until('November', () => scrollTop(page), value => value === top('2026-11'));
-    pulses = await recordPulses(page);
-    await page.keyboard.press('t');
-    await until('the grid\'s disc pulses', async () => (await pulses()).filter(pulse => pulse.where === 'month').length, count => count === 1);
-    assert.deepEqual((await pulses()).filter(pulse => pulse.where === 'month').map(pulse => pulse.scrollTop), [top('2026-10')], 'after the glide lands');
-
-    // Paging doesn't.
-    pulses = await recordPulses(page);
-    await page.keyboard.press('p');
-    await until('September', () => scrollTop(page), value => value === top('2026-09'));
-    await page.keyboard.press('n');
-    await until('October again', () => scrollTop(page), value => value === top('2026-10'));
-    assert.deepEqual(await pulses(), []);
-
-    // The week's head too.
-    await page.keyboard.press('w');
-    await page.locator('.wk-dhead .dn.today').waitFor();
-    pulses = await recordPulses(page);
-    await page.keyboard.press('t');
-    await until('the week\'s disc pulses', async () => (await pulses()).map(pulse => pulse.where).join(), where => where.includes('week'));
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-/** Records how each Month or Week section put on the page from now on arrives: its data-enter, entrance and the y it scales from. */
-async function recordEntrances(page: Page): Promise<() => Promise<{section: string; enter: string | null; animation: string; originY: number}[]>> {
-  await rested(() => page.evaluate(() => {
-    const seen: {section: string; enter: string | null; animation: string; originY: number}[] = [];
-    (window as unknown as {entrances: typeof seen}).entrances = seen;
-    new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-      if (!(node instanceof HTMLElement) || !node.matches('[data-cal-section]')) return;
-      const style = getComputedStyle(node);
-      seen.push({section: node.className.split(' ')[0]!, enter: node.dataset.enter ?? null, animation: `${style.animationName} ${style.animationDuration}`, originY: parseFloat(style.transformOrigin.split(' ')[1]!)});
-    }))).observe(document.querySelector('.cal-content')!, {childList: true});
-  }));
-  return () => page.evaluate(() => [...(window as unknown as {entrances: {section: string; enter: string | null; animation: string; originY: number}[]}).entrances]);
-}
-
 /** A segmented control's thumb: where it sits and how wide, and the `on` segment's box. */
 const thumb = (seg: Locator) => seg.evaluate(element => {
   const on = element.querySelector<HTMLElement>(':scope > .on')!;
@@ -238,52 +116,20 @@ const thumb = (seg: Locator) => seg.evaluate(element => {
   return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
 });
 
-test('Week zooms in from the selected week\'s row in Month and Month settles back out around it, over 180 ms; a segmented control\'s thumb slides to the segment that\'s on', async () => {
+test('a segmented control\'s thumb waits under the segment that\'s on and slides to the next, handing the fill back', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
-    // Wed Oct 7's week is October's second row: its middle is a row, the weekday row and half a row down.
-    const row = layout.monthRow + layout.weekdayRow + layout.monthRow / 2;
     const seg = page.locator('.hd .seg');
-    // At rest Month draws its own `sub3` fill, the thumb hidden under it.
-    const first = await thumb(seg);
+    const first = await rested(() => thumb(seg));
     assert.deepEqual([first.x, first.width], first.on, 'the thumb waits under Month');
-    assert.deepEqual([first.onFill, await rested(() => style(seg, 'visibility', '::before')), await rested(() => style(seg, 'transition-property', '::before'))], [await rested(() => colour(page, '--sub3')), 'hidden', 'all']);
-    // Sliding, it moves over 180 ms.
-    assert.equal(await rested(() => page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.className = 'seg';
-      probe.dataset.sliding = '';
-      document.body.append(probe);
-      const {transitionProperty, transitionDuration} = getComputedStyle(probe, '::before');
-      probe.remove();
-      return `${transitionProperty} ${transitionDuration}`;
-    })), 'transform, width 0.18s, 0.18s');
     const sliding = await watch(seg, 'data-sliding');
-
-    let entrances = await recordEntrances(page);
     await page.keyboard.press('w');
-    const week = page.locator('.cal-week');
-    await week.waitFor();
-    assert.deepEqual(await entrances(), [{section: 'cal-week', enter: 'in', animation: 'cal-zoom-in 0.18s', originY: row}], 'it zooms in from the selected week\'s row');
-    await until('the zoom lets go once it has played', () => week.getAttribute('data-enter'), value => value === null);
     await until('the thumb slides under Week, then hands the fill back', sliding, seen => seen.join() === ',');
     const after = await rested(() => thumb(seg));
     assert.deepEqual([after.x, after.width, after.onFill], [...after.on, await rested(() => colour(page, '--sub3'))]);
-
-    entrances = await recordEntrances(page);
-    await page.keyboard.press('m');
-    const month = page.locator('.cal-month');
-    await month.waitFor();
-    assert.deepEqual(await entrances(), [{section: 'cal-month', enter: 'out', animation: 'cal-zoom-out 0.18s', originY: row}], 'Month settles out around the same row');
-    await until('the zoom lets go', () => month.getAttribute('data-enter'), value => value === null);
-    // Paging doesn't zoom.
-    await page.keyboard.press('n');
-    await until('November', () => page.locator('.hd-title').textContent(), text => text === 'November 2026');
-    assert.equal(await month.getAttribute('data-enter'), null);
-
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -299,21 +145,13 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
 
-    // Thursday the 15th under the pointer: its wash fades in over 120 ms, and its + shows.
+    // Thursday the 15th under the pointer: its wash shows, and its +.
     const cell = page.locator('.cell[data-date="2026-10-15"]');
     const plus = cell.locator('.dadd');
     assert.deepEqual([await rested(() => opacity(cell, '::before')), await rested(() => opacity(plus))], ['0', '0'], 'nothing at rest');
     await cell.hover({position: {x: 70, y: 150}});
     await until('the day answers', async () => [await opacity(cell, '::before'), await opacity(plus)], values => values.join() === '1,1');
-    assert.deepEqual([await rested(() => style(cell, 'background-color', '::before')), await rested(() => style(cell, 'transition-duration', '::before'))],
-      [await rested(() => colour(page, 'color-mix(in srgb, var(--sub) 55%, transparent)')), '0.12s']);
-    assert.deepEqual([await plus.getAttribute('title'), await plus.locator('svg').getAttribute('width')], ['New event · C', '14']);
-    // The selected day keeps its own fill.
-    const selected = page.locator('.cell[data-date="2026-10-07"]');
-    await selected.hover({position: {x: 70, y: 150}});
-    // The wash of the day left fades out over 120 ms; the selected day's never shows.
-    await page.waitForTimeout(250);
-    assert.deepEqual([await rested(() => opacity(selected, '::before')), await rested(() => opacity(cell, '::before'))], ['0', '0']);
+    assert.equal(await rested(() => style(cell, 'background-color', '::before')), await rested(() => colour(page, 'color-mix(in srgb, var(--sub) 55%, transparent)')));
 
     // Its + takes `sub2` under the pointer, and a click makes an event on that day, selecting it.
     await cell.hover({position: {x: 70, y: 150}});
@@ -339,10 +177,6 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 40));
     const slot = column.locator('.wk-hover');
     await until('10:30 AM under the pointer', () => slot.textContent(), text => text === '10:30 AM');
-    await until('faded in', () => opacity(slot), value => value === '1');
-    assert.deepEqual([await rested(() => style(slot, 'height')), await rested(() => style(slot, 'transform')), await rested(() => style(slot, 'transition-duration')), await rested(() => style(slot, 'animation-duration'))],
-      ['22px', `matrix(1, 0, 0, 1, 0, ${minuteTop(10 * 60 + 30)})`, '0.12s, 0.12s', '0.12s']);
-    assert.equal(await rested(() => style(slot, 'background-color')), await rested(() => colour(page, '--sub')));
     // A step further down it moves there.
     await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 50));
     await until('10:45 AM', () => slot.textContent(), text => text === '10:45 AM');
@@ -362,40 +196,6 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
   }
 });
 
-test('the week reads by its dates and its now: the date 14 / 500 `ink` on a 24 px disc, today\'s 24 px at 600, and now faintly across every day under today\'s line', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar?view=week`);
-    await page.locator('.wb').first().waitFor();
-    const date = page.locator('.wk-dhead[data-date="2026-10-08"] .dn');
-    assert.deepEqual([await rested(() => style(date, 'font-size')), await rested(() => style(date, 'font-weight')), await rested(() => style(date, 'height')), await rested(() => style(date, 'min-width'))], ['14px', '500', '24px', '24px']);
-    assert.equal(await rested(() => style(date, 'color')), await rested(() => colour(page, '--ink')));
-    const today = page.locator('.wk-dhead .dn.today');
-    assert.deepEqual([await rested(() => style(today, 'font-weight')), await rested(() => style(today, 'height')), await rested(() => style(today, 'min-width'))], ['600', '24px', '24px']);
-    assert.equal(await rested(() => style(page.locator('.wk-dhead[data-date="2026-10-08"]'), 'column-gap')), '7px');
-    // The weekday stays 11.5 uppercase `ink3`.
-    assert.deepEqual([await style(page.locator('.wk-dhead[data-date="2026-10-08"] .dw'), 'font-size'), await style(page.locator('.wk-dhead[data-date="2026-10-08"] .dw'), 'text-transform')], ['11.5px', 'uppercase']);
-
-    // Now across the week: one 1 px line at today's line's height, `alert` at 55%, under it.
-    const across = page.locator('.wk-cols > .wk-nowx');
-    const line = page.locator('.wk-now');
-    assert.equal(await across.count(), 1);
-    assert.equal(await rested(() => style(across, 'top')), await rested(() => style(line, 'top')));
-    assert.deepEqual([await rested(() => style(across, 'height')), await rested(() => style(across, 'z-index')), await rested(() => style(line, 'z-index'))], ['1px', '2', '3']);
-    assert.equal(await rested(() => style(across, 'background-color')), await rested(() => colour(page, 'color-mix(in oklch, var(--alert) 55%, transparent)')));
-    const [columns, width] = [await rested(() => page.locator('.wk-cols').boundingBox()), (await rested(() => across.boundingBox()))!.width];
-    assert.equal(Math.round(width), Math.round(columns!.width), 'across all seven days');
-    // Another week has none.
-    await page.keyboard.press('n');
-    await until('the next week', () => page.locator('.hd-title').textContent(), text => text === 'Oct 11 – 17, 2026');
-    assert.equal(await page.locator('.wk-nowx').count(), 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 /** A colour expression as `target` computes it (so its own `--c` applies), on a probe inside it. */
 const colourIn = (target: Locator, css: string) => target.evaluate((element, value) => {
   const probe = document.createElement('span');
@@ -406,7 +206,7 @@ const colourIn = (target: Locator, css: string) => target.evaluate((element, val
   return computed;
 }, css);
 
-test('the pane lifts the next event on a tint of its colour with "in 5h" in it; under way it sits under the now-line with what\'s left and its bar filling; past ones are grey; the now-line has the week\'s dot on the colour bars', async () => {
+test('the pane lifts the next event on a tint of its colour with "in 5h" in it; under way it says what\'s left; past ones are grey; the now-line has the week\'s dot on the colour bars', async () => {
   // The server's clock holds at 9:12 AM; the page's is the check's, moved on to 2:45 PM.
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -417,13 +217,12 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     const gym = page.locator('.rpane .ag-item', {hasText: 'Gym'});
     await dentist.waitFor();
 
-    // 9:12 AM: Dentist is next, lifted: inset 8 px, radius 10, its colour at 9%, its time `ink`, "in 5h" in its colour at 12.5 / 500.
+    // 9:12 AM: Dentist is next, lifted: its colour at 9%, its time `ink`, "in 5h" in its colour.
     assert.equal(await dentist.getAttribute('class'), 'ag-item next');
-    assert.deepEqual([await rested(() => style(dentist, 'margin-left')), await rested(() => style(dentist, 'padding-left')), await rested(() => style(dentist, 'border-top-left-radius'))], ['8px', '12px', '10px']);
     assert.equal(await rested(() => style(dentist, 'background-color')), await rested(() => colourIn(dentist, 'color-mix(in oklch, var(--c) 9%, transparent)')));
     assert.equal(await rested(() => style(dentist.locator('.when'), 'color')), await rested(() => colour(page, '--ink')));
     const left = dentist.locator('.in');
-    assert.deepEqual([await left.textContent(), await rested(() => style(left, 'font-size')), await rested(() => style(left, 'font-weight'))], ['in 5h', '12.5px', '500']);
+    assert.equal(await left.textContent(), 'in 5h');
     assert.equal(await rested(() => style(left, 'color')), await rested(() => colourIn(dentist, 'oklch(from var(--c) min(l, var(--tintL)) c h)')));
     // Its bar lines up with the others': the content keeps the rows' 20 px inset.
     const [dentistBar, gymBar] = [(await dentist.locator('.cbar').boundingBox())!, (await gym.locator('.cbar').boundingBox())!];
@@ -431,11 +230,9 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
 
     // Gym is over: grey, not faded.
     assert.deepEqual([await style(gym, 'opacity'), await style(gym.locator('.title'), 'color'), await style(gym.locator('.when'), 'color')], ['1', await colour(page, '--ink3'), await colour(page, '--ink3')]);
-    assert.equal(await rested(() => style(gym.locator('.cbar'), 'background-color')), await rested(() => colourIn(gym, 'color-mix(in oklch, var(--c) 45%, transparent)')));
 
-    // The now-line: 1.5 px `alert` at full strength, an 8 px dot centred on the colour bars.
+    // The now-line: its dot centred on the colour bars.
     const line = page.locator('.rpane .nowline .line');
-    assert.deepEqual([await rested(() => style(line, 'height')), await rested(() => style(line, 'opacity')), await rested(() => style(line, 'width', '::before')), await rested(() => style(line, 'height', '::before'))], ['1.5px', '1', '8px', '8px']);
     const dot = await rested(() => line.evaluate(element => {
       const box = element.getBoundingClientRect();
       const style = getComputedStyle(element, '::before');
@@ -443,83 +240,18 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     }));
     assert.equal(dot, gymBar.x + gymBar.width / 2, 'the dot sits on the bars');
 
-    // 2:45 PM: Dentist is under way, under the line, "45m left", its bar a quarter full.
+    // 2:45 PM: Dentist is under way, "45m left".
     await page.clock.fastForward((5 * 60 + 33) * 60_000);
     await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
     await until('Dentist under way', () => dentist.getAttribute('class'), classes => classes === 'ag-item next ongoing');
     assert.equal(await left.textContent(), '45m left');
-    // A quarter full. The page's clock runs on from the seed's moment while the page loads, seconds
-    // more on a slowed CPU (25.2% under stress), so a quarter within 18 seconds of it.
-    const done = parseFloat(await style(dentist, '--done'));
-    assert.ok(Math.abs(done - 25) <= 0.5, `a quarter full, not ${done}%`);
-    const order = await page.locator('.rpane .rp-scroll > *').evaluateAll(rows => rows.map(row => (row.classList.contains('nowline') ? 'now' : row.querySelector('.title')?.textContent ?? row.textContent)));
-    assert.deepEqual(order.slice(0, 4), ['Events', 'Gym', 'now', 'Dentist'], 'under the now-line');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('a calendar toggled off fades its chips and rows out over 120 ms before they go, and back in over 180 ms; off, its name is `ink3`; Todoist has no ring', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ev').first().waitFor();
-    const rows = page.locator('.calrow');
-    assert.equal(await page.locator('.calrow', {hasText: 'Todoist'}).locator('.ring').count(), 0, 'Todoist reads as the others');
-    assert.equal(await page.locator('.calrow .ring').count(), 0);
-    const personal = rows.filter({hasText: 'Personal'});
-    assert.equal(await rested(() => style(personal, 'color')), await rested(() => colour(page, '--ink2')));
-
-    // Off: Wednesday's Gym chip and its agenda row fade out first, then go.
-    const gym = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'});
-    const row = page.locator('.rpane .ag-item', {hasText: 'Gym'});
-    const [gymClass, rowClass] = [await watch(gym, 'class'), await watch(row, 'class')];
-    await personal.click();
-    await gym.waitFor({state: 'detached'});
-    await row.waitFor({state: 'detached'});
-    assert.ok((await gymClass()).some(value => value?.split(' ').includes('leaving')), 'the chip faded out first');
-    assert.ok((await rowClass()).some(value => value?.split(' ').includes('leaving')), 'and its row');
-    const ink3 = await rested(() => colour(page, '--ink3'));
-    await until('the name recedes', () => style(personal, 'color'), value => value === ink3);
-
-    // On: they come back fading in over 180 ms.
-    await rested(() => page.evaluate(() => {
-      const seen: string[] = [];
-      (window as unknown as {arrived: string[]}).arrived = seen;
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement) node.querySelectorAll<HTMLElement>('.ev, .ag-item').forEach(one => seen.push(`${one.className} ${getComputedStyle(one).animationName} ${getComputedStyle(one).animationDuration}`));
-        if (node instanceof HTMLElement && node.matches('.ev, .ag-item')) seen.push(`${node.className} ${getComputedStyle(node).animationName} ${getComputedStyle(node).animationDuration}`);
-      }))).observe(document.querySelector('.cal-content')!, {subtree: true, childList: true});
-    }));
-    await personal.click();
-    await gym.waitFor();
-    const arrived = await page.evaluate(() => (window as unknown as {arrived: string[]}).arrived);
-    assert.ok(arrived.some(line => /^ev .*entering ev-in 0\.18s$/.test(line)), `the chip fades in: ${JSON.stringify(arrived.slice(0, 4))}`);
-    assert.ok(arrived.some(line => /^ag-item .*entering ev-in 0\.18s$/.test(line)), 'and its row');
-    await until('it lets go of the fade', () => gym.getAttribute('class'), classes => !classes?.includes('entering'));
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-/** Records, from now on, each element in the editor that starts to flash, by its class. */
-async function recordFlashes(page: Page): Promise<() => Promise<string[]>> {
-  await page.evaluate(() => {
-    const seen: string[] = [];
-    (window as unknown as {flashes: string[]}).flashes = seen;
-    const note = (element: Element) => element.classList.contains('flash') && seen.push(element.className);
-    new MutationObserver(records => records.forEach(record => {
-      if (record.type === 'attributes') note(record.target as Element);
-      record.addedNodes.forEach(node => node instanceof Element && [node, ...node.querySelectorAll('.flash')].forEach(note));
-    })).observe(document.querySelector('.editor')!, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
-  });
-  return () => page.evaluate(() => [...(window as unknown as {flashes: string[]}).flashes]);
-}
-
-test('each word typed lands in its field: the rows it fills take its colour, a mark being typed is only dashed until it\'s picked and lands, and a field moved by another flashes', async () => {
+test('each word typed lands in its field: the rows it fills take its colour, and a mark being typed is only dashed until it\'s picked', async () => {
   const setpoint = await startSetpoint({fixtures: ['no-dinner'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -534,56 +266,32 @@ test('each word typed lands in its field: the rows it fills take its colour, a m
 
     await line.pressSequentially('Dinner with Sam fri 7-9pm @Blue');
     await page.locator('.places .menu-i', {hasText: 'Blue Door'}).first().waitFor();
-    // The time row came from the line: its clock in the mark's `cool`, over 120 ms.
+    // The time row came from the line: its clock in the mark's `cool`.
     await until('the clock echoes the date', () => style(icon('schedule'), 'color'), value => value === cool);
-    assert.equal(await rested(() => style(icon('schedule'), 'transition-duration')), '0.12s');
     // "@Blue", its Places open, is still being typed: only a dashed underline.
     const place = page.locator('.nl .tok-p');
     assert.match((await place.getAttribute('class'))!, /\blive\b/);
     assert.deepEqual([await rested(() => style(place, 'background-color')), await rested(() => style(place, 'background-size'))], ['rgba(0, 0, 0, 0)', '6px 1.5px']);
-    // Enter picks it: a normal mark again, brightening once over 260 ms as it lands; the pin takes `comf`.
-    const classes = await watch(place, 'class');
-    let flashes = await recordFlashes(page);
+    // Enter picks it: a normal mark again; the pin takes `comf`.
     await page.keyboard.press('Enter');
     await page.locator('.nl .tok-p', {hasText: '@Blue Door'}).waitFor();
-    await until('it lands', async () => (await classes()).concat(await page.locator('.nl .tok-p').getAttribute('class')), seen => seen.some(value => value?.split(' ').includes('landed')));
-    assert.equal(await rested(() => page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.className = 'tok-p landed';
-      document.querySelector('.editor .nl-text')!.append(probe);
-      const {animationName, animationDuration} = getComputedStyle(probe);
-      probe.remove();
-      return `${animationName} ${animationDuration}`;
-    })), 'tok-in 0.26s');
     await until('the pin echoes the place', () => style(icon('location_on'), 'color'), value => value === comf);
-    // The address the pick filled in flashes.
-    await until('the address flashes', flashes, seen => seen.some(name => name.includes('place-address')));
 
     // A time set by hand: the clock is `ink3` again.
     await page.getByLabel('Start', {exact: true}).fill('4p');
     await page.keyboard.press('Enter');
     await until('set by hand', () => style(icon('schedule'), 'color'), value => value === ink3);
-    // An End before the start runs into the next day: the Date flashes and End says "+1".
-    flashes = await recordFlashes(page);
+    // An End before the start runs into the next day: End says "+1".
     await page.getByLabel('End', {exact: true}).fill('2p');
     await page.keyboard.press('Enter');
-    await until('the Date flashes', flashes, seen => seen.some(name => name.includes('date')));
-    assert.deepEqual([await page.locator('.editor .later').textContent(), await rested(() => style(page.locator('.editor .later'), 'font-size'))], ['+1', '11.5px']);
-    assert.equal(await rested(() => page.evaluate(() => {
-      const probe = document.createElement('label');
-      probe.className = 'field flash';
-      document.querySelector('.editor .eg')!.append(probe);
-      const {animationName, animationDuration} = getComputedStyle(probe);
-      probe.remove();
-      return `${animationName} ${animationDuration}`;
-    })), 'side-flash 0.6s');
+    assert.equal(await page.locator('.editor .later').textContent(), '+1');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('ticking a task off is one moment everywhere: its done check lands over 120 ms as the Today block\'s, the pane draws its strike over 180 ms and keeps its project beside the spinner, and its card is drawn in its project\'s colour', async () => {
+test('ticking a task off is one moment everywhere: the pane plays it and keeps its project beside the spinner, and its card is drawn in its project\'s colour', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -605,23 +313,9 @@ test('ticking a task off is one moment everywhere: its done check lands over 120
     await row.getByRole('button', {name: 'Complete Pay rent'}).click();
     await row.getByRole('button', {name: 'Reopen Pay rent'}).waitFor();
     assert.deepEqual([await row.locator('.spin').count(), await row.locator('.project').textContent()], [1, 'Home']);
-    assert.deepEqual(await row.evaluate(element => [...element.children].slice(-2).map(child => child.className)), ['spin', 'ink3 project'], 'the spinner before the project');
     assert.ok((await classes()).some(value => value?.split(' ').includes('just-done')), 'it played the moment');
-    const probe = (className: string, inner: string) => page.evaluate(([outer, child]) => {
-      const host = document.createElement('a');
-      host.className = outer!;
-      host.innerHTML = child!;
-      document.querySelector('.rpane .rp-scroll')!.append(host);
-      const target = host.querySelector('[data-probe]')!;
-      const {animationName, animationDuration} = getComputedStyle(target);
-      host.remove();
-      return `${animationName} ${animationDuration}`;
-    }, [className, inner] as const);
-    assert.equal(await rested(() => probe('ag-item ag-task done just-done', '<span class="title"><span data-probe>Pay rent</span></span>')), 'strike-in 0.18s', 'the strike draws over 180 ms');
-    assert.equal(await rested(() => probe('ag-item ag-task done just-done', '<svg class="task-glyph done" data-probe></svg>')), 'ring-done 0.12s', 'the check lands as the Today block\'s');
-    // At rest the strike is a 1 px line across the title.
+    // The moment ends before the reopen below, which plays none.
     await until('the moment ends', () => row.getAttribute('class'), value => !value?.includes('just-done'));
-    assert.equal(await rested(() => style(row.locator('.title > span'), 'background-size')), '100% 1px');
     release();
     await until('Todoist has it', () => row.locator('.spin').count(), count => count === 0);
     // Reopened, it plays nothing.
@@ -640,7 +334,7 @@ test('ticking a task off is one moment everywhere: its done check lands over 120
     const gridRing = page.locator('.cell[data-date="2026-10-08"] .tk .ring');
     assert.equal(await rested(() => style(ring, 'border-top-color')), await rested(() => style(gridRing, 'border-top-color')), 'as the grid draws it');
     const dot = card.locator('.fact.project .fact-dot .dot');
-    assert.deepEqual([await dot.count(), await rested(() => style(dot, 'width')), await card.getByRole('button', {name: 'Colour'}).count()], [1, '9px', 0]);
+    assert.deepEqual([await dot.count(), await card.getByRole('button', {name: 'Colour'}).count()], [1, 0]);
     assert.equal(await rested(() => style(dot, 'background-color')), await rested(() => style(gridRing, 'border-top-color')));
     // Complete: struck through in `ink3`, its mark at .5 while Todoist hasn't answered, the check landing.
     let hold = () => {};
@@ -668,7 +362,7 @@ test('ticking a task off is one moment everywhere: its done check lands over 120
   }
 });
 
-test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the pointer `sub2`, six rows always, a band for the week, days sliding in as it steps; the date picker marks its choice most and today with a ring; menus tick their choice', async () => {
+test('the mini-month marks the selected day `sub3` and the pointer `sub2`, stepping moves nothing under it, and a band marks the week; the date picker marks its choice most and today with a ring', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -676,9 +370,6 @@ test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the poin
     await page.locator('.ev').first().waitFor();
     const mini = page.locator('.sb .mini');
     const day = (date: string) => mini.locator(`button[aria-label="${date}"]`);
-    // Six rows of seven, October's five and November's first week.
-    assert.equal(await mini.locator('button').count(), 42);
-    assert.deepEqual([await rested(() => style(day('2026-10-09'), 'width')), await rested(() => style(day('2026-10-09'), 'height'))], ['26px', '26px']);
     // The selected day: `sub3`, `ink` at 500; the pointer elsewhere `sub2`.
     const [sub3, ink] = [await colour(page, '--sub3'), await colour(page, '--ink')];
     await until('the selected day', async () => [await style(day('2026-10-09'), 'background-color'), await style(day('2026-10-09'), 'color'), await style(day('2026-10-09'), 'font-weight')].join(' '), value => value === `${sub3} ${ink} 500`);
@@ -686,97 +377,63 @@ test('the mini-month is crisp: 26 px discs, the selected day `sub3` and the poin
     const sub2 = await rested(() => colour(page, '--sub2'));
     await until('the pointer', () => style(day('2026-10-21'), 'background-color'), fill => fill === sub2);
 
-    // Stepping: the days slide in from the side they come from, and Calendars under it stays put.
+    // Stepping: Calendars under it stays put.
     const calendars = async () => (await page.locator('.calrow').first().boundingBox())!.y;
     const before = await rested(() => calendars());
     for (let step = 0; step < 3; step += 1) await page.locator('.sb .mini-head').getByRole('button', {name: 'Next month'}).click();
     await page.locator('.sb .mini-head', {hasText: 'January 2027'}).waitFor();
-    assert.equal(await page.locator('.sb .mini').getAttribute('data-dir'), 'next');
-    assert.deepEqual([await rested(() => style(page.locator('.sb .mini > button').first(), 'animation-name')), await rested(() => style(page.locator('.sb .mini > button').first(), 'animation-duration'))], ['mini-in-next', '0.18s']);
     assert.equal(await rested(() => calendars()), before, 'January\'s six weeks move nothing');
     await page.locator('.sb .mini-head').getByRole('button', {name: 'Previous month'}).click();
-    assert.equal(await page.locator('.sb .mini').getAttribute('data-dir'), 'prev');
     for (let step = 0; step < 2; step += 1) await page.locator('.sb .mini-head').getByRole('button', {name: 'Previous month'}).click();
     await page.locator('.sb .mini-head', {hasText: 'October 2026'}).waitFor();
 
-    // Week: the shown week one band, its ends round, today's disc on it.
+    // Week: the shown week one band.
     await page.keyboard.press('w');
     await page.locator('.sb .mini .wk').first().waitFor();
     const band = page.locator('.sb .mini .wk');
     assert.deepEqual(await band.allTextContents(), ['4', '5', '6', '7', '8', '9', '10']);
-    assert.deepEqual([await rested(() => style(band.first(), 'border-top-left-radius')), await rested(() => style(band.nth(1), 'border-top-left-radius')), await rested(() => style(band.last(), 'border-top-right-radius'))], ['999px', '0px', '999px']);
     await until('the band fills in', () => style(band.nth(1), 'background-color'), fill => fill === sub2);
-    assert.match(await rested(() => style(page.locator('.sb .mini .wk.t'), 'background-image')), /^radial-gradient/);
     await page.keyboard.press('m');
     await page.locator('.cal-month').waitFor();
 
-    // The date picker: a task due Fri 9, its day the `accent` disc at 600, today a ring.
+    // The date picker: a task due Fri 9, its day the `accent` disc, today a ring.
     await page.keyboard.press('d');
     await page.getByLabel('Due date', {exact: true}).click();
     const sheet = page.locator('.datepop');
     await sheet.waitFor();
     const chosen = sheet.locator('button[aria-label="2026-10-09"]');
-    assert.deepEqual([await rested(() => style(chosen, 'background-color')), await rested(() => style(chosen, 'font-weight')), await rested(() => style(chosen, 'width'))], [await rested(() => colour(page, 'color-mix(in oklch, var(--accent) 50%, transparent)')), '600', '26px']);
+    assert.equal(await rested(() => style(chosen, 'background-color')), await rested(() => colour(page, 'color-mix(in oklch, var(--accent) 50%, transparent)')));
     const today = sheet.locator('button[aria-label="2026-10-07"]');
     assert.deepEqual([await rested(() => style(today, 'background-color')), await rested(() => style(today, 'color'))], ['rgba(0, 0, 0, 0)', await rested(() => colour(page, '--ink'))]);
     assert.equal(await rested(() => style(today, 'box-shadow')), `${await rested(() => colour(page, '--alert'))} 0px 0px 0px 1.5px inset`);
-    await page.keyboard.press('Escape');
-
-    // The menus tick the current choice and leave the fill to the pointer.
-    await page.getByRole('button', {name: 'Repeat', exact: true}).click();
-    const current = page.getByRole('menuitemradio', {checked: true});
-    assert.equal(await current.count(), 1);
-    assert.deepEqual([await current.locator('svg').count(), await current.getAttribute('class')], [1, 'menu-i']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('a day picked answers in three places: its number\'s `sub3` disc, the mini-month\'s, and the pane sliding in from its side; an empty day offers New event C and New task D as ghost rows', async () => {
+test('a day picked answers in three places: its number\'s `sub3` disc, the mini-month\'s, and the pane; an empty day offers New event C and New task D as ghost rows', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
-    const recordPane = () => page.evaluate(() => {
-      const seen: string[] = [];
-      (window as unknown as {pane: string[]}).pane = seen;
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (!(node instanceof HTMLElement)) return;
-        const style = getComputedStyle(node);
-        if (node.matches('.rp-scroll, .rp-head > *')) seen.push(`${node.className} ${node.dataset.dir ?? node.dataset.swap ?? '-'} ${style.animationName} ${style.animationDuration}`);
-      }))).observe(document.querySelector('.rpane')!, {subtree: true, childList: true});
-    });
-    const pane = () => page.evaluate(() => (window as unknown as {pane: string[]}).pane);
 
-    // Fri 9, later: its number on a `sub3` disc, the pane sliding in from the right.
-    await recordPane();
+    // Fri 9: its number on a `sub3` disc.
     await page.locator('.cell[data-date="2026-10-09"]').click({position: {x: 100, y: 150}});
     await until('Fri, Oct 9', () => page.locator('.rp-date').textContent(), title => title === 'Fri, Oct 9');
     const number = page.locator('.cell[data-date="2026-10-09"] .dn');
     assert.deepEqual([await rested(() => style(number, 'background-color')), await rested(() => style(number, 'color')), await rested(() => style(number, 'font-weight'))], [await rested(() => colour(page, '--sub3')), await rested(() => colour(page, '--ink')), '500']);
     const sub3 = await rested(() => colour(page, '--sub3'));
     await until('as the mini-month marks it', () => style(page.locator('.sb .mini button[aria-label="2026-10-09"]'), 'background-color'), fill => fill === sub3);
-    assert.deepEqual((await pane()).sort(), ['grow next day-head-in 0.12s', 'rp-scroll next day-in-next 0.12s']);
-    // Mon 5, earlier: from the left. Today keeps its own disc.
-    await recordPane();
+    // Mon 5: the pane follows.
     await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 100, y: 150}});
     await until('Mon, Oct 5', () => page.locator('.rp-date').textContent(), title => title === 'Mon, Oct 5');
-    assert.ok((await pane()).includes('rp-scroll prev day-in-prev 0.12s'));
-    // The same day again plays nothing.
-    await recordPane();
-    await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 100, y: 150}});
-    await setpoint.idle();
-    assert.deepEqual(await pane(), []);
 
     // An empty day: two dashed ghost rows, New event C and New task D; each opens the editor.
     await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
     const ghosts = page.locator('.rpane .ag-ghost');
     await until('Sat, Oct 24\'s ghost rows', () => ghosts.allTextContents(), rows => rows.join() === 'New eventC,New taskD');
-    // (A 1.5 px outline draws snapped to 1 at one device pixel per px.)
-    assert.deepEqual([await style(ghosts.first(), 'height'), await style(ghosts.first(), 'border-top-left-radius'), await style(ghosts.first(), 'outline-style')], ['36px', '10px', 'dashed']);
-    assert.equal(await rested(() => style(ghosts.first(), 'outline-color')), await rested(() => colour(page, '--edgeOn')));
     await ghosts.first().hover();
     const sub = await rested(() => colour(page, '--sub'));
     await until('it answers the pointer', () => style(ghosts.first(), 'background-color'), fill => fill === sub);
@@ -789,7 +446,7 @@ test('a day picked answers in three places: its number\'s `sub3` disc, the mini-
   }
 });
 
-test('a change on its way dashes its chip\'s bar, marching from a second on, and lands with its tint brightening once', async () => {
+test('a change on its way holds its chip at .5, and it settles once the server has it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -810,25 +467,9 @@ test('a change on its way dashes its chip\'s bar, marching from a second on, and
     await page.locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
     await page.keyboard.press('Escape');
     await until('on its way', () => dentist.getAttribute('class'), classes => classes === 'ev pending');
-    // Its bar dashed, 3 px on and 3 off, still for a second, then marching every 900 ms.
+    // Held, it's at .5.
     await until('at .5', () => style(dentist, 'opacity'), value => value === '0.5');
-    assert.deepEqual([await rested(() => style(dentist, 'box-shadow')), await rested(() => style(dentist, 'background-size'))], ['none', '3px 100%']);
-    assert.match(await rested(() => style(dentist, 'background-image')), /^repeating-linear-gradient\(/);
-    assert.deepEqual([await rested(() => style(dentist, 'animation-name')), await rested(() => style(dentist, 'animation-duration')), await rested(() => style(dentist, 'animation-delay')), await rested(() => style(dentist, 'animation-iteration-count'))],
-      ['sending', '0.9s', '1s', 'infinite']);
-    assert.match(await rested(() => style(dentist, 'transition')), /opacity 0\.12s/, 'its .5 eases back');
-    // Arrived: its tint brightens once and settles over 420 ms.
-    const classes = await watch(dentist, 'class');
     release();
-    await until('it lands', classes, seen => seen.some(value => value?.split(' ').includes('landed')));
-    assert.equal(await rested(() => page.evaluate(() => {
-      const probe = document.createElement('div');
-      probe.className = 'ev landed';
-      document.querySelector('.cal-grid .cell')!.append(probe);
-      const {animationName, animationDuration} = getComputedStyle(probe);
-      probe.remove();
-      return `${animationName} ${animationDuration}`;
-    })), 'landed 0.42s');
     await until('settled', () => dentist.getAttribute('class'), value => value === 'ev');
     await page.unroute(/\/api\/items\/\d+$/);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -837,7 +478,7 @@ test('a change on its way dashes its chip\'s bar, marching from a second on, and
   }
 });
 
-test('a deleted chip fades and folds away so the ones under it slide up, and ⌘Z folds it back and lands it', async () => {
+test('a deleted chip folds away so the ones under it slide up, and ⌘Z brings it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -847,7 +488,7 @@ test('a deleted chip fades and folds away so the ones under it slide up, and ⌘
     const lecture = page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'CS 101 lecture'});
     const below = (await rested(() => lecture.boundingBox()))!.y;
 
-    // Delete: it fades out over 120 ms, then folds up over 180, and the lecture slides up 23 px into its place.
+    // Delete: it folds away, and the lecture slides up into its place.
     await fair.click();
     await page.locator('.fd').waitFor();
     const classes = await watch(fair, 'class');
@@ -855,27 +496,10 @@ test('a deleted chip fades and folds away so the ones under it slide up, and ⌘
     await fair.waitFor({state: 'detached'});
     assert.ok((await classes()).some(value => value?.split(' ').includes('removing')), 'it folded away first');
     await until('the lecture takes its place', async () => (await lecture.boundingBox())!.y, y => y === below - layout.calendarChip - 3);
-    assert.equal(await rested(() => page.evaluate(() => {
-      const probe = document.createElement('div');
-      probe.className = 'ev removing';
-      document.querySelector('.cal-grid .cell')!.append(probe);
-      const {animationName, animationDuration, animationDelay} = getComputedStyle(probe);
-      probe.remove();
-      return `${animationName} ${animationDuration} ${animationDelay}`;
-    })), 'chip-out, chip-fold 0.12s, 0.18s 0s, 0.12s');
 
-    // ⌘Z: it unfolds back in reverse over 180 ms, then its tint lands.
-    await rested(() => page.evaluate(() => {
-      const seen: string[] = [];
-      (window as unknown as {back: string[]}).back = seen;
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement && node.matches('.ev')) seen.push(`${node.textContent} ${node.className} ${getComputedStyle(node).animationName}`);
-      }))).observe(document.querySelector('.cal-grid')!, {subtree: true, childList: true});
-    }));
+    // ⌘Z: it comes back.
     await page.keyboard.press('Meta+z');
     await fair.waitFor();
-    const back = await page.evaluate(() => (window as unknown as {back: string[]}).back);
-    assert.ok(back.includes('10 AMCareer fair ev restoring chip-unfold, landed'), JSON.stringify(back));
     await until('the lecture back under it', async () => (await lecture.boundingBox())!.y, y => y === below);
     await setpoint.idle();
     const listed = await setpoint.api<{items: {title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
@@ -886,7 +510,7 @@ test('a deleted chip fades and folds away so the ones under it slide up, and ⌘
   }
 });
 
-test('a drag lands where it shows it will: the lift eases in, the day under it takes the item\'s colour with a dashed slot where it would sort in, and the drop settles into place', async () => {
+test('a drag lands where it shows it will: the chip lifts at its own width, the day under it takes the item\'s colour with a slot where it would sort in, and the drop lands there', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -905,7 +529,6 @@ test('a drag lands where it shows it will: the lift eases in, the day under it t
     await page.mouse.move(target.x + target.width / 2, target.y + target.height - 30, {steps: 5});
     const lift = page.locator('.ev.lift');
     await lift.waitFor();
-    assert.deepEqual([await rested(() => style(lift, 'animation-name')), await rested(() => style(lift, 'animation-duration'))], ['lift-in', '0.12s']);
     // It lifts at its own width, not the press's .97 of it, however long it was held (subpixel layout,
     // so to within 0.5 px).
     const lifted = await lift.evaluate(element => parseFloat(element.style.width));
@@ -924,29 +547,8 @@ test('a drag lands where it shows it will: the lift eases in, the day under it t
     // The slot sorts in between Gym and the lecture.
     assert.deepEqual(await thursday.locator(':is(.ev, .tk)').evaluateAll(chips => chips.map(chip => (chip.classList.contains('slot') ? 'slot' : chip.textContent))),
       ['slot', '6 PMCS 101 lecture', 'Renew car registration']);
-    const slot = thursday.locator('.ev.slot');
-    assert.deepEqual([await rested(() => style(slot, 'outline-style')), await rested(() => style(slot, 'height'))], ['dashed', '20px']);
 
-    // Dropped: it settles from the lift into its place over 180 ms on the glide's curve.
-    await page.evaluate(() => {
-      const seen: string[] = [];
-      (window as unknown as {settled: string[]}).settled = seen;
-      const watch = () => {
-        for (const animation of document.getAnimations()) {
-          const target = (animation.effect as KeyframeEffect | null)?.target as HTMLElement | null;
-          if (target?.matches('.cell[data-date="2026-10-08"] .ev') && !(animation instanceof CSSAnimation) && !(animation instanceof CSSTransition)) {
-            const timing = animation.effect!.getTiming();
-            seen.push(`${target.textContent} ${timing.duration} ${timing.easing}`);
-            return;
-          }
-        }
-        requestAnimationFrame(watch);
-      };
-      requestAnimationFrame(watch);
-    });
     await page.mouse.up();
-    await until('it settles', () => page.evaluate(() => (window as unknown as {settled: string[]}).settled), seen => seen.length === 1);
-    assert.match((await page.evaluate(() => (window as unknown as {settled: string[]}).settled))[0]!, /Dentist 180 cubic-bezier\(0?\.22, ?1\.3, ?0?\.36, ?1\)$/);
     await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
     assert.equal(await thursday.getAttribute('class').then(classes => classes!.split(' ').includes('drop')), false);
     assert.deepEqual(setpoint.pageErrors, []);

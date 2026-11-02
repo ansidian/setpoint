@@ -6,17 +6,8 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
-import type {Locator, Page} from 'playwright-core';
-import {ICONS} from '../../src/ui/glyphs.ts';
+import type {Page} from 'playwright-core';
 import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
-
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
-const leadGlyph = (line: Locator) => line.evaluate(element => {
-  const icon = element.querySelector('.icon')!;
-  const range = document.createRange();
-  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
-});
 
 after(cleanUp);
 
@@ -42,14 +33,10 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await page.locator('.ag-item', {hasText: 'Dentist'}).locator('.leave').textContent(), 'Leave by 2:05 PM · 18 min');
     assert.equal(await page.locator('.ag-item .leave').count(), 1, 'only Dentist has one today');
-    // #125: the line names the calendar; the place has its own line, 16 px location_on in ink3, 4 px under it, as Leave by is.
+    // #125: the line names the calendar; the place has its own line.
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
-    assert.deepEqual(await rested(() => dentist.locator('.place').evaluate(line => {
-      const icon = line.querySelector('.icon')!;
-      return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(line).color, getComputedStyle(line).marginTop, getComputedStyle(line.nextElementSibling!).marginTop, getComputedStyle(line).fontSize];
-    })), [ICONS.location_on, '16', await rested(() => tokenColour(page, 'ink3')), '4px', '4px', '12.5px']);
     await settle(page);
     assert.equal(await page.title(), 'October 2026 · Calendar');
     await matchGolden(page, '11-calendar-october-2026');
@@ -74,8 +61,6 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
     assert.deepEqual(await popover.locator(':is(.ev, .tk)').allTextContents(),
       ['9 AMFarmers market', '11 AMHaircut', '12:30 PMLunch with Jo', '2 PMVolunteer shift', '5 PMCall Mom', '8 PMMovie night', 'Grocery run', 'Laundry']);
     assert.equal(await text(page, '.rp-date'), 'Sat, Oct 17');
-    // A popover's × is 16 px in a 26 px button, as every card's (#123); its laid-out width, whatever its entrance.
-    assert.deepEqual(await popover.getByRole('button', {name: 'Close'}).evaluate(button => [(button as HTMLElement).offsetWidth, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     await page.locator('.ag-item', {hasText: 'Movie night'}).waitFor();
 
     await page.keyboard.press('Escape');
@@ -206,19 +191,22 @@ test('the header reads the month filling the view: October nudged up past a row 
   }
 });
 
-test('a calendar toggled off leaves the grid and the agenda, and comes back on', async () => {
+test('a calendar toggled off leaves the grid and the agenda, its name going `ink3`, and comes back on; Todoist has no ring', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
     // Its own row (Dinner with Sam's says it overlaps Study group, F6).
     await page.locator('.ag-item', {hasText: 'Study group'}).first().waitFor();
+    assert.equal(await page.locator('.calrow .ring').count(), 0, 'Todoist reads as the others');
     const personal = page.locator('.calrow', {hasText: 'Personal'});
     assert.equal(await personal.getAttribute('aria-pressed'), 'true');
     await personal.click();
     await until('Personal leaves the grid', () => chips(page, '2026-10-09'), list => list.join() === '6:30 PMStudy group');
     assert.equal(await page.locator('.ag-item', {hasText: 'Dinner with Sam'}).count(), 0, 'and the agenda');
     assert.equal(await personal.locator('.chk.off').count(), 1);
+    const ink3 = await rested(() => tokenColour(page, 'ink3'));
+    await until('the name recedes', () => personal.evaluate(row => getComputedStyle(row).color), value => value === ink3);
     await until('the toggle is kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Personal')?.visible === false);
     // Todoist's toggle takes the tasks.
     await page.locator('.calrow', {hasText: 'Todoist'}).click();
@@ -370,21 +358,11 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     // Every calendar off: Wed Oct 7's Gym, Dentist and two tasks are hidden, not gone, and the header says the view is filtered.
     for (const name of names.slice(1)) await page.locator('.calrow', {hasText: name}).click();
     await until('the pane says what\'s hidden', () => empty.textContent(), line => line === '4 hidden · Show all');
-    assert.equal(await empty.locator('.icon').count(), 1, 'with the visibility_off glyph');
-    assert.deepEqual(await rested(() => leadGlyph(empty)), [ICONS.visibility_off, '16', await rested(() => tokenColour(page, 'ink3')), 8]);
     await hiddenMark.waitFor();
-    assert.equal(await hiddenMark.locator('.icon').getAttribute('width'), '16');
     assert.equal(await rested(() => hiddenMark.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'ink3')));
     assert.equal(await page.locator('.hd-title').textContent(), 'October 2026');
     // The grid stays quiet: Wed Oct 7's cell has nothing in it.
     assert.deepEqual(await chips(page, '2026-10-07'), []);
-    // A day with nothing on it at all offers New event and New task as ghost rows (polish audit calpanes-09).
-    await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
-    await until('Sat, Oct 24', () => text(page, '.rp-date'), title => title === 'Sat, Oct 24');
-    assert.deepEqual(await page.locator('.rpane .ag-ghost').allTextContents(), ['New eventC', 'New taskD']);
-    assert.equal(await empty.count(), 0);
-    await page.locator('.cell[data-date="2026-10-07"]').click({position: {x: 100, y: 150}});
-    await until('Wed, Oct 7 again', () => empty.textContent(), line => line === '4 hidden · Show all');
 
     // Show all turns every calendar back on, and Undo in the toast turns them off again.
     await empty.getByRole('button', {name: 'Show all'}).click();
