@@ -4,7 +4,8 @@
 // own policy: no scripts but the reader's measuring script, and remote images only when the
 // remote-content rule allows them or the user said Show. The sandbox gives the page no origin of its
 // own, so nothing can reach in to measure it; instead the measuring script posts the page's height
-// as it lays out and as its images load, and the frame takes it.
+// as it lays out and as its images load, and the frame takes it. Keys pressed with the email clicked
+// into come the same way, and are pressed again on the frame, so Setpoint's keys still work (SV-149).
 import {useEffect, useRef, useState} from 'react';
 import {emailBodyPath} from '../api/mail.ts';
 
@@ -12,6 +13,16 @@ import {emailBodyPath} from '../api/mail.ts';
 const TALLEST = 200_000;
 /** What a frame holds before its page says its height. */
 const RESERVED = 240;
+
+const KEY_FLAGS = ['metaKey', 'ctrlKey', 'altKey', 'shiftKey', 'repeat', 'isComposing'] as const;
+
+/** The key the measuring script says was pressed in the email, or null when it isn't one. */
+function pressedKey(sent: unknown): KeyboardEventInit | null {
+  if (!sent || typeof sent !== 'object') return null;
+  const {key, code} = sent as Record<string, unknown>;
+  if (typeof key !== 'string' || typeof code !== 'string') return null;
+  return {key, code, ...Object.fromEntries(KEY_FLAGS.map(flag => [flag, (sent as Record<string, unknown>)[flag] === true]))};
+}
 
 export function MailFrame({messageId, show, title}: {messageId: number; show: boolean; title: string}) {
   const src = emailBodyPath(messageId, show);
@@ -23,8 +34,12 @@ export function MailFrame({messageId, show, title}: {messageId: number; show: bo
   useEffect(() => {
     const listen = (event: MessageEvent) => {
       if (!frame.current || event.source !== frame.current.contentWindow) return;
-      const reported: unknown = (event.data as {setpointMailHeight?: unknown} | null)?.setpointMailHeight;
+      const data = event.data as {setpointMailHeight?: unknown; setpointMailKey?: unknown} | null;
+      const reported = data?.setpointMailHeight;
       if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) setHeight(Math.min(Math.ceil(reported), TALLEST));
+      // A key pressed in the email comes to the page's own keys as if the frame itself held it (SV-149).
+      const key = pressedKey(data?.setpointMailKey);
+      if (key) frame.current.dispatchEvent(new KeyboardEvent('keydown', {...key, bubbles: true, cancelable: true}));
     };
     window.addEventListener('message', listen);
     return () => window.removeEventListener('message', listen);

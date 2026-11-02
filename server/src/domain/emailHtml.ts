@@ -136,6 +136,9 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
  * The page never scrolls itself (only the reading pane does), and an email wider than the frame is
  * zoomed down to fit it. The height counts to a marker after the
  * email, in the frame's own pixels whichever way the browser reports a zoomed box.
+ * A key pressed with the email clicked into is passed on to the reader too (SV-149), unless a field
+ * of the email's own takes it. The page keeps its own defaults, so selecting and copying still work;
+ * only ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
  */
 export const MEASURE_SCRIPT = `(() => {
   const root = document.documentElement;
@@ -162,6 +165,13 @@ export const MEASURE_SCRIPT = `(() => {
   new ResizeObserver(later).observe(root);
   addEventListener('load', later, true);
   measure();
+  addEventListener('keydown', event => {
+    const target = event.target;
+    if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+    if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && ['f', 'k', ','].includes(event.key.toLowerCase())) event.preventDefault();
+    const {key, code, metaKey, ctrlKey, altKey, shiftKey, repeat, isComposing} = event;
+    parent.postMessage({setpointMailKey: {key, code, metaKey, ctrlKey, altKey, shiftKey, repeat, isComposing}}, '*');
+  });
 })();`;
 
 const MEASURE_HASH = createHash('sha256').update(MEASURE_SCRIPT).digest('base64');

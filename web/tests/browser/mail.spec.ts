@@ -789,6 +789,46 @@ test('an email of three whole documents shows all three, in order, as tall as th
   }
 });
 
+test('with the email clicked into, its keys still reach Setpoint, and its text stays selected (SV-149)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['stitched-html']});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, 'Statement ready')})}`);
+    await stitchedNotice(page);
+    const frame = page.frameLocator('iframe.mailframe');
+    const intoEmail = async () => {
+      await frame.getByText('Your statement is ready', {exact: true}).click({clickCount: 3});
+      await until('the email has the keys', () => page.evaluate(() => document.activeElement?.className), name => name === 'mailframe');
+    };
+    const selected = () => frame.locator('body').evaluate(() => getSelection()!.toString().trim());
+
+    await intoEmail();
+    await page.keyboard.press('p');
+    await page.locator('.rd-tools .tool', {hasText: 'Unpin'}).waitFor();
+    assert.equal(await selected(), 'Your statement is ready');
+
+    // O opens it in Gmail (answered here, never the real Gmail).
+    await page.context().route('https://mail.google.com/**', route => route.fulfill({contentType: 'text/html', body: '<title>Gmail</title>'}));
+    await intoEmail();
+    const opened = page.waitForEvent('popup');
+    await page.keyboard.press('o');
+    assert.match((await opened).url(), /^https:\/\/mail\.google\.com\/mail\/\?authuser=/);
+
+    // ⌘F goes to the header's search, as it does from anywhere else.
+    await intoEmail();
+    await page.keyboard.press('Meta+f');
+    await until('the search has the keys', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label === 'Search mail');
+    await page.keyboard.press('Escape');
+
+    await intoEmail();
+    await page.keyboard.press('2');
+    await page.locator('.cal-grid').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the facts card and protected line on security mail, and no Add to calendar there', async () => {
   const setpoint = await startSetpoint();
   try {

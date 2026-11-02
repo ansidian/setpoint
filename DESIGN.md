@@ -1459,7 +1459,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to New, #243) ⇧I ⇧U ⌘Enter;
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
   `J` `K` Enter `O` `N` Esc. Key hints read "Esc",
-  "⌘K", "⇧I".
+  "⌘K", "⇧I". They work with an HTML email clicked into, too, but not in a field of its own (#294).
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
   in place with the provider's message otherwise. Nothing quietly reverts. A calendar item deleted
   fades and folds away, and Undo or ⌘Z folds it back and lands it (#193).
@@ -3612,3 +3612,8 @@ it changes what's on screen.
     failing line whose source is healthy again no longer holds 1.2 s on a `good` check: it folds out
     with its own glyph and words. The Jobs history pass's "Read 330 emails" stays, since it says the
     pass ended rather than a source recovering.
+294. **Keys work with an HTML email clicked into** (2026-11-02; darma D413, SV-149). The email's
+    frame passes each key on to Setpoint, so `1`–`4`, `O`, `J` / `K` and the rest act as they would
+    from anywhere else, unless the key is typed into a field of the email's own. Selecting and
+    copying the email's text still work there; only ⌘F, ⌘K and ⌘, are kept from the browser, as
+    Setpoint keeps them everywhere else.
