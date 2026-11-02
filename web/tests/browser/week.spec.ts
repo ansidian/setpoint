@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, still, test, until, writeOutput} from './harness.ts';
+import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -59,7 +59,6 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week (polish audit calpanes-05)');
     assert.equal(await block(page, '2026-10-07', 'Dentist').getAttribute('aria-label'), 'Dentist, Wed, Oct 7, 2:30 – 3:30 PM, Personal');
-    writeOutput('week.target.png', await page.screenshot());
 
     // Paging keeps the view and the address; Today comes back.
     await page.keyboard.press('ArrowRight');
@@ -203,7 +202,6 @@ test('a recurring block dropped asks this, following or all; a click opens the f
     const card = (await rested(() => page.locator('.fd .card').boundingBox()))!;
     const chip = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
     assert.ok(card.x >= chip.x + chip.width || card.x + card.width <= chip.x || card.y >= chip.y + chip.height || card.y + card.height <= chip.y, 'the card sits beside its block');
-    writeOutput('week.detail.png', await page.screenshot());
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

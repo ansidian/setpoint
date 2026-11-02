@@ -9,7 +9,7 @@ import {after} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -363,7 +363,6 @@ test('an empty day with a forecast keeps its own line to show it, "No events" be
     assert.equal(line!.height, 30);
     assert.ok(none!.x + none!.width < wx!.x - 40, 'a space between "No events" and the forecast');
     assert.ok(Math.abs(line!.x + line!.width - 20 - (wx!.x + wx!.width)) <= 1, 'the forecast at the end');
-    writeOutput('phone-agenda-weekend-forecast.png', await page.screenshot());
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

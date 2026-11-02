@@ -15,7 +15,7 @@ import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
-import {cleanUp, point, rested, startSetpoint, test, until, writeOutput} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -1499,7 +1499,6 @@ test('calendar search: the header turns into Search, chips and results in the ri
     await page.locator('.cs-result', {hasText: 'Dinner with Sam'}).click();
     await detailOf(page, 'Dinner with Sam').waitFor();
     await until('the chip on the grid', () => page.locator('.cell[data-date="2026-10-09"] .ev.sel').allTextContents(), shown => shown.join() === '7 PMDinner with Sam');
-    writeOutput('calendar-search.actual.png', await page.screenshot());
     // E hands it to the editor; Esc (Cancel) brings the results back.
     await page.keyboard.press('e');
     await page.locator('.editor.handed').waitFor();
