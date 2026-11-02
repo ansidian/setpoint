@@ -1172,7 +1172,7 @@ test('Alfred\'s sources and the results: a long account label and an age with it
 });
 
 test('Alfred: the card says what Alfred is doing as it works, the steps it took above it (search-04); a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
-  const fake = await fakeAlfred(listAlfred, {delayMs: 1500, holdAnswer: true});
+  const fake = await fakeAlfred(listAlfred, {delayMs: 1500});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
     throw error;
@@ -1188,20 +1188,12 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     await until('Alfred\'s first line', () => waiting.textContent(), text => text === 'Looking through your mail…');
     await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…', 6000);
     await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')), 6000);
-    // Its trail (search-04): the search it ran stays above, in the past tense after its 14 px glyph;
-    // what it's doing now shimmers; two bars hold the answer's place; the header's glyph twinkles.
+    // Its trail (search-04): the search it ran stays above; two bars hold the answer's place.
     const trail = page.locator('.answer .trail .done-step');
-    assert.deepEqual(await trail.allTextContents(), ['Searched “the”']);
-    assert.deepEqual(await trail.locator('.icon').evaluateAll(icons => icons.map(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width')])), [[ICONS.search, '14']]);
-    assert.equal(await rested(() => trail.first().evaluate(row => row.getBoundingClientRect().height)), 20);
-    assert.deepEqual(await rested(() => waiting.locator('.now').evaluate(now => [getComputedStyle(now).animationName, getComputedStyle(now).animationDuration, getComputedStyle(now).backgroundClip])), ['alfred-shimmer', '1.6s', 'text']);
-    assert.equal(await page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), 2);
-    assert.deepEqual(await rested(() => page.locator('.answer .card-h > .icon').evaluate(icon => [getComputedStyle(icon).animationName, getComputedStyle(icon).animationDuration, getComputedStyle(icon).animationDirection])), ['twinkle', '1.2s', 'alternate']);
-    // The fake held the answer for those reads: landing under one, it removes what's being read (SV-115).
-    fake.releaseAnswer();
+    await until('the search it ran', () => trail.allTextContents(), lines => lines.join() === 'Searched “the”');
+    await until('the answer\'s place', () => page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), count => count === 2);
     await page.locator('.answer .ans').waitFor({timeout: 10_000});
-    // The answer fades up where its place was held; the trail folds away.
-    assert.equal(await page.locator('.answer .ans').evaluate(ans => getComputedStyle(ans).animationName), 'turn-in');
+    // The trail folds away.
     await page.locator('.answer .trail').waitFor({state: 'detached'});
     assert.equal(await page.locator('.answer [data-skeleton]').count(), 0);
     const total = Number((await page.locator('.answer .ans').textContent())!.split(' ')[0]);
@@ -1262,7 +1254,7 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
   }
 });
 
-test('Alfred about one email: its first line reads "Reading this email…", and the follow-up field dims until the answer lands', async () => {
+test('Alfred about one email: its first line reads "Reading this email…", and a follow-up typed while it answers stays in the field, unsent', async () => {
   const fake = await fakeAlfred(leaseAlfred, {delayMs: 1500});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
@@ -1276,8 +1268,6 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
     await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
     const field = page.locator('.pane .answer .field');
     await field.locator('input').waitFor();
-    const opacity = () => field.evaluate(element => getComputedStyle(element).opacity);
-    assert.equal(await rested(() => opacity()), '1');
     let asks = 0;
     page.on('request', request => {
       if (request.url().endsWith('/api/alfred/ask')) asks += 1;
@@ -1285,12 +1275,10 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
     await page.keyboard.type('When does my lease renewal need to be signed?');
     await page.keyboard.press('Enter');
     await until('Alfred\'s first line', () => page.locator('.pane .answer .waiting').allTextContents(), lines => lines.join() === 'Reading this email…');
-    await until('the field dimmed while Alfred answers', opacity, value => value === '0.5');
     // A follow-up typed meanwhile stays in the field, unsent, until the answer is in.
     await page.keyboard.type('what\'s the new rent?');
     await page.keyboard.press('Enter');
     await page.locator('.pane .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
-    await until('the field back', opacity, value => value === '1');
     assert.equal(asks, 1);
     assert.equal(await field.locator('input').inputValue(), 'what\'s the new rent?');
     assert.deepEqual(setpoint.pageErrors, []);

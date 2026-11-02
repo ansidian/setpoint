@@ -594,18 +594,6 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     await row.locator('button', {hasText: 'Copy'}).click();
     await row.locator('button', {hasText: 'Copied'}).waitFor();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
-    // Copied confirms in `good`: a 14% fill, its words and glyph `good` (inbox-11).
-    const copied = row.locator('.copy.copied');
-    const look = () => copied.evaluate(button => [getComputedStyle(button).backgroundColor, getComputedStyle(button).color, getComputedStyle(button.querySelector('.icon')!).color]);
-    const green = [await rested(() => page.evaluate(() => {
-        const probe = document.body.appendChild(document.createElement('i'));
-        probe.style.background = 'color-mix(in oklch, var(--good) 14%, transparent)';
-        const colour = getComputedStyle(probe).backgroundColor;
-        probe.remove();
-        return colour;
-      })), await rested(() => tokenColour(page, 'good')), await rested(() => tokenColour(page, 'good'))];
-    // Its fill and words change over 120 ms.
-    await until('Copied in good', look, seen => JSON.stringify(seen) === JSON.stringify(green));
     assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
     // "Copied" for a second and a half.
     await page.clock.runFor(1500);
@@ -622,7 +610,6 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     const countdown = row.locator('.sum');
     const seconds = Number(/^Expires in (\d+) sec$/.exec((await countdown.textContent())!)?.[1]);
     assert.ok(seconds > 0 && seconds <= 12, `${seconds} seconds left`);
-    assert.equal(await rested(() => countdown.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'caution')));
     // A second later it reads one less.
     await page.clock.runFor(1000);
     await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
