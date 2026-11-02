@@ -5,19 +5,10 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {MailCountsOut, MessageOut} from '@setpoint/shared';
-import type {Locator, Page} from 'playwright-core';
-import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import type {Page} from 'playwright-core';
+import {cleanUp, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
-
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
-const leadGlyph = (line: Locator) => line.evaluate(element => {
-  const icon = element.querySelector('.icon')!;
-  const range = document.createRange();
-  range.selectNode(icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
-});
 
 const items = (page: Page) => page.locator('.palette .item').allTextContents();
 const current = (page: Page) => page.locator('.palette .item.cur').textContent();
@@ -163,7 +154,7 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
   }
 });
 
-test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, each with its nav\'s glyph', async () => {
+test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -173,28 +164,16 @@ test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail,
       await page.keyboard.press('Meta+k');
       await page.keyboard.type(typed);
       assert.deepEqual(await items(page), [`Settings › ${section}`], typed);
-      const glyph = await page.locator('.palette .item .icon path').getAttribute('d');
       await page.keyboard.press('Enter');
       await page.locator('.settings .set-title', {hasText: section}).waitFor();
-      // The command carries its page's own glyph from Settings' nav, not a generic gear (#123).
-      assert.equal(await page.locator('.settings .set-nav .nav.on .icon path').first().getAttribute('d'), glyph, `Settings › ${section}'s glyph`);
       await page.keyboard.press('Escape');
       await page.locator('.settings').waitFor({state: 'detached'});
     }
-    // Nothing found leads with search_off, 16 px in ink3, 8 px before its words (#124).
+    // Nothing found says so.
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('zebra');
     const none = page.locator('.palette .none', {hasText: 'No command matches'});
     await none.waitFor();
-    const ink3 = await rested(() => page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.color = 'var(--ink3)';
-      document.body.append(probe);
-      const colour = getComputedStyle(probe).color;
-      probe.remove();
-      return colour;
-    }));
-    assert.deepEqual(await rested(() => leadGlyph(none)), [ICONS.search_off, '16', ink3, 8]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

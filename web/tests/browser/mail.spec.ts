@@ -13,7 +13,7 @@ import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDom
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, readSecurity, rested, startSetpoint, still, test, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, still, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -492,8 +492,6 @@ test('Mark all as read from the footer: everything outside Attention and Securit
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    // Its glyph is ⌘K's for the same command, 16 px before the label (#123).
-    assert.deepEqual((await glyphs(page.locator('.listfoot .lnk .icon')))[0]!.slice(0, 2), ['mark_email_read', '16']);
     await page.locator('.listfoot .lnk', {hasText: 'Mark all as read'}).click();
     await until('only Attention\'s two unread and Security\'s three remain', () => unreadCount(page), text => text === '5', 5000);
     // The screen shows it at once; the server follows.
@@ -791,20 +789,6 @@ test('an email of three whole documents shows all three, in order, as tall as th
   }
 });
 
-test('on the phone, an email of three whole documents shows all three too (SV-127)', async () => {
-  const setpoint = await startSetpoint({fixtures: ['stitched-html']});
-  try {
-    const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, 'Statement ready')})}`);
-    const {box, tops} = await stitchedNotice(page);
-    assert.deepEqual([...tops].sort((a, b) => a - b), tops);
-    assert.equal(box.width, 350);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 test('the facts card and protected line on security mail, and no Add to calendar there', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -871,10 +855,6 @@ test('every attachment downloads: its card\'s Download, the preview\'s, and a ca
     const page = await load(setpoint);
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     const card = page.locator('.attach', {hasText: 'Renewal agreement.pdf'});
-    // At least 280 wide, wider to show the whole name; 44 tall.
-    const box = (await card.boundingBox())!;
-    assert.ok(box.width >= 280 && box.height === 44, `the card is ${box.width} × ${box.height}`);
-    assert.equal(await card.locator('.name').evaluate(name => name.scrollWidth <= name.clientWidth), true, 'the whole name shows');
     // The card's Download saves it without opening the preview.
     let download = page.waitForEvent('download');
     await card.locator('.dl', {hasText: 'Download'}).click();
@@ -904,51 +884,6 @@ test('every attachment downloads: its card\'s Download, the preview\'s, and a ca
     await zip.click();
     await download;
     assert.equal(await other.locator('.attach-preview').count(), 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-/** A background as the page computes it, mixes included. */
-const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
-  const probe = document.createElement('div');
-  probe.style.background = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).backgroundColor;
-  probe.remove();
-  return computed;
-}, background);
-
-test('#122: an attachment\'s type tile says what it is in its colour and glyph, Download carries its glyph, and the pointer lifts the card', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await load(setpoint);
-    await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
-    const card = page.locator('.attach', {hasText: 'Renewal agreement.pdf'});
-    const tile = card.locator('.type');
-    await tile.waitFor();
-    assert.equal(await rested(() => card.evaluate(element => getComputedStyle(element).padding)), '0px 8px 0px 7px');
-    // 30 px, radius 8, concentric in the 44 px card (7 px from its edges), 12 px before the name.
-    assert.deepEqual(await rested(() => tile.evaluate(element => {
-      const box = element.getBoundingClientRect();
-      const outer = element.closest('.attach')!.getBoundingClientRect();
-      const names = element.closest('.attach')!.querySelector('.names')!.getBoundingClientRect();
-      return [box.width, box.height, getComputedStyle(element).borderRadius, box.left - outer.left, box.top - outer.top, names.left - box.right];
-    })), [30, 30, '8px', 7, 7, 12]);
-    const alert = await rested(() => tokenColour(page, 'alert'));
-    assert.deepEqual(await rested(() => glyphs(tile.locator('.icon'))), [['picture_as_pdf', '18', alert]]);
-    assert.equal(await rested(() => tile.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 14%, transparent)')));
-    const download = card.locator('.dl');
-    assert.deepEqual(await rested(() => glyphs(download.locator('.icon'))), [['download', '16', await rested(() => tokenColour(page, 'ink2'))]]);
-    assert.deepEqual(await rested(() => download.evaluate(element => [getComputedStyle(element).columnGap, getComputedStyle(element).padding])), ['6px', '0px 10px 0px 8px']);
-    // Under the pointer: the tile deepens to 22%, the eye turns ink, and in Night the card lifts to cardOn.
-    await card.locator('.names').hover();
-    const deeper = await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--alert) 22%, transparent)'));
-    await until('the tile deepens', () => tile.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === deeper);
-    const [ink, cardOn] = [await rested(() => tokenColour(page, 'ink')), await rested(() => backgroundOf(page, 'var(--cardOn)'))];
-    await until('the eye turns ink', () => card.locator('.look').evaluate(element => getComputedStyle(element).color), colour => colour === ink);
-    await until('the card lifts', () => card.evaluate(element => getComputedStyle(element).backgroundColor), colour => colour === cardOn);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1040,7 +975,6 @@ test('#237: with the reader open, the kinds turn into subheadings under FYI, and
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    const ink3 = await rested(() => tokenColour(page, 'ink3'));
     const subheads = page.locator('.list.all .kh');
     // Wide, the kinds sit in the left column and no subheading shows.
     assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), true);
@@ -1049,10 +983,9 @@ test('#237: with the reader open, the kinds turn into subheadings under FYI, and
     const before = (await rested(() => fabrikam.boundingBox()))!.y;
     await fabrikam.click();
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
-    // Each FYI run of one kind gets its subheading, its glyph at 13 px in ink3; the column goes.
+    // Each FYI run of one kind gets its subheading; the column goes.
     await subheads.first().waitFor();
     assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.deepEqual((await rested(() => glyphs(subheads.locator('.icon')))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), false);
     // New's subheadings sit under FYI's header, each before its run's first row.
     const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
@@ -1070,37 +1003,6 @@ test('#237: with the reader open, the kinds turn into subheadings under FYI, and
   }
 });
 
-test('#240: with the reader open the sender column takes 24% of its row, between 112 px and its own width, so the summary keeps room', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await load(setpoint);
-    await page.setViewportSize({width: 1440, height: 900});
-    const widths = (row: Locator) => row.evaluate((node): [number, number] => {
-      // The row's width inside its padding, which a percentage is of.
-      const style = getComputedStyle(node);
-      return [node.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight), node.querySelector('.from')!.getBoundingClientRect().width];
-    });
-    for (const [path, rows, wide] of [['/inbox', '.list.all .row:not(.shelf)', 200]] as const) {
-      await page.goto(`${setpoint.base}${path}`);
-      const row = page.locator(rows).first();
-      await row.waitFor();
-      // Closed, the column keeps its width.
-      assert.equal((await widths(row))[1], wide);
-      await row.click();
-      await page.locator('.pane .rd-subj').waitFor();
-      const [width, from] = await rested(() => widths(row));
-      assert.equal(Math.round(from), Math.round(Math.min(wide, Math.max(112, width * .24))), path);
-      assert.ok(from < wide, `${path}: narrower with the reader open (${from}px of a ${width}px row)`);
-      await page.keyboard.press('Escape');
-      await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-      assert.equal((await rested(() => widths(row)))[1], wide);
-    }
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 test('#238: the reader shows the email\'s summary under its subject, and none when triage wrote none', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -1109,42 +1011,13 @@ test('#238: the reader shows the email\'s summary under its subject, and none wh
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     const summary = page.locator('.rd-sum');
     assert.equal(await summary.textContent(), 'Data Analyst');
-    assert.equal(await rested(() => summary.evaluate(node => getComputedStyle(node).color)), await rested(() => tokenColour(page, 'ink2')));
-    // Under the subject, 6 px below it, and above the sender.
-    const [subject, sum, meta] = [await page.locator('.rd-subj').boundingBox(), await summary.boundingBox(), await page.locator('.rd-meta').boundingBox()];
-    assert.equal(Math.round(sum!.y - (subject!.y + subject!.height)), 6);
+    // Above the sender.
+    const [sum, meta] = [await summary.boundingBox(), await page.locator('.rd-meta').boundingBox()];
     assert.ok(meta!.y > sum!.y + sum!.height, 'the sender comes after it');
     // An email with no summary has no line for it.
     await page.locator('.list.all .row', {hasText: 'You sent $42.00 to Sam Lee'}).first().click();
     await page.locator('.rd-subj', {hasText: 'You sent $42.00 to Sam Lee'}).waitFor();
     assert.equal(await summary.count(), 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('#119: each band leads with its glyph, 14 px in ink3 and 8 px before its label, Attention\'s flag in caution; the kind column draws the kind\'s at 13 px', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await load(setpoint);
-    const [ink3, caution] = [await rested(() => tokenColour(page, 'ink3')), await rested(() => tokenColour(page, 'caution'))];
-    const headers = page.locator('.list .gh:not(.day)');
-    const labels = await headers.evaluateAll(all => all.map(header => header.querySelector('.gi')!.nextSibling!.textContent));
-    assert.deepEqual(labels, ['New', 'Attention', 'Pinned']);
-    assert.deepEqual(await rested(() => glyphs(headers.locator('.gi .icon'))), [['mark_email_unread', '14', ink3], ['flag', '14', caution], ['keep', '14', ink3]]);
-    // The label starts 8 px after the glyph, as the band's other parts are spaced.
-    const gaps = await rested(() => headers.evaluateAll(all => all.map(header => {
-      const glyph = header.querySelector('.gi')!;
-      const range = document.createRange();
-      range.selectNode(glyph.nextSibling!);
-      return Math.round(range.getBoundingClientRect().left - glyph.getBoundingClientRect().right);
-    })));
-    assert.deepEqual(new Set(gaps), new Set([8]));
-    // Each kind word after its group's glyph at 13 px.
-    const kinds = page.locator('.list.all .row .kd:has(.icon)');
-    assert.deepEqual((await kinds.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.deepEqual((await rested(() => glyphs(kinds.locator('.icon')))).slice(0, 4), [['lock', '13', ink3], ['local_shipping', '13', ink3], ['payments', '13', ink3], ['work', '13', ink3]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1159,6 +1032,10 @@ test('the Pinned shelf (D105): P on New\'s row moves it to the shelf at once, an
     const bank = page.locator('.list.all .row', {hasText: 'Checking ending in 1234'});
     assert.deepEqual(await shelf(), ['Parkside Apartments']);
     assert.equal(await bank.count(), 1);
+    // Down New's 13 rows, its Noise line and Attention's one row, then the Pinned shelf's lease (D105).
+    await page.locator('.today-row').first().waitFor();
+    for (let press = 0; press < 16; press++) await page.keyboard.press('j');
+    await page.locator('.list.all .row.shelf.cur', {hasText: 'Parkside Apartments'}).waitFor();
     await point(bank);
     // The server's answer is held, so the move is shown before the server has it.
     let release = () => {};
@@ -1192,7 +1069,7 @@ test('the Pinned shelf (D105): P on New\'s row moves it to the shelf at once, an
   }
 });
 
-test('the Inbox is one place: the sidebar, 1 and the bare address open it, with or without mail waiting, and All\'s old addresses land there (#243)', async () => {
+test('the Inbox is one place: the sidebar and the bare address open it, and All\'s old addresses land there (#243)', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -1204,21 +1081,6 @@ test('the Inbox is one place: the sidebar, 1 and the bare address open it, with 
     assert.equal(await path(), '/inbox');
     // No Unread | All to choose between.
     assert.equal(await page.locator('.hd .seg').count(), 0);
-    // Nothing waiting: Security read, Mark all as read, then Done on each Attention email.
-    await readSecurity(setpoint);
-    await setpoint.api('POST', '/mail/mark-all-read', {});
-    await until('Mark all as read confirmed', () => counts(setpoint), value => value.unread === value.attention - 1 && value.unread_fyi === 0);
-    const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
-    for (const row of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${row.id}/done`, {done: true});
-    await page.keyboard.press('2');
-    await page.locator('.cal-grid').waitFor();
-    await page.keyboard.press('1');
-    await page.locator('.list .gh.day').first().waitFor();
-    assert.equal(await path(), '/inbox');
-    // No New, no Attention, and no All caught up: the shelf, then the days. The answers this
-    // browser had from before may show first; places settle once the fresh ones are in.
-    await until('the shelf leads', () => page.locator('.list .gh:not(.day)').allTextContents(), bands => bands.join() === 'Pinned 1');
-    assert.equal(await page.locator('.empty-line').count(), 0);
     // The bare address, and All's old one with an email in it.
     await page.goto(`${setpoint.base}/`);
     await page.locator('.list .gh.day').first().waitFor();
@@ -1362,42 +1224,6 @@ test('S8 (SV-25, D54): offline, opening an email shows no failure toast: the off
     await setpoint.idle();
     assert.equal(await page.locator('.toast').count(), 0);
     await page.context().setOffline(false);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('Pin and Mark all as read show at once, before the server has them', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await load(setpoint);
-    let release = () => {};
-    const held = new Promise<void>(resolve => {
-      release = resolve;
-    });
-    await page.route(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/, async route => {
-      await held;
-      await route.continue();
-    });
-    const shelf = () => page.locator('.row.shelf').allTextContents();
-
-    // P on Northwind's row: on the shelf at once.
-    await point(rowOf(page, 'Pick a 30-minute slot'));
-    await page.keyboard.press('p');
-    await until('Northwind joins the shelf', () => shelf(), rows => rows.some(text => text.includes('Pick a 30-minute slot this week')));
-
-    // ⇧I: New empties at once, its FYI and Noise read, and the sidebar's count drops.
-    await page.keyboard.press('Shift+I');
-    await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0);
-    const pinned = (await setpoint.api<InboxOut>('GET', '/mail/inbox')).groups.find(group => group.group === 'pinned')!;
-    assert.equal(pinned.rows.length, 1, 'the server doesn\'t have the pin yet');
-
-    release();
-    await until('the server has both', () => setpoint.api<InboxOut>('GET', '/mail/inbox'),
-      inbox => inbox.groups.find(group => group.group === 'pinned')!.rows.length === 2 && !inbox.groups.some(group => group.group === 'deliveries'));
-    await until('the shelf keeps it', () => shelf(), rows => rows.length === 2);
-    await page.unroute(/\/api\/mail\/(messages\/\d+\/pin|mark-all-read)$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

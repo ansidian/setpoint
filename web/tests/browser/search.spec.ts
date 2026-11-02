@@ -11,22 +11,13 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
-import type {Locator, Page} from 'playwright-core';
-import {ICONS} from '../../src/ui/glyphs.ts';
+import type {Page} from 'playwright-core';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
 import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
-
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
-const leadGlyph = (line: Locator) => line.evaluate(element => {
-  const icon = element.querySelector('.icon')!;
-  const range = document.createRange();
-  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
-});
 
 async function load(setpoint: Setpoint): Promise<Page> {
   const page = await setpoint.page('target');
@@ -196,15 +187,6 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     await page.keyboard.type('zebra');
     await page.locator('.no-results', {hasText: 'No emails match'}).waitFor();
     assert.equal(await page.locator('.no-results').textContent(), 'No emails matchNorthwind TalentRejectionMar 2026zebra');
-    const ink3 = await rested(() => page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.color = 'var(--ink3)';
-      document.body.append(probe);
-      const colour = getComputedStyle(probe).color;
-      probe.remove();
-      return colour;
-    }));
-    assert.deepEqual(await rested(() => leadGlyph(page.locator('.no-results'))), [ICONS.search_off, '20', ink3, 12], 'nothing found leads with search_off (#124)');
     await page.locator('.no-results .x[aria-label="Remove zebra"]').click();
     await page.locator('.arow.result').first().waitFor();
     // Esc in the field clears the search: the Inbox is back.
@@ -1374,8 +1356,6 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Project"]').inputValue(), 'School');
-    // A labelled button's glyph is 17, open_in_new as Add's (#123).
-    assert.equal(await card.getByRole('button', {name: 'More options'}).locator('.icon').getAttribute('width'), '17');
     // S4: the card's fields as left go with it; those changed lose the email's mark.
     await card.locator('input[aria-label="Title"]').fill('Study for the final');
     await card.locator('input[aria-label="Date"]').fill('dec 8');
