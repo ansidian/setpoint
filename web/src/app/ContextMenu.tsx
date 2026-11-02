@@ -4,7 +4,8 @@
 // ⌘K, its keys) with their key hints, plus Copy items. It's the reader's More menu (`.pop.menu`),
 // kept on screen (logic/contextMenu.ts). Its cursor starts on the first item; ↑ ↓ move it, Enter
 // runs it, an item's key runs that item, and Esc, a press elsewhere, a scroll or the window
-// resizing close it. An item with a panel (Colour) shows the panel in its place, at the same spot.
+// resizing close it. An item with a panel (Colour) shows the panel in its place, at the same spot,
+// and one with items (Add to rule) shows them there, as a list of its own with the same keys.
 //
 // The browser keeps its own menu on a link or field inside the thing, on selected text, inside an
 // email's body (its frame never reaches here), and with ⌥ held. A right-click that closes an open
@@ -33,6 +34,8 @@ export interface MenuAction {
   group?: string;
   // Picked, it shows this in its place, at the same spot, rather than running (Colour's swatches).
   panel?: (close: () => void) => ReactNode;
+  // Picked, these take the menu's place, at the same spot, rather than it running (Add to rule's rules).
+  items?: MenuAction[];
 }
 
 interface Open {
@@ -132,9 +135,10 @@ function Menu({open}: {open: Open}) {
   const menu = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<{left: number; top: number; right: boolean; up: boolean} | null>(null);
   const [panel, setPanel] = useState<MenuAction | null>(null);
-  const actions = open.actions;
-  const firstEnabled = Math.max(0, actions.findIndex(action => !action.disabled));
-  const [cursor, setCursor] = useState(firstEnabled);
+  const [inner, setInner] = useState<MenuAction[] | null>(null);
+  const actions = inner ?? open.actions;
+  const firstEnabled = (list: MenuAction[]) => Math.max(0, list.findIndex(action => !action.disabled));
+  const [cursor, setCursor] = useState(() => firstEnabled(actions));
   // What had focus, given back when the menu closes by its own keys or a pick.
   const [was] = useState(() => document.activeElement as HTMLElement | null);
 
@@ -144,12 +148,13 @@ function Menu({open}: {open: Open}) {
     if (!element) return;
     const z = zoom();
     setPlace(placeMenuAt({x: open.x, y: open.y}, {width: element.offsetWidth, height: element.offsetHeight}, {width: window.innerWidth / z, height: window.innerHeight / z}));
-  }, [open, panel]);
-  // Once it shows: a hidden element can't take focus.
+  }, [open, panel, inner]);
+  // Once it shows: a hidden element can't take focus. Again when its items change, as the one
+  // clicked to show them took focus and is gone.
   const placed = place !== null;
   useLayoutEffect(() => {
     if (placed) menu.current?.focus({preventScroll: true});
-  }, [placed, panel]);
+  }, [placed, panel, inner]);
 
   // A scroll, the window resizing or losing focus closes it: it belongs to where the pointer was.
   useEffect(() => {
@@ -176,6 +181,11 @@ function Menu({open}: {open: Open}) {
     if (!action || action.disabled) return;
     if (action.panel) {
       setPanel(action);
+      return;
+    }
+    if (action.items) {
+      setInner(action.items);
+      setCursor(firstEnabled(action.items));
       return;
     }
     close();

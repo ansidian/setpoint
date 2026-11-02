@@ -179,6 +179,52 @@ export function senderMatch(text: string): RuleMatch | null {
   return null;
 }
 
+// Mail hosts many people send from: a rule from one of them names the address, not everyone on it.
+const SHARED_HOSTS = new Set(['gmail.com', 'googlemail.com', 'icloud.com', 'me.com', 'mac.com', 'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'yahoo.com', 'aol.com', 'proton.me', 'protonmail.com']);
+
+export interface RuleSender {
+  // What Add to rule names it by: "northwind.example", or "sam@gmail.com".
+  text: string;
+  match: Pick<RuleMatch, 'from_domains' | 'from_addresses'>;
+}
+
+/** Add to rule's sender (SV-160): the address's domain, or the address itself on a shared host. */
+export function ruleSender(address: string): RuleSender | null {
+  const value = address.trim().toLowerCase();
+  const domain = value.split('@')[1] ?? '';
+  const text = SHARED_HOSTS.has(domain) ? value : domain;
+  const match = senderMatch(text);
+  return match && {text, match};
+}
+
+const covers = (match: RuleMatch, sender: RuleSender) => {
+  const [address] = sender.match.from_addresses ?? [];
+  const domain = sender.match.from_domains?.[0] ?? address?.split('@')[1];
+  return (address !== undefined && (match.from_addresses ?? []).includes(address))
+    || (match.from_domains ?? []).some(one => domain === one || domain?.endsWith(`.${one}`));
+};
+
+/** The rules Add to rule offers: written ones that are on and match on sender, in their order, leaving out those that already take this sender. */
+export const rulesToAddTo = (rules: RuleOut[] | undefined, sender: RuleSender): RuleOut[] => splitRules(rules ?? []).written
+  .filter(rule => rule.enabled && (rule.match.from_domains || rule.match.from_addresses) && !covers(rule.match, sender));
+
+/** The rule's match with the sender among its senders (which are alternatives), the rest kept. */
+export function withSender(match: RuleMatch, sender: RuleSender): RuleMatch {
+  const next = {...match};
+  if (sender.match.from_domains) next.from_domains = [...match.from_domains ?? [], ...sender.match.from_domains];
+  if (sender.match.from_addresses) next.from_addresses = [...match.from_addresses ?? [], ...sender.match.from_addresses];
+  return next;
+}
+
+/** A rule on one line, as Settings › Mail words it: "From woodgrovebank.example → FYI · Money". */
+export const ruleLine = (rule: Pick<RuleOut, 'match' | 'lane' | 'kind'>) => `${ruleWords(rule.match).map(run => run.text).join('')} → ${laneTag(rule.lane, rule.kind)}`;
+
+/** Add rule's Send to for an email in `lane` and `kind`: where it is now ("fyi:money"), FYI · Other before triage. */
+export function ruleDestination(lane: Lane | null, kind: Kind | null): string {
+  if (lane === 'attention' || lane === 'noise') return lane;
+  return `fyi:${kind ?? 'other'}`;
+}
+
 /** Event reminder presets (Settings › Notifications), in minutes before. */
 export const EVENT_REMINDERS = [0, 5, 10, 15, 30, 60, 120, 24 * 60];
 

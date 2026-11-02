@@ -1,5 +1,5 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
-// rule, the note that protected mail can't be moved by any rule, learned rules (from pattern
+// rule (open and filled in when an email's Add to rule asked for a New rule from its sender, SV-160), the note that protected mail can't be moved by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
 // with a filter, and the code expiry's presets.
 import type {Kind, Lane, RuleOut, Settings, TrustedDomainOut} from '@setpoint/shared';
@@ -16,6 +16,8 @@ import {segThumb} from '../../ui/seg.ts';
 import {useNow} from '../clock.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
+import {clearRuleDraft, useRuleDraft} from './store.ts';
+import type {RuleDraft} from './store.ts';
 import type {DragProps} from './order.ts';
 import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
@@ -36,23 +38,29 @@ export function MailPage() {
   const settingsLoad = {path: SETTINGS_PATH, ...useResource<Settings>(SETTINGS_PATH)};
   const settings = settingsLoad.data;
   const [adding, setAdding] = useState(false);
+  const draft = useRuleDraft();
+  const showForm = adding || draft !== null;
+  const closeForm = () => {
+    setAdding(false);
+    clearRuleDraft();
+  };
   const save = useAttempt();
   const {written, learned} = splitRules(rules ?? []);
   const order = useLiveOrder(written, 'text/x-setpoint-rule', ids => void reorderRules(ids).catch(toastFailure('Couldn\'t reorder rules')));
 
   return (
     <Page title="Mail" loads={[rulesLoad, domainsLoad, settingsLoad]}>
-      <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => setAdding(!adding)}><Icon name="add" size={17} />Add rule</button>}>
+      <Section label="Rules" right={<button className="btn quiet sm" type="button" onClick={() => (showForm ? closeForm() : setAdding(true))}><Icon name="add" size={17} />Add rule</button>}>
         {/* "No rules yet" only once the rules are known (states-01). */}
-        {!rules && !adding ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>
-          {adding && <AddRule onDone={() => setAdding(false)} />}
+        {!rules && !showForm ? <SkeletonRows count={3} one /> : <div {...order.groupProps}>
+          {showForm && <AddRule key={draft?.from} draft={draft} onDone={closeForm} />}
           {written.map((rule, index) => (
             <WrittenRule key={rule.id} rule={rule} drag={order.rowProps(rule, index)} onMove={delta => {
               const next = moved(written, index, delta);
               if (next !== written) void reorderRules(next.map(one => one.id)).catch(toastFailure('Couldn\'t reorder rules'));
             }} />
           ))}
-          {!written.length && !adding && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
+          {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
         </div>}
         <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · no rule can move it</div>
       </Section>
@@ -140,9 +148,9 @@ function LearnedRule({rule}: {rule: RuleOut}) {
   );
 }
 
-/** Add rule: from a domain or address, optionally with words in the subject, to a lane and kind. */
-function AddRule({onDone}: {onDone: () => void}) {
-  const [destination, setDestination] = useState('fyi:other');
+/** Add rule: from a domain or address, optionally with words in the subject, to a lane and kind; from an email's draft, its sender and where it is now. */
+function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void}) {
+  const [destination, setDestination] = useState(draft?.destination ?? 'fyi:other');
   const send = useAttempt();
   return (
     <form className="set-row ctl form" onKeyDown={escapeCancels(onDone)} onSubmit={event => {
@@ -156,7 +164,7 @@ function AddRule({onDone}: {onDone: () => void}) {
         .then(rule => rule && onDone());
     }}>
       <span className="s">From</span>
-      <input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" autoFocus style={{width: 170}} />
+      <input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={draft?.from} autoFocus style={{width: 170}} />
       <input className="fld" name="subject" placeholder="Subject has (optional)" aria-label="Subject has" style={{width: 170}} />
       <Icon name="arrow_forward" size={16} />
       <Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} />

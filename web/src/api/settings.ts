@@ -2,7 +2,7 @@
 // routes). Each change shows its answer at once and refreshes what else it touches; secrets are
 // write-only, so only whether one is set ever comes back.
 import type {
-  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleOut, SecretName,
+  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, SecretName,
   SecurityOut, Settings, SettingsPatch, TodoistConnectOut, TrustedDomainOut,
 } from '@setpoint/shared';
 import {ACCOUNTS_PATH} from './mail.ts';
@@ -107,6 +107,16 @@ export async function setRuleEnabled(id: number, enabled: boolean): Promise<void
   updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, enabled} : rule)));
   try {
     await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, {enabled});
+  } finally {
+    refreshIfShown(RULES_PATH);
+  }
+}
+
+/** A rule's new match: Add to rule's sender added (SV-160), or its Undo. */
+export async function setRuleMatch(id: number, match: RuleMatch): Promise<void> {
+  updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, match} : rule)));
+  try {
+    await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, {match});
   } finally {
     refreshIfShown(RULES_PATH);
   }

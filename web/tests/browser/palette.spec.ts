@@ -33,7 +33,7 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     await page.locator('.palette').waitFor();
     assert.deepEqual(await page.locator('.palette .cmdk-label').allTextContents(), ['This email', 'Go to', 'Appearance']);
     assert.deepEqual(await items(page), [
-      'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'Add to calendar', 'Add as task', 'Ask about this email', 'Mark unread⇧U',
+      'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'Add to calendar', 'Add as task', 'Ask about this email', 'New rule from northwind.example…', 'Mark unread⇧U',
       'Inbox1', 'Calendar2', 'News3', 'Jobs4', 'Settings⌘,', 'System', 'Light', 'Night',
     ]);
     assert.equal(await current(page), 'DoneH');

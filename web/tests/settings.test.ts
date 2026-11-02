@@ -1,10 +1,11 @@
 // Settings' words as tables: rules as sentences, attention precision, Google Calendar's sources as
 // one row, the order moves and the presets' labels.
-import type {HealthOut, RuleMatch, SourceOut} from '@setpoint/shared';
+import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, precisionText, ruleWords, senderMatch, shifts, sparkPath, sparkTitle, splitRules, taskTime, withPatch,
+  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, precisionText, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch,
+  shifts, sparkPath, sparkTitle, splitRules, taskTime, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -46,6 +47,51 @@ describe('Settings', () => {
     ['woodgrovebank.example', {from_domains: ['woodgrovebank.example']}], [' News.Fabrikam.com ', {from_domains: ['news.fabrikam.com']}],
     ['sam@example.com', {from_addresses: ['sam@example.com']}], ['woodgrove', null], ['', null], ['a b.com', null],
   ])('Add rule\'s From %j matches %j', (text, match) => expect(senderMatch(text)).toEqual(match));
+
+  // Add to rule (SV-160): the sender an email gives a rule, the rules it can join, and the rule with it.
+  test.each([
+    ['no-reply@northwind.example', {text: 'northwind.example', match: {from_domains: ['northwind.example']}}],
+    ['Alerts@Mail.Woodgrovebank.example', {text: 'mail.woodgrovebank.example', match: {from_domains: ['mail.woodgrovebank.example']}}],
+    // A host many people share names the address, not everyone on it.
+    ['sam.lee@gmail.com', {text: 'sam.lee@gmail.com', match: {from_addresses: ['sam.lee@gmail.com']}}],
+    ['pat@icloud.com', {text: 'pat@icloud.com', match: {from_addresses: ['pat@icloud.com']}}],
+    ['not an address', null],
+  ])('an email from %j gives a rule %j', (address, sender) => expect(ruleSender(address)).toEqual(sender));
+
+  const rule = (id: number, match: RuleMatch, fields: Partial<RuleOut> = {}): RuleOut => ({
+    id, origin: 'written', match, lane: 'fyi', kind: 'money', position: id, enabled: true, imported: false, created_at: '2026-10-01T00:00:00Z', matches_this_month: 0, ...fields,
+  });
+  test('the rules an email\'s sender can join: written ones on, matching on sender, not already matching it, in their order', () => {
+    const rules = [
+      rule(3, {from_domains: ['news.fabrikam.com']}, {lane: 'noise', kind: null}),
+      rule(1, {from_domains: ['university.edu'], subject_includes: ['Registrar']}, {lane: 'attention', kind: null}),
+      rule(2, {from_domains: ['woodgrovebank.example']}),
+      rule(4, {from_addresses: ['sam@example.com']}, {enabled: false}),
+      rule(5, {organisation: 'Northwind', type: 'newsletter'}, {origin: 'learned'}),
+      rule(6, {subject_includes: ['invoice']}),
+    ];
+    expect(rulesToAddTo(rules, ruleSender('no-reply@northwind.example')!).map(one => one.id)).toEqual([1, 2, 3]);
+    // Already matched, by the domain or a parent of it, or by the address: not offered.
+    expect(rulesToAddTo(rules, ruleSender('alerts@mail.woodgrovebank.example')!).map(one => one.id)).toEqual([1, 3]);
+    expect(rulesToAddTo([rule(7, {from_addresses: ['sam.lee@gmail.com']})], ruleSender('sam.lee@gmail.com')!)).toEqual([]);
+    expect(rulesToAddTo(undefined, ruleSender('no-reply@northwind.example')!)).toEqual([]);
+  });
+
+  test.each<[RuleMatch, string, RuleMatch]>([
+    [{from_domains: ['woodgrovebank.example']}, 'no-reply@northwind.example', {from_domains: ['woodgrovebank.example', 'northwind.example']}],
+    [{from_domains: ['university.edu'], subject_includes: ['Registrar']}, 'sam@gmail.com', {from_domains: ['university.edu'], subject_includes: ['Registrar'], from_addresses: ['sam@gmail.com']}],
+    [{from_addresses: ['pat@icloud.com']}, 'sam@icloud.com', {from_addresses: ['pat@icloud.com', 'sam@icloud.com']}],
+  ])('the rule %j with %s\'s sender matches %j', (match, address, next) => expect(withSender(match, ruleSender(address)!)).toEqual(next));
+
+  test.each([
+    [rule(2, {from_domains: ['woodgrovebank.example']}), 'From woodgrovebank.example → FYI · Money'],
+    [rule(1, {from_domains: ['university.edu'], subject_includes: ['Registrar']}, {lane: 'attention', kind: null}), 'From university.edu with “Registrar” in the subject → Attention'],
+  ])('a rule on one line: %#', (one, line) => expect(ruleLine(one)).toBe(line));
+
+  // New rule from the sender starts in the lane and group the email is in now.
+  test.each([
+    ['attention', null, 'attention'], ['fyi', 'money', 'fyi:money'], ['fyi', null, 'fyi:other'], ['noise', null, 'noise'], [null, null, 'fyi:other'],
+  ] as const)('an email in %s %s starts a rule sending to %s', (lane, kind, destination) => expect(ruleDestination(lane, kind)).toBe(destination));
 
   test.each([
     // Not yet loaded: nothing to say, rather than that nothing was Done (states-01).

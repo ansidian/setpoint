@@ -3103,7 +3103,7 @@ it changes what's on screen.
       Mark all as read for one email: it stays where it is in New for the visit, the attention
       pill doesn't move, Undo and ⌘Z) or Mark unread ⇧U on a read one, Open in Gmail O, Add to
       calendar, Add as task, Ask about this email (on every row; each opens the email, whose
-      reading pane holds its card), Copy sender address, and Copy code on a code row. **New**'s
+      reading pane holds its card), Add to rule (#296), Copy sender address, and Copy code on a code row. **New**'s
       band: Mark all as read ⇧I. Nothing changes an email's lane or kind (brief decision 28).
     - **The reader:** an attachment, Preview and Download; the sender, Copy address; the code
       card, Copy.
@@ -3624,3 +3624,18 @@ it changes what's on screen.
     keeping it for the visit, the attention pill as it was, the counts following. It adds no toast or
     Undo of its own, since Copied already says it; Mark unread takes it back. A refused copy reads
     nothing. On the phone's reader after Mark unread, Copy reads it again and offers Mark unread.
+296. **An email's right-click and ⌘K offer Add to rule** (Andy, 2026-11-02; darma SV-160, D415). In
+    a row's menu, after Ask about this email, **Add to rule** puts a list in the menu's place, with
+    the menu's keys. First comes **New rule from northwind.example…**, which opens Settings › Mail
+    with Add rule filled in: From is the sender's domain, or the address on a host many people share
+    (gmail.com, icloud.com and the like), and Send to is where the email is now, FYI · Other before
+    triage. Then come the written rules that are on and match on sender, in their order and worded
+    as Settings words them ("From woodgrovebank.example → FYI · Money"), leaving out any that already
+    take this sender. Picking one adds the sender to it: "Added northwind.example to the rule · Undo".
+    ⌘K's This email has no such list, so it offers the same as commands of their own: "New rule from
+    …" and "Add to the rule From … → …". The email stays where it is, as a rule sorts new mail;
+    brief decision 28 stands, this being a written rule made on purpose rather than a correction. A
+    selection has none, and the reader is unchanged (Andy chose this over a More on every email).
+    Settled while building: Undo is the toast's, not ⌘Z, which undoes mail changes; learned rules and
+    rules turned off aren't offered. Board audit: board 20's This email gains New rule from …; no
+    board draws a right-click menu.

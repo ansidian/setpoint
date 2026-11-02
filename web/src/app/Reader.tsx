@@ -14,12 +14,13 @@
 //
 // EmailOnly is the email without the rest, for a pane on a page that isn't mail: its head and its
 // body, with no tools, actions, slot or commands of its own.
-import type {AccountOut, ItemKind, MessageOut, MessageRowOut, ProposalOut} from '@setpoint/shared';
+import type {AccountOut, ItemKind, MessageOut, MessageRowOut, ProposalOut, RuleOut} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
 import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
+import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
 import {fullTimestamp, readerTime} from '../logic/format.ts';
 import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
@@ -117,7 +118,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
   // the email stays unread; from the email's row too, as the tools are, so it's there at once. The
   // same list as the row's right-click menu and More (emailActions.ts).
   const handlers = {...actions, propose: cards.propose, ask: cards.ask};
-  const offered = listed ? emailActions(listed, gmail, handlers, 'palette') : [];
+  const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
+  const offered = listed ? emailActions(listed, gmail, handlers, 'palette', rules) : [];
   useCommands(() => (listed ? {
     context: {label: listed.subject, colour: accounts.get(listed.account_id)?.colour ?? 'ink3'},
     commands: offered.map(action => ({...action, section: 'email' as const})),

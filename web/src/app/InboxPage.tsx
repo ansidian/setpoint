@@ -20,7 +20,7 @@
 //
 // On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts, the
 // account filter and Mark all as read, with a plain search field under it (no chips, no Alfred).
-import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut} from '@setpoint/shared';
+import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
 import {flushSync} from 'react-dom';
@@ -29,6 +29,7 @@ import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources}
 import {
   allPath, answerPrompt, changeEach, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
+import {RULES_PATH} from '../api/settings.ts';
 import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} from '../logic/all.ts';
 import type {Place} from '../logic/all.ts';
 import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
@@ -179,6 +180,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   // The pattern prompt (B3's; none until its route exists), and the ones answered here.
   const {data: prompts} = useResource<PatternPrompt[]>(PROMPTS_PATH);
+  // Add to rule's rules to join, in the row's menu (SV-160).
+  const {data: rules} = useResource<RuleOut[]>(RULES_PATH);
   const [answered, setAnswered] = useState<ReadonlySet<number>>(new Set());
   const prompt = visiblePrompt(prompts, answered);
 
@@ -672,7 +675,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       markRead: () => on.markRead([id]),
       markUnread: () => on.markUnread([id]),
       codeCopied: () => on.read([id]),
-    }, 'menu');
+    }, 'menu', rules);
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);
     // Open in Gmail needs the email's own link: asked for now, so it's in by the time it's picked.

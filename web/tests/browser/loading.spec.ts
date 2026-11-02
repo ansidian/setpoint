@@ -115,7 +115,8 @@ test('Settings opening loads every page\'s answers, so the next page shows at on
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    const asked = ['/api/mail/rules', '/api/mail/trusted-domains', '/api/security', '/api/ai', '/api/news/sources']
+    // The rules aren't among them: the Inbox has them already, for Add to rule (SV-160).
+    const asked = ['/api/mail/trusted-domains', '/api/security', '/api/ai', '/api/news/sources']
       .map(path => page.waitForResponse(response => new URL(response.url()).pathname === path));
     await page.keyboard.press('Meta+,');
     await page.locator('.settings .set-title', {hasText: 'Accounts'}).waitFor();

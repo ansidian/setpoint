@@ -3,10 +3,11 @@
 // its keys run its items, Add as task opens the email with the card, and ⌥ or an open popover leave
 // the browser's own. On Calendar an event's menu selects it without the floating detail, Colour's
 // swatches take the menu's place, and empty grid offers New event here (at a week slot's time) and
-// Paste here on the day clicked. News's rows, the sidebar and the Today block have theirs.
+// Paste here on the day clicked. News's rows, the sidebar and the Today block have theirs. Add to
+// rule (SV-160) lists New rule from the sender and the rules it can join in the menu's place.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {ItemsOut, MailCountsOut, MessageOut} from '@setpoint/shared';
+import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -41,7 +42,7 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     const box = (await rested(() => row.boundingBox()))!;
     await rightClick(row, {x: 420, y: 12});
     assert.deepEqual(await items(page), [
-      'Open↵', 'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'Add to calendar', 'Add as task', 'Ask about this email', 'Mark read', 'Copy sender address',
+      'Open↵', 'DoneH', 'TrashE', 'PinP', 'Open in GmailO', 'Add to calendar', 'Add as task', 'Ask about this email', 'Add to rule', 'Mark read', 'Copy sender address',
     ]);
     assert.equal(await menu(page).locator('.menu-i.cur').textContent(), 'Open↵', 'the cursor starts on the first item');
     // Its corner is at the pointer.
@@ -118,6 +119,58 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     await item(page, 'Add as task').click();
     await page.waitForURL(`**/inbox/${id}`);
     await page.locator('.pane .card.prop').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('Add to rule (SV-160): New rule from the sender and the rules it can join, in the menu\'s place; one joined with Undo, New rule opening Add rule filled in, the email staying where it is', async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openInbox(page, setpoint.base);
+    const row = northwind(page);
+    const id = Number(await row.getAttribute('data-id'));
+    const rules = () => setpoint.api<RuleOut[]>('GET', '/mail/rules');
+    const woodgrove = (list: RuleOut[]) => list.find(rule => rule.match.from_domains?.[0] === 'woodgrovebank.example')!;
+
+    // Its list takes the menu's place, with the menu's keys: ↓ ↓ Enter joins the second rule.
+    await rightClick(row);
+    await item(page, 'Add to rule').click();
+    await until('the rules to join', () => items(page), list => list[0] === 'New rule from northwind.example…');
+    assert.deepEqual(await items(page), [
+      'New rule from northwind.example…', 'From university.edu with “Registrar” in the subject → Attention', 'From woodgrovebank.example → FYI · Money', 'From news.fabrikam.com → Noise',
+    ], 'written rules matching on sender, in their order; no learned ones');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await menu(page).waitFor({state: 'detached'});
+    await page.locator('.toast', {hasText: 'Added northwind.example to the rule'}).waitFor();
+    await until('joined', rules, list => woodgrove(list).match.from_domains?.join() === 'woodgrovebank.example,northwind.example');
+    // A rule that takes the sender already isn't offered again.
+    await rightClick(row);
+    await item(page, 'Add to rule').click();
+    await until('the rules to join', () => items(page), list => list.length === 3 && !list.some(text => text.includes('woodgrovebank')));
+    await page.keyboard.press('Escape');
+    await menu(page).waitFor({state: 'detached'});
+    await page.locator('.toast').getByRole('button', {name: 'Undo'}).click();
+    await until('undone', rules, list => woodgrove(list).match.from_domains?.join() === 'woodgrovebank.example');
+
+    // New rule from the sender: Settings › Mail's Add rule, filled in with it and the email's lane.
+    await rightClick(row);
+    await item(page, 'Add to rule').click();
+    await item(page, 'New rule from northwind.example…').click();
+    const from = page.locator('.settings input[name="from"]');
+    await until('Add rule filled in', () => from.inputValue(), value => value === 'northwind.example');
+    assert.equal(await page.locator('.settings').getByRole('button', {name: 'Send to', exact: true}).textContent(), 'Attention');
+    await page.locator('.settings').getByRole('button', {name: 'Add', exact: true}).click();
+    await until('the new rule', rules, list => list.some(rule => rule.match.from_domains?.join() === 'northwind.example' && rule.lane === 'attention'));
+    await page.locator('.settings .rule', {hasText: 'northwind.example'}).waitFor();
+    assert.equal(await from.count(), 0, 'the form closed');
+    // The email stays where it is: a rule sorts new mail.
+    const message = await setpoint.api<MessageOut>('GET', `/mail/messages/${id}`);
+    assert.equal(message.lane, 'attention');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
