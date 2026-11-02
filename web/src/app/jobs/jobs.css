@@ -90,12 +90,6 @@
 .jb-cand .icon.ok { color: var(--good); }
 /* Not this posting's candidates, where the JD was (35b). */
 .jb-jdcands { margin-top: 8px; max-width: 560px; }
-/* Answered (34b): the outcome in line two's place, then the item folds away. */
-.jb-need.answered .acts.outcome { animation: jb-fade var(--dur-fast) var(--ease); }
-.jb-done { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-size: 12.5px; white-space: nowrap; min-width: 0; overflow: hidden; }
-.jb-done > .icon { color: var(--good); flex: none; }
-.jb-done .ink3 { color: var(--ink3); overflow: hidden; text-overflow: ellipsis; }
-.jb-hist .what .jb-done { animation: jb-fade var(--dur-fast) var(--ease); }
 .jb-need .btn.out[aria-expanded="true"] { background: var(--sub2); box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .jb-need .btn .icon.after { transition: transform var(--dur-medium) var(--ease); }
 .jb-need .btn[aria-expanded="true"] .icon.after { transform: rotate(180deg); }

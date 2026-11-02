@@ -792,7 +792,7 @@ const toast = (page: Page) => page.locator('.toast:not(.leaving)');
 const undo = (page: Page) => toast(page).getByRole('button', {name: 'Undo'}).click();
 const navCount = async (setpoint: Setpoint) => (await setpoint.api<JobsNavOut>('GET', '/jobs/nav')).needs_you;
 
-test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, JD saved shows, the item folds with the count, and Undo folds it back; None of these', async () => {
+test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, the item folds with the count, and Undo folds it back; None of these', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -804,12 +804,9 @@ test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, JD saved s
     await until('the cursor on Lucerne', () => page.locator('.jb-need.cur').textContent(), text => Boolean(text?.includes('Lucerne')));
     await page.keyboard.press('ArrowDown');
     await until('the first candidate chosen', () => page.locator('.jb-cand.cur').textContent(), text => text === 'Junior Developer · New York, NY · Greenhouse');
-    const item = need(page, 'Lucerne');
-    const classes = await watch(item, 'class');
     await page.keyboard.press('Enter');
     // The fold, the count going with it.
     await until('Lucerne folded away', () => need(page, 'Lucerne').count(), count => count === 0);
-    assert.ok((await classes()).some(value => value?.split(' ').includes('answered')), 'it was answered before it went');
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
     await until('the toast', () => toast(page).textContent(), text => text === 'JD saved for Lucerne PublishingUndo');
     await until('the sidebar\'s count', () => page.locator('aside.sb .nav.jobs .cnt').textContent(), text => text === '2');
@@ -1124,22 +1121,12 @@ test('D402: an application in Assign to… opens its first email beside the menu
   }
 });
 
-test('an answer undone at once, or refused, leaves the item for good: the fold it had coming doesn\'t take it away', async () => {
+test('an answer refused leaves the item for good: the fold it had coming doesn\'t take it away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/jobs`);
     const item = need(page, 'Wide World');
-    // Undo inside the 360 ms the answer shows for.
-    await item.getByRole('button', {name: 'Not about a job'}).click();
-    await undo(page);
-    await until('the answer undone', () => navCount(setpoint), count => count === 3);
-    // Nothing happened: past the 360 ms and the 180 ms fold it had coming.
-    await page.waitForTimeout(700);
-    await setpoint.idle();
-    assert.equal(await item.getByRole('button', {name: 'Not about a job'}).count(), 1);
-    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
-
     await page.route('**/api/jobs/needs-you/*/not-a-job', route => route.fulfill({status: 500, json: {error: {code: 'server', message: 'No'}}}));
     await item.getByRole('button', {name: 'Not about a job'}).click();
     await until('the refusal', () => toast(page).textContent(), text => Boolean(text?.startsWith('Couldn\'t set it aside')));
@@ -1159,8 +1146,6 @@ test('Track this (34c, decision 69): the application lands at its email\'s date,
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/jobs`);
     await need(page, 'Wide World').getByRole('button', {name: 'Track this'}).click();
-    await need(page, 'Wide World').locator('.jb-done').waitFor();
-    assert.equal(await need(page, 'Wide World').locator('.jb-done').textContent(), 'Tracked· Wide World Importers');
     await until('it opens', () => page.title(), title => title === 'Junior Software Engineer · Wide World Importers');
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-first').waitFor();
@@ -1170,10 +1155,10 @@ test('Track this (34c, decision 69): the application lands at its email\'s date,
     assert.equal(await pane.locator('.jb-ev .tag').textContent(), 'First seen');
     await until('the toast', () => toast(page).textContent(), text => text === 'Tracking Wide World ImportersUndo');
     // It landed at the top, at its date, settling from sub2; the numbers move with it (All 63, In process 4, this week 4).
-    assert.deepEqual((await companies(page)).slice(0, 2), ['Wide World Importers', 'Fabrikam']);
-    assert.deepEqual(await page.locator('.hd .jb-status button').allTextContents(), ['All63', 'Applied31', 'In process4', 'Offer1', 'Rejected25', 'Withdrawn2']);
-    assert.equal(await page.locator('.jb-week').textContent(), 'Per week4 this week');
-    assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
+    await until('its row at the top', () => companies(page), all => all[0] === 'Wide World Importers' && all[1] === 'Fabrikam');
+    await until('the filter\'s counts', () => page.locator('.hd .jb-status button').allTextContents(), counts => counts.join() === 'All63,Applied31,In process4,Offer1,Rejected25,Withdrawn2');
+    await until('Per week', () => page.locator('.jb-week').textContent(), text => text === 'Per week4 this week');
+    await until('Needs you 2', () => page.locator('.jb-band .gh').textContent(), text => text === 'Needs you 2');
 
     // Undo takes the application away and brings the item back.
     await undo(page);

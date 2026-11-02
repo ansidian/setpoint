@@ -11,9 +11,9 @@
 // - An item with an email: its subject opens that email where the detail sits (D401). The page holds
 //   which, and the item shows it as the table shows its open row; reading it answers nothing.
 //
-// Answered (34b, as the Today block's task): the press lands, line two crossfades to the outcome
-// (120 out, 120 in), and at 360 ms the item folds away (180 ms), the count changing as it starts; the
-// toast says what happened, with Undo, which folds it back. The last item takes the band with it.
+// Answered (34b, as the Today block's task): the press lands, the item holds its place, taking no
+// more presses, and at 360 ms it folds away (180 ms), the count changing as it starts; the toast says
+// what happened, with Undo, which folds it back. The last item takes the band with it.
 import type {AccountOut, ApplicationRowOut, JdCandidateOut, NeedsYouItemOut} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
@@ -31,31 +31,22 @@ import type {Said} from './act.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismiss} from './api.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
-import {assignMenu, candidateWhere, chooseMenu} from './menus.ts';
+import {assignMenu, chooseMenu} from './menus.ts';
 import {dayWord, historyWhy, itemFrom, itemWhat, needsLine, pickWords, titleOf} from './words.ts';
 
 const KIND_GLYPHS: Record<NeedsYouItemOut['kind'], IconName> = {jd_to_confirm: 'description', update_to_assign: 'alt_route', email_to_track: 'bookmark_add'};
 
 export const needKey = (id: number) => `n:${id}`;
 
-/** How long an answered item shows its outcome before it folds away (34b). */
-export const ANSWERED_MS = 360;
-
-/** An answer's outcome, line two's words once the press lands: "JD saved · Junior Developer · New York, NY · Greenhouse", or "Link kept · …". */
-interface Outcome {
-  what: string;
-  rest: string | null;
-  // The candidate picked, or None of these: its group shows it for the press.
-  picked?: number | 'none';
-}
+/** How long an answered item stays put before it folds: a double-click's second press finds it there, not the item riding up (#106). */
+const HOLD_MS = 360;
 
 interface Answered {
   item: NeedsYouItemOut;
-  outcome: Outcome;
   // Where it stood, so it holds its place while the page's answer no longer has it.
   index: number;
-  // The press, then the outcome in place of line two.
-  phase: 'pressed' | 'done';
+  // The candidate picked, or None of these: its group shows it for the press.
+  picked: number | 'none' | null;
 }
 
 const FOLDS: FoldRules<NeedsYouItemOut> = {folds: () => true, arrives: () => true};
@@ -144,18 +135,14 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
     });
   };
 
-  /** Answers an item: the press lands, its outcome shows, and at 360 ms it folds away; a refusal brings it back. */
-  const answer = (item: NeedsYouItemOut, outcome: Outcome, send: () => ReturnType<typeof act>, after?: (application: number | null) => void) => {
+  /** Answers an item: the press lands, and at 360 ms it folds away; a refusal brings it back. */
+  const answer = (item: NeedsYouItemOut, picked: Answered['picked'], send: () => ReturnType<typeof act>, after?: (application: number | null) => void) => {
     if (answered.has(item.id)) return;
     const list = item.from_history ? history : items;
-    setAnswered(map => new Map(map).set(item.id, {item, outcome, index: Math.max(0, list.findIndex(each => each.id === item.id)), phase: 'pressed'}));
-    later(motion.fast, () => setAnswered(map => {
-      const held = map.get(item.id);
-      return held ? new Map(map).set(item.id, {...held, phase: 'done'}) : map;
-    }));
+    setAnswered(map => new Map(map).set(item.id, {item, index: Math.max(0, list.findIndex(each => each.id === item.id)), picked}));
     let folding = false;
     let made: number | null | undefined;
-    folds.current.set(item.id, later(ANSWERED_MS, () => {
+    folds.current.set(item.id, later(HOLD_MS, () => {
       folding = true;
       setGone(set => new Set(set).add(item.id));
       if (made !== undefined) after?.(made);
@@ -169,16 +156,16 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const said = (item: NeedsYouItemOut, done: string, failed: string, tone?: Said['tone']): Said => ({done, failed, tone, undone: () => drop(item.id)});
 
   const pick = (item: NeedsYouItemOut, candidate: JdCandidateOut) => {
-    const {what, done, failed} = pickWords(candidate, item.company);
-    answer(item, {what, rest: `${candidate.title} · ${candidateWhere(candidate)}`, picked: candidate.id}, () => act(() => pickCandidate(item.application_id!, candidate.id), said(item, done, failed)));
+    const {done, failed} = pickWords(candidate, item.company);
+    answer(item, candidate.id, () => act(() => pickCandidate(item.application_id!, candidate.id), said(item, done, failed)));
   };
-  const none = (item: NeedsYouItemOut) => answer(item, {what: 'None of these', rest: 'No JD found', picked: 'none'},
+  const none = (item: NeedsYouItemOut) => answer(item, 'none',
     () => act(() => noneOfThese(item.application_id!), said(item, `None of these for ${item.company}`, 'Couldn\'t turn them down')));
-  const assign = (item: NeedsYouItemOut, row: ApplicationRowOut) => answer(item, {what: 'Assigned', rest: `${titleOf(row)} · ${row.company}`},
+  const assign = (item: NeedsYouItemOut, row: ApplicationRowOut) => answer(item, null,
     () => act(() => assignItem(item.id, row.id), said(item, `Assigned to ${titleOf(row)}`, 'Couldn\'t assign it')));
-  const notJob = (item: NeedsYouItemOut) => answer(item, {what: 'Not about a job', rest: null},
+  const notJob = (item: NeedsYouItemOut) => answer(item, null,
     () => act(() => notAJob(item.id), said(item, 'Not about a job', 'Couldn\'t set it aside', 'gone')));
-  const track = (item: NeedsYouItemOut) => answer(item, {what: 'Tracked', rest: item.company},
+  const track = (item: NeedsYouItemOut) => answer(item, null,
     () => act(() => trackItem(item.id), said(item, `Tracking ${item.company}`, 'Couldn\'t track it')), id => id !== null && onOpen(id));
 
   const openMenu = (owner: string, spec: MenuSpec, element: HTMLElement) =>
@@ -260,17 +247,6 @@ interface Handlers {
   read: (item: NeedsYouItemOut) => void;
 }
 
-/** The outcome in line two's place: a filled `check_circle` in `good`, what happened in `ink`, the rest in `ink3`. */
-function Done({outcome}: {outcome: Outcome}) {
-  return (
-    <span className="jb-done" role="status">
-      <Icon name="check_circle-fill" size={16} />
-      <span className="w">{outcome.what}</span>
-      {outcome.rest && <span className="ink3">· {outcome.rest}</span>}
-    </span>
-  );
-}
-
 function Item({item, account, cur, reading, own, answered, fold, menuOpen, now, timeZone, today, onPoint, on}: {
   item: NeedsYouItemOut;
   account: AccountOut | undefined;
@@ -290,8 +266,7 @@ function Item({item, account, cur, reading, own, answered, fold, menuOpen, now, 
   const key = needKey(item.id);
   const jd = item.kind === 'jd_to_confirm';
   const leaving = fold === 'out';
-  const done = answered?.phase === 'done';
-  const classes = ['jb-need', cur && !leaving && 'cur', reading && 'reading', answered && 'answered', leaving && 'leaving'].filter(Boolean).join(' ');
+  const classes = ['jb-need', cur && !leaving && 'cur', reading && 'reading', leaving && 'leaving'].filter(Boolean).join(' ');
   return (
     <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : key} data-need={item.id}
       aria-hidden={leaving || undefined} inert={Boolean(answered) || leaving} onMouseMove={() => !cur && !leaving && onPoint(key)}>
@@ -310,9 +285,9 @@ function Item({item, account, cur, reading, own, answered, fold, menuOpen, now, 
           </>
         )}
       </div>
-      {done ? <div className="acts outcome"><Done outcome={answered.outcome} /></div> : jd ? (
+      {jd ? (
         <div className="acts cands">
-          <CandidatePicker candidates={item.candidates} active={cur && !answered} picked={answered?.outcome.picked ?? null}
+          <CandidatePicker candidates={item.candidates} active={cur && !answered} picked={answered?.picked ?? null}
             onPick={candidate => on.pick(item, candidate)} onNone={() => on.none(item)} />
         </div>
       ) : (
@@ -345,10 +320,10 @@ function HistoryRow({item, reading, own, answered, fold, menuOpen, today, timeZo
   const day = dayWord(localDate(item.at, timeZone), today);
   const leaving = fold === 'out';
   return (
-    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={['jb-hist', reading && 'reading', answered && 'answered'].filter(Boolean).join(' ')} data-need={item.id}
+    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={reading ? 'jb-hist reading' : 'jb-hist'} data-need={item.id}
       aria-hidden={leaving || undefined} inert={Boolean(answered) || leaving}>
       <Icon name={KIND_GLYPHS[item.kind]} size={16} />
-      {answered?.phase === 'done' ? <span className="what"><Done outcome={answered.outcome} /></span> : item.message_id !== null ? (
+      {item.message_id !== null ? (
         <span className="what opens">
           <button type="button" title="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
           <span className="why"> · {historyWhy(item)}</span>

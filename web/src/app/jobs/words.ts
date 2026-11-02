@@ -141,13 +141,13 @@ export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at'>, plat
 }
 
 /**
- * What a pick says, in its row and its toast. One Jobs can't read can't save a JD, so it says the link
- * was kept rather than promise one, though the job still tries it once (SV-140).
+ * What a pick says in its toast. One Jobs can't read can't save a JD, so it says the link was kept
+ * rather than promise one, though the job still tries it once (SV-140).
  */
-export function pickWords(candidate: {unreadable: boolean}, company: string): {what: string; done: string; failed: string} {
+export function pickWords(candidate: {unreadable: boolean}, company: string): {done: string; failed: string} {
   return candidate.unreadable
-    ? {what: 'Link kept', done: `Link kept for ${company}`, failed: 'Couldn\'t keep the link'}
-    : {what: 'JD saved', done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'};
+    ? {done: `Link kept for ${company}`, failed: 'Couldn\'t keep the link'}
+    : {done: `JD saved for ${company}`, failed: 'Couldn\'t save the JD'};
 }
 
 /** Applications per week's bars: the busiest week 20 px and the rest in proportion; a week with none a 1 px stub. */

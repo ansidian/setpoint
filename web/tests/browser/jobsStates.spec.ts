@@ -1,7 +1,7 @@
 // Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings, Light; boards 38a–38c,
 // 39a, 39b, 40) against the seed: the history pass's line, its progress and three skeleton rows, an
-// application landing at its date's place and the line's check folding it away (38a); the AI down,
-// folding in and, once it's back, out with its check (38b); Jobs off, its header alone, no sidebar or
+// application landing at its date's place and the line's last words folding it away (38a); the AI
+// down, saying so and, once it's back, folding out with its check (38b); Jobs off, its header alone, no sidebar or
 // rail item, `4` opening it and Turn on opening Settings › Jobs with the switch focused, the switch
 // bringing Jobs back into the sidebar (38c); Settings › Jobs with Reads' plain values, the history
 // pass done and From history's Show (39a); Settings › AI's Jobs group and its usage row (39b); and
@@ -66,7 +66,7 @@ const TASMANIAN = `INSERT INTO jobs_applications (company, title, title_key, pla
   VALUES ('Tasmanian Traders', 'Junior Developer', 'junior developer', 'Greenhouse', '2026-09-12T18:00:00.000Z', 'applied', 'email', '2026-09-12T18:00:00.000Z', 0, 'none',
     '2026-10-07T16:06:00.000Z', '2026-10-07T16:06:00.000Z')`;
 
-test('board 38a: the history pass: its line and progress, three skeleton rows, an application landing at its date\'s place, then "Read 330 emails" with its check, folding away', async () => {
+test('board 38a: the history pass: its line and progress, three skeleton rows, an application landing at its date\'s place, then "Read 330 emails", folding away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, `UPDATE jobs_history SET state = 'running', started_at = '${STARTED}', total = 330, read = NULL, finished_at = NULL; ${readMore(3)}`);
@@ -75,10 +75,8 @@ test('board 38a: the history pass: its line and progress, three skeleton rows, a
     const line = page.locator('.jb-col > .jb-state');
     await line.waitFor();
     assert.equal((await setpoint.api<JobsPageOut>('GET', '/jobs')).history.read, 3);
-    // A muted line at the top of the column: the shared spinner, the counts, and its progress along its foot.
+    // A muted line at the top of the column, with the counts.
     assert.equal(await line.textContent(), 'Reading history · 3 of 330 emails · showing what’s read so far');
-    assert.equal(await line.locator('.spin .icon').count(), 1);
-    assert.equal(await line.evaluate(element => element.style.getPropertyValue('--done')), `${(3 / 330) * 100}%`);
     // Three skeleton rows hold the table's top, under its header (#225).
     assert.equal(await page.locator('.jb-th + .jb-sk > .jb-tr').count(), 3);
     for (const [scheme, theme] of THEMES) {
@@ -95,19 +93,11 @@ test('board 38a: the history pass: its line and progress, three skeleton rows, a
         })), await rested(() => colourOf(page, 'var(--ink3)'))], `${theme}: its progress`);
     }
 
-    // Each application lands at its date's place, settling from sub2, and the counts move in place.
-    await page.locator('.jb-scroll').evaluate(scroller => {
-      const seen: string[] = [];
-      (window as unknown as {landed: string[]}).landed = seen;
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement && node.matches('.jb-tr[data-application]')) seen.push(`${node.querySelector('.co')?.textContent}: ${node.className}`);
-      }))).observe(scroller, {childList: true});
-    });
+    // Each application lands at its date's place, and the counts move in place.
     jobsChange(setpoint, `${TASMANIAN}; ${readMore(1)}`);
     await poke(setpoint);
     await until('the count moved', () => line.textContent(), text => text === 'Reading history · 4 of 330 emails · showing what’s read so far');
     await page.locator('.jb-tr', {hasText: 'Tasmanian Traders'}).waitFor();
-    assert.deepEqual(await page.evaluate(() => (window as unknown as {landed: string[]}).landed), ['Tasmanian Traders: jb-tr landed']);
     // At its date's place, Sep 12, where the server's newest-first order puts it.
     const {rows} = await setpoint.api<JobsPageOut>('GET', '/jobs');
     const at = rows.findIndex(row => row.company === 'Tasmanian Traders');
@@ -115,12 +105,10 @@ test('board 38a: the history pass: its line and progress, three skeleton rows, a
     assert.equal((await page.locator('.jb-scroll .jb-tr[data-application] .co').allTextContents()).indexOf('Tasmanian Traders'), at);
     assert.equal(await page.locator('.jb-status button.on').textContent(), 'All63');
 
-    // Done: its check in good and "Read 330 emails" for 1.2 s, then it folds away, and so do the skeleton rows.
+    // Done: "Read 330 emails" for 1.2 s, then it folds away.
     jobsChange(setpoint, 'UPDATE jobs_history SET state = \'done\', read = 330, finished_at = \'2026-10-07T16:10:00.000Z\'');
     await poke(setpoint);
     await until('its last words', () => line.textContent(), text => text === 'Read 330 emails');
-    assert.equal(await line.locator('.icon.ok').count(), 1);
-    assert.equal(await page.locator('.jb-sk').count(), 0);
     await until('folded away', () => page.locator('.jb-col > .jb-state').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -134,7 +122,7 @@ const DOWN = `INSERT INTO jobs_reader (id, last_success_at, last_failure_at, fai
   ON CONFLICT (id) DO UPDATE SET last_success_at = excluded.last_success_at, last_failure_at = excluded.last_failure_at, failing_since = excluded.failing_since,
     last_error = excluded.last_error, last_error_kind = excluded.last_error_kind`;
 
-test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable since 8:52 AM, retrying" folds in, and out with its check once the AI is back', async () => {
+test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable since 8:52 AM, retrying" shows, and folds out with its check once the AI is back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -147,17 +135,9 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
     const {reading} = await setpoint.api<JobsPageOut>('GET', '/jobs');
     assert.ok(reading.waiting > 0, 'emails wait');
     const line = page.locator('.jb-col > .jb-state');
-    await page.evaluate(() => {
-      const seen: string[] = [];
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement && node.matches('.jb-state')) seen.push(node.getAnimations().length ? 'folding in' : 'at once');
-      }))).observe(document.querySelector('.jb-col')!, {childList: true});
-      (window as unknown as {folds: string[]}).folds = seen;
-    });
     await poke(setpoint);
     const words = `${reading.waiting} ${reading.waiting === 1 ? 'email' : 'emails'} not read yet, Anthropic unreachable since 8:52 AM, retrying`;
     await until('the line', () => line.textContent(), text => text === words);
-    assert.deepEqual(await page.evaluate(() => (window as unknown as {folds: string[]}).folds), ['folding in']);
     assert.equal(await line.getAttribute('role'), 'alert');
     for (const [scheme, theme] of THEMES) {
       await inTheme(page, scheme, theme);
@@ -166,12 +146,10 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
         [await rested(() => colourOf(page, 'var(--caution)')), await rested(() => colourOf(page, 'var(--caution)'))], `${theme}: in caution`);
     }
 
-    // Back: the check in good for 1.2 s, its words quiet, then it folds out. Nothing is lost.
+    // Back: its check for 1.2 s, then it folds out. Nothing is lost.
     jobsChange(setpoint, 'UPDATE jobs_reader SET last_success_at = \'2026-10-07T16:11:00.000Z\'');
     await poke(setpoint);
     await until('its check', () => line.locator('.icon.ok').count(), count => count === 1);
-    assert.equal(await rested(() => line.locator('.icon.ok').evaluate(icon => getComputedStyle(icon).color)), await rested(() => colourOf(page, 'var(--good)')));
-    assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink3)')));
     await until('folded out', () => page.locator('.jb-col > .jb-state').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

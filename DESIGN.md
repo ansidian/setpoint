@@ -953,11 +953,11 @@ desktop and keeps it (D325).
     in a new tab without picking it. The last row is **None of these**, after `block`, in `ink2`.
   - A row under the pointer or the cursor takes `sub2` and its radio `ink2`; pressed, `sub3` and
     `radio_button_checked` in `ink`. ↑ ↓ choose and Enter picks.
-  - Picked, the group takes `good` at 10% with a 35% `good` ring, and the row reads `check_circle`
-    in `good`, "Junior Developer · JD saved".
+  - Picked, the group takes `good` at 10% with a 35% `good` ring, and the row's radio turns to
+    `check_circle` in `good`.
   - A candidate Jobs opened and can't read adds "Jobs can't read this one" in `ink3`, kept whole
-    while its line gives way, and its arrow still opens it. Picked, it reads "Link kept", in its row
-    and the toast, never "JD saved" (#278).
+    while its line gives way, and its arrow still opens it. Picked, its toast reads "Link kept",
+    never "JD saved" (#278).
 - **An update to assign** ("Thank you for your interest in the Software Engineer II role · Humongous
   Insurance via iCIMS"):
   - "A rejection · it could be either Humongous application", then an outline small **Assign to…**
@@ -971,11 +971,10 @@ desktop and keeps it (D325).
 - **An email to track** ("Can we set up a call this week? · Wide World Importers"): "An interview
   request with no application", then **Track this** (`add`), a solid small button, the page's only
   one, and a quiet **Not about a job**.
-- **Answered** (34b, as the Today block's task, #106): the press lands, and line two crossfades to
-  the outcome (120 ms out, 120 in): a 16 px filled `check_circle` in `good` and "JD saved" in `ink`
-  12.5, then "· Junior Developer · New York, NY · Greenhouse" in `ink3` ("Tracked · Wide World
-  Importers" for Track this). At 360 ms the item folds away (height over 180 ms, opacity over 120)
-  and what's below rides up; the band's count and the sidebar's change as the fold starts. The toast
+- **Answered** (34b, as the Today block's task, #106, #287): the press lands and the item holds its
+  place for 360 ms, wordless, taking no more presses, so a double-click's second press can't answer
+  the item riding up. Then it folds away (height over 180 ms, opacity over 120) and what's below
+  rides up; the band's count and the sidebar's change as the fold starts. The toast
   says what happened, with Undo: "JD saved for Lucerne Publishing · Undo", "Tracking Wide World
   Importers · Undo"; Undo folds the item back. The row its answer changed settles in from `sub2`
   over 900 ms.
@@ -3403,7 +3402,7 @@ it changes what's on screen.
     Offer; Not about this's item saying "taken off the application it was on"; the company edited in
     its own line; a click-opened menu's cursor on its first item, a submenu under the resting pointer;
     an event's right-click opening its ··· where it sits. Board audit: 34a draws the picked group,
-    which shows here only for the press before 34b's outcome replaces it.
+    which shows here for the hold before the item folds (#287).
 271. **The JD popover's Full posting opens it in Jobs** (Andy, 2026-10-29; darma SV-125, D372): the
     application arrives open, scrolled to its full posting and unfolded, as Open in Jobs arrives at
     the top; the popover stays a quick look, and the long read happens where the detail is built for
@@ -3596,3 +3595,10 @@ it changes what's on screen.
     this at rest; a Light chip under the pointer is not covered, since `--evhover` lies over its text
     and takes it to about 3.8–4.1:1, a moment's state and the tint's to change. The mini-month's days
     outside its month stay dim on purpose.
+287. **An answered Needs you item shows no outcome line** (Andy, 2026-11-01; darma D404, SV-152,
+    SV-151's F1). "JD saved", "Link kept", "Assigned" and "Tracked" in line two's place go, with 34b's
+    crossfade: they showed for 240 ms, too short to read, and were set on the press, so a refused
+    pick read "JD saved" and then came back, while the toast says the same for 6 s with Undo. The
+    item still holds for 360 ms, wordless and inert, before it folds, since measured without the
+    hold a double-click's second press answered the item riding up. A picked candidate's check and
+    its group's `good` tint stay for the hold. Board audit: 34b draws the outcome.

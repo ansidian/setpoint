@@ -815,6 +815,12 @@ const needsKey = (sub: string): Patch => ({
   why: 'D315, as News\'s rows: with no Anthropic key (the seed sets none), each model\'s row says one is needed',
   from: `<span class="s">${sub}</span>`, to: `<span class="s">${sub} · needs a key</span>`,
 });
+const BOARD_34B_PATCHES: Patch[] = [
+  {why: '#287: an answered item shows no outcome line, so the leaving item keeps its candidate\'s words',
+    from: `<span class="jb-done"><span class="ms f">check_circle</span>JD saved</span>
+          <span class="ink3">· Junior Developer · New York, NY · Greenhouse</span>`,
+    to: '<span class="ink3">Junior Developer · New York, NY · Greenhouse</span>'},
+];
 const BOARD_38C_PATCHES: Patch[] = [
   {why: 'DESIGN.md › Jobs › States: while Jobs is off it has no item in the sidebar (38c draws it, current)',
     from: '\n  <a class="nav on" href="#"><span class="ms">work</span><span class="grow">Jobs</span></a>', to: ''},
@@ -838,7 +844,7 @@ const JOBS_BOARDS: Board[] = [
   {...jobsBoard('32b-a-narrow-window.html', [], false), width: 1024, height: 768},
   jobsBoard('33-the-jds-full-text.html'),
   jobsBoard('34a-needs-you-each-kind.html'),
-  jobsBoard('34b-an-item-resolving-from-history.html'),
+  jobsBoard('34b-an-item-resolving-from-history.html', BOARD_34B_PATCHES),
   jobsBoard('34c-track-this-resolved.html'),
   jobsBoard('35a-corrections-edit-in-place-move-to.html'),
   jobsBoard('35b-corrections-more-merge-with.html'),

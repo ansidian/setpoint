@@ -313,7 +313,7 @@ function Picked({active, onPick, onNone}: {active: boolean; onPick: (candidate: 
   }} />;
 }
 
-test('the candidates are radios, the last None of these; ↑ ↓ choose and Enter picks, and picked the group takes good with "JD saved"', async () => {
+test('the candidates are radios, the last None of these; ↑ ↓ choose and Enter picks, and picked the group takes good', async () => {
   const onPick = vi.fn();
   const onNone = vi.fn();
   await render(<Picked active={false} onPick={onPick} onNone={onNone} />);
@@ -331,7 +331,6 @@ test('the candidates are radios, the last None of these; ↑ ↓ choose and Ente
   await expect.poll(() => getComputedStyle(group.getByRole('radio').nth(1).element().parentElement!).backgroundColor).toBe(colour('var(--sub2)'));
   await userEvent.keyboard('{Enter}');
   expect(onPick.mock.calls.map(([candidate]) => candidate.id)).toEqual([2]);
-  await expect.element(group.getByRole('radio').nth(1)).toHaveTextContent('Junior Developer, Digital · JD saved');
   expect(group.getByRole('radio').nth(1).element().getAttribute('aria-checked')).toBe('true');
   await expect.poll(() => getComputedStyle(group.element()).backgroundColor).toBe(colour('color-mix(in oklch, var(--good) 10%, transparent)'));
   // Picked, it answers nothing more.
@@ -357,11 +356,9 @@ test('a candidate Jobs can\'t read says so in ink3, however long its title, and 
   await expect.element(group.getByRole('link', {name: `Look at ${long.title}`})).toHaveAttribute('href', UNREADABLE.link);
 });
 
-test('picked, a candidate Jobs can\'t read reads "Link kept", never "JD saved", and the toast says the same (SV-140)', async () => {
-  await render(<CandidatePicker candidates={[CANDIDATES[0]!, UNREADABLE]} active={false} picked={UNREADABLE.id} onPick={() => {}} onNone={() => {}} />);
-  await expect.element(page.getByRole('radio').nth(1)).toHaveTextContent('Junior Developer · Link kept');
-  expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({what: 'Link kept', done: 'Link kept for Lucerne Publishing', failed: 'Couldn\'t keep the link'});
-  expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({what: 'JD saved', done: 'JD saved for Lucerne Publishing', failed: 'Couldn\'t save the JD'});
+test('a pick\'s toast says "Link kept" of a candidate Jobs can\'t read, never "JD saved" (SV-140)', () => {
+  expect(pickWords(UNREADABLE, 'Lucerne Publishing')).toEqual({done: 'Link kept for Lucerne Publishing', failed: 'Couldn\'t keep the link'});
+  expect(pickWords(CANDIDATES[0]!, 'Lucerne Publishing')).toEqual({done: 'JD saved for Lucerne Publishing', failed: 'Couldn\'t save the JD'});
 });
 
 test('Choose… says the same of a candidate Jobs can\'t read, its arrow still there (SV-140)', () => {
