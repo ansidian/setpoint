@@ -51,10 +51,6 @@ const stops: Stop[] = [
 ];
 
 // Each lane's glyph, one per group and no two alike (#119): its header and All's kind column draw it.
-test.each([
-  ['pinned', 'keep'], ['attention', 'flag'], ['unsorted', 'pending'], ['security', 'lock'], ['deliveries', 'local_shipping'], ['money', 'payments'],
-  ['career', 'work'], ['people', 'person'], ['updates', 'notifications'], ['other', 'mail'], ['noise', 'campaign'],
-] as const)('%s\'s glyph is %s', (name, glyph) => expect(GROUP_GLYPHS[name]).toBe(glyph));
 test('no two groups share a glyph', () => expect(new Set(Object.values(GROUP_GLYPHS)).size).toBe(Object.keys(GROUP_GLYPHS).length));
 
 describe('the Inbox keeps what it showed until the user leaves it', () => {

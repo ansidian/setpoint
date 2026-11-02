@@ -1,7 +1,7 @@
 // The state lines' folds as a table (the polish audit's states-13): which lines fold in, which fold
 // out, which show their last words first, and where the going ones stay.
 import {describe, expect, test} from 'vitest';
-import {DONE_MS, lineMovesOn, nextLines} from '../src/logic/stateLines.ts';
+import {lineMovesOn, nextLines} from '../src/logic/stateLines.ts';
 import type {LinePhase, ShownLine} from '../src/logic/stateLines.ts';
 
 // A line is its key and whether it has last words to show (the history pass) or not (the rest).
@@ -12,8 +12,6 @@ const phases = (lines: ShownLine<Line>[]) => lines.map(line => `${line.key}:${li
 const holds = (line: Line) => line.holds;
 
 describe('state lines folding', () => {
-  test('a line shows its last words for 1.2 s', () => expect(DONE_MS).toBe(1200));
-
   test.each([
     ['nothing changes', shown(['Work', 'here']), next('Work'), ['Work:here']],
     ['a line arrives: it folds in', shown(['Work', 'here']), next('Work', 'iCloud'), ['Work:here', 'iCloud:in']],

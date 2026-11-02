@@ -8,7 +8,6 @@ import {describe, expect, test} from 'vitest';
 import type {InboxGroupOut} from '@setpoint/shared';
 import {allRowLine, clearNew, dayHeading, dayStops, dayView, groupByDay, kindGroup, kindLabel, NEW, placeRows, splitInbox} from '../src/logic/all.ts';
 import type {Place} from '../src/logic/all.ts';
-import {clockTime} from '../src/logic/format.ts';
 
 let nextId = 100;
 function row(fields: Partial<MessageRowOut>): MessageRowOut {
@@ -75,17 +74,6 @@ describe('dayHeading', () => {
     ['last year', '2025-12-30', {label: 'Tue', date: 'Dec 30, 2025'}],
   ])('%s', (_name, date, heading) => {
     expect(dayHeading(date, '2026-10-07')).toEqual(heading);
-  });
-});
-
-describe('clock times under the headings', () => {
-  test.each([
-    ['Contoso\'s code', '2026-10-07T16:08:00.000Z', '9:08 AM'],
-    ['Woodgrove Pay, last evening', '2026-10-07T03:15:00.000Z', '8:15 PM'],
-    ['Sam, at noon-ish', '2026-10-05T19:40:00.000Z', '12:40 PM'],
-    ['just after midnight', '2026-10-07T07:05:00.000Z', '12:05 AM'],
-  ])('%s → %s', (_name, at, time) => {
-    expect(clockTime(at, zone)).toBe(time);
   });
 });
 

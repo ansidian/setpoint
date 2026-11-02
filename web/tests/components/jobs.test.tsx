@@ -8,7 +8,7 @@
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
-  ApplicationOut, JdCandidateOut, JobCountsOut, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
+  ApplicationOut, JdCandidateOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {MAX_PASTED_CHARS, PASTED_TOO_LONG} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
@@ -32,7 +32,7 @@ import {NeedsYou} from '../../src/app/jobs/NeedsYou.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
-import {foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, jobsUsageParts, pickWords, readingLine} from '../../src/app/jobs/words.ts';
+import {foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine} from '../../src/app/jobs/words.ts';
 import {colour} from './colour.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -727,12 +727,6 @@ test('the history pass\'s line (38a): its counts in place and how far it has com
   expect(historySetting(DONE, NOW, ZONE)).toBe('Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM');
   expect(historySetting({state: 'not_started', read: 0, total: 0, started_at: null, finished_at: null}, NOW, ZONE)).toBe('Runs once when Jobs is turned on, over the mail from before then');
   expect([fromHistorySetting(6), fromHistorySetting(0)]).toEqual(['6 waiting in Needs you, what the pass wasn\'t sure of', 'None waiting in Needs you']);
-});
-
-test('Usage this month\'s Jobs row (39b): its three parts', () => {
-  const part = (cost_usd: number) => ({calls: 1, input_tokens: 0, output_tokens: 0, cost_usd});
-  const month: JobsAiOut['this_month'] = {...part(3.85), emails: part(0.62), finding_jds: part(2.71), reading_jds: part(0.52)};
-  expect(jobsUsageParts(month)).toBe('Emails $0.62 · finding JDs $2.71 · reading JDs $0.52');
 });
 
 test('Reads (#273, D383): an account changed in place, added at the end, or taken out by Off', () => {

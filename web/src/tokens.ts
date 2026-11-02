@@ -1,7 +1,7 @@
-// Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens and
-// design-export/styles/setpoint.css (tests/tokens.test.ts compares all three, with DESIGN.md's
-// overrides named there), so change them together. applyTokens() publishes the theme-free ones as
-// CSS custom properties (`--r-card`, `--dur-fast`, `--sidebar`, `--a-business`…), applyTheme() a
+// Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens, which
+// names where they leave design-export/styles/setpoint.css (its Overrides), so change the two
+// together (tests/tokens.test.ts compares the colours and radii). applyTokens() publishes the
+// theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`, `--sidebar`, `--a-business`…), applyTheme() a
 // theme's colours, shadows and tints, under the export's names (`--page`, `--shadow-pop`, `--evtint`).
 import type {Colour} from '@setpoint/shared';
 
@@ -136,16 +136,7 @@ export const lightShadow: Record<keyof typeof shadow, string> = {
 export const accountColour = {business: 'warm', personal: 'cool', work: 'comf', jobs: 'violet', icloud: 'ink2'} as const satisfies Record<string, Colour>;
 export const calendarColour = {personal: 'cool', classes: 'cyan', jobs: 'violet'} as const satisfies Record<string, Colour>;
 
-/**
- * Mixes, as `color-mix(in oklch, <colour> N%, <on>)`: the tags, the needs-reconnect bar, the
- * search highlight and calendar chips' tint (`--evtint`).
- */
-export const mix = {
-  tagAlert: {colour: 'alert', fill: 10, on: 'chip', edge: 40},
-  tagCaution: {colour: 'caution', fill: 12, on: 'chip', edge: 35},
-  reconnectBar: {colour: 'caution', fill: 9, on: 'page', edge: 22},
-  searchHighlight: {colour: 'sun', fill: 26, on: 'transparent'},
-} as const;
+/** Calendar chips' tint (`--evtint`). */
 export const evtint = {night: 16, light: 14} as const;
 /** What a calendar chip lays over itself under the pointer, in its own colour (`--evhover`, polish audit grids-05). */
 export const evhover = {night: 18, light: 14} as const;
@@ -168,16 +159,6 @@ export const mailDim = {night: 0.95, light: 1} as const;
  */
 export const ringL = {night: {min: 0.72, max: 1}, light: {min: 0, max: 0.55}} as const;
 
-/** Glyph colours: the Todoist rings (done is `good`, DESIGN.md override 4) and the weather. */
-export const glyphColour = {
-  taskOpen: 'ink3',
-  taskOpenOnGrid: 'ink2',
-  taskDone: 'good',
-  sun: 'sun',
-  cloud: 'ink2',
-  rain: 'cool',
-} as const satisfies Record<string, Colour>;
-
 /** darma's scrollbar (mantel's thin dark one). */
 export const scrollbar = {size: 10, thumb: 'rgba(255,255,255,.16)', lightThumb: 'rgba(29,30,33,.22)', inset: 3} as const;
 
@@ -185,24 +166,6 @@ export const font = {
   sans: "'Geist Variable', system-ui, sans-serif",
   mono: "'Geist Mono Variable', ui-monospace, monospace",
   features: '"ss01"',
-} as const;
-
-export const base = {size: 13, lineHeight: 1.35} as const;
-
-/** DESIGN.md › Type. Sizes in px. */
-export const type = {
-  readerSubject: {size: 20, weight: 500, tracking: '-.01em', lineHeight: 1.25},
-  headerTitle: {size: 15, weight: 500, tracking: '-.005em'},
-  name: {size: 14, weight: 600, tracking: '-.01em'},
-  emailBody: {size: 14, lineHeight: 1.55, maxWidth: 600},
-  row: {size: 13, unreadWeight: 500},
-  control: {size: 12.5},
-  small: {size: 12, chipWeight: 500},
-  label: {size: 11.5, tracking: '.08em'},
-  hint: {size: 11, weight: 500},
-  code: {size: 13, weight: 500, tracking: '.06em'},
-  // The reader's code card (polish audit reader-04).
-  readerCode: {size: 22, weight: 500, tracking: '.12em'},
 } as const;
 
 /** DESIGN.md › Shape, in the table's order. Settings' row groups are 16. */
@@ -241,10 +204,6 @@ export const glide = {
   newContentInToMs: 220,
   newContentSlidePx: 6,
   selectionSolidAtMs: 60,
-  selectionOldAtMs: 0,
-  // The overshoot never crosses the grid's edge (decision 47, DESIGN.md override 1); glide.json
-  // still says it may pass by about 9 px.
-  clampOvershootAtEdges: true,
   openMs: 180,
   openScale: 0.96,
   closeMs: 120,
@@ -328,7 +287,6 @@ export const layout = {
   listRowMax: 1480,
   rightPane: 400,
   floatingDetail: 280,
-  monthColumn: 147,
   monthRow: 176,
   weekdayRow: 30,
   dayHead: 22,
@@ -338,17 +296,9 @@ export const layout = {
   settingsNav: 220,
   settingsRow: 52,
   settingsGroupRadius: 16,
-  row: 38,
-  groupHeader: 30,
-  sidebarItem: 32,
-  accountRow: 28,
-  todayRow: 28,
   calendarRow: 30,
   miniDay: 26,
   mailSearch: 380,
-  search: 32,
-  segmented: 28,
-  readerTools: 48,
   attachment: 280,
   // The board's .cmdk (DESIGN.md: about 637).
   palette: 640,

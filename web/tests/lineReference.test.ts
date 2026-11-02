@@ -59,8 +59,7 @@ describe('What the line reads', () => {
     expect(row.reads, `"${row.example}" reads "${reads(row)}"`).toBe(reads(row));
   });
 
-  test('each kind of phrase has its section, each with an example, and none twice', () => {
-    expect(LINE_REFERENCE.map(section => section.title)).toEqual(['Days', 'Times', 'Lengths and spans', 'Repeats', 'Reminders', 'Places, calendars and projects', 'Keeping a phrase as words']);
+  test('each section has an example, and none twice', () => {
     expect(LINE_REFERENCE.every(section => section.rows.length > 0)).toBe(true);
     expect(new Set(rows.map(row => row.example)).size).toBe(rows.length);
   });

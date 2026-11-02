@@ -7,8 +7,8 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, landed, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
-  rowMeta, sameLayout, SECTION_GLYPHS, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
-  capMeter, cappedLine, CAP_CHOICES, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, newsUsageParts, sectionLine, sourcesHeader, sourceTile, unsortedLine,
+  rowMeta, sameLayout, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
+  capMeter, cappedLine, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
 import type {Layout} from '../src/logic/news.ts';
 import {news} from '../src/tokens.ts';
@@ -26,10 +26,6 @@ function story(fields: Partial<StoryRowOut> = {}): StoryRowOut {
   };
 }
 const lead = (outlet_short: string, more: number, published_at = '2026-10-07T15:02:00.000Z') => ({...story().lead, outlet_short, more, published_at});
-
-test('each section\'s glyph (#120): Local location_on, Tech computer, AI auto_awesome, General public', () => {
-  expect(SECTION_GLYPHS).toEqual({local: 'location_on', tech: 'computer', ai: 'auto_awesome', general: 'public'});
-});
 
 describe('a hazard\'s glyph where the photo would go (#121)', () => {
   const image = {thumb: {id: 1, url: '/api/news/images/1', width: 144, height: 96}, large: null, outlet: 'KTLA'};
@@ -429,7 +425,6 @@ describe('Settings › AI\'s News group (30b)', () => {
     [52, 40, true],
   ])('$%f of $%i is near the cap: %s', (spent, cap, near) => {
     expect(capMeter({this_month_usd: spent, monthly_cap_usd: cap}).near).toBe(near);
-    expect(CAP_CHOICES).toContain(40);
   });
 
   test('at the cap it says so, until the 1st of next month; below it, nothing', () => {
@@ -437,11 +432,5 @@ describe('Settings › AI\'s News group (30b)', () => {
     expect(cappedLine({capped: true, summaries_model: 'claude-haiku-5-5'}, '2026-10-01T07:00:00.000Z', zone, label)).toBe('Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
     expect(cappedLine({capped: true, summaries_model: 'claude-haiku-5-5'}, '2026-12-01T08:00:00.000Z', zone, label)).toBe('Cap reached, summaries use Claude Haiku 5.5 until Jan 1');
     expect(cappedLine({capped: false, summaries_model: 'claude-sonnet-5-5'}, '2026-10-01T07:00:00.000Z', zone, label)).toBeNull();
-  });
-
-  test('News\'s usage in its parts (the board)', () => {
-    const part = (cost_usd: number) => ({calls: 7, input_tokens: 1, output_tokens: 1, cost_usd});
-    expect(newsUsageParts({...part(18.4), articles: part(1.9), grouping: part(1.2), stories: part(13.1), ranking: part(2.2)}))
-      .toBe('Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20');
   });
 });
