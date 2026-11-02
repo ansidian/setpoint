@@ -1,10 +1,9 @@
 // Loading in the browser (the polish audit's loading slice, SV-61; DESIGN.md › Motion › Loading and
 // Decided while building #225–#236): each page's skeleton while its data is held at the server's
 // door, never a false empty; a load that fails says so in place with Try again; Setpoint starting
-// shows its mark, or the shell when this browser was signed in; the reader and the story pane draw
-// their heads from their rows at once; search shows a skeleton, then its results. Every check holds
-// the answer it's about, so "while it loads" is as long as the check needs, and releases it to see
-// the rows replace the skeleton.
+// shows its mark; the reader and the story pane draw their heads from their rows at once; search
+// shows a skeleton, then its results. Every check holds the answer it's about, so "while it loads"
+// is as long as the check needs, and releases it to see the rows replace the skeleton.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page, Route} from 'playwright-core';
@@ -316,13 +315,18 @@ test('a story opens at once from its row: sections, headline and meta; its summa
   }
 });
 
-test('Setpoint starting in a new browser shows its mark; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
+test('Setpoint starting shows its mark and clears what browsers used to keep; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     const releaseMe = await hold(page, /^\/api\/me$/);
+    await page.addInitScript(() => {
+      localStorage.setItem('setpoint.sidebar', '{"accounts":[{"label":"Personal"}]}');
+      localStorage.setItem('setpoint.signedIn', '1');
+    });
     await visit(page, `${setpoint.base}/inbox`);
     await page.locator('.boot.starting svg.mark').waitFor();
+    assert.deepEqual(await page.evaluate(() => [localStorage.getItem('setpoint.sidebar'), localStorage.getItem('setpoint.signedIn')]), [null, null]);
 
     // Setpoint answers: its accounts and Today wait as skeletons.
     const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
@@ -332,68 +336,6 @@ test('Setpoint starting in a new browser shows its mark; then the sidebar\'s acc
     await release();
     await page.locator('aside.sb .acct').first().waitFor();
     assert.equal(await page.locator('aside.sb [data-skeleton]').count(), 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('a browser that was signed in starts on its shell as it last stood: its accounts, counts and Today\'s place, and the page\'s skeleton; signed out, it forgets them (shell-10)', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-    await page.locator('.today-row').first().waitFor();
-    const sidebar = () => page.locator('aside.sb').evaluate(aside => ({
-      accounts: [...aside.querySelectorAll('.acct')].map(row => row.textContent),
-      inbox: aside.querySelector('.nav')!.textContent,
-      calendarAt: [...aside.querySelectorAll('.nav')].find(nav => nav.textContent === 'Calendar')!.getBoundingClientRect().y,
-    }));
-    const loaded = await rested(() => sidebar());
-    const todayLines = await page.locator('.today-row').count();
-
-    // The next open: Setpoint hasn't answered yet.
-    const releaseMe = await hold(page, /^\/api\/me$/);
-    await visit(page, `${setpoint.base}/inbox`);
-    await page.locator('.app[data-frame]').waitFor();
-    assert.deepEqual(await rested(() => sidebar()), loaded, 'the accounts and counts as they were, nothing moved');
-    assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), todayLines, 'Today\'s place, its lines as many as it had');
-    await shown(page, 'all');
-
-    // Setpoint answers, and the app takes over.
-    await releaseMe();
-    await page.locator('.list .row').first().waitFor();
-
-    // Signed out, this browser forgets the session's shape.
-    await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
-    await page.locator('.settings .set-nav .nav', {hasText: 'Sign out'}).click();
-    await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).click();
-    await page.locator('.sign-in').waitFor();
-    assert.deepEqual(await page.evaluate(() => [localStorage.getItem('setpoint.signedIn'), localStorage.getItem('setpoint.sidebar')]), [null, null]);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('on the phone, a signed-in browser starts on its header, tabs and the page\'s skeleton, an email\'s address on its reader\'s (phone-12)', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-    const releaseMe = await hold(page, /^\/api\/me$/);
-    await visit(page, `${setpoint.base}/inbox`);
-    await page.locator('.app[data-frame] .ph-tabs').waitFor();
-    assert.equal(await page.locator('.hd .hd-title').textContent(), 'Inbox');
-    assert.equal(await page.locator('.hd svg.mark').count(), 1);
-    await shown(page, 'all');
-    await visit(page, `${setpoint.base}/inbox/5`);
-    await page.locator('.app[data-frame] .pane').waitFor();
-    await shown(page, 'body');
-    await releaseMe();
-    await page.locator('.pane .rd-subj').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

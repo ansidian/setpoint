@@ -1,6 +1,7 @@
 import './styles.css';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import {forgetShape} from './app/forgetShape.ts';
 import {Root} from './app/Root.tsx';
 // After every component's own styles, so the phone's layout wins below 640 px.
 import './phone.css';
@@ -9,6 +10,7 @@ import {applyTokens} from './tokens.ts';
 
 applyTokens(document.documentElement);
 startTheme(document.documentElement);
+forgetShape();
 // iOS Safari draws `:active` (every tap's press, phone.css) only under a touch listener.
 document.addEventListener('touchstart', () => {}, {passive: true});
 createRoot(document.getElementById('root')!).render(<StrictMode><Root /></StrictMode>);

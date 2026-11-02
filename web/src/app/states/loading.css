@@ -9,7 +9,7 @@
   animation: sk-breathe var(--skel-breathe) var(--skel-ease) calc(var(--skel-delay) + var(--dur-medium)) infinite;
 }
 .sk.on-sub { --sk-fill: var(--skel-on-sub); }
-/* Carried on from the shell's, which was already showing: at once. */
+/* `immediate` (Loading.tsx): at once. */
 .sk.carried { animation: none; }
 .sk.carried :is(.sk-bar, .sk-dot, .sk-ring, .sk-box, .sk-img, .sk-thumb, .sk-fav, .sk-tile, .sk-attach, .rail) { animation-delay: 0s; }
 @keyframes sk-in { from { opacity: 0; } }

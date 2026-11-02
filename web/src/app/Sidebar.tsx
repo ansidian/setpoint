@@ -15,8 +15,6 @@ import {useResource} from '../api/client.ts';
 import {ACCOUNTS_PATH, COUNTS_PATH, markAllRead} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {FIRST_ACCOUNTS, shapeOf} from '../logic/shape.ts';
-import type {ShapeAccount} from '../logic/shape.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {motion} from '../tokens.ts';
 import {CalendarSidebar} from './calendar/CalendarSidebar.tsx';
@@ -24,7 +22,6 @@ import {openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
 import {Count} from './Count.tsx';
 import {useCompact} from './Phone.tsx';
-import {lastShape, rememberShape} from './lastShape.ts';
 import {AccountsSkeleton} from './states/Skeletons.tsx';
 import {reconnectFrom} from './states/States.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
@@ -92,22 +89,11 @@ function AttentionPill({value}: {value: number}) {
   return <span ref={pill} className={classes} title="Attention, not Done"><Count value={current.shown} /></span>;
 }
 
-/**
- * The sidebar. Its accounts and counts are this browser's last-known ones until their answers come,
- * which then settle them in place, or a skeleton on a first visit, so nothing under them moves (#234).
- * `frame`: drawn while Setpoint starts, before it may ask for anything (ShellFrame.tsx).
- */
-export function Sidebar({route, frame = false}: {route: Route; frame?: boolean}) {
-  const {data: loadedCounts} = useResource<MailCountsOut>(frame ? null : COUNTS_PATH);
-  const {data: loadedAccounts} = useResource<AccountOut[]>(frame ? null : ACCOUNTS_PATH);
-  // What the sidebar last showed, read as it first draws.
-  const [kept] = useState(lastShape);
-  const fresh = useMemo(() => (loadedAccounts ? shapeOf(loadedAccounts, loadedCounts, null) : null), [loadedAccounts, loadedCounts]);
-  useEffect(() => {
-    if (fresh?.counts) rememberShape({accounts: fresh.accounts, counts: fresh.counts});
-  }, [fresh]);
-  const accounts: ShapeAccount[] | null = fresh?.accounts ?? kept?.accounts ?? null;
-  const counts = loadedCounts ?? kept?.counts ?? null;
+/** The sidebar. Its accounts are three skeleton rows until their answer comes. */
+export function Sidebar({route}: {route: Route}) {
+  const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
+  const {data: loadedAccounts} = useResource<AccountOut[]>(ACCOUNTS_PATH);
+  const accounts = useMemo(() => (loadedAccounts ? [...loadedAccounts].sort((a, b) => a.position - b.position) : null), [loadedAccounts]);
   const unreadOf = (id: number) => counts?.accounts.find(account => account.account_id === id)?.unread ?? 0;
   const filtered = route.page === 'inbox' ? route.account : null;
   const rail = useCompact();
@@ -133,26 +119,24 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
       </Link>
       {/* On Calendar the accounts fold away to the page's section (board 11), over 180 ms rather than
           in one frame, so Calendar slides up under the pointer that clicked it (shell-08). Until they
-          come, the ones this browser last showed, or a skeleton on a first visit (#234). */}
+          come, a skeleton. */}
       {!rail && (
         <div className={route.page === 'calendar' ? 'sb-accts folded' : 'sb-accts'} inert={route.page === 'calendar'}>
           <div>
-            {accounts === null ? <AccountsSkeleton count={FIRST_ACCOUNTS} /> : accounts.map(account => {
+            {accounts === null ? <AccountsSkeleton count={3} /> : accounts.map(account => {
               const unread = unreadOf(account.id);
               const on = filtered === account.id;
+              const reconnect = account.health.state === 'needs_reconnect';
               return (
                 <Link key={account.id} className={on ? 'acct on' : 'acct'} style={dotStyle(account.colour)}
                   to={route.page === 'inbox' ? {...route, account: on ? null : account.id, open: null} : toInbox(account.id)}
-                  onContextMenu={event => {
-                    const full = loadedAccounts?.find(one => one.id === account.id);
-                    openContextMenu(event, event.currentTarget, [
-                      ...(unread > 0 ? [{id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', run: markAllReadOf(account.id)} satisfies MenuAction] : []),
-                      ...(account.reconnect && full ? [{id: 'reconnect', label: 'Reconnect', icon: 'sync_problem', run: () => reconnectFrom([full])} satisfies MenuAction] : []),
-                    ]);
-                  }}>
+                  onContextMenu={event => openContextMenu(event, event.currentTarget, [
+                    ...(unread > 0 ? [{id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', run: markAllReadOf(account.id)} satisfies MenuAction] : []),
+                    ...(reconnect ? [{id: 'reconnect', label: 'Reconnect', icon: 'sync_problem', run: () => reconnectFrom([account])} satisfies MenuAction] : []),
+                  ])}>
                   <span className="dot sm" />
                   {account.label}
-                  {account.reconnect && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
+                  {reconnect && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
                   {unread > 0 && <span className="cnt num"><Count value={unread} /></span>}
                 </Link>
               );
@@ -168,8 +152,8 @@ export function Sidebar({route, frame = false}: {route: Route; frame?: boolean})
         <Icon name="newspaper" />
         <span className="grow">News</span>
       </Link>
-      <JobsNavItem current={route.page === 'jobs'} frame={frame} />
-      {!rail && (route.page === 'calendar' ? !frame && <CalendarSidebar route={route} /> : <TodayBlock frame={frame} />)}
+      <JobsNavItem current={route.page === 'jobs'} />
+      {!rail && (route.page === 'calendar' ? <CalendarSidebar route={route} /> : <TodayBlock />)}
       <div className="sb-foot">
         {/* Settings opens over the page (settings/store.ts); its address still works in a new tab. */}
         <a className="nav" title={named('Settings · ⌘,')} href={routePath({page: 'settings', section: 'accounts'})} onClick={event => {

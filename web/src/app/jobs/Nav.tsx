@@ -3,7 +3,7 @@
 // window the rail's slot after News, its count a neutral 16 px badge (jobs.css). Only while Jobs is on:
 // turned on, it folds in under News over 180 ms (39a); off, it has no item, and `4` opens the off page
 // (38c). ⌘K's Go to lists "Jobs 4" only while it's on, as the sidebar does. What this browser last saw is
-// kept, so the shell draws it as it starts (#234).
+// kept, so the item draws before its answer and `4` knows whether it's on.
 import type {JobsNavOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';
@@ -31,7 +31,7 @@ function remember(nav: JobsNavOut) {
   try {
     localStorage.setItem(KEY, JSON.stringify(nav));
   } catch {
-    // Private windows may refuse; the shell then draws it once it's answered.
+    // Private windows may refuse; the item then draws once it's answered.
   }
 }
 
@@ -49,9 +49,9 @@ export function goToJobs(): boolean {
 /** ⌘K's Go to: "Jobs 4", while it's on. */
 export const jobsCommands = (): Command[] => (jobsOn() ? [{id: 'jobs', section: 'goto', label: 'Jobs', icon: 'work', hint: '4', run: () => navigate(JOBS)}] : []);
 
-/** The sidebar's item, or the rail's slot. `frame`: drawn while Setpoint starts, asking for nothing. */
-export function JobsNavItem({current, frame}: {current: boolean; frame: boolean}) {
-  const {data} = useResource<JobsNavOut>(frame ? null : NAV_PATH);
+/** The sidebar's item, or the rail's slot. */
+export function JobsNavItem({current}: {current: boolean}) {
+  const {data} = useResource<JobsNavOut>(NAV_PATH);
   useEffect(() => {
     if (data) remember(data);
   }, [data]);

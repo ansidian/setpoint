@@ -60,7 +60,7 @@ export function AllSkeleton({more = false, first = !more}: {more?: boolean; firs
   );
 }
 
-// The sidebar's rows on a first visit: account labels, and Today's lines (shell-10).
+// The sidebar's rows until they come: account labels, and Today's lines (shell-10).
 const ACCOUNT_LABELS = [58, 62, 40, 36, 44];
 
 /** The accounts under Inbox (.acct) before they're known: `count` rows, a dot, a label and a count. */

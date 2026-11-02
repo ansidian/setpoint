@@ -83,7 +83,6 @@ files marked *imports* import the folders.
 | `web/src/app/settings/parts.tsx`, `Page`'s `note` (J8) | the generic hook Settings › Jobs's "62 applications" uses; it names no module, so it can stay |
 | `web/src/logic/route.ts`, `'jobs'` in `SETTINGS_PAGES` (J8) | Settings › Jobs between News and AI, and /settings/jobs |
 | `web/src/logic/settings.ts`, `SETTINGS_NAV`'s `jobs` (J8) | Settings' nav item, Jobs with `work` |
-| `web/src/app/ShellFrame.tsx`, the starting shell's title (J5) | "Jobs" while Setpoint starts on a Jobs address; it imports nothing |
 | `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, and J8's words (removed with the module) |
 | `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
 | `web/tests/browser/jobsStates.spec.ts` (J8) | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
