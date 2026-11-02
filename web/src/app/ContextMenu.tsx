@@ -84,10 +84,16 @@ export function openContextMenu(event: ReactMouseEvent, owner: Element, actions:
   return true;
 }
 
-/** Copy items: the text onto the clipboard, saying what it took ("Copied pat@contoso.example", #40), or that it couldn't (#109). */
-export function copyText(text: string, said = text) {
+/**
+ * Copy items: the text onto the clipboard, saying what it took ("Copied pat@contoso.example", #40), or
+ * that it couldn't (#109). `copied` runs once the clipboard has it.
+ */
+export function copyText(text: string, said = text, copied?: () => void) {
   const writing = navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject(new Error('No clipboard'));
-  writing.then(() => showToast(`Copied ${said}`), () => showToast('Couldn\'t copy it'));
+  writing.then(() => {
+    showToast(`Copied ${said}`);
+    copied?.();
+  }, () => showToast('Couldn\'t copy it'));
 }
 
 // A right-click (or a Ctrl-click) pressed while a popover is open only closes it: its menu, and the

@@ -58,6 +58,8 @@ export interface ReaderActions {
   close: () => void;
   // ⇧U: unread again, and the reader closes so it stays so (UX #11).
   markUnread: () => void;
+  // Its code copied: read, quietly (#295).
+  codeCopied: () => void;
 }
 
 export function Reader({id, travel = null, row, accounts, now, timeZone, canStep, actions, marks = [], onOpen, back = 'Inbox'}: {
@@ -109,6 +111,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
     setToggles({id, count: toggled + 1});
     void (markedUnread ? markRead(id) : markUnread(id)).catch((error: Error) => showToast(error.message, null, 'failed'));
   };
+  // A copied code reads the email (#295); on the phone after Mark unread, as Mark read would.
+  const codeCopied = () => (markedUnread ? toggleRead() : actions.codeCopied());
   // ⌘K's This email (board 20): the tools, the actions and Mark unread, which closes the reader so
   // the email stays unread; from the email's row too, as the tools are, so it's there at once. The
   // same list as the row's right-click menu and More (emailActions.ts).
@@ -157,7 +161,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       </div>
       <Swap id={id} travel={travel}>
         {/* The head from the email's row at once; only the body waits for the email (reader-01, #229). */}
-        <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} />
+        <Message key={id} id={id} listed={listed} message={message} load={messageLoad} accounts={accounts} now={now} timeZone={timeZone} marks={marks} onOpen={onOpen} cards={cards} unread={markedUnread} onCodeCopied={codeCopied} />
       </Swap>
       {/* The actions share the bar evenly (2, 3 or 4 of them), drawn once the email's row or the
           email and its account are known, so none moves in or along when the email arrives; until
@@ -331,7 +335,7 @@ function MoreMenu({actions, onClose}: {actions: MenuAction[]; onClose: () => voi
 }
 
 /** The open email: its card, and the email under it. */
-function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread}: {
+function Message({id, listed, message, load, accounts, now, timeZone, marks, onOpen, cards, unread, onCodeCopied}: {
   id: number;
   listed: MessageRowOut | undefined;
   message: MessageOut | undefined;
@@ -344,6 +348,8 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
   cards: Cards;
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
+  // Its code copied, which reads it (#295).
+  onCodeCopied: () => void;
 }) {
   const {panel, alfred} = cards;
   return (
@@ -354,7 +360,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
       {panel?.kind === 'ask' && alfred.open && (
         <AnswerCard alfred={{...alfred, close: cards.close}} scoped openId={id} accounts={accounts} now={now} timeZone={timeZone} onOpen={onOpen} />
       )}
-      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} />
+      <Email listed={listed} message={message} load={load} accounts={accounts} now={now} timeZone={timeZone} marks={marks} cards={cards} unread={unread} onCodeCopied={onCodeCopied} />
     </>
   );
 }
@@ -365,7 +371,7 @@ function Message({id, listed, message, load, accounts, now, timeZone, marks, onO
  * card when it has one), or why it couldn't load (reader-01, phone-04, #229). With no `cards`, it's
  * the email alone: no slot and no actions.
  */
-function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false}: {
+function Email({listed, message, load, accounts, now, timeZone, marks, cards, unread = false, onCodeCopied}: {
   listed: MessageRowOut | undefined;
   message: MessageOut | undefined;
   load: Load;
@@ -375,12 +381,13 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
   marks: string[];
   cards?: Cards;
   unread?: boolean;
+  onCodeCopied?: () => void;
 }) {
   const failed = useLoadFailed([load]);
   const arrived = useArrival(message !== undefined);
   return (
     <>
-      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} /> : <HeadSkeleton />}
+      {listed ? <Head listed={listed} message={message} accounts={accounts} now={now} timeZone={timeZone} cards={cards} unread={unread} onCodeCopied={onCodeCopied} /> : <HeadSkeleton />}
       {message ? <Body message={message} marks={marks} arrived={arrived} /> : (
         <div className="rd-body">{failed ? <LoadFailed what="this email" loads={[load]} /> : <BodySkeleton attachment={(listed?.attachment_count ?? 0) > 0} />}</div>
       )}
@@ -389,7 +396,7 @@ function Email({listed, message, load, accounts, now, timeZone, marks, cards, un
 }
 
 /** The head: from the row while the email loads, then from the email (its domain, its security facts). */
-function Head({listed, message, accounts, now, timeZone, cards, unread}: {
+function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCopied}: {
   listed: MessageRowOut;
   message: MessageOut | undefined;
   accounts: Map<number, AccountOut>;
@@ -398,6 +405,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
   cards: Cards | undefined;
   // Marked unread on the phone, where it stays open: the list's unread dot before the subject.
   unread: boolean;
+  onCodeCopied: (() => void) | undefined;
 }) {
   const account = accounts.get(listed.account_id);
   const colour = colourVar(account?.colour);
@@ -424,7 +432,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread}: {
         <span className="time" title={fullTimestamp(listed.received_at, timeZone)}>{readerTime(listed.received_at, now, timeZone)}</span>
       </div>
       {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
-      {listed.code && <CodeCard code={listed.code} />}
+      {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}
       {message?.security && (
         <div className={message.protected || message.security.unfamiliar ? 'facts-card alert' : 'facts-card'}>
           <dl className="facts">

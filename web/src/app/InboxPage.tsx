@@ -455,16 +455,23 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
       });
     },
-    // The menu's Mark read on unread rows, as Mark all as read is for them (#248): they stay where they
-    // are for the visit, the attention pill doesn't move, and Undo or ⌘Z marks them unread again.
-    markRead: (ids: number[]) => {
+    // The unread ones of `ids` read, in place: they stay where they are for the visit and the attention
+    // pill doesn't move. A copied code's email reads so, with nothing to say (#295). The ids read.
+    read: (ids: number[]) => {
       const unread = ids.filter(id => rowOf(id)?.unread ?? true);
-      if (!unread.length) return;
+      if (!unread.length) return unread;
       if (searching) for (const id of unread) search.mark(id, {unread: false});
       void changeEach(unread, id => markRead(id)).then(outcomes => {
         const refused = refusals(unread, outcomes);
         if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it read', n => `Couldn't mark ${n} read`))(refused[0]!.error);
       });
+      return unread;
+    },
+    // The menu's Mark read on unread rows, as Mark all as read is for them (#248): read in place, and
+    // Undo or ⌘Z marks them unread again.
+    markRead: (ids: number[]) => {
+      const unread = on.read(ids);
+      if (!unread.length) return;
       const back = () => {
         const at = undos.indexOf(back);
         if (at < 0) return;
@@ -511,6 +518,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
       if (next !== null) openEmail(next, undefined, delta > 0 ? 'next' : 'prev');
     },
     markUnread: () => (onSelection ? forSelection.markUnread() : target !== null && on.markUnread([target])),
+    // The open email's code copied: read, quietly (#295).
+    codeCopied: () => open !== null && on.read([open]),
     // U: the cursor to New's first email, wherever the list is scrolled (D264).
     toNew: () => {
       const first = freshView ? dayStops([], [], {fresh: freshView})[0] : undefined;
@@ -662,6 +671,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       ask: () => withCard('ask'),
       markRead: () => on.markRead([id]),
       markUnread: () => on.markUnread([id]),
+      codeCopied: () => on.read([id]),
     }, 'menu');
     if (!openContextMenu(event, element, offered)) return;
     if (key && stops.some(stop => stop.key === key)) setCursor(key);
@@ -708,7 +718,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={prompt} markable={markAllReadIds(withHeld(groups ?? [], held)).length > 0}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
-            onMarkAllRead={actions.markAllRead} onAnswer={(answer, yes) => {
+            onMarkAllRead={actions.markAllRead} onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
               void answerPrompt(answer.id, yes).catch(toastFailure('Couldn\'t answer it'));
             }} />

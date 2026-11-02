@@ -622,6 +622,45 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
   }
 });
 
+test('SV-159: copying a code reads its email, in place: the row\'s Copy and the menu\'s Copy code, counts following, with no toast of its own', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await load(setpoint);
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
+    const row = page.locator('.list .row[data-key]', {has: page.locator('.code-line')});
+    const id = Number(await row.getAttribute('data-id'));
+    assert.match((await row.getAttribute('class'))!, /\bunread\b/);
+    const before = await counts(setpoint);
+
+    // The row's Copy: read where it is, the attention pill as it was, and nothing opened.
+    await row.locator('button', {hasText: 'Copy'}).click();
+    await row.locator('button', {hasText: 'Copied'}).waitFor();
+    await until('read', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.unread);
+    await until('its class', () => row.getAttribute('class'), classes => !/\bunread\b/.test(classes!));
+    await until('the count follows', () => unreadCount(page), text => text === String(before.unread - 1));
+    const after = await counts(setpoint);
+    assert.equal(after.unread, before.unread - 1);
+    assert.equal(after.attention, before.attention, 'the pill doesn\'t move');
+    assert.ok(await row.isVisible(), 'it stays where it is, in New');
+    assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
+    assert.equal(await page.locator('.toast').count(), 0, 'Copied says it; no Marked as read');
+
+    // The menu's Copy code does the same, its toast saying what it took.
+    await row.click({button: 'right'});
+    await page.locator('.ctx-menu .menu-i', {hasText: 'Mark unread'}).click();
+    await until('unread again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.unread);
+    await until('its class', () => row.getAttribute('class'), classes => /\bunread\b/.test(classes!));
+    await row.click({button: 'right'});
+    await page.locator('.ctx-menu .menu-i', {hasText: 'Copy code'}).click();
+    await page.locator('.toast', {hasText: 'Copied 482913'}).waitFor();
+    await until('read again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.unread);
+    await until('its class', () => row.getAttribute('class'), classes => !/\bunread\b/.test(classes!));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('images hidden: Show loads them this time; Always show trusts the domain', async () => {
   const setpoint = await startSetpoint({fixtures: ['coffee-html']});
   try {

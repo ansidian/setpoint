@@ -1,7 +1,8 @@
 // A verification code's parts, shared by the list's code row (DESIGN.md › The list) and the reader's
 // code card (polish audit reader-04): Copy, which confirms in `good` for a second and a half and says
 // so when the clipboard refuses (#109), and the countdown, which moves on as its words change, each
-// second through its last minute ("Expires in 42 sec", in `caution`, inbox-11).
+// second through its last minute ("Expires in 42 sec", in `caution`, inbox-11). A code copied reads its
+// email (#295): `onCopied` runs once the clipboard has it.
 import {useEffect, useState} from 'react';
 import type {MouseEvent} from 'react';
 import {serverNow} from '../api/auth.ts';
@@ -13,7 +14,7 @@ import {showToast} from './toast.ts';
 const COPIED_MS = 1500;
 
 /** Copy: the code without its space onto the clipboard; "Copied" in `good` for 1.5 s. */
-export function CodeCopy({value}: {value: string}) {
+export function CodeCopy({value, onCopied}: {value: string; onCopied?: () => void}) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -24,7 +25,10 @@ export function CodeCopy({value}: {value: string}) {
   const copy = (event: MouseEvent) => {
     event.stopPropagation();
     const writing = navigator.clipboard ? navigator.clipboard.writeText(value) : Promise.reject(new Error('No clipboard'));
-    writing.then(() => setCopied(true), () => showToast('Couldn\'t copy it'));
+    writing.then(() => {
+      setCopied(true);
+      onCopied?.();
+    }, () => showToast('Couldn\'t copy it'));
   };
   return (
     <button className={copied ? 'btn ghost sm copy copied' : 'btn ghost sm copy'} type="button" onClick={copy}>
@@ -58,13 +62,13 @@ export function useCountdown(at: string): {text: string; soon: boolean; expired:
  * Copy, and at the right its countdown on the clock, not the email's own words; once expired it says
  * so and the code steps back to `ink3`.
  */
-export function CodeCard({code}: {code: {value: string; expires_at: string}}) {
+export function CodeCard({code, onCopied}: {code: {value: string; expires_at: string}; onCopied?: () => void}) {
   const countdown = useCountdown(code.expires_at);
   return (
     <div className={countdown.expired ? 'code-card expired' : 'code-card'}
-      onContextMenu={event => openContextMenu(event, event.currentTarget, [{id: 'copy-code', label: 'Copy code', icon: 'content_copy', run: () => copyText(code.value)}])}>
+      onContextMenu={event => openContextMenu(event, event.currentTarget, [{id: 'copy-code', label: 'Copy code', icon: 'content_copy', run: () => copyText(code.value, code.value, onCopied)}])}>
       <span className="code">{codeGroups(code.value)}</span>
-      <CodeCopy value={code.value} />
+      <CodeCopy value={code.value} onCopied={onCopied} />
       <span className="grow" />
       <span className={countdown.soon ? 'expiry num soon' : 'expiry num'}>{countdown.text}</span>
     </div>

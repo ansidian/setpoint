@@ -1446,7 +1446,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 
 ## Interaction rules
 
-- **Read state:** an email becomes read only when opened (Enter or a click) or by Mark all as read.
+- **Read state:** an email becomes read only when opened (Enter or a click), by Mark all as read, or
+  by copying its verification code ([Decided while building](#decided-while-building) #295).
   Moving the cursor, scrolling and opening a Noise line never mark anything read. Counts follow at once
   (opening an unread email drops the unread counts; the attention pill drops only on Done).
 - **Keyboard cursor:** `J` / `K` move it (a `sub2` fill); moving the pointer onto a row makes it the
@@ -3617,3 +3618,9 @@ it changes what's on screen.
     from anywhere else, unless the key is typed into a field of the email's own. Selecting and
     copying the email's text still work there; only ⌘F, ⌘K and ⌘, are kept from the browser, as
     Setpoint keeps them everywhere else.
+295. **Copying a verification code reads its email** (Andy, 2026-11-02; darma D414, SV-159). Every Copy
+    of a code (the code row's, the code card's, and Copy code in either right-click menu) marks an
+    unread email read once the clipboard takes it, as the row menu's Mark read does: in place, New
+    keeping it for the visit, the attention pill as it was, the counts following. It adds no toast or
+    Undo of its own, since Copied already says it; Mark unread takes it back. A refused copy reads
+    nothing. On the phone's reader after Mark unread, Copy reads it again and offers Mark unread.

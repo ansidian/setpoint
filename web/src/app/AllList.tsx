@@ -58,7 +58,7 @@ const NONE: ReadonlySet<number> = new Set();
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
 export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null, markable = false,
-  onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onMarkAllRead}: {
+  onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onMarkAllRead, onCodeCopied}: {
   // New's lanes and Noise, drawn as a day's (null when nothing's New), how many of it are unread (its
   // band's count), and Attention's rows.
   fresh: DayView | null;
@@ -92,6 +92,8 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
   onUnpin: (id: number) => void;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
   onMarkAllRead?: () => void;
+  // A code row's Copy, once the clipboard has it: it reads the email (#295).
+  onCodeCopied?: (id: number) => void;
 }) {
   const today = localDate(now, timeZone);
   const onScroll = (event: UIEvent<HTMLElement>) => {
@@ -217,7 +219,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
             {/* A live code above the days has Copy and its countdown, as the Inbox's always had. */}
-            {item.aged && row.code ? <CodeLine code={row.code} /> : (
+            {item.aged && row.code ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
                 <b className={line.alert ? 'alertsubj' : undefined}>
                   {line.code ? <>{line.code.before}<span className="code">{line.code.value}</span>{line.code.after}</> : line.subject}
@@ -246,12 +248,12 @@ export function Gutter({beat}: {beat: Beat | null}) {
 }
 
 /** A code row: the code in two groups of three, Copy (the code without its space), and its countdown. */
-function CodeLine({code}: {code: {value: string; expires_at: string}}) {
+function CodeLine({code, onCopied}: {code: {value: string; expires_at: string}; onCopied: () => void}) {
   const countdown = useCountdown(code.expires_at);
   return (
     <span className="subj code-line">
       <span className="code">{codeGroups(code.value)}</span>
-      <CodeCopy value={code.value} />
+      <CodeCopy value={code.value} onCopied={onCopied} />
       <span className={countdown.soon ? 'sum soon' : 'sum'}>{countdown.text}</span>
     </span>
   );

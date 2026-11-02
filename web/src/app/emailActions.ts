@@ -3,7 +3,7 @@
 // drift. ⌘K's order: Done H (Attention mail not yet Done, #93), Trash E, Pin or Unpin P, Open in
 // Gmail O (Gmail's mail), Add to calendar, Add as task, Ask about this email, Mark unread ⇧U. The
 // menu leads with Open ↵, offers Mark read on an unread row in Mark unread's place, and ends with
-// its Copy items: the sender's address and a code row's code.
+// its Copy items: the sender's address and a code row's code, whose copy reads the email (#295).
 import type {ItemKind, MessageRowOut} from '@setpoint/shared';
 import {readerActions} from '../logic/reader.ts';
 import {selectionOffers} from '../logic/selection.ts';
@@ -18,9 +18,10 @@ export interface EmailHandlers {
   propose: (kind: ItemKind) => void;
   ask: () => void;
   markUnread: () => void;
-  // The menu's own: Open, and Mark read on an unread row.
+  // The menu's own: Open, Mark read on an unread row, and what a copied code does.
   open?: () => void;
   markRead?: () => void;
+  codeCopied?: () => void;
 }
 
 /** `gmail`: whether its account is Gmail's (false hides Open in Gmail, as null does until it's known). */
@@ -41,7 +42,7 @@ export function emailActions(row: MessageRowOut, gmail: boolean | null, on: Emai
       : {id: 'unread', group: menu ? 'read' : 'make', label: 'Mark unread', icon: 'mark_email_unread', hint: '⇧U', run: on.markUnread},
     ...(menu ? [
       {id: 'copy-address', group: 'copy', label: 'Copy sender address', icon: 'alternate_email', run: () => copyText(row.from_address)} satisfies MenuAction,
-      ...(row.code ? [{id: 'copy-code', group: 'copy', label: 'Copy code', icon: 'content_copy', run: () => copyText(row.code!.value)} satisfies MenuAction] : []),
+      ...(row.code ? [{id: 'copy-code', group: 'copy', label: 'Copy code', icon: 'content_copy', run: () => copyText(row.code!.value, row.code!.value, on.codeCopied)} satisfies MenuAction] : []),
     ] : []),
   ];
 }

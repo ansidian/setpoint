@@ -247,6 +247,29 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
   }
 });
 
+test('SV-159: the reader\'s Copy on an email marked unread reads it again, and offers Mark unread', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
+    const before = await counts(setpoint);
+    await page.locator('.list .row', {has: page.locator('.code-line')}).tap();
+    await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
+    await until('read', () => counts(setpoint), value => value.unread === before.unread - 1);
+    await page.locator('.ph-acts button', {hasText: 'Mark unread'}).tap();
+    await page.locator('.ph-acts button', {hasText: 'Mark read'}).waitFor();
+    await until('unread again', () => counts(setpoint), value => value.unread === before.unread);
+
+    await page.locator('.code-card button', {hasText: 'Copy'}).tap();
+    await page.locator('.code-card button', {hasText: 'Copied'}).waitFor();
+    await page.locator('.ph-acts button', {hasText: 'Mark unread'}).waitFor();
+    await until('read again', () => counts(setpoint), value => value.unread === before.unread - 1);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the account filter, and plain search with no chips and no Alfred', async () => {
   const setpoint = await startSetpoint();
   try {
