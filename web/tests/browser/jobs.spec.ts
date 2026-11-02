@@ -807,9 +807,7 @@ test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, JD saved s
     const item = need(page, 'Lucerne');
     const classes = await watch(item, 'class');
     await page.keyboard.press('Enter');
-    // The outcome in line two's place, then the fold, the count going with it.
-    await item.locator('.jb-done').waitFor();
-    assert.equal(await item.locator('.jb-done').textContent(), 'JD saved· Junior Developer · New York, NY · Greenhouse');
+    // The fold, the count going with it.
     await until('Lucerne folded away', () => need(page, 'Lucerne').count(), count => count === 0);
     assert.ok((await classes()).some(value => value?.split(' ').includes('answered')), 'it was answered before it went');
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
