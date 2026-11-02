@@ -1,7 +1,7 @@
 // Health is "the last check succeeded", against a threshold from the source's own schedule
 // (decision 31): twice the interval plus a grace.
 import {describe, expect, test} from 'vitest';
-import {deriveHealth, HEALTH_GRACE_SECONDS, staleAfterMs} from '../src/domain/health.ts';
+import {deriveHealth, staleAfterMs} from '../src/domain/health.ts';
 import type {HealthInput} from '../src/domain/health.ts';
 
 const NOW = '2026-10-07T16:12:00.000Z';
@@ -15,7 +15,6 @@ const base: HealthInput = {
 
 describe('deriveHealth', () => {
   test('the threshold is twice the interval plus the grace', () => {
-    expect(HEALTH_GRACE_SECONDS).toBe(60);
     expect(staleAfterMs(120)).toBe(5 * 60_000);
     expect(staleAfterMs(30 * 60)).toBe(61 * 60_000);
   });

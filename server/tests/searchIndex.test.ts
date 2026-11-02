@@ -90,6 +90,16 @@ describe('links', () => {
   });
 });
 
+describe('accents', () => {
+  test('"cafe" finds "Café" in a subject and in a body', () => {
+    const {w, add} = accountWorld();
+    add({subject: 'Café order', bodyText: 'Hello.'});
+    add({subject: 'Second order', bodyText: 'The café is closed Monday.'});
+    add({subject: 'Third order', bodyText: 'Hello.'});
+    expect(subjects(search(w, 'cafe'))).toEqual(['Café order', 'Second order']);
+  });
+});
+
 describe('the summary', () => {
   const settled = (summary: string) => ({
     source: 'cheap_model' as const, ruleId: null,

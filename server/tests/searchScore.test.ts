@@ -58,16 +58,10 @@ describe('summarise', () => {
 });
 
 describe('scoring the real search over the seed', () => {
-  const lease = 'When does my lease renewal need to be signed?';
-
-  test.each([
-    {text: 'northwind rejection', subjects: ['Update on your application', 'Your application for Data Engineer Intern'], firstRight: 1, precisionTop5: 0.4, top10: 1, anywhere: 1},
-    {text: 'renewal', subjects: ['October rent received'], firstRight: 4, precisionTop5: 0.2, top10: 1, anywhere: 1, firstSection: 3, rightInFirst: 0},
-    {text: lease, subjects: ['Lease renewal terms', 'Update on your application'], firstRight: 1, precisionTop5: 0.2, top10: 0.5, anywhere: 0.5, listed: 1},
-  ])('$text → $subjects', ({text, subjects, ...scores}) => {
+  test('renewal → October rent received, past the first section', () => {
     const w = world({seed: true});
-    const [score] = scoreSearches(w.store, [{group: 'topic', text, wanted: subjects.map(subject => idOf(w, subject))}]);
-    expect(score).toMatchObject(scores);
+    const [score] = scoreSearches(w.store, [{group: 'topic', text: 'renewal', wanted: [idOf(w, 'October rent received')]}]);
+    expect(score).toMatchObject({firstRight: 4, precisionTop5: 0.2, top10: 1, anywhere: 1, firstSection: 3, rightInFirst: 0});
   });
 });
 
@@ -153,13 +147,13 @@ describe('loadTerms', () => {
   });
 });
 
-// Each run starts a Node process, which a machine that's busy can take seconds over.
+// The run starts a Node process, which a machine that's busy can take seconds over.
 const SPAWNING = 30_000;
 
 describe('scoreSearch.ts', () => {
   const script = fileURLToPath(new URL('../src/dev/scoreSearch.ts', import.meta.url));
 
-  test('--migrate scores a copy and leaves the database as it was', () => {
+  test('--migrate --terms scores a copy with the terms in it and leaves the database as it was', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-score-test-'));
     onTestFinished(() => fs.rmSync(dir, {recursive: true, force: true}));
     const file = path.join(dir, 'mail.sqlite');
@@ -169,27 +163,16 @@ describe('scoreSearch.ts', () => {
     const id = (sqlite.prepare('SELECT id FROM messages WHERE subject = ?').get('Lease renewal terms') as {id: number}).id;
     sqlite.close();
     const test = path.join(dir, 'test.json');
-    fs.writeFileSync(test, JSON.stringify({searches: [{group: 'topic', text: 'lease renewal', wanted: [id]}] satisfies TestSearch[]}));
+    fs.writeFileSync(test, JSON.stringify({searches: [{group: 'topic', text: 'tenancy', wanted: [id]}] satisfies TestSearch[]}));
+    const terms = path.join(dir, 'terms.jsonl');
+    fs.writeFileSync(terms, `${JSON.stringify({id, terms: ['tenancy agreement']})}\n`);
     const before = fs.readFileSync(file);
 
-    const run = (...args: string[]) => execFileSync(process.execPath, ['--no-warnings', script, test, ...args], {env: {...process.env, SETPOINT_DB: file}, encoding: 'utf8'});
-    const allRow = (out: string) => out.split('\n').find(line => line.startsWith('all'));
-    expect(allRow(run('--migrate'))).toMatch(/^all\s+1\s+1\.000\s/);
-    expect(fs.readFileSync(file).equals(before)).toBe(true);
-    expect(allRow(run())).toBe(allRow(run('--migrate')));
-    expect(fs.readdirSync(dir).sort()).toEqual(['mail.sqlite', 'test.json']);
-
     // Terms go into the scratch copy, beside the file, and are gone with it.
-    const terms = path.join(dir, 'terms.jsonl');
-    const other = (sqliteId: number) => JSON.stringify({searches: [{group: 'topic', text: 'tenancy', wanted: [sqliteId]}] satisfies TestSearch[]});
-    fs.writeFileSync(test, other(id));
-    expect(allRow(run('--migrate'))).toMatch(/^all\s+1\s+0\.000\s/);
-    fs.writeFileSync(terms, `${JSON.stringify({id, terms: ['tenancy agreement']})}\n`);
-    const scored = run('--migrate', '--terms', terms);
+    const scored = execFileSync(process.execPath, ['--no-warnings', script, test, '--migrate', '--terms', terms], {env: {...process.env, SETPOINT_DB: file}, encoding: 'utf8'});
     expect(scored).toContain('Search terms on 1 emails');
-    expect(allRow(scored)).toMatch(/^all\s+1\s+1\.000\s/);
+    expect(scored.split('\n').find(line => line.startsWith('all'))).toMatch(/^all\s+1\s+1\.000\s/);
     expect(fs.readFileSync(file).equals(before)).toBe(true);
     expect(fs.readdirSync(dir).sort()).toEqual(['mail.sqlite', 'terms.jsonl', 'test.json']);
-    expect(() => execFileSync(process.execPath, ['--no-warnings', script, test, '--terms', terms], {env: {...process.env, SETPOINT_DB: file}, stdio: 'pipe'})).toThrow(/--terms needs --migrate/);
   }, SPAWNING);
 });

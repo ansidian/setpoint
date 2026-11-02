@@ -1,7 +1,7 @@
 // Pattern prompts and attention precision as tables (BUILD-PLAN.md › B3 › Done when: prompts'
 // threshold, never for protected mail, Yes and No quieting them).
 import {describe, expect, test} from 'vitest';
-import {attentionPrecision, patternPrompts, PROMPT_THRESHOLD, promptKey} from '../src/domain/learning.ts';
+import {attentionPrecision, patternPrompts, promptKey} from '../src/domain/learning.ts';
 import type {Verdict} from '../src/domain/learning.ts';
 
 let next = 1;
@@ -12,10 +12,6 @@ const verdict = (day: number, changes: Partial<Verdict> = {}): Verdict => ({
 const run = (days: number[], changes: Partial<Verdict> = {}) => days.map(day => verdict(day, changes));
 
 describe('patternPrompts', () => {
-  test('the threshold is the board\'s four', () => {
-    expect(PROMPT_THRESHOLD).toBe(4);
-  });
-
   test.each<[string, Verdict[], number | null]>([
     // name, verdicts, the prompt's count (null: no prompt)
     ['three cleared unopened: not yet', run([2, 9, 16]), null],

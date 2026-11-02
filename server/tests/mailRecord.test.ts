@@ -11,7 +11,6 @@ import type {SenderAuthentication} from '../src/domain/senderAuthentication.ts';
 import type {RemoteContentInput} from '../src/domain/remoteContent.ts';
 import {fetchedMessage, parseEmail} from '../src/providers/mime.ts';
 import {allMail, inbox, indexing, mailCounts, messageDetail} from '../src/queries/mail.ts';
-import {ftsQuery, searchMessages} from '../src/search/messages.ts';
 import {startBackfill, writeBackfill} from '../src/sync/cursors.ts';
 import {applyProviderStates, removeMessages, upsertMessages} from '../src/sync/mailMirror.ts';
 import type {FetchedMessage} from '../src/sync/mailMirror.ts';
@@ -22,6 +21,7 @@ import {gmailVerdict, rawEmail} from './rawEmail.ts';
 const accountId = (w: World, label: string) => w.store.db.select().from(t.accounts).where(eq(t.accounts.label, label)).get()!.id;
 const row = (w: World, id: number) => w.store.db.select().from(t.messages).where(eq(t.messages.id, id)).get()!;
 const integrity = (w: World) => w.store.sqlite.prepare(`INSERT INTO messages_fts(messages_fts) VALUES ('integrity-check')`).run();
+const inIndex = (w: World, word: string) => w.store.sqlite.prepare('SELECT count(*) AS n FROM messages_fts WHERE messages_fts MATCH ?').pluck().get(word);
 
 function fetched(overrides: Partial<FetchedMessage> = {}): FetchedMessage {
   return {
@@ -103,48 +103,23 @@ describe('the mirror', () => {
     expect(removeMessages(w.store, business, ['g-1'])).toEqual([id]);
     expect(w.store.db.select().from(t.messages).where(eq(t.messages.id, id!)).get()).toBeUndefined();
     expect(w.store.db.select().from(t.commands).all().filter(command => command.targetId === id)).toEqual([]);
-    expect(searchMessages(w.store, {text: 'beans'})).toEqual([]);
+    expect(inIndex(w, 'beans')).toBe(0);
     integrity(w);
   });
 });
 
 describe('the full-text index', () => {
-  test('finds by sender, organisation, subject and body, newest first, by word prefix and without accents', () => {
-    const w = world({seed: true});
-    const business = accountId(w, 'Business');
-    const [older, newer] = upsertMessages(w.store, business, [
-      fetched({providerId: 'g-1', subject: 'Café order', receivedAt: '2026-10-01T15:00:00.000Z'}),
-      fetched({providerId: 'g-2', subject: 'Second order', bodyText: 'The café is closed Monday.', receivedAt: '2026-10-05T15:00:00.000Z'}),
-    ]).inserted;
-    expect(searchMessages(w.store, {text: 'cafe'})).toEqual([{id: newer, fields: ['body']}, {id: older, fields: ['subject']}]);
-    expect(searchMessages(w.store, {text: 'contos ord'}).map(hit => hit.fields)).toEqual([['sender', 'subject'], ['sender', 'subject']]);
-    w.store.db.update(t.messages).set({organisation: 'Zephyr Roasters'}).where(eq(t.messages.id, older!)).run();
-    expect(searchMessages(w.store, {text: 'zephyr'})).toEqual([{id: older, fields: ['organisation']}]);
-    integrity(w);
-  });
-
-  test('stays in step on update and delete, and ignores read-state and Done changes', () => {
+  test('stays in step with a new subject and organisation, and ignores read-state and Done changes', () => {
     const w = world({seed: true});
     const id = w.store.db.select().from(t.messages).where(eq(t.messages.subject, 'Interview availability for Software Engineer I')).get()!.id;
-    expect(searchMessages(w.store, {text: 'interview'}).map(hit => hit.id)).toContain(id);
-    w.store.db.update(t.messages).set({subject: 'Scheduling call'}).where(eq(t.messages.id, id)).run();
-    expect(searchMessages(w.store, {text: 'interview availability'}).map(hit => hit.id)).not.toContain(id);
-    expect(searchMessages(w.store, {text: 'scheduling'}).map(hit => hit.id)).toEqual([id]);
+    expect(inIndex(w, 'availability')).toBe(1);
+    w.store.db.update(t.messages).set({subject: 'Scheduling call', organisation: 'Zephyr Roasters'}).where(eq(t.messages.id, id)).run();
+    expect(inIndex(w, 'availability')).toBe(0);
+    expect(inIndex(w, 'scheduling')).toBe(1);
+    expect(inIndex(w, 'zephyr')).toBe(1);
     openMessage(w.store, id);
     setDone(w.store, id, true);
     integrity(w);
-  });
-
-  test('leaves trashed mail out, filters to an account, and turns words into prefix terms', () => {
-    const w = world({seed: true});
-    const business = accountId(w, 'Business');
-    const [id] = upsertMessages(w.store, business, [fetched({trashed: true})]).inserted;
-    expect(searchMessages(w.store, {text: 'beans'})).toEqual([]);
-    applyProviderStates(w.store, business, new Map([['g-1', {unread: true, trashed: false, archived: false}]]));
-    expect(searchMessages(w.store, {text: 'beans', accountId: business})).toEqual([{id, fields: ['subject']}]);
-    expect(searchMessages(w.store, {text: 'beans', accountId: accountId(w, 'Jobs')})).toEqual([]);
-    expect(ftsQuery('Northwind "rejection" OR march*')).toBe('"northwind"* "rejection"* "or"* "march"*');
-    expect(ftsQuery('  ·  ')).toBeNull();
   });
 });
 

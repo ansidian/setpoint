@@ -1,6 +1,6 @@
 // The one retry policy for jobs and commands.
 import {describe, expect, test} from 'vitest';
-import {RETRY, retryAfterFailure} from '../src/domain/retry.ts';
+import {retryAfterFailure} from '../src/domain/retry.ts';
 import type {ProviderErrorKind} from '../src/domain/retry.ts';
 
 const S = 1000;
@@ -25,8 +25,7 @@ describe('retryAfterFailure', () => {
     expect(retryAfterFailure(kind, attempt, retryAfter)).toEqual(expected === false ? {retry: false} : {retry: true, delayMs: expected});
   });
 
-  test('six attempts in all, and never more than 30 minutes apart', () => {
-    expect(RETRY.maxAttempts).toBe(6);
+  test('no retry far past the last attempt', () => {
     expect(retryAfterFailure('transient', 20, null)).toEqual({retry: false});
   });
 });

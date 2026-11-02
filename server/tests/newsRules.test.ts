@@ -5,7 +5,7 @@ import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Health} from '../src/domain/health.ts';
 import {
-  ARCHIVE_MS, blockSize, expiresAt, keepsImage, leadOf, listedArticles, mainSection, newSince, purgeAt, sectionHealth, sectionOrder, STORY_TTL_MS, storyStage,
+  blockSize, expiresAt, keepsImage, leadOf, listedArticles, mainSection, newSince, purgeAt, sectionHealth, sectionOrder, storyStage,
   storyState,
 } from '../src/domain/news.ts';
 import type {OutletArticle, StoryReading} from '../src/domain/news.ts';
@@ -15,8 +15,6 @@ const after = (hours: number, from = FACT) => new Date(Date.parse(from) + hours 
 
 describe('a story\'s life', () => {
   test('it leaves the page 48 hours after its last new fact, and the archive 90 days after it', () => {
-    expect(STORY_TTL_MS).toBe(48 * 3_600_000);
-    expect(ARCHIVE_MS).toBe(90 * 24 * 3_600_000);
     expect(expiresAt(FACT)).toBe('2026-10-07T15:40:00.000Z');
     expect(purgeAt(FACT)).toBe('2027-01-03T15:40:00.000Z');
   });
