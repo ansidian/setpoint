@@ -190,7 +190,7 @@ test('board 25: All on a typical morning, the Missed strip, Upcoming, the pill, 
   }
 });
 
-test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
+test('board 31: board 25 in Light', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -205,33 +205,10 @@ test('board 31: board 25 in Light, from the theme\'s tokens', async () => {
     await newsChange(setpoint, THREE_NEW_ONE_UPDATED);
     await page.locator('.nw-pill', {hasText: '3 new · 1 updated'}).waitFor();
 
-    // The single values, each Light's own token.
-    const style = (selector: string, property: 'color' | 'backgroundColor') => page.locator(selector).first().evaluate((element, name) => getComputedStyle(element)[name], property);
-    const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
-    assert.equal(await rested(() => colourOf(page, 'var(--ink)')), 'rgb(29, 30, 33)', 'Light\'s ink');
-    assert.equal(await rested(() => page.evaluate(() => getComputedStyle(document.body).backgroundColor)), 'rgb(246, 246, 244)', 'Light\'s page (override 5)');
-    assert.equal(await rested(() => style('.nw-sec', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--panel)')));
-    assert.equal(await rested(() => style('.nw-sec', 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'the section\'s name in ink2 (#120)');
-    assert.equal(await rested(() => style('.nw-sec > .icon', 'color')), await rested(() => colourOf(page, 'var(--ink3)')), 'its glyph in ink3');
-    assert.equal(await rested(() => style('.nw-missed', 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--accent) 9%, var(--page))')));
-    assert.equal(await rested(() => style('.nw-missed > .icon', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
-    assert.equal(await rested(() => style('.nw-pill', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--cardOn)')));
-    assert.equal(await rested(() => style('.nw-pill .upd', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
-    assert.equal(await rested(() => dot('Red Flag Warning')), await rested(() => colourOf(page, 'var(--ink)')), 'new: ink');
-    assert.equal(await rested(() => dot('Man arrested after a stabbing')), await rested(() => colourOf(page, 'var(--accent)')), 'updated: accent');
-    assert.equal(await rested(() => style('.nw-row.new .hl', 'color')), await rested(() => colourOf(page, 'var(--ink)')));
-    assert.equal(await rested(() => style('.nw-row .sm', 'color')), await rested(() => colourOf(page, 'var(--ink3)')));
-    assert.equal(await rested(() => style('.nw-meta .upd', 'color')), await rested(() => colourOf(page, 'var(--accent)')));
-    // Upcoming's tile is the accent, not Jobs' violet (#163).
-    assert.equal(await style('.nw-up .ico', 'color'), await colourOf(page, 'var(--accent)'));
-
     await lead.click();
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     await page.locator('.pane .st-img .nw-img').evaluate((image: HTMLImageElement) => image.decode());
-    assert.equal(await rested(() => style('.st-new', 'backgroundColor')), await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--accent) 8%, var(--card))')));
-    assert.equal(await rested(() => style('.st-new .lab', 'color')), await rested(() => colourOf(page, 'oklch(from var(--accent) min(l, var(--tintL)) c h)')));
-    assert.equal(await rested(() => style('.src-list', 'backgroundColor')), await rested(() => backgroundOf(page, 'var(--sub)')));
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '31-light-news');

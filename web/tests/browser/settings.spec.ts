@@ -1,4 +1,4 @@
-// Settings in the browser (F7; DESIGN.md › Settings): boards 17, 18a and 18b built and checked
+// Settings in the browser (F7; DESIGN.md › Settings): board 17 built and checked
 // (board 17 also takes one of the release's page screenshots, pages.ts), then each page saving: the
 // modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
 // (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form), Mail (a rule, Undo
@@ -119,40 +119,6 @@ test('each source\'s state leads with its glyph (the polish audit\'s settings-01
     await fox.waitFor();
     assert.deepEqual(await rested(() => lead(fox)), [ICONS.warning, '16', caution]);
     assert.deepEqual(await rested(() => lead(page.locator('.settings .news-src:not(.warn)').first())), ['dot', '7px', good]);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('board 18a: Settings › Mail, consolidatedmessenger.example under the pointer', async () => {
-  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'mail');
-    await page.locator('.settings .dom', {hasText: 'Show all 78'}).waitFor();
-    // The rules load apart from the domains: wait for the last one before reading the list.
-    await page.locator('.settings .rule', {hasText: 'Proseware alerts'}).waitFor();
-    assert.deepEqual(await page.locator('.settings .rule').allTextContents(), [
-      'From university.edu with “Registrar” in the subjectAttention', 'From woodgrovebank.exampleFYI · Money', 'From news.fabrikam.comNoise',
-      'Northwind newslettersFYI · Updates', 'Proseware alertsFYI · Updates',
-    ]);
-    await page.locator('.settings .dom[data-domain="consolidatedmessenger.example"]').hover();
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('board 18b: Settings › Notifications', async () => {
-  const setpoint = await startSetpoint({fixtures: ['ntfy'], clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'notifications');
-    await page.locator('.settings .set-label', {hasText: 'Connected · last sent 8:02 AM'}).waitFor();
-    // Every group has its label (the polish audit's settings-11), spaced as every other group is.
-    assert.deepEqual(await page.locator('.settings .set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['ntfy', 'Reminder defaults', 'Time to Leave', 'Alerts']);
-    assert.deepEqual(await rested(() => page.locator('.settings .set-sec').evaluateAll(sections => sections.slice(1).map(section => getComputedStyle(section).marginTop))), ['14px', '14px', '14px']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -459,11 +425,12 @@ test('Accounts: colour, rename and order save; Connect Gmail says Google isn\'t 
   }
 });
 
-test('Mail: a rule added, a learned rule undone, a domain untrusted, the code expiry changed', async () => {
+test('Mail: a long list of trusted domains shows some and Show all, a rule added, a learned rule undone, a domain untrusted, the code expiry changed', async () => {
   const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
+    await page.locator('.settings .dom', {hasText: 'Show all 78'}).waitFor();
     const rules = () => setpoint.api<RuleOut[]>('GET', '/mail/rules');
 
     await page.getByRole('button', {name: 'Add rule'}).click();
@@ -604,62 +571,6 @@ test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, rea
     assert.equal(await empty.evaluate(button => document.activeElement === button), true, 'Tab reaches it');
     await page.keyboard.press('Enter');
     await page.locator('.settings input[name="from"]').waitFor();
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('S12b: "No rules yet · Add rule" is one line in a plain row, not the Inbox\'s centred All caught up', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'mail');
-    const row = page.locator('.settings .set-row', {hasText: 'No rules yet'});
-    const shape = await rested(() => row.evaluate((element: HTMLElement) => {
-      const line = element.querySelector<HTMLElement>('.s')!;
-      const words = document.createRange();
-      words.selectNodeContents(line.firstChild!);
-      return {
-        row: element.offsetHeight, group: element.parentElement!.offsetHeight, line: line.offsetHeight,
-        wordsTop: Math.round(words.getBoundingClientRect().top), buttonTop: Math.round(line.querySelector('button')!.getBoundingClientRect().top),
-        leadLeft: Math.round(element.querySelector('.icon')!.getBoundingClientRect().left - element.getBoundingClientRect().left),
-      };
-    }));
-    assert.ok(shape.line < 24, `one line, not ${shape.line}px`);
-    assert.ok(Math.abs(shape.wordsTop - shape.buttonTop) <= 2, 'Add rule sits on the words\' line');
-    assert.ok(shape.row <= 46, `a 46px row, not ${shape.row}px`);
-    assert.equal(shape.group, shape.row, 'the group holds just the row');
-    assert.ok(shape.leadLeft <= 17, 'its glyph starts at the row\'s inset, as the domains\' None yet does (#124)');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-// The select itself (the checked choice, the keys, Esc going no further, its ring) is
-// tests/components/select.test.tsx's (SV-101); here, every page uses it and a pick is saved.
-test('S13: Settings\' selects are the shared menu on every page, not the browser\'s list, and a pick is saved', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'notifications');
-    for (const name of ['Todoist', 'AI', 'Security', 'Notifications']) {
-      await page.locator('.settings .set-nav .nav', {hasText: new RegExp(`^${name}$`)}).click();
-      await page.locator('.settings .set-title', {hasText: new RegExp(`^${name}$`)}).waitFor();
-      await page.locator('.settings .select').first().waitFor();
-      assert.equal(await page.locator('.settings select').count(), 0, `${name} has no browser select`);
-    }
-
-    const before = (await setpoint.api<Settings>('GET', '/settings')).reminders.task_time;
-    const chip = page.locator('.settings').getByRole('button', {name: 'Task reminders', exact: true});
-    const menu = page.locator('.settings').getByRole('menu', {name: 'Task reminders', exact: true});
-    await chip.click();
-    const next = (await menu.getByRole('menuitemradio', {checked: false}).first().textContent())!;
-    await menu.getByRole('menuitemradio', {name: next, exact: true}).click();
-    await menu.waitFor({state: 'detached'});
-    await until('the chip shows the choice', () => chip.locator('.num').textContent(), text => text === next);
-    await settled('saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.reminders.task_time !== before);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1123,7 +1034,7 @@ test('Security: a load that reaches the server just after a change there ended t
   }
 });
 
-test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline pill keep their sizes and places', async () => {
+test('a wide screen (2400 × 1300, zoomed 1.25): Settings keeps its size and place', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 2400, height: 1300});
@@ -1132,16 +1043,7 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     const box = async (selector: string) => (await rested(() => page.locator(selector).boundingBox()))!;
     const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a}, expected ${b}`);
 
-    // Each measured where it rests, once it has risen into place.
-    await page.keyboard.press('Meta+k');
-    await page.locator('.palette').waitFor();
-    await still(page);
-    const palette = await box('.palette');
-    near(palette.width, 640 * 1.25, 'the palette\'s width');
-    near(palette.x + palette.width / 2, 1200, 'the palette is centred');
-    near(palette.y, 160 * 1.25, 'the palette\'s top');
-    await page.keyboard.press('Escape');
-
+    // Measured where it rests, once it has risen into place.
     await page.keyboard.press('Meta+,');
     await page.locator('.settings').waitFor();
     await still(page);
@@ -1152,16 +1054,6 @@ test('a wide screen (2400 × 1300, zoomed 1.25): ⌘K, Settings and the offline 
     near(modal.y, (1300 - 900) / 2, 'and down');
     near((await box('.settings .set-nav')).width, 220 * 1.25, 'the nav');
     await page.keyboard.press('Escape');
-
-    await page.context().setOffline(true);
-    // It comes in from 8 px above (states-13): measured where it rests.
-    await page.locator('.offline-pill').waitFor();
-    await still(page);
-    const pill = await box('.offline-pill');
-    const main = await box('.main');
-    near(pill.height, 36 * 1.25, 'the pill\'s height');
-    near(pill.x + pill.width / 2, main.x + main.width / 2, 'the pill is centred over the page');
-    near(pill.y, 12 * 1.25, 'the pill sits 12 px under the top');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

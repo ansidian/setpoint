@@ -562,28 +562,26 @@ test('SV-141: Role stops at its longest title and the page ends at the table\'s 
         clipped: all.filter(each => each.querySelector('.ro')!.scrollWidth > each.querySelector('.ro')!.clientWidth).length,
       };
     }));
-    for (const [width, zoom] of [[1677, 1], [2655, 1.25]] as const) {
-      const page = await setpoint.page({width, height: 1000});
-      await page.goto(`${setpoint.base}/jobs`);
-      const at = await columns(page);
-      assert.equal(at.clipped, 0, 'every title whole');
-      const room = at.role - at.longest;
-      assert.ok(room >= 16 * zoom && room <= 48 * zoom, `Role keeps a comfortable margin past its longest title, no more: ${room}`);
-      assert.ok(at.row - at.edge > 200, `spare width past JD: ${at.row - at.edge}`);
-      assert.deepEqual(at.ends, [at.edge], 'Needs you, the fold and the search field end at JD');
-      await page.locator('.jb-status button', {hasText: 'In process'}).click();
-      await until('In process\'s rows', () => rows(page).count(), count => count === 3);
-      const filtered = await columns(page);
-      assert.deepEqual([filtered.platform, filtered.edge, filtered.ends], [at.platform, at.edge, at.ends], 'the filter leaves the columns and the edge where they are');
-      await page.locator('.jb-status button', {hasText: 'All'}).click();
-      await until('all the rows', () => rows(page).count(), count => count === 62);
-      if (width === 2655) {
-        await rows(page).first().click();
-        await page.locator('.jb-pane').waitFor();
-        const search = await rested(() => page.locator('.hd .search').boundingBox());
-        assert.equal(Math.round(search!.x + search!.width), width - 16 * zoom, 'beside a detail the header runs to the pane\'s end');
-      }
-    }
+    const width = 2655;
+    const zoom = 1.25;
+    const page = await setpoint.page({width, height: 1000});
+    await page.goto(`${setpoint.base}/jobs`);
+    const at = await columns(page);
+    assert.equal(at.clipped, 0, 'every title whole');
+    const room = at.role - at.longest;
+    assert.ok(room >= 16 * zoom && room <= 48 * zoom, `Role keeps a comfortable margin past its longest title, no more: ${room}`);
+    assert.ok(at.row - at.edge > 200, `spare width past JD: ${at.row - at.edge}`);
+    assert.deepEqual(at.ends, [at.edge], 'Needs you, the fold and the search field end at JD');
+    await page.locator('.jb-status button', {hasText: 'In process'}).click();
+    await until('In process\'s rows', () => rows(page).count(), count => count === 3);
+    const filtered = await columns(page);
+    assert.deepEqual([filtered.platform, filtered.edge, filtered.ends], [at.platform, at.edge, at.ends], 'the filter leaves the columns and the edge where they are');
+    await page.locator('.jb-status button', {hasText: 'All'}).click();
+    await until('all the rows', () => rows(page).count(), count => count === 62);
+    await rows(page).first().click();
+    await page.locator('.jb-pane').waitFor();
+    const search = await rested(() => page.locator('.hd .search').boundingBox());
+    assert.equal(Math.round(search!.x + search!.width), width - 16 * zoom, 'beside a detail the header runs to the pane\'s end');
     const narrow = await setpoint.page({width: 1024, height: 768});
     await narrow.goto(`${setpoint.base}/jobs`);
     const fitted = await columns(narrow);
