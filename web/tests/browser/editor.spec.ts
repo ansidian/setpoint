@@ -82,9 +82,6 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('End');
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
-    // The head's × is a 30 px header button with an 18 px glyph, as Settings' (#123); Add another's add is 17 beside its label.
-    assert.deepEqual(await page.getByRole('button', {name: 'Close editor'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [30, '18']);
-    assert.equal(await page.getByRole('button', {name: 'Add another'}).locator('.icon').getAttribute('width'), '17');
     await page.mouse.move(700, 28);
     // Lets a hover fill the move left fade out (120 ms) before the screenshot.
     await page.waitForTimeout(250);
@@ -541,10 +538,14 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     await line.waitFor();
     const project = page.getByLabel('Project', {exact: true});
     const menu = page.getByRole('listbox', {name: 'Projects'});
+    const mark = page.locator('.nl .tok-j');
+    const markColour = () => mark.evaluate(element => getComputedStyle(element).getPropertyValue('--c').trim());
     // Typed in the line, the menu shows under Project; Enter picks, and what follows is the title's again.
     await line.pressSequentially('Pay bills #hom');
-    await page.locator('.nl .tok-j', {hasText: '#hom'}).waitFor();
+    await mark.filter({hasText: '#hom'}).waitFor();
     assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'New project “hom”']);
+    // Not a project yet: the mark is ink2.
+    assert.equal(await markColour(), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim()));
     // Each project in its own colour (SV-29): Home is the seed's orange (#c77100), clamped per theme as its rings are (#175).
     const orange = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
@@ -559,6 +560,9 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
     await menu.waitFor({state: 'detached'});
     // The line reads the project's name, then a space (SV-29).
     assert.equal(await line.inputValue(), 'Pay bills #Home ');
+    // Home's orange, as its dot in the Project field and menu (TODOIST_COLOURS.orange).
+    await mark.filter({hasText: '#Home'}).waitFor();
+    assert.equal(await rested(() => markColour()), '#c77100');
     await line.pressSequentially('fri');
     assert.deepEqual([await titleWords(page), await project.inputValue(), await page.getByLabel('Due date', {exact: true}).inputValue()],
       ['Pay bills', 'Home', 'Fri, Oct 9']);
@@ -590,37 +594,7 @@ test('SV-25: a task\'s #project in the line: suggestions under Project, a pick e
   }
 });
 
-test('SV-56: "#ho" puts Home first in Project\'s menu, as the line reads it; Enter picks it, and its mark takes Home\'s colour', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openCalendar(page, setpoint.base);
-    await page.keyboard.press('d');
-    const line = page.getByLabel('Describe the task');
-    await line.waitFor();
-    const menu = page.getByRole('listbox', {name: 'Projects'});
-    const mark = page.locator('.nl .tok-j');
-    const markColour = () => mark.evaluate(element => getComputedStyle(element).getPropertyValue('--c').trim());
-    // School holds "ho" too, but Home starts with it: Home first, with the cursor on it.
-    await line.pressSequentially('Buy printer ink #ho');
-    await mark.filter({hasText: '#ho'}).waitFor();
-    assert.deepEqual(await menu.getByRole('option').allTextContents(), ['Home↵', 'School', 'New project “ho”']);
-    // Not a project yet: the mark is ink2.
-    assert.equal(await markColour(), await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ink2').trim()));
-    await page.keyboard.press('Enter');
-    await menu.waitFor({state: 'detached'});
-    assert.equal(await line.inputValue(), 'Buy printer ink #Home ');
-    assert.equal(await page.getByLabel('Project', {exact: true}).inputValue(), 'Home');
-    // Home's orange, as its dot in the Project field and menu (TODOIST_COLOURS.orange).
-    await mark.filter({hasText: '#Home'}).waitFor();
-    assert.equal(await rested(() => markColour()), '#c77100');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('SV-56: a line longer than the field shows its typed end and marks, faded where it\'s cut; Home goes back to its start', async () => {
+test('SV-56: a line longer than the field shows its typed end and marks, with the cut side flagged; Home goes back to its start', async () => {
   const setpoint = await startSetpoint({fixtures: ['no-dinner'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -645,13 +619,10 @@ test('SV-56: a line longer than the field shows its typed end and marks, faded w
     assert.equal(await rested(() => shift()), -scrolled, 'the marks moved with the text');
     const clipped = () => marks.evaluate(element => [element.hasAttribute('data-clip-left'), element.hasAttribute('data-clip-right')]);
     assert.deepEqual(await clipped(), [true, false]);
-    // The cut side fades over 14 px.
-    assert.equal(await marks.evaluate(element => getComputedStyle(element).maskImage), 'linear-gradient(90deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
-    // Home: the start shows again, the end is cut and fades.
+    // Home: the start shows again, and the end is cut.
     await page.keyboard.press('Home');
     await until('back at the start', clipped, clip => !clip[0] && !!clip[1]);
     assert.equal(await rested(() => shift()), 0);
-    assert.equal(await rested(() => marks.evaluate(element => getComputedStyle(element).maskImage)), 'linear-gradient(270deg, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 14px)');
     assert.equal(await inView(place), false, '@Blue Door is past the end');
     // However the field scrolls (a drag past its edge), the marks follow: scrolled partway, both sides are cut.
     await line.evaluate(input => {

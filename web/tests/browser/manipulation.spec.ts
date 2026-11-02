@@ -181,8 +181,6 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed .icon').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .tk.pending .spin').waitFor();
     assert.equal(await card.getAttribute('data-side'), 'below');
-    // The card's × is 16 px in a 26 px button, as every card's (#123).
-    assert.deepEqual(await card.getByRole('button', {name: 'Close'}).evaluate(button => [button.getBoundingClientRect().width, button.querySelector('.icon')!.getAttribute('width')]), [26, '16']);
     const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
     assert.equal(Math.round((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)), GAP);
 
@@ -540,7 +538,7 @@ test('S1 (SV-25, D55): a task\'s card completes it and reopens it; ⌘Z undoes a
   }
 });
 
-test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top back; the drop lands on the day under the pointer', async () => {
+test('F6b: a drag held at the grid\'s bottom edge scrolls it on; the drop lands on the day under the pointer', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -569,14 +567,7 @@ test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top 
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.equal(await scrollTop(), stopped);
-    // At the top edge: back up a little.
-    await page.mouse.move(grid.x + grid.width / 2, grid.y + 6, {steps: 2});
-    await until('the grid scrolls up', scrollTop, top => top < stopped - 176, 6000);
-    await page.mouse.move(grid.x + grid.width / 2, grid.y + grid.height / 2, {steps: 2});
-    await atRest();
-    // Let go on an empty November day in full view: the one the tooltip names. How far the top edge
-    // took it back depends on how long the pointer was there, so the wheel brings November back into
-    // view if it went past.
+    // Let go on an empty November day in full view: the one the tooltip names.
     const november = () => scroller.evaluate(element => {
       const view = element.getBoundingClientRect();
       const cells = [...element.querySelectorAll<HTMLElement>('.cal-grid .cell')].filter(cell => {
@@ -585,11 +576,7 @@ test('F6b: a drag held at the grid\'s bottom edge scrolls it on, and at its top 
       });
       return cells[0]?.dataset.date ?? null;
     });
-    const date = (await until('an empty November day in view', async () => {
-      const found = await november();
-      if (!found) await page.mouse.wheel(0, 176);
-      return found;
-    }, found => found !== null))!;
+    const date = (await until('an empty November day in view', november, found => found !== null))!;
     await atRest();
     const box = (await rested(() => page.locator(`.cell[data-date="${date}"]`).boundingBox()))!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 3});

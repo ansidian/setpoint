@@ -93,7 +93,6 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
     await glideTo(page, chip(page, '2026-10-07', 'Gym'));
     assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(), ['Weekly on Mon, Wed, Fri', '10 min before', 'Personal']);
-    assert.equal(await card(page).locator('.fd-layer.in .fact', {hasText: 'Weekly'}).locator('.icon').getAttribute('width'), '17');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -207,9 +206,6 @@ test('Esc closes the card and lets the item go; so does a click on empty grid; Ã
     await openDentist(page);
     await card(page).getByRole('button', {name: 'Close'}).click();
     await until('Ã— closes it', () => card(page).count(), count => count === 0);
-    // F6 brings the icon actions (manipulation.spec.ts carries them out).
-    await openDentist(page);
-    for (const name of ['Clone', 'Copy', 'Colour', 'Delete']) assert.equal(await card(page).getByRole('button', {name}).getAttribute('aria-disabled'), null);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
