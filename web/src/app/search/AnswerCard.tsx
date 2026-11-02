@@ -71,7 +71,7 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
     return () => window.clearTimeout(timer);
   }, [folding]);
   const finished = (trail: AskStep[], current: AskStep | null) => (current ? trail.slice(0, -1) : trail);
-  const noKey = ai && !ai.keys.anthropic && !ai.keys.openai ? 'Alfred needs an Anthropic or OpenAI key in Settings › AI.' : null;
+  const noKey = ai && !ai.keys.anthropic ? 'Alfred needs an Anthropic key in Settings › AI.' : null;
   const failure = error ?? (turns.length || asking ? null : noKey);
   return (
     <div ref={card} className={asking ? 'card answer asking' : 'card answer'} aria-label="Alfred's answer">

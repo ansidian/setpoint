@@ -5,9 +5,6 @@
 // field by field, as triage's is; an answer with no usable event is null (read, making nothing).
 import type {ToolSpec} from '../providers/ai/index.ts';
 
-/** Bumped when the prompt or tool changes. */
-export const JOBS_PROMPT_VERSION = 'v1';
-
 /**
  * What an email is to Jobs. The first five set a status (decision 55; "interview" takes a scheduling
  * request too); the next six are quiet (decision 50); a recruiter's cold email and mail that isn't

@@ -4,13 +4,13 @@
 // and the email waits in Unsorted. Every few minutes, and as soon as triage recovers or its keys or
 // models change, Unsorted mail is queued again. New Attention and FYI mail is sent by ntfy once
 // sorted, each lane as Settings › Notifications allows (SV-96).
-import type {AiProvider, AiPurpose} from '@setpoint/shared';
+import type {AiModelChoiceOut, AiPurpose} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import type {Reading} from '../domain/triagePolicy.ts';
 import type {Notifier} from '../notify/index.ts';
-import {AI_ENDPOINTS, modelClient} from '../providers/ai/index.ts';
+import {AI_ENDPOINTS, anthropicClient} from '../providers/ai/index.ts';
 import type {AiEndpoints, ModelAnswer, ModelClient} from '../providers/ai/index.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow, noteLive} from '../store.ts';
@@ -21,11 +21,11 @@ import {failJob, finishJob} from '../sync/jobs.ts';
 import type {Job} from '../sync/jobs.ts';
 import {recordTriageFailure, recordTriageSuccess} from './health.ts';
 import {applyOutcome, hurryTriage, resortUnsorted, triageEmailOf} from './intake.ts';
-import {aiKeys, chooseTriageModels, keyOf} from './models.ts';
+import {aiKeys, anthropicKey, chooseTriageModels} from './models.ts';
 import {triageEmail, TriageUnavailable} from './pipeline.ts';
 import type {Tier} from './pipeline.ts';
 import {loadRules} from './rules.ts';
-import {MAX_OUTPUT_TOKENS, promptInput, PROMPT_VERSION, readingOf, TRIAGE_SYSTEM, TRIAGE_TOOL} from './prompt.ts';
+import {MAX_OUTPUT_TOKENS, promptInput, readingOf, TRIAGE_SYSTEM, TRIAGE_TOOL} from './prompt.ts';
 
 export interface TriageWorkerOptions {
   store: Store;
@@ -54,7 +54,7 @@ export function recordUsage(store: Store, answer: ModelAnswer, messageId: number
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,
-    costMicros: costMicros(answer.provider, answer.model, answer.usage) ?? 0,
+    costMicros: costMicros(answer.model, answer.usage) ?? 0,
   }).run();
 }
 
@@ -67,10 +67,10 @@ export interface TriageClients {
 /** The clients for the models Settings › AI chooses, with the keys set; none without a key. */
 export function triageClients(store: Store, endpoints: AiEndpoints, timeoutMs?: number): TriageClients {
   const chosen = chooseTriageModels(getSettings(store).ai, aiKeys(store));
-  const clientFor = (choice: {provider: AiProvider; model: string} | null) => {
-    const apiKey = choice ? keyOf(store, choice.provider) : null;
+  const clientFor = (choice: AiModelChoiceOut | null) => {
+    const apiKey = choice ? anthropicKey(store) : null;
     if (!choice || !apiKey) return undefined;
-    return {client: modelClient(choice.provider, {apiKey, baseUrl: endpoints[choice.provider], timeoutMs}), model: choice.model};
+    return {client: anthropicClient({apiKey, baseUrl: endpoints.anthropic, timeoutMs}), model: choice.model};
   };
   const cheap = clientFor(chosen.cheap);
   const strong = clientFor(chosen.strong) ?? cheap;
@@ -79,10 +79,9 @@ export function triageClients(store: Store, endpoints: AiEndpoints, timeoutMs?: 
 }
 
 /** One model call for an email with triage's prompt and tool, its usage written to the ledger. */
-export async function askModel(store: Store, {client, model}: {client: ModelClient; model: string}, tier: Tier, input: string, messageId: number, signal?: AbortSignal): Promise<ModelAnswer> {
+export async function askModel(store: Store, {client, model}: {client: ModelClient; model: string}, input: string, messageId: number, signal?: AbortSignal): Promise<ModelAnswer> {
   const answer = await client.call({
-    model, system: TRIAGE_SYSTEM, tool: TRIAGE_TOOL, input, maxOutputTokens: MAX_OUTPUT_TOKENS[client.provider],
-    cacheKey: `setpoint-triage:${PROMPT_VERSION}:${tier}:${model}`, signal,
+    model, system: TRIAGE_SYSTEM, tool: TRIAGE_TOOL, input, maxOutputTokens: MAX_OUTPUT_TOKENS, signal,
   });
   recordUsage(store, answer, messageId);
   return answer;
@@ -151,7 +150,7 @@ export class TriageWorker implements JobWorker {
     const ask = async (tier: Tier, _reason: string): Promise<Reading | null> => {
       let answer: ModelAnswer;
       try {
-        answer = await askModel(store, clients[tier]!, tier, input, message.id, signal);
+        answer = await askModel(store, clients[tier]!, input, message.id, signal);
       } catch (caught) {
         const error = asProviderError(caught);
         if (recordTriageFailure(store, error.message)) noteLive(store, {type: 'mail', messages: [], accounts: [], commands: []});

@@ -105,7 +105,7 @@ export class NewsSortWorker implements JobWorker {
 
   /** Each call: written to the ledger, and a success to sorting's health. A failure is the caller's to record. */
   private ask: Ask = async (purpose, {client, model}, request) => {
-    const answer = await client.call({...request, model, cacheKey: `setpoint-news:${purpose}:${model}`});
+    const answer = await client.call({...request, model});
     recordNewsUsage(this.store, answer, purpose, request.cacheTtl);
     if (recordSortSuccess(this.store)) announceState(this.store);
     return answer;

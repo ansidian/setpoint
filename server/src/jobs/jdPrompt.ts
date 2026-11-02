@@ -11,9 +11,6 @@ import type {JobWorkplace} from '@setpoint/shared';
 import type {ToolSpec} from '../providers/ai/index.ts';
 import type {Verdict} from './lookupRules.ts';
 
-/** Bumped when a prompt or tool changes. */
-export const JD_PROMPT_VERSION = 'v3';
-
 /** How much of a candidate's text the check sees, and of the confirmation email. */
 export const CHECK_TEXT_LIMIT = 1_500;
 export const EMAIL_EXCERPT_LIMIT = 3_000;

@@ -178,8 +178,8 @@ describe('confident (decision 54)', () => {
     expect(liveEvents(s.w).filter(event => event.type === 'jobs')).toEqual([{type: 'jobs', applications: [id], needs_you: []}]);
     // The check and the reading are Jobs's "reading JDs", at Haiku's price.
     expect(s.ledger().map(row => [row.purpose, row.model, row.costMicros])).toEqual([
-      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('anthropic', 'claude-haiku-5-5', {inputTokens: 2400, outputTokens: 40, cachedTokens: 0, cacheWriteTokens: 0})],
-      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('anthropic', 'claude-haiku-5-5', {inputTokens: 1800, outputTokens: 260, cachedTokens: 0, cacheWriteTokens: 0})],
+      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('claude-haiku-5-5', {inputTokens: 2400, outputTokens: 40, cachedTokens: 0, cacheWriteTokens: 0})],
+      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('claude-haiku-5-5', {inputTokens: 1800, outputTokens: 260, cachedTokens: 0, cacheWriteTokens: 0})],
     ]);
   });
 
@@ -259,7 +259,7 @@ describe('confident (decision 54)', () => {
     // Finding JDs: Sonnet's tokens and its two searches at $10 per 1,000.
     expect(s.ledger().map(row => [row.purpose, row.model, row.costMicros])).toEqual([
       ['jobs_finding_jds', 'claude-sonnet-5-5', 5200 * 2 + 310 * 10 + 2 * 10_000],
-      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('anthropic', 'claude-haiku-5-5', {inputTokens: 1800, outputTokens: 260, cachedTokens: 0, cacheWriteTokens: 0})],
+      ['jobs_reading_jds', 'claude-haiku-5-5', costMicros('claude-haiku-5-5', {inputTokens: 1800, outputTokens: 260, cachedTokens: 0, cacheWriteTokens: 0})],
     ]);
   });
 

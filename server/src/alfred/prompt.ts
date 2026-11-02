@@ -8,7 +8,6 @@
 // replaced by the one `answer` tool: the Answer card shows one or two lines and their source emails.
 import type {ToolSpec} from '../providers/ai/index.ts';
 
-export const PROMPT_VERSION = 'v3';
 export const MAX_OUTPUT_TOKENS = 16_000;
 
 /** The system prompt, anchored to today in the owner's zone. */

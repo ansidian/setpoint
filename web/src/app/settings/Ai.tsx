@@ -1,5 +1,5 @@
 // Settings › AI (board 30b; DESIGN.md › Settings' row pattern and News in Settings, decisions D25
-// and D26): the Anthropic and OpenAI keys, write-only (set or replace, or remove); Mail's four models,
+// and D26): the Anthropic key, write-only (set or replace, or remove); Mail's four models,
 // each changeable at will (triage's cheap and strong, the history pass, and Alfred; Default is the
 // built-in choice for the keys that are set); News's group (N5): its two models, fixed (D90), the
 // monthly cap, and this month's spend on its meter, saying so at the cap; Jobs's group (J8, board 39b,
@@ -51,10 +51,9 @@ export function AiPage() {
     <Page title="AI" loads={[aiLoad, settingsLoad, secretsLoad]}>
       <Section label="Keys">
         {/* What's set, and which model is in use, only once it's known (states-01). */}
-        {!secrets ? <SkeletonRows count={2} /> : (
+        {!secrets ? <SkeletonRows count={1} /> : (
           <div className="set-group">
             <SecretRow name="anthropic_api_key" title="Anthropic" sub="Claude models" secrets={secrets} />
-            <SecretRow name="openai_api_key" title="OpenAI" sub="GPT models" secrets={secrets} />
           </div>
         )}
       </Section>

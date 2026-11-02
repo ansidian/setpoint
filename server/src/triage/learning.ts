@@ -208,7 +208,7 @@ export function aiOverview(store: Store): AiOut {
       triage_model: builtIn.cheap?.model ?? null, triage_strong_model: builtIn.strong?.model ?? null, history_model: builtIn.history?.model ?? null,
       alfred_model: chooseAlfredModel(unchosen, keys).choice?.model ?? null,
     },
-    models: [...AI_MODELS],
+    models: AI_MODELS.filter(model => model.provider === 'anthropic'),
     usage_30_days: {calls: usage?.calls ?? 0, input_tokens: Number(usage?.input ?? 0), output_tokens: Number(usage?.output ?? 0), cost_usd: Number(usage?.cost ?? 0) / 1_000_000},
     news: newsAiOverview(store), usage_this_month: usageThisMonth(store),
   };

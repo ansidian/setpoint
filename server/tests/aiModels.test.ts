@@ -1,16 +1,18 @@
-// The model clients against the fake Anthropic and OpenAI (tests/fakeModels.ts): request shapes
-// v1 learned (forced tool, thinking off, cacheable prefix, prompt cache key and its retry), usage
-// and the providers' refusals as the retry policy's kinds. Plus the ledger's cost table.
+// The model client against the fake Anthropic (tests/fakeModels.ts): request shapes v1 learned
+// (forced tool, thinking off, cacheable prefix), usage and the provider's refusals as the retry
+// policy's kinds. Plus the ledger's cost table, and what a model saved for OpenAI now reads as.
 import {describe, expect, test} from 'vitest';
+import {chooseAlfredModel} from '../src/alfred/models.ts';
 import {costMicros} from '../src/domain/aiCost.ts';
-import {anthropicClient, openaiClient} from '../src/providers/ai/index.ts';
+import {anthropicClient} from '../src/providers/ai/index.ts';
 import type {ModelRequest} from '../src/providers/ai/index.ts';
 import {ProviderError} from '../src/sync/errors.ts';
+import {chooseTriageModels} from '../src/triage/models.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 
 const TOOL = {name: 'submit_email_triage', description: 'Submit one triage decision.', schema: {type: 'object', properties: {lane: {type: 'string'}}, required: ['lane']}};
 const request = (changes: Partial<ModelRequest> = {}): ModelRequest => ({
-  model: 'claude-haiku-5-5', system: 'Sort one email.', tool: TOOL, input: 'From: Woodgrove Bank <no-reply@woodgrovebank.example>', maxOutputTokens: 1400, cacheKey: 'setpoint-triage:v1:cheap', ...changes,
+  model: 'claude-haiku-5-5', system: 'Sort one email.', tool: TOOL, input: 'From: Woodgrove Bank <no-reply@woodgrovebank.example>', maxOutputTokens: 1400, ...changes,
 });
 
 async function refusalOf(promise: Promise<unknown>): Promise<ProviderError> {
@@ -150,71 +152,45 @@ describe('anthropicClient with web search', () => {
   });
 });
 
-describe('openaiClient', () => {
-  test('asks the Responses API with a forced function, unstored, with a 24-hour prompt cache key', async () => {
-    const fake = await fakeModels();
-    fake.answer(() => ({tool: {lane: 'noise'}, usage: {input: 700, output: 40, cacheRead: 1200}}));
-    const answer = await openaiClient({apiKey: FAKE_KEYS.openai, baseUrl: fake.endpoints.openai}).call(request({model: 'gpt-5.4-mini'}));
-    expect(fake.requests[0]!.headers.authorization).toBe(`Bearer ${FAKE_KEYS.openai}`);
-    expect(fake.requests[0]!.body).toMatchObject({
-      model: 'gpt-5.4-mini', store: false, prompt_cache_key: 'setpoint-triage:v1:cheap', prompt_cache_retention: '24h',
-      instructions: 'Sort one email.', input: 'From: Woodgrove Bank <no-reply@woodgrovebank.example>', max_output_tokens: 1400, reasoning: {effort: 'low'},
-      tools: [{type: 'function', name: 'submit_email_triage', parameters: TOOL.schema, strict: false}],
-      tool_choice: {type: 'function', name: 'submit_email_triage'},
-    });
-    expect(answer).toEqual({
-      provider: 'openai', model: 'gpt-5.4-mini-2026-10-01', toolInput: {lane: 'noise'},
-      usage: {inputTokens: 1900, outputTokens: 40, cachedTokens: 1200, cacheWriteTokens: 0},
-    });
-  });
-
-  test('a model that refuses the cache fields is asked once more without them (v1)', async () => {
-    const fake = await fakeModels();
-    fake.answer(() => ({tool: {lane: 'fyi'}}));
-    const answer = await openaiClient({apiKey: FAKE_KEYS.openai, baseUrl: fake.endpoints.openai}).call(request({model: 'gpt-no-cache'}));
-    expect(answer.toolInput).toEqual({lane: 'fyi'});
-    expect(fake.requests).toHaveLength(1);
-    expect(fake.requests[0]!.body.prompt_cache_key).toBeUndefined();
-    expect(fake.requests[0]!.body.store).toBe(false);
-  });
-
-  test('broken function arguments are no reading', async () => {
-    const fake = await fakeModels();
-    fake.answer(() => 'broken_arguments');
-    expect((await openaiClient({apiKey: FAKE_KEYS.openai, baseUrl: fake.endpoints.openai}).call(request({model: 'gpt-5.4-mini'}))).toolInput).toBeNull();
-  });
-
-  test.each<[string, Parameters<Awaited<ReturnType<typeof fakeModels>>['answer']>[0] | null, string, string]>([
-    ['a refused key', null, 'auth', 'OpenAI: Incorrect API key provided. (401). Check the OpenAI key in Settings › AI.'],
-    ['429', () => 'rate_limited', 'rate_limited', 'OpenAI: Rate limit reached for requests (429)'],
-    ['503 overloaded', () => 'overloaded', 'transient', 'OpenAI: The engine is currently overloaded, please try again later (503)'],
-  ])('%s', async (_, answer, kind, message) => {
-    const fake = await fakeModels();
-    if (answer) fake.answer(answer);
-    const error = await refusalOf(openaiClient({apiKey: answer ? FAKE_KEYS.openai : 'sk-wrong', baseUrl: fake.endpoints.openai}).call(request({model: 'gpt-5.4-mini'})));
-    expect([error.kind, error.message]).toEqual([kind, message]);
-  });
-});
-
 describe('costMicros', () => {
-  test.each<[string, 'anthropic' | 'openai', string, [number, number, number, number], number | null]>([
-    // name, provider, model, [input, output, cached, cache writes], micro-dollars
-    ['Haiku 5.5: $0.10 in, $0.50 out per million', 'anthropic', 'claude-haiku-5-5', [10_000, 2000, 0, 0], 1000 + 1000],
-    ['Haiku 5.5 cache reads at $0.01', 'anthropic', 'claude-haiku-5-5', [10_000, 0, 5000, 0], 500 + 50],
-    ['Haiku 5.5 over 100K prompt tokens: 5× everything', 'anthropic', 'claude-haiku-5-5', [200_000, 1000, 0, 0], (20_000 + 500) * 5],
-    ['Sonnet 5.5: $2 in, $0.20 cached, $10 out', 'anthropic', 'claude-sonnet-5-5', [3000, 100, 1000, 0], 4000 + 200 + 1000],
-    ['Opus 5.5: $4 in, $20 out', 'anthropic', 'claude-opus-5-5', [1000, 100, 0, 0], 4000 + 2000],
-    ['Haiku 4.5: $1 in, $5 out per million', 'anthropic', 'claude-haiku-4-5', [1000, 200, 0, 0], 2000],
-    ['a dated snapshot prices as its model', 'anthropic', 'claude-haiku-4-5-20251001', [1000, 200, 0, 0], 2000],
-    ['cache reads at a tenth, writes at 1.25×', 'anthropic', 'claude-sonnet-4-6', [3000, 100, 1800, 200], 1000 * 3 + 1800 * 0.3 + 200 * 3.75 + 100 * 15],
-    ['OpenAI cached input', 'openai', 'gpt-5.4-mini', [2000, 100, 1000, 0], Math.round(1000 * 0.75 + 1000 * 0.075 + 100 * 4.5)],
-    ['an OpenAI dated snapshot', 'openai', 'gpt-5.5-2026-04-23', [100, 10, 0, 0], 800],
-    ['an unknown model has no cost', 'anthropic', 'claude-future-9', [1000, 200, 0, 0], null],
-  ])('%s', (_, provider, model, [inputTokens, outputTokens, cachedTokens, cacheWriteTokens], micros) => {
-    expect(costMicros(provider, model, {inputTokens, outputTokens, cachedTokens, cacheWriteTokens})).toBe(micros);
+  test.each<[string, string, [number, number, number, number], number | null]>([
+    // name, model, [input, output, cached, cache writes], micro-dollars
+    ['Haiku 5.5: $0.10 in, $0.50 out per million', 'claude-haiku-5-5', [10_000, 2000, 0, 0], 1000 + 1000],
+    ['Haiku 5.5 cache reads at $0.01', 'claude-haiku-5-5', [10_000, 0, 5000, 0], 500 + 50],
+    ['Haiku 5.5 over 100K prompt tokens: 5× everything', 'claude-haiku-5-5', [200_000, 1000, 0, 0], (20_000 + 500) * 5],
+    ['Sonnet 5.5: $2 in, $0.20 cached, $10 out', 'claude-sonnet-5-5', [3000, 100, 1000, 0], 4000 + 200 + 1000],
+    ['Opus 5.5: $4 in, $20 out', 'claude-opus-5-5', [1000, 100, 0, 0], 4000 + 2000],
+    ['Haiku 4.5: $1 in, $5 out per million', 'claude-haiku-4-5', [1000, 200, 0, 0], 2000],
+    ['a dated snapshot prices as its model', 'claude-haiku-4-5-20251001', [1000, 200, 0, 0], 2000],
+    ['cache reads at a tenth, writes at 1.25×', 'claude-sonnet-4-6', [3000, 100, 1800, 200], 1000 * 3 + 1800 * 0.3 + 200 * 3.75 + 100 * 15],
+    ['an unknown model has no cost', 'claude-future-9', [1000, 200, 0, 0], null],
+  ])('%s', (_, model, [inputTokens, outputTokens, cachedTokens, cacheWriteTokens], micros) => {
+    expect(costMicros(model, {inputTokens, outputTokens, cachedTokens, cacheWriteTokens})).toBe(micros);
   });
 
   test('web searches add $10 per 1,000 to the tokens', () => {
-    expect(costMicros('anthropic', 'claude-sonnet-5-5', {inputTokens: 3000, outputTokens: 100, cachedTokens: 0, cacheWriteTokens: 0, webSearches: 3})).toBe(6000 + 1000 + 30_000);
+    expect(costMicros('claude-sonnet-5-5', {inputTokens: 3000, outputTokens: 100, cachedTokens: 0, cacheWriteTokens: 0, webSearches: 3})).toBe(6000 + 1000 + 30_000);
+  });
+});
+
+describe('a model saved while OpenAI was a provider', () => {
+  const ai = {triage_model: 'gpt-5.4-mini', triage_strong_model: 'gpt-5.5', history_model: 'o4-mini', alfred_model: 'chatgpt-4o-latest'};
+
+  test('reads as no choice: with the key, Claude\'s defaults', () => {
+    const keys = {anthropic: true, openai: false};
+    expect(chooseTriageModels(ai, keys)).toEqual({
+      cheap: {provider: 'anthropic', model: 'claude-sonnet-5-5'}, strong: {provider: 'anthropic', model: 'claude-opus-5-5'}, history: {provider: 'anthropic', model: 'claude-haiku-5-5'}, missing: null,
+    });
+    expect(chooseAlfredModel(ai, keys)).toEqual({choice: {provider: 'anthropic', model: 'claude-opus-5-5'}, missing: null});
+  });
+
+  test('without the key, nothing to ask, and it asks for Anthropic\'s', () => {
+    const keys = {anthropic: false, openai: false};
+    expect(chooseTriageModels(ai, keys)).toEqual({cheap: null, strong: null, history: null, missing: 'Triage has no model to ask: add an Anthropic key in Settings › AI.'});
+    expect(chooseAlfredModel(ai, keys)).toEqual({choice: null, missing: 'Alfred needs an Anthropic key in Settings › AI.'});
+  });
+
+  test('any other unknown id still says it can\'t be told', () => {
+    expect(chooseAlfredModel({...ai, alfred_model: 'llama-5'}, {anthropic: true, openai: false})).toEqual({choice: null, missing: 'Setpoint can\'t tell which provider runs llama-5; choose another model in Settings › AI.'});
   });
 });

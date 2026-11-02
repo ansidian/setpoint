@@ -26,12 +26,12 @@ import type {SearchReadingLog} from '../db/schema.ts';
 import {fold, isNot, keptTokens, parseQuery, sameChip, TYPE_LABELS, wordsOf} from '../domain/searchChips.ts';
 import {textTerms} from '../domain/searchMatch.ts';
 import {localDay} from '../domain/time.ts';
-import {AI_ENDPOINTS, modelClient} from '../providers/ai/index.ts';
+import {AI_ENDPOINTS, anthropicClient} from '../providers/ai/index.ts';
 import type {AiEndpoints} from '../providers/ai/index.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 import {logSuggestion} from './log.ts';
-import {keyOf} from '../triage/models.ts';
+import {anthropicKey} from '../triage/models.ts';
 import {recordUsage} from '../triage/worker.ts';
 import {
   FACET_MATCHES, readingFacets, readingOf, SEARCH_READING_MAX_OUTPUT_TOKENS, SEARCH_READING_MODEL, SEARCH_READING_PROMPT_VERSION, SEARCH_READING_SYSTEM, SEARCH_READING_TOOL,
@@ -207,7 +207,7 @@ export class SearchReader {
     const started = performance.now();
     const {plan, reading, source, applied} = await this.read(input);
     const found = suggestionOf(input, applied);
-    const reads = !input.model && plan.prompt !== null && keyOf(this.store, 'anthropic') !== null;
+    const reads = !input.model && plan.prompt !== null && anthropicKey(this.store) !== null;
     if (!found) return {suggestion: null, reads};
     const id = logSuggestion(this.store, {
       query: input.text, accountId: input.account_id ?? null, chips: found.chips, words: found.words, hides: found.hides, total: found.total,
@@ -235,7 +235,7 @@ export class SearchReader {
     const none = (fallback: SearchReadingFallback) => ({reading: null, source: null, fallback});
     const {prompt, key} = plan;
     if (prompt === null) return none('nothing_to_read');
-    const apiKey = keyOf(this.store, 'anthropic');
+    const apiKey = anthropicKey(this.store);
     if (!apiKey) return none('no_key');
     const held = this.heldReading(key);
     const pending = held ?? this.call(apiKey, prompt, key);
@@ -258,10 +258,9 @@ export class SearchReader {
 
   /** Asks the model, and holds the answer. A failed call holds nothing, so the next pause asks again. */
   private call(apiKey: string, input: string, key: string): Promise<Reading | null> {
-    const client = modelClient('anthropic', {apiKey, baseUrl: this.endpoints.anthropic, timeoutMs: READING_CALL_MS});
+    const client = anthropicClient({apiKey, baseUrl: this.endpoints.anthropic, timeoutMs: READING_CALL_MS});
     const reading = client.call({
       model: SEARCH_READING_MODEL, system: SEARCH_READING_SYSTEM, tool: SEARCH_READING_TOOL, input, maxOutputTokens: SEARCH_READING_MAX_OUTPUT_TOKENS,
-      cacheKey: `setpoint-search-reading:v${SEARCH_READING_PROMPT_VERSION}`,
     }).then(answer => {
       recordUsage(this.store, answer, null, 'search_reading');
       return readingOf(answer.toolInput);

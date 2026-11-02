@@ -1,12 +1,11 @@
-// The model providers over plain HTTPS (bring your own key, BRIEF.md › Settings › AI): Anthropic's
-// Messages API and OpenAI's Responses API, each asked to answer through one forced tool. Triage
-// uses them (B3); Alfred uses their conversation form at the end (B4). Base URLs are configurable
-// so tests point them at a fake on 127.0.0.1; no test or dev run reaches a real provider.
+// The model provider over plain HTTPS (bring your own key, BRIEF.md › Settings › AI): Anthropic's
+// Messages API, asked to answer through one forced tool. Triage uses it (B3); Alfred uses its
+// conversation form at the end (B4). The base URL is configurable so tests point it at a fake on
+// 127.0.0.1; no test or dev run reaches a real provider.
 //
 // Harvested from v1's `triage-model-client` (SV-4): the forced tool, thinking off on Anthropic
 // (Sonnet 5 and Opus 5 think by default, which conflicts with a forced tool), the cacheable system
-// and tool prefix, OpenAI's prompt cache key with its one retry without the cache fields when a
-// model refuses them, a long wedge-breaker timeout, and usage read from every answer. Refusals become
+// and tool prefix, a long wedge-breaker timeout, and usage read from every answer. Refusals become
 // ProviderErrors for the one retry policy: a refused key (401, 403) needs a new key, 429 waits
 // (Retry-After), 529 (Anthropic overloaded), 5xx and timeouts are transient, the rest permanent.
 // An answer without a usable tool call isn't an error: `toolInput` is null and triage treats it as
@@ -27,10 +26,9 @@ import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
 
 export interface AiEndpoints {
   anthropic: string;
-  openai: string;
 }
 
-export const AI_ENDPOINTS: AiEndpoints = {anthropic: 'https://api.anthropic.com', openai: 'https://api.openai.com'};
+export const AI_ENDPOINTS: AiEndpoints = {anthropic: 'https://api.anthropic.com'};
 
 export interface ToolSpec {
   name: string;
@@ -45,8 +43,6 @@ export interface ModelRequest {
   tool: ToolSpec;
   input: string;
   maxOutputTokens: number;
-  // OpenAI's prompt cache key (Anthropic caches the marked prefix instead).
-  cacheKey?: string;
   // How long Anthropic keeps the marked prefix: five minutes by default, or an hour for a prompt asked
   // hourly (News's ranking, N3), whose cache writes cost 2× input rather than 1.25×.
   cacheTtl?: '5m' | '1h';
@@ -77,7 +73,6 @@ export interface ModelAnswer {
 }
 
 export interface ModelClient {
-  provider: AiProvider;
   call(request: ModelRequest): Promise<ModelAnswer>;
 }
 
@@ -88,7 +83,6 @@ export interface ClientOptions {
   timeoutMs?: number;
 }
 
-const NAMES: Record<AiProvider, string> = {anthropic: 'Anthropic', openai: 'OpenAI'};
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -104,23 +98,23 @@ function retryAfterMs(response: Response): number | null {
 }
 
 /** A refusal in the provider's own words: "Anthropic: Overloaded (529)". */
-async function refusal(provider: AiProvider, response: Response, text?: string): Promise<ProviderError> {
+async function refusal(response: Response): Promise<ProviderError> {
   let message = '';
   try {
-    const body = JSON.parse(text ?? await response.text()) as {error?: {message?: string} | string};
+    const body = JSON.parse(await response.text()) as {error?: {message?: string} | string};
     message = typeof body.error === 'string' ? body.error : body.error?.message ?? '';
   } catch {
     // Not JSON: the status says it.
   }
   const status = response.status;
-  const said = `${NAMES[provider]}: ${message || response.statusText || 'request refused'} (${status})`;
-  if (status === 401 || status === 403) return new ProviderError('auth', `${said}. Check the ${NAMES[provider]} key in Settings › AI.`, {status});
+  const said = `Anthropic: ${message || response.statusText || 'request refused'} (${status})`;
+  if (status === 401 || status === 403) return new ProviderError('auth', `${said}. Check the Anthropic key in Settings › AI.`, {status});
   // Anthropic's "overloaded" status: transient, like a 5xx.
   if (status === 529) return new ProviderError('transient', said, {status, retryAfterMs: retryAfterMs(response)});
   return new ProviderError(kindOfStatus(status), said, {status, retryAfterMs: retryAfterMs(response)});
 }
 
-async function post(provider: AiProvider, url: string, headers: Record<string, string>, body: unknown, timeoutMs: number, signal?: AbortSignal): Promise<Response> {
+async function post(url: string, headers: Record<string, string>, body: unknown, timeoutMs: number, signal?: AbortSignal): Promise<Response> {
   const timeout = AbortSignal.timeout(timeoutMs);
   try {
     return await fetch(url, {
@@ -129,20 +123,20 @@ async function post(provider: AiProvider, url: string, headers: Record<string, s
     });
   } catch (error) {
     if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
-      throw new ProviderError('transient', `${NAMES[provider]} didn't answer in time.`);
+      throw new ProviderError('transient', 'Anthropic didn\'t answer in time.');
     }
-    throw new ProviderError('transient', `${NAMES[provider]} couldn't be reached: ${error instanceof Error ? error.message : String(error)}`);
+    throw new ProviderError('transient', `Anthropic couldn't be reached: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
-async function json(provider: AiProvider, response: Response): Promise<Record<string, unknown>> {
+async function json(response: Response): Promise<Record<string, unknown>> {
   try {
     const body: unknown = await response.json();
     if (isRecord(body)) return body;
   } catch {
     // Below.
   }
-  throw new ProviderError('transient', `${NAMES[provider]} answered with something that isn't its API's JSON (${response.status}).`);
+  throw new ProviderError('transient', `Anthropic answered with something that isn't its API's JSON (${response.status}).`);
 }
 
 const NO_FORCED_TOOL = /^claude-(sonnet-5-5|opus-5-5|fable-5-1|mythos-5-1)\b/;
@@ -164,7 +158,6 @@ const MAX_RESUMES = 4;
 /** Anthropic's Messages API with the tool (forced where the model allows), thinking off where it can be, and the system and tool marked cacheable. */
 export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ModelClient {
   return {
-    provider: 'anthropic',
     async call(request) {
       const cache = request.cacheTtl === '1h' ? {type: 'ephemeral', ttl: '1h'} : {type: 'ephemeral'};
       const shape = anthropicToolShape(request.model, request.tool.name);
@@ -173,7 +166,7 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
       const messages: unknown[] = [{role: 'user', content: request.input}];
       const total = {inputTokens: 0, outputTokens: 0, cachedTokens: 0, cacheWriteTokens: 0, webSearches: 0};
       for (let turn = 0; ; turn += 1) {
-        const response = await post('anthropic', `${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
+        const response = await post(`${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
           model: request.model,
           max_tokens: request.maxOutputTokens,
           system: [{type: 'text', text: request.system, cache_control: cache}],
@@ -183,8 +176,8 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
             : {tools: [tool], ...shape}),
           messages,
         }, timeoutMs, request.signal);
-        if (!response.ok) throw await refusal('anthropic', response);
-        const body = await json('anthropic', response);
+        if (!response.ok) throw await refusal(response);
+        const body = await json(response);
         const usage = isRecord(body.usage) ? body.usage : {};
         const cachedTokens = count(usage.cache_read_input_tokens);
         const cacheWriteTokens = count(usage.cache_creation_input_tokens);
@@ -212,77 +205,16 @@ export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeo
   };
 }
 
-function openaiToolInput(body: Record<string, unknown>, name: string): Record<string, unknown> | null {
-  for (const item of Array.isArray(body.output) ? body.output : []) {
-    if (!isRecord(item) || item.type !== 'function_call' || item.name !== name) continue;
-    if (isRecord(item.arguments)) return item.arguments;
-    if (typeof item.arguments === 'string') {
-      try {
-        const parsed: unknown = JSON.parse(item.arguments);
-        if (isRecord(parsed)) return parsed;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
-/** OpenAI's Responses API with a forced function, not stored, with a 24-hour prompt cache key. */
-export function openaiClient({apiKey, baseUrl = AI_ENDPOINTS.openai, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ModelClient {
-  const send = (request: ModelRequest, cacheFields: boolean) => post('openai', `${baseUrl}/v1/responses`, {authorization: `Bearer ${apiKey}`}, {
-    model: request.model,
-    store: false,
-    ...(cacheFields && request.cacheKey ? {prompt_cache_key: request.cacheKey, prompt_cache_retention: '24h'} : {}),
-    instructions: request.system,
-    input: request.input,
-    max_output_tokens: request.maxOutputTokens,
-    reasoning: {effort: 'low'},
-    tools: [{type: 'function', name: request.tool.name, description: request.tool.description, parameters: request.tool.schema, strict: false}],
-    tool_choice: {type: 'function', name: request.tool.name},
-  }, timeoutMs, request.signal);
-  return {
-    provider: 'openai',
-    async call(request) {
-      let response = await send(request, true);
-      if (!response.ok) {
-        const text = await response.text();
-        // Some models refuse the cache fields: ask once more without them (v1).
-        if (response.status === 400 && request.cacheKey && /prompt_cache_(key|retention)/i.test(text)) {
-          response = await send(request, false);
-          if (!response.ok) throw await refusal('openai', response);
-        } else {
-          throw await refusal('openai', response, text);
-        }
-      }
-      const body = await json('openai', response);
-      const usage = isRecord(body.usage) ? body.usage : {};
-      const details = isRecord(usage.input_tokens_details) ? usage.input_tokens_details : {};
-      const inputTokens = count(usage.input_tokens);
-      return {
-        provider: 'openai',
-        model: typeof body.model === 'string' ? body.model : request.model,
-        toolInput: openaiToolInput(body, request.tool.name),
-        usage: {inputTokens, outputTokens: count(usage.output_tokens), cachedTokens: Math.min(count(details.cached_tokens), inputTokens), cacheWriteTokens: 0},
-      };
-    },
-  };
-}
-
-export function modelClient(provider: AiProvider, options: ClientOptions): ModelClient {
-  return provider === 'anthropic' ? anthropicClient(options) : openaiClient(options);
-}
-
 // ---- Conversations with tools (B4: Alfred) ----
 //
 // Alfred talks with a model over several turns: the model asks for tools, Setpoint runs them and
-// sends back their results, until it answers. Same providers, keys, endpoints, refusals and usage as
+// sends back their results, until it answers. Same key, endpoint, refusals and usage as
 // the one-shot call above; the tool choice is the model's own (`auto`, which every model accepts),
 // and thinking is off where the model allows it, as above.
 //
 // The transcript is the provider's own message list, kept by the caller and only ever appended to:
-// each turn's output goes back exactly as it came (thinking blocks and OpenAI's encrypted reasoning
-// included), which the newest models require.
+// each turn's output goes back exactly as it came (thinking blocks included), which the newest
+// models require.
 
 export interface ToolCall {
   id: string;
@@ -303,7 +235,6 @@ export interface ConverseRequest {
   tools: ToolSpec[];
   transcript: unknown[];
   maxOutputTokens: number;
-  cacheKey?: string;
   signal?: AbortSignal;
 }
 
@@ -320,7 +251,6 @@ export interface ConverseTurn {
 }
 
 export interface ConversationClient {
-  provider: AiProvider;
   converse(request: ConverseRequest): Promise<ConverseTurn>;
   // A user turn: the last turn's tool results (if any), then what the user said.
   userTurn(text: string, results?: ToolResult[]): unknown[];
@@ -332,10 +262,9 @@ const anthropicResults = (results: ToolResult[]) => results.map(result => ({type
 
 export function anthropicConversation({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ConversationClient {
   return {
-    provider: 'anthropic',
     async converse(request) {
       const {thinking} = anthropicToolShape(request.model, '');
-      const response = await post('anthropic', `${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
+      const response = await post(`${baseUrl}/v1/messages`, {'x-api-key': apiKey, 'anthropic-version': '2023-06-01'}, {
         model: request.model,
         max_tokens: request.maxOutputTokens,
         system: [{type: 'text', text: request.system, cache_control: {type: 'ephemeral'}}],
@@ -349,8 +278,8 @@ export function anthropicConversation({apiKey, baseUrl = AI_ENDPOINTS.anthropic,
         cache_control: {type: 'ephemeral'},
         messages: request.transcript,
       }, timeoutMs, request.signal);
-      if (!response.ok) throw await refusal('anthropic', response);
-      const body = await json('anthropic', response);
+      if (!response.ok) throw await refusal(response);
+      const body = await json(response);
       const usage = isRecord(body.usage) ? body.usage : {};
       const cachedTokens = count(usage.cache_read_input_tokens);
       const cacheWriteTokens = count(usage.cache_creation_input_tokens);
@@ -372,74 +301,4 @@ export function anthropicConversation({apiKey, baseUrl = AI_ENDPOINTS.anthropic,
     userTurn: (text, results = []) => [{role: 'user', content: results.length ? [...anthropicResults(results), {type: 'text', text}] : text}],
     toolResults: results => [{role: 'user', content: anthropicResults(results)}],
   };
-}
-
-const openaiResults = (results: ToolResult[]) => results.map(result => ({type: 'function_call_output', call_id: result.id, output: result.output}));
-
-function openaiArguments(value: unknown): Record<string, unknown> | null {
-  if (isRecord(value)) return value;
-  if (typeof value !== 'string') return null;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-export function openaiConversation({apiKey, baseUrl = AI_ENDPOINTS.openai, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ConversationClient {
-  const send = (request: ConverseRequest, cacheFields: boolean) => post('openai', `${baseUrl}/v1/responses`, {authorization: `Bearer ${apiKey}`}, {
-    model: request.model,
-    store: false,
-    // Not stored, so reasoning comes back encrypted to send with the next turn.
-    include: ['reasoning.encrypted_content'],
-    ...(cacheFields && request.cacheKey ? {prompt_cache_key: request.cacheKey, prompt_cache_retention: '24h'} : {}),
-    instructions: request.system,
-    input: request.transcript,
-    max_output_tokens: request.maxOutputTokens,
-    reasoning: {effort: 'low'},
-    tools: request.tools.map(tool => ({type: 'function', name: tool.name, description: tool.description, parameters: tool.schema, strict: false})),
-    tool_choice: 'auto',
-  }, timeoutMs, request.signal);
-  return {
-    provider: 'openai',
-    async converse(request) {
-      let response = await send(request, true);
-      if (!response.ok) {
-        const text = await response.text();
-        if (response.status === 400 && request.cacheKey && /prompt_cache_(key|retention)/i.test(text)) {
-          response = await send(request, false);
-          if (!response.ok) throw await refusal('openai', response);
-        } else {
-          throw await refusal('openai', response, text);
-        }
-      }
-      const body = await json('openai', response);
-      const usage = isRecord(body.usage) ? body.usage : {};
-      const details = isRecord(usage.input_tokens_details) ? usage.input_tokens_details : {};
-      const inputTokens = count(usage.input_tokens);
-      const output = (Array.isArray(body.output) ? body.output : []).filter(isRecord);
-      const toolCalls = output.filter(item => item.type === 'function_call').map(item => ({id: String(item.call_id), name: String(item.name), input: openaiArguments(item.arguments)}));
-      const parts = output.filter(item => item.type === 'message').flatMap(item => (Array.isArray(item.content) ? item.content.filter(isRecord) : []));
-      const incomplete = body.status === 'incomplete' && isRecord(body.incomplete_details) && body.incomplete_details.reason === 'max_output_tokens';
-      return {
-        provider: 'openai',
-        model: typeof body.model === 'string' ? body.model : request.model,
-        stop: parts.some(part => part.type === 'refusal') ? 'refusal' : incomplete ? 'max_tokens' : toolCalls.length ? 'tool_use' : 'end',
-        text: parts.filter(part => part.type === 'output_text').map(part => String(part.text ?? '')).join(''),
-        toolCalls,
-        usage: {inputTokens, outputTokens: count(usage.output_tokens), cachedTokens: Math.min(count(details.cached_tokens), inputTokens), cacheWriteTokens: 0},
-        // Messages and calls go back without their ids (nothing is stored for them to point at);
-        // reasoning items keep theirs, with the encrypted content.
-        assistant: output.filter(item => ['message', 'function_call', 'reasoning'].includes(String(item.type)))
-          .map(item => (item.type === 'reasoning' ? item : Object.fromEntries(Object.entries(item).filter(([key]) => key !== 'id')))),
-      };
-    },
-    userTurn: (text, results = []) => [...openaiResults(results), {role: 'user', content: text}],
-    toolResults: openaiResults,
-  };
-}
-
-export function conversationClient(provider: AiProvider, options: ClientOptions): ConversationClient {
-  return provider === 'anthropic' ? anthropicConversation(options) : openaiConversation(options);
 }

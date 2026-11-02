@@ -16,20 +16,20 @@ import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import {localDay, localTime} from '../domain/time.ts';
 import {notFound, SetpointError} from '../errors.ts';
-import {AI_ENDPOINTS, conversationClient} from '../providers/ai/index.ts';
+import {AI_ENDPOINTS, anthropicConversation} from '../providers/ai/index.ts';
 import type {AiEndpoints, ConverseTurn, ToolResult} from '../providers/ai/index.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
 import {ProviderError} from '../sync/errors.ts';
-import {aiKeys, keyOf} from '../triage/models.ts';
+import {aiKeys, anthropicKey} from '../triage/models.ts';
 import {chooseAlfredModel} from './models.ts';
-import {ALFRED_TOOLS, alfredSystem, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS, PROMPT_VERSION} from './prompt.ts';
+import {ALFRED_TOOLS, alfredSystem, ANSWER_NUDGE, fenced, MAX_OUTPUT_TOKENS} from './prompt.ts';
 import {runTool} from './tools.ts';
 import type {ToolContext} from './tools.ts';
 
 export interface AlfredOptions {
-  // The providers' base URLs; tests point them at a fake on 127.0.0.1.
+  // The provider's base URL; tests point it at a fake on 127.0.0.1.
   endpoints?: AiEndpoints;
   timeoutMs?: number;
 }
@@ -122,7 +122,7 @@ function recordUsage(store: Store, turn: ConverseTurn, messageId: number | null)
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: turn.provider, model: turn.model, purpose: 'alfred', messageId,
     inputTokens: turn.usage.inputTokens, outputTokens: turn.usage.outputTokens, cachedTokens: turn.usage.cachedTokens,
-    costMicros: costMicros(turn.provider, turn.model, turn.usage) ?? 0,
+    costMicros: costMicros(turn.model, turn.usage) ?? 0,
   }).run();
 }
 
@@ -151,7 +151,8 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   if (input.conversation_id) {
     thread = store.db.select().from(t.alfredConversations).where(eq(t.alfredConversations.id, input.conversation_id)).get() ?? null;
     if (!thread) throw notFound('No such conversation.');
-    if (Date.parse(now) - Date.parse(thread.touchedAt) > THREAD_IDLE_MS) throw new SetpointError('conversation_ended', 'This conversation has ended; ask again to start a new one.', 410);
+    // A thread begun on OpenAI, when it was a provider, has a transcript Claude can't continue.
+    if (Date.parse(now) - Date.parse(thread.touchedAt) > THREAD_IDLE_MS || thread.provider !== 'anthropic') throw new SetpointError('conversation_ended', 'This conversation has ended; ask again to start a new one.', 410);
   }
   const scope = thread ? thread.messageId : input.message_id ?? null;
   if (!thread && scope !== null) {
@@ -162,13 +163,13 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   // The model: the thread's own, or Settings › AI's choice for a new thread.
   const keys = aiKeys(store);
   const chosen = thread ? {choice: {provider: thread.provider, model: thread.model}, missing: null} : chooseAlfredModel(getSettings(store).ai, keys);
-  const apiKey = chosen.choice ? keyOf(store, chosen.choice.provider) : null;
+  const apiKey = chosen.choice ? anthropicKey(store) : null;
   if (!chosen.choice || !apiKey) {
     throw new SetpointError('alfred_no_key', chosen.missing ?? `This conversation used ${chosen.choice!.model}; add its key in Settings › AI, or ask again to start over.`, 503);
   }
   const {provider, model} = chosen.choice;
   const endpoints = options.endpoints ?? AI_ENDPOINTS;
-  const client = conversationClient(provider, {apiKey, baseUrl: endpoints[provider], timeoutMs: options.timeoutMs});
+  const client = anthropicConversation({apiKey, baseUrl: endpoints.anthropic, timeoutMs: options.timeoutMs});
 
   const earlier = thread ? store.db.select().from(t.alfredTurns).where(eq(t.alfredTurns.conversationId, thread.id)).orderBy(asc(t.alfredTurns.id)).all() : [];
   const items = [...(thread?.transcript.items ?? [])];
@@ -190,7 +191,7 @@ export async function askAlfred(store: Store, input: {question: string; conversa
   try {
     for (let step = 0; step < MAX_STEPS && !final; step += 1) {
       const turn = await client.converse({
-        model, system, tools: ALFRED_TOOLS, transcript: items, maxOutputTokens: MAX_OUTPUT_TOKENS, cacheKey: `setpoint-alfred:${PROMPT_VERSION}:${model}`,
+        model, system, tools: ALFRED_TOOLS, transcript: items, maxOutputTokens: MAX_OUTPUT_TOKENS,
       });
       recordUsage(store, turn, scope);
       items.push(...turn.assistant);

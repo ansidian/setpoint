@@ -8,7 +8,7 @@ import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {searchLogEntry} from '../src/search/log.ts';
-import {READING_HELD_MS, SearchReader, SUGGESTION_HIDES} from '../src/search/reading.ts';
+import {READING_HELD_MS, SearchReader} from '../src/search/reading.ts';
 import {FACET_MATCHES, readingFacets, readingOf, SEARCH_READING_MODEL, SEARCH_READING_PROMPT_VERSION, SEARCH_READING_SYSTEM, SEARCH_READING_TOOL, searchReadingInput} from '../src/search/readingPrompt.ts';
 import {searchMail} from '../src/search/search.ts';
 import {setSecret} from '../src/secrets/store.ts';
@@ -590,7 +590,6 @@ describe('when a suggestion is worth offering', () => {
     ['hiding nothing', 3, 0, false],
     ['leaving one of two', 1, 1, true],
   ])('%s: %i kept, %i hidden', async (_case, chosen, others, offered) => {
-    expect(SUGGESTION_HIDES).toBe(0.2);
     const {suggest} = await premium(chosen, others);
     const {suggestion} = await suggest('premium');
     expect(suggestion !== null).toBe(offered);

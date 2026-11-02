@@ -61,7 +61,7 @@ const adapters = new Adapters({
 }, config.production ? null : devProvider({delayMs: 600, refuse: boardRefusals, held: holdFile ? () => fs.existsSync(holdFile) : undefined}));
 // B3: triage runs as jobs on the same engine; with no AI key, new mail waits in Unsorted.
 // Development only (config refuses it in production): every model call goes to a fake on the loopback.
-const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl, openai: config.devAiUrl} : AI_ENDPOINTS;
+const aiEndpoints = config.devAiUrl ? {anthropic: config.devAiUrl} : AI_ENDPOINTS;
 // Jobs reads what triage sorts in the accounts it lists (J2): triage's onSorted nudges its worker.
 // Its JD lookups (J3) read the hiring platforms and posting pages only in production.
 const jobsReader = new JobsReader({store, endpoints: aiEndpoints, ...(config.production ? {web: jobsWeb()} : {})});

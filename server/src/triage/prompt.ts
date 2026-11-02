@@ -10,13 +10,10 @@ import type {Kind, Lane, MessageType, ProtectedReason, SecurityFacts} from '@set
 import type {Reading} from '../domain/triagePolicy.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
 
-/** Bumped when the prompt or tool changes, so OpenAI's prompt cache starts over. */
-export const PROMPT_VERSION = 'v3';
-
 /** v1's evidence bound: a longer body is cut, and what was cut can't make the email Noise. */
 export const EVIDENCE_LIMIT = 20_000;
 
-export const MAX_OUTPUT_TOKENS = {anthropic: 1400, openai: 1600} as const;
+export const MAX_OUTPUT_TOKENS = 1400;
 
 export const TRIAGE_SYSTEM = `You sort one email for the user's personal inbox. Answer only with the submit_email_triage tool.
 

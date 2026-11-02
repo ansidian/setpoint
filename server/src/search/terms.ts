@@ -21,7 +21,7 @@
 //   this into a dearer pass. Every call is in the AI usage ledger, purpose `search_terms`.
 import {and, count, desc, eq, isNotNull, isNull, ne, or} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
-import {AI_ENDPOINTS, modelClient} from '../providers/ai/index.ts';
+import {AI_ENDPOINTS, anthropicClient} from '../providers/ai/index.ts';
 import type {AiEndpoints} from '../providers/ai/index.ts';
 import {isoNow, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -29,7 +29,7 @@ import type {JobWorker} from '../sync/engine.ts';
 import {asProviderError, ProviderError} from '../sync/errors.ts';
 import {enqueueJob, failJob, finishJob} from '../sync/jobs.ts';
 import type {Job} from '../sync/jobs.ts';
-import {aiKeys, keyOf} from '../triage/models.ts';
+import {aiKeys, anthropicKey} from '../triage/models.ts';
 import {recordUsage} from '../triage/worker.ts';
 import {
   SEARCH_TERMS_MAX_OUTPUT_TOKENS, SEARCH_TERMS_MODEL, SEARCH_TERMS_PROMPT_VERSION, SEARCH_TERMS_SYSTEM, SEARCH_TERMS_TOOL, searchTermsInput, termsOf, termsText,
@@ -140,13 +140,13 @@ export class SearchTermsWorker implements JobWorker {
     const message = job.messageId === null ? undefined : store.db.select().from(t.messages).where(eq(t.messages.id, job.messageId)).get();
     // Gone, trashed since it was queued, or read already: never charged for.
     if (!message || message.trashedAt || message.searchTermsVersion === SEARCH_TERMS_PROMPT_VERSION) return finishJob(store, job.id);
-    const apiKey = keyOf(store, 'anthropic');
+    const apiKey = anthropicKey(store);
     if (!apiKey) return failJob(store, job, new ProviderError('auth', NO_SEARCH_TERMS_KEY));
     try {
-      const client = modelClient('anthropic', {apiKey, baseUrl: this.endpoints.anthropic, timeoutMs: this.timeoutMs});
+      const client = anthropicClient({apiKey, baseUrl: this.endpoints.anthropic, timeoutMs: this.timeoutMs});
       const answer = await client.call({
         model: SEARCH_TERMS_MODEL, system: SEARCH_TERMS_SYSTEM, tool: SEARCH_TERMS_TOOL, input: searchTermsInput(message), maxOutputTokens: SEARCH_TERMS_MAX_OUTPUT_TOKENS,
-        cacheKey: `setpoint-search-terms:v${SEARCH_TERMS_PROMPT_VERSION}`, signal,
+        signal,
       });
       transaction(store, () => {
         // The email may have gone during the call; its cost stays in the ledger.

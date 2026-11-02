@@ -11,7 +11,7 @@ import {FAKE_KEYS, fakeModels} from '../../../tests/fakeModels.ts';
 import type {FakeAnswer, FakeRequest} from '../../../tests/fakeModels.ts';
 import {liveEvents, world} from '../../../tests/helpers.ts';
 import * as t from '../../db/schema.ts';
-import {setSecret} from '../../secrets/store.ts';
+import {deleteSecret, setSecret} from '../../secrets/store.ts';
 import {SyncEngine} from '../../sync/engine.ts';
 import {upsertMessages} from '../../sync/mailMirror.ts';
 import {Adapters} from '../../sync/registry.ts';
@@ -441,10 +441,12 @@ describe('the AI down (When things break)', () => {
   });
 
   test('with no Anthropic key, emails wait for one, then are read', async () => {
-    const s = await setup({key: false});
-    // Triage sorts with OpenAI meanwhile; Jobs reads only with Anthropic's.
-    setSecret(s.store, 'openai_api_key', FAKE_KEYS.openai);
+    const s = await setup({hook: false});
+    // Triage needs the key too, so it goes after triage has sorted the email.
     await s.arrive('fabrikam-applied');
+    deleteSecret(s.store, 'anthropic_api_key');
+    s.reader.nudge();
+    await s.drain();
     expect(s.read('fabrikam-applied')).toBeUndefined();
     expect(jobsPage(s.store).reading).toEqual({waiting: 1, state: 'down', since: expect.any(String), reason: NO_JOBS_KEY, cause: 'no_key', retrying: false});
     expect(s.readJob()).toMatchObject({state: 'failed'});

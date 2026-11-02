@@ -841,7 +841,7 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
 
     // Defaults per D25 and D26 with the Anthropic key: Sonnet, Opus, Haiku, Opus.
     const ai = await setpoint.api<AiOut>('GET', '/ai');
-    // Default names its model, and OpenAI's models wait for their key (UX #14).
+    // Default names its model, and every model on offer is Claude's and can be picked with the key (UX #14).
     // The Triage model menu's choices, opened and closed again.
     const choices = async () => {
       await page.locator('.settings').getByRole('button', {name: 'Triage model', exact: true}).click();
@@ -852,8 +852,9 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
       return all;
     };
     await until('Default named', async () => (await choices())[0]?.text, text => text === 'Default (Claude Sonnet 5.5)');
-    const disabled = (await choices()).flatMap(choice => (choice.disabled ? [choice.text] : []));
-    assert.ok(disabled.length > 0 && disabled.every(text => text?.startsWith('GPT')), `only OpenAI's wait for a key: ${disabled.join(', ')}`);
+    const offered = await choices();
+    assert.ok(offered.every(choice => !choice.disabled && choice.text?.includes('Claude')), `only Claude's, none waiting for a key: ${offered.map(choice => choice.text).join(', ')}`);
+    assert.equal(await page.locator('.settings [data-secret="openai_api_key"]').count(), 0, 'no OpenAI key row');
     assert.deepEqual([ai.triage.cheap?.model, ai.triage.strong?.model, ai.triage.history?.model, ai.alfred?.model], ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5', 'claude-opus-5-5']);
     for (const [label, model, setting] of [
       ['Triage model', 'Claude Haiku 5.5', 'triage_model'], ['Triage, when unsure model', 'Claude Sonnet 5.5', 'triage_strong_model'],
@@ -871,6 +872,8 @@ test('AI: a key set write-only and removed, and each model changed at will', asy
 
     await anthropic.getByRole('button', {name: 'Remove'}).click();
     await settled('removed', secrets, list => list.find(secret => secret.name === 'anthropic_api_key')?.set === false);
+    // With no key, each model waits for it (UX #14).
+    await until('every model waits for the key', async () => (await choices()).slice(1), models => models.length > 0 && models.every(model => model.disabled && model.text?.endsWith(' · no key')));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

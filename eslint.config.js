@@ -11,7 +11,7 @@ import tseslint from 'typescript-eslint';
 const providerSdks = {
   group: [
     'googleapis', '@googleapis/*', 'google-auth-library', '@google-cloud/*', '@googlemaps/*',
-    'imapflow', 'imap', 'node-imap', 'mailparser', '@doist/*', 'openai', '@anthropic-ai/*',
+    'imapflow', 'imap', 'node-imap', 'mailparser', '@doist/*', '@anthropic-ai/*',
   ],
   message: 'Provider SDKs belong in server/src/providers/ (BUILD-PLAN.md › Boundaries the lint enforces).',
 };

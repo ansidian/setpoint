@@ -300,10 +300,6 @@ describe('models and cost (D90)', () => {
     expect(summaryModel(spent, cap)).toBe(model);
   });
 
-  test('the models are Haiku 5.5 and Sonnet 5.5', () => {
-    expect(NEWS_MODELS).toEqual({articles: 'claude-haiku-5-5', stories: 'claude-sonnet-5-5'});
-  });
-
   test.each<[string, string]>([
     ['2026-10-07T16:12:00.000Z', '2026-10-01T07:00:00.000Z'],
     // Still September on the user's clock.
@@ -317,7 +313,7 @@ describe('models and cost (D90)', () => {
     ['five-minute cache writes at 1.25× input', '5m', 1000 * 2 * 1.25 + 1000 * 2 + 100 * 10],
     ['the ranking\'s hour-long cache writes at 2×', '1h', 1000 * 2 * 2 + 1000 * 2 + 100 * 10],
   ])('%s', (_, ttl, micros) => {
-    expect(costMicros('anthropic', 'claude-sonnet-5-5', {inputTokens: 2000, cachedTokens: 0, cacheWriteTokens: 1000, outputTokens: 100}, ttl)).toBe(micros);
+    expect(costMicros('claude-sonnet-5-5', {inputTokens: 2000, cachedTokens: 0, cacheWriteTokens: 1000, outputTokens: 100}, ttl)).toBe(micros);
   });
 });
 

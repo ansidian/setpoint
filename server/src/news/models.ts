@@ -9,12 +9,12 @@ import {and, count, gte, inArray, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {costMicros} from '../domain/aiCost.ts';
 import {monthStart, NEWS_MODELS, summaryModel} from '../domain/newsSorting.ts';
-import {modelClient} from '../providers/ai/index.ts';
+import {anthropicClient} from '../providers/ai/index.ts';
 import type {AiEndpoints, ModelAnswer, ModelClient} from '../providers/ai/index.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
-import {aiKeys, keyOf} from '../triage/models.ts';
+import {aiKeys, anthropicKey} from '../triage/models.ts';
 
 export const NEWS_PURPOSES = ['news_articles', 'news_grouping', 'news_stories', 'news_ranking'] as const satisfies readonly AiPurpose[];
 export type NewsPurpose = (typeof NEWS_PURPOSES)[number];
@@ -26,7 +26,7 @@ export function recordNewsUsage(store: Store, answer: ModelAnswer, purpose: News
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId: null,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,
-    costMicros: costMicros(answer.provider, answer.model, answer.usage, cacheTtl) ?? 0,
+    costMicros: costMicros(answer.model, answer.usage, cacheTtl) ?? 0,
   }).run();
 }
 
@@ -54,9 +54,9 @@ export interface NewsClients {
 
 /** The clients for News's models with the Anthropic key; null without one. */
 export function newsClients(store: Store, endpoints: AiEndpoints, timeoutMs?: number): NewsClients | null {
-  const apiKey = keyOf(store, 'anthropic');
+  const apiKey = anthropicKey(store);
   if (!apiKey) return null;
-  const client = modelClient('anthropic', {apiKey, baseUrl: endpoints.anthropic, timeoutMs});
+  const client = anthropicClient({apiKey, baseUrl: endpoints.anthropic, timeoutMs});
   const cap = getSettings(store).news.monthly_cap_usd;
   return {
     articles: {client, model: NEWS_MODELS.articles},

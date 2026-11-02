@@ -13,7 +13,8 @@ import {runTool} from '../src/alfred/tools.ts';
 import * as t from '../src/db/schema.ts';
 import {searchMail} from '../src/search/search.ts';
 import {setSecret} from '../src/secrets/store.ts';
-import {updateSettings} from '../src/settings.ts';
+import {getSettings, updateSettings} from '../src/settings.ts';
+import {isoNow} from '../src/store.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import type {FakeAnswer, FakeRequest} from './fakeModels.ts';
 import {signedIn, world} from './helpers.ts';
@@ -24,23 +25,13 @@ const RENT_QUESTION = 'what\'s the new rent?';
 
 /** What a request carries: the latest user text, the tool results just sent, and every tool result so far. */
 function read(request: FakeRequest) {
-  if (request.provider === 'anthropic') {
-    const messages = request.body.messages as {role: string; content: string | {type: string; text?: string; content?: string; tool_use_id?: string; is_error?: boolean}[]}[];
-    const blocks = (message: (typeof messages)[number]) => (typeof message.content === 'string' ? [{type: 'text', text: message.content}] : message.content);
-    const last = messages.at(-1)!;
-    return {
-      text: blocks(last).filter(block => block.type === 'text').map(block => block.text).join(''),
-      results: blocks(last).filter(block => block.type === 'tool_result').map(block => ({output: String(block.content), error: Boolean(block.is_error)})),
-      all: messages.flatMap(message => blocks(message).filter(block => block.type === 'tool_result').map(block => String(block.content))),
-    };
-  }
-  const items = request.body.input as {type?: string; role?: string; content?: string; output?: string}[];
-  const trailing: typeof items = [];
-  for (let at = items.length - 1; at >= 0 && (items[at]!.type === 'function_call_output' || items[at]!.role === 'user'); at -= 1) trailing.unshift(items[at]!);
+  const messages = request.body.messages as {role: string; content: string | {type: string; text?: string; content?: string; tool_use_id?: string; is_error?: boolean}[]}[];
+  const blocks = (message: (typeof messages)[number]) => (typeof message.content === 'string' ? [{type: 'text', text: message.content}] : message.content);
+  const last = messages.at(-1)!;
   return {
-    text: trailing.filter(item => item.role === 'user').map(item => item.content).join(''),
-    results: trailing.filter(item => item.type === 'function_call_output').map(item => ({output: String(item.output), error: false})),
-    all: items.filter(item => item.type === 'function_call_output').map(item => String(item.output)),
+    text: blocks(last).filter(block => block.type === 'text').map(block => block.text).join(''),
+    results: blocks(last).filter(block => block.type === 'tool_result').map(block => ({output: String(block.content), error: Boolean(block.is_error)})),
+    all: messages.flatMap(message => blocks(message).filter(block => block.type === 'tool_result').map(block => String(block.content))),
   };
 }
 
@@ -66,10 +57,10 @@ function leaseModel(request: FakeRequest): FakeAnswer {
   return {text: 'I\'m not sure.'};
 }
 
-async function alfredWorld({provider = 'anthropic' as 'anthropic' | 'openai'} = {}) {
+async function alfredWorld() {
   const fake = await fakeModels();
   const w = world({seed: true});
-  setSecret(w.store, `${provider}_api_key`, FAKE_KEYS[provider]);
+  setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
   const c = await signedIn(w, {alfred: {endpoints: fake.endpoints, timeoutMs: 2000}});
   return {w, c, fake};
 }
@@ -126,23 +117,6 @@ describe('Alfred answers the brief\'s lease questions through its tools', () => 
     expect(ledger(w).every(row => row.costMicros > 0)).toBe(true);
     const thread = await c.send('GET', `/api/alfred/conversations/${first.body.conversation_id}`);
     expect(thread.body).toMatchObject({message_id: null, turns: [{answer: first.body.answer}, {answer: followUp.body.answer}]});
-  });
-
-  test('the same over OpenAI\'s Responses API', async () => {
-    const {w, c, fake} = await alfredWorld({provider: 'openai'});
-    fake.answer(leaseModel);
-    const first = await c.send('POST', '/api/alfred/ask', {body: {question: LEASE_QUESTION}});
-    expect(first.body).toMatchObject({answer: 'By Oct 31, 2026, per Parkside\'s Sep 30 email.', sources: [{message_id: idOf(w, 'Lease renewal terms')}]});
-    const followUp = await c.send('POST', '/api/alfred/ask', {body: {question: RENT_QUESTION, conversation_id: first.body.conversation_id}});
-    expect(followUp.body.answer).toBe('$2,140 a month, up from $2,060.');
-    const [opening, afterSearch] = fake.requests;
-    expect(opening!).toMatchObject({model: 'gpt-5.5', body: {store: false, include: ['reasoning.encrypted_content'], tool_choice: 'auto'}});
-    // Calls go back without their ids, with their outputs after them.
-    expect(afterSearch!.body.input.slice(1)).toEqual([
-      {type: 'function_call', call_id: 'call_1_0', name: 'search_mail', status: 'completed', arguments: JSON.stringify({query: 'lease renewal'})},
-      {type: 'function_call_output', call_id: 'call_1_0', output: expect.stringContaining('"searched":"lease renewal"')},
-    ]);
-    expect(ledger(w).map(row => row.provider)).toEqual(Array(4).fill('openai'));
   });
 });
 
@@ -231,10 +205,8 @@ describe('Alfred\'s other paths', () => {
     const c = await signedIn(w, {alfred: {endpoints: fake.endpoints, timeoutMs: 2000}});
     const noKey = await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}});
     expect(noKey.status).toBe(503);
-    expect(noKey.body.error).toEqual({code: 'alfred_no_key', message: 'Alfred needs an Anthropic or OpenAI key in Settings › AI.'});
-    updateSettings(w.store, {ai: {alfred_model: 'gpt-5.5'}});
+    expect(noKey.body.error).toEqual({code: 'alfred_no_key', message: 'Alfred needs an Anthropic key in Settings › AI.'});
     setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
-    expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.error.message).toBe('gpt-5.5 needs an OpenAI key in Settings › AI.');
     updateSettings(w.store, {ai: {alfred_model: 'claude-sonnet-5-5'}});
 
     fake.answer(() => 'overloaded');
@@ -257,6 +229,25 @@ describe('Alfred\'s other paths', () => {
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: 9999}})).status).toBe(404);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', message_id: 9999}})).status).toBe(404);
     expect((await c.send('POST', '/api/alfred/ask', {body: {question: '  '}})).status).toBe(400);
+  });
+
+  test('what OpenAI left: a saved GPT model asks Claude\'s default, and a thread begun there reads but has ended', async () => {
+    const {w, c, fake} = await alfredWorld();
+    updateSettings(w.store, {ai: {alfred_model: 'gpt-5.5'}});
+    fake.answer(() => ({calls: [{name: 'answer', input: {found: true, text: 'Hello.', source_ids: []}}]}));
+    expect((await c.send('POST', '/api/alfred/ask', {body: {question: 'Hi?'}})).body.answer).toBe('Hello.');
+    expect(fake.requests.map(request => request.model)).toEqual(['claude-opus-5-5']);
+    expect(getSettings(w.store).ai.alfred_model).toBe('gpt-5.5');
+
+    const now = isoNow(w.store);
+    const {id} = w.store.db.insert(t.alfredConversations).values({
+      messageId: null, provider: 'openai', model: 'gpt-5.5', transcript: {items: [{role: 'user', content: 'Before?'}], pending: [], seen: []}, createdAt: now, touchedAt: now,
+    }).returning({id: t.alfredConversations.id}).get();
+    w.store.db.insert(t.alfredTurns).values({conversationId: id, at: now, question: 'Before?', answer: 'Yes.', emphasis: [], sourceIds: [], searched: [], proposals: []}).run();
+    expect((await c.send('GET', `/api/alfred/conversations/${id}`)).body).toMatchObject({turns: [{question: 'Before?', answer: 'Yes.'}]});
+    const followUp = await c.send('POST', '/api/alfred/ask', {body: {question: 'And?', conversation_id: id}});
+    expect([followUp.status, followUp.body.error.code]).toEqual([410, 'conversation_ended']);
+    expect(fake.requests).toHaveLength(1);
   });
 });
 

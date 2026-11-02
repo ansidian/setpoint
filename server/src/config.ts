@@ -26,7 +26,7 @@ export interface Config {
   // holds it at SEED_NOW, so the browser checks' screenshots don't depend on how long they take.
   clock: 'real' | 'seed' | 'frozen';
   // SETPOINT_DEV_AI_URL: every model call (triage, history, Alfred) goes to this fake on the loopback
-  // instead of Anthropic or OpenAI, so the browser checks can show Alfred answering. Development only.
+  // instead of Anthropic, so the browser checks can show Alfred answering. Development only.
   devAiUrl: string | null;
   // SETPOINT_DEV_PROVIDER_HOLD: a file; while it's there, the dev provider holds every change it's
   // sent rather than confirming it, so a browser check decides when the provider confirms.

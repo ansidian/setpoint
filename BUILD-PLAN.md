@@ -204,7 +204,7 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
     never for protected mail.
   - A Yes creates a **learned rule**.
   - The precision figure covers the last 30 days.
-- **Bring your own key:** Anthropic or OpenAI keys, model choices, and costs in the ledger.
+- **Bring your own key:** an Anthropic key, model choices, and costs in the ledger.
 - **Imports:** v1's rules and its 163 lane corrections, as seed evidence for the learning loop.
 - **Harvest candidates:** `verification-code-detector`, the structure of v1's `preflight-rules.json`,
   and `triage-model-client`'s tool schema, extended with organisation, type and security facts.

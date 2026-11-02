@@ -44,7 +44,7 @@ export interface Outcome {
 
 /** No model to ask and no rule to decide: the email stays Unsorted until there is one. */
 export class TriageUnavailable extends Error {
-  constructor(message = 'Triage has no model to ask: add an Anthropic or OpenAI key in Settings › AI.') {
+  constructor(message = 'Triage has no model to ask: add an Anthropic key in Settings › AI.') {
     super(message);
     this.name = 'TriageUnavailable';
   }

@@ -1589,7 +1589,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     `ink2` and `ink3`, with the keycap Ask Alfred's row draws above it.
 40. **What SV-151 took out still shows in the export:** board 34b's outcome line (#287), board 38a's
     skeleton rows (#292), and in `jobs/motion.md` the theme fade (#291) and the AI line's `good`
-    check (#293). The audit patches the two boards.
+    check (#293). The audit patches the two boards. Boards 30b and 39b still draw an OpenAI key's
+    row, which went with OpenAI itself (D411).
 
 ## Not designed yet
 
@@ -1888,7 +1889,7 @@ it changes what's on screen.
 62. **A failing source says all of it:** atop the calendar's right pane its line wraps, so the
     provider's words show in full; every health line, the Inbox's bars too, has its text as its
     title (Andy, 2026-10-09; polish audit #8).
-63. **Alfred says it needs a key as its card opens:** with no Anthropic or OpenAI key the card says
+63. **Alfred says it needs a key as its card opens:** with no Anthropic key the card says
     so before anything is asked; "Settings › AI" in that line, or in any failure that names it,
     opens Settings there, and a question that failed comes back to the field (Andy, 2026-10-09;
     polish audit #10).

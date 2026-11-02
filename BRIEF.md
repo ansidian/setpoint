@@ -292,7 +292,7 @@ Alfred is used to find things, so it lives in search and in the reader, not in a
 - Alfred's tools are the same queries and commands the UI uses. It can't do anything Andy can't,
   and anything it would create is a **proposal**.
 - Can't answer: "Couldn't find that in your mail" and what it searched.
-- Bring your own key: Anthropic or OpenAI keys in Settings › AI.
+- Bring your own key: an Anthropic key in Settings › AI.
 
 ## Calendar
 
@@ -833,7 +833,7 @@ the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to 
 - **Todoist:** connection, default project.
 - **Notifications:** ntfy server and topics, reminder defaults, Time to Leave.
 - **Mail:** rules (written and learned), trusted remote-content domains, the code expiry.
-- **AI:** Anthropic and OpenAI keys (write-only), the triage and Alfred models; after 2.0, News's
+- **AI:** the Anthropic key (write-only), the triage and Alfred models; after 2.0, News's
   models, its monthly cap and this month's spend; then Jobs' models and this month's spend (no cap).
 - **News** (after 2.0): the sources by section, each with its health. Read-only until the tuning
   round.

@@ -147,7 +147,7 @@ export class HistoryExtractor implements JobWorker {
     const {clients, missing} = triageClients(store, this.endpoints, this.timeoutMs);
     if (!clients.history) return failJob(store, job, new ProviderError('auth', missing ?? 'No AI key for the history pass.'));
     try {
-      const answer = await askModel(store, clients.history, 'cheap', promptInput(triageEmailOf(store, message)).input, message.id, signal);
+      const answer = await askModel(store, clients.history, promptInput(triageEmailOf(store, message)).input, message.id, signal);
       transaction(store, () => {
         applyExtraction(store, message.id, readingOf(answer.toolInput));
         finishJob(store, job.id);

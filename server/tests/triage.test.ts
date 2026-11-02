@@ -9,9 +9,10 @@ import * as t from '../src/db/schema.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {inbox} from '../src/queries/mail.ts';
 import {setSecret} from '../src/secrets/store.ts';
-import {updateSettings} from '../src/settings.ts';
+import {getSettings, updateSettings} from '../src/settings.ts';
+import {isoNow} from '../src/store.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
-import {answerPrompt, currentPrompts, deleteRule, listRules, precision} from '../src/triage/learning.ts';
+import {aiOverview, answerPrompt, currentPrompts, deleteRule, listRules, precision} from '../src/triage/learning.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
 import type {FakeAnswer} from './fakeModels.ts';
@@ -34,6 +35,23 @@ async function setup(fixtures: string[] = [], timeoutMs?: number) {
   return {fake, world, deliver};
 }
 
+describe('what OpenAI left in the database', () => {
+  test('a saved GPT model sorts with Claude\'s default and stays saved, and its ledger rows still count', async () => {
+    const {fake, world, deliver} = await setup();
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    updateSettings(world.store, {ai: {triage_model: 'gpt-5.4-mini'}});
+    world.store.db.insert(t.aiUsage).values({at: isoNow(world.store), provider: 'openai', model: 'gpt-5.4-mini', purpose: 'triage', inputTokens: 100, outputTokens: 10, cachedTokens: 0, costMicros: 120}).run();
+    fake.answer(() => decision());
+    const id = deliver({subject: 'Northwind Engineering Digest · October'});
+    await world.drain();
+    expect(world.message(id)).toMatchObject({lane: 'fyi', triageSource: 'cheap_model'});
+    expect(fake.requests.map(request => request.model)).toEqual(['claude-sonnet-5-5']);
+    expect(getSettings(world.store).ai.triage_model).toBe('gpt-5.4-mini');
+    expect(world.store.db.select().from(t.aiUsage).all().map(row => [row.provider, row.model])).toEqual([['openai', 'gpt-5.4-mini'], ['anthropic', 'claude-sonnet-5-5']]);
+    expect(aiOverview(world.store)).toMatchObject({usage_30_days: {calls: 2}, triage: {cheap: {model: 'claude-sonnet-5-5'}}});
+  });
+});
+
 describe('triage down and back', () => {
   test('with no key, new mail waits in Unsorted and the Inbox says triage is down; a key sorts it', async () => {
     const {fake, world, deliver} = await setup();
@@ -41,7 +59,7 @@ describe('triage down and back', () => {
     const id = deliver({subject: 'Northwind Engineering Digest · October'});
     await world.drain();
     expect(world.message(id).lane).toBeNull();
-    expect(world.status()).toEqual({state: 'down', as_of: null, reason: 'Triage has no model to ask: add an Anthropic or OpenAI key in Settings › AI.', unsorted: 1});
+    expect(world.status()).toEqual({state: 'down', as_of: null, reason: 'Triage has no model to ask: add an Anthropic key in Settings › AI.', unsorted: 1});
     expect(inbox(world.store).groups.find(group => group.group === 'unsorted')!.rows.map(row => row.id)).toEqual([id]);
     expect(fake.requests).toHaveLength(0);
 
@@ -223,7 +241,7 @@ describe('new mail by ntfy', () => {
 
 describe('the learning loop', () => {
   test('the base seed raises no prompt; board 09\'s four Northwind digests, cleared unopened, make one', () => {
-    expect(currentPrompts(triageWorld({anthropic: 'http://127.0.0.1:9', openai: 'http://127.0.0.1:9'}).store)).toEqual([]);
+    expect(currentPrompts(triageWorld({anthropic: 'http://127.0.0.1:9'}).store)).toEqual([]);
     const {world} = triageWorldOnly();
     const [prompt] = currentPrompts(world.store);
     expect(prompt).toMatchObject({organisation: 'Northwind Engineering', type: 'newsletter', count: 4, protected: false, lane: 'fyi', kind: 'updates'});
@@ -304,7 +322,7 @@ describe('the learning loop', () => {
 
 function triageWorldOnly() {
   // Board 09's fixture: four Northwind Engineering digests cleared unopened.
-  return {world: triageWorld({anthropic: 'http://127.0.0.1:9', openai: 'http://127.0.0.1:9'}, {fixtures: ['new-digest']})};
+  return {world: triageWorld({anthropic: 'http://127.0.0.1:9'}, {fixtures: ['new-digest']})};
 }
 
 describe('the API', () => {
@@ -338,16 +356,25 @@ describe('the API', () => {
       keys: {anthropic: false, openai: false}, triage: {cheap: null, strong: null, history: null}, usage_30_days: {calls: 0, cost_usd: 0},
       defaults: {triage_model: null, triage_strong_model: null, history_model: null, alfred_model: null},
     });
+    // An OpenAI key stored when it was a provider stays stored, and reads as no key.
     expect((await api.send('PUT', '/api/secrets/openai_api_key', {body: {value: FAKE_KEYS.openai}})).status).toBe(204);
-    expect((await api.send('GET', '/api/ai')).body.triage).toEqual({cheap: {provider: 'openai', model: 'gpt-5.4-mini'}, strong: {provider: 'openai', model: 'gpt-5.5'}, history: {provider: 'openai', model: 'gpt-5.4-mini'}});
-    expect((await api.send('GET', '/api/ai')).body.alfred).toEqual({provider: 'openai', model: 'gpt-5.5'});
+    expect((await api.send('GET', '/api/secrets')).body).toContainEqual({name: 'openai_api_key', set: true, updated_at: expect.any(String)});
+    expect((await api.send('GET', '/api/ai')).body).toMatchObject({keys: {anthropic: false, openai: false}, triage: {cheap: null, strong: null, history: null}, alfred: null});
+    expect((await api.send('PUT', '/api/secrets/anthropic_api_key', {body: {value: FAKE_KEYS.anthropic}})).status).toBe(204);
+    const claude = {cheap: {provider: 'anthropic', model: 'claude-sonnet-5-5'}, strong: {provider: 'anthropic', model: 'claude-opus-5-5'}, history: {provider: 'anthropic', model: 'claude-haiku-5-5'}};
+    expect((await api.send('GET', '/api/ai')).body.triage).toEqual(claude);
+    expect((await api.send('GET', '/api/ai')).body.alfred).toEqual({provider: 'anthropic', model: 'claude-opus-5-5'});
+    // Only Anthropic's models are offered.
+    expect((await api.send('GET', '/api/ai')).body.models.every((model: {provider: string}) => model.provider === 'anthropic')).toBe(true);
     expect((await api.send('PATCH', '/api/settings', {body: {ai: {triage_model: 'claude-haiku-5-5'}}})).status).toBe(200);
     // What Default is for each model, whatever is chosen, so the picker can name it (UX #14).
     expect((await api.send('GET', '/api/ai')).body.defaults).toEqual({
-      triage_model: 'gpt-5.4-mini', triage_strong_model: 'gpt-5.5', history_model: 'gpt-5.4-mini', alfred_model: 'gpt-5.5',
+      triage_model: 'claude-sonnet-5-5', triage_strong_model: 'claude-opus-5-5', history_model: 'claude-haiku-5-5', alfred_model: 'claude-opus-5-5',
     });
-    expect((await api.send('GET', '/api/ai')).body.triage).toEqual({cheap: null, strong: {provider: 'openai', model: 'gpt-5.5'}, history: {provider: 'openai', model: 'gpt-5.4-mini'}});
+    expect((await api.send('GET', '/api/ai')).body.triage).toEqual({...claude, cheap: {provider: 'anthropic', model: 'claude-haiku-5-5'}});
     // Keys stay write-only.
-    expect(JSON.stringify((await api.send('GET', '/api/secrets')).body)).not.toContain(FAKE_KEYS.openai);
+    const secrets = JSON.stringify((await api.send('GET', '/api/secrets')).body);
+    expect(secrets).not.toContain(FAKE_KEYS.openai);
+    expect(secrets).not.toContain(FAKE_KEYS.anthropic);
   });
 });

@@ -30,7 +30,7 @@ import {jobsDb} from './db.ts';
 import {emailsToRead, jobsEmail} from './mail.ts';
 import type {JobsEmail, ReadWindow} from './mail.ts';
 import {jobsEmailClient, NO_JOBS_KEY, recordJobsUsage} from './models.ts';
-import {emailReadingOf, JOBS_MAX_OUTPUT_TOKENS, JOBS_PROMPT_VERSION, JOBS_SYSTEM, JOBS_TOOL, jobsPromptInput} from './prompt.ts';
+import {emailReadingOf, JOBS_MAX_OUTPUT_TOKENS, JOBS_SYSTEM, JOBS_TOOL, jobsPromptInput} from './prompt.ts';
 import type {EmailReading} from './prompt.ts';
 import {announceHistory, finishHistory, HISTORY_KEY, resumeHistory} from './history.ts';
 import {historyRow, historyStatus, historyWindow} from './historyState.ts';
@@ -193,8 +193,7 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
 export function askHaiku(store: Store, {client, model}: {client: ModelClient; model: string}, signal?: AbortSignal): AskJobs {
   return async email => {
     const answer = await client.call({
-      model, system: JOBS_SYSTEM, tool: JOBS_TOOL, input: jobsPromptInput(email), maxOutputTokens: JOBS_MAX_OUTPUT_TOKENS,
-      cacheKey: `setpoint-jobs:${JOBS_PROMPT_VERSION}:${model}`, signal,
+      model, system: JOBS_SYSTEM, tool: JOBS_TOOL, input: jobsPromptInput(email), maxOutputTokens: JOBS_MAX_OUTPUT_TOKENS, signal,
     });
     recordJobsUsage(store, answer, 'jobs_emails', email.id);
     if (recordReadSuccess(store)) announce(store);

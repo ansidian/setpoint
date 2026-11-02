@@ -1220,7 +1220,7 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
     await page.reload();
     await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
     await page.locator('.rd-acts button', {hasText: 'Ask about this email'}).click();
-    const noKey = page.locator('.pane .answer .failed-line', {hasText: 'Alfred needs an Anthropic or OpenAI key in Settings › AI.'});
+    const noKey = page.locator('.pane .answer .failed-line', {hasText: 'Alfred needs an Anthropic key in Settings › AI.'});
     await noKey.waitFor();
     // Asked anyway: the server's words, once, and the question stays in the field.
     await page.keyboard.type('what\'s the new rent?');

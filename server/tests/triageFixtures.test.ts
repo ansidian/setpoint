@@ -1,6 +1,5 @@
 // B3's Done-when: the recorded fixture set triages to its expected lanes with the models faked at
-// the HTTP boundary, through the real worker, pipeline, rules and policy, for either provider.
-import type {AiProvider} from '@setpoint/shared';
+// the HTTP boundary, through the real worker, pipeline, rules and policy.
 import {eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
@@ -23,13 +22,13 @@ const answerOf = (recorded: Recorded | undefined, subject: string, tier: string)
   return typeof recorded === 'string' ? recorded : {tool: {...recorded}};
 };
 
-describe.each<AiProvider>(['anthropic', 'openai'])('the recorded fixture set, with %s\'s models faked', provider => {
+describe('the recorded fixture set, with Anthropic\'s models faked', () => {
   test('every email ends in its expected lane, kind, protection and code, asking the expected models', async () => {
     const fake = await fakeModels();
     const world = triageWorld(fake.endpoints);
-    setSecret(world.store, provider === 'anthropic' ? 'anthropic_api_key' : 'openai_api_key', FAKE_KEYS[provider]);
+    setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
     for (const rule of FIXTURE_RULES) createRule(world.store, {...rule, enabled: true});
-    const models = DEFAULT_TRIAGE_MODELS[provider];
+    const models = DEFAULT_TRIAGE_MODELS;
     fake.answer(request => {
       const subject = /^Subject: (.*)$/m.exec(request.input)?.[1] ?? '';
       const fixture = TRIAGE_FIXTURES.find(candidate => candidate.subject === subject);
@@ -66,7 +65,7 @@ describe.each<AiProvider>(['anthropic', 'openai'])('the recorded fixture set, wi
     // Every call is in the ledger with its tokens and cost; triage is healthy and nothing is Unsorted.
     const ledger = world.store.db.select().from(t.aiUsage).all();
     expect(ledger).toHaveLength(fake.requests.length);
-    expect(ledger.every(entry => entry.provider === provider && entry.purpose === 'triage' && entry.inputTokens > 0 && entry.outputTokens > 0 && entry.costMicros > 0 && entry.messageId !== null)).toBe(true);
+    expect(ledger.every(entry => entry.provider === 'anthropic' && entry.purpose === 'triage' && entry.inputTokens > 0 && entry.outputTokens > 0 && entry.costMicros > 0 && entry.messageId !== null)).toBe(true);
     expect(world.status()).toMatchObject({state: 'healthy', unsorted: 0});
     expect(world.store.db.select().from(t.messages).where(eq(t.messages.triageSource, 'rule')).all().length).toBeGreaterThan(0);
   });

@@ -45,7 +45,7 @@ import {asProviderError, ProviderError} from '../sync/errors.ts';
 import {enqueueJob} from '../sync/jobs.ts';
 import {jobsDb} from './db.ts';
 import {
-  CHECK_MAX_OUTPUT_TOKENS, CHECK_SYSTEM, CHECK_TOOL, checkInput, JD_PROMPT_VERSION, postingReadingOf, READING_MAX_OUTPUT_TOKENS, READING_SYSTEM,
+  CHECK_MAX_OUTPUT_TOKENS, CHECK_SYSTEM, CHECK_TOOL, checkInput, postingReadingOf, READING_MAX_OUTPUT_TOKENS, READING_SYSTEM,
   READING_TOOL, readingInput, SEARCH_MAX_OUTPUT_TOKENS, SEARCH_MAX_USES, SEARCH_SYSTEM, SEARCH_TOOL, searchCandidatesOf, searchInput, verdictsOf,
 } from './jdPrompt.ts';
 import type {JdApplication} from './jdPrompt.ts';
@@ -307,8 +307,7 @@ export async function readPosting(
   store: Store, haiku: {client: ModelClient; model: string}, application: Pick<Application, 'company' | 'title'>, posting: Pick<FoundPosting, 'title' | 'location' | 'facts' | 'text'>, signal?: AbortSignal,
 ) {
   const answer = await haiku.client.call({
-    model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, posting), maxOutputTokens: READING_MAX_OUTPUT_TOKENS,
-    cacheKey: `setpoint-jobs-reading:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
+    model: haiku.model, system: READING_SYSTEM, tool: READING_TOOL, input: readingInput(application, posting), maxOutputTokens: READING_MAX_OUTPUT_TOKENS, signal,
   });
   recordJobsUsage(store, answer, 'jobs_reading_jds', null);
   return postingReadingOf(answer.toolInput, posting.location);
@@ -326,8 +325,7 @@ async function readAndSave(
 async function verdictsOn(store: Store, haiku: {client: ModelClient; model: string}, context: JdApplication, offers: Offer[], signal: AbortSignal): Promise<Verdict[]> {
   const answer = await haiku.client.call({
     model: haiku.model, system: CHECK_SYSTEM, tool: CHECK_TOOL, maxOutputTokens: CHECK_MAX_OUTPUT_TOKENS,
-    input: checkInput(context, offers.map(offer => ({...offer.found!, site: offer.site}))),
-    cacheKey: `setpoint-jobs-check:${JD_PROMPT_VERSION}:${haiku.model}`, signal,
+    input: checkInput(context, offers.map(offer => ({...offer.found!, site: offer.site}))), signal,
   });
   recordJobsUsage(store, answer, 'jobs_reading_jds', null);
   return verdictsOf(answer.toolInput, offers.length);
