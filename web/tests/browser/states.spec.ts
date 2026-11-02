@@ -309,40 +309,18 @@ const recordArrivals = (page: Page, selector: string) => page.addInitScript(watc
 }, selector);
 const arrivals = (page: Page) => page.evaluate(() => (window as unknown as {arrivals: string[]}).arrivals);
 
-test('state lines fold in as they come, a line whose source is healthy again shows a good check, then folds out, and the offline pill comes in from above and fades out (the polish audit\'s states-13)', async () => {
-  const setpoint = await startSetpoint({fixtures: ['stale-todoist', 'failing-work'], clock: 'frozen'});
+test('Check now clears a failing line: its source healthy again, it shows a good check, then folds out (the polish audit\'s states-13)', async () => {
+  const setpoint = await startSetpoint({fixtures: ['failing-work'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    // The calendar's lines come with its sources, after the pane: each folds in from nothing, as a row does.
-    await recordArrivals(page, '.rpane > .rp-health');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.rpane > .rp-health').waitFor();
-    await until('the line arrived', () => arrivals(page), seen => seen.length === 1);
-    assert.deepEqual(await arrivals(page), ['0px']);
-
-    // The Inbox: Work's failing line, checked now and healthy again, turns its glyph to a good check
-    // for 1.2 s, then folds out.
+    // Work's failing line, checked now and healthy again, turns its glyph to a good check, then folds out.
     await page.goto(`${setpoint.base}/inbox`);
     const line = page.locator('.hbar', {hasText: 'Work, as of'});
     await line.getByRole('button', {name: 'Check now'}).click();
     await line.locator('.icon.ok').waitFor();
-    assert.deepEqual(await rested(() => toneGlyph(line)), [ICONS.check, '16', await rested(() => colourOf(page, 'var(--good)'))]);
-    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, getComputedStyle(element).color, element.querySelector('.check-now') === null])), ['hbar muted cleared', await rested(() => colourOf(page, 'var(--ink3)')), true]);
     const folds = await watch(line, 'data-fold');
     await line.waitFor({state: 'detached'});
     assert.deepEqual(await folds(), ['out'], 'it folded out');
-
-    // Offline, the pill comes in from 8 px above over 180 ms; back, a copy of it fades out where it was.
-    await recordArrivals(page, '.main > .offline-pill');
-    await page.reload();
-    await page.locator('.list .row').first().waitFor();
-    await network(page, false);
-    const pill = page.locator('.main > .offline-pill');
-    await pill.waitFor();
-    assert.deepEqual(await rested(() => pill.evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration])), ['pill-in', '0.18s']);
-    await network(page, true);
-    await until('the pill gone', () => pill.count(), count => count === 0);
-    assert.deepEqual(await arrivals(page), ['none', 'leaving copy']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

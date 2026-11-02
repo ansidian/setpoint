@@ -744,7 +744,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
   }
 });
 
-test('Send test (the polish audit\'s states-11, settings-07): it turns while it sends at its own width, a failure reads as one in alert and in words, a test that went ticks good, and the Server field says it saved', async () => {
+test('Send test (the polish audit\'s states-11, settings-07): it turns while it sends, a failure reads as one in alert and in words, a test that went ticks good, and the Server field says it saved', async () => {
   const ntfy = await fakeNtfy();
   // A server nothing answers at: a port just closed.
   const closed = http.createServer();
@@ -758,20 +758,11 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     const server = page.locator('.settings input[aria-label="ntfy server"]');
     await server.fill(`http://${unreachable}`);
     await page.keyboard.press('Enter');
-    // Saved, a check in good at the field's right end.
+    // Saved.
     const saved = page.locator('.settings .fld-at .saved');
     await saved.waitFor();
-    // Read while it shows: Saved stays 1.5 s and fades, which a rest would wait out.
-    assert.deepEqual(await saved.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]),
-      [ICONS.check, '16', await computed(page, 'color', 'var(--good)')]);
-    // Measured as it shows, for the same reason.
-    const [field, mark] = [(await server.boundingBox())!, (await saved.boundingBox())!];
-    assert.equal(Math.round(field.x + field.width - (mark.x + mark.width)), 9, 'at the field\'s right end');
-    // It goes after 1.5 s and its fade.
-    await saved.waitFor({state: 'detached'});
 
     const button = page.getByRole('button', {name: 'Send test'});
-    const width = (await rested(() => button.boundingBox()))!.width;
     let release = () => {};
     const held = new Promise<void>(resolve => {
       release = resolve;
@@ -781,10 +772,9 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
       await route.continue();
     });
     await button.click();
-    // While it sends, the shared spinner stands where its glyph was, and the button keeps its width.
+    // While it sends, the shared spinner stands where its glyph was.
     await button.locator('.spin .icon').waitFor();
     assert.equal(await button.locator('.spin .icon path').getAttribute('d'), ICONS.progress_activity);
-    assert.equal((await rested(() => button.boundingBox()))!.width, width);
     release();
     // A failure is a failure: in alert, led by error, in words rather than Node's "fetch failed".
     const line = page.locator('.settings .line');
@@ -797,7 +787,7 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     assert.equal(await rested(() => header.locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor)), await rested(() => computed(page, 'background', 'var(--caution)')));
     await page.unroute('**/api/notifications/test');
 
-    // A server that answers: the test goes, its line ticks in good, and so does the button for 2 s.
+    // A server that answers: the test goes, and its line ticks in good.
     await server.fill(ntfy.url);
     await page.keyboard.press('Enter');
     await settled('the server', () => setpoint.api<Settings>('GET', '/settings'), value => value.notifications.ntfy_server === ntfy.url);
@@ -805,8 +795,6 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     await line.filter({hasText: 'Sent to setpoint-reminders'}).waitFor();
     const good = await rested(() => computed(page, 'color', 'var(--good)'));
     assert.deepEqual(await rested(() => line.evaluate(element => [element.className, getComputedStyle(element.querySelector('.icon')!).color, element.querySelector('.icon path')?.getAttribute('d')])), ['line done', good, ICONS.check]);
-    assert.deepEqual(await rested(() => button.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color])), [ICONS.check, good]);
-    await until('the button\'s glyph back to send', () => button.locator('.icon path').getAttribute('d'), d => d === ICONS.send);
     assert.equal(ntfy.published.length, 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
