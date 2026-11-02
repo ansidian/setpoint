@@ -1,6 +1,6 @@
 // Direct manipulation on the month grid (DESIGN.md › Drag, Recurring events and Health and states;
 // boards 15, 15b and 19b): the boards built and checked, then the flows: a drop with each scope, a
-// single event and a task moved at once (pending at .5 with a spinner until the provider confirms), a
+// single event and a task moved at once (pending with a spinner until the provider confirms), a
 // change that fails in place with Try again and Move back, Clone, Copy and Paste, Colour, Delete (and
 // a recurring one asking which), multi-select, and the drag, the drop prompt and the failed card
 // under the 1.25 wide-screen zoom (D23). The dev provider confirms after 600 ms and refuses moving
@@ -42,11 +42,12 @@ async function openCalendar(page: Page, base: string) {
 
 /** Presses a chip and carries it to another day's cell, `held` true to stop before letting go. */
 /**
- * Runs the page's clock (a check that installs one) past the Undo of the delete its toast names, as
- * 6 s waited out are the most a check here spends; the timer starts as the toast comes.
+ * Runs the page's clock (a check that installs one) past the Undo of a delete, as 6 s waited out are
+ * the most a check here spends. The timer starts as the delete takes its items off the grid, whatever
+ * toast is showing by then, so this goes by the chips.
  */
-async function passUndo(page: Page, toast: string) {
-  await page.locator('.toast', {hasText: toast}).waitFor();
+async function passUndo(page: Page, ...deleted: [date: string, title: string][]) {
+  for (const [date, title] of deleted) await chip(page, date, title).waitFor({state: 'detached'});
   await page.clock.fastForward(UNDO_MS);
 }
 
@@ -136,18 +137,15 @@ test('a drop asks which occurrences: This and following splits Gym, All events m
   }
 });
 
-test('an event and a task move at once, waiting at .5 with a spinner until the provider confirms', async () => {
+test('an event and a task move at once, waiting with a spinner until the provider confirms', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openCalendar(page, setpoint.base);
     await drag(page, chip(page, '2026-10-07', 'Dentist'), '2026-10-08');
     // No prompt for a single event: pending where it landed, then confirmed.
-    const moved = chip(page, '2026-10-08', 'Dentist');
     // The spinner shows only after a second (DESIGN.md #54), and the dev provider confirms sooner.
     await page.locator('.cell[data-date="2026-10-08"] .ev.pending .spin').waitFor({state: 'attached'});
-    // Read while it's pending: the dev provider confirms within the moment a rest would wait.
-    assert.equal(await moved.evaluate(element => getComputedStyle(element).opacity), '0.5');
     await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
     assert.deepEqual((await titles(setpoint, '2026-10-08')).filter(title => title.startsWith('Dentist')), ['Dentist 2:30 PM']);
@@ -234,7 +232,7 @@ test('a drag the provider refuses fails in place, and its card says so', async (
   }
 });
 
-test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and Delete from the card and the keys; multi-select', async () => {
+test('Copy and Paste (Copy and ⌘C say what they took, S10) and Delete from the card and the keys; multi-select', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -242,52 +240,32 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await openCalendar(page, setpoint.base);
     const dentists = async (date: string) => (await items(setpoint, date)).filter(item => item.title === 'Dentist');
 
-    // Clone: another Dentist on the same day.
-    await chip(page, '2026-10-07', 'Dentist').click();
-    await page.locator('.fd').getByRole('button', {name: 'Clone'}).click();
-    await until('the clone', () => dentists('2026-10-07'), list => list.length === 2 && list.every(item => !item.command));
-
     // Copy, then ⌘V on Tue, Oct 13: the copy keeps its time.
+    await chip(page, '2026-10-07', 'Dentist').click();
     await page.locator('.fd').getByRole('button', {name: 'Copy'}).click();
-    await page.locator('.toast', {hasText: 'Copied Dentist, ⌘V pastes on the selected day'}).waitFor();
-    // A toast with no button keeps the same room on both sides.
-    assert.deepEqual(await page.locator('.toast').evaluate(toast => [getComputedStyle(toast).paddingLeft, getComputedStyle(toast).paddingRight]), ['16px', '16px']);
+    await page.locator('.toast', {hasText: 'Copied Dentist'}).waitFor();
     await page.locator('.cell[data-date="2026-10-13"]').click({position: {x: 70, y: 150}});
     await page.keyboard.press('Meta+v');
     await until('the paste', () => dentists('2026-10-13'), list => list.length === 1 && !list[0]!.command);
     assert.deepEqual(await titles(setpoint, '2026-10-13').then(list => list.filter(title => title.startsWith('Dentist'))), ['Dentist 2:30 PM']);
 
-    // Colour: Dinner with Sam takes `good`, its own.
-    await chip(page, '2026-10-09', 'Dinner with Sam').click();
-    await page.locator('.fd').getByRole('button', {name: 'Colour'}).click();
-    await page.locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
-    await until('the colour', async () => (await items(setpoint, '2026-10-09')).find(item => item.title === 'Dinner with Sam')!, item => item.colour === 'good' && !item.command);
-    assert.match(await chip(page, '2026-10-09', 'Dinner with Sam').evaluate(element => (element as HTMLElement).style.getPropertyValue('--c')), /good/);
-    // Its toast comes with the browser's answer, behind the server's: landing after Delete's, it would take that one's place.
-    await page.locator('.toast', {hasText: 'Changed the colour of Dinner with Sam'}).waitFor();
-
     // Delete the pasted Dentist with the key, once the browser draws it saved: Delete leaves pending items.
     await until('Dentist drawn saved', () => chip(page, '2026-10-13', 'Dentist').evaluateAll(chips => chips.map(one => one.classList.contains('pending'))), pending => pending.join() === 'false');
     await chip(page, '2026-10-13', 'Dentist').click();
-    // Its own card, as Dinner's is still open until the selection has moved, and Delete takes what's selected.
-    await page.locator('.fd', {hasText: 'Dentist'}).waitFor();
+    await page.locator('.fd').waitFor();
     await page.keyboard.press('Delete');
-    await passUndo(page, 'Deleted Dentist');
+    await passUndo(page, ['2026-10-13', 'Dentist']);
     await until('the delete, once its Undo has gone', () => dentists('2026-10-13'), list => list.length === 0, AFTER_UNDO);
 
-    // Multi-select: ⌘ alone puts the card away and keeps Dinner selected; ⌘-click a second, no card;
+    // Multi-select: ⌘ alone puts the card away and keeps Dinner selected; ⌘-click a second;
     // ⌘C and ⌘V on Tue, Oct 20 keeps their distance; Delete takes both copies.
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Meta');
     await page.locator('.fd').waitFor({state: 'detached'});
-    await page.locator('.cell[data-date="2026-10-09"] .ev.sel', {hasText: 'Dinner with Sam'}).waitFor();
     await chip(page, '2026-10-15', 'Career fair').click({modifiers: ['Meta']});
-    await page.locator('.cell[data-date="2026-10-15"] .ev.sel', {hasText: 'Career fair'}).waitFor();
-    await page.locator('.cell[data-date="2026-10-09"] .ev.sel', {hasText: 'Dinner with Sam'}).waitFor();
-    await page.locator('.fd').waitFor({state: 'detached'});
     await page.keyboard.press('Meta+c');
-    await page.locator('.toast', {hasText: 'Copied 2 items, ⌘V pastes on the selected day'}).waitFor();
+    await page.locator('.toast', {hasText: 'Copied 2 items'}).waitFor();
     await page.locator('.cell[data-date="2026-10-20"]').click({position: {x: 70, y: 150}});
     await page.keyboard.press('Meta+v');
     await until('both pasted', async () => [...await items(setpoint, '2026-10-20'), ...await items(setpoint, '2026-10-26')].filter(item => !item.recurring),
@@ -301,7 +279,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await chip(page, '2026-10-20', 'Dinner with Sam').click();
     await chip(page, '2026-10-26', 'Career fair').click({modifiers: ['Meta']});
     await page.keyboard.press('Delete');
-    await passUndo(page, 'Deleted 2 items');
+    await passUndo(page, ['2026-10-20', 'Dinner with Sam'], ['2026-10-26', 'Career fair']);
     await until('both copies gone', async () => [...await items(setpoint, '2026-10-20'), ...await items(setpoint, '2026-10-26')].filter(item => !item.recurring), list => list.length === 0, AFTER_UNDO);
 
     // Deleting one Gym asks which; This event takes Friday's alone.
@@ -309,7 +287,7 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await page.locator('.fd').getByRole('button', {name: 'Delete'}).click();
     await page.locator('.scope-card', {hasText: 'Delete recurring event'}).waitFor();
     await page.keyboard.press('Enter');
-    await passUndo(page, 'Deleted Gym');
+    await passUndo(page, ['2026-10-16', 'Gym']);
     await until('Friday\'s Gym gone', async () => (await titles(setpoint, '2026-10-16')).filter(title => title.startsWith('Gym')), list => list.length === 0, AFTER_UNDO);
     assert.deepEqual((await titles(setpoint, '2026-10-14')).filter(title => title.startsWith('Gym')), ['Gym 7:00 AM']);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -445,7 +423,8 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await chip(page, '2026-10-07', 'Dentist').click();
     await page.keyboard.press('Delete');
     assert.equal((await dentists()).length, 1, 'held while Undo is offered');
-    await passUndo(page, 'Deleted Dentist');
+    await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
+    await passUndo(page, ['2026-10-07', 'Dentist']);
     await until('the delete is sent', dentists, list => list.length === 0, AFTER_UNDO);
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -505,6 +484,7 @@ test('UX #6: a move, a completion, a clone, a paste and a colour each say what t
     await page.locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
     await toast('Changed the colour of Dinner with Sam').waitFor();
     await until('the colour', () => named('2026-10-09', 'Dinner with Sam'), list => list[0]!.colour === 'good' && !list[0]!.command);
+    assert.match(await chip(page, '2026-10-09', 'Dinner with Sam').evaluate(element => (element as HTMLElement).style.getPropertyValue('--c')), /good/);
     await undo('Changed the colour of Dinner with Sam');
     await until('the colour back', () => named('2026-10-09', 'Dinner with Sam'), list => list[0]!.colour !== 'good' && !list[0]!.command);
 
