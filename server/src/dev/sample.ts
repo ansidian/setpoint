@@ -250,7 +250,7 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
   {account: 'iCloud', at: ['2026-09-30', '08:03'], from: ['Apple', 'noreply@icloud.example'], organisation: 'Apple',
     subject: 'Your iCloud storage is almost full', body: 'You\'ve used almost all of your 50 GB of iCloud storage.',
     unread: false, lane: 'fyi', kind: 'updates', type: 'alert'},
-  // Board 10's second pin, unpinned here so board 01's shelf holds one.
+  // Unpinned, so board 01's shelf holds one.
   {account: 'Personal', at: ['2026-09-28', '10:00'], from: ['DMV', 'notices@dmv.example'], organisation: 'DMV',
     subject: 'Car registration renewal notice', summary: 'Renewal notice for your vehicle · online or by mail',
     body: 'Your registration for your vehicle expires soon. Renew online or by mail.',

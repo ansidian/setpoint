@@ -31,7 +31,7 @@ export function icloudConnector(store: Store, adapter: ICloudAdapter): ICloudCon
   };
 }
 
-/** An iCloud account and its mail source, once its password is known to work (or comes from v1, src/importV1.ts). */
+/** An iCloud account and its mail source, once its password is known to work. */
 export function connectICloud(store: Store, input: ICloudConnectInput): Connected {
   const schedule = DEFAULT_SCHEDULES.icloud;
   return connectMailAccount(store, {

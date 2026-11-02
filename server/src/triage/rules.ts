@@ -1,9 +1,9 @@
 // Triage's rules as it applies them: the user's written rules in their order, then learned rules, then the
 // shipped defaults (defaultRules.json). The defaults keep v1's `preflight-rules.json` structure
 // (key, priority, match, lane, reason; harvested, SV-4) with v1's generic rules only: the user's own v1
-// rules, which name their senders, come over through B7's import (src/triage/importV1.ts) as written
-// rules. v1's loader refused a broken catalogue at start rather than let a bad pattern quietly stop
-// matching; so does this one.
+// rules, which name their senders, came over once at cutover as written rules (D412). v1's loader
+// refused a broken catalogue at start rather than let a bad pattern quietly stop matching; so does
+// this one.
 import fs from 'node:fs';
 import {KINDS, LANES, MESSAGE_TYPES, ruleMatchSchema} from '@setpoint/shared';
 import {asc, desc, eq} from 'drizzle-orm';

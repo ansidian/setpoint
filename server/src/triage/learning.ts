@@ -126,12 +126,12 @@ export function listRules(store: Store): RuleOut[] {
 }
 
 /** A written rule, after every other written rule. It sorts new mail; mail already sorted stays. */
-export function createRule(store: Store, input: RuleInput, importedFrom: string | null = null): RuleOut {
+export function createRule(store: Store, input: RuleInput): RuleOut {
   return transaction(store, () => {
     const last = store.db.select({position: sql<number>`max(${t.triageRules.position})`}).from(t.triageRules).where(eq(t.triageRules.origin, 'written')).get();
     const row = store.db.insert(t.triageRules).values({
       origin: 'written', match: input.match, lane: input.lane, kind: input.lane === 'noise' ? null : input.kind, enabled: input.enabled,
-      position: (last?.position ?? -1) + 1, importedFrom, createdAt: isoNow(store),
+      position: (last?.position ?? -1) + 1, createdAt: isoNow(store),
     }).returning().get()!;
     return presentRules(store, [row])[0]!;
   });

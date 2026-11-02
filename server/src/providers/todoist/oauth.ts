@@ -87,7 +87,7 @@ export async function completeTodoistOAuth(store: Store, options: TodoistOAuthOp
   return connectTodoist(store, answer.access_token);
 }
 
-/** Stores a Todoist token on the Todoist source (made if new) with its calendar: the callback's, and v1's import. */
+/** Stores a Todoist token on the Todoist source (made if new) with its calendar. */
 export function connectTodoist(store: Store, token: string): number {
   const sourceId = transaction(store, () => {
     todoistCalendar(store);

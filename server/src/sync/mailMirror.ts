@@ -124,28 +124,9 @@ export function upsertMessages(store: Store, accountId: number, fetched: Fetched
     }
     // B3: new mail is queued for triage; backfilled history is sorted now by the rules-only pass.
     triageIntake(store, inserted, options.backfill ?? false);
-    applyPendingPins(store, accountId, inserted);
     noteLive(store, {type: 'mail', messages: [...inserted, ...updated], accounts: [accountId], commands: []});
     return {inserted, updated};
   });
-}
-
-/** A Message-ID header as v1 and v2 compare it: without its angle brackets. */
-export const bareMessageId = (value: string | null | undefined) => value?.trim().replace(/^<|>$/g, '') || null;
-
-/** v1's pins waiting for their emails (src/importV1.ts): applied as the emails land, then forgotten. */
-export function applyPendingPins(store: Store, accountId: number, messageIds: number[]) {
-  if (!messageIds.length) return;
-  const pending = store.db.select().from(t.pendingPins).where(eq(t.pendingPins.accountId, accountId)).all();
-  if (!pending.length) return;
-  const rows = store.db.select({id: t.messages.id, providerId: t.messages.providerId, rfc822Id: t.messages.rfc822Id}).from(t.messages).where(inArray(t.messages.id, messageIds)).all();
-  for (const row of rows) {
-    const bare = bareMessageId(row.rfc822Id);
-    const pin = pending.find(one => one.providerId === row.providerId || (bare !== null && one.messageId === bare));
-    if (!pin) continue;
-    store.db.update(t.messages).set({pinnedAt: pin.pinnedAt}).where(eq(t.messages.id, row.id)).run();
-    store.db.delete(t.pendingPins).where(eq(t.pendingPins.id, pin.id)).run();
-  }
 }
 
 /**

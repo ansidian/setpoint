@@ -109,9 +109,9 @@ export async function completeAuthorization(store: Store, options: GmailConnectO
 
 /**
  * A Google account's Gmail source and, on the same sign-in, its Calendar source: Connect Gmail's
- * callback, and v1's import (src/importV1.ts) with v1's refresh token, label, colour and icon.
+ * callback.
  */
-export function connectGmail(store: Store, push: boolean, input: Pick<ConnectInput, 'address' | 'credentials' | 'accountId' | 'label' | 'colour' | 'icon'>): Connected {
+export function connectGmail(store: Store, push: boolean, input: Pick<ConnectInput, 'address' | 'credentials' | 'accountId'>): Connected {
   const schedule = push ? DEFAULT_SCHEDULES.gmail : {mode: 'poll' as const, intervalSeconds: GMAIL_POLL_SECONDS};
   const calendar = DEFAULT_SCHEDULES.google_calendar;
   return connectMailAccount(store, {

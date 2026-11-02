@@ -635,7 +635,7 @@ export const scheduleMarks = sqliteTable('schedule_marks', {
 export const RULE_ORIGINS = ['written', 'learned'] as const;
 
 /**
- * Triage's rules (Settings › Mail): written ones (the user's, or v1's brought over by B7's import) in
+ * Triage's rules (Settings › Mail): written ones (the user's, or v1's brought over at cutover) in
  * their order, and learned ones from a pattern prompt's Yes. `match` is v1's preflight-rules shape
  * (`@setpoint/shared` ruleMatchSchema). No rule moves protected mail (decision 29): triage applies
  * protection after every rule.
@@ -648,7 +648,7 @@ export const triageRules = sqliteTable('triage_rules', {
   kind: text('kind', {enum: KINDS}),
   position: integer('position').notNull(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(true),
-  // "v1:<rule name>" for a rule B7 imported from v1, so a second import replaces rather than adds.
+  // "v1:<rule name>" for a rule brought over from v1 at cutover (D412); null for every other rule.
   importedFrom: text('imported_from').unique(),
   createdAt: text('created_at').notNull(),
 }, table => [
@@ -685,8 +685,8 @@ export const patternPrompts = sqliteTable('pattern_prompts', {
 ]);
 
 /**
- * Evidence for the learning loop from outside the message record: v1's lane corrections, imported
- * once (src/triage/importV1.ts). A correction out of Attention counts as a Done without opening; one
+ * Evidence for the learning loop from outside the message record: v1's lane corrections, brought
+ * over once at cutover (D412). A correction out of Attention counts as a Done without opening; one
  * into Attention as one opened first. Lanes are v2's.
  */
 export const triageEvidence = sqliteTable('triage_evidence', {
@@ -700,7 +700,7 @@ export const triageEvidence = sqliteTable('triage_evidence', {
   fromLane: text('from_lane', {enum: LANES}).notNull(),
   toLane: text('to_lane', {enum: LANES}).notNull(),
   at: text('at').notNull(),
-  // What the import keeps it unique by, so importing the same file twice adds nothing.
+  // What the cutover's import kept it unique by. Nothing adds to this table now.
   dedupe: text('dedupe').notNull().unique(),
 }, table => [
   index('triage_evidence_key').on(table.organisationKey, table.type),
@@ -834,12 +834,11 @@ export const alfredTurns = sqliteTable('alfred_turns', {
   proposals: text('proposals', {mode: 'json'}).$type<ProposalOut[]>().notNull(),
 }, table => [index('alfred_turns_conversation').on(table.conversationId)]);
 
-// ---- B7 · v1's import ----
+// ---- B7 · what v1's import left ----
 
 /**
- * A pin from v1 whose email isn't in the record yet (the backfill brings it later): applied, and
- * deleted, when that email arrives. Found by Gmail's message id, or by the Message-ID header without
- * its angle brackets (v1's iCloud ids have no UIDVALIDITY, so they can't name a v2 row).
+ * Pins from v1 that waited for their emails after the cutover. Nothing reads or writes it now, and
+ * the table stays until a migration has another reason to drop it (D412).
  */
 export const pendingPins = sqliteTable('pending_pins', {
   id: integer('id').primaryKey({autoIncrement: true}),
