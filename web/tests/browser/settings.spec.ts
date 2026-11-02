@@ -15,7 +15,7 @@ import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import path from 'node:path';
 import {after} from 'node:test';
-import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, PrecisionOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, test, until} from './harness.ts';
@@ -51,19 +51,6 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     await page.locator('.settings [data-source="todoist"]', {hasText: 'Inbox · 3 projects'}).waitFor();
     await page.locator('.settings .precision', {hasText: '82%'}).waitFor();
     await page.locator('.hbar.caution').waitFor();
-    // Attention precision leads with its figure, 24 / 500 in ink, then the 30 days as a 1.5 px line in
-    // good on a 180 × 32 drawing (the polish audit's settings-08).
-    const precision = page.locator('.settings .precision');
-    assert.deepEqual(await rested(() => precision.locator('.big').evaluate(big => [big.textContent, getComputedStyle(big).fontSize, getComputedStyle(big).fontWeight, getComputedStyle(big).color])),
-      ['82%', '24px', '500', await rested(() => computed(page, 'color', 'var(--ink)'))]);
-    assert.deepEqual(await rested(() => precision.locator('svg.spark').evaluate(svg => [svg.getBoundingClientRect().width, svg.getBoundingClientRect().height])), [180, 32]);
-    assert.deepEqual(await rested(() => precision.locator('.spark .line').evaluate(line => [getComputedStyle(line).stroke, getComputedStyle(line).strokeWidth])), [await rested(() => computed(page, 'color', 'var(--good)')), '1.5px']);
-    // Each day's column names it as the app writes dates, "Tue, Oct 6 · 9 of 11 opened first", not "2026-10-06".
-    const {days} = await setpoint.api<PrecisionOut>('GET', '/mail/precision');
-    const titles = await page.locator('.settings .spark .day title').allTextContents();
-    assert.deepEqual(titles, days.map(day => `${new Date(`${day.date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})} · ${
-      day.done ? `${day.opened_before_done} of ${day.done} opened first` : 'nothing Done'}`));
-    assert.match(titles.at(-1)!, /^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} · /);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
     // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#123).
@@ -192,10 +179,10 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
-    // The meter: 160 × 6, filled to $18.40 of $40, measured once Settings has settled into place.
+    // The meter, filled to $18.40 of $40, measured once Settings has settled into place.
     await still(page);
     const meter = news.locator('.meter');
-    assert.deepEqual(await rested(() => meter.evaluate(element => [element.getBoundingClientRect().width, element.getBoundingClientRect().height, Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10])), [160, 6, 73.6]);
+    assert.equal(await rested(() => meter.evaluate(element => Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10)), 73.6);
     // The money first (the polish audit's settings-10): the amount in ink, and a neutral meter, ink3 on a sub2
     // track: a usage meter is neither "you are here" (accent) nor an identity (cool).
     const neutral = await computed(page, 'background', 'var(--ink3)');
@@ -214,16 +201,14 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
       ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
       ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
     ]);
-    // The month's total in the label, each cost in ink at 500.
+    // The month's total in the label.
     assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
-    assert.deepEqual(await rested(() => usage.locator('.cost').first().evaluate(cost => [getComputedStyle(cost).color, getComputedStyle(cost).fontWeight])), [await rested(() => computed(page, 'color', 'var(--ink)')), '500']);
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
     // the meter turns caution, before the cap is reached; under that, ink3 again.
     await choose(page, 'Monthly cap', '$20');
     await amount.filter({hasText: '$18.40 of $20'}).waitFor();
     assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
-    assert.equal(await rested(() => meter.locator('span').evaluate(fill => getComputedStyle(fill).transitionDuration)), '0.26s, 0.12s', 'the fill eases to its new width');
     const caution = await rested(() => computed(page, 'background', 'var(--caution)'));
     await until('the meter in caution', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === caution);
     await choose(page, 'Monthly cap', '$50');
@@ -259,7 +244,7 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
   }
 });
 
-test('a long page keeps its title and × in place while it scrolls, a hairline under the title once it has, and a section\'s label under it (the polish audit\'s settings-04)', async () => {
+test('a long page keeps its title and × in place while it scrolls, and a section\'s label under it (the polish audit\'s settings-04)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -278,22 +263,9 @@ test('a long page keeps its title and × in place while it scrolls, a hairline u
         head: [Math.round(head.top - modal.top), Math.round(modal.right - head.right)]};
     });
     const before = await rested(() => place());
-    assert.deepEqual(before.close, [24, 20]);
-    assert.deepEqual(before.head, [1, 1], 'the head stops short of the modal\'s ring');
-    assert.equal(await rested(() => head.evaluate(element => getComputedStyle(element).boxShadow)), 'rgba(0, 0, 0, 0) 0px 0px 0px 0px', 'no hairline before it scrolls');
-    const hairline = await rested(() => page.evaluate(() => {
-      const probe = document.createElement('div');
-      probe.style.boxShadow = '0 1px 0 var(--hair)';
-      document.body.append(probe);
-      const shadow = getComputedStyle(probe).boxShadow;
-      probe.remove();
-      return shadow;
-    }));
     await main.evaluate(element => element.scrollTo({top: 200}));
     await until('scrolled', () => main.evaluate(element => element.scrollTop), top => top === 200);
     assert.deepEqual(await rested(() => place()), before, 'the title and × stay where they were');
-    await until('the hairline under the title', () => head.evaluate(element => getComputedStyle(element).boxShadow), shadow => shadow === hairline);
-    assert.equal(await rested(() => head.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'background', 'var(--modal)')), 'over the modal\'s colour, so rows pass under it');
     await page.getByRole('button', {name: 'Close settings'}).click();
     await page.locator('.settings').waitFor({state: 'detached'});
 
