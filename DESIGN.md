@@ -1273,8 +1273,7 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
   - Done: the line shows a `good` check and "Read 330 emails" for 1.2 s, then folds away (180 ms).
 - **The AI is down** (38b): a failing line at the top of the column (32 px, `caution` 12.5, led by
   `warning`, #218): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying". It folds
-  in as it comes and out when the AI's back, showing a `good` check for 1.2 s first, as mail's
-  health lines do. Nothing is lost.
+  in as it comes and out when the AI's back, as mail's health lines do. Nothing is lost.
 - **No JD found**, **Ghosted** and **a status set by hand** are drawn above (The table, The
   application's detail), never animated.
 - **Jobs off** (38c): the header is "Jobs" alone; the page is the one-line empty state (#124), the
@@ -1400,7 +1399,7 @@ Health means **the last check succeeded**, not that data changed; thresholds com
 schedule ([BRIEF.md › Health](BRIEF.md#health-and-states)).
 
 The Inbox's bar and lines and the calendar pane's lines fold in as they come and out as they go, as
-rows do; a line whose source is healthy again shows a `good` check for 1.2 s first. The offline pill
+rows do. The offline pill
 comes in from above and fades out (#221).
 
 ## Phone
@@ -1588,6 +1587,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 39. **Board 06 draws a suggestion already taken** (#281): its chips are in the field, so what's new
     has no board. A suggestion sits at the end of the results line the board draws, in its 12.5 px,
     `ink2` and `ink3`, with the keycap Ask Alfred's row draws above it.
+40. **What SV-151 took out still shows in the export:** board 34b's outcome line (#287), board 38a's
+    skeleton rows (#292), and in `jobs/motion.md` the theme fade (#291) and the AI line's `good`
+    check (#293). The audit patches the two boards.
 
 ## Not designed yet
 
@@ -2866,14 +2868,12 @@ it changes what's on screen.
     as its row in Settings does; for iCloud, or several accounts, it opens Settings › Accounts (amending
     Health and states, where only Needs reconnect had an action) (Andy, 2026-10-11, polish audit
     states-08).
-221. **State lines arrive gently and resolve visibly:** the Inbox's needs-reconnect bar and stale and
+221. **State lines arrive and leave gently:** the Inbox's needs-reconnect bar and stale and
     failing lines, and the calendar pane's lines (above the grid in the compact tier too), fold in
     and out as rows do (#13, app/fold.ts): the height opens over 180 ms with the words coming in over
     its last 40%, and closes the same way, so a 40 px bar arriving no longer shoves the list down in
-    one frame. A stale or failing line whose source is healthy again keeps its place for 1.2 s with
-    its glyph turned to a 16 px `check` in `good` (scaling in from .6 over 120 ms) and its words
-    quiet in `ink3`, then folds out, the one success flourish the health system has; the bar, which
-    clears by signing in, just folds out. The offline pill comes in from 8 px above over 180 ms and
+    one frame. A stale or failing line whose source is healthy again just folds
+    out, as the bar does once signed in (#293). The offline pill comes in from 8 px above over 180 ms and
     fades out over 120 ms. Nothing loops; a line on screen at the first paint shows as it is (Andy,
     2026-10-11, polish audit states-13).
 222. **Offline is read-only for now, not a locked screen, and a blip never cries wolf** (amending
@@ -3607,3 +3607,7 @@ it changes what's on screen.
 292. **The history pass draws no skeleton rows** (Andy, 2026-11-01; darma D409, SV-155, SV-151's F6).
     They sat over a table that was already full, once. The pass's line and progress say what's
     happening, and each application lands at its date's place. Board audit: 38a draws them.
+293. **A health line just folds out** (Andy, 2026-11-01; darma D410, SV-155, SV-151's F7). A stale or
+    failing line whose source is healthy again no longer holds 1.2 s on a `good` check: it folds out
+    with its own glyph and words. The Jobs history pass's "Read 330 emails" stays, since it says the
+    pass ended rather than a source recovering.

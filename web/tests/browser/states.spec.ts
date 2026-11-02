@@ -10,7 +10,7 @@ import {after} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, rested, startSetpoint, test, until, watch} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -284,18 +284,15 @@ const recordArrivals = (page: Page, selector: string) => page.addInitScript(watc
 }, selector);
 const arrivals = (page: Page) => page.evaluate(() => (window as unknown as {arrivals: string[]}).arrivals);
 
-test('Check now clears a failing line: its source healthy again, it shows a good check, then folds out (the polish audit\'s states-13)', async () => {
+test('Check now clears a failing line: its source healthy again, it goes (the polish audit\'s states-13)', async () => {
   const setpoint = await startSetpoint({fixtures: ['failing-work'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
-    // Work's failing line, checked now and healthy again, turns its glyph to a good check, then folds out.
+    // Work's failing line, checked now and healthy again, goes.
     await page.goto(`${setpoint.base}/inbox`);
     const line = page.locator('.hbar', {hasText: 'Work, as of'});
     await line.getByRole('button', {name: 'Check now'}).click();
-    await line.locator('.icon.ok').waitFor();
-    const folds = await watch(line, 'data-fold');
     await line.waitFor({state: 'detached'});
-    assert.deepEqual(await folds(), ['out'], 'it folded out');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

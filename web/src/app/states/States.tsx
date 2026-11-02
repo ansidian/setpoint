@@ -13,7 +13,7 @@ import {clockTime} from '../../logic/format.ts';
 import {offlineRefuses} from '../../logic/live.ts';
 import {inboxHealthLines, reconnectLine, reconnectTarget, triageNote} from '../../logic/health.ts';
 import type {SourceLine} from '../../logic/health.ts';
-import {CLEARED_MS, lineMovesOn, nextLines} from '../../logic/stateLines.ts';
+import {DONE_MS, lineMovesOn, nextLines} from '../../logic/stateLines.ts';
 import type {LinePhase, ShownLine} from '../../logic/stateLines.ts';
 import {motion} from '../../tokens.ts';
 import {Icon, Mark} from '../../ui/Icon.tsx';
@@ -41,8 +41,7 @@ export function useHealthBars() {
     ...(reconnect ? [{key: 'reconnect', line: {kind: 'reconnect' as const, text: reconnect}}] : []),
     ...inboxHealthLines(list, now, timeZone()).map(line => ({key: `line:${line.key}`, line: {kind: 'line' as const, ...line}})),
   ];
-  // A line clears when its account is healthy again; the bar goes once signed in.
-  const {shown, moveOn} = useShownLines(bars, bar => bar.kind === 'line');
+  const {shown, moveOn} = useShownLines(bars);
   if (!shown.length) return null;
   return (
     <>
@@ -55,39 +54,39 @@ export function useHealthBars() {
 
 /**
  * The lines as they show while they change (states-13; logic/stateLines.ts): one that arrives folds
- * in, one whose source is healthy again shows its check for 1.2 s, then folds out. The first paint
- * shows them as they are.
+ * in, one that goes folds out, after 1.2 s of its last words if `holds` says it has any. The first
+ * paint shows them as they are.
  */
-export function useShownLines<T>(next: {key: string; line: T}[], clears: (line: T) => boolean) {
+export function useShownLines<T>(next: {key: string; line: T}[], holds: (line: T) => boolean = () => false) {
   const signature = JSON.stringify(next);
   const [state, setState] = useState(() => ({signature, shown: next.map((entry): ShownLine<T> => ({...entry, phase: 'here'}))}));
   let {shown} = state;
   if (state.signature !== signature) {
-    shown = nextLines(state.shown, next, clears);
+    shown = nextLines(state.shown, next, holds);
     setState({signature, shown});
   }
-  const moveOn = useCallback((key: string, from: 'cleared' | 'out') => setState(last => ({...last, shown: lineMovesOn(last.shown, key, from)})), []);
+  const moveOn = useCallback((key: string, from: 'done' | 'out') => setState(last => ({...last, shown: lineMovesOn(last.shown, key, from)})), []);
   return {shown, moveOn};
 }
 
 /**
  * A line's motion by its phase: the ref that folds it in or out (app/fold.ts, as rows fold), and its
- * time: cleared, it folds out after 1.2 s; folded out, it goes.
+ * time: done, it folds out after 1.2 s; folded out, it goes.
  */
-export function useLinePhase(phase: LinePhase, onMoveOn: (from: 'cleared' | 'out') => void) {
+export function useLinePhase(phase: LinePhase, onMoveOn: (from: 'done' | 'out') => void) {
   const moveOn = useRef(onMoveOn);
   useEffect(() => {
     moveOn.current = onMoveOn;
   });
   useEffect(() => {
-    if (phase !== 'cleared' && phase !== 'out') return;
-    const timer = window.setTimeout(() => moveOn.current(phase), phase === 'cleared' ? CLEARED_MS : motion.medium);
+    if (phase !== 'done' && phase !== 'out') return;
+    const timer = window.setTimeout(() => moveOn.current(phase), phase === 'done' ? DONE_MS : motion.medium);
     return () => window.clearTimeout(timer);
   }, [phase]);
   return foldRef(phase === 'in' ? 'in' : phase === 'out' ? 'out' : null);
 }
 
-function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts: AccountOut[]; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+function ReconnectBar({text, accounts, phase, onMoveOn}: {text: string; accounts: AccountOut[]; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
   return (
     <div ref={ref} className="hbar caution" role="alert">
@@ -110,20 +109,15 @@ export function reconnectFrom(accounts: AccountOut[]) {
   authorizeGmail(target.gmail).then(({url}) => window.location.assign(url), toastFailure(`Couldn't reconnect ${label}`));
 }
 
-/**
- * A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands
- * (states-08). Once its account is healthy again its glyph turns to `check` in `good` and its words
- * go quiet, then it folds out (states-13).
- */
-function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+/** A stale or failing account's line, with its fix on it: Check now, "Checking…" until the check lands (states-08). */
+function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
   const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, ACCOUNTS_PATH);
-  const cleared = phase === 'cleared' || phase === 'out';
   return (
-    <div ref={ref} className={`hbar ${cleared ? 'muted cleared' : line.state === 'failing' ? 'failing' : 'muted'}`}>
-      {cleared ? <Icon name="check" size={16} className="ok" /> : <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />}
+    <div ref={ref} className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
+      <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
       <span className="num ell" title={line.text}>{line.text}</span>
-      {line.source !== null && !cleared && <CheckNow check={check} />}
+      {line.source !== null && <CheckNow check={check} />}
     </div>
   );
 }

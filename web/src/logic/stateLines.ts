@@ -1,11 +1,11 @@
-// The health lines as they show while they change (the polish audit's states-13): a line that
-// arrives folds in, as a row does (#13); one that clears, its source healthy again, keeps its place
-// with its glyph turned to a `good` check for 1.2 s, then folds out; one that goes otherwise (the
-// reconnect bar, an account removed) folds out at once. app/states/States.tsx keeps the time and
+// The state lines as they show while they change (the polish audit's states-13): a line that
+// arrives folds in, as a row does (#13), and one that goes folds out at once, whether its source is
+// healthy again or it went otherwise. The one that says something as it goes, Jobs's history pass
+// with "Read 330 emails", keeps its place for 1.2 s first. app/states/States.tsx keeps the time and
 // draws the motion.
 
-/** How a line shows: folding in, here, cleared (its check showing), folding out. */
-export type LinePhase = 'in' | 'here' | 'cleared' | 'out';
+/** How a line shows: folding in, here, done (its last words showing), folding out. */
+export type LinePhase = 'in' | 'here' | 'done' | 'out';
 
 export interface ShownLine<T> {
   // Stable while its words change: the account's or the source's name.
@@ -14,16 +14,16 @@ export interface ShownLine<T> {
   phase: LinePhase;
 }
 
-/** How long a cleared line shows its check before it folds out. */
-export const CLEARED_MS = 1200;
+/** How long a line shows its last words before it folds out. */
+export const DONE_MS = 1200;
 
 /**
  * The lines after a change: `next` in its order, each line gone from `shown` kept after the line it
- * followed, cleared if `clears` says its going is a recovery (else folding out), and each new line
- * folding in. A line back while it showed its check stays as it is; one back while folding out folds
- * in again, its element still closed.
+ * followed, done if `holds` says it has last words to show (else folding out), and each new line
+ * folding in. A line back while it showed its last words stays as it is; one back while folding out
+ * folds in again, its element still closed.
  */
-export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}[], clears: (line: T) => boolean): ShownLine<T>[] {
+export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}[], holds: (line: T) => boolean): ShownLine<T>[] {
   const before = new Map(shown.map(entry => [entry.key, entry]));
   const nextKeys = new Set(next.map(entry => entry.key));
   // The lines going, by the key of the line they follow (null: at the top).
@@ -34,7 +34,7 @@ export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}
       anchor = entry.key;
       continue;
     }
-    const phase: LinePhase = entry.phase === 'cleared' || entry.phase === 'out' ? entry.phase : clears(entry.line) ? 'cleared' : 'out';
+    const phase: LinePhase = entry.phase === 'done' || entry.phase === 'out' ? entry.phase : holds(entry.line) ? 'done' : 'out';
     after.set(anchor, [...after.get(anchor) ?? [], {...entry, phase}]);
   }
   const result = [...after.get(null) ?? []];
@@ -45,7 +45,7 @@ export function nextLines<T>(shown: ShownLine<T>[], next: {key: string; line: T}
   return result;
 }
 
-/** A moment on for one line: cleared, it folds out; folded out, it goes. */
-export function lineMovesOn<T>(shown: ShownLine<T>[], key: string, from: 'cleared' | 'out'): ShownLine<T>[] {
-  return shown.flatMap(entry => (entry.key !== key || entry.phase !== from ? [entry] : from === 'cleared' ? [{...entry, phase: 'out' as const}] : []));
+/** A moment on for one line: done, it folds out; folded out, it goes. */
+export function lineMovesOn<T>(shown: ShownLine<T>[], key: string, from: 'done' | 'out'): ShownLine<T>[] {
+  return shown.flatMap(entry => (entry.key !== key || entry.phase !== from ? [entry] : from === 'done' ? [{...entry, phase: 'out' as const}] : []));
 }

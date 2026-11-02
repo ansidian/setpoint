@@ -1,7 +1,7 @@
 // Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings; boards 38a–38c, 39a,
 // 39b) against the seed: the history pass's line, an application landing at its date's place and
 // the line's last words folding it away (38a); the AI
-// down, saying so and, once it's back, folding out with its check (38b); Jobs off, its header alone, no
+// down, saying so and, once it's back, folding out (38b); Jobs off, its header alone, no
 // sidebar item, `4` opening it and Turn on opening Settings › Jobs with the switch focused, the switch
 // bringing Jobs back into the sidebar (38c); Settings › Jobs with Reads' plain values and From
 // history's Show (39a); and Settings › AI's Jobs group (39b). The pass and the AI arrive as the
@@ -90,7 +90,7 @@ const DOWN = `INSERT INTO jobs_reader (id, last_success_at, last_failure_at, fai
   ON CONFLICT (id) DO UPDATE SET last_success_at = excluded.last_success_at, last_failure_at = excluded.last_failure_at, failing_since = excluded.failing_since,
     last_error = excluded.last_error, last_error_kind = excluded.last_error_kind`;
 
-test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable since 8:52 AM, retrying" shows, and folds out with its check once the AI is back', async () => {
+test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable since 8:52 AM, retrying" shows, and folds out once the AI is back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -108,10 +108,9 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
     await until('the line', () => line.textContent(), text => text === words);
     assert.equal(await line.getAttribute('role'), 'alert');
 
-    // Back: its check for 1.2 s, then it folds out. Nothing is lost.
+    // Back: it folds out. Nothing is lost.
     jobsChange(setpoint, 'UPDATE jobs_reader SET last_success_at = \'2026-10-07T16:11:00.000Z\'');
     await poke(setpoint);
-    await until('its check', () => line.locator('.icon.ok').count(), count => count === 1);
     await until('folded out', () => page.locator('.jb-col > .jb-state').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

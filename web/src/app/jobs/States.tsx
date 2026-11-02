@@ -1,7 +1,7 @@
 // Jobs's states (J8; DESIGN.md › Jobs › States; boards 38a–38c):
 // - The AI down (38b, #218): "5 emails not read yet, Anthropic unreachable since 8:52 AM, retrying" in
-//   `caution`, led by `warning`, at the top of the column. It folds in as it comes and, once the AI is
-//   back, shows a `good` check for 1.2 s and folds out, as mail's health lines do (states-13).
+//   `caution`, led by `warning`, at the top of the column. It folds in as it comes and out once the AI
+//   is back, as mail's health lines do (states-13).
 // - The history pass (38a, D311, D326): the shared spinner and "Reading history · 140 of 330 emails ·
 //   showing what’s read so far", muted, its progress along its foot easing over 260 ms; each
 //   application lands at its date's place (JobsPage). Done, it shows its check and "Read 330 emails"
@@ -27,8 +27,8 @@ export function JobsLines({page, now, timeZone}: {page: JobsPageOut; now: number
     ...(down ? [{key: 'down', line: {kind: 'down' as const, text: down}}] : []),
     ...(historyRuns(page.history) ? [{key: 'history', line: {kind: 'history' as const, history: {read: page.history.read, total: page.history.total}}}] : []),
   ];
-  // Either one going is a recovery: the AI back, or the pass done.
-  const {shown, moveOn} = useShownLines(lines, () => true);
+  // The pass says it's done before it goes; the AI's line just folds out.
+  const {shown, moveOn} = useShownLines(lines, line => line.kind === 'history');
   if (!shown.length) return null;
   return (
     <>
@@ -39,25 +39,22 @@ export function JobsLines({page, now, timeZone}: {page: JobsPageOut; now: number
   );
 }
 
-const cleared = (phase: LinePhase) => phase === 'cleared' || phase === 'out';
-
-function DownLine({text, phase, onMoveOn}: {text: string; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+function DownLine({text, phase, onMoveOn}: {text: string; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
-  const back = cleared(phase);
   return (
-    <div ref={ref} className={back ? 'jb-state muted cleared' : 'jb-state failing'} role={back ? 'status' : 'alert'}>
-      {back ? <Icon name="check" size={16} className="ok" /> : <Icon name="warning" size={16} />}
-      <span className="grow num ell" title={text}>{text.endsWith('Settings › AI') && !back ? <SettingsLink text={text} /> : text}</span>
+    <div ref={ref} className="jb-state failing" role="alert">
+      <Icon name="warning" size={16} />
+      <span className="grow num ell" title={text}>{text.endsWith('Settings › AI') ? <SettingsLink text={text} /> : text}</span>
     </div>
   );
 }
 
 /** The pass's line; `done` is the page's latest, whose count the last words say. */
-function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistoryOut, 'read' | 'total'>; done: JobsHistoryOut; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistoryOut, 'read' | 'total'>; done: JobsHistoryOut; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
-  if (cleared(phase)) {
+  if (phase === 'done' || phase === 'out') {
     return (
-      <div ref={ref} className="jb-state muted cleared" role="status">
+      <div ref={ref} className="jb-state muted done" role="status">
         <Icon name="check" size={16} className="ok" />
         <span className="grow num ell">{historyRead(done.state === 'done' ? done : history)}</span>
       </div>

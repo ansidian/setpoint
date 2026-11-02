@@ -147,24 +147,22 @@ export function DayPane({date, today, loading, failed, items, hidden, forecast, 
 /**
  * SV-20: "Todoist, as of 8:40 AM" (board 19b), muted while stale, in `caution` with the reason while
  * failing, wrapping so the provider's words show in full (Decided while building #62), each with
- * Check now on it (states-08); folding in as they come, and once their source is healthy again
- * showing a `good` check for 1.2 s before folding out (states-13).
+ * Check now on it (states-08); folding in as they come and out as they go (states-13).
  */
 export function HealthLines({now, timeZone}: {now: number; timeZone: string}) {
   const {data: sources} = useResource<SourceOut[]>(SOURCES_PATH);
-  const {shown, moveOn} = useShownLines(calendarHealthLines(sources ?? [], now, timeZone).map(line => ({key: line.key, line})), () => true);
+  const {shown, moveOn} = useShownLines(calendarHealthLines(sources ?? [], now, timeZone).map(line => ({key: line.key, line})));
   return shown.map(({key, line, phase}) => <HealthLine key={key} line={line} phase={phase} onMoveOn={from => moveOn(key, from)} />);
 }
 
-function HealthLine({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'cleared' | 'out') => void}) {
+function HealthLine({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase; onMoveOn: (from: 'done' | 'out') => void}) {
   const ref = useLinePhase(phase, onMoveOn);
   const check = useCheckNow(line.source === null ? undefined : {id: line.source, health: line.health}, SOURCES_PATH);
-  const cleared = phase === 'cleared' || phase === 'out';
   return (
-    <div ref={ref} className={`rp-health ${line.state}${cleared ? ' cleared' : ''}`}>
-      {cleared ? <Icon name="check" size={16} className="ok" /> : <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />}
+    <div ref={ref} className={`rp-health ${line.state}`}>
+      <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
       <span className={line.state === 'failing' ? 'num' : 'num ell'} title={line.text}>{line.text}</span>
-      {line.source !== null && !cleared && <span className="rp-act"><CheckNow check={check} /></span>}
+      {line.source !== null && <span className="rp-act"><CheckNow check={check} /></span>}
     </div>
   );
 }
