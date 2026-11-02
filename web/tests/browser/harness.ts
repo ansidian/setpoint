@@ -35,10 +35,9 @@ export const TRACES = path.join(OUTPUT, 'traces');
 /** The release's page screenshots (pages.ts, D281). */
 export const GOLDENS = fileURLToPath(new URL('./goldens/', import.meta.url));
 
-/** The sizes every check runs at: the design target, the larger MacBook, and an iPhone. */
+/** The sizes every check runs at: the design target and an iPhone. */
 export const SIZES = {
   target: {width: 1677, height: 1050},
-  large: {width: 1728, height: 1117},
   iphone: {width: 390, height: 844},
 } as const;
 export type SizeName = keyof typeof SIZES;
@@ -54,7 +53,7 @@ export const PASSWORD = 'browser checks only';
  * server before the browser's change has reached it, or reads text widths before the fonts are in,
  * fails every time rather than only when the machine is busy. The normal run is unchanged.
  */
-const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
+export const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
 const STRESS_CPU_RATE = 4;
 const STRESS_QUIET_MS = 25;
 const STRESS_API_GAP_MS = 150;

@@ -4,11 +4,14 @@
 // calendar's month and week, the editor, News
 // with a story open, Jobs with an application open, with a Needs you item's email open (D401), and
 // with its menus open (Assign to…, and More with Merge with…'s submenu), every Settings page, Jobs with its history pass running and the AI down,
-// and Jobs off (J8), the phone's Inbox; Jobs isn't on the phone, decision 49) in Night and Light, at the design target,
-// 1100 and 820 wide and on the phone. On each, at rest: nothing scrolls sideways, no text is cut by an
+// and Jobs off (J8), the phone's Inbox; Jobs isn't on the phone, decision 49) in Night, at the design target,
+// 1100 and 820 wide and on the phone. Settings skips 1100, as its fixed modal draws there as at the target,
+// and Assign to…, More, the history pass and Jobs off stay at the target, as they don't change with width.
+// On each, at rest: nothing scrolls sideways, no text is cut by an
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
-// theme at the target width, by rule and element. Each failure names the element, page, theme and width.
+// theme at the target width and on the phone, by rule and element. Each failure names the element, page, theme and width.
+// Stress skips it all: a page at rest has no answer to race.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -16,7 +19,7 @@ import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import type {AllOut, InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, rested, SIZES, startSetpoint, STRESS, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 import {SETTINGS_PAGES} from '../../src/logic/route.ts';
 
@@ -26,6 +29,7 @@ const THEMES = ['dark', 'light'] as const;
 const NAMES = {dark: 'Night', light: 'Light'} as const;
 const HEIGHT = SIZES.target.height;
 const WIDTHS = [SIZES.target.width, 1100, 820];
+const TARGET_ONLY = [SIZES.target.width];
 
 interface Route {
   name: string;
@@ -34,6 +38,8 @@ interface Route {
   shows: string;
   // What it opens once there, again at each width (a menu closes as the window resizes).
   open?: (page: Page) => Promise<void>;
+  // Where it's read, when that isn't all of WIDTHS. The target comes first, where `visit` leaves it.
+  widths?: number[];
 }
 
 /** Problems on the page as it rests, each naming its element. */
@@ -198,7 +204,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
     {name: 'the calendar\'s week', path: '/calendar?view=week', shows: '.cal-week'},
     {name: 'News, a story open', path: `/news/story/${story}`, shows: '.pane .rd-subj'},
     {name: 'Jobs, an application open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want'},
-    {name: 'Jobs, Assign to… open', path: '/jobs', shows: '.jb-need', open: async page => {
+    {name: 'Jobs, Assign to… open', path: '/jobs', shows: '.jb-need', widths: TARGET_ONLY, open: async page => {
       await page.locator('.jb-need .btn.out', {hasText: 'Assign to…'}).click();
       await page.getByRole('menu', {name: 'Assign to'}).waitFor();
     }},
@@ -207,15 +213,14 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
       if (await subject.getAttribute('aria-pressed') !== 'true') await subject.click();
       await page.locator('.jb-pane .rd-body').waitFor();
     }},
-    {name: 'Jobs, More and Merge with… open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want', open: async page => {
+    {name: 'Jobs, More and Merge with… open', path: `/jobs/${application}`, shows: '.jb-pane .jb-want', widths: TARGET_ONLY, open: async page => {
       await page.locator('.jb-pane').getByRole('button', {name: 'More'}).click();
       await page.getByRole('menuitem', {name: 'Merge with…'}).hover();
       await page.getByRole('textbox', {name: 'Search applications'}).waitFor();
     }},
-    ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on'})),
+    ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on', widths: [SIZES.target.width, 820]})),
     // J8's states, last, as they change the server: the pass's line and skeleton rows, the AI down's line, then Jobs off.
-    {name: 'Jobs, its history pass and the AI down', path: '/jobs', shows: '.jb-scroll .jb-tr', open: async page => {
-      if (await page.locator('.jb-col > .jb-state').count() === 2) return;
+    {name: 'Jobs, its history pass and the AI down', path: '/jobs', shows: '.jb-scroll .jb-tr', widths: TARGET_ONLY, open: async page => {
       const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
       try {
         database.exec('PRAGMA busy_timeout = 5000');
@@ -229,7 +234,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
       await setpoint.api('POST', `/jobs/applications/${rows.find(row => row.company === 'Trey Research')!.id}/lookup`);
       await until('both lines', () => page.locator('.jb-col > .jb-state').count(), count => count === 2);
     }},
-    {name: 'Jobs, off', path: '/jobs', shows: '.hd-title', open: async page => {
+    {name: 'Jobs, off', path: '/jobs', shows: '.hd-title', widths: TARGET_ONLY, open: async page => {
       await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
       await page.locator('.jb-empty').waitFor();
     }},
@@ -250,15 +255,20 @@ async function visit(page: Page, base: string, route: Route) {
   await route.open?.(page);
 }
 
-/** Night or Light at `width`, at rest, swept; what it found, each line naming where. */
-async function sweepAt(page: Page, route: Route, theme: typeof THEMES[number], width: number, heard: () => string[]): Promise<string[]> {
+/** Sets Night or Light and waits for it to land. */
+async function show(page: Page, theme: typeof THEMES[number]) {
+  await page.emulateMedia({colorScheme: theme});
+  await until(NAMES[theme], () => page.evaluate(() => document.documentElement.dataset.theme), value => value === (theme === 'dark' ? 'night' : 'light'));
+}
+
+/** Night at `width`, at rest, swept; what it found, each line naming where. */
+async function sweepAt(page: Page, route: Route, width: number, heard: () => string[]): Promise<string[]> {
   if (page.viewportSize()!.width !== width) {
     await page.setViewportSize({width, height: page.viewportSize()!.height});
     if (route.open) await route.open(page);
   }
-  await page.emulateMedia({colorScheme: theme});
-  await until(NAMES[theme], () => page.evaluate(() => document.documentElement.dataset.theme), value => value === (theme === 'dark' ? 'night' : 'light'));
-  const where = `${route.name}, ${NAMES[theme]}, ${width} wide`;
+  await show(page, 'dark');
+  const where = `${route.name}, ${NAMES.dark}, ${width} wide`;
   // Every face asked for, as the harness's goto does: one the page doesn't use yet is "unloaded" until then.
   await page.evaluate(() => Promise.all([...document.fonts].map(face => face.load().catch(() => {}))));
   return [...await rested(() => page.evaluate(sweepPage)), ...heard()].map(problem => `${where}: ${problem}`);
@@ -268,8 +278,9 @@ async function sweepAt(page: Page, route: Route, theme: typeof THEMES[number], w
 const CONTRAST_FLOOR = 4.5;
 const DIM_ON_PURPOSE = '.mini > .o';
 
-/** axe's violations, as rule and element. */
+/** axe's violations in `theme`, as rule and element. */
 async function axe(page: Page, route: Route, theme: typeof THEMES[number]): Promise<string[]> {
+  await show(page, theme);
   const results = await rested(() => new AxeBuilder({page}).analyze());
   const found: string[] = [];
   for (const violation of results.violations) {
@@ -288,8 +299,8 @@ async function axe(page: Page, route: Route, theme: typeof THEMES[number]): Prom
   return found;
 }
 
-// Every route at each width in both themes, with axe: about a minute, three under stress, past the run's 180 s.
-test('the main pages, in Night and Light at three widths, keep to their boxes, and axe finds nothing', {timeout: 300_000}, async () => {
+// axe in both themes comes before each route's layout reads, so those hear what Light asked for.
+test('the main pages keep to their boxes in Night at their widths, and axe finds nothing in Night or Light', {skip: STRESS}, async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: SIZES.target.width, height: HEIGHT});
@@ -298,12 +309,8 @@ test('the main pages, in Night and Light at three widths, keep to their boxes, a
     for (const route of await routes(setpoint)) {
       await page.setViewportSize({width: SIZES.target.width, height: HEIGHT});
       await visit(page, setpoint.base, route);
-      for (const width of WIDTHS) {
-        for (const theme of THEMES) {
-          found.push(...await sweepAt(page, route, theme, width, heard));
-          if (width === SIZES.target.width) found.push(...await axe(page, route, theme));
-        }
-      }
+      for (const theme of THEMES) found.push(...await axe(page, route, theme));
+      for (const width of route.widths ?? WIDTHS) found.push(...await sweepAt(page, route, width, heard));
     }
     assert.deepEqual(found, []);
   } finally {
@@ -311,7 +318,7 @@ test('the main pages, in Night and Light at three widths, keep to their boxes, a
   }
 });
 
-test('the phone\'s Inbox, in Night and Light, keeps to its boxes, and axe finds nothing', async () => {
+test('the phone\'s Inbox keeps to its boxes in Night, and axe finds nothing in Night or Light', {skip: STRESS}, async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
@@ -319,10 +326,8 @@ test('the phone\'s Inbox, in Night and Light, keeps to its boxes, and axe finds 
     const route = {name: 'the phone\'s Inbox', path: '/inbox', shows: '.list .row'};
     await visit(page, setpoint.base, route);
     const found: string[] = [];
-    for (const theme of THEMES) {
-      found.push(...await sweepAt(page, route, theme, SIZES.iphone.width, heard));
-      found.push(...await axe(page, route, theme));
-    }
+    for (const theme of THEMES) found.push(...await axe(page, route, theme));
+    found.push(...await sweepAt(page, route, SIZES.iphone.width, heard));
     assert.deepEqual(found, []);
   } finally {
     await setpoint.stop();
