@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, inSight, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -378,5 +378,21 @@ describe('the account column', () => {
     ['a 40-character label stops at 160 px, cut with an ellipsis', [231], 160],
   ])('accountColumn: %s', (_name, widths, px) => {
     expect(accountColumn(widths)).toBe(px);
+  });
+});
+
+describe('a pin out of the shelf\'s sight says so (inbox-09)', () => {
+  // The list's box runs 100 to 600; each place is a row's top and bottom.
+  const box = {top: 100, bottom: 600};
+  test.each([
+    ['a shelf row inside the list', [{top: 300, bottom: 338}], true],
+    ['a shelf row below the list', [{top: 610, bottom: 648}], false],
+    ['a shelf row scrolled above the list', [{top: 40, bottom: 78}], false],
+    ['one pixel showing at the bottom is out of sight', [{top: 599, bottom: 637}], false],
+    ['two pixels showing at the top are in sight', [{top: 64, bottom: 102}], true],
+    ['one row of two in sight is enough', [{top: 40, bottom: 78}, {top: 120, bottom: 158}], true],
+    ['nothing to go by counts as seen', [], true],
+  ])('inSight: %s', (_name, places, seen) => {
+    expect(inSight(places, box)).toBe(seen);
   });
 });

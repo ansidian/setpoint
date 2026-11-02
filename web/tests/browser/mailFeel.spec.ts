@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, still, test, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -124,53 +124,27 @@ test('shell-08: the accounts fold away on Calendar and come back on the Inbox', 
   }
 });
 
-test('inbox-09, -10: a pin out of the shelf\'s sight says so and lands on the shelf, one in view says nothing; bands stay at the top', async () => {
+// Whether the shelf is in sight is inSight's, a table in inbox.test.ts; the bands' sticking and a
+// pin with the shelf in view went with it, as both needed a scroll to set up, and scrolls race.
+test('inbox-09: a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf', async () => {
   const setpoint = await startSetpoint();
   try {
-    // A short window, so the list scrolls.
+    // A short window, so the shelf starts below New, out of sight, with nothing scrolled.
     const page = await setpoint.page({width: 1677, height: 560});
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-    const list = page.locator('.content > .list');
-
-    // Bands stick to the top, each sliding over the last.
-    await list.evaluate(element => element.scrollBy(0, 300));
-    const stuck = await rested(() => page.evaluate(() => {
-      const box = document.querySelector('.content > .list')!.getBoundingClientRect();
-      const top = document.elementFromPoint(box.left + 200, box.top + 15)?.closest('.gh');
-      return top ? top.textContent : null;
-    }));
-    assert.ok(stuck && !/^Pinned/.test(stuck), `a later group's header is on top: ${stuck}`);
-
-    // P on Consolidated Messenger near New's top, with the shelf below, out of sight: the toast says
-    // Pinned, with Undo; the row leaves New for the shelf (#243).
-    await list.evaluate(element => element.scrollTo(0, 0));
+    // P on Consolidated Messenger near New's top: the toast says Pinned, with Undo; the row leaves
+    // New for the shelf (#243).
     const pay = page.locator('.row:not(.shelf)', {hasText: 'Consolidated Messenger'});
     await point(pay);
     await page.keyboard.press('p');
     const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
     await toast.waitFor();
-    // It lands on the shelf.
     await page.locator('.row.shelf', {hasText: 'Consolidated Messenger'}).waitFor();
     await until('it left New', () => pay.count(), count => count === 0);
     // Undo unpins it, back in New, and the toast goes.
     await toast.getByRole('button', {name: 'Undo'}).click();
     await until('back in New', () => pay.count(), count => count === 1);
     await until('the toast gone', () => page.locator('.toast').count(), count => count === 0);
-
-    // With the shelf in view, a pin needs no toast. Its first row can still be the unpinned one
-    // folding away, which is dropped mid-scroll, so the scroll goes to one that stays (stress caught it).
-    // The Undo's lists are in and its fold done first: one landing after the scroll moved the list
-    // back up, the shelf below sight, so the pin rightly said Pinned (1 run in 7).
-    await setpoint.idle();
-    await still(page);
-    const exams = page.locator('.row:not(.shelf)', {hasText: 'Contoso University'}).first();
-    await page.locator('.row.shelf:not(.leaving)').first().scrollIntoViewIfNeeded();
-    await point(exams);
-    await page.keyboard.press('p');
-    await page.locator('.row.shelf', {hasText: 'Contoso University'}).waitFor();
-    await setpoint.idle();
-    assert.equal(await page.locator('.toast', {hasText: 'Pinned'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

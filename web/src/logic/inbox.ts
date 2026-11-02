@@ -250,6 +250,15 @@ export function inboxAfterPin(inbox: InboxOut, id: number, pinned: boolean, from
   return {...inbox, groups: [pinnedGroup, ...rest]};
 }
 
+/**
+ * Whether a pin lands where it's seen: any of the places (the shelf's rows, or with no shelf yet the
+ * first day's header, where it comes) shows more than a pixel inside the list's box (inbox-09). None
+ * to go by counts as seen.
+ */
+export function inSight(places: {top: number; bottom: number}[], box: {top: number; bottom: number}): boolean {
+  return !places.length || places.some(place => place.bottom > box.top + 1 && place.top < box.bottom - 1);
+}
+
 /** A Security row (a code, a sign-in alert): Mark all as read leaves it unread (UX #4). */
 const isSecurity = (row: MessageRowOut) => row.lane === 'fyi' && row.kind === 'security';
 

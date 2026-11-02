@@ -34,7 +34,7 @@ import {clearNew, dayStops, dayView, groupByDay, NEW, placeRows, splitInbox} fro
 import type {Place} from '../logic/all.ts';
 import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
-  codeExpired, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
+  codeExpired, inSight, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
 import {readerActions} from '../logic/reader.ts';
 import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
@@ -79,14 +79,9 @@ type InboxRoute = Extract<Route, {page: 'inbox'}>;
 function shelfInView(): boolean {
   const list = document.querySelector<HTMLElement>('.content > .list');
   if (!list) return true;
-  const box = list.getBoundingClientRect();
   const shelf = [...list.querySelectorAll<HTMLElement>('.row.shelf:not(.leaving)')];
   const places = shelf.length ? shelf : [...list.querySelectorAll<HTMLElement>('.gh.day')].slice(0, 1);
-  if (!places.length) return true;
-  return places.some(place => {
-    const at = place.getBoundingClientRect();
-    return at.bottom > box.top + 1 && at.top < box.bottom - 1;
-  });
+  return inSight(places.map(place => place.getBoundingClientRect()), list.getBoundingClientRect());
 }
 
 // The email last opened, so the address following an open doesn't open it twice; a deep link,
