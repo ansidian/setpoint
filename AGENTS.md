@@ -105,8 +105,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   month, Light beside Night, a role colour on a glyph); a relation rather than a literal (fits or
   clips, beside or inside, equal room, a width at a breakpoint); or a value that has already moved
   by accident, stated in the commit that fixes it. A literal that only restates the stylesheet or a
-  token (a padding, a gap, a font size, a motion duration) is left to `web/tests/tokens.test.ts`
-  (D269).
+  token (a padding, a gap, a font size, a motion duration) goes untested on purpose, and a check
+  doesn't read a state shorter than about a second, or an animation's name or duration: a real
+  change to one of those is judged by eye (D269, SV-151).
 - A widget's own behaviour goes to a component test (`web/tests/components/*.test.tsx`, SV-101):
   React renders the one widget in a real Chromium with the app's stylesheets and tokens (Vitest's
   browser mode, part of `npm test`, a few seconds; run alone, they take no lock, it's one headless page). It
@@ -119,12 +120,14 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   shrinks to the journey and says where the rest went. Widgets with module state (the toast) are
   reset in the test; nothing in `web/src/` is mocked.
 - The visual net is two things. Per change, the layout sweep (`web/tests/browser/sweep.spec.ts`,
-  SV-99, runs with every `npm run test:browser`, about 30 s) visits the main pages in Night and Light
-  at 1677, 1100 and 820 wide and on the phone. At rest it fails on anything that scrolls sideways,
+  SV-99, runs with every `npm run test:browser`, about 40 s; stress skips it, as a page at rest has
+  no answer to race) visits the main pages in Night at 1677, 1100 and 820 wide and on the phone,
+  with Settings at 1677 and 820, and Jobs's menus, the history pass and Jobs off at 1677. At rest it
+  fails on anything that scrolls sideways,
   text an `overflow: hidden` box cuts (an ellipsis is meant), an interactive element covered at its
   centre (a pane lying over the page is meant), a broken image, a font not loaded, a failed request
-  or a console error. Then axe runs on the same pages per theme, by rule and element, at its own
-  contrast floor of 4.5:1 (D400). A finding is fixed, with "the sweep caught it" or "axe caught
+  or a console error. Then axe runs in Night and Light at 1677 and on the phone, by rule and element,
+  at its own contrast floor of 4.5:1 (D400). A finding is fixed, with "the sweep caught it" or "axe caught
   it" in the commit, or decided in darma and left out in the spec by name.
 - At release, ten whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
   News, Jobs and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside
