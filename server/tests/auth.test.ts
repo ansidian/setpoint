@@ -6,8 +6,9 @@ import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {
   changePassword, claimOwner, generateRecoveryCodes, getOwner, hashRecoveryCode, issueSetupToken, PASSWORD_MAX_ATTEMPTS, PASSWORD_WINDOW_MS,
-  passwordSignInOutcome, recover, recoveryStatus, reservePasswordAttempt, securityTransition, sweepExpiredAuth,
+  passwordMatches, passwordSignInOutcome, recover, recoveryStatus, reservePasswordAttempt, securityTransition, sweepExpiredAuth,
 } from '../src/auth/owner.ts';
+import type {Owner} from '../src/auth/owner.ts';
 import {passkeySignInOptions, relyingParty, startPendingSignIn} from '../src/auth/passkeys.ts';
 import {createSession, findSession, hashSecret, SESSION_DAYS} from '../src/auth/sessions.ts';
 import * as t from '../src/db/schema.ts';
@@ -49,6 +50,12 @@ describe('the first claim', () => {
     const results = await Promise.allSettled([claimOwner(w.store, token, PASSWORD, 4), claimOwner(w.store, token, `${PASSWORD}!`, 4)]);
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
   });
+});
+
+test('a hash made outside Setpoint verifies: the owner\'s came over from v1, made by its own bcrypt', async () => {
+  const owner = {passwordHash: '$2b$04$/NB2JnssvCyVI2i5UmcMI.6Nmy9BgDprm68KwtvENW9loVWj/U0ES'} as Owner;
+  expect(await passwordMatches(owner, 'correct horse battery staple')).toBe(true);
+  expect(await passwordMatches(owner, 'not the password')).toBe(false);
 });
 
 describe('the password budget', () => {

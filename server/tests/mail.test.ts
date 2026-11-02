@@ -124,6 +124,16 @@ describe('read state, Done and the counts (decision 48)', () => {
     expect(view.groups[0]!.rows.map(row => row.subject)).toEqual(['Bill is ready', 'Lease renewal terms']);
     expect(view.groups.find(group => group.group === 'money')!.count).toBe(3);
   });
+
+  test('the shelf runs newest pin first, whatever the emails\' own dates', () => {
+    const w = world({seed: true});
+    const lease = 'Lease renewal terms';
+    const notice = 'Car registration renewal notice';
+    const received = (subject: string) => w.store.db.select().from(t.messages).where(eq(t.messages.id, idOf(w, subject))).get()!.receivedAt;
+    expect(received(notice) < received(lease)).toBe(true);
+    setPinned(w.store, idOf(w, notice), true);
+    expect(inbox(w.store).groups[0]!.rows.map(row => row.subject)).toEqual([notice, lease]);
+  });
 });
 
 describe('trash, failures and Mark all as read', () => {

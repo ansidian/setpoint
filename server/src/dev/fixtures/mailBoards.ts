@@ -8,7 +8,6 @@
 //   new-digest      09: four Northwind Engineering digests cleared unopened (the real prompt's run)
 //                   and a fifth that arrived "now", unread in Attention
 //                   (4 attention, 20 unread, Jobs 3); B3's GET /api/mail/prompts raises the prompt
-//   second-pin      10: the DMV's renewal notice, pinned before Parkside's lease
 //   code-expiring   mail checks: Contoso Insurance's code expires 12 seconds after the seed's moment
 //   newsletter-html mail checks: Contoso Coffee's newsletter as a mailing service builds one, mostly
 //                   images with only a width, in a shell wider than the frame
@@ -208,9 +207,6 @@ export function newDigest({db}: OpenDatabase) {
     receivedAt: SEED_NOW, unread: true, lane: 'attention', kind: 'updates', type: 'newsletter',
   }).run();
 }
-
-export const secondPin = ({db}: OpenDatabase) =>
-  db.update(t.messages).set({pinnedAt: zoned('2026-09-28', '10:30')}).where(eq(t.messages.id, bySubject(db, 'Car registration renewal notice').id)).run();
 
 export const codeExpiring = ({db}: OpenDatabase) =>
   db.update(t.messages).set({codeExpiresAt: new Date(Date.parse(SEED_NOW) + 12_000).toISOString()}).where(eq(t.messages.id, bySubject(db, 'Your code is 482913').id)).run();

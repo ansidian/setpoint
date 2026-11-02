@@ -10,7 +10,7 @@ import {openDatabase} from '../../db/open.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
-import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, secondPin, stitchedHtml} from './mailBoards.ts';
+import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, stitchedHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
 import {linkPlaces} from './linkPlaces.ts';
@@ -21,7 +21,6 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'coffee-html': {board: '02', apply: coffeeHtml},
   'recovery-html': {board: '03', apply: recoveryHtml},
   'new-digest': {board: '09', apply: newDigest},
-  'second-pin': {board: '10', apply: secondPin},
   'busy-saturday': {board: '11b', apply: busySaturday},
   'time-to-leave': {board: '11, 12a, 12b, 12d', apply: timeToLeave},
   'no-dinner': {board: '13', apply: noDinner},
