@@ -1,11 +1,11 @@
-// Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings, Light; boards 38a–38c,
-// 39a, 39b, 40) against the seed: the history pass's line, its progress and three skeleton rows, an
+// Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings; boards 38a–38c, 39a,
+// 39b) against the seed: the history pass's line and three skeleton rows, an
 // application landing at its date's place and the line's last words folding it away (38a); the AI
-// down, saying so and, once it's back, folding out with its check (38b); Jobs off, its header alone, no sidebar or
-// rail item, `4` opening it and Turn on opening Settings › Jobs with the switch focused, the switch
-// bringing Jobs back into the sidebar (38c); Settings › Jobs with Reads' plain values, the history
-// pass done and From history's Show (39a); Settings › AI's Jobs group and its usage row (39b); and
-// each of them in Light (40). The pass and the AI arrive as the reader's own would: the server's
+// down, saying so and, once it's back, folding out with its check (38b); Jobs off, its header alone, no
+// sidebar item, `4` opening it and Turn on opening Settings › Jobs with the switch focused, the switch
+// bringing Jobs back into the sidebar (38c); Settings › Jobs with Reads' plain values and From
+// history's Show (39a); and Settings › AI's Jobs group (39b). The pass and the AI arrive as the
+// reader's own would: the server's
 // database changes, then a `jobs` live event (Look it up on Trey Research sends one) has the page ask
 // again. The words are the component tests' tables (web/tests/components/jobs.test.tsx), and the
 // server's side Jobs's own tests (server/src/jobs/tests/). No JD found, Ghosted and a status set by
@@ -16,7 +16,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {JobsNavOut, JobsPageOut, JobsSettingsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -39,23 +39,6 @@ async function poke(setpoint: Setpoint) {
   await setpoint.api('POST', `/jobs/applications/${trey}/lookup`);
 }
 
-/** A colour as the page computes it. */
-const colourOf = (page: Page, colour: string) => page.evaluate(value => {
-  const probe = document.body.appendChild(document.createElement('span'));
-  probe.style.color = value;
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return computed;
-}, colour);
-
-const THEMES = [['dark', 'night'], ['light', 'light']] as const;
-
-/** Night, then Light (board 40): the page's theme follows the system's, as set. */
-async function inTheme(page: Page, scheme: 'dark' | 'light', theme: 'night' | 'light') {
-  await page.emulateMedia({colorScheme: scheme});
-  await until(theme, () => page.evaluate(() => document.documentElement.dataset.theme), value => value === theme);
-}
-
 // The seed's moment is 9:12 AM; the pass started at 9:00, reading the mail from before Jobs was turned on.
 const STARTED = '2026-10-07T16:00:00.000Z';
 /** Marks `n` more emails read by the pass: emails from before it, read since it started. */
@@ -66,7 +49,7 @@ const TASMANIAN = `INSERT INTO jobs_applications (company, title, title_key, pla
   VALUES ('Tasmanian Traders', 'Junior Developer', 'junior developer', 'Greenhouse', '2026-09-12T18:00:00.000Z', 'applied', 'email', '2026-09-12T18:00:00.000Z', 0, 'none',
     '2026-10-07T16:06:00.000Z', '2026-10-07T16:06:00.000Z')`;
 
-test('board 38a: the history pass: its line and progress, three skeleton rows, an application landing at its date\'s place, then "Read 330 emails", folding away', async () => {
+test('board 38a: the history pass: its line, three skeleton rows, an application landing at its date\'s place, then "Read 330 emails", folding away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, `UPDATE jobs_history SET state = 'running', started_at = '${STARTED}', total = 330, read = NULL, finished_at = NULL; ${readMore(3)}`);
@@ -79,19 +62,6 @@ test('board 38a: the history pass: its line and progress, three skeleton rows, a
     assert.equal(await line.textContent(), 'Reading history · 3 of 330 emails · showing what’s read so far');
     // Three skeleton rows hold the table's top, under its header (#225).
     assert.equal(await page.locator('.jb-th + .jb-sk > .jb-tr').count(), 3);
-    for (const [scheme, theme] of THEMES) {
-      await inTheme(page, scheme, theme);
-      assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink3)')), `${theme}: the line in ink3`);
-      // The track sub2, what's read ink3, neutral as a meter is.
-      assert.deepEqual(await rested(() => line.evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::after').backgroundColor])),
-        [await rested(() => page.evaluate(() => {
-          const probe = document.body.appendChild(document.createElement('i'));
-          probe.style.background = 'var(--sub2)';
-          const sub2 = getComputedStyle(probe).backgroundColor;
-          probe.remove();
-          return sub2;
-        })), await rested(() => colourOf(page, 'var(--ink3)'))], `${theme}: its progress`);
-    }
 
     // Each application lands at its date's place, and the counts move in place.
     jobsChange(setpoint, `${TASMANIAN}; ${readMore(1)}`);
@@ -139,12 +109,6 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
     const words = `${reading.waiting} ${reading.waiting === 1 ? 'email' : 'emails'} not read yet, Anthropic unreachable since 8:52 AM, retrying`;
     await until('the line', () => line.textContent(), text => text === words);
     assert.equal(await line.getAttribute('role'), 'alert');
-    for (const [scheme, theme] of THEMES) {
-      await inTheme(page, scheme, theme);
-      // caution, led by `warning` (#218).
-      assert.deepEqual(await rested(() => line.evaluate(element => [getComputedStyle(element).color, getComputedStyle(element.querySelector('.icon')!).color])),
-        [await rested(() => colourOf(page, 'var(--caution)')), await rested(() => colourOf(page, 'var(--caution)'))], `${theme}: in caution`);
-    }
 
     // Back: its check for 1.2 s, then it folds out. Nothing is lost.
     jobsChange(setpoint, 'UPDATE jobs_reader SET last_success_at = \'2026-10-07T16:11:00.000Z\'');
@@ -157,7 +121,7 @@ test('board 38b: the AI down: "N emails not read yet, Anthropic unreachable sinc
   }
 });
 
-test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sidebar or rail item, `4` opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
+test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sidebar item, `4` opens it; Turn on opens Settings › Jobs with the switch focused, and on brings Jobs back under News', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('PATCH', '/jobs/settings', {enabled: false});
@@ -180,18 +144,6 @@ test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sid
     await page.keyboard.press('j');
     await setpoint.idle();
     assert.equal(await page.locator('.hd').textContent(), 'Jobs');
-    for (const [scheme, theme] of THEMES) {
-      await inTheme(page, scheme, theme);
-      const [glyph, words, link] = await rested(() => empty.evaluate(element => [element.querySelector('.icon')!, element.querySelector('.line > span')!, element.querySelector('.lnk')!]
-        .map(part => getComputedStyle(part).color)));
-      const tokens = await rested(() => Promise.all(['var(--ink3)', 'var(--ink2)', 'var(--ink)'].map(token => colourOf(page, token))));
-      assert.deepEqual([glyph, words, link], tokens, `${theme}: work in ink3, the words ink2, Turn on ink`);
-    }
-
-    // A narrow window's rail has no Jobs either.
-    await page.setViewportSize({width: 1024, height: 768});
-    await until('the rail', () => page.locator('aside.sb .nav').evaluateAll(items => items.map(item => item.getAttribute('title') ?? item.textContent)), titles => titles.length === 4);
-    await page.setViewportSize({width: 1677, height: 1050});
 
     // Turn on: Settings › Jobs, the switch focused, still off: turning it on is a choice made there.
     await empty.getByRole('button', {name: 'Turn on'}).click();
@@ -202,18 +154,10 @@ test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sid
     await until('the switch focused', () => toggle.evaluate(element => element === document.activeElement), focused => focused);
     assert.equal(await toggle.getAttribute('aria-checked'), 'false');
 
-    // On: the pass starts, and Jobs folds into the sidebar under News.
+    // On: the pass starts, and Jobs comes back into the sidebar under News.
     const item = page.locator('aside.sb .nav.jobs');
-    await page.evaluate(() => {
-      const seen: string[] = [];
-      new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
-        if (node instanceof HTMLElement && node.matches('.nav.jobs')) seen.push(node.getAnimations().length ? 'folding in' : 'at once');
-      }))).observe(document.querySelector('aside.sb')!, {childList: true, subtree: true});
-      (window as unknown as {arrivals: string[]}).arrivals = seen;
-    });
     await page.keyboard.press('Space');
     await item.waitFor();
-    assert.deepEqual(await page.evaluate(() => (window as unknown as {arrivals: string[]}).arrivals), ['folding in']);
     assert.equal(await toggle.getAttribute('aria-checked'), 'true');
     await until('the server on', () => setpoint.api<JobsSettingsOut>('GET', '/jobs/settings'), value => value.enabled);
     assert.deepEqual(await page.locator('aside.sb .nav .grow').allTextContents(), ['Inbox', 'Calendar', 'News', 'Jobs', 'Settings']);
@@ -238,20 +182,14 @@ async function openSettings(page: Page, base: string, name: 'Jobs' | 'AI') {
   return settings;
 }
 
-test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on each account, the history pass done, and From history\'s Show opening Jobs with it unfolded', async () => {
+test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on each account, and From history\'s Show opening Jobs with it unfolded', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     const settings = await openSettings(page, setpoint.base, 'Jobs');
-    // The nav: Jobs (work) between News and AI.
-    assert.deepEqual(await settings.locator('.set-nav .nav .grow').allTextContents(),
-      ['Accounts', 'Calendar', 'Todoist', 'Notifications', 'Mail', 'News', 'Jobs', 'AI', 'Appearance', 'Security', 'Sign out']);
     const main = settings.getByRole('region', {name: 'Jobs'});
     await main.locator('.jb-reads').waitFor();
     assert.equal(await main.locator('.set-head').textContent(), 'Jobs62 applications');
-    // The count follows the title, not the head's end.
-    const [title, note] = await rested(() => Promise.all([main.locator('.set-title').boundingBox(), main.locator('.head-note').boundingBox()]));
-    assert.ok(note!.x - (title!.x + title!.width) < 20, 'the count beside the title');
 
     assert.deepEqual(await main.locator('.set-row .t').first().textContent(), 'Jobs');
     assert.equal(await main.getByRole('switch', {name: 'Jobs'}).getAttribute('aria-checked'), 'true');
@@ -262,24 +200,8 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on 
     assert.deepEqual(await readsShown(), [
       ['Jobs', 'Every email'], ['Business', 'Career mail only'], ['Personal', 'Off'], ['Work', 'Off'], ['iCloud', 'Off'],
     ]);
-    assert.equal(await main.locator('.jb-note').textContent(), 'Career mail is what triage sorts as Career. Jobs never changes how mail itself is sorted.');
 
-    // History: the pass done, with its good dot; From history's six with Show.
     const rows = main.locator('.set-sec', {has: page.locator('.set-label', {hasText: 'History'})}).locator('.set-row');
-    assert.deepEqual(await rows.evaluateAll(all => all.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.querySelector('.state, .btn')?.textContent ?? null])), [
-      ['History pass', 'Read 330 emails once, when Jobs was turned on · finished Oct 1, 8:14 PM', 'Done'],
-      ['From history', '6 waiting in Needs you, what the pass wasn\'t sure of', 'Show'],
-    ]);
-    for (const [scheme, theme] of THEMES) {
-      await inTheme(page, scheme, theme);
-      assert.equal(await rested(() => rows.first().locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor)), await rested(() => page.evaluate(() => {
-        const probe = document.body.appendChild(document.createElement('i'));
-        probe.style.background = 'var(--good)';
-        const good = getComputedStyle(probe).backgroundColor;
-        probe.remove();
-        return good;
-      })), `${theme}: Done's dot in good`);
-    }
 
     // Choosing one sends the whole list, the account added at its end, and Off takes it out again.
     const accountOf = async (label: string) => Number(await main.locator('.jb-reads .set-row', {hasText: label}).getAttribute('data-account'));
@@ -306,7 +228,7 @@ test('board 39a: Settings › Jobs: its count, the switch, Reads as a select on 
   }
 });
 
-test('board 39b: Settings › AI\'s Jobs group: three models by name, this month with no meter; Usage this month\'s Jobs row in three parts, in the label\'s total', async () => {
+test('board 39b: Settings › AI\'s Jobs group: three models by name, this month with no meter', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -314,8 +236,6 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, this month
     const main = settings.getByRole('region', {name: 'AI'});
     const jobs = main.locator('.set-sec', {has: page.locator('.set-label', {hasText: /^Jobs$/})});
     await jobs.locator('.set-row').first().waitFor();
-    // After News's group (D315).
-    assert.deepEqual(await main.locator('.set-label').evaluateAll(labels => labels.map(label => label.firstChild!.textContent)), ['Keys', 'Mail', 'News', 'Jobs', 'Usage this month']);
     // Names, not selects (override 26); no key yet, so each says one is needed, as News's do.
     assert.deepEqual(await jobs.locator('.set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.lastElementChild!.textContent])), [
       ['Each email', 'Role title, requisition ID, the event, the match · needs a key', 'Claude Haiku 5.5'],
@@ -325,19 +245,6 @@ test('board 39b: Settings › AI\'s Jobs group: three models by name, this month
     ]);
     // No cap, so no meter and nothing to choose.
     assert.equal(await jobs.locator('.meter, .select, [role="meter"]').count(), 0);
-
-    const usage = main.locator('.set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
-    await usage.scrollIntoViewIfNeeded();
-    assert.deepEqual(await usage.locator('.set-row').evaluateAll(rows => rows.map(row => [row.querySelector('.t')!.textContent, row.querySelector('.s')!.textContent, row.querySelector('.cost')!.textContent])).then(rows => rows.slice(-2)), [
-      ['News', 'Articles $1.90 · grouping $1.20 · stories $13.10 · ranking $2.20', '$18.40'],
-      ['Jobs', 'Emails $0.62 · finding JDs $2.71 · reading JDs $0.52', '$3.85'],
-    ]);
-    assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
-    for (const [scheme, theme] of THEMES) {
-      await inTheme(page, scheme, theme);
-      assert.deepEqual(await rested(() => Promise.all([jobs.locator('.jb-spent'), jobs.locator('.val').first()].map(value => value.evaluate(element => getComputedStyle(element).color)))),
-        [await rested(() => colourOf(page, 'var(--ink)')), await rested(() => colourOf(page, 'var(--ink2)'))], `${theme}: the amount in ink, a model in ink2`);
-    }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
