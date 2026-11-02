@@ -211,7 +211,6 @@ describe('tokens.ts against DESIGN.md', () => {
     const flat = design.replace(/\n\s*/g, ' ');
     expect(flat).toContain(`**${motion.fast} ms** hover and fills, **${motion.medium} ms** popovers and panes, **${motion.slow} ms** modals, all \`${motion.ease}\``);
     expect(flat).toContain(`A lifted calendar chip tilts ${minus(String(motion.liftTilt))}° and scales ${motion.liftScale}.`);
-    expect(flat).toContain(`Theme switches fade every colour over ${motion.themeFade} ms`);
     expect(flat).toContain(`A press goes in over **${motion.press} ms** and lets go over ${motion.fast} ms`);
     expect(flat).toContain(`settle in from \`sub2\` over ${news.landedMs} ms`);
   });

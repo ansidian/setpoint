@@ -1,6 +1,6 @@
 // Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), each also one of the
-// release's page screenshots (pages.ts), then the switch itself: System follows the browser, a choice
-// is kept per browser and the first paint doesn't fade.
+// release's page screenshots (pages.ts), then the switch itself: System follows the browser and a
+// choice is kept per browser.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
@@ -47,23 +47,13 @@ test('board 22b: October 2026 in Light, chosen in this browser', async () => {
   }
 });
 
-test('System follows the browser, and the first paint doesn\'t fade', async () => {
+test('System follows the browser', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
-    // Every fade from the document's first moment: one at the first paint is over in 180 ms.
-    await page.addInitScript(() => {
-      const scope = window as unknown as {fades: number};
-      scope.fades = 0;
-      // The page has no <html> yet, so the document itself is watched.
-      new MutationObserver(() => {
-        if (document.documentElement?.classList.contains('theme-fade')) scope.fades += 1;
-      }).observe(document, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
-    });
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     assert.equal(await theme(page), 'night', 'System, with the browser preferring dark');
-    assert.equal(await page.evaluate(() => (window as unknown as {fades: number}).fades), 0, 'the first paint doesn\'t fade');
     await page.emulateMedia({colorScheme: 'light'});
     await until('Light', () => theme(page), value => value === 'light');
     assert.deepEqual(setpoint.pageErrors, []);

@@ -35,12 +35,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .app, button { user-select: none; -webkit-user-select: none; }
 .selectable, .rd-subj, .mailtext, .code { user-select: text; -webkit-user-select: text; }
 
-/* A theme switch fades every colour (DESIGN.md › Motion); theme.ts adds the class for the fade only. */
-.theme-fade, .theme-fade *, .theme-fade *::before, .theme-fade *::after {
-  transition: background-color var(--theme-fade) var(--ease), color var(--theme-fade) var(--ease), border-color var(--theme-fade) var(--ease),
-    box-shadow var(--theme-fade) var(--ease), fill var(--theme-fade) var(--ease), stroke var(--theme-fade) var(--ease) !important;
-}
-
 /* Thin scrollbars, their thumb the theme's (DESIGN.md › Tokens: darma's). */
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
 

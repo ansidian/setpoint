@@ -553,8 +553,8 @@ export async function still(page: Page): Promise<void> {
 
 /**
  * Records each value `attribute` takes on `target` from now on, for a state too short-lived to read
- * after the action that starts it (a card's 120 ms close, the 180 ms theme fade): a busy machine can
- * take longer than that between the action and the read. Resolves to a reader of what it has seen.
+ * after the action that starts it (a card's 120 ms close): a busy machine can take longer than that
+ * between the action and the read. Resolves to a reader of what it has seen.
  */
 export async function watch(target: Locator, attribute: string): Promise<() => Promise<(string | null)[]>> {
   const index = await target.evaluate((element, name) => {

@@ -245,10 +245,6 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
 async function visit(page: Page, base: string, route: Route) {
   await page.emulateMedia({colorScheme: 'dark'});
   await page.goto(`${base}${route.path}`);
-  // A theme lands at once, as at the first paint, rather than over the 180 ms fade a switch takes, a
-  // wave of colour transitions element by element that would hold each rest for a third of a second:
-  // the sweep reads where things rest, not how they got there.
-  await page.addStyleTag({content: ':root { --theme-fade: 0s !important; }'});
   await page.locator(route.shows).first().waitFor();
   // The pointer out of the way, so no hover card covers anything.
   await page.mouse.move(0, 0);

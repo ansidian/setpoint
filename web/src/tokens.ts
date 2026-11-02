@@ -210,9 +210,9 @@ export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row
 
 /**
  * mantel's timings; a press going in (its release takes `fast`, polish audit motion-02); a lifted
- * calendar chip's tilt and scale; the theme fade.
+ * calendar chip's tilt and scale.
  */
-export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04, themeFade: 180} as const;
+export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04} as const;
 
 /**
  * Loading (DESIGN.md › Motion, Decided while building #225): a skeleton's bars are `sub2` on the
@@ -381,7 +381,6 @@ export function cssVariables(): Record<string, string> {
   vars['--dur-medium'] = `${motion.medium}ms`;
   vars['--dur-slow'] = `${motion.slow}ms`;
   vars['--dur-press'] = `${motion.press}ms`;
-  vars['--theme-fade'] = `${motion.themeFade}ms`;
   vars['--news-landed'] = `${news.landedMs}ms`;
   vars['--skel'] = `var(--${skeleton.fill})`;
   vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;

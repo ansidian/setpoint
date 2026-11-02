@@ -162,8 +162,8 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
-calendar chip tilts −1.5° and scales 1.04. Theme switches fade every colour over 180 ms; the first
-paint doesn't fade. A segmented control's fill slides to the segment turned on over 180 ms (#179). A
+calendar chip tilts −1.5° and scales 1.04. A theme switch has no motion of its own: what has a colour
+transition takes it, the rest lands at once (#291). A segmented control's fill slides to the segment turned on over 180 ms (#179). A
 press goes in over **80 ms** and lets go over 120 ms (#150). The stories `N` brings onto News's list
 settle in from `sub2` over 900 ms (#131): the longer motions are kept for arrivals, as are a
 calendar change's landing (420 ms, #192) and an editor field another's change moved (600 ms, #187).
@@ -1313,7 +1313,7 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
 
 Board 40 is board 32 in Light, and Jobs has no Light values of its own: its components take the
 theme's tokens (Light `page`, `ink2`, `cardOn` and `navOn` with its hairline, and Light `good` for
-Offer). A theme switch fades every colour over 180 ms, as everywhere.
+Offer). A theme switch has no motion of its own (#291).
 
 ### Keys and behaviour
 
@@ -3602,3 +3602,6 @@ it changes what's on screen.
     the "+N" popover lose their 120 ms exit fades, as menus never had one, with focus still back
     where it was as they go. The floating detail's close (#148) and the Jobs folds aren't overlay
     exits, and stay.
+291. **A theme switch has no motion of its own** (Andy, 2026-11-01; darma D408, SV-155, SV-151's F5).
+    The 180 ms fade of every colour goes. What has a colour transition takes it, 120 ms on most, and
+    the rest lands at once, as the first paint does.
