@@ -263,6 +263,8 @@ test('Clone, Copy and Paste (Copy and ⌘C say what they took, S10), Colour and 
     await page.locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
     await until('the colour', async () => (await items(setpoint, '2026-10-09')).find(item => item.title === 'Dinner with Sam')!, item => item.colour === 'good' && !item.command);
     assert.match(await chip(page, '2026-10-09', 'Dinner with Sam').evaluate(element => (element as HTMLElement).style.getPropertyValue('--c')), /good/);
+    // Its toast comes with the browser's answer, behind the server's: landing after Delete's, it would take that one's place.
+    await page.locator('.toast', {hasText: 'Changed the colour of Dinner with Sam'}).waitFor();
 
     // Delete the pasted Dentist with the key, once the browser draws it saved: Delete leaves pending items.
     await until('Dentist drawn saved', () => chip(page, '2026-10-13', 'Dentist').evaluateAll(chips => chips.map(one => one.classList.contains('pending'))), pending => pending.join() === 'false');
