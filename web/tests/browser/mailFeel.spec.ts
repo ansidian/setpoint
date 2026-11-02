@@ -158,9 +158,10 @@ test('inbox-09, -10: a pin out of the shelf\'s sight says so and lands on the sh
     await until('back in New', () => pay.count(), count => count === 1);
     await until('the toast gone', () => page.locator('.toast').count(), count => count === 0);
 
-    // With the shelf in view, a pin needs no toast.
+    // With the shelf in view, a pin needs no toast. Its first row can still be the unpinned one
+    // folding away, which is dropped mid-scroll, so the scroll goes to one that stays (stress caught it).
     const exams = page.locator('.row:not(.shelf)', {hasText: 'Contoso University'}).first();
-    await page.locator('.row.shelf').first().scrollIntoViewIfNeeded();
+    await page.locator('.row.shelf:not(.leaving)').first().scrollIntoViewIfNeeded();
     await point(exams);
     await page.keyboard.press('p');
     await page.locator('.row.shelf', {hasText: 'Contoso University'}).waitFor();
