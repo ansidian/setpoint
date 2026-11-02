@@ -3,9 +3,9 @@
 //   `caution`, led by `warning`, at the top of the column. It folds in as it comes and, once the AI is
 //   back, shows a `good` check for 1.2 s and folds out, as mail's health lines do (states-13).
 // - The history pass (38a, D311, D326): the shared spinner and "Reading history · 140 of 330 emails ·
-//   showing what’s read so far", muted, its progress along its foot easing over 260 ms; three skeleton
-//   rows hold the table's top while it runs (#225), and each application lands at its date's place
-//   (JobsPage). Done, it shows its check and "Read 330 emails" for 1.2 s, then folds away (180 ms).
+//   showing what’s read so far", muted, its progress along its foot easing over 260 ms; each
+//   application lands at its date's place (JobsPage). Done, it shows its check and "Read 330 emails"
+//   for 1.2 s, then folds away (180 ms).
 // - Jobs off (38c): the one-line empty state, the 20 px `work` over "Jobs is off · Turn on"; Turn on
 //   opens Settings › Jobs with its switch focused.
 // No JD found, Ghosted and a status set by hand are the table's and the detail's, never animated.
@@ -14,7 +14,6 @@ import type {CSSProperties} from 'react';
 import type {LinePhase} from '../../logic/stateLines.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {SettingsLink} from '../search/AnswerCard.tsx';
-import {Bar, Sk} from '../states/Loading.tsx';
 import {useLinePhase, useShownLines} from '../states/States.tsx';
 import {openJobsSettings} from './JobsSettings.tsx';
 import {historyLine, historyRead, historyRuns, historyShare, readingLine} from './words.ts';
@@ -70,21 +69,6 @@ function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistor
       <span className="spin"><Icon name="progress_activity" size={16} /></span>
       <span className="grow num ell" title={text}>{text}</span>
     </div>
-  );
-}
-
-/** While the pass runs, three skeleton rows hold the table's top: the newest applications are still to come (#225). */
-export function HistorySkeleton() {
-  const widths: [number, number, number, number][] = [[132, 196, 64, 72], [104, 238, 56, 64], [150, 170, 72, 56]];
-  return (
-    <Sk kind="jobs-history" className="jb-sk" immediate>
-      {widths.map(([company, role, platform, jd], index) => (
-        <div key={index} className="jb-tr">
-          <span /><span><Bar w={company} /></span><span><Bar w={role} /></span><span className="c-plat"><Bar w={platform} /></span>
-          <span><Bar w={40} /></span><span><Bar w={88} /></span><span><Bar w={jd} /></span>
-        </div>
-      ))}
-    </Sk>
   );
 }
 

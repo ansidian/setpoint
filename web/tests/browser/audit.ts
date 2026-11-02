@@ -526,6 +526,10 @@ const BOARD_34B_PATCHES: Patch[] = [
           <span class="ink3">· Junior Developer · New York, NY · Greenhouse</span>`,
     to: '<span class="ink3">Junior Developer · New York, NY · Greenhouse</span>'},
 ];
+const BOARD_38A_PATCHES: Patch[] = [
+  {why: '#292: the history pass draws no skeleton rows over the table',
+    from: boardBlock('38a-states-the-history-pass.html', '      <div class="jb-tr sk">', '\n\n', JOBS_DIR), to: ''},
+];
 const BOARD_38C_PATCHES: Patch[] = [
   {why: 'DESIGN.md › Jobs › States: while Jobs is off it has no item in the sidebar (38c draws it, current)',
     from: '\n  <a class="nav on" href="#"><span class="ms">work</span><span class="grow">Jobs</span></a>', to: ''},
@@ -558,7 +562,7 @@ const JOBS_BOARDS: Board[] = [
   jobsBoard('37a-in-mail-the-jd-chip.html'),
   jobsBoard('37b-in-mail-the-chip-opens-its-jd.html'),
   jobsBoard('37c-in-mail-applied-before.html'),
-  jobsBoard('38a-states-the-history-pass.html'),
+  jobsBoard('38a-states-the-history-pass.html', BOARD_38A_PATCHES),
   jobsBoard('38b-states-not-read-no-jd-ghosted-set-by-hand.html'),
   jobsBoard('38c-states-jobs-off.html', BOARD_38C_PATCHES),
   jobsBoard('39a-settings-jobs.html', BOARD_39A_PATCHES, false),

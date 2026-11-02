@@ -1267,8 +1267,7 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
   so far".
   - Its progress runs along its foot: a 2 px `sub2` track filling in `ink3` (radius 0 2 2 0), its
     width easing over 260 ms as each count comes; the counts change in place, tabular, unanimated.
-  - The pass reads oldest first, so the newest applications are still to come: three skeleton rows
-    hold the table's top (#225), and each application lands at its date's place as it's made,
+  - The pass reads oldest first, so the newest applications are still to come: each application lands at its date's place as it's made,
     settling from `sub2` over 900 ms. The numbers in the header count what's landed.
   - What the pass is unsure of gathers in From history as it goes.
   - Done: the line shows a `good` check and "Read 330 emails" for 1.2 s, then folds away (180 ms).
@@ -3605,3 +3604,6 @@ it changes what's on screen.
 291. **A theme switch has no motion of its own** (Andy, 2026-11-01; darma D408, SV-155, SV-151's F5).
     The 180 ms fade of every colour goes. What has a colour transition takes it, 120 ms on most, and
     the rest lands at once, as the first paint does.
+292. **The history pass draws no skeleton rows** (Andy, 2026-11-01; darma D409, SV-155, SV-151's F6).
+    They sat over a table that was already full, once. The pass's line and progress say what's
+    happening, and each application lands at its date's place. Board audit: 38a draws them.

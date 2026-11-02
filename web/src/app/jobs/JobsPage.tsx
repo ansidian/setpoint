@@ -19,8 +19,8 @@
 // the shell's (App.tsx).
 //
 // J8's states (States.tsx; 38a–38c): the AI down and the history pass's lines at the top of the column,
-// three skeleton rows holding the table's top while the pass runs, and Jobs off's one line, its header
-// "Jobs" alone. Settings › Jobs's Show arrives at /jobs/from-history, From history unfolded.
+// and Jobs off's one line, its header "Jobs" alone. Settings › Jobs's Show arrives at
+// /jobs/from-history, From history unfolded.
 //
 // From mail (J7): an application open as the page mounts (Open in Jobs, Full posting, a reload)
 // arrives with its pane simply there, no slide; /jobs/12/posting arrives scrolled to its full posting
@@ -64,9 +64,9 @@ import {ItemEmail} from './ItemEmail.tsx';
 import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
-import {HistorySkeleton, JobsLines, JobsOff} from './States.tsx';
+import {JobsLines, JobsOff} from './States.tsx';
 import {HeaderRow, rowKey, Rows, takenAway, useRoleFit} from './Table.tsx';
-import {DEFAULT_SORT, historyRuns, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
+import {DEFAULT_SORT, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import './jobs.css';
 
@@ -431,7 +431,6 @@ export function JobsPage({route}: {route: JobsRoute}) {
                 unfoldHistory={historyAsks.count} reading={reading} onPoint={onPoint} onOpen={openAt}
                 onRead={item => (item.id === reading?.item && reading.of === null ? setReading(null) : read(item))} onLook={lookAt} />
               <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />
-              {!results && historyRuns(page.history) && <HistorySkeleton />}
               {results ? (
                 <>
                   {corRows.length > 0 ? (

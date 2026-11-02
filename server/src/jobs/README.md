@@ -297,7 +297,7 @@ the lint rule still refuses an import of Jobs from triage.
 ## States and Settings (J8)
 
 - **The page's lines** ([`States.tsx`](../../../web/src/app/jobs/States.tsx), 38a, 38b): `GET /api/jobs`'s `history`
-  draws the pass's line while it's `running` or `waiting`, with three skeleton rows over the table, and its
+  draws the pass's line while it's `running` or `waiting`, and its
   check and "Read 330 emails" once it's `done`; `reading` draws the AI down's line, worded by its `cause`
   (`unreachable`, `rate_limited`, `refused`, `no_key`; [`readerState.ts`](readerState.ts)), counting what waits
   for the reader and what a held pass has left. Both fold in and out as mail's health lines do, by

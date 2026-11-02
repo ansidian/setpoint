@@ -1,6 +1,6 @@
 // Jobs's states and Settings (J8; DESIGN.md › Jobs › States, Jobs in Settings; boards 38a–38c, 39a,
-// 39b) against the seed: the history pass's line and three skeleton rows, an
-// application landing at its date's place and the line's last words folding it away (38a); the AI
+// 39b) against the seed: the history pass's line, an application landing at its date's place and
+// the line's last words folding it away (38a); the AI
 // down, saying so and, once it's back, folding out with its check (38b); Jobs off, its header alone, no
 // sidebar item, `4` opening it and Turn on opening Settings › Jobs with the switch focused, the switch
 // bringing Jobs back into the sidebar (38c); Settings › Jobs with Reads' plain values and From
@@ -49,7 +49,7 @@ const TASMANIAN = `INSERT INTO jobs_applications (company, title, title_key, pla
   VALUES ('Tasmanian Traders', 'Junior Developer', 'junior developer', 'Greenhouse', '2026-09-12T18:00:00.000Z', 'applied', 'email', '2026-09-12T18:00:00.000Z', 0, 'none',
     '2026-10-07T16:06:00.000Z', '2026-10-07T16:06:00.000Z')`;
 
-test('board 38a: the history pass: its line, three skeleton rows, an application landing at its date\'s place, then "Read 330 emails", folding away', async () => {
+test('board 38a: the history pass: its line, an application landing at its date\'s place, then "Read 330 emails", folding away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     jobsChange(setpoint, `UPDATE jobs_history SET state = 'running', started_at = '${STARTED}', total = 330, read = NULL, finished_at = NULL; ${readMore(3)}`);
@@ -60,8 +60,6 @@ test('board 38a: the history pass: its line, three skeleton rows, an application
     assert.equal((await setpoint.api<JobsPageOut>('GET', '/jobs')).history.read, 3);
     // A muted line at the top of the column, with the counts.
     assert.equal(await line.textContent(), 'Reading history · 3 of 330 emails · showing what’s read so far');
-    // Three skeleton rows hold the table's top, under its header (#225).
-    assert.equal(await page.locator('.jb-th + .jb-sk > .jb-tr').count(), 3);
 
     // Each application lands at its date's place, and the counts move in place.
     jobsChange(setpoint, `${TASMANIAN}; ${readMore(1)}`);

@@ -418,9 +418,6 @@
 .jb-state .lnk { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 /* Its source back (the AI, or the pass done): `check` in `good` for 1.2 s, then it folds out (states-13). */
 .jb-state.cleared > .icon.ok { color: var(--good); animation: line-ok var(--dur-fast) var(--ease); }
-/* While the pass runs, three skeleton rows hold the table's top (#225). */
-.jb-sk > .jb-tr { pointer-events: none; }
-.jb-sk > .jb-tr > span { display: flex; align-items: center; }
 
 /* Jobs off (38c): the one-line empty state, `work` over "Jobs is off · Turn on", Turn on an ink pill. */
 .jb-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ink3); padding-bottom: 80px; }

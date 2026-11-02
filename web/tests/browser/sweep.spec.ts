@@ -219,7 +219,7 @@ async function routes(setpoint: Setpoint): Promise<Route[]> {
       await page.getByRole('textbox', {name: 'Search applications'}).waitFor();
     }},
     ...SETTINGS_PAGES.map(name => ({name: `Settings › ${name}`, path: `/settings/${name}`, shows: '.settings .set-nav .nav.on', widths: [SIZES.target.width, 820]})),
-    // J8's states, last, as they change the server: the pass's line and skeleton rows, the AI down's line, then Jobs off.
+    // J8's states, last, as they change the server: the pass's line, the AI down's line, then Jobs off.
     {name: 'Jobs, its history pass and the AI down', path: '/jobs', shows: '.jb-scroll .jb-tr', widths: TARGET_ONLY, open: async page => {
       const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
       try {
