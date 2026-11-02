@@ -148,6 +148,12 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   an element mid-entrance or mid-slide measures as it passes, not where it rests. A helper that
   reads is a reader, and so is one that calls a reader; each use of one rests, polls (`until`), or
   says why on the line before it, a read meant to catch motion (the lint asks, SV-75).
+- A check doesn't depend on animation or scrolling (Andy, 2026-11-02): it doesn't wait out an
+  animation (`still`) or read one on its way, and doesn't scroll to put something in or out of
+  sight, since those kept making checks that race. A choice made from what's in sight or from
+  timing goes to a pure rule and its table (`inSight` for inbox-09), and the check keeps the outcome
+  on a page as it loads. A check that races is fixed by taking the dependence out, never by adding
+  a wait; an older check that still has one is brought into line when it's next touched.
 - Every bug fix starts with a failing test. There is no known-failing list.
 - A fix whose browser check went red on its own, not because the design changed, says so in its
   commit message ("the X check caught it"): git has no other record of a check catching something,
