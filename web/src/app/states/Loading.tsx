@@ -124,8 +124,8 @@ export function LoadFailed({what, loads, className}: {what: string; loads: Load[
 
 /**
  * Setpoint starting, before it knows whether this browser is signed in (#233): the mark at 36 px
- * where the sign-in card's top sits, its chips settling in turn once the start has taken a moment,
- * then breathing as a skeleton does. Unreachable (States.tsx) is the same screen with the pill.
+ * where the sign-in card's top sits, fading in once the start has taken a moment, then breathing,
+ * as a skeleton does. Unreachable (States.tsx) is the same screen with the pill.
  */
 export function Boot() {
   return (
