@@ -19,7 +19,6 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {motion} from '../../tokens.ts';
-import {useExit} from '../../ui/exit.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -29,6 +28,7 @@ import {act} from './act.ts';
 import {CandidatePicker} from './CandidatePicker.tsx';
 import type {Said} from './act.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismiss} from './api.ts';
+import {useHold} from './hold.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {assignMenu, chooseMenu} from './menus.ts';
@@ -117,8 +117,8 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const live = todays.filter(entry => entry.fold !== 'out');
   const liveHistory = olds.filter(entry => entry.fold !== 'out');
   // The last item leaving folds the whole band, header and all (180 ms); From history alone keeps its line.
-  const band = useExit(live.length || liveHistory.length ? true : null, motion.medium);
-  const historyLine = useExit(liveHistory.length ? true : null, motion.medium * 2);
+  const band = useHold(live.length || liveHistory.length ? true : null, motion.medium);
+  const historyLine = useHold(liveHistory.length ? true : null, motion.medium * 2);
   if (!band.shown) return null;
 
   const drop = (id: number) => {

@@ -97,7 +97,7 @@ if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', event => {
     const secondary = event.button === 2 || (event.button === 0 && event.ctrlKey);
     const target = event.target as Node;
-    swallow = secondary && [...document.querySelectorAll('.pop:not(.closing)')].some(pop => !pop.contains(target));
+    swallow = secondary && [...document.querySelectorAll('.pop')].some(pop => !pop.contains(target));
     // A press outside the menu closes it, as any menu's does.
     if (state && !document.querySelector('.ctx-menu')?.contains(target)) set(null);
   }, true);

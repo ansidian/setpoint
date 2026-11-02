@@ -698,9 +698,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .scope-card[data-side="left"], .failed-card[data-side="left"] { transform-origin: right center; }
 .scope-card[data-side="above"], .failed-card[data-side="above"] { transform-origin: center bottom; }
 .scope-card[data-side="below"], .failed-card[data-side="below"] { transform-origin: center top; }
-/* A scrim fades in under what it's behind, and out with it. */
+/* A scrim fades in under what it's behind. */
 @keyframes scrim-in { from { opacity: 0; } }
-@keyframes scrim-out { to { opacity: 0; } }
 /* A pane's content arrives beside the list, 12 px, as the editor does after E; swapping what it shows
    (J, K, another row) keeps the pane, so that stays instant. */
 @keyframes pane-in { from { opacity: 0; transform: translateX(12px); } }

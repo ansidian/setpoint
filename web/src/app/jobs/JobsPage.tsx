@@ -38,7 +38,6 @@ import {getJson, updateCached, useResource} from '../../api/client.ts';
 import {localDate} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {motion, news as arrivals} from '../../tokens.ts';
-import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useAccounts} from '../accounts.ts';
@@ -54,6 +53,7 @@ import {
   applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
   pickCandidate, searchPath, setStatus,
 } from './api.ts';
+import {useHold} from './hold.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {rowMenu} from './menus.ts';
@@ -197,7 +197,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // item answered takes its email with it once it's left the page's answer; refused, it never left.
   const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null; of: string | null} | null>(null);
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
-  const email = useExit(reading, compact ? motion.medium : motion.fast);
+  const email = useHold(reading, compact ? motion.medium : motion.fast);
 
   // Closing: the content fades over 120 ms (in a narrow window it slides off over 180), then the pane goes.
   const [leaving, setLeaving] = useState(false);

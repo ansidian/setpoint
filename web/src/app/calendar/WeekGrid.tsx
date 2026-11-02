@@ -20,7 +20,6 @@ import {
 } from '../../logic/week.ts';
 import type {Block as BlockLayout, Edge, Segment} from '../../logic/week.ts';
 import {drag as dragTokens, week as tokens} from '../../tokens.ts';
-import {useExit} from '../../ui/exit.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {colourVar} from '../accounts.ts';
 import {Chip, ghostly} from './Chip.tsx';
@@ -98,8 +97,6 @@ const resizable = (item: ItemOut) => item.kind === 'event' && canMove(item) && i
 
 export function WeekGrid(props: WeekGridProps) {
   const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays, enter = null, onEntered} = props;
-  // The "+N" popover fades out once closed (ui/exit.ts).
-  const {shown: shownPopover, closing: popoverClosing} = useExit(popover);
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -413,7 +410,7 @@ export function WeekGrid(props: WeekGridProps) {
   // The day a move would land on takes the item's colour (polish audit calflows-09).
   const dropDay = drag && drag.press.kind === 'move' && drag.changes && drag.to !== drag.press.from ? drag.to : null;
   const dropColour = drag && drag.press.kind === 'move' ? (drag.press.item.kind === 'task' ? 'var(--ink3)' : colourVar(drag.press.item.colour ?? calendars.get(drag.press.item.calendar_id)?.colour ?? 'cool')) : undefined;
-  const popoverItems = shownPopover ? byDay.get(shownPopover) ?? [] : [];
+  const popoverItems = popover ? byDay.get(popover) ?? [] : [];
   const calendarName = (item: ItemOut) => calendars.get(item.calendar_id)?.name;
 
   return (
@@ -536,10 +533,10 @@ export function WeekGrid(props: WeekGridProps) {
           </div>
         </div>
       </div>
-      {shownPopover && popoverItems.length > 0 && (
-        <DayPopover key={shownPopover} date={shownPopover} items={popoverItems} section={section} closing={popoverClosing} {...{selected, calendars, now, timeZone}}
-          onSelectItem={(item, chip, additive) => onSelectItem(item, shownPopover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
-          onPress={(item, event) => pressItem(item, shownPopover, 'all', event, undefined, true)} />
+      {popover && popoverItems.length > 0 && (
+        <DayPopover key={popover} date={popover} items={popoverItems} section={section} {...{selected, calendars, now, timeZone}}
+          onSelectItem={(item, chip, additive) => onSelectItem(item, popover, rectIn(chip, section.current!), additive)} onClose={() => onPopover(null)}
+          onPress={(item, event) => pressItem(item, popover, 'all', event, undefined, true)} />
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}

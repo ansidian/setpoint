@@ -5,7 +5,7 @@
 // focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
 // at once; until a group's answers come it draws skeleton rows, never a default as a fact (#226).
 import type {AccountOut, NewsSourcesOut} from '@setpoint/shared';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 import type {JSX, KeyboardEvent} from 'react';
 import {askSignOut} from '../signOut.ts';
 import {prefetch, useResource} from '../../api/client.ts';
@@ -18,7 +18,7 @@ import {JOBS_SETTINGS_PATHS, JobsSettingsPage} from '../jobs/index.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {SETTINGS_PAGES} from '../../logic/route.ts';
 import type {SettingsPage} from '../../logic/route.ts';
-import {useExit, useFocusReturn} from '../../ui/exit.ts';
+import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {AccountsPage} from './Accounts.tsx';
 import {AiPage} from './Ai.tsx';
@@ -47,23 +47,19 @@ const PAGES: Record<SettingsPage, () => JSX.Element> = {
 
 export function Settings() {
   const page = useSettingsPage();
-  // It rises in over 260 ms and fades out over 120 ms, taking no keys or clicks meanwhile (settings.css);
-  // opened again while it fades, it starts afresh.
-  const {shown, closing} = useExit(page);
-  const [opens, setOpens] = useState({open: page !== null, count: 0});
-  if ((page !== null) !== opens.open) setOpens({open: page !== null, count: opens.count + (page !== null ? 1 : 0)});
-  return shown && <Open key={opens.count} page={shown} closing={closing} />;
+  // It rises in over 260 ms (settings.css) and closes at once.
+  return page && <Open page={page} />;
 }
 
-function Open({page, closing}: {page: SettingsPage; closing: boolean}) {
+function Open({page}: {page: SettingsPage}) {
   const modal = useRef<HTMLDivElement>(null);
   const {data: accounts} = useResource<AccountOut[]>(ACCOUNTS_PATH);
   const reconnect = accounts?.some(account => account.health.state === 'needs_reconnect') ?? false;
   const {data: newsSources} = useResource<NewsSourcesOut>(NEWS_SOURCES_PATH);
   const failing = feedFailing(newsSources);
 
-  // Focus goes back where it was as it starts to close.
-  useFocusReturn(closing);
+  // Focus goes back where it was as it closes.
+  useFocusReturn();
   useEffect(() => {
     const timer = window.setTimeout(() => PAGE_PATHS.forEach(prefetch), PREFETCH_AFTER_MS);
     return () => window.clearTimeout(timer);
@@ -96,8 +92,8 @@ function Open({page, closing}: {page: SettingsPage; closing: boolean}) {
   const Body = PAGES[page];
   return (
     <>
-      <div className={closing ? 'settings-scrim closing' : 'settings-scrim'} onPointerDown={closeSettings} />
-      <div className={closing ? 'settings closing' : 'settings'} ref={modal} role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} inert={closing} onKeyDown={onKeyDown}>
+      <div className="settings-scrim" onPointerDown={closeSettings} />
+      <div className="settings" ref={modal} role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} onKeyDown={onKeyDown}>
         <nav className="set-nav" aria-label="Settings pages" onKeyDown={onNavKey}>
           <div className="set-navtitle">Settings</div>
           {SETTINGS_PAGES.map(name => (
