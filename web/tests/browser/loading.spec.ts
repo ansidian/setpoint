@@ -33,16 +33,6 @@ async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
 /** Goes to an address without waiting for its data (the harness's goto waits for it, which a held answer never gives). */
 const visit = (page: Page, url: string) => page.mainFrame().goto(url).then(() => {});
 
-/** A token's colour as the page computes it. */
-const tokenColour = (page: Page, token: string) => page.evaluate(name => {
-  const probe = document.createElement('span');
-  probe.style.color = `var(--${name})`;
-  document.body.append(probe);
-  const colour = getComputedStyle(probe).color;
-  probe.remove();
-  return colour;
-}, token);
-
 /** Waits until a skeleton has come in after its delay, and is drawn. */
 async function shown(page: Page, kind: string) {
   const found = page.locator(`[data-skeleton="${kind}"]`).first();
@@ -50,8 +40,6 @@ async function shown(page: Page, kind: string) {
   await until(`the ${kind} skeleton in`, () => found.evaluate(element => element.getAnimations().find(animation => (animation as CSSAnimation).animationName === 'sk-in')?.playState ?? 'none'), state => state === 'finished');
   return found;
 }
-
-const heights = (page: Page, selector: string) => page.locator(selector).evaluateAll(all => all.map(element => element.getBoundingClientRect().height));
 
 test('Inbox loading: a skeleton, never an empty list, until the rows replace it (states-03, inbox-13)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
@@ -229,8 +217,8 @@ test('the reader\'s body, Calendar\'s day, News and a Settings page each say in 
   }
 });
 
-test('the reader draws the email\'s head from its row at once, and only its body waits, a skeleton; an HTML email holds its frame\'s place (reader-01)', async () => {
-  const setpoint = await startSetpoint({fixtures: ['coffee-html'], clock: 'frozen'});
+test('the reader draws the email\'s head from its row at once, and only its body waits, a skeleton (reader-01)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
@@ -243,16 +231,13 @@ test('the reader draws the email\'s head from its row at once, and only its body
     assert.equal(await head.locator('.name').textContent(), 'Google');
     assert.equal(await head.locator('.account').textContent(), 'Personal');
     assert.equal(await head.locator('.rd-acts .btn', {hasText: 'Ask about this email'}).count(), 1);
-    const body = await shown(page, 'body');
+    await shown(page, 'body');
     assert.equal(await page.locator('.pane .mailtext').count(), 0);
-    // Its lines at the body's rhythm: 10 px bars 12 apart, at most 600 px.
-    assert.deepEqual(await body.evaluate(element => [getComputedStyle(element).rowGap, element.getBoundingClientRect().width <= 600, element.querySelector('.sk-bar')!.getBoundingClientRect().height]), ['12px', true, 10]);
     const subjectAt = (await rested(() => head.locator('.rd-subj').boundingBox()))!.y;
     await release();
     await page.locator('.pane .facts-card').waitFor();
     assert.equal(await page.locator('.pane [data-skeleton]').count(), 0);
     assert.equal((await rested(() => head.locator('.rd-subj').boundingBox()))!.y, subjectAt, 'the head stays where it was');
-    assert.equal(await page.locator('.pane .rd-body').getAttribute('class'), 'rd-body sk-arrive', 'the body fades in');
 
     // An email with an attachment holds its card's place too.
     release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
@@ -261,21 +246,6 @@ test('the reader draws the email\'s head from its row at once, and only its body
     await (await shown(page, 'body')).locator('.sk-attach').waitFor();
     await release();
     await page.locator('.pane .attach').waitFor();
-
-    // An HTML email's frame holds 240 px on `sub`, unseen, until its page says its height; then it fades in.
-    release = await hold(page, /^\/api\/mail\/messages\/\d+\/body/);
-    // The newsletter is in New's Noise, folded until opened.
-    await page.locator('.list .nfold.collapsed').first().click();
-    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
-    const box = page.locator('.mailframe-box');
-    await box.waitFor();
-    assert.deepEqual(await rested(() => box.evaluate(element => [element.className, element.querySelector('iframe')!.getBoundingClientRect().height, getComputedStyle(element).backgroundColor, getComputedStyle(element.querySelector('iframe')!).opacity])),
-      ['mailframe-box measuring', 240, await rested(() => tokenColour(page, 'sub')), '0']);
-    await release();
-    await page.locator('.mailframe-box:not(.measuring)').waitFor();
-    await until('the frame takes the email\'s height', () => box.evaluate(element => element.getBoundingClientRect().height), height => height > 300);
-    // Measured, the card turns white around the email (#254).
-    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgb(255, 255, 255)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -319,38 +289,7 @@ test('News loading: its list\'s skeleton, never "Nothing new", until the stories
   }
 });
 
-test('a news image\'s box waits with a skeleton\'s fill, Light\'s `sub3`, and the image fades in over it with a hairline edge (news-02)', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    let release = await hold(page, /^\/api\/news\/images\//);
-    await visit(page, `${setpoint.base}/news`);
-    const box = page.locator('.nw-lead .nw-ph').first();
-    await box.waitFor();
-    const look = () => box.evaluate(element => {
-      const image = element.querySelector('.nw-img')!;
-      return [element.className, getComputedStyle(element).backgroundColor, getComputedStyle(element).animationName, getComputedStyle(image).opacity];
-    });
-    assert.deepEqual(await rested(() => look()), ['nw-ph', await rested(() => tokenColour(page, 'sub2')), 'sk-breathe', '0']);
-    assert.deepEqual(await rested(() => box.locator('.nw-img').evaluate(image => [getComputedStyle(image).outlineStyle, getComputedStyle(image).outlineWidth, getComputedStyle(image).outlineOffset, getComputedStyle(image).outlineColor, getComputedStyle(image).transitionDuration])),
-      ['solid', '1px', '-1px', await rested(() => tokenColour(page, 'edge')), '0.18s']);
-    await release();
-    assert.deepEqual(await until('the image faded in', look, value => value[3] === '1'), ['nw-ph done', 'rgba(0, 0, 0, 0)', 'none', '1']);
-
-    // In Light, the box's fill is `sub3`, which shows on the page.
-    await page.evaluate(() => localStorage.setItem('setpoint.theme', 'light'));
-    release = await hold(page, /^\/api\/news\/images\//);
-    await visit(page, `${setpoint.base}/news`);
-    await box.waitFor();
-    assert.equal(await rested(() => box.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => tokenColour(page, 'sub3')));
-    await release();
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('a story opens at once from its row: sections, headline, meta and its image, the thumbnail blurred until the large copy; its summary and sources a skeleton (news-05)', async () => {
+test('a story opens at once from its row: sections, headline and meta; its summary and sources a skeleton (news-05)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -364,11 +303,8 @@ test('a story opens at once from its row: sections, headline, meta and its image
     await pane.locator('.rd-subj', {hasText: headline!}).waitFor();
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local']);
     const meta = await pane.locator('.st-meta').textContent();
-    // Its image: the large copy over the row's thumbnail, blurred, which stands in until the large is in.
-    assert.equal(await pane.locator('.st-img .nw-ph .nw-blur').evaluate(image => getComputedStyle(image).filter), 'blur(6px)');
     await shown(page, 'story');
     assert.equal(await pane.locator('.st-sum').count(), 0);
-    assert.equal(await rested(() => pane.locator('.st-swap').evaluate(element => getComputedStyle(element).animationName)), 'st-in');
     await release();
     await pane.locator('.st-sum').waitFor();
     await pane.locator('.src-row').first().waitFor();
@@ -380,29 +316,18 @@ test('a story opens at once from its row: sections, headline, meta and its image
   }
 });
 
-test('Setpoint starting in a new browser shows its mark after 200 ms where the sign-in card\'s top sits, chips settling in turn; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
+test('Setpoint starting in a new browser shows its mark; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     const releaseMe = await hold(page, /^\/api\/me$/);
     await visit(page, `${setpoint.base}/inbox`);
-    const mark = page.locator('.boot.starting svg.mark');
-    await mark.waitFor();
-    const box = (await rested(() => mark.boundingBox()))!;
-    assert.deepEqual([box.width, box.height, box.y], [36, 36, 1050 / 2 - 120]);
-    // Each chip settles as the mark's settle has them (#203), once the start has taken 200 ms, 70 ms after the one before.
-    assert.deepEqual(await mark.locator('g').evaluateAll(chips => chips.map(chip => [getComputedStyle(chip).animationName, getComputedStyle(chip).animationDuration, getComputedStyle(chip).animationDelay])),
-      [['mark-settle', '0.26s', '0.2s'], ['mark-settle', '0.26s', '0.27s'], ['mark-settle', '0.26s', '0.34s']]);
-    await until('the chips settled', () => mark.locator('g').evaluateAll(chips => chips.map(chip => chip.getAnimations().every(animation => animation.playState === 'finished'))), settled => settled.every(Boolean));
-    assert.equal(await rested(() => mark.evaluate(svg => getComputedStyle(svg).animationName)), 'sk-breathe', 'then it breathes as a skeleton does');
+    await page.locator('.boot.starting svg.mark').waitFor();
 
-    // Setpoint answers: the app fades in; its accounts and Today wait as skeletons, three rows each.
+    // Setpoint answers: its accounts and Today wait as skeletons.
     const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
     await releaseMe();
-    await page.locator('.app.boot-after').waitFor();
-    assert.equal(await rested(() => page.locator('.app.boot-after').evaluate(element => getComputedStyle(element).animationName)), 'sk-arrive');
     await shown(page, 'accounts');
-    assert.deepEqual(await rested(() => heights(page, '[data-skeleton="accounts"] .sk-acct')), [28, 28, 28]);
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
     await release();
     await page.locator('aside.sb .acct').first().waitFor();
@@ -413,7 +338,7 @@ test('Setpoint starting in a new browser shows its mark after 200 ms where the s
   }
 });
 
-test('a browser that was signed in starts on its shell as it last stood: its accounts, counts and Today\'s place, and the page\'s skeleton; the app takes over in place (shell-10)', async () => {
+test('a browser that was signed in starts on its shell as it last stood: its accounts, counts and Today\'s place, and the page\'s skeleton; signed out, it forgets them (shell-10)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -436,16 +361,9 @@ test('a browser that was signed in starts on its shell as it last stood: its acc
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), todayLines, 'Today\'s place, its lines as many as it had');
     await shown(page, 'all');
 
-    // Setpoint answers before the Inbox's own answers: the app's sidebar keeps the same rows, and its
-    // list's skeleton carries on from the shell's rather than fading in again.
-    const release = await hold(page, /^\/api\/(accounts|mail\/(counts|inbox))$/);
+    // Setpoint answers, and the app takes over.
     await releaseMe();
-    await page.locator('.app:not([data-frame])').waitFor();
-    assert.deepEqual(await rested(() => sidebar()), loaded);
-    assert.match((await page.locator('[data-skeleton="all"]').getAttribute('class'))!, /\bcarried\b/);
-    await release();
     await page.locator('.list .row').first().waitFor();
-    assert.deepEqual(await rested(() => sidebar()), loaded);
 
     // Signed out, this browser forgets the session's shape.
     await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();

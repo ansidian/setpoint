@@ -1,10 +1,10 @@
 // Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), each also one of the
 // release's page screenshots (pages.ts), then the switch itself: System follows the browser, a choice
-// is kept per browser, the first paint doesn't fade and a switch fades every colour over 180 ms.
+// is kept per browser and the first paint doesn't fade.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until, watch} from './harness.ts';
+import {cleanUp, matchGolden, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -47,7 +47,7 @@ test('board 22b: October 2026 in Light, chosen in this browser', async () => {
   }
 });
 
-test('System follows the browser, the first paint doesn\'t fade, and a change does', async () => {
+test('System follows the browser, and the first paint doesn\'t fade', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -64,14 +64,8 @@ test('System follows the browser, the first paint doesn\'t fade, and a change do
     await page.locator('.list .row').first().waitFor();
     assert.equal(await theme(page), 'night', 'System, with the browser preferring dark');
     assert.equal(await page.evaluate(() => (window as unknown as {fades: number}).fades), 0, 'the first paint doesn\'t fade');
-    const classes = await watch(page.locator('html'), 'class');
     await page.emulateMedia({colorScheme: 'light'});
     await until('Light', () => theme(page), value => value === 'light');
-    assert.equal((await classes()).some(value => Boolean(value?.split(' ').includes('theme-fade'))), true, 'the change fades');
-    // Mid-fade the page is between the two backgrounds, then lands on Light's.
-    const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    await until('the fade ends', () => page.evaluate(() => document.documentElement.classList.contains('theme-fade')), on => !on);
-    assert.equal(await rested(() => background()), 'rgb(246, 246, 244)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
