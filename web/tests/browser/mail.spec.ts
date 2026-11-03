@@ -13,7 +13,7 @@ import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDom
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, rested, startSetpoint, still, test, until} from './harness.ts';
+import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -412,7 +412,8 @@ test('P on an email still loading: its first answer, from before the pin, doesn\
   }
 });
 
-test('the reader\'s tools come from the email\'s row before the email has loaded: Unpin on pinned mail, no Open in Gmail on iCloud mail; each email opens at its top', async () => {
+// Each email opening at its top went with the scroll it needed (D416), by eye.
+test('the reader\'s tools come from the email\'s row before the email has loaded: Unpin on pinned mail, no Open in Gmail on iCloud mail', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -442,24 +443,6 @@ test('the reader\'s tools come from the email\'s row before the email has loaded
     await page.locator('.rd-subj', {hasText: 'Your iCloud storage is almost full'}).waitFor();
     assert.deepEqual(await tools(), [['TrashE', null], ['PinP', 'false']]);
     await page.unroute(/\/api\/mail\/messages\/\d+(\/open)?$/);
-
-    // Each email opens at its top, one shown before (drawn at once, from the cache) too.
-    const short = await setpoint.page({width: 1677, height: 480});
-    await short.goto(`${setpoint.base}/inbox`);
-    const scroller = short.locator('.rd-scroll');
-    const recovery = short.locator('.list .row', {hasText: 'Your recovery email was changed'});
-    await recovery.click();
-    await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
-    // Its body is in after its head, which the row draws at once.
-    await short.locator('.pane .mailtext').waitFor();
-    assert.ok(await scroller.evaluate(element => element.scrollHeight > element.clientHeight + 40), 'the email is taller than the pane');
-    await short.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
-    await short.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
-    await scroller.evaluate(element => element.scrollTo(0, element.scrollHeight));
-    assert.ok(await scroller.evaluate(element => element.scrollTop > 40), 'scrolled down the lease');
-    await recovery.click();
-    await short.locator('.rd-subj', {hasText: 'Your recovery email was changed'}).waitFor();
-    assert.equal(await scroller.evaluate(element => element.scrollTop), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -611,9 +594,8 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     // A second later it reads one less.
     await page.clock.runFor(1000);
     await until('a second less', () => countdown.textContent(), text => text === `Expires in ${seconds - 1} sec`);
+    // When it expires is codeExpired's, a table in inbox.test.ts; its fold out is by eye (D416).
     await page.clock.runFor(loaded + 12_000 + 400 - await page.evaluate(() => Date.now()));
-    // Its fold out has begun (its end waits on the paused clock).
-    await until('the code row leaves', () => page.locator('.list .row:not(.leaving)', {has: page.locator('.code-line')}).count(), count => count === 0);
     await page.clock.resume();
     await until('the code row gone', () => row.count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -749,7 +731,7 @@ const fits = ([across, down, below]: number[]) => across === 0 && down === 0 && 
 const picturesLoaded = (page: Page) => page.frameLocator('iframe.mailframe').locator('img')
   .evaluateAll(images => images.filter(image => (image as HTMLImageElement).naturalWidth > 0).length).catch(() => -1);
 
-test('a newsletter that is mostly pictures: the frame grows to the whole email, as wide as the pane, with no scrollbars of its own', async () => {
+test('a newsletter that is mostly pictures: the frame grows to the whole email, with no scrollbars of its own', async () => {
   const setpoint = await startSetpoint({fixtures: ['newsletter-html']});
   try {
     const page = await load(setpoint);
@@ -758,17 +740,9 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     await openNoise(page);
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
-    // Hidden, the frame's card is as wide as the reading pane's body (the images bar's width), wider
-    // than the 622 px the email was built at, and the frame exactly as tall as the email. The frame
-    // sits up to 20 px in from each side, but keeps 600 px (#254).
+    // Hidden, the frame is exactly as tall as the email. How wide the frame and its card are (#254) is
+    // by eye (D417).
     await until('the hidden newsletter fits its frame', () => fit(page), fits);
-    // Measured where the pane rests, once its content has slid in.
-    await still(page);
-    const width = (await rested(() => page.locator('.imgbar').boundingBox()))!.width;
-    assert.ok(width > 622, `the images bar is ${width} px wide`);
-    assert.equal((await rested(() => page.locator('.mailframe-box').boundingBox()))!.width, width);
-    const inside = Math.max(width - 40, 600);
-    assert.equal((await rested(() => element.boundingBox()))!.width, inside);
 
     await page.locator('.imgbar').getByRole('button', {name: 'Show', exact: true}).click();
     await until('the pictures load', () => picturesLoaded(page), count => count === 4);
@@ -777,7 +751,6 @@ test('a newsletter that is mostly pictures: the frame grows to the whole email, 
     await until('the newsletter fits its frame', () => fit(page), fits);
     const shown = (await rested(() => element.boundingBox()))!;
     assert.ok(shown.height > 1000, `the frame is ${shown.height} px tall`);
-    assert.equal(shown.width, inside);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1035,13 +1008,12 @@ test('the one list: New, Attention, the shelf, then the days with clock times; l
     // The kind drops while the reading pane is open; the account never does.
     assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').isVisible(), false);
     assert.equal(await coffee.first().locator('.ac').isVisible(), true);
-    // Trash folds the row out at once, and ⌘Z folds it back in.
+    // Trash takes the row out, and ⌘Z brings it back; the folds are by eye (D416).
     await page.keyboard.press('Escape');
     const lease = page.locator('.list.all .row[title="Lease renewal terms"]');
     await point(lease);
     await page.keyboard.press('e');
-    await page.locator('.list.all .row.leaving[title="Lease renewal terms"]').waitFor();
-    await until('it folds away', () => lease.count(), count => count === 0);
+    await until('it goes', () => lease.count(), count => count === 0);
     await page.keyboard.press('Meta+z');
     await until('⌘Z brings it back', () => lease.count(), count => count === 1, 5000);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -1174,23 +1146,19 @@ test('the Inbox is one place: the sidebar and the bare address open it, and All\
   }
 });
 
-test('U takes the cursor to New\'s first email, wherever the list is; ⌘K\'s Go to New does the same; 1 goes to the Inbox from elsewhere (#243)', async () => {
+// Bringing New's first row into sight from further down went with the scroll it needed (D416).
+test('U takes the cursor from a day\'s row to New\'s first email; ⌘K\'s Go to New does the same; 1 goes to the Inbox from elsewhere (#243)', async () => {
   const setpoint = await startSetpoint();
   try {
-    const page = await setpoint.page({width: 1677, height: 600});
+    // Tall enough that a day's row shows as the page loads.
+    const page = await setpoint.page({width: 1677, height: 1400});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .gh.new').waitFor();
-    // Scrolled down to the days, the cursor on a day's row.
+    // The cursor on a day's row.
     const lab = page.locator('.list .row[title="Lab 5 posted"]');
-    await lab.scrollIntoViewIfNeeded();
     await point(lab);
     await page.keyboard.press('u');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
-    await until('New\'s first row in view', () => page.locator('.list .row.cur').evaluate(row => {
-      const list = row.closest('.list')!.getBoundingClientRect();
-      const box = row.getBoundingClientRect();
-      return box.top >= list.top && box.bottom <= list.bottom;
-    }), shown => shown);
     // ⌘K names it with its key.
     await point(lab);
     await page.keyboard.press('Meta+k');

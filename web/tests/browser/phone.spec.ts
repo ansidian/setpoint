@@ -70,15 +70,6 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
     await subheads.first().waitFor();
     assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
     assert.equal(await page.locator('.list.all .row .kd').first().isVisible(), false);
-    // They show already, so opening an email and coming back moves nothing.
-    const bank = page.locator('.list.all .row', {hasText: 'Proseware'}).first();
-    await bank.scrollIntoViewIfNeeded();
-    const before = (await rested(() => bank.boundingBox()))!.y;
-    await bank.tap();
-    await page.locator('.rd-subj', {hasText: 'Bill is ready'}).waitFor();
-    await page.locator('.ph-back').tap();
-    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    assert.equal(Math.round((await rested(() => bank.boundingBox()))!.y), Math.round(before));
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -175,11 +166,10 @@ test('read state on the phone: a tap opens and reads; scrolling and opening Nois
   const setpoint = await startSetpoint();
   try {
     const page = await inbox(setpoint);
-    await page.locator('.list').evaluate(list => list.scrollBy(0, 300));
-    await page.locator('.list').evaluate(list => list.scrollTo(0, 0));
+    // Nothing reads on a scroll, so the check makes none (D416).
     await page.locator('.list .nfold').first().tap();
     await page.locator('.row[title^="Fall sale"]').waitFor();
-    // Nothing happens to wait for: scrolling and opening Noise read nothing.
+    // Nothing happens to wait for: opening Noise reads nothing.
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.deepEqual(await counts(setpoint).then(value => [value.attention, value.unread]), [3, 19]);

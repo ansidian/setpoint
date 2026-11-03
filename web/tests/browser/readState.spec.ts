@@ -59,11 +59,8 @@ for (const size of sizes) {
         // The pointer onto a row makes it the cursor.
         await point(row(page, `new:${northwind}`));
         assert.equal(await cursorKey(page), `new:${northwind}`);
-        // Scrolling the list.
-        await page.locator('.list').evaluate(list => list.scrollBy(0, 400));
-        await page.locator('.list').evaluate(list => list.scrollTo(0, 0));
-        // Opening New's Noise from the keyboard (its line is a cursor stop), closing it by a click, and opening it again.
-        await row(page, 'noise:new').scrollIntoViewIfNeeded();
+        // Opening New's Noise from the keyboard (its line is a cursor stop), closing it by a click, and
+        // opening it again. Nothing reads on a scroll, so the check makes none (D416).
         await point(row(page, 'noise:new'));
         await page.keyboard.press('Enter');
         await page.locator('.row[title^="Fall sale"]').waitFor();

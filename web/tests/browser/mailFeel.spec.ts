@@ -1,8 +1,8 @@
 // Mail feels finished (the polish audit's mail slice, darma SV-63; DESIGN.md › Decided while building
 // #197–#219), each by what it leaves on screen: Done moving an email into its day, the Today block's
-// bar and warming time, the accounts folding away on Calendar, a pin out of the shelf's sight and
-// sticky headers, the reader's J and K, code card and edge, a newsletter's images, and search's
-// chips when nothing matches.
+// bar and warming time, the accounts folding away on Calendar, a pin out of the shelf's sight, the
+// reader's J and K, code card and edge, a newsletter's images, and search's chips when nothing
+// matches.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';

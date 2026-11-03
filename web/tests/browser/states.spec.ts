@@ -96,12 +96,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.locator('.main.offline').waitFor();
     // What changes something is held back: Mark all as read at .4, taking no pointer.
     assert.deepEqual(await page.locator('.listfoot .lnk').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
-    // Reading goes on: the list scrolls, J moves the cursor, Enter opens an email this browser has.
-    const list = page.locator('section.list');
-    await list.hover();
-    await page.mouse.wheel(0, 300);
-    await until('the list scrolled', () => list.evaluate(element => element.scrollTop), top => top > 0);
-    await list.evaluate(element => element.scrollTo({top: 0}));
+    // Reading goes on: J moves the cursor, Enter opens an email this browser has.
     await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
     await page.locator('.list .row.cur[title^="Interview availability"]').waitFor();

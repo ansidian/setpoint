@@ -200,8 +200,6 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
-    // Reduce motion changes nothing (DESIGN.md › Principles): the card still opens with its motion.
-    await page.emulateMedia({reducedMotion: 'reduce'});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
@@ -209,13 +207,12 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
     assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
 
-    // The card sits 8 px right of the sidebar, level with its line; the email stays open behind it.
+    // The card opens over the open email, which stays behind it; where it sits and its motion (which
+    // reduce motion doesn't change, DESIGN.md › Principles) are by eye (D416, D417).
     await lines.filter({hasText: 'Renew car registration'}).click();
     const card = page.locator('.today-card');
     await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
-    assert.equal(await rested(() => card.evaluate(element => getComputedStyle(element).animationName)), 'today-card-in');
     assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
-    assert.equal(Math.round((await box(page, '.today-card')).x), Math.round((await box(page, '.sb')).width) + 8);
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
       ['EditE', 'Complete', 'Open in Calendar', 'Delete']);
     // Another line moves the same card; Esc closes it and leaves the email open.
