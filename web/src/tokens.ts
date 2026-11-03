@@ -227,6 +227,12 @@ export const placement = {gapPx: 8, sides: ['right', 'left', 'above', 'below']} 
 export const drag = {thresholdPx: 4, tipOffset: {left: 18, top: 30}} as const;
 
 /**
+ * The shared tooltip (DESIGN.md #299): how long the pointer rests before it shows, how far it sits
+ * from what it names, and how close it may come to the window's edges.
+ */
+export const tip = {delayMs: 80, gapPx: 6, marginPx: 8} as const;
+
+/**
  * The week view (DESIGN.md › Week view; board 16): the hour grid's measures, the all-day row's lines,
  * the steps a drag snaps to, and the paging slide.
  */

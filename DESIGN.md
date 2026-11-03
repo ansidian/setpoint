@@ -3665,3 +3665,14 @@ it changes what's on screen.
     Undo, as Dismiss all's. Settled while building: 2 per section rather than 3, as 3 filled the
     whole first screen of board 25 (D429). Board audit: boards 25 and 28 still draw the strip and
     Missed (override 42).
+299. **Setpoint's tooltip is its own, quick, in place of the browser's** (Andy, 2026-11-03; darma
+    SV-168, D430). An element with `data-tip` shows its words 80 ms after the mouse rests on it, or
+    at once when the keyboard focuses it, in the drag tip's look: `cardOn` with the `edgeOn` hairline
+    and the pill shadow, 12 px `ink` with tabular figures, corners 6, at most 320 px wide and wrapping
+    past it. It sits centred 6 px under its element, above it when it would run past the window's
+    bottom, and 8 px inside the window's sides, over everything but signing in. Leaving, a press, a
+    scroll, Esc, or the window resizing or losing focus puts it away, and while it shows it describes
+    its element for a screen reader. Touch and the phone have none. The reader's sender name, "to
+    you" (the account's address) and time are its first; the rest of the `title` tooltips move to it
+    next. Settled while building: 80 ms rather than the 500 ms first proposed, so there's no rule for
+    moving quickly between tips.

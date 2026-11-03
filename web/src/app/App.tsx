@@ -22,6 +22,7 @@ import {Settings} from './settings/Settings.tsx';
 import {openSettings} from './settings/store.ts';
 import {Sidebar} from './Sidebar.tsx';
 import {OfflinePill} from './states/States.tsx';
+import {Tip} from './Tip.tsx';
 import {toInbox} from './toInbox.ts';
 import {fillMailSlots} from './slots.tsx';
 import {showToast} from './toast.ts';
@@ -106,6 +107,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
           <Settings />
           <Palette />
           <ContextMenu />
+          <Tip />
         </>
       )}
     </div>
