@@ -4,6 +4,7 @@
 //   GET  /api/jobs                       JobsPageOut (the two numbers, Needs you, From history, the rows)
 //   GET  /api/jobs/applications/:id      ApplicationOut (the detail: its JD, timeline, Applied before)
 //   POST /api/jobs/applications/:id/lookup  ApplicationOut, 202 (J3: Look it up)
+//   POST /api/jobs/applications/:id/lookup/stop  ApplicationOut (SV-170: stopped to paste the posting)
 //   GET  /api/jobs/settings              JobsSettingsOut (J4, drawn in J8: Settings › Jobs)
 //   PATCH /api/jobs/settings             jobsSettingsPatchInput → JobsSettingsOut (J4: turning Jobs on starts the history pass)
 //   POST /api/jobs/from-history/dismiss  JobsDismissedOut (J4: Dismiss all, the same as ignoring each item)
@@ -20,7 +21,7 @@
 //   POST   /api/jobs/needs-you/:id/assign               jobsAssignInput (Assign to…, Another application…)
 //   POST   /api/jobs/needs-you/:id/track                Track this (decision 69)
 //   POST   /api/jobs/needs-you/:id/not-a-job            Not about a job
-//   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More)
+//   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More, the JD's location)
 //   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status; null is Let emails decide)
 //   POST   /api/jobs/applications/:id/merge             jobsMergeInput (Merge with…: the other comes into this one)
 //   POST   /api/jobs/applications/:id/not-this-posting  the JD goes, its other candidates offered
@@ -59,6 +60,8 @@ export const jdSummarySchema = z.strictObject({
   // The saved posting's link, for a row's Open posting and Copy posting link (J6). On `not_found`,
   // the posting the user picked that Jobs couldn't read (SV-132). Null otherwise.
   link: z.url().nullable(),
+  // `not_found` because the user stopped the lookup to paste the posting (SV-170): "Lookup stopped".
+  stopped: z.boolean(),
 });
 export type JdSummaryOut = z.infer<typeof jdSummarySchema>;
 
@@ -221,6 +224,8 @@ export const postingSchema = z.strictObject({
   // The three-line what-they-want summary.
   summary: z.string(),
   location: z.string().nullable(),
+  // When the user set the location (SV-170), which no reading changes; null while it's the reading's.
+  location_set_at: instant.nullable(),
   workplace: z.enum(JOB_WORKPLACES).nullable(),
   // "3 days", after Hybrid.
   workplace_detail: z.string().nullable(),
@@ -424,7 +429,9 @@ export const jobsMergeInput = z.strictObject({other: id});
 export const jobsEditInput = z.strictObject({
   company: z.string().trim().min(1).max(200).optional(),
   title: z.string().trim().min(1).max(300).optional(),
-}).refine(edit => edit.company !== undefined || edit.title !== undefined, 'The company or the title.');
+  // The JD's location (SV-170); empty or null takes it away.
+  location: z.string().trim().max(200).nullable().optional(),
+}).refine(edit => edit.company !== undefined || edit.title !== undefined || edit.location !== undefined, 'The company, the title or the location.');
 export type JobsEdit = z.infer<typeof jobsEditInput>;
 
 /** Set status (D365): one of the five, set by hand (D322); null is Let emails decide. */

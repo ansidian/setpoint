@@ -169,6 +169,11 @@ the lint rule still refuses an import of Jobs from triage.
   again.
 - **While it runs** the row's `jd` is `{state: 'looking', looked_at: <when it began>}`; its end comes as
   a `jobs` event naming the application (and any Needs you item).
+- **Stopped (SV-170):** `POST /api/jobs/applications/:id/lookup/stop` (`stopLookup`), the detail's
+  Paste the posting while it's looked up, ends it at once as `not_found` with `jd_lookup_stopped_at`
+  set (`jd.stopped`, "Lookup stopped"), letting go of a pick being read; any later lookup or answer
+  clears it. The running job watches the `jobs` events for its application and, once it's no longer
+  `looking` (stopped, pasted, Undo), aborts its model and web calls and finishes, never retried.
 
 ## The history pass (J4)
 

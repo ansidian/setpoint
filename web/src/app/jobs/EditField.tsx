@@ -1,12 +1,20 @@
-// The title, or the company, edited in place (DESIGN.md › Corrections; board 35a).
+// The title, the company or the JD's location, edited in place (DESIGN.md › Corrections; board 35a; SV-170).
 import {useEffect, useRef, useState} from 'react';
 
 /**
  * A field in place (35a): the text swapped for a field on the same baseline, focused with its words
- * selected. Enter saves (an empty or unchanged one changes nothing) and Esc cancels, both at once;
- * leaving it cancels too.
+ * selected. Enter saves (an empty or unchanged one changes nothing, unless it may be emptied) and Esc
+ * cancels, both at once; leaving it cancels too.
  */
-export function EditField({label, value, small = false, onSave, onCancel}: {label: string; value: string; small?: boolean; onSave: (value: string) => void; onCancel: () => void}) {
+export function EditField({label, value, small = false, emptied = false, onSave, onCancel}: {
+  label: string;
+  value: string;
+  small?: boolean;
+  // Saving it empty takes the value away (the location).
+  emptied?: boolean;
+  onSave: (value: string) => void;
+  onCancel: () => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(value);
   const done = useRef(false);
@@ -18,7 +26,7 @@ export function EditField({label, value, small = false, onSave, onCancel}: {labe
     if (done.current) return;
     done.current = true;
     const next = text.trim();
-    if (save && next && next !== value) onSave(next);
+    if (save && (next || emptied) && next !== value) onSave(next);
     else onCancel();
   };
   return (

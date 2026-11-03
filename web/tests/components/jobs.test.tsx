@@ -111,7 +111,7 @@ test('the status filter holds the counts by status, so a count is also the filte
 });
 
 const POSTING: PostingOut = {
-  summary: 'A new-grad engineer for the hiring-platform team.', location: 'Irvine, CA', workplace: 'hybrid', workplace_detail: '3 days', salary: '$95,000–$115,000',
+  summary: 'A new-grad engineer for the hiring-platform team.', location: 'Irvine, CA', location_set_at: null, workplace: 'hybrid', workplace_detail: '3 days', salary: '$95,000–$115,000',
   must_haves: ['TypeScript and React'], nice_to_haves: ['Tests in CI'],
   full_text: '## About the team\n\nNorthwind Talent builds hiring software\nfor mid-sized companies.\n\n## What you\'ll do\n\n- Build features end to end\n- Write the tests that run in CI',
   link: 'https://greenhouse.example/northwindtalent/jobs/4471029', source: 'platform', platform: 'Greenhouse', found_at: '2026-10-01T17:41:00.000Z',
@@ -445,7 +445,7 @@ test('too long is said here, without sending it', async () => {
   expect(onSave).not.toHaveBeenCalled();
 });
 
-const PASTED: PostingOut = {summary: '', location: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [], full_text: '## The role\n\nWeekly reports.', link: null, source: 'pasted', platform: null, found_at: '2026-10-07T16:12:00.000Z'};
+const PASTED: PostingOut = {summary: '', location: null, location_set_at: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [], full_text: '## The role\n\nWeekly reports.', link: null, source: 'pasted', platform: null, found_at: '2026-10-07T16:12:00.000Z'};
 
 test('a JD pasted says so in the full posting and the column, and shows no link it hasn\'t got', async () => {
   await render(<FullPosting posting={PASTED} title="Data Analyst" company="Fabrikam" timeZone={ZONE} today={TODAY} />);
@@ -454,8 +454,9 @@ test('a JD pasted says so in the full posting and the column, and shows no link 
   expect(row.element().querySelector('a')).toBeNull();
   expect(foundShort(PASTED, ZONE, TODAY)).toBe('Pasted by you · Oct 7');
   expect(foundBy(PASTED)).toBe('Pasted');
-  const jd = {state: 'found', source: 'pasted', platform: null, found_at: PASTED.found_at, candidates: 0, looked_at: null, link: null} as const;
+  const jd = {state: 'found', source: 'pasted', platform: null, found_at: PASTED.found_at, candidates: 0, looked_at: null, link: null, stopped: false} as const;
   expect(jdCell(jd, Date.parse('2026-10-07T18:12:00.000Z'), ZONE)).toMatchObject({text: 'Pasted', title: 'Pasted by you · 2h ago'});
+  expect(jdCell({...jd, state: 'not_found', source: null, stopped: true}, Date.parse('2026-10-07T18:12:00.000Z'), ZONE)).toMatchObject({text: 'Stopped', title: 'You stopped the lookup'});
 });
 
 test('a JD not read yet has no reading to show: the popover says nothing of a salary', async () => {
@@ -473,6 +474,48 @@ test('what it has read shows as any JD\'s does', async () => {
   await expect.element(popover.getByRole('button', {name: 'Full posting'})).toBeInTheDocument();
   expect(popover.element().textContent).toContain('What they wantWeekly reports for the whole company.Atlanta, GASalary not stated');
   expect([PASTED, {...PASTED, nice_to_haves: ['Python']}, {...PASTED, salary: '$70,000'}].map(hasReading)).toEqual([false, true, true]);
+});
+
+// ---- The location in place (SV-170) ----
+
+/** The detail's facts, the location editable as Jd holds it. */
+function Facts({posting, reading = true, onSave = () => {}}: {posting: PostingOut; reading?: boolean; onSave?: (value: string) => void}) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div style={{width: 600}}>
+      <JdFacts posting={posting} reading={reading} location={{
+        editing, today: TODAY, timeZone: ZONE, onEdit: () => setEditing(true), onSave: value => {
+          setEditing(false);
+          onSave(value);
+        }, onCancel: () => setEditing(false),
+      }} />
+    </div>
+  );
+}
+
+test('a JD not read yet offers Add location and claims nothing else; one read shows the location the user set with when', async () => {
+  const {rerender} = await render(<Facts posting={PASTED} reading={false} />);
+  const add = page.getByRole('button', {name: 'Add location'});
+  await expect.element(add).toBeInTheDocument();
+  expect(document.querySelector('.jb-facts')!.textContent).toBe('Add location');
+  rerender(<Facts posting={{...POSTING, location: 'Austin, TX', location_set_at: '2026-10-07T16:12:00.000Z'}} />);
+  const place = page.getByRole('button', {name: 'Austin, TX'});
+  await expect.element(place).toHaveAttribute('data-tip', 'Set by you on Oct 7');
+  expect(document.querySelector('.jb-facts')!.textContent).toBe('Austin, TXHybrid, 3 days$95,000–$115,000');
+  // A location the user set isn't a reading: a pasted JD with only that still claims no salary.
+  expect(hasReading({...PASTED, location: 'Austin, TX', location_set_at: '2026-10-07T16:12:00.000Z'})).toBe(false);
+});
+
+test('the location\'s field: Enter saves what\'s typed, and an emptied one saves empty, taking it away', async () => {
+  const onSave = vi.fn();
+  await render(<Facts posting={POSTING} onSave={onSave} />);
+  await page.getByRole('button', {name: 'Irvine, CA'}).click();
+  const field = page.getByRole('textbox', {name: 'Location'});
+  await expect.element(field).toHaveFocus();
+  await userEvent.keyboard('Remote, US{Enter}');
+  await page.getByRole('button', {name: 'Irvine, CA'}).click();
+  await userEvent.keyboard('{Backspace}{Enter}');
+  expect(onSave.mock.calls).toEqual([['Remote, US'], ['']]);
 });
 
 // ---- The title in place (35a) ----
@@ -514,7 +557,7 @@ const NORTHWIND: JobsMailApplicationOut = {id: 7, company: 'Northwind Talent', t
 const detailOf = (posting: PostingOut | null, jd: Partial<ApplicationOut['jd']> = {}): ApplicationOut => ({
   ...NORTHWIND, platform: 'Greenhouse', account_id: 4, applied_at: '2026-10-01T18:26:00.000Z', status_set_by: 'email', status_set_at: '2026-10-07T14:12:00.000Z',
   step: 'Pick a 30-minute interview slot this week', step_at: '2026-10-07T14:12:00.000Z', days_without_email: 0, reapplied_from: null, first_seen_in_email: false,
-  jd: {state: posting ? 'found' : 'none', source: posting?.source ?? null, platform: posting?.platform ?? null, found_at: posting?.found_at ?? null, candidates: 0, looked_at: null, link: posting?.link ?? null, ...jd},
+  jd: {state: posting ? 'found' : 'none', source: posting?.source ?? null, platform: posting?.platform ?? null, found_at: posting?.found_at ?? null, candidates: 0, looked_at: null, link: posting?.link ?? null, stopped: false, ...jd},
   posting, candidates: [], timeline: [], applied_before: [], also_at: [], hand_set: [],
 });
 
@@ -658,6 +701,7 @@ test.each<[string, ApplicationOut, string]>([
   ['No JD found', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z'}), 'No JD found · Greenhouse and a web search had nothing for it on Oct 1'],
   ['Couldn\'t read the posting you picked', detailOf(null, {state: 'not_found', looked_at: '2026-10-01T18:33:00.000Z', link: 'https://www.glassdoor.example/job-listing/2291'}), 'Couldn\'t read the posting you picked · glassdoor.example gave Jobs no text on Oct 1'],
   ['Looking for the posting…', detailOf(null, {state: 'looking', looked_at: '2026-10-07T16:00:00.000Z'}), 'Looking for the posting… · the email\'s link, then the platforms, then search'],
+  ['Lookup stopped', detailOf(null, {state: 'not_found', stopped: true, looked_at: '2026-10-07T16:00:00.000Z'}), 'Lookup stopped · You stopped it on Oct 7'],
   ['Is this the posting?', detailOf(null, {state: 'candidates', candidates: 2}), 'Is this the posting? · 2 candidates in Needs you'],
 ])('without a JD the popover says so: %s, with Open in Jobs and no Full posting', async (_, detail, words) => {
   const {button} = await chip(NORTHWIND, detail);

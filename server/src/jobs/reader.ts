@@ -39,7 +39,7 @@ import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts
 import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
 import type {Plan, ReadMatchEmail} from './rules.ts';
 import * as j from './schema.ts';
-import {blockedEmails, emailSetsStatus, knownApplications, setByHand} from './stick.ts';
+import {blockedEmails, emailSetsStatus, knownApplications, setByHand, stillLooking} from './stick.ts';
 import type {JobsWeb} from './web.ts';
 
 export const JOBS_READ_KEY = 'jobs_read';
@@ -316,18 +316,29 @@ export class JobsReader implements JobWorker {
     if (finishHistory(store, startedAt, passed)?.length) this.queueLookups();
   }
 
-  /** One application's JD lookup: done, or failed by the one retry policy (never "No JD found"). */
+  /**
+   * One application's JD lookup: done, or failed by the one retry policy (never "No JD found"). Once
+   * its application is no longer `looking` (stopped to paste the posting, pasted, Undo; SV-170), its
+   * calls are aborted, since nothing it finds would be kept, and it's done.
+   */
   private async lookUp(job: Job, signal: AbortSignal) {
     const store = this.store;
     if (!this.web) return finishJob(store, job.id);
     const applicationId = Number(job.key.slice(LOOKUP_KEY_PREFIX.length));
+    const halt = new AbortController();
+    const unsubscribe = store.live?.subscribe(event => {
+      if (event.type === 'live' && event.event.type === 'jobs' && event.event.applications.includes(applicationId) && !stillLooking(store, applicationId)) halt.abort();
+    });
     try {
-      await lookUpJd(store, applicationId, {web: this.web, endpoints: this.endpoints, timeoutMs: this.timeoutMs, signal});
+      await lookUpJd(store, applicationId, {web: this.web, endpoints: this.endpoints, timeoutMs: this.timeoutMs, signal: AbortSignal.any([signal, halt.signal])});
       finishJob(store, job.id);
     } catch (caught) {
+      if (halt.signal.aborted) return finishJob(store, job.id);
       const error = asProviderError(caught);
       console.error(`Jobs couldn't look up application ${applicationId}'s JD, ${error.message}`);
       failJob(store, job, error);
+    } finally {
+      unsubscribe?.();
     }
   }
 

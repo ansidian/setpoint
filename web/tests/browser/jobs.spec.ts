@@ -8,6 +8,7 @@
 // Let emails decide, Merge with…, Move to…, Not about this, Not an application, Delete, Not this
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
 // SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
+// SV-170: Paste the posting while it's looked up stops the lookup, and the JD's location set in place.
 // D401: an item's email opening where the detail sits, and Esc leaving the item unanswered. D402: an
 // application's email opening from Assign to…, the menu staying beside it.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
@@ -192,7 +193,7 @@ test('an application opens where the reading pane sits: Platform drops and JD is
     assert.equal(await pane.locator('.rd-subj').textContent(), 'Software Engineer I');
     assert.equal(await pane.locator('.jb-stat').textContent(), 'In processPick a 30-minute interview slot this week· 2h');
     assert.match(await pane.locator('.jb-want').textContent() ?? '', /^A new-grad engineer for the hiring-platform team/);
-    assert.deepEqual(await pane.locator('.jb-body > .jb-facts > span').allTextContents(), ['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
+    assert.deepEqual(await pane.locator('.jb-body > .jb-facts > *').allTextContents(), ['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
     assert.deepEqual(await pane.locator('.jb-lists .jb-label').allTextContents(), ['Must-haves 4', 'Nice-to-haves 3']);
     assert.equal(await pane.locator('.jb-src').textContent(), 'Full postingFound on Greenhouse · Oct 1, 10:41 AMgreenhouse.exampleShow');
     // The timeline, oldest first (D317); then Applied before at the company (D306).
@@ -407,9 +408,9 @@ test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Past
     await full.waitFor();
     assert.match((await full.textContent())!, /^Full postingPasted by you · Oct 7, \d+:\d\d [AP]Mglassdoor\.exampleShow$/);
     await until('its row', () => row(page, phone).locator('.jd').textContent(), value => value === 'Pasted');
-    // Nothing read yet, so nothing claimed: no empty summary, no "Salary not stated".
+    // Nothing read yet, so nothing claimed: no empty summary, no "Salary not stated", only Add location.
     assert.equal(await pane.locator('.jb-want').count(), 0);
-    assert.equal(await pane.locator('.jb-facts').count(), 0);
+    assert.equal(await pane.locator('.jb-facts').textContent(), 'Add location');
     assert.equal(await pane.locator('.rd-tools a.tool').getAttribute('href'), link);
     await full.getByRole('button', {name: 'Show'}).click();
     await pane.locator('.jb-full').getByText('You answer the phones', {exact: false}).waitFor();
@@ -473,6 +474,50 @@ test('No JD found (SV-140): Paste the posting beside Look it up; a posting with 
   }
 });
 
+test('Paste the posting while it\'s looked up (SV-170): the lookup stops, Esc leaves it stopped, and the JD pasted takes a location, with Undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const trey = await applicationId(setpoint, 'Trey Research', 'Data Engineer I');
+    // A run has no web, so its lookup stays under way until it's stopped.
+    await setpoint.api('POST', `/jobs/applications/${trey}/lookup`);
+    await page.goto(`${setpoint.base}/jobs/${trey}`);
+    const pane = page.locator('.jb-pane');
+    await pane.locator('.jb-src.looking').waitFor();
+    assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then searchPaste the posting');
+    await pane.getByRole('button', {name: 'Paste the posting'}).click();
+    const area = pane.getByRole('textbox', {name: 'The posting\'s text'});
+    await until('the area focused', () => area.evaluate(element => element === document.activeElement), focused => focused);
+    assert.equal(await pane.locator('.jb-nojd').textContent(), 'Lookup stopped · You stopped it on Oct 7');
+    await until('stopped on the server', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.jd.state === 'not_found' && detail.jd.stopped);
+    await until('its row', () => row(page, trey).locator('.jd').textContent(), value => value === 'Stopped');
+
+    // Esc leaves it stopped, Paste the posting first.
+    await page.keyboard.press('Escape');
+    await until('the area gone', () => area.count(), count => count === 0);
+    assert.equal(await pane.locator('.jb-nojd').textContent(), 'Lookup stopped · You stopped it on Oct 7Paste the postingLook it up');
+    await pane.getByRole('button', {name: 'Paste the posting'}).click();
+    await area.fill(`The data team\n\n${'You build the pipelines the analysts rely on, and you keep them running through the night. '.repeat(4)}`);
+    await page.keyboard.press('Meta+Enter');
+    await until('the toast', () => toast(page).textContent(), value => value === 'JD saved for Trey ResearchUndo');
+    await pane.getByRole('group', {name: 'Full posting'}).waitFor();
+
+    // The location, added in place.
+    await pane.getByRole('button', {name: 'Add location'}).click();
+    await pane.getByRole('textbox', {name: 'Location'}).fill('Austin, TX');
+    await page.keyboard.press('Enter');
+    await until('the toast', () => toast(page).textContent(), value => value === 'Location setUndo');
+    assert.equal(await pane.locator('.jb-facts').textContent(), 'Austin, TX');
+    await until('saved', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.posting?.location === 'Austin, TX');
+    await undo(page);
+    await pane.getByRole('button', {name: 'Add location'}).waitFor();
+    await until('undone', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.posting?.location === null);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Look it up on Trey Research: No JD found becomes the lookup under way, in the detail and its row (38b, 34c)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -486,7 +531,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     assert.equal(await pane.locator('.rd-tools .tool').count(), 0);
     await pane.getByRole('button', {name: 'Look it up'}).click();
     await pane.locator('.jb-src.looking').waitFor();
-    assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then search');
+    assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then searchPaste the posting');
     assert.equal(await pane.locator('[data-skeleton="jobs-jd"] .sk-bar').count(), 4);
     await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('data-tip'), title => title === 'Looking for the posting');
     await setpoint.idle();
@@ -1102,9 +1147,9 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-want').waitFor();
     // Under the pointer, its pencil.
-    await pane.locator('.jb-tbtn').hover();
-    await until('the pencil', () => pane.locator('.jb-tbtn .pen').evaluate(pen => getComputedStyle(pen).opacity), opacity => opacity === '1');
-    await pane.locator('.jb-tbtn').click();
+    await pane.locator('.jb-title .jb-tbtn').hover();
+    await until('the pencil', () => pane.locator('.jb-title .jb-tbtn .pen').evaluate(pen => getComputedStyle(pen).opacity), opacity => opacity === '1');
+    await pane.locator('.jb-title .jb-tbtn').click();
     const field = pane.getByRole('textbox', {name: 'Title'});
     await field.waitFor();
     await page.keyboard.type('Claims Platform Engineer');
@@ -1112,7 +1157,7 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
     await until('back as it was', () => pane.locator('.rd-subj').textContent(), text => text === 'Software Engineer II, Claims');
     assert.equal(await pane.count(), 1, 'Esc went no further than the field');
 
-    await pane.locator('.jb-tbtn').click();
+    await pane.locator('.jb-title .jb-tbtn').click();
     await field.fill('Claims Platform Engineer');
     await page.keyboard.press('Enter');
     await until('the new title', () => pane.locator('.rd-subj').textContent(), text => text === 'Claims Platform Engineer');

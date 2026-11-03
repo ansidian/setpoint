@@ -90,6 +90,7 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
     case 'candidates':
       return {icon: 'pending', text: 'In Needs you', title: `${jd.candidates} ${jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`};
     case 'not_found':
+      if (jd.stopped) return {icon: 'remove', text: 'Stopped', title: 'You stopped the lookup'};
       return jd.link
         ? {icon: 'remove', text: 'Couldn\'t read', title: 'Couldn\'t read the posting you picked'}
         : {icon: 'remove', text: 'No JD found', title: 'No JD found'};
@@ -109,7 +110,8 @@ export function foundLine(posting: Pick<PostingOut, 'source' | 'platform' | 'fou
 }
 
 /** Whether a saved JD has been read: one pasted is saved first, and a reading that failed leaves it as it was (SV-140). */
-export const hasReading = (posting: PostingOut) => Boolean(posting.summary || posting.location || posting.workplace || posting.salary || posting.must_haves.length || posting.nice_to_haves.length);
+// A location the user set isn't a reading (SV-170).
+export const hasReading = (posting: PostingOut) => Boolean(posting.summary || (posting.location && !posting.location_set_at) || posting.workplace || posting.salary || posting.must_haves.length || posting.nice_to_haves.length);
 
 /** A link's host, the full posting's tool ("greenhouse.example"). */
 export function hostOf(link: string): string {
@@ -133,8 +135,12 @@ function notFoundLine(platform: string | null, lookedAt: string | null, timeZone
   return lookedAt ? `${who} had nothing for it on ${dayWord(localDate(lookedAt, timeZone), today)}` : `${who} had nothing for it`;
 }
 
-/** Not found's lead and line: No JD found, or the posting the user picked that Jobs couldn't read (SV-132). */
-export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at'>, platform: string | null, timeZone: string, today: string): {lead: string; rest: string} {
+/**
+ * Not found's lead and line: No JD found, the posting the user picked that Jobs couldn't read
+ * (SV-132), or the lookup the user stopped to paste the posting (SV-170).
+ */
+export function notFoundWords(jd: Pick<JdSummaryOut, 'link' | 'looked_at' | 'stopped'>, platform: string | null, timeZone: string, today: string): {lead: string; rest: string} {
+  if (jd.stopped) return {lead: 'Lookup stopped', rest: jd.looked_at ? `You stopped it on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : 'You stopped it'};
   if (!jd.link) return {lead: 'No JD found', rest: notFoundLine(platform, jd.looked_at, timeZone, today)};
   const host = new URL(jd.link).hostname.replace(/^www\./, '');
   return {lead: 'Couldn\'t read the posting you picked', rest: jd.looked_at ? `${host} gave Jobs no text on ${dayWord(localDate(jd.looked_at, timeZone), today)}` : `${host} gave Jobs no text`};

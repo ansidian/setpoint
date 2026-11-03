@@ -4,7 +4,7 @@
 // later email, re-run or lookup is ./stick.ts.
 //
 // - The company and title in place: set by hand, and kept; the application still answers to its old
-//   name, so a later email naming that finds it.
+//   name, so a later email naming that finds it. The JD's location too (SV-170): no reading writes it again.
 // - Set status (D365): set by hand, until an email that sets one comes (D322). Let emails decide hands
 //   it back to what the emails make it.
 // - Merge with…: the other application comes into this one, its emails and all, and goes; this one
@@ -102,7 +102,7 @@ export function takeEmail(store: Store, applicationId: number, kind: JobEventKin
   settleStatus(store, applicationId, now);
 }
 
-/** PATCH /api/jobs/applications/:id: the title in place, or the company from More; set by hand and kept. */
+/** PATCH /api/jobs/applications/:id: the title in place, the company from More, or the JD's location; set by hand and kept. */
 export function editApplication(store: Store, id: number, edit: JobsEdit): Change {
   return corrected(store, {applications: [id]}, now => {
     const db = jobsDb(store.sqlite);
@@ -117,6 +117,11 @@ export function editApplication(store: Store, id: number, edit: JobsEdit): Chang
     if (edit.title !== undefined && edit.title !== application.title) {
       db.update(j.jobsApplications).set({title: edit.title, updatedAt: now}).where(eq(j.jobsApplications.id, id)).run();
       markByHand(store, id, 'title', now);
+    }
+    if (edit.location !== undefined) {
+      const posting = db.select({id: j.jobsPostings.id}).from(j.jobsPostings).where(eq(j.jobsPostings.applicationId, id)).get();
+      if (!posting) throw conflict('no_jd', 'This application has no JD to give a location.');
+      db.update(j.jobsPostings).set({location: edit.location || null, locationSetAt: now}).where(eq(j.jobsPostings.id, posting.id)).run();
     }
     return {application: id};
   });
@@ -257,7 +262,7 @@ export function offerCandidates(store: Store, application: Application, now: str
   const left = db.select().from(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, application.id)).all().filter(candidate => !turnedDown.has(candidate.link));
   db.delete(j.jobsJdCandidates).where(and(eq(j.jobsJdCandidates.applicationId, application.id), inArray(j.jobsJdCandidates.link, [...turnedDown, '']))).run();
   if (!left.length) {
-    db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, application.id)).run();
+    db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, jdLookupStoppedAt: null, updatedAt: now}).where(eq(j.jobsApplications.id, application.id)).run();
     return null;
   }
   db.update(j.jobsApplications).set({jdLookup: 'candidates', jdLookupAt: now, jdLookupFromHistory: false, updatedAt: now}).where(eq(j.jobsApplications.id, application.id)).run();

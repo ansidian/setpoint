@@ -679,7 +679,7 @@ One queue at the top of the page, with its count in the sidebar. Empty on a good
 ### Corrections (decision 58)
 
 The first history pass will need some, so each is a click or two on the application:
-- **Edit** the company or title in place.
+- **Edit** the company or title in place, or the JD's location (SV-170).
 - **Merge with…** another application: one, with all their emails.
 - On each event, **Move to…** another application, or **Not about this** (back to Needs you).
 - **Not an application:** hidden, and its emails never make one again.

@@ -86,7 +86,7 @@ export function noneOfThese(store: Store, applicationId: number): Change {
     const answered = openJdItems(store, applicationId);
     resolve(store, answered, 'none_of_these', now);
     const posting = db.select({id: j.jobsPostings.id}).from(j.jobsPostings).where(eq(j.jobsPostings.applicationId, applicationId)).get();
-    if (!posting) db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
+    if (!posting) db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, jdLookupStoppedAt: null, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
     return {application: applicationId, changed: {needsYou: answered}};
   });
 }

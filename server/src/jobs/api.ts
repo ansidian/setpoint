@@ -1,5 +1,6 @@
 // Jobs's routes (shapes and the list in `@setpoint/shared` jobs/api.ts): the page and an
-// application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application;
+// application's detail (J1); Look it up (J3, D320), which starts a JD lookup on any application, and
+// its Stop (SV-170);
 // Settings › Jobs, where turning Jobs on starts the history pass, and From history's Dismiss all and
 // its Undo (J4); search and the shell's item (J5); Needs you's answers, the corrections and their
 // Undo (J6); what mail's slots draw (J7); Settings › AI's Jobs group (J8). Mounted under /api behind the session by server.ts, a
@@ -13,7 +14,7 @@ import {
 import type {JobsChangeOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
 import {conflict, invalid, notFound, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
-import {requestLookup} from './lookup.ts';
+import {requestLookup, stopLookup} from './lookup.ts';
 import {
   deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, pastePosting, setStatus,
 } from './corrections.ts';
@@ -48,6 +49,12 @@ export function jobsApi(store: Store) {
     const applicationId = id(c.req.param('id'));
     if (requestLookup(store, applicationId) === 'saved') throw conflict('jd_saved', 'This application has its JD already, Not this posting takes it away first.');
     return c.json(applicationDetail(store, applicationId), 202);
+  });
+  // Stop (SV-170): the lookup ends now, to paste the posting instead. It answers with the detail.
+  api.post('/jobs/applications/:id/lookup/stop', c => {
+    const applicationId = id(c.req.param('id'));
+    stopLookup(store, applicationId);
+    return c.json(applicationDetail(store, applicationId));
   });
   api.get('/jobs/settings', c => c.json(jobsSettings(store)));
   // Settings › AI's Jobs group: the models, and this month's spend in its three parts (J8).

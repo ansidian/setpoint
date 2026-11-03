@@ -1053,7 +1053,7 @@ desktop and keeps it (D325).
   - `description` with "Search", "Greenhouse", "The email's link", "Pasted" (tooltip "Search · found
     7h ago", "Greenhouse · found Oct 1", "Pasted by you · 2h ago")
   - `pending` "In Needs you" (tooltip "2 candidates in Needs you")
-  - `remove` "No JD found"
+  - `remove` "No JD found", or "Stopped" (tooltip "You stopped the lookup", #300)
   - `progress_activity` "Looking it up…" while it's looked up (tooltip "Looking for the posting")
   - nothing for a closed application from history, which isn't looked up (D311).
 - **Arrivals:** an application that lands (a confirmation, Track this, the history pass) takes its
@@ -1090,7 +1090,8 @@ desktop and keeps it (D325).
   - **Facts:** one line in `ink2` (6 / 18 apart), each after a 16 px glyph in `ink3`: `location_on`
     "Irvine, CA", `home_work` "Hybrid, 3 days", `payments` "$95,000–$115,000". With no salary
     stated, "Salary not stated" in `ink3`. A fact too long for its line wraps ([Decided while
-    building](#decided-while-building) #277).
+    building](#decided-while-building) #277). The location edits in place, or "Add location" in
+    `ink3` adds one (#300).
   - **Must-haves** and **Nice-to-haves** in two columns, 28 apart, max 624, each label with its
     count in `ink2` ("MUST-HAVES 4"). Items 6 apart at 13 / 1.45 in a 14 px hanging column:
     must-haves in `ink` after a 5 px `ink2` dot, nice-to-haves in `ink2` after a 5 px `ink3` ring.
@@ -1147,12 +1148,13 @@ desktop and keeps it (D325).
   refusal stays there in `alert` with the text kept. Saved, it says "JD saved for Fabrikam · Undo".
   The JD shows the moment it's saved with only its Full posting row, "Pasted by you · Oct 31, 9:12
   AM", and What they want, the facts and the lists fill in when Haiku has read it; a reading that
-  fails leaves it so, claiming no "Salary not stated". The pick's link stays its Open posting, and
-  with no pick there's none. Mail's popover and the phone never offer it, and keep showing Couldn't
-  read with the link.
+  fails leaves it so, claiming no "Salary not stated", with only the location's line (#300). The
+  pick's link stays its Open posting, and with no pick there's none. Mail's popover and the phone
+  never offer it, and keep showing Couldn't read with the link.
 - **Looking it up** (34c): the Full posting row outlined instead of filled (an `edge` ring): the
   shared spinner (`progress_activity` 16 in `ink3`, 900 ms a turn), "Looking for the posting…" in
-  `ink2`, "LinkedIn, then the platforms, then search" in `ink3`. Under it the summary's skeleton:
+  `ink2`, "LinkedIn, then the platforms, then search" in `ink3`, and a quiet small **Paste the
+  posting** at its right, which stops the lookup (#300). Under it the summary's skeleton:
   four 10 px bars in `sub2` (92%, 86%, 54% and 38% wide, 9 apart, the last 10 further down),
   breathing as every skeleton does (#225). What comes fades in over 120 ms.
 - **First seen in this email** (34c, D323): an application Track this made is dated by its email, so
@@ -1171,6 +1173,9 @@ with Undo for 6 seconds and #147's glyph (override 36).
   no jump (34 px, radius 10, `cardOn`, the `edgeFocus` ring arriving over 120 ms, 20 / 500, padding
   0 6 0 10), with "Enter to save · Esc" under it in `ink3` 12. Enter saves and Esc cancels, both at
   once. The company edits the same way from More.
+- **The location in place** (#300): a click on the JD's location, or on "Add location", swaps it
+  for the same small field as the company's, 240 wide, with "Enter to save · Esc" beside it.
+  Emptied and saved, the location goes. The toast says "Location set" or "Location removed".
 - **More** (35b, 300 wide) grows from its top-right corner:
   - **Edit company** (`edit`), **Edit title** (`edit_note`), **Set status** (`radio_button_checked`)
     and **Merge with…** (`merge`), the last two with a `chevron_right` submenu
@@ -3682,3 +3687,12 @@ it changes what's on screen.
     is held, as on a drag's way over the calendar's chips, and one gained under a resting mouse (the
     editor's line over a lit phrase, "Click to keep as words") shows once the mouse moves. A click that
     focuses a field shows none; the keyboard focusing one does.
+300. **Paste the posting skips the lookup, and the JD's location is the user's to set** (Andy,
+    2026-11-03; darma SV-170, D431). While a JD is looked up, its row offers a quiet small **Paste
+    the posting** at its right. A click stops the lookup at once, aborting its model calls, and opens
+    the area where the row was. Cancel or Esc leaves "Lookup stopped · You stopped it on Oct 7" with
+    Paste the posting leading and a quiet Look it up after it; the JD column says "Stopped". Nothing
+    looks it up again until Look it up. The location of a saved JD edits in place, like the company:
+    a pencil on hover, "Add location" in `ink3` when there's none, and an emptied field takes it
+    away, with Undo. A location set by hand is kept over any reading, its tip "Set by you on Oct 7".
+    Before a pasted JD is read, its facts line holds only the location, claiming nothing else.

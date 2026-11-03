@@ -165,7 +165,7 @@ describe('confident (decision 54)', () => {
     expect(s.models.requests[1]!.input).toMatch(/^Employer: Lucerne Publishing\nPosting: Junior Developer\nLocation given: New York, NY\n\n## About Lucerne Publishing/);
 
     const detail = applicationDetail(s.store, id);
-    expect(detail.jd).toEqual({state: 'found', source: 'platform', platform: 'Greenhouse', found_at: SEED_NOW, candidates: 0, looked_at: SEED_NOW, link: expect.any(String)});
+    expect(detail.jd).toEqual({state: 'found', source: 'platform', platform: 'Greenhouse', found_at: SEED_NOW, candidates: 0, looked_at: SEED_NOW, link: expect.any(String), stopped: false});
     expect(detail.posting).toMatchObject({
       summary: LUCERNE_READING.summary, location: 'New York, NY', workplace: 'hybrid', workplace_detail: '3 days', salary: '$80,000–$95,000',
       must_haves: LUCERNE_READING.must_haves, nice_to_haves: LUCERNE_READING.nice_to_haves,
@@ -304,7 +304,7 @@ describe('unsure (decision 54)', () => {
     expect(s.asked()).toEqual(['submit_posting_check']);
     expect(s.posting(id)).toBeUndefined();
     const page = jobsPageSchema.parse(jobsPage(s.store));
-    expect(page.rows.find(row => row.id === id)!.jd).toEqual({state: 'candidates', source: null, platform: null, found_at: null, candidates: 2, looked_at: SEED_NOW, link: null});
+    expect(page.rows.find(row => row.id === id)!.jd).toEqual({state: 'candidates', source: null, platform: null, found_at: null, candidates: 2, looked_at: SEED_NOW, link: null, stopped: false});
     expect(page.needs_you).toEqual([expect.objectContaining({
       kind: 'jd_to_confirm', reason: 'unsure_posting', company: 'Lucerne Publishing', title: 'Junior Developer', platform: 'Greenhouse', application_id: id,
       at: '2026-10-05T17:20:00.000Z', subject: null, event_kind: null, from_history: false,
@@ -748,7 +748,7 @@ describe('not found (D320)', () => {
       'api.ashby.example/posting-api/job-board/treyresearch', 'api.ashby.example/posting-api/job-board/trey-research',
     ]);
     expect(s.asked()).toEqual(['submit_posting_search']);
-    expect(applicationDetail(s.store, id).jd).toEqual({state: 'not_found', source: null, platform: null, found_at: null, candidates: 0, looked_at: SEED_NOW, link: null});
+    expect(applicationDetail(s.store, id).jd).toEqual({state: 'not_found', source: null, platform: null, found_at: null, candidates: 0, looked_at: SEED_NOW, link: null, stopped: false});
     expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
 
     // Hours of rescans later, nothing more.
@@ -812,7 +812,7 @@ describe('the posting pasted in (SV-140)', () => {
     const detail = applicationDetail(s.store, id);
     expect(detail.jd).toMatchObject({state: 'found', source: 'pasted', platform: null, link: LINK, found_at: SEED_NOW});
     expect(detail.posting).toEqual({
-      summary: '', location: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [],
+      summary: '', location: null, location_set_at: null, workplace: null, workplace_detail: null, salary: null, must_haves: [], nice_to_haves: [],
       full_text: expect.stringMatching(/^## About the role\n\nWe need an analyst[^]*\n\n## What you'll need\n\n- SQL\n- Clear writing$/), link: LINK, source: 'pasted', platform: null, found_at: SEED_NOW,
     });
     expect(jobsPage(s.store).rows.find(row => row.id === id)!.jd).toMatchObject({state: 'found', source: 'pasted', link: LINK});
@@ -1042,6 +1042,82 @@ describe('the posting pasted in (SV-140)', () => {
     expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', link: null});
     await paste(s, id, TEXT);
     expect(s.posting(id)).toMatchObject({link: null, source: 'pasted'});
+  });
+});
+
+describe('stopped to paste the posting (SV-170)', () => {
+  const TEXT = `About the role\n\n${'We need an analyst who builds the weekly reports the whole company reads, and the pipelines behind them. '.repeat(3)}`;
+  const READ = {summary: 'An analyst for the weekly reports.', location: 'Atlanta, GA', workplace: 'hybrid', workplace_detail: '2 days', salary: null, must_haves: ['SQL'], nice_to_haves: []};
+  type S = Awaited<ReturnType<typeof setup>>;
+  // One sign-in a world.
+  const clients = new WeakMap<S, ReturnType<typeof signedIn>>();
+  const send = async (s: S, method: 'POST' | 'PATCH', path: string, body?: unknown) => {
+    if (!clients.has(s)) clients.set(s, signedIn(s.w, {routes: [jobsApi(s.store)]}));
+    return (await clients.get(s)!).send(method, path, body === undefined ? {} : {body});
+  };
+  const stop = (s: S, id: number) => send(s, 'POST', `/api/jobs/applications/${id}/lookup/stop`);
+
+  test('Sonnet\'s search under way is aborted, not waited out: the job is done, never retried or queued again, and the JD is stopped until Look it up', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: 'Workday'});
+    s.answers({submit_posting_search: () => 'hang'});
+    await s.engine.tick();
+    await vi.waitFor(() => expect(s.asked()).toEqual(['submit_posting_search']));
+    const answer = await stop(s, id);
+    expect(answer.status).toBe(200);
+    expect(answer.body.jd).toMatchObject({state: 'not_found', stopped: true, link: null, looked_at: SEED_NOW});
+    // Waited out, the 2 s limit would fail the job for a retry.
+    await s.engine.settled();
+    expect(s.lookupJobs(id).map(job => job.state)).toEqual(['done']);
+    expect(queueDueLookups(s.store)).toEqual([]);
+    expect(jobsPage(s.store).rows.find(row => row.id === id)!.jd).toMatchObject({state: 'not_found', stopped: true});
+
+    s.answers({submit_posting_search: () => searched([], 3)});
+    await send(s, 'POST', `/api/jobs/applications/${id}/lookup`);
+    await s.drain();
+    expect(applicationDetail(s.store, id).jd).toMatchObject({state: 'not_found', stopped: false});
+  });
+
+  test('a pick being read is let go, so it isn\'t taken for one Jobs couldn\'t read; then the text is pasted', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Fabrikam', title: 'Data Analyst', platform: null, jdLookup: 'candidates'});
+    const link = 'https://fabrikam.example/careers/jobs/7';
+    s.db.insert(j.jobsJdCandidates).values({applicationId: id, title: 'Data Analyst', location: null, platform: 'Fabrikam Careers', link, position: 0, foundAt: SEED_NOW}).run();
+    await send(s, 'POST', `/api/jobs/applications/${id}/jd/pick`, {candidate: applicationDetail(s.store, id).candidates[0]!.id});
+    expect((await stop(s, id)).body.jd).toMatchObject({state: 'not_found', stopped: true, link: null});
+    s.answers({submit_posting_reading: reading(READ)});
+    expect((await send(s, 'POST', `/api/jobs/applications/${id}/jd/paste`, {text: TEXT})).status).toBe(200);
+    await s.drain();
+    expect(s.posting(id)).toMatchObject({source: 'pasted', link: null, summary: READ.summary});
+    expect(s.web.asked()).not.toContain('fabrikam.example/careers/jobs/7');
+  });
+
+  test('refused over a JD saved meanwhile; a lookup that has ended is left as it is', async () => {
+    const s = await setup();
+    const saved = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    await send(s, 'POST', `/api/jobs/applications/${saved}/jd/paste`, {text: TEXT});
+    expect((await stop(s, saved)).status).toBe(409);
+    const ended = s.make({company: 'Trey Research', title: 'Data Engineer II', platform: 'Breezy', jdLookup: 'not_found'});
+    expect((await stop(s, ended)).body.jd).toMatchObject({state: 'not_found', stopped: false, looked_at: '2026-10-05T17:20:00.000Z'});
+    expect((await stop(s, 999_999)).status).toBe(404);
+  });
+
+  test('the location set by hand: kept over the reading that lands after it, taken away by an empty one, and put back by Undo', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    expect((await send(s, 'PATCH', `/api/jobs/applications/${id}`, {location: 'Austin, TX'})).status).toBe(409);
+    await send(s, 'POST', `/api/jobs/applications/${id}/jd/paste`, {text: TEXT});
+    const set = await send(s, 'PATCH', `/api/jobs/applications/${id}`, {location: '  Austin, TX '});
+    expect(set.status).toBe(200);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({location: 'Austin, TX', summary: ''});
+    s.answers({submit_posting_reading: reading(READ)});
+    await s.drain();
+    expect(applicationDetail(s.store, id).posting).toMatchObject({location: 'Austin, TX', summary: READ.summary, workplace: 'hybrid'});
+
+    const cleared = await send(s, 'PATCH', `/api/jobs/applications/${id}`, {location: ''});
+    expect(applicationDetail(s.store, id).posting).toMatchObject({location: null, summary: READ.summary});
+    await send(s, 'POST', `/api/jobs/undo/${cleared.body.undo}`);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({location: 'Austin, TX'});
   });
 });
 

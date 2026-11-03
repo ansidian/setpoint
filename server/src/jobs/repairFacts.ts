@@ -35,11 +35,12 @@ export interface CutPosting {
 
 const cutPostings = (store: Store) => jobsDb(store.sqlite).select({
   id: j.jobsPostings.id, applicationId: j.jobsPostings.applicationId, text: j.jobsPostings.fullText, salary: j.jobsPostings.salary, location: j.jobsPostings.location,
-  company: j.jobsApplications.company, title: j.jobsApplications.title,
+  locationSetAt: j.jobsPostings.locationSetAt, company: j.jobsApplications.company, title: j.jobsApplications.title,
 }).from(j.jobsPostings).innerJoin(j.jobsApplications, eq(j.jobsApplications.id, j.jobsPostings.applicationId))
   .where(or(like(j.jobsPostings.salary, '%…'), like(j.jobsPostings.location, '%…')))
   .orderBy(asc(j.jobsPostings.applicationId)).all()
-  .map(posting => ({...posting, cut: FACTS.filter(fact => wasCut(posting[fact], OLD_LIMITS[fact]))}))
+  // A location the user set is theirs, whatever it looks like (SV-170).
+  .map(posting => ({...posting, cut: FACTS.filter(fact => !(fact === 'location' && posting.locationSetAt) && wasCut(posting[fact], OLD_LIMITS[fact]))}))
   .filter(posting => posting.cut.length);
 
 const planned = ({applicationId, company, title, cut}: CutPosting): CutPosting => ({applicationId, company, title, cut});

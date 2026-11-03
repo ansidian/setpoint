@@ -35,6 +35,13 @@ export async function lookUp(id: number): Promise<void> {
   refreshIfShown(JOBS_PATH);
 }
 
+/** Stop (SV-170): the lookup under way ends now, to paste the posting instead. The answer is the detail. */
+export async function stopLookup(id: number): Promise<void> {
+  const detail = await sendJson<ApplicationOut>('POST', `${applicationPath(id)}/lookup/stop`);
+  setCached(applicationPath(id), detail);
+  refreshIfShown(JOBS_PATH);
+}
+
 /** What answers and corrections change: the page, the shell's count and the application open. */
 function refreshJobs(applications: (number | null)[] = []) {
   refreshIfShown(JOBS_PATH);

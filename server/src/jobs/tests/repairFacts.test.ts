@@ -81,6 +81,13 @@ describe('jobs-repair-facts', () => {
     expect(s.models.requests).toEqual([]);
   });
 
+  test('a location the user set is theirs, even one that looks cut (SV-170)', async () => {
+    const s = await setup();
+    const id = s.make('Fabrikam', 'Analyst', {salary: CUT_PAY, location: CUT_PLACES});
+    s.db.update(j.jobsPostings).set({locationSetAt: SEED_NOW}).where(eq(j.jobsPostings.applicationId, id)).run();
+    expect(repairFactsPlan(s.store)).toEqual([{applicationId: id, company: 'Fabrikam', title: 'Analyst', cut: ['salary']}]);
+  });
+
   test('applying reads the saved text, not the cut value, and writes only what was cut; the JD and the application stay', async () => {
     const s = await setup();
     const pay = s.make('Contoso', 'Data Analyst', {salary: CUT_PAY, location: 'Irvine, CA'});

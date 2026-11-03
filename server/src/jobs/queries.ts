@@ -51,12 +51,14 @@ function loadRows(store: Store) {
   const jdOf = (application: Application): JdSummaryOut => {
     const posting = postings.get(application.id);
     if (posting) {
-      return {state: 'found', source: posting.source, platform: posting.platform, found_at: posting.foundAt, candidates: 0, looked_at: application.jdLookupAt, link: posting.link};
+      return {state: 'found', source: posting.source, platform: posting.platform, found_at: posting.foundAt, candidates: 0, looked_at: application.jdLookupAt, link: posting.link, stopped: false};
     }
     const unread = application.jdLookup === 'not_found' ? candidates.get(application.id)?.find(candidate => candidate.pickedAt) : undefined;
     return {
       state: application.jdLookup, source: null, platform: null, found_at: null,
       candidates: application.jdLookup === 'candidates' ? (candidates.get(application.id)?.length ?? 0) : 0, looked_at: application.jdLookupAt, link: unread?.link ?? null,
+      // Stopped by the user (SV-170); any lookup or answer since clears it.
+      stopped: application.jdLookup === 'not_found' && application.jdLookupStoppedAt !== null,
     };
   };
   const rowOf = (application: Application): ApplicationRowOut => {
@@ -110,7 +112,7 @@ export function jobsPage(store: Store): JobsPageOut {
 }
 
 const postingOut = (posting: typeof j.jobsPostings.$inferSelect): PostingOut => ({
-  summary: posting.summary, location: posting.location, workplace: posting.workplace, workplace_detail: posting.workplaceDetail, salary: posting.salary,
+  summary: posting.summary, location: posting.location, location_set_at: posting.locationSetAt, workplace: posting.workplace, workplace_detail: posting.workplaceDetail, salary: posting.salary,
   must_haves: posting.mustHaves, nice_to_haves: posting.niceToHaves, full_text: posting.fullText, link: posting.link, source: posting.source,
   platform: posting.platform, found_at: posting.foundAt,
 });

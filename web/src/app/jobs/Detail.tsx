@@ -6,7 +6,9 @@
 // step away, or where the JD stands (looking, No JD found with Look it up, candidates in Needs you);
 // the timeline, each event opening its email; Applied before at the company, and its other
 // applications. At not_found, Paste the posting (SV-140): the main action after a pick Jobs couldn't
-// read, beside Look it up otherwise; a JD pasted shows what Haiku has read of it so far. J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
+// read, beside Look it up otherwise; a JD pasted shows what Haiku has read of it so far. While it's
+// looked up, Paste the posting stops the lookup and opens the area (SV-170). The JD's location is
+// added or changed in place (SV-170). J6's corrections (35a, 35b, #267–#269): More after the tools, the title edited in
 // place (and the company, from More), the status chip's Set status, Not this posting's candidates
 // offered where the JD was, and each event's ··· (Open email, Move to…, Not about this), also on a
 // right-click. An event whose email Gmail no longer has keeps its line and opens nothing.
@@ -17,7 +19,7 @@ import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {news as arrivals} from '../../tokens.ts';
 import {takesContextMenu} from '../ContextMenu.tsx';
 import {foldIn, foldOut, useFold} from '../fold.ts';
-import {useResource} from '../../api/client.ts';
+import {updateCached, useResource} from '../../api/client.ts';
 import {age, fullTimestamp, localDate} from '../../logic/format.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -26,8 +28,8 @@ import {PaneEdge} from '../Reader.tsx';
 import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import {Bar, Sk} from '../states/Loading.tsx';
 import {toastFailure} from '../toast.ts';
-import {actInPlace} from './act.ts';
-import {applicationPath, lookUp, pastePosting} from './api.ts';
+import {act, actInPlace} from './act.ts';
+import {applicationPath, editApplication, lookUp, pastePosting, stopLookup} from './api.ts';
 import {FullPosting} from './FullPosting.tsx';
 import type {FullPostingHandle} from './FullPosting.tsx';
 import {JobsMenu} from './Menu.tsx';
@@ -215,15 +217,33 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
 }) {
   const [asking, setAsking] = useState(false);
   const [pasting, setPasting] = useState(false);
+  const [placing, setPlacing] = useState(false);
   const paste = (text: string) => actInPlace(() => pastePosting(detail.id, text), {done: `JD saved for ${detail.company}`});
   const lookItUp = () => {
     setAsking(true);
     void lookUp(detail.id).catch(toastFailure('Couldn\'t look it up')).finally(() => setAsking(false));
   };
+  // Paste the posting while it's looked up (SV-170): the area opens at once, and the lookup stops.
+  const pasteInstead = () => {
+    setPasting(true);
+    void stopLookup(detail.id).catch((error: unknown) => {
+      setPasting(false);
+      toastFailure('Couldn\'t stop the lookup')(error);
+    });
+  };
+  // The location in place (SV-170): shown at once, then saved, with Undo; empty takes it away.
+  const place = (value: string) => {
+    setPlacing(false);
+    const location = value || null;
+    const setAt = new Date().toISOString();
+    updateCached<ApplicationOut>(applicationPath(detail.id), data => (data.id === detail.id && data.posting ? {...data, posting: {...data.posting, location, location_set_at: setAt}} : data));
+    void act(() => editApplication(detail.id, {location}), {done: location ? 'Location set' : 'Location removed', failed: 'Couldn\'t change the location'});
+  };
   const saved = detail.posting;
   // The area stays until the JD has come, and doesn't come back with Undo.
   if (saved && pasting) setPasting(false);
   if (saved) {
+    const location: LocationEdit = {editing: placing, today, timeZone, onEdit: () => setPlacing(true), onSave: place, onCancel: () => setPlacing(false)};
     return (
       <>
         {saved.summary && (
@@ -232,19 +252,23 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
             <p className="jb-want">{saved.summary}</p>
           </div>
         )}
-        {hasReading(saved) && <JdFacts posting={saved} />}
+        {/* Before it's read, only the location: nothing else is claimed, "Salary not stated" least of all. */}
+        <JdFacts posting={saved} location={location} reading={hasReading(saved)} />
         <JdLists posting={saved} />
         <FullPosting ref={posting} posting={saved} title={titleOf(detail)} company={detail.company} timeZone={timeZone} today={today} arrived={unfolded} />
       </>
     );
   }
-  if (detail.jd.state === 'looking') {
+  if (detail.jd.state === 'looking' && !pasting) {
     return (
       <>
-        <div className="jb-src looking" role="status">
+        <div className="jb-src looking">
           <span className="spin"><Icon name="progress_activity" size={16} /></span>
-          <span className="t">Looking for the posting…</span>
-          <span className="how">{lookingWhere(detail.platform)}</span>
+          <span className="grow line" role="status">
+            <span className="t">Looking for the posting…</span>
+            <span className="how">{lookingWhere(detail.platform)}</span>
+          </span>
+          <button className="btn quiet sm" type="button" onClick={pasteInstead}><Icon name="edit_note" size={16} />Paste the posting</button>
         </div>
         <Sk kind="jobs-jd" className="jb-skel" immediate><Bar w="92%" h={10} /><Bar w="86%" h={10} /><Bar w="54%" h={10} /><Bar w="38%" h={10} /></Sk>
       </>
@@ -262,16 +286,19 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
     );
   }
   // No JD found (D320), or never looked up (a closed application from history, D311): each says so
-  // under the section's label, with Look it up where it can run.
-  const line = detail.jd.state === 'not_found'
-    ? {icon: 'search_off' as const, ...notFoundWords(detail.jd, detail.platform, timeZone, today)}
+  // under the section's label, with Look it up where it can run. A lookup stopped to paste (SV-170)
+  // reads as stopped from the click, so the area isn't drawn again when the server answers.
+  const stoppedHere = detail.jd.state === 'looking';
+  const jd = stoppedHere ? {...detail.jd, state: 'not_found' as const, stopped: true} : detail.jd;
+  const line = jd.state === 'not_found'
+    ? {icon: 'search_off' as const, ...notFoundWords(jd, detail.platform, timeZone, today)}
     : detail.jd.state === 'candidates'
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${detail.jd.candidates} ${detail.jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
-  const notFound = detail.jd.state === 'not_found';
+  const notFound = jd.state === 'not_found';
   // After a pick Jobs couldn't read, the text is what's left, so Paste leads and Look it up steps back;
-  // with nothing found, another look still costs the user less (SV-140).
-  const pasteFirst = notFound && detail.jd.link !== null;
+  // with nothing found, another look still costs the user less (SV-140). Stopped, the user chose to paste.
+  const pasteFirst = notFound && (jd.link !== null || jd.stopped);
   const lookUpButton = (
     <button className={`btn ${notFound && !pasteFirst ? 'out' : 'quiet'} sm`} type="button" disabled={asking} onClick={lookItUp}><Icon name="search" size={16} />Look it up</button>
   );
@@ -279,14 +306,14 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
     <button className={`btn ${pasteFirst ? '' : 'quiet '}sm`} type="button" onClick={() => setPasting(true)}><Icon name="edit_note" size={16} />Paste the posting</button>
   );
   return (
-    <div className="jb-arrive" key={detail.jd.state}>
+    <div className="jb-arrive" key={jd.state}>
       <h2 className="jb-label">Job description</h2>
       <div className={notFound ? 'jb-nojd stacked' : 'jb-nojd'}>
         <span className="grow line">
           <Icon name={line.icon} size={16} />
           <span className="words"><span className="ink2">{line.lead}</span><span className="num"><span className="sep"> · </span>{line.rest}</span></span>
         </span>
-        {!(notFound && pasting) && detail.jd.state !== 'candidates' && (
+        {!(notFound && pasting) && jd.state !== 'candidates' && (
           <span className="acts">
             {pasteFirst && pasteButton}
             {lookUpButton}
@@ -301,14 +328,41 @@ function Jd({detail, timeZone, today, posting, unfolded, onPick}: {
 
 const WORKPLACES = {on_site: 'On-site', hybrid: 'Hybrid', remote: 'Remote'} as const;
 
-/** The JD's facts (D307): where, the setting, the salary or "Salary not stated". Mail's popover shows them too. */
-export function JdFacts({posting}: {posting: PostingOut}) {
+/** The location in place (SV-170), in the detail only. */
+interface LocationEdit {
+  editing: boolean;
+  today: string;
+  timeZone: string;
+  onEdit: () => void;
+  onSave: (value: string) => void;
+  onCancel: () => void;
+}
+
+/**
+ * The JD's facts (D307): where, the setting, the salary or "Salary not stated". Mail's popover shows
+ * them too. In the detail the location is edited in place, or added ("Add location"), and before the
+ * JD is read the line holds only that (SV-170).
+ */
+export function JdFacts({posting, location, reading = true}: {posting: PostingOut; location?: LocationEdit; reading?: boolean}) {
   const place = posting.workplace ? `${WORKPLACES[posting.workplace]}${posting.workplace_detail ? `, ${posting.workplace_detail}` : ''}` : null;
+  const where = !location ? posting.location && <span><Icon name="location_on" size={16} />{posting.location}</span>
+    : location.editing ? (
+      <span className="jb-place">
+        <Icon name="location_on" size={16} />
+        <EditField label="Location" value={posting.location ?? ''} small emptied onSave={location.onSave} onCancel={location.onCancel} />
+        <span className="jb-hint">Enter to save · Esc</span>
+      </span>
+    ) : (
+      <button type="button" className={posting.location ? 'jb-tbtn jb-place' : 'jb-tbtn jb-place none'} onClick={location.onEdit}
+        data-tip={posting.location_set_at ? `Set by you on ${dayWord(localDate(posting.location_set_at, location.timeZone), location.today)}` : posting.location ? 'Edit location' : undefined}>
+        <Icon name="location_on" size={16} /><span>{posting.location ?? 'Add location'}</span><Icon name="edit" size={14} className="pen" />
+      </button>
+    );
   return (
     <div className="jb-facts">
-      {posting.location && <span><Icon name="location_on" size={16} />{posting.location}</span>}
-      {place && <span><Icon name="home_work" size={16} />{place}</span>}
-      <span><Icon name="payments" size={16} />{posting.salary ?? <span className="quiet">Salary not stated</span>}</span>
+      {where}
+      {reading && place && <span><Icon name="home_work" size={16} />{place}</span>}
+      {reading && <span><Icon name="payments" size={16} />{posting.salary ?? <span className="quiet">Salary not stated</span>}</span>}
     </div>
   );
 }

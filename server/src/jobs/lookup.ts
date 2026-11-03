@@ -30,6 +30,9 @@
 // - Pasted (SV-140): the user's own copy is saved at once as the JD, whatever the models are doing,
 //   the pick's link kept (`savePasted`), and its own job, keyed `jobs_pasted:<posting>`, has Haiku
 //   fill the reading (`readPasted`). A reading that fails leaves it saved without one.
+// - Stopped (SV-170): the user would rather paste the posting than wait, so `stopLookup` ends the
+//   lookup at once as `not_found`, marked stopped, and the job running it aborts its calls when it
+//   sees its application no longer `looking` (./reader.ts).
 // - Cost: no cap (decision 61). Search is the ledger's `jobs_finding_jds`, the check and the reading
 //   `jobs_reading_jds`. Every change sends the `jobs` live event.
 import {OPEN_JOB_STATUSES} from '@setpoint/shared';
@@ -119,11 +122,33 @@ export function requestLookup(store: Store, applicationId: number): 'looking' | 
     const answered = answerJdItems(store, applicationId, 'looked_up_again', now);
     db.delete(j.jobsJdCandidates).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     // Asked for now, so what it's unsure of is today's, whoever made the application.
-    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupFromHistory: false, updatedAt: now})
+    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupStoppedAt: null, jdLookupFromHistory: false, updatedAt: now})
       .where(eq(j.jobsApplications.id, applicationId)).run();
     queueLookup(store, applicationId);
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
     return 'looking';
+  });
+}
+
+/**
+ * Stop (SV-170): a lookup under way ends now as `not_found`, marked stopped, so Paste the posting is
+ * there and nothing is queued again; its job aborts its model calls at this change (./reader.ts). A
+ * pick being read is let go, so it isn't taken for one Jobs couldn't read. Refused over a JD saved
+ * meanwhile; a lookup that has already ended is left as it is.
+ */
+export function stopLookup(store: Store, applicationId: number): 'stopped' | 'ended' {
+  const db = jobsDb(store.sqlite);
+  return transaction(store, () => {
+    const application = db.select({jdLookup: j.jobsApplications.jdLookup}).from(j.jobsApplications).where(eq(j.jobsApplications.id, applicationId)).get();
+    if (!application) throw notFound('No such application.');
+    if (hasPosting(store, applicationId)) throw conflict('jd_saved', 'This application has its JD already.');
+    if (application.jdLookup !== 'looking') return 'ended';
+    const now = isoNow(store);
+    db.update(j.jobsJdCandidates).set({pickedAt: null}).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
+    db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, jdLookupStoppedAt: now, updatedAt: now})
+      .where(eq(j.jobsApplications.id, applicationId)).run();
+    noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: []});
+    return 'stopped';
   });
 }
 
@@ -144,7 +169,7 @@ export function requestPick(store: Store, applicationId: number, candidateId: nu
     const answered = answerJdItems(store, applicationId, 'picked', now);
     db.update(j.jobsJdCandidates).set({pickedAt: null}).where(eq(j.jobsJdCandidates.applicationId, applicationId)).run();
     db.update(j.jobsJdCandidates).set({pickedAt: now}).where(eq(j.jobsJdCandidates.id, candidateId)).run();
-    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupFromHistory: false, updatedAt: now})
+    db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupStoppedAt: null, jdLookupFromHistory: false, updatedAt: now})
       .where(eq(j.jobsApplications.id, applicationId)).run();
     queueLookup(store, applicationId);
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: answered});
@@ -507,7 +532,8 @@ export function savePasted(store: Store, applicationId: number, text: string, no
  */
 export async function readPasted(store: Store, postingId: number, {endpoints, timeoutMs, signal}: Omit<LookupOptions, 'web'>): Promise<void> {
   const db = jobsDb(store.sqlite);
-  const held = () => db.select({text: j.jobsPostings.fullText, applicationId: j.jobsPostings.applicationId}).from(j.jobsPostings).where(eq(j.jobsPostings.id, postingId)).get();
+  const held = () => db.select({text: j.jobsPostings.fullText, applicationId: j.jobsPostings.applicationId, locationSetAt: j.jobsPostings.locationSetAt})
+    .from(j.jobsPostings).where(eq(j.jobsPostings.id, postingId)).get();
   const posting = held();
   if (!posting) return;
   const haiku = jobsModelClient(store, endpoints, 'reading', timeoutMs);
@@ -519,7 +545,8 @@ export async function readPasted(store: Store, postingId: number, {endpoints, ti
     const still = held();
     if (!still) return;
     db.update(j.jobsPostings).set({
-      summary: reading.summary, location: reading.location, workplace: reading.workplace, workplaceDetail: reading.workplace === 'hybrid' ? reading.workplaceDetail : null,
+      // A location the user set while it was read is theirs (SV-170).
+      summary: reading.summary, location: still.locationSetAt ? undefined : reading.location, workplace: reading.workplace, workplaceDetail: reading.workplace === 'hybrid' ? reading.workplaceDetail : null,
       salary: reading.salary, mustHaves: reading.mustHaves, niceToHaves: reading.niceToHaves,
     }).where(eq(j.jobsPostings.id, postingId)).run();
     noteLive(store, {type: 'jobs', applications: [still.applicationId], needs_you: []});
@@ -556,7 +583,7 @@ function markNotFound(store: Store, applicationId: number) {
   transaction(store, () => {
     if (hasPosting(store, applicationId) || !stillLooking(store, applicationId)) return;
     const now = isoNow(store);
-    db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
+    db.update(j.jobsApplications).set({jdLookup: 'not_found', jdLookupAt: now, jdLookupStoppedAt: null, updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
     noteLive(store, {type: 'jobs', applications: [applicationId], needs_you: []});
   });
 }

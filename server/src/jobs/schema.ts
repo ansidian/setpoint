@@ -52,6 +52,9 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   // Where its JD lookup stands; a saved posting is `found` (jobs_postings).
   jdLookup: text('jd_lookup', {enum: JD_LOOKUPS}).notNull().default('none'),
   jdLookupAt: text('jd_lookup_at'),
+  // The user stopped its lookup to paste the posting (SV-170): `not_found`, saying "Lookup stopped",
+  // until the next lookup or answer clears it.
+  jdLookupStoppedAt: text('jd_lookup_stopped_at'),
   // Its lookup was started by the history pass's end (J4): what it's unsure of goes to From history.
   jdLookupFromHistory: integer('jd_lookup_from_history', {mode: 'boolean'}).notNull().default(false),
   createdAt: text('created_at').notNull(),
@@ -94,6 +97,8 @@ export const jobsPostings = sqliteTable('jobs_postings', {
   fullText: text('full_text').notNull(),
   summary: text('summary').notNull(),
   location: text('location'),
+  // The user set the location (SV-170): no reading writes it again.
+  locationSetAt: text('location_set_at'),
   workplace: text('workplace', {enum: JOB_WORKPLACES}),
   workplaceDetail: text('workplace_detail'),
   salary: text('salary'),

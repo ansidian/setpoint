@@ -104,7 +104,7 @@ export function finishHistory(store: Store, startedAt: string, passedOver: Reado
         lt(j.jobsApplications.appliedAt, pass.before), inArray(j.jobsApplications.status, [...OPEN_JOB_STATUSES]),
       )).all().map(row => row.id);
     if (open.length) {
-      db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupFromHistory: true, updatedAt: now})
+      db.update(j.jobsApplications).set({jdLookup: 'looking', jdLookupAt: now, jdLookupStoppedAt: null, jdLookupFromHistory: true, updatedAt: now})
         .where(inArray(j.jobsApplications.id, open)).run();
     }
     noteLive(store, {type: 'jobs', applications: open, needs_you: [], history: historyStatus(store)});
