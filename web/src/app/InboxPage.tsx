@@ -36,6 +36,7 @@ import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
   codeExpired, inSight, keepCursor, keepShown, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
+import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
 import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
@@ -103,10 +104,10 @@ let slides = 0;
  * The phone's push and back (#139): the reader slides in over the list, which moves a little under it,
  * and slides back off it, as one 260 ms view transition (phone.css draws it, by the direction on the
  * root). Only the app's own opens and closes slide: the browser's Back (popstate) doesn't, as Safari's
- * edge swipe animates it already. Without the API it's the cut it was.
+ * edge swipe animates it already. Without the API it's the cut it was; which way is phoneSlide's.
  */
-function slide(direction: 'in' | 'back', update: () => void) {
-  if (!('startViewTransition' in document)) return update();
+function slide(direction: 'in' | 'back' | null, update: () => void) {
+  if (!direction || !('startViewTransition' in document)) return update();
   const root = document.documentElement;
   const token = ++slides;
   root.dataset.slide = direction;
@@ -279,8 +280,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       search.mark(id, {unread: false});
     }
     // On the phone the reader slides in over the list; the desktop's sits beside it.
-    if (phone && open === null) slide('in', () => go({open: id}));
-    else go({open: id});
+    slide(phoneSlide(phone, open, id), () => go({open: id}));
     void openMessage(id).catch(toastFailure('Couldn\'t mark it read'));
   }
 
@@ -310,14 +310,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
   /** Back to an email Undo brought back, as it was. */
   function reopen(id: number) {
     lastOpened = id;
-    if (phone) slide('in', () => navigate({...route, open: id}));
-    else navigate({...route, open: id});
+    slide(phoneSlide(phone, open, id), () => navigate({...route, open: id}));
   }
 
   /** Closes the reader: on the phone it slides back off the list (Back, Done, Trash). */
   function close() {
-    if (phone && open !== null) slide('back', () => go({open: null}));
-    else go({open: null});
+    slide(phoneSlide(phone, open, null), () => go({open: null}));
   }
 
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;

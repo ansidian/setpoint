@@ -4,6 +4,17 @@ import type {ItemOut} from '@setpoint/shared';
 import {dayTitle, isPast, timeRange} from './calendar.ts';
 import {addDays, clockTime, daysBetween} from './format.ts';
 
+/**
+ * How the phone's reader changes (#139): an email opened from the list slides in over it, and closing it
+ * slides back; going from one email to another, and the desktop's reader beside the list, don't slide.
+ */
+export function phoneSlide(phone: boolean, from: number | null, to: number | null): 'in' | 'back' | null {
+  if (!phone) return null;
+  if (from === null && to !== null) return 'in';
+  if (from !== null && to === null) return 'back';
+  return null;
+}
+
 /** Today and the next 7 days. */
 export const AGENDA_DAYS = 8;
 

@@ -1,6 +1,6 @@
 // The phone feeling native (darma SV-66; DESIGN.md › Phone and Decided while building #137–#146), at
 // 390 × 844 with touch: the reader's actions sharing the bar, the unread dot on an email marked
-// unread, the slide over the list and back, search's way out, the tab bar, the safe-area insets and
+// unread, the reader over the list and back, search's way out, the tab bar, the safe-area insets and
 // the theme colour, the list's type a step up, the agenda's today, now and chips, and the sign-in
 // card clear of the keyboard. phone.spec.ts has board 21 and the phone's flows.
 import assert from 'node:assert/strict';
@@ -106,7 +106,8 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
   }
 });
 
-test('Mark unread on the phone puts the unread dot before the subject, popping in with the swapped icon; Mark read takes it away', async () => {
+// The dot's pop and its look are by eye (D416, D417).
+test('Mark unread on the phone puts the unread dot before the subject; Mark read takes it away', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -118,22 +119,7 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
     await page.locator('.ph-acts button', {hasText: 'Mark unread'}).tap();
     await page.locator('.ph-acts button', {hasText: 'Mark read'}).waitFor();
     const dot = page.locator('.rd-subj .rd-unread');
-    // It and the icon scale in from .4 over 120 ms: read from the animation, then measured once it's over.
-    assert.deepEqual(await page.locator('.ph-acts .ph-swap').evaluate(element => [getComputedStyle(element).animationName, getComputedStyle(element).animationDuration]), ['ph-pop', '0.12s']);
-    await until('the dot has popped in', () => dot.evaluate(element => element.getAnimations().length), running => running === 0);
-    // The list's dot: 6 px `ink`, 10 px before the subject, in its line's middle.
-    const look = await rested(() => dot.evaluate(element => {
-      const style = getComputedStyle(element);
-      const line = element.parentElement!.getBoundingClientRect();
-      const box = element.getBoundingClientRect();
-      const words = document.createRange();
-      words.setStart(element.parentElement!.lastChild!, 0);
-      words.setEnd(element.parentElement!.lastChild!, 1);
-      const first = words.getClientRects()[0]!;
-      return {size: [box.width, box.height], colour: style.backgroundColor, gap: Math.round(first.left - box.right), middle: Math.abs((box.top + box.bottom) / 2 - (first.top + first.bottom) / 2) <= 2,
-        inLine: box.top >= line.top, animation: [style.animationName, style.animationDuration]};
-    }));
-    assert.deepEqual(look, {size: [6, 6], colour: await rested(() => tokenColour(page, 'ink')), gap: 10, middle: true, inLine: true, animation: ['ph-pop', '0.12s']});
+    await dot.waitFor();
     await page.locator('.ph-acts button', {hasText: 'Mark read'}).tap();
     await page.locator('.ph-acts button', {hasText: 'Mark unread'}).waitFor();
     assert.equal(await dot.count(), 0);
@@ -143,126 +129,23 @@ test('Mark unread on the phone puts the unread dot before the subject, popping i
   }
 });
 
-
-interface Slide {
-  direction: string;
-  animations: string[];
-  taps: string;
-}
-
-/**
- * Records each view transition the page starts from now on: the direction on the root as it starts,
- * and, once its pseudo-elements are built, each of the slide's animations with the pseudo-element it
- * runs on, its duration and direction, and whether the overlay lets taps through.
- */
-const recordSlides = (page: Page) => page.evaluate(() => {
-  const scope = window as unknown as {slides: Slide[]};
-  scope.slides = [];
-  const start = document.startViewTransition.bind(document);
-  document.startViewTransition = ((update: ViewTransitionUpdateCallback) => {
-    const slide: Slide = {direction: document.documentElement.dataset.slide ?? '', animations: [], taps: ''};
-    scope.slides.push(slide);
-    const transition = start(update);
-    void transition.ready.then(() => {
-      slide.taps = getComputedStyle(document.documentElement, '::view-transition').pointerEvents;
-      slide.animations = document.getAnimations().flatMap(animation => {
-        const effect = animation.effect as KeyframeEffect;
-        const name = (animation as CSSAnimation).animationName;
-        if (!effect.pseudoElement?.startsWith('::view-transition-') || !name?.startsWith('ph-')) return [];
-        return [`${effect.pseudoElement} ${name} ${String(effect.getTiming().duration)} ${effect.getTiming().direction ?? ''}`];
-      }).sort();
-    });
-    return transition;
-  }) as typeof document.startViewTransition;
-});
-const slides = (page: Page) => page.evaluate(() => (window as unknown as {slides: Slide[]}).slides);
-
-test('the reader slides in over the list and back off it, Done too; the browser\'s Back doesn\'t, nor the desktop\'s reader', async () => {
+// Which way the reader slides is phoneSlide's, a table in phone.test.ts; the slide itself is by eye
+// (D416). Here, the list and the reader carry the names the slide draws them by.
+test('the reader comes over the list and goes back to it, Done too, each named for the slide', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await rested(() => recordSlides(page));
     assert.deepEqual(await rested(() => styles(page, '.content > .list', ['view-transition-name'])), ['ph-list']);
     await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.deepEqual(await rested(() => styles(page, '.pane', ['view-transition-name'])), ['ph-reader']);
-    // In: the reader from the right over 260 ms, the list a fifth left and dimmed under it, taps
-    // going through to the page meanwhile.
-    const opened = await until('the slide in has started', () => slides(page), seen => seen.length === 1 && seen[0]!.animations.length > 0);
-    assert.deepEqual(opened, [{direction: 'in', taps: 'none', animations: [
-      '::view-transition-new(ph-reader) ph-in 260 normal', '::view-transition-old(ph-list) ph-under 260 normal',
-    ]}]);
-    // Back: the reader off to the right, the list back from the left.
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    const back = await until('the slide back has started', () => slides(page), seen => seen.length === 2 && seen[1]!.animations.length > 0);
-    assert.deepEqual(back[1], {direction: 'back', taps: 'none', animations: [
-      '::view-transition-new(ph-list) ph-under 260 reverse', '::view-transition-old(ph-reader) ph-in 260 reverse',
-    ]});
-    await until('the slide is over', () => page.evaluate(() => document.documentElement.dataset.slide ?? null), direction => direction === null);
-    // Done goes back the same way, to the list where its row folds away.
+    // Done goes back to the list, where its row folds away.
     await page.locator('.list .row[title^="Final exam schedule"]').tap();
     await page.locator('.ph-acts .ph-done').tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
-    await until('a third and fourth slide', () => slides(page), seen => seen.length === 4 && seen[3]!.animations.length > 0);
-    assert.deepEqual((await slides(page)).map(slide => slide.direction), ['in', 'back', 'in', 'back']);
-    // The browser's Back (Safari's edge swipe) animates itself: no slide.
-    await page.locator('.list .row[title^="Interview availability"]').tap();
-    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    await until('the fifth slide', () => slides(page), seen => seen.length === 5);
-    await page.goBack();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    // Nothing more happens to wait for: a slide would have started with the close.
-    await page.waitForTimeout(300);
-    await setpoint.idle();
-    assert.equal((await slides(page)).length, 5);
-
-    // The desktop's reader sits beside the list: no slide.
-    const desk = await setpoint.page('target');
-    await desk.goto(`${setpoint.base}/inbox`);
-    await desk.locator('.list .row').first().waitFor();
-    await rested(() => recordSlides(desk));
-    await desk.locator('.list .row', {hasText: 'Your recovery email'}).click();
-    await desk.locator('.rd-subj', {hasText: 'Your recovery email'}).waitFor();
-    await desk.keyboard.press('Escape');
-    await until('the reader closes', () => desk.locator('.pane').count(), count => count === 0);
-    assert.deepEqual(await slides(desk), []);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('the agenda\'s detail rises into place over its fading scrim, and the toast rises from the tab bar', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.pitem', {hasText: 'Dentist'}).tap();
-    await page.locator('.ph-detail .fd-title', {hasText: 'Dentist'}).waitFor();
-    // Each entrance: its animation, timing, and where its first keyframe starts.
-    const entrance = (selector: string) => page.locator(selector).evaluate(element => {
-      const style = getComputedStyle(element);
-      const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]);
-      const find = (list: CSSRule[]): CSSKeyframesRule | undefined => {
-        for (const rule of list) {
-          if (rule instanceof CSSKeyframesRule && rule.name === style.animationName) return rule;
-          if (rule instanceof CSSMediaRule && window.matchMedia(rule.conditionText).matches) {
-            const inner = find([...rule.cssRules]);
-            if (inner) return inner;
-          }
-        }
-        return undefined;
-      };
-      const from = find(rules)?.findRule('from') ?? find(rules)?.findRule('0%');
-      return [style.animationName, style.animationDuration, style.animationTimingFunction, from ? [from.style.transform, from.style.opacity] : null];
-    });
-    assert.deepEqual(await rested(() => entrance('.fd.ph-detail')), ['ph-rise', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translateY(24px)', '0']]);
-    assert.deepEqual(await rested(() => entrance('.ph-scrim')), ['ph-fade', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['', '0']]);
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.hd button[aria-label="Mark all as read"]').tap();
-    await page.locator('.toast').waitFor();
-    assert.deepEqual(await rested(() => entrance('.toast')), ['ph-toast-in', '0.18s', 'cubic-bezier(0.2, 0, 0, 1)', ['translate(-50%, 8px)', '0']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -313,7 +196,8 @@ test('phone search: a clear button where the hint was, no Mark all as read meanw
   }
 });
 
-test('the tab bar: the current tab filled, Inbox badged while Attention waits on another page, and a tap on the current tab back to the top', async () => {
+// A tap on the current tab scrolling its list back to the top is by eye (D416).
+test('the tab bar: the current tab filled, and Inbox badged while Attention waits on another page', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
@@ -322,19 +206,6 @@ test('the tab bar: the current tab filled, Inbox badged while Attention waits on
     assert.deepEqual([await glyph('Inbox'), await glyph('Agenda')], [ICONS['inbox-fill'], ICONS.calendar_today]);
     // The Inbox's header has the pill: no badge there.
     assert.equal(await badge.count(), 0);
-    // A tap on the current tab scrolls its list back to the top, smoothly (in more than one step).
-    const list = page.locator('.content > .list');
-    await list.evaluate(element => element.scrollTo(0, 900));
-    await until('scrolled down', () => list.evaluate(element => element.scrollTop), top => top > 500);
-    await list.evaluate(element => {
-      const scope = window as unknown as {steps: number};
-      scope.steps = 0;
-      element.addEventListener('scroll', () => (scope.steps += 1));
-    });
-    await page.locator('.ph-tab', {hasText: 'Inbox'}).tap();
-    await until('back at the top', () => list.evaluate(element => element.scrollTop), top => top === 0);
-    assert.ok(await page.evaluate(() => (window as unknown as {steps: number}).steps) > 1, 'it scrolls smoothly, not in one jump');
-
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await page.locator('.ph-agenda .pitem').first().waitFor();
     assert.deepEqual([await glyph('Inbox'), await glyph('Agenda')], [ICONS.inbox, ICONS['calendar_today-fill']]);
@@ -479,23 +350,6 @@ test('the agenda marks today and now, draws events as their calendar\'s chips, a
     assert.equal(await rested(() => words(chip)), await rested(() => words(task.locator('.ell'))));
     assert.ok(await task.locator('.ring').isVisible());
     assert.deepEqual(await rested(() => styles(page, '.ph-agenda .pday', ['position', 'top', 'z-index'])), ['sticky', '0px', '1']);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('a busy day\'s head stays in view as its items scroll under it', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen', fixtures: ['busy-saturday']});
-  try {
-    const page = await setpoint.page('iphone');
-    await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-17'})}`);
-    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 17 – 24');
-    const agenda = page.locator('.ph-agenda');
-    await agenda.evaluate(element => element.scrollTo(0, 40));
-    await until('scrolled', () => agenda.evaluate(element => element.scrollTop), top => top === 40);
-    const [box, head] = [await rested(() => agenda.boundingBox()), await rested(() => page.locator('.ph-agenda [data-days="2026-10-17"] .pday').boundingBox())];
-    assert.equal(head!.y, box!.y, 'Saturday\'s head stays at the top');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

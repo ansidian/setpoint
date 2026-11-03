@@ -4,7 +4,7 @@ import type {ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {itemsByDay} from '../src/logic/calendar.ts';
-import {agendaNowAt, agendaRange, agendaStart, phoneAgenda} from '../src/logic/phone.ts';
+import {agendaNowAt, agendaRange, agendaStart, phoneAgenda, phoneSlide} from '../src/logic/phone.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -122,3 +122,11 @@ test.each([
   const [today] = phoneAgenda('2026-10-07', '2026-10-07', itemsByDay(list, undefined, zone), now, zone);
   expect(today?.kind === 'day' ? [today.nowAt, agendaNowAt(today.lines)] : null).toEqual([expected, expected]);
 });
+
+test.each([
+  ['the phone opens an email from the list: it slides in', true, null, 4, 'in'],
+  ['the phone closes it (Back, Done, Trash): it slides back', true, 4, null, 'back'],
+  ['the phone goes from one email to another: no slide', true, 4, 5, null],
+  ['the desktop opens one: its reader sits beside the list', false, null, 4, null],
+  ['the desktop closes one', false, 4, null, null],
+] as const)('the reader\'s slide (#139): %s', (_name, phone, from, to, slide) => expect(phoneSlide(phone, from, to)).toBe(slide));
