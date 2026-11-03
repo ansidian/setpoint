@@ -50,7 +50,7 @@ cutover. This file owns what's on screen and how it behaves.
 
 As in [BRIEF.md › Vocabulary](BRIEF.md#vocabulary): Inbox, All, lane (Attention, FYI, Noise),
 kind, Done, Unsorted, Protected, item, floating detail, proposal, Alfred, source, and in News story,
-section and Missed. The **kinds** are
+section and recap. The **kinds** are
 Deliveries, Money, Career, Security, Updates, People and Other (Career and People, not Work and
 Personal, which are account names). The UI says "Done", never "handled".
 
@@ -723,8 +723,8 @@ navigation.
 - **The dot** (6 px in the 12 px gutter): `ink` for **new**, as unread mail; `cool` for
   **updated**; none once seen, from the next visit (#95), an opened story's shrinking out in its
   colour over 180 ms (#131). Hover is `sub`; the keyboard cursor and the open story are `sub2`.
-- **Meta copy:** "KTLA +4 · 1h · Updated 8:40 AM". Ages follow [Copy](#copy). Missed rows lead with
-  the section, the story's main one (#96): "General · NPR +9 · Tue".
+- **Meta copy:** "KTLA +4 · 1h · Updated 8:40 AM". Ages follow [Copy](#copy). The recap's rows lead
+  with the section, the story's main one (#96): "General · NPR +9 · Tue".
 - **Images:** Setpoint's own resized copy, cropped to fill (`object-fit: cover`). The boards draw
   tinted placeholders instead. While one loads its box breathes in a skeleton's fill, then it
   fades in over 180 ms; every news image has a 1 px `edge` hairline inside its edge (#230).
@@ -741,13 +741,9 @@ navigation.
     takes an ellipsis; the leads' images shrink to 160 × 90 (#99).
   - The row opens a popover with the story that announced the keynote, which opens that story
     (#100).
-- **Missed strip** (D92), at the top of All only while Missed holds stories:
-  - 46 px, padding 0 12 0 22, `cool` at 9% over `page`, with a `cool` 22% hairline below.
-  - A `cool` `history` icon, then "**14 stories** you missed since Mon" in `ink`, then a solid small
-    **Catch up** button.
+- **While you were away** (#298): All's first block, above Local, while it holds stories (below).
 - **New-stories pill:**
-  - A 32 px pill centred 10 px below the list's top (under the Missed strip when there is one):
-    `cardOn`, an `edgeOn` ring, the pill shadow.
+  - A 32 px pill centred 10 px below the list's top: `cardOn`, an `edgeOn` ring, the pill shadow.
   - It shows `arrow_upward`, "3 new · 1 updated" (the updated count in `cool`) and the `N` hint.
   - A click or `N` re-sorts the list and scrolls it to the top. The stories it brings onto the list
     settle in from `sub2` over 900 ms.
@@ -798,18 +794,27 @@ navigation.
     summary", with a solid small **Read at KTLA**.
   - Then the feed summary, and **Also in this story**, listing the other sources.
 
-### Missed
+### While you were away
 
-Board 28 replaces All's list.
-- **Back row** (44 px): the back arrow (back to All), "Missed since Mon 10:40 PM" (14 / 500), and
-  the count in `ink3` on the right.
-- **Day headers** are section headers ("TUESDAY", with "Oct 6" on the right), on `history` (#120).
-- Under each day, up to 5 stories per section, biggest first, the first as a lead. Each row names
-  its section in the meta. A lead's image is its story's large copy, kept while the story is in
-  Missed, never its thumbnail stretched (#115).
-- A story leaves Missed once it's seen, but the list holds for the visit, as All's order does: rows
-  seen while it's open keep their places. Back in All, the strip is gone once Missed is empty, and
-  Missed opened with nothing in it is All (#117).
+The recap (#298): what left the page before the user saw it, offered once at the top of All rather
+than kept as a list to clear. No board draws it.
+- **Header:** a section header (32 px, `history` in `ink3`), "While you were away", then on the
+  right "since Fri 6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one) and
+  a ghost small **Done**.
+- **Rows:** each section's biggest stories that left the page unseen since the last recap was put
+  away, up to 3 per section (12 at most), grouped in the blocks' order (Local, Tech, AI, General)
+  and biggest first within each. Story rows only, no lead. Each row names its section in the meta.
+- **No dots:** everything in it is unseen. An opened story's headline turns `ink2` 400, as a seen
+  row's does, so the user can tell what they've read.
+- **Fixed on arrival:** the recap is chosen when All opens and holds for the visit. Nothing slides
+  in, and the pill never counts its stories. A story still on the page keeps its dot in its own
+  block and isn't in the recap.
+- **Put away:** once it has been on screen and the user has then been away from News for about an
+  hour; a shorter trip to another page, or opening News into a section or from a story link before
+  it has shown, keeps it. **Done** puts it away at once: it folds away (180 ms) and says "Recap put
+  away · Undo". Either way its stories stay unseen and in search's archive (D91), and the next
+  recap holds only what left after.
+- Only on All: not in a section's list, in search, or during the first run.
 
 ### States
 
@@ -823,7 +828,7 @@ Board 28 replaces All's list.
 - **First run** (29b):
   - The muted line "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so
     far", its progress along its foot (#223).
-  - No Missed strip.
+  - No recap.
   - A section with nothing yet says "Nothing sorted in AI yet", turning as the first run's line does
     (#223).
 - **Offline:** as everywhere, the pill and the dimmed page.
@@ -1594,6 +1599,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     row, which went with OpenAI itself (D411).
 41. **Stories and ranking's line** (#297): 30b and 39b draw "Headlines and summaries, the hourly
     ranking"; the app reads "Headlines, summaries and how much each matters".
+42. **No Missed strip or Catch up** (#298): board 25 draws the strip above All's list and board 28
+    the Missed list by day. Neither is in the app; All opens with the recap, which no board draws.
 
 ## Not designed yet
 
@@ -3646,3 +3653,14 @@ it changes what's on screen.
     writer judges its importance as it writes it, and no hourly call ranks the stories any more.
     Settled while building: the wording. Board audit: 30b and 39b still draw the old line
     (override 41).
+298. **Catch-up is a recap offered once, not a list to clear** (Andy, 2026-11-02; darma SV-163,
+    D418, D419, D422 to D424, D426; superseding D92's strip, #115 and #117). Missed kept a story
+    until it was seen, which made it an unread count with homework: seeing one let the next of its
+    day slide in under its five-per-section limit, and the pill counted those as new. All now opens
+    with [While you were away](#while-you-were-away): up to 3 per section, compact rows, put away
+    after an hour away once it has shown, or by Done. The Missed strip, Catch up and the Missed view
+    go, and with no leads a story that leaves unseen keeps only its thumbnail. Desktop first: the
+    iPhone app keeps its strip and Catch up, fed the recap's stories, until setpoint-ios has its own
+    recap. What was in Missed at release is the first recap. Settled while drafting: Done's fold and
+    Undo, as Dismiss all's. Board audit: boards 25 and 28 still draw the strip and Missed (override
+    42).

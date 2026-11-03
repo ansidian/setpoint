@@ -83,7 +83,7 @@ updated within weeks, so this one fills itself.
 | **Source** | A provider connection (an account, Calendar, Todoist, weather) or a news feed, each with a health state. |
 | **Story** | In News: the articles about one event, grouped across outlets, with one summary. The unit of the page. |
 | **Section** | In News: Local, Tech, AI or General. A story can be in more than one. |
-| **Missed** | In News: stories that left the page before Andy saw them, to catch up on. |
+| **Recap** | In News: "While you were away", the biggest stories that left the page before Andy saw them, offered once at the top of All. |
 | **Application** | In Jobs: one role Andy applied to, made from its confirmation email, with its events and its JD. |
 | **Event** | In Jobs: one email's part in an application: applied, assessment, interview, offer, rejection, or a quiet one (account created, a form). |
 | **JD** | In Jobs: the job description as it was when Andy applied, kept in Setpoint, never just a link. |
@@ -463,13 +463,14 @@ The list's order **holds**, so nothing moves under the cursor:
   1 updated". The pill re-sorts the list.
 - Opening the page always shows the latest order.
 
-### Missed (D87)
+### While you were away (D87, D418)
 
-When stories left the page before Andy saw them, a line at the top of All offers them: "14 stories
-you missed since Mon · Catch up".
-- **Catch up** lists them by day, biggest first, at most 5 per section per day.
-- Each story leaves Missed as it's seen.
-- The line goes when Missed is empty.
+When stories left the page before Andy saw them, All opens with a recap of them, offered once
+rather than kept to clear (DESIGN.md › While you were away):
+- Each section's biggest, up to 3 per section, under "While you were away · since Fri 6:10 PM".
+- It's put away once it has shown and Andy has been away from News for about an hour, or by Done.
+- Its stories stay unseen and in search's archive; nothing counts them.
+- The iPhone app keeps its Missed line and Catch up until it has its own recap (D424).
 
 ### Ranking (D86)
 
@@ -507,7 +508,7 @@ stories on the page, not everything that was published.
   the repository is public. The NWS zone and the distance filters come from the home location.
 - **Polling:** every 15 minutes (many feeds hold only 10 items), hazards every 5, except AirNow's
   file, read hourly as it changes (DESIGN.md #97). Every request sends an honest, named User-Agent.
-- **First run** fills the last 48 hours. Everything starts new, and Missed stays empty until there's
+- **First run** fills the last 48 hours. Everything starts new, and there's no recap until there's
   history.
 
 ### Models and cost (D90)
