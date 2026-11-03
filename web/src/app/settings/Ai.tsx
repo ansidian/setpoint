@@ -87,7 +87,7 @@ export function AiPage() {
           <Row title="Articles and grouping" sub={`Section, noise filter, key facts, same event or not${needsKey}`} kind="ctl">
             {news && <span className="val">{label(news.articles_model)}</span>}
           </Row>
-          <Row title="Stories and ranking" sub={`Headlines and summaries, the hourly ranking${needsKey}`} kind="ctl">
+          <Row title="Stories and ranking" sub={`Headlines, summaries and how much each matters${needsKey}`} kind="ctl">
             {news && <span className="val">{label(news.stories_model)}</span>}
           </Row>
           <Row title="Monthly cap" sub="At the cap, summaries switch to Haiku until the 1st" kind="ctl">

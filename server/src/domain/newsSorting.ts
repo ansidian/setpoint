@@ -365,7 +365,7 @@ const CLOSE_FULL_KM = 5;
 const CLOSE_NONE_KM = 80;
 
 export interface RankSignals {
-  // The model's judgement, 0–100: Haiku's per article, then Sonnet's hourly for the story.
+  // The model's judgement, 0–100: Haiku's per article, then the story writer's (D421).
   importance: number;
   // Outlets, wire copy once.
   outlets: number;
@@ -413,7 +413,7 @@ export function rankOrder<S extends {id: number; score: number; lastNewFactAt: s
 
 export const NEWS_MODELS = {articles: 'claude-haiku-5-5', stories: 'claude-sonnet-5-5'} as const;
 
-/** Which model writes story summaries: Sonnet, until this month's News spend reaches the cap; then Haiku for the rest of the month. */
+/** Which model writes stories and judges their importance: Sonnet, until this month's News spend reaches the cap; then Haiku for the rest of the month. */
 export function summaryModel(spentUsd: number, capUsd: number): string {
   return spentUsd >= capUsd ? NEWS_MODELS.articles : NEWS_MODELS.stories;
 }
@@ -423,8 +423,8 @@ export function monthStart(now: string, timeZone: string): string {
   return zonedInstant(`${localDay(now, timeZone).slice(0, 8)}01`, '00:00', timeZone);
 }
 
-/** How often the ranking runs: under the hour, so its prompt's hour-long cache is still warm. */
-export const RANK_EVERY_MS = 55 * 60_000;
+/** How often every story on the page is scored again by the formula, as recency moves with the clock. */
+export const RANK_EVERY_MS = HOUR;
 
 // ---- Missed (D87) ----
 

@@ -1,8 +1,8 @@
 // N5's fixtures (SV decision D3): News's states the seed doesn't have, for boards 29a, 29b and 30b
 // and the News and Settings browser checks. Registered in index.ts. Everything here is invented and
 // reaches no model or feed: the articles waiting to be sorted come from sources no adapter reads
-// outside production (`.example` addresses), sorting's next try is held far ahead, and the hourly
-// ranking has just run, so nothing asks a model while a check runs.
+// outside production (`.example` addresses), sorting's next try is held far ahead, so nothing asks a
+// model while a check runs, and the hourly re-score has just run, so no score moves.
 //
 //   news-ai-down     29a: sorting down since 8:52 AM (Anthropic didn't answer), 12 articles waiting
 //   news-stale-ai    29a: every AI source last checked at 7:02 AM ("AI, as of 7:02 AM")
@@ -21,7 +21,7 @@ const MINUTE = 60_000;
 const minutesAgo = (minutes: number) => new Date(Date.parse(SEED_NOW) - minutes * MINUTE).toISOString();
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
 
-/** Sorting's state as the fixture has it: the ranking just ran, so its hour isn't up while a check runs. */
+/** Sorting's state as the fixture has it: the re-score just ran, so its hour isn't up while a check runs. */
 function sorting(db: Db, values: Partial<typeof t.newsSorting.$inferInsert>) {
   const row = {lastRankedAt: SEED_NOW, ...values};
   db.insert(t.newsSorting).values({id: 1, ...row}).onConflictDoUpdate({target: t.newsSorting.id, set: row}).run();

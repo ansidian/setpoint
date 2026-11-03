@@ -3,8 +3,8 @@
 //   source's job, once that job has read its new articles' pages; every few minutes, and as soon as
 //   the keys change, it's queued again while anything waits, so articles a down AI left Unsorted are
 //   sorted once it's back.
-// - `news_rank` is the hourly ranking, on a prompt cached for an hour (so it runs a little inside the
-//   hour, while the cache is warm). Without a key it still scores the stories by the formula.
+// - `news_rank` scores the stories on the page again every hour, as recency moves with the clock. It
+//   asks no model: each story's importance is judged as it's written (D421).
 // Each model call is written to the AI usage ledger and to sorting's health; a refusal fails the job
 // by the one retry policy, and the articles wait Unsorted meanwhile ("Anthropic unreachable since
 // 8:52 AM, retrying"). Production asks with the keys in Settings › AI (D90).
@@ -21,7 +21,7 @@ import {asProviderError, ProviderError} from '../sync/errors.ts';
 import {enqueueJob, failJob, finishJob, hasActiveJob} from '../sync/jobs.ts';
 import type {Job} from '../sync/jobs.ts';
 import {newsClients, NO_NEWS_KEY, recordNewsUsage} from './models.ts';
-import {rankStories, sortPending} from './sorter.ts';
+import {rescoreStories, sortPending} from './sorter.ts';
 import type {Ask, SortContext} from './sorter.ts';
 import {finishFirstRun, markRanked, pendingArticleIds, recordSortFailure, recordSortSuccess, sortDown, sortingRow, startFirstRun} from './sortState.ts';
 
@@ -73,7 +73,7 @@ export class NewsSortWorker implements JobWorker {
     this.timeoutMs = timeoutMs;
   }
 
-  /** The engine's tick: queue what waits Unsorted when it's time, and the ranking when the hour's up. */
+  /** The engine's tick: queue what waits Unsorted when it's time, and the re-score when the hour's up. */
   schedule() {
     const now = this.store.now().getTime();
     if (now - this.lastResortAt >= this.resortEveryMs) {
@@ -97,7 +97,7 @@ export class NewsSortWorker implements JobWorker {
     return this.sort(job, signal);
   }
 
-  /** Stories on the page to rank. */
+  /** Stories on the page to score. */
   private hasStories() {
     const cutoff = new Date(this.store.now().getTime() - STORY_TTL_MS).toISOString();
     return this.store.db.select({id: t.newsStories.id}).from(t.newsStories).where(and(isNull(t.newsStories.expiredAt), gt(t.newsStories.lastNewFactAt, cutoff))).limit(1).get() !== undefined;
@@ -106,7 +106,7 @@ export class NewsSortWorker implements JobWorker {
   /** Each call: written to the ledger, and a success to sorting's health. A failure is the caller's to record. */
   private ask: Ask = async (purpose, {client, model}, request) => {
     const answer = await client.call({...request, model});
-    recordNewsUsage(this.store, answer, purpose, request.cacheTtl);
+    recordNewsUsage(this.store, answer, purpose);
     if (recordSortSuccess(this.store)) announceState(this.store);
     return answer;
   };
@@ -141,19 +141,9 @@ export class NewsSortWorker implements JobWorker {
     finishJob(store, job.id);
   }
 
-  private async rank(job: Job) {
-    const store = this.store;
-    const clients = newsClients(store, this.endpoints, this.timeoutMs);
-    // The next hour's ranking counts from this one, whatever the model says; a failure is retried by
-    // the policy meanwhile.
-    markRanked(store);
-    try {
-      await rankStories(store, clients ? {clients, ask: this.ask} : null);
-    } catch (caught) {
-      // The formula still runs: recency moves with the clock.
-      await rankStories(store, null);
-      return this.failed(job, caught);
-    }
-    finishJob(store, job.id);
+  private rank(job: Job) {
+    markRanked(this.store);
+    rescoreStories(this.store);
+    finishJob(this.store, job.id);
   }
 }

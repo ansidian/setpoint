@@ -1,8 +1,9 @@
 // News's models and cost (N3; BRIEF.md › Models and cost, D90): Claude Haiku 5.5 reads each article
-// and groups, Claude Sonnet 5.5 writes stories and ranks them, on the Anthropic key in Settings › AI
-// (the production key in production). Each call goes in the AI usage ledger with its own purpose
-// (news_articles, news_grouping, news_stories, news_ranking). Past the monthly cap
-// (`news.monthly_cap_usd`, $40 by default) story summaries use Haiku for the rest of the month.
+// and groups, Claude Sonnet 5.5 writes stories and judges how much each matters, on the Anthropic key
+// in Settings › AI (the production key in production). Each call goes in the AI usage ledger with its
+// own purpose (news_articles, news_grouping, news_stories; news_ranking holds the hourly ranking's
+// calls from before D421, which asks none now). Past the monthly cap (`news.monthly_cap_usd`, $40 by
+// default) stories are written by Haiku for the rest of the month, so News asks Sonnet nothing.
 // Settings › AI's News group and "Usage this month" come from here.
 import type {AiPurpose, AiUsageOut, AiOut, NewsAiOut} from '@setpoint/shared';
 import {and, count, gte, inArray, sum} from 'drizzle-orm';
@@ -22,11 +23,11 @@ export type NewsPurpose = (typeof NEWS_PURPOSES)[number];
 export const NO_NEWS_KEY = 'News needs an Anthropic key in Settings › AI.';
 
 /** Writes a News model call to the AI usage ledger. */
-export function recordNewsUsage(store: Store, answer: ModelAnswer, purpose: NewsPurpose, cacheTtl: '5m' | '1h' = '5m') {
+export function recordNewsUsage(store: Store, answer: ModelAnswer, purpose: NewsPurpose) {
   store.db.insert(t.aiUsage).values({
     at: isoNow(store), provider: answer.provider, model: answer.model, purpose, messageId: null,
     inputTokens: answer.usage.inputTokens, outputTokens: answer.usage.outputTokens, cachedTokens: answer.usage.cachedTokens,
-    costMicros: costMicros(answer.model, answer.usage, cacheTtl) ?? 0,
+    costMicros: costMicros(answer.model, answer.usage) ?? 0,
   }).run();
 }
 
@@ -47,9 +48,8 @@ export interface NewsModel {
 export interface NewsClients {
   // Each article and grouping.
   articles: NewsModel;
-  // Story summaries: Sonnet, or Haiku past the cap.
+  // Stories and their importance: Sonnet, or Haiku past the cap.
   stories: NewsModel;
-  ranking: NewsModel;
 }
 
 /** The clients for News's models with the Anthropic key; null without one. */
@@ -61,7 +61,6 @@ export function newsClients(store: Store, endpoints: AiEndpoints, timeoutMs?: nu
   return {
     articles: {client, model: NEWS_MODELS.articles},
     stories: {client, model: summaryModel(newsSpentThisMonth(store), cap)},
-    ranking: {client, model: NEWS_MODELS.stories},
   };
 }
 

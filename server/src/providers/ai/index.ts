@@ -43,9 +43,6 @@ export interface ModelRequest {
   tool: ToolSpec;
   input: string;
   maxOutputTokens: number;
-  // How long Anthropic keeps the marked prefix: five minutes by default, or an hour for a prompt asked
-  // hourly (News's ranking, N3), whose cache writes cost 2× input rather than 1.25×.
-  cacheTtl?: '5m' | '1h';
   // Anthropic only: Claude's web search (a server tool) beside the answer's tool, searching at most
   // this many times. The model then chooses when to answer (`auto`), and a turn the API pauses is
   // resumed until it does.
@@ -159,7 +156,7 @@ const MAX_RESUMES = 4;
 export function anthropicClient({apiKey, baseUrl = AI_ENDPOINTS.anthropic, timeoutMs = DEFAULT_TIMEOUT_MS}: ClientOptions): ModelClient {
   return {
     async call(request) {
-      const cache = request.cacheTtl === '1h' ? {type: 'ephemeral', ttl: '1h'} : {type: 'ephemeral'};
+      const cache = {type: 'ephemeral'};
       const shape = anthropicToolShape(request.model, request.tool.name);
       const search = request.webSearch;
       const tool = {name: request.tool.name, description: request.tool.description, input_schema: request.tool.schema, cache_control: cache};

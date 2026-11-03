@@ -475,7 +475,8 @@ you missed since Mon · Catch up".
 
 "Biggest" combines four signals:
 - **how many outlets** cover the story
-- **how much it matters**, judged by the model against a short guide for each section:
+- **how much it matters**, judged by the model against a short guide for each section, each time
+  the story is written (D421):
   - Local: public safety, hazards, ICE activity, closures
   - Tech: real launches from the named companies
   - AI: releases and incidents at the major labs
@@ -518,11 +519,16 @@ subscription's API credits cover it).
 | --- | --- | --- |
 | Each article: section, noise filter, key facts, best image | Haiku 5.5 | $3 a month |
 | Grouping: is this the same event, and does it bring new facts? | Haiku 5.5 | $2 |
-| Each story's headline and summary, from Haiku's fact notes, rewritten only on new facts | Sonnet 5.5 | $15–25 |
-| Ranking, hourly, on a cached prompt | Sonnet 5.5 | $3–5 |
+| Each story's headline, summary and importance, from Haiku's fact notes, rewritten only on new facts (D421) | Sonnet 5.5 | $15–25 |
+| Ranking: the formula again every hour, as recency moves | none | $0 |
 
-A **monthly cap** (default $40) switches summaries to Haiku for the rest of the month and says so
-in Settings › AI. News has its own row in the AI usage ledger.
+A **monthly cap** (default $40) switches story writing to Haiku for the rest of the month, so News
+asks Sonnet nothing past it, and says so in Settings › AI. News has its own row in the AI usage
+ledger.
+
+An hourly Sonnet call over every story on the page ran about $82 a month on prod (October 2026,
+SV-165), since it sent each story again every hour, so each story is judged as it's written instead
+(D421).
 
 ### When things break
 

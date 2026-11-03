@@ -1592,6 +1592,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     skeleton rows (#292), and in `jobs/motion.md` the theme fade (#291) and the AI line's `good`
     check (#293). The audit patches the two boards. Boards 30b and 39b still draw an OpenAI key's
     row, which went with OpenAI itself (D411).
+41. **Stories and ranking's line** (#297): 30b and 39b draw "Headlines and summaries, the hourly
+    ranking"; the app reads "Headlines, summaries and how much each matters".
 
 ## Not designed yet
 
@@ -3639,3 +3641,8 @@ it changes what's on screen.
     Settled while building: Undo is the toast's, not ⌘Z, which undoes mail changes; learned rules and
     rules turned off aren't offered. Board audit: board 20's This email gains New rule from …; no
     board draws a right-click menu.
+297. **Stories and ranking's line says what its model does** (Andy, 2026-11-03; darma SV-165, D421).
+    Settings › AI's News row reads "Headlines, summaries and how much each matters": a story's
+    writer judges its importance as it writes it, and no hourly call ranks the stories any more.
+    Settled while building: the wording. Board audit: 30b and 39b still draw the old line
+    (override 41).

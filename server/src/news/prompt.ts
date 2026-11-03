@@ -1,13 +1,13 @@
 // What News asks the models and how it reads their answers (N3; BRIEF.md › News › What it covers,
-// Stories, Ranking, Models and cost; D86, D88, D90). Four prompts, each answered through one tool:
+// Stories, Ranking, Models and cost; D86, D88, D90, D421). Three prompts, each answered through one tool:
 // - each article (Claude Haiku 5.5): its sections, what kind of thing it is and what it's about (the
 //   noise and politics policy is applied to that answer in src/domain/newsSorting.ts), its key facts,
 //   its importance against the section's guide, where it happened, and a keynote it announces;
 // - grouping (Haiku): whether an article is about one of a few likely stories, and what facts it adds;
 // - a story (Claude Sonnet 5.5, Haiku past the monthly cap): the neutral headline, the one line and
-//   the summary, from Haiku's fact notes, with the lead article and the best image;
-// - the hourly ranking (Sonnet): each story's importance against the day's others, on a prompt cached
-//   for an hour.
+//   the summary, from Haiku's fact notes, with the lead article, the best image and how much the story
+//   matters against its sections' guides. That judgement is the story's importance in the ranking; no
+//   separate call ranks the stories (D421).
 // Each system prompt is fixed text, so its cached prefix holds; what changes rides in the input.
 // Answers are read leniently, field by field: what doesn't fit is dropped, and only an answer missing
 // what the step can't do without is unusable (null).
@@ -19,7 +19,7 @@ import {zonedInstant} from '../domain/time.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
 
 /** Bumped when a prompt or tool changes. */
-export const NEWS_PROMPT_VERSION = 'n3-v1';
+export const NEWS_PROMPT_VERSION = 'n3-v2';
 
 /** An article's text is cut here: its opening says what happened. */
 export const ARTICLE_TEXT_LIMIT = 6_000;
@@ -157,11 +157,16 @@ export const STORY_SYSTEM = `You write one story for the user's news page from t
 - one_line: under 100 characters: the most useful detail the headline doesn't say ("Evacuation warnings for foothill homes; crews held the west flank overnight").
 - summary: two to four sentences from all the sources, the newest facts first where they change the picture. Only what the notes say; never speculate, never add opinion, never name outlets.
 - lead_article_id: the article that covers the event best and most fully.
-- image_article_id: the article whose image best shows the event, among those marked "has image"; null when none has one. Never describe or invent an image.`;
+- image_article_id: the article whose image best shows the event, among those marked "has image"; null when none has one. Never describe or invent an image.
+- importance: how much the event matters, against the guide of each of its sections, below.
+
+${SECTION_GUIDES}
+
+Judge the event, not the coverage: Setpoint adds how many outlets cover a story, how recent and how fast-growing it is, and how close a local one is. Use the scale strictly: most stories are minor. A story that has grown (an arrest, a fire's spread, a confirmed death toll) matters more than when it began; one that has turned out minor matters less.`;
 
 export const STORY_TOOL: ToolSpec = {
   name: 'submit_news_story',
-  description: 'Submit the story\'s headline, one line, summary, lead article and image.',
+  description: 'Submit the story\'s headline, one line, summary, lead article, image and importance.',
   schema: {
     type: 'object',
     properties: {
@@ -170,8 +175,9 @@ export const STORY_TOOL: ToolSpec = {
       summary: {type: 'string'},
       lead_article_id: {type: 'integer'},
       image_article_id: nullable({type: 'integer'}),
+      importance: {type: 'integer', minimum: 0, maximum: 100},
     },
-    required: ['headline', 'one_line', 'summary', 'lead_article_id', 'image_article_id'],
+    required: ['headline', 'one_line', 'summary', 'lead_article_id', 'image_article_id', 'importance'],
   },
 };
 
@@ -199,48 +205,7 @@ export function storyInput(story: {headline: string | null; sections: NewsSectio
   ].join('\n');
 }
 
-export const RANKING_SYSTEM = `You rank the stories on the user's news page once an hour: judge how much each one matters, against its section's guide and against the rest of today's stories. Answer only with the submit_news_ranking tool, with every story given.
-
-${SECTION_GUIDES}
-
-Judge the event, not the coverage: Setpoint adds how many outlets cover a story, how recent and how fast-growing it is, and how close a local one is. A story that has grown (an arrest, a fire's spread, a confirmed death toll) matters more than when it began; one that has turned out minor matters less. importance is an integer from 0 to 100 for each story id.`;
-
-export const RANKING_TOOL: ToolSpec = {
-  name: 'submit_news_ranking',
-  description: 'Submit each story\'s importance.',
-  schema: {
-    type: 'object',
-    properties: {
-      stories: {
-        type: 'array',
-        items: {type: 'object', properties: {id: {type: 'integer'}, importance: {type: 'integer', minimum: 0, maximum: 100}}, required: ['id', 'importance']},
-      },
-    },
-    required: ['stories'],
-  },
-};
-
-export interface PromptRanked {
-  id: number;
-  sections: NewsSection[];
-  headline: string;
-  oneLine: string | null;
-  outlets: number;
-  firstReportedAt: string;
-  lastNewFactAt: string;
-}
-
-export function rankingInput(now: string, stories: readonly PromptRanked[]): string {
-  return [
-    `Now: ${now}`,
-    'Stories:',
-    ...stories.map(story => `${story.id} · ${story.sections.join(', ')} · ${story.outlets} outlets · first ${story.firstReportedAt} · last new fact ${story.lastNewFactAt} · ${story.headline}${story.oneLine ? ` · ${story.oneLine}` : ''}`),
-  ].join('\n');
-}
-
 export const MAX_OUTPUT_TOKENS = {article: 700, grouping: 400, story: 1000} as const;
-/** The ranking answers a line per story. */
-export const rankingMaxTokens = (stories: number) => Math.min(16_000, 300 + stories * 30);
 
 // ---- Reading the answers ----
 
@@ -253,6 +218,10 @@ const text = (value: unknown, max: number): string | null => {
 const oneOf = <T extends string>(values: readonly T[], value: unknown): T | null =>
   typeof value === 'string' && (values as readonly string[]).includes(value) ? value as T : null;
 const integer = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : null);
+const percent = (value: unknown): number | null => {
+  const whole = integer(value);
+  return whole === null ? null : Math.min(100, Math.max(0, whole));
+};
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 function validZone(zone: string): boolean {
@@ -287,7 +256,7 @@ export function notesOf(input: Record<string, unknown> | null, timeZone: string)
   const place = isRecord(input.place) && typeof input.place.lat === 'number' && typeof input.place.lng === 'number'
     && Math.abs(input.place.lat) <= 90 && Math.abs(input.place.lng) <= 180 ? {lat: input.place.lat, lng: input.place.lng} : null;
   return {
-    sections, kind, subject, facts, importance: Math.min(100, Math.max(0, integer(input.importance) ?? 0)), place,
+    sections, kind, subject, facts, importance: percent(input.importance) ?? 0, place,
     keynote: keynoteOf(input.keynote, timeZone),
   };
 }
@@ -310,6 +279,8 @@ export interface WrittenStory {
   summary: string | null;
   leadArticleId: number | null;
   imageArticleId: number | null;
+  // How much the story matters, 0–100; null when the answer gave none, which leaves the story's as it was.
+  importance: number | null;
 }
 
 /** The story tool's input, or null without a headline. */
@@ -318,18 +289,6 @@ export function writtenOf(input: Record<string, unknown> | null): WrittenStory |
   if (!input || !headline) return null;
   return {
     headline, oneLine: text(input.one_line, 140), summary: text(input.summary, 1200),
-    leadArticleId: integer(input.lead_article_id), imageArticleId: integer(input.image_article_id),
+    leadArticleId: integer(input.lead_article_id), imageArticleId: integer(input.image_article_id), importance: percent(input.importance),
   };
-}
-
-/** The ranking tool's input: each story's importance, by id. */
-export function rankingOf(input: Record<string, unknown> | null): Map<number, number> {
-  const out = new Map<number, number>();
-  for (const item of Array.isArray(input?.stories) ? input.stories : []) {
-    if (!isRecord(item)) continue;
-    const id = integer(item.id);
-    const importance = integer(item.importance);
-    if (id !== null && importance !== null) out.set(id, Math.min(100, Math.max(0, importance)));
-  }
-  return out;
 }

@@ -445,7 +445,7 @@ export const syncCursors = sqliteTable('sync_cursors', {
 
 // B3 adds `triage` (one email's triage, retried by the same policy while its models are down) and
 // `extract` (one backfilled email through the history extraction pass); N1 `news` (one News source's
-// fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly ranking,
+// fetch, run by src/news/worker.ts); N3 `news_sort` (sorting what's Unsorted, and the hourly re-score,
 // run by src/news/sortWorker.ts); Jobs's `jobs_read` (J2, a wiring point: Jobs reading what triage
 // sorted in the accounts it reads, run by src/jobs/reader.ts; removing Jobs may leave the value);
 // SV-136's `search_terms` (one email's search terms, run by src/search/terms.ts).
@@ -984,8 +984,9 @@ export const newsStories = sqliteTable('news_stories', {
   expiredAt: text('expired_at'),
   expiredUnseen: integer('expired_unseen', {mode: 'boolean'}).notNull().default(false),
   createdAt: text('created_at').notNull(),
-  // N3: the model's importance, 0–100 (the highest of its articles', then Sonnet's hourly judgement),
-  // and its outlets with wire copy once; with recency, growth and closeness they make `score`.
+  // N3: the model's importance, 0–100 (the highest of its articles', then its writer's judgement, D421;
+  // the hourly ranking's before that), and its outlets with wire copy once; with recency, growth and
+  // closeness they make `score`. `ranked_at` is when it was last judged.
   importance: integer('importance').notNull().default(0),
   outlets: integer('outlets').notNull().default(0),
   rankedAt: text('ranked_at'),
@@ -1075,7 +1076,7 @@ export const newsEvents = sqliteTable('news_events', {
 /**
  * N3: News's sorting, one row: its health as triage's is (down while its last model call failed, or
  * there was no model to ask, with when this spell began and the provider's words), the first run's
- * span, and when the hourly ranking last ran.
+ * span, and when the hourly re-score last ran (`last_ranked_at`).
  */
 export const newsSorting = sqliteTable('news_sorting', {
   id: integer('id').primaryKey(),

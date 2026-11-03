@@ -5,13 +5,12 @@
 // how the model's answers are read, and search's matching.
 import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {costMicros} from '../src/domain/aiCost.ts';
 import {
   applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
   rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, storyScore, summaryModel, wireKey,
 } from '../src/domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteClaim, NoiseReason, RankSignals, SourceRule} from '../src/domain/newsSorting.ts';
-import {ARTICLE_SYSTEM, groupingOf, keynoteOf, notesOf, rankingOf, writtenOf} from '../src/news/prompt.ts';
+import {ARTICLE_SYSTEM, groupingOf, keynoteOf, notesOf, writtenOf} from '../src/news/prompt.ts';
 
 const ZONE = 'America/Los_Angeles';
 const NOW = '2026-10-07T16:12:00.000Z';
@@ -309,12 +308,6 @@ describe('models and cost (D90)', () => {
     expect(monthStart(now, ZONE)).toBe(start);
   });
 
-  test.each<[string, '5m' | '1h', number]>([
-    ['five-minute cache writes at 1.25× input', '5m', 1000 * 2 * 1.25 + 1000 * 2 + 100 * 10],
-    ['the ranking\'s hour-long cache writes at 2×', '1h', 1000 * 2 * 2 + 1000 * 2 + 100 * 10],
-  ])('%s', (_, ttl, micros) => {
-    expect(costMicros('claude-sonnet-5-5', {inputTokens: 2000, cachedTokens: 0, cacheWriteTokens: 1000, outputTokens: 100}, ttl)).toBe(micros);
-  });
 });
 
 describe('Missed\'s limits (D87)', () => {
@@ -381,13 +374,15 @@ describe('reading the models\' answers', () => {
     expect(notesOf(null, ZONE)).toBeNull();
   });
 
-  test('grouping, a story and the ranking', () => {
+  test('grouping and a story, with how much it matters', () => {
     expect(groupingOf({story_id: 4, new_facts: ['Suspect arrested', '']})).toEqual({storyId: 4, newFacts: ['Suspect arrested']});
     expect(groupingOf(null)).toEqual({storyId: null, newFacts: []});
-    expect(writtenOf({headline: ' Brush fire grows ', one_line: 'Warnings widened', summary: 'Text.', lead_article_id: 3, image_article_id: null}))
-      .toEqual({headline: 'Brush fire grows', oneLine: 'Warnings widened', summary: 'Text.', leadArticleId: 3, imageArticleId: null});
+    expect(writtenOf({headline: ' Brush fire grows ', one_line: 'Warnings widened', summary: 'Text.', lead_article_id: 3, image_article_id: null, importance: 72}))
+      .toEqual({headline: 'Brush fire grows', oneLine: 'Warnings widened', summary: 'Text.', leadArticleId: 3, imageArticleId: null, importance: 72});
+    // Importance is kept within 0–100; an answer without one leaves the story's as it was.
+    expect(writtenOf({headline: 'Fire', importance: 140})?.importance).toBe(100);
+    expect(writtenOf({headline: 'Fire', importance: 'high'})?.importance).toBeNull();
     expect(writtenOf({headline: ''})).toBeNull();
-    expect([...rankingOf({stories: [{id: 1, importance: 80}, {id: 2, importance: 120}, {id: 'x', importance: 3}]}).entries()]).toEqual([[1, 80], [2, 100]]);
   });
 });
 

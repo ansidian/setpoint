@@ -3,8 +3,9 @@
 // invented articles, across outlets and sections, groups and ranks as expected: wire copies count
 // once, a developing story gains facts (a hazard's revisions among them) and is rewritten only then,
 // a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
-// News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, and the
-// hourly ranking reorders. Then the cost and the cap, Unsorted while the AI is down or has no key,
+// News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
+// order follows the importance each story is judged as it's written (D421), and the hour re-scores
+// without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
 // the first run, Missed's limit, search and Add to calendar.
 import {missedSchema, newsPageSchema, newsSearchSchema, newsStatusSchema, newsUnsortedSchema, SEED_NOW, storySchema} from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
@@ -17,12 +18,13 @@ import {saveNewsImage} from '../src/news/images.ts';
 import {NO_NEWS_KEY} from '../src/news/models.ts';
 import {sourceValues} from '../src/news/sources.ts';
 import type {NewsSourceSpec} from '../src/news/sources.ts';
-import {markRanked, newsStatus, unsortedArticles} from '../src/news/sortState.ts';
+import {markRanked, newsStatus, sortingRow, unsortedArticles} from '../src/news/sortState.ts';
 import {NewsSortWorker, sortAfterFetch} from '../src/news/sortWorker.ts';
 import {expireNews, markSeen, storeArticles} from '../src/news/store.ts';
 import {missed, newsPage, newsSearch, newsSection, storyDetail} from '../src/queries/news.ts';
 import {setSecret} from '../src/secrets/store.ts';
 import {updateSettings} from '../src/settings.ts';
+import {isoNow} from '../src/store.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {Adapters} from '../src/sync/registry.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
@@ -155,25 +157,23 @@ const FLOOD: Recorded[] = [
 
 const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD].map(article => [article.headline, article]));
 
-// Sonnet's stories, by what their notes say (first match wins).
-const STORIES: [RegExp, (input: string) => {headline: string; one_line: string; summary: string}][] = [
+// Sonnet's stories, by what their notes say (first match wins), with how much each matters: mostly
+// under Haiku's reading of an article, as on prod.
+const STORIES: [RegExp, (input: string) => {headline: string; one_line: string; summary: string; importance: number}][] = [
   [/brush fire|foothill fire/i, input => (/400 acres/.test(input)
-    ? {headline: 'Brush fire near the 210 grows to 400 acres', one_line: 'Evacuation warnings for foothill homes', summary: 'A brush fire near the 210 grew from 150 to 400 acres. Evacuation warnings cover foothill homes.'}
-    : {headline: 'Brush fire near the 210 burns 150 acres', one_line: 'Crews are fighting it in the foothills', summary: 'A brush fire near the 210 has burned about 150 acres in the foothills.'})],
+    ? {headline: 'Brush fire near the 210 grows to 400 acres', one_line: 'Evacuation warnings for foothill homes', summary: 'A brush fire near the 210 grew from 150 to 400 acres. Evacuation warnings cover foothill homes.', importance: 75}
+    : {headline: 'Brush fire near the 210 burns 150 acres', one_line: 'Crews are fighting it in the foothills', summary: 'A brush fire near the 210 has burned about 150 acres in the foothills.', importance: 70})],
   [/warehouse/i, input => (/in custody/.test(input)
-    ? {headline: 'Four killed in a warehouse shooting in Ohio; suspect in custody', one_line: 'Two more were wounded', summary: 'Four people were killed in a Columbus warehouse. A suspect is in custody.'}
-    : {headline: 'Four killed in a warehouse shooting in Ohio', one_line: 'The gunman fled before police arrived', summary: 'Four people were killed in a Columbus warehouse. The gunman fled.'})],
-  [/senate/i, () => ({headline: 'OpenAI testifies before a Senate committee on AI safety', one_line: 'Lawmakers asked about model testing', summary: 'OpenAI testified on AI safety.'})],
-  [/apple/i, () => ({headline: 'Apple sends invites for an Oct 20 event', one_line: 'Expected: new iPads and Macs', summary: 'Apple will hold an event on October 20 at 10 AM.'})],
-  [/pixel/i, () => ({headline: 'Pixel Watch 5 goes on sale with two-day battery life', one_line: 'From $349; preorders ship Friday', summary: 'The Pixel Watch 5 is on sale from $349.'})],
-  [/haiku/i, () => ({headline: 'Anthropic releases Claude Haiku 5.5', one_line: 'Faster and cheaper, in the API and Claude apps today', summary: 'Anthropic released Claude Haiku 5.5.'})],
-  [/library/i, () => ({headline: 'A library branch extends its weekend hours', one_line: 'Open Sundays from this week', summary: 'A branch library added Sunday hours.'})],
-  [/ramp/i, () => ({headline: 'Overnight freeway ramp closures begin tonight', one_line: 'Through Friday', summary: 'Ramp closures begin tonight.'})],
-  [/fabrikam falls/i, () => ({headline: 'Flash flood closes 8 roads around Fabrikam Falls', one_line: 'Crews expect the creek to crest before dawn', summary: 'A flash flood closed eight roads around Fabrikam Falls overnight.'})],
+    ? {headline: 'Four killed in a warehouse shooting in Ohio; suspect in custody', one_line: 'Two more were wounded', summary: 'Four people were killed in a Columbus warehouse. A suspect is in custody.', importance: 90}
+    : {headline: 'Four killed in a warehouse shooting in Ohio', one_line: 'The gunman fled before police arrived', summary: 'Four people were killed in a Columbus warehouse. The gunman fled.', importance: 85})],
+  [/senate/i, () => ({headline: 'OpenAI testifies before a Senate committee on AI safety', one_line: 'Lawmakers asked about model testing', summary: 'OpenAI testified on AI safety.', importance: 55})],
+  [/apple/i, () => ({headline: 'Apple sends invites for an Oct 20 event', one_line: 'Expected: new iPads and Macs', summary: 'Apple will hold an event on October 20 at 10 AM.', importance: 80})],
+  [/pixel/i, () => ({headline: 'Pixel Watch 5 goes on sale with two-day battery life', one_line: 'From $349; preorders ship Friday', summary: 'The Pixel Watch 5 is on sale from $349.', importance: 50})],
+  [/haiku/i, () => ({headline: 'Anthropic releases Claude Haiku 5.5', one_line: 'Faster and cheaper, in the API and Claude apps today', summary: 'Anthropic released Claude Haiku 5.5.', importance: 70})],
+  [/library/i, () => ({headline: 'A library branch extends its weekend hours', one_line: 'Open Sundays from this week', summary: 'A branch library added Sunday hours.', importance: 20})],
+  [/ramp/i, () => ({headline: 'Overnight freeway ramp closures begin tonight', one_line: 'Through Friday', summary: 'Ramp closures begin tonight.', importance: 50})],
+  [/fabrikam falls/i, () => ({headline: 'Flash flood closes 8 roads around Fabrikam Falls', one_line: 'Crews expect the creek to crest before dawn', summary: 'A flash flood closed eight roads around Fabrikam Falls overnight.', importance: 60})],
 ];
-
-// Sonnet's hourly judgement, by what each story's line says.
-const RANKED: [RegExp, number][] = [[/warehouse/i, 90], [/apple/i, 80], [/brush fire/i, 85], [/haiku/i, 70], [/pixel/i, 50], [/water main/i, 30], [/senate/i, 55], [/library/i, 20]];
 
 const toolOf = (request: FakeRequest) => String(request.body.tools?.[0]?.name);
 const headlineIn = (input: string) => /^Headline: (.*)$/m.exec(input)?.[1] ?? '';
@@ -202,11 +202,6 @@ function recordedAnswer(request: FakeRequest): FakeAnswer {
       const image = /^Article (\d+) .*· has image$/m.exec(input);
       return {tool: {...written, lead_article_id: lead, image_article_id: image ? Number(image[1]) : null}};
     }
-    case 'submit_news_ranking':
-      return {tool: {stories: input.split('\n').flatMap(line => {
-        const id = /^(\d+) · /.exec(line)?.[1];
-        return id ? [{id: Number(id), importance: RANKED.find(([pattern]) => pattern.test(line))?.[1] ?? 50}] : [];
-      })}};
     default:
       return {status: 500, body: {type: 'error', error: {type: 'api_error', message: 'Unknown tool'}}};
   }
@@ -220,7 +215,7 @@ async function sortWorld({key = true, seed = false} = {}) {
   const w = world({seed});
   if (!seed) updateSettings(w.store, {calendar: {home: HOME}});
   if (key) setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
-  // The ranking runs when its hour is up, which each test moves the clock to.
+  // The hour's re-score runs when its hour is up, which each test moves the clock to.
   markRanked(w.store);
   const worker = new NewsSortWorker({store: w.store, endpoints: fake.endpoints, timeoutMs: 2000, concurrency: 1});
   const engine = new SyncEngine({store: w.store, adapters: new Adapters(), workers: [worker]});
@@ -273,7 +268,7 @@ const headlines = (w: World, section: NewsSection) => blocks(w)[section]!.storie
 const listed = (w: World, section: NewsSection) => newsSection(w.store, section).stories.map(story => story.headline);
 
 describe('a recorded set of articles groups and ranks as expected', () => {
-  test('sections and noise, wire copy, a developing story, a repeat, metered and discovery stories, Upcoming, and the hourly ranking', async () => {
+  test('sections and noise, wire copy, a developing story, a repeat, metered and discovery stories, Upcoming, and the order as each story is judged', async () => {
     const s = await sortWorld();
     const {w} = s;
 
@@ -315,10 +310,13 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(s.story(library).score).toBeLessThan(35);
 
     expect(headlines(w, 'local')).toEqual(['Brush fire near the 210 burns 150 acres', 'Water main break floods an intersection in Example Park']);
+    // Each story is judged as it's written, so the order follows Sonnet's judgement at once, not Haiku's
+    // reading of the articles (D421): Haiku put the Pixel Watch over Apple's event, and Anthropic's
+    // release level with the shooting.
     // Anthropic's release is in AI and General; All shows it once, in AI's block, its subject's (D102).
     expect(headlines(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio']);
-    expect(listed(w, 'general')).toEqual(['Anthropic releases Claude Haiku 5.5', 'Four killed in a warehouse shooting in Ohio']);
-    expect(headlines(w, 'tech')).toEqual(['Pixel Watch 5 goes on sale with two-day battery life', 'Apple sends invites for an Oct 20 event']);
+    expect(listed(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio', 'Anthropic releases Claude Haiku 5.5']);
+    expect(headlines(w, 'tech')).toEqual(['Apple sends invites for an Oct 20 event', 'Pixel Watch 5 goes on sale with two-day battery life']);
     expect(headlines(w, 'ai')).toEqual(['Anthropic releases Claude Haiku 5.5', 'OpenAI testifies before a Senate committee on AI safety']);
     // A second outlet confirms Apple's keynote: Upcoming, at the top of Tech.
     expect(blocks(w).tech!.upcoming).toEqual([expect.objectContaining({name: 'Apple event', starts_at: '2026-10-20T17:00:00.000Z', all_day: false, section: 'tech', story_id: s.storyOf('Apple sends invites for an Oct 20 event')})]);
@@ -360,24 +358,25 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     await s.drain();
     expect(s.storyOf('Brush fire near the 210 reaches 400 acres')).toBe(fire);
     expect(s.story(fire)).toMatchObject({lastNewFactAt: before.lastNewFactAt, writtenAt: before.writtenAt, headline: before.headline, outlets: 5});
+    // Nor does it lift the judgement made when the story grew, though Haiku read the repeat higher.
+    expect(s.story(fire).importance).toBe(75);
     expect(storyDetail(w.store, fire).lead.more).toBe(4);
     expect(writes().slice(9)).toEqual(['ramp']);
 
-    // The hour is up: Sonnet judges each story against the day's on the cached prompt, and the order follows.
+    // The hour is up: every story is scored again by the formula, and no model is asked (D421).
+    const asked = s.fake.requests.length;
     w.advance(20 * MINUTE);
     await s.drain();
-    const ranking = s.calls('submit_news_ranking');
-    expect(ranking).toHaveLength(1);
-    expect(ranking[0]!.model).toBe('claude-sonnet-5-5');
-    expect(ranking[0]!.body.system[0].cache_control).toEqual({type: 'ephemeral', ttl: '1h'});
+    expect(s.fake.requests).toHaveLength(asked);
+    expect(sortingRow(w.store).lastRankedAt).toBe(isoNow(w.store));
     expect(headlines(w, 'tech')).toEqual(['Apple sends invites for an Oct 20 event', 'Pixel Watch 5 goes on sale with two-day battery life']);
     expect(listed(w, 'general')).toEqual(['Four killed in a warehouse shooting in Ohio; suspect in custody', 'Anthropic releases Claude Haiku 5.5']);
-    // Judged minor, the water main falls under the bar and leaves the page.
-    expect(headlines(w, 'local')).toEqual(['Brush fire near the 210 grows to 400 acres', 'Overnight freeway ramp closures begin tonight']);
+    // The water main, which only Google News found, is never written, so it keeps Haiku's reading.
+    expect(headlines(w, 'local')).toEqual(['Brush fire near the 210 grows to 400 acres', 'Overnight freeway ramp closures begin tonight', 'Water main break floods an intersection in Example Park']);
 
     // Every call is in the ledger under News's own rows.
     const ledger = (purpose: string) => w.store.db.select().from(t.aiUsage).where(eq(t.aiUsage.purpose, purpose as 'news_articles')).all();
-    expect([ledger('news_articles').length, ledger('news_grouping').length, ledger('news_stories').length, ledger('news_ranking').length]).toEqual([23, 7, 10, 1]);
+    expect([ledger('news_articles').length, ledger('news_grouping').length, ledger('news_stories').length, ledger('news_ranking').length]).toEqual([23, 7, 10, 0]);
     expect(ledger('news_articles').every(row => row.model === 'claude-haiku-5-5' && row.costMicros > 0)).toBe(true);
     expect(ledger('news_stories').every(row => row.model === 'claude-sonnet-5-5')).toBe(true);
     expect(s.calls('submit_news_article').every(request => request.model === 'claude-haiku-5-5' && request.body.tool_choice.type === 'tool')).toBe(true);
@@ -429,7 +428,7 @@ describe('the same event, worded apart (the polish audit\'s extra-09)', () => {
 });
 
 describe('cost and the cap (D90)', () => {
-  test('past the monthly cap, story summaries use Haiku; Settings › AI says so, with this month\'s usage by part', async () => {
+  test('past the monthly cap, stories are written and judged by Haiku and nothing asks Sonnet; Settings › AI says so, with this month\'s usage by part', async () => {
     const s = await sortWorld();
     const {w} = s;
     // Last month's spend doesn't count.
@@ -450,6 +449,10 @@ describe('cost and the cap (D90)', () => {
     s.deliver([FIRST.find(article => article.source === 'anthropic')!]);
     await s.drain();
     expect(s.calls('submit_news_story').map(request => request.model)).toEqual(['claude-sonnet-5-5', 'claude-haiku-5-5']);
+    // Nor does the hour's re-score: no model at all (D421).
+    w.advance(HOUR);
+    await s.drain();
+    expect(s.fake.requests.filter(request => request.model === 'claude-sonnet-5-5')).toHaveLength(1);
     ai = (await api.send('GET', '/api/ai')).body;
     expect(ai.news).toMatchObject({summaries_model: 'claude-haiku-5-5', capped: true});
     expect(ai.news.this_month_usd).toBeGreaterThan(40);

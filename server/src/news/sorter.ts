@@ -10,12 +10,14 @@
 //    same count and place) and Haiku confirms whether it's the same event and what facts it brings.
 //    No match starts a story.
 // 3. Stories with new facts (or new ones) are written (Claude Sonnet 5.5, Haiku past the cap): the
-//    neutral headline, the one line, the summary, the lead article and the best image. A fifth outlet
-//    repeating the first four rewrites nothing. A story covered only by a metered paper is never
-//    written (it never shows); one only Google News found shows its headline and link, unwritten.
+//    neutral headline, the one line, the summary, the lead article, the best image and how much the
+//    story matters, which becomes its importance (D421). A fifth outlet repeating the first four
+//    rewrites nothing and moves no judgement. A story covered only by a metered paper is never
+//    written (it never shows); one only Google News found shows its headline and link, unwritten,
+//    and keeps the importance Haiku read in its articles.
 // 4. Each touched story is scored by the ranking formula, and a confirmed keynote goes to Upcoming.
-// The hourly ranking (rankStories) asks Sonnet to judge every story's importance on a cached prompt,
-// then scores them all again.
+// Every hour (rescoreStories) the stories on the page are scored again, as recency moves with the
+// clock; no model is asked.
 //
 // Every model call goes through `ask`, which the worker gives (the ledger and sorting's health). A
 // provider's refusal stops the pass and is thrown as it came, for the job's retry policy; what was
@@ -38,7 +40,7 @@ import type {Store} from '../store.ts';
 import type {NewsClients, NewsModel, NewsPurpose} from './models.ts';
 import {
   ARTICLE_SYSTEM, ARTICLE_TOOL, articleInput, fallbackNotes, GROUPING_SYSTEM, GROUPING_TOOL, groupingInput, groupingOf, MAX_OUTPUT_TOKENS, notesOf,
-  RANKING_SYSTEM, RANKING_TOOL, rankingInput, rankingMaxTokens, rankingOf, STORY_SYSTEM, STORY_TOOL, storyInput, writtenOf,
+  STORY_SYSTEM, STORY_TOOL, storyInput, writtenOf,
 } from './prompt.ts';
 import {inFirstRun, pendingArticleIds} from './sortState.ts';
 
@@ -51,7 +53,6 @@ export interface AskRequest {
   tool: ToolSpec;
   input: string;
   maxOutputTokens: number;
-  cacheTtl?: '5m' | '1h';
 }
 
 /** One model call, its usage written to the ledger and its outcome to sorting's health. */
@@ -154,7 +155,9 @@ function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: Ar
     added.forEach((section, index) => store.db.insert(t.newsStorySections).values({storyId, section, position: live.sections.length + index}).run());
     const values: Partial<StoryRow> = {
       outlets: outletCount([...live.articles, article]),
-      importance: Math.max(live.story.importance, notes.importance),
+      // Once the story's writer has judged it, an article moves its importance only through the
+      // rewrite its new facts bring (D421).
+      importance: live.story.rankedAt === null ? Math.max(live.story.importance, notes.importance) : live.story.importance,
       firstReportedAt: article.publishedAt < live.story.firstReportedAt ? article.publishedAt : live.story.firstReportedAt,
     };
     if (facts.length) {
@@ -262,7 +265,9 @@ export async function writeStory(ctx: SortContext, storyId: number) {
   if (!written) return done({});
   const lead = listed.find(article => article.id === written.leadArticleId)?.id ?? story.leadArticleId ?? listed[0]!.id;
   const image = [written.imageArticleId, story.imageArticleId, lead, ...listed.map(article => article.id)].find(id => id !== null && thumbs.has(id)) ?? null;
-  return done({headline: written.headline, oneLine: written.oneLine, summary: written.summary, leadArticleId: lead, imageArticleId: image, writtenAt: isoNow(store)});
+  const now = isoNow(store);
+  const judged = written.importance === null ? {} : {importance: written.importance, rankedAt: now};
+  return done({headline: written.headline, oneLine: written.oneLine, summary: written.summary, leadArticleId: lead, imageArticleId: image, writtenAt: now, ...judged});
 }
 
 // ---- 4. Scores and Upcoming ----
@@ -382,33 +387,11 @@ export async function sortPending(ctx: SortContext, batch = SORT_BATCH): Promise
   return sorted;
 }
 
-// ---- The hourly ranking ----
+// ---- The hour ----
 
-/**
- * Asks Sonnet, on the hour-long cached prompt, how much each story on the page matters against the
- * day's others; then scores every one by the formula (recency moves with the clock). Without a model
- * (`ctx` null), only the formula runs.
- */
-export async function rankStories(store: Store, ctx: Pick<SortContext, 'clients' | 'ask'> | null): Promise<number[]> {
-  const sources = sourcesById(store);
-  const live = liveStories(store, sources);
-  if (ctx && live.length) {
-    const answer = await ctx.ask('news_ranking', ctx.clients.ranking, {
-      system: RANKING_SYSTEM, tool: RANKING_TOOL, cacheTtl: '1h', maxOutputTokens: rankingMaxTokens(live.length),
-      input: rankingInput(isoNow(store), live.map(({story, sections}) => ({
-        id: story.id, sections, headline: story.headline, oneLine: story.oneLine, outlets: story.outlets,
-        firstReportedAt: story.firstReportedAt, lastNewFactAt: story.lastNewFactAt,
-      }))),
-    });
-    const judged = rankingOf(answer.toolInput);
-    const now = isoNow(store);
-    transaction(store, () => {
-      for (const {story} of live) {
-        const importance = judged.get(story.id);
-        if (importance !== undefined) store.db.update(t.newsStories).set({importance, rankedAt: now}).where(eq(t.newsStories.id, story.id)).run();
-      }
-    });
-  }
+/** Scores every story on the page again by the formula, as recency moves with the clock (D421). Returns those whose score changed. */
+export function rescoreStories(store: Store): number[] {
+  const live = liveStories(store, sourcesById(store));
   const changed = live.flatMap(({story}) => (scoreStory(store, story.id)?.changed ? [story.id] : []));
   announce(store, changed);
   return changed;

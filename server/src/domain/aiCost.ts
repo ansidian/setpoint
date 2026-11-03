@@ -1,8 +1,8 @@
 // What a model call cost, for the AI usage ledger (Settings › AI). Standard text API rates in US
 // dollars per million tokens: input, cached input reads, output. Anthropic's rates are the claude-api
 // skill's pricing table (cached 2026-10-06; cache reads 0.1× input except where it states otherwise:
-// Opus 5.5 and Sonnet 5.5 $0.20, Fable 5.1 $0.25). Cache writes cost 1.25× input for five minutes
-// (triage's, Alfred's) and 2× for an hour (News's hourly ranking, N3).
+// Opus 5.5 and Sonnet 5.5 $0.20, Fable 5.1 $0.25). Cache writes cost 1.25× input, for Anthropic's
+// five minutes.
 // Claude Haiku 5.5 bills a prompt over 100K tokens at 5× in every bucket. Dated snapshots price as their model. A model not listed has no cost (null; the ledger
 // keeps its tokens and records 0) rather than a guessed one.
 
@@ -46,7 +46,7 @@ export interface Tokens {
 export const WEB_SEARCH_MICROS = 10_000;
 
 /** The call's cost in millionths of a dollar, or null for a model without a known rate. */
-export function costMicros(model: string, tokens: Tokens, cacheTtl: '5m' | '1h' = '5m'): number | null {
+export function costMicros(model: string, tokens: Tokens): number | null {
   const rate = RATES[baseModel(model)];
   if (!rate) return null;
   const cached = Math.min(tokens.cachedTokens, tokens.inputTokens);
@@ -54,7 +54,6 @@ export function costMicros(model: string, tokens: Tokens, cacheTtl: '5m' | '1h' 
   const plain = tokens.inputTokens - cached - writes;
   const premium = baseModel(model) === 'claude-haiku-5-5' && tokens.inputTokens > 100_000 ? 5 : 1;
   // Rates are dollars per million tokens, which is micro-dollars per token.
-  const write = cacheTtl === '1h' ? 2 : 1.25;
   const searches = (tokens.webSearches ?? 0) * WEB_SEARCH_MICROS;
-  return Math.round((plain * rate.input + cached * rate.cached + writes * rate.input * write + tokens.outputTokens * rate.output) * premium) + searches;
+  return Math.round((plain * rate.input + cached * rate.cached + writes * rate.input * 1.25 + tokens.outputTokens * rate.output) * premium) + searches;
 }
