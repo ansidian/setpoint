@@ -428,7 +428,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           <div className="ell selectable" title={listed.from_address}>
             <span className="name">{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
           </div>
-          <div className="to">to you</div>
+          <div className="to" title={account?.address}>to you</div>
         </div>
         <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
         <span className="time" title={fullTimestamp(listed.received_at, timeZone)}>{readerTime(listed.received_at, now, timeZone)}</span>
