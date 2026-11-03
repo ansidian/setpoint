@@ -1,9 +1,10 @@
 // News's sorting rules (N3; BRIEF.md › News › What it covers, Stories, Ranking, Models and cost,
 // Missed; D86–D91): the rules that map a source to a likely section, the noise and politics policy
 // as applied to the model's reading of an article, wire copy, candidate matching and how a grouping
-// answer is applied (new facts versus repeats), the ranking formula and the bar, the monthly cap,
-// Missed's limits, keynote confirmation, and search's matching. Pure, so each is tested as a table;
-// src/news/sorter.ts asks the models and keeps what these decide.
+// answer is applied (new facts versus repeats, and which rewrite the story), what a story's writer is
+// sent, the ranking formula and the bar, the monthly cap, Missed's limits, keynote confirmation, and
+// search's matching. Pure, so each is tested as a table; src/news/sorter.ts asks the models and keeps
+// what these decide.
 import type {NewsHazard, NewsSection} from '@setpoint/shared';
 import {NEWS_HAZARDS, NEWS_SECTIONS} from '@setpoint/shared';
 import {SUBJECT_SECTION} from './news.ts';
@@ -266,6 +267,17 @@ export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly 
   };
 }
 
+/**
+ * What a story's writer is sent (D427): its window, with its current lead and image kept in view so a
+ * rewrite can keep them, its sources newest first. A long story's whole past once went to every
+ * rewrite, up to 60k tokens a write; its headline and summary carry that past instead.
+ */
+export function writerWindow<F, S extends {id: number; publishedAt: string}>(facts: readonly F[], sources: readonly S[], keep: readonly (number | null)[]): {facts: F[]; sources: S[]} {
+  const window = storyWindow(facts, sources);
+  const kept = sources.filter(source => keep.includes(source.id) && !window.sources.includes(source));
+  return {facts: window.facts, sources: [...window.sources, ...kept].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.id - b.id)};
+}
+
 /** A story's words for its candidates: its headline, and its window's facts and sources' headlines. */
 export function storyWords(headline: string, facts: readonly {text: string}[], sources: readonly {headline: string; publishedAt: string}[]): Set<string> {
   const window = storyWindow(facts, sources);
@@ -357,11 +369,14 @@ export function freshFacts(facts: readonly string[], existing: readonly string[]
  * The model's grouping answer, applied: the story it names, only if it was one of the candidates
  * (else the article starts its own story), and the facts it says the article brings, less those the
  * timeline already has. No fact left is a repeat: "Suspect arrested" is a new fact; a fifth outlet
- * repeating the first four isn't (D86).
+ * repeating the first four isn't (D86). New facts rewrite the story only when the model says they
+ * change its headline or one line (D427): detail joins the timeline and shows as new, and the next
+ * rewrite takes it in. An answer that doesn't say rewrites, as before.
  */
-export function applyGrouping(answer: {storyId: number | null; newFacts: string[]}, candidateIds: readonly number[], existingFacts: readonly string[]): {storyId: number | null; newFacts: string[]} {
-  if (answer.storyId === null || !candidateIds.includes(answer.storyId)) return {storyId: null, newFacts: []};
-  return {storyId: answer.storyId, newFacts: freshFacts(answer.newFacts, existingFacts)};
+export function applyGrouping(answer: {storyId: number | null; newFacts: string[]; changesHeadline: boolean | null}, candidateIds: readonly number[], existingFacts: readonly string[]): {storyId: number | null; newFacts: string[]; rewrite: boolean} {
+  if (answer.storyId === null || !candidateIds.includes(answer.storyId)) return {storyId: null, newFacts: [], rewrite: false};
+  const newFacts = freshFacts(answer.newFacts, existingFacts);
+  return {storyId: answer.storyId, newFacts, rewrite: newFacts.length > 0 && answer.changesHeadline !== false};
 }
 
 /**

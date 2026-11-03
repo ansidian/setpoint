@@ -7,14 +7,16 @@
 // 2. Grouping, one article at a time in the order published: the same hazard incident (each revision
 //    a new fact) or another outlet's same wire text (a repeat) joins its story by rule; otherwise cheap candidate
 //    matching finds the likely stories (enough words in common, or a headline a day apart with the
-//    same count and place) and Haiku confirms whether it's the same event and what facts it brings.
-//    No match starts a story.
-// 3. Stories with new facts (or new ones) are written (Claude Sonnet 5.5, Haiku past the cap): the
-//    neutral headline, the one line, the summary, the lead article, the best image and how much the
-//    story matters, which becomes its importance (D421). A fifth outlet repeating the first four
-//    rewrites nothing and moves no judgement. A story covered only by a metered paper is never
-//    written (it never shows); one only Google News found shows its headline and link, unwritten,
-//    and keeps the importance Haiku read in its articles.
+//    same count and place) and Haiku confirms whether it's the same event, what facts it brings, and
+//    whether they change the story's headline or one line. No match starts a story.
+// 3. New stories, and stories whose new facts are headline news, are written (Claude Sonnet 5.5,
+//    Haiku past the cap) from their window (D427): the neutral headline, the one line, the summary,
+//    the lead article, the best image and how much the story matters, which becomes its importance
+//    (D421). Facts that only add detail join the timeline and show as new, and wait for the next
+//    rewrite; a fifth outlet repeating the first four rewrites nothing and moves no judgement. A
+//    story covered only by a metered paper is never written (it never shows); one only Google News
+//    found shows its headline and link, unwritten, and keeps the importance Haiku read in its
+//    articles.
 // 4. Each touched story is scored by the ranking formula, and a confirmed keynote goes to Upcoming.
 // Every hour (rescoreStories) the stories on the page are scored again, as recency moves with the
 // clock; no model is asked.
@@ -29,7 +31,7 @@ import * as t from '../db/schema.ts';
 import {STORY_TTL_MS} from '../domain/news.ts';
 import {
   applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
-  significantWords, sourceRule, storyScore, storyWords, wireKey,
+  significantWords, sourceRule, storyScore, storyWords, wireKey, writerWindow,
 } from '../domain/newsSorting.ts';
 import type {ArticleNotes, KeynoteClaim, MatchableStory} from '../domain/newsSorting.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
@@ -147,8 +149,11 @@ function matchable(live: LiveStory, sources: Map<number, SourceRow>): MatchableS
   };
 }
 
-/** Joins an article to a story: its sections, any new facts (which move the story's last new fact), its outlets and importance. */
-function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: ArticleNotes, facts: string[]) {
+/**
+ * Joins an article to a story: its sections, any new facts (which move the story's last new fact, and
+ * rewrite it when `rewrite` says they're headline news, D427), its outlets and importance.
+ */
+function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: ArticleNotes, facts: string[], rewrite: boolean) {
   const now = isoNow(store);
   transaction(store, () => {
     const storyId = live.story.id;
@@ -166,7 +171,7 @@ function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: Ar
       const at = factTime(article.publishedAt, article.fetchedAt, live.story.seenAt);
       for (const text of facts) store.db.insert(t.newsFacts).values({storyId, at, text, articleId: article.id}).run();
       if (at > live.story.lastNewFactAt) values.lastNewFactAt = at;
-      values.needsWriting = true;
+      if (rewrite) values.needsWriting = true;
     }
     // A story nothing could show until now (a metered paper's alone) is written once something can.
     if (!article.metered && live.articles.every(other => other.metered)) values.needsWriting = true;
@@ -213,7 +218,8 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
   if (ruled) {
     const story = live.find(candidate => candidate.story.id === ruled.storyId)!;
     const existing = story.facts.map(fact => fact.text);
-    joinStory(store, story, article, notes, ruled.by === 'incident' ? revisionFacts(notes.facts, article.headline, existing) : []);
+    // A hazard's revision exists because its numbers changed, so its facts are headline news.
+    joinStory(store, story, article, notes, ruled.by === 'incident' ? revisionFacts(notes.facts, article.headline, existing) : [], true);
     return story.story.id;
   }
   const likely = candidates(wanted, stories);
@@ -222,7 +228,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
     const answer = await ctx.ask('news_grouping', ctx.clients.articles, {
       system: GROUPING_SYSTEM, tool: GROUPING_TOOL, maxOutputTokens: MAX_OUTPUT_TOKENS.grouping,
       input: groupingInput({outlet: article.outlet, headline: article.headline, publishedAt: article.publishedAt, facts: notes.facts}, shown.map(story => ({
-        id: story.story.id, headline: story.story.headline, sections: story.sections, facts: story.facts,
+        id: story.story.id, headline: story.story.headline, oneLine: story.story.oneLine, sections: story.sections, facts: story.facts,
         sources: story.articles.filter(other => !other.metered),
       }))),
     });
@@ -230,7 +236,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
     const named = shown.find(story => story.story.id === said.storyId);
     const applied = applyGrouping(said, likely.map(({id}) => id), named?.facts.map(fact => fact.text) ?? []);
     if (applied.storyId !== null) {
-      joinStory(store, named!, article, notes, applied.newFacts);
+      joinStory(store, named!, article, notes, applied.newFacts, applied.rewrite);
       return applied.storyId;
     }
   }
@@ -239,7 +245,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
 
 // ---- 3. Stories ----
 
-/** Writes a story's headline, one line and summary from its articles' notes, with its lead and image. */
+/** Writes a story's headline, one line and summary from its window's notes (D427), with its lead and image. */
 export async function writeStory(ctx: SortContext, storyId: number) {
   const {store} = ctx;
   const story = store.db.select().from(t.newsStories).where(eq(t.newsStories.id, storyId)).get();
@@ -255,9 +261,10 @@ export async function writeStory(ctx: SortContext, storyId: number) {
   const sections = store.db.select().from(t.newsStorySections).where(eq(t.newsStorySections.storyId, storyId)).orderBy(asc(t.newsStorySections.position)).all().map(row => row.section);
   const facts = store.db.select({at: t.newsFacts.at, text: t.newsFacts.text}).from(t.newsFacts).where(eq(t.newsFacts.storyId, storyId)).orderBy(asc(t.newsFacts.at), asc(t.newsFacts.id)).all();
   const thumbs = hasThumb(store, listed.map(article => article.id));
+  const sent = writerWindow(facts, listed, [story.leadArticleId, story.imageArticleId]);
   const answer = await ctx.ask('news_stories', ctx.clients.stories, {
     system: STORY_SYSTEM, tool: STORY_TOOL, maxOutputTokens: MAX_OUTPUT_TOKENS.story,
-    input: storyInput({headline: story.writtenAt ? story.headline : null, sections, facts}, listed.map(article => ({
+    input: storyInput({headline: story.writtenAt ? story.headline : null, summary: story.writtenAt ? story.summary : null, sections, facts: sent.facts}, sent.sources.map(article => ({
       id: article.id, outlet: article.outlet, publishedAt: article.publishedAt, headline: article.headline,
       facts: article.notes?.facts ?? [], hasImage: thumbs.has(article.id),
     }))),

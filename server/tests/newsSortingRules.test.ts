@@ -1,17 +1,18 @@
 // News's sorting policy as tables (N3; BRIEF.md › What it covers, Stories, Ranking, Models and cost,
 // Missed, The page › Upcoming): the rules for a source, noise and politics as applied to the model's
 // reading ("events, not arguments", the subject wins), wire copy, candidate matching, new facts
-// versus repeats, the ranking formula and its order, the cap, Missed's limits, keynote confirmation,
-// how the model's answers are read, and search's matching.
+// versus repeats and which rewrite the story, what its writer is sent, the ranking formula and its
+// order, the cap, Missed's limits, keynote confirmation, how the model's answers are read, and
+// search's matching.
 import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
   rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, STORY_FACTS_SHOWN, STORY_SOURCES_SHOWN,
-  storyScore, storyWords, summaryModel, wireKey,
+  storyScore, storyWords, summaryModel, wireKey, writerWindow,
 } from '../src/domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteClaim, NoiseReason, RankSignals, SourceRule} from '../src/domain/newsSorting.ts';
-import {ARTICLE_SYSTEM, groupingInput, groupingOf, keynoteOf, notesOf, writtenOf} from '../src/news/prompt.ts';
+import {ARTICLE_SYSTEM, groupingInput, groupingOf, keynoteOf, notesOf, storyInput, writtenOf} from '../src/news/prompt.ts';
 
 const ZONE = 'America/Los_Angeles';
 const NOW = '2026-10-07T16:12:00.000Z';
@@ -224,16 +225,20 @@ describe('grouping: cheap candidates first', () => {
     expect(candidates({words: significantWords(headline, ...facts)}, [longStory]).map(candidate => candidate.id)).toEqual(ids);
   });
 
-  test('the grouping prompt shows a candidate as it was matched: its latest facts, and its latest sources by publication', () => {
+  test('the grouping prompt shows a candidate as it was matched: its headline and one line, its latest facts, and its latest sources by publication', () => {
     const sources = LONG_STORY.sources.map(source => ({...source, outlet: 'KTLA'})).reverse();
     const input = groupingInput({outlet: 'NBC Los Angeles', headline: 'Fabrikam coast logs a record 12th day of tidal flooding', publishedAt: NOW, facts: []},
-      [{id: 17, headline: LONG_STORY.headline, sections: ['local'], facts: LONG_STORY.facts, sources}]);
+      [{id: 17, headline: LONG_STORY.headline, oneLine: 'Tides hit 9 feet at the harbor gauge', sections: ['local'], facts: LONG_STORY.facts, sources}]);
     const facts = input.split('\n').filter(line => line.startsWith('- '));
     const shown = input.split('\n').filter(line => line.startsWith('  Source: '));
     expect([facts.length, facts[0], shown.length, shown[0], shown.at(-1)]).toEqual([
       STORY_FACTS_SHOWN, `- ${day(10)}: High tide reached 7 feet at the harbor gauge on day 1 of tidal flooding`,
       STORY_SOURCES_SHOWN, '  Source: KTLA: Day 3 of king tides floods Fabrikam streets', `  Source: KTLA: Day ${STORY_SOURCES_SHOWN + 2} of king tides floods Fabrikam streets`,
     ]);
+    expect(input).toContain(`Story 17 (local): ${LONG_STORY.headline}\n  One line: Tides hit 9 feet at the harbor gauge\n`);
+    // A story not yet written has no one line to show.
+    expect(groupingInput({outlet: 'KTLA', headline: 'Flood', publishedAt: NOW, facts: []}, [{id: 3, headline: 'Flood', oneLine: null, sections: ['local'], facts: [], sources: []}]))
+      .not.toContain('One line:');
   });
 
   test.each<[string, number[], string[]]>([
@@ -273,20 +278,24 @@ describe('grouping: cheap candidates first', () => {
   });
 });
 
-describe('new facts versus repeats, as the model\'s answer is applied (D86)', () => {
+describe('new facts versus repeats, as the model\'s answer is applied (D86, D427)', () => {
   const timeline = ['A brush fire broke out near the 210', 'About 150 acres burned'];
+  type Said = {storyId: number | null; newFacts: string[]; changesHeadline?: boolean | null};
 
-  test.each<[string, {storyId: number | null; newFacts: string[]}, {storyId: number | null; newFacts: string[]}]>([
-    ['"Suspect arrested" is a new fact', {storyId: 1, newFacts: ['Suspect arrested']}, {storyId: 1, newFacts: ['Suspect arrested']}],
-    ['a fifth outlet repeating the first four is a repeat', {storyId: 1, newFacts: []}, {storyId: 1, newFacts: []}],
-    ['a "new" fact the timeline has, in other words, is a repeat', {storyId: 1, newFacts: ['About 150 acres have burned']}, {storyId: 1, newFacts: []}],
-    ['only the new ones count', {storyId: 1, newFacts: ['About 150 acres burned', 'Evacuation warnings issued for foothill homes']}, {storyId: 1, newFacts: ['Evacuation warnings issued for foothill homes']}],
-    ['the same new fact twice counts once', {storyId: 1, newFacts: ['Grew to 400 acres', 'It grew to 400 acres']}, {storyId: 1, newFacts: ['Grew to 400 acres']}],
-    ['at most three', {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut', 'Four shelters opened']}, {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut']}],
-    ['no story named: a story of its own', {storyId: null, newFacts: ['Something']}, {storyId: null, newFacts: []}],
-    ['a story that wasn\'t a candidate: a story of its own', {storyId: 9, newFacts: ['Something']}, {storyId: null, newFacts: []}],
+  test.each<[string, Said, {storyId: number | null; newFacts: string[]; rewrite: boolean}]>([
+    ['"Suspect arrested" is a new fact', {storyId: 1, newFacts: ['Suspect arrested'], changesHeadline: true}, {storyId: 1, newFacts: ['Suspect arrested'], rewrite: true}],
+    ['a fifth outlet repeating the first four is a repeat', {storyId: 1, newFacts: []}, {storyId: 1, newFacts: [], rewrite: false}],
+    ['a "new" fact the timeline has, in other words, is a repeat', {storyId: 1, newFacts: ['About 150 acres have burned'], changesHeadline: true}, {storyId: 1, newFacts: [], rewrite: false}],
+    ['only the new ones count', {storyId: 1, newFacts: ['About 150 acres burned', 'Evacuation warnings issued for foothill homes'], changesHeadline: true}, {storyId: 1, newFacts: ['Evacuation warnings issued for foothill homes'], rewrite: true}],
+    ['the same new fact twice counts once', {storyId: 1, newFacts: ['Grew to 400 acres', 'It grew to 400 acres'], changesHeadline: true}, {storyId: 1, newFacts: ['Grew to 400 acres'], rewrite: true}],
+    ['at most three', {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut', 'Four shelters opened'], changesHeadline: true}, {storyId: 1, newFacts: ['One arrest made', 'Two roads closed', 'Three schools shut'], rewrite: true}],
+    // Detail joins the timeline and shows as new, but leaves the headline, one line and summary as they are (D427).
+    ['a detail that doesn\'t change the headline or one line joins without a rewrite', {storyId: 1, newFacts: ['Crews brought in sandbags'], changesHeadline: false}, {storyId: 1, newFacts: ['Crews brought in sandbags'], rewrite: false}],
+    ['an answer that doesn\'t say rewrites, as before', {storyId: 1, newFacts: ['Suspect arrested'], changesHeadline: null}, {storyId: 1, newFacts: ['Suspect arrested'], rewrite: true}],
+    ['no story named: a story of its own', {storyId: null, newFacts: ['Something'], changesHeadline: true}, {storyId: null, newFacts: [], rewrite: false}],
+    ['a story that wasn\'t a candidate: a story of its own', {storyId: 9, newFacts: ['Something'], changesHeadline: true}, {storyId: null, newFacts: [], rewrite: false}],
   ])('%s', (_, answer, applied) => {
-    expect(applyGrouping(answer, [1, 2], timeline)).toEqual(applied);
+    expect(applyGrouping({changesHeadline: null, ...answer}, [1, 2], timeline)).toEqual(applied);
   });
 
   test.each<[string, string[], string, string[]]>([
@@ -307,6 +316,40 @@ describe('new facts versus repeats, as the model\'s answer is applied (D86)', ()
     ['never after Setpoint had it (a feed\'s clock ahead)', ago(-1), ago(1), null, ago(1)],
   ])('a fact\'s time: %s', (_, published, fetched, seen, at) => {
     expect(factTime(published, fetched, seen)).toBe(at);
+  });
+});
+
+describe('what a story\'s writer is sent (D427)', () => {
+  const fact = (n: number) => ({at: ago(40 - n), text: `Fact ${n}`});
+  const source = (id: number) => ({id, publishedAt: ago(40 - id)});
+  const ids = (sources: readonly {id: number}[]) => sources.map(one => one.id);
+
+  test.each<[string, number, number, (number | null)[], {facts: string[]; sources: number[]}]>([
+    ['a short story is sent whole, its sources newest first', 3, 4, [1, null], {facts: ['Fact 1', 'Fact 2', 'Fact 3'], sources: [4, 3, 2, 1]}],
+    ['a long story is sent its latest facts and newest sources', STORY_FACTS_SHOWN + 5, STORY_SOURCES_SHOWN + 4, [null, null], {
+      facts: Array.from({length: STORY_FACTS_SHOWN}, (_, n) => `Fact ${n + 6}`),
+      sources: Array.from({length: STORY_SOURCES_SHOWN}, (_, n) => STORY_SOURCES_SHOWN + 4 - n),
+    }],
+    ['its current lead and image are kept in view, so a rewrite can keep them', 3, STORY_SOURCES_SHOWN + 4, [1, 2], {
+      facts: ['Fact 1', 'Fact 2', 'Fact 3'], sources: [...Array.from({length: STORY_SOURCES_SHOWN}, (_, n) => STORY_SOURCES_SHOWN + 4 - n), 2, 1],
+    }],
+    ['a lead already in view is sent once', 3, STORY_SOURCES_SHOWN + 4, [STORY_SOURCES_SHOWN + 4, STORY_SOURCES_SHOWN + 4], {
+      facts: ['Fact 1', 'Fact 2', 'Fact 3'], sources: Array.from({length: STORY_SOURCES_SHOWN}, (_, n) => STORY_SOURCES_SHOWN + 4 - n),
+    }],
+  ])('%s', (_, facts, sources, keep, sent) => {
+    const window = writerWindow(Array.from({length: facts}, (__, n) => fact(n + 1)), Array.from({length: sources}, (__, n) => source(n + 1)), keep);
+    expect({facts: window.facts.map(one => one.text), sources: ids(window.sources)}).toEqual(sent);
+  });
+
+  test('a rewrite shows the writer the story as it stands: its headline and summary, then its latest facts and sources', () => {
+    const story = {headline: 'Brush fire near the 210 burns 150 acres', summary: 'A brush fire near the 210 has burned about 150 acres.', sections: ['local'] as NewsSection[], facts: [fact(1)]};
+    const sources = [{id: 4, outlet: 'KTLA', publishedAt: ago(1), headline: 'Brush fire grows', facts: ['It grew to 400 acres'], hasImage: true}];
+    expect(storyInput(story, sources)).toBe([
+      'Sections: local', 'Current headline: Brush fire near the 210 burns 150 acres', 'Current summary: A brush fire near the 210 has burned about 150 acres.',
+      'Latest facts, oldest first:', `- ${ago(39)}: Fact 1`, '', 'Latest articles, newest first:', `Article 4 · KTLA · ${ago(1)} · has image`, '  Headline: Brush fire grows', '  - It grew to 400 acres',
+    ].join('\n'));
+    // A first write has neither.
+    expect(storyInput({...story, headline: null, summary: null}, sources)).not.toMatch(/Current (headline|summary)/);
   });
 });
 
@@ -437,8 +480,11 @@ describe('reading the models\' answers', () => {
   });
 
   test('grouping and a story, with how much it matters', () => {
-    expect(groupingOf({story_id: 4, new_facts: ['Suspect arrested', '']})).toEqual({storyId: 4, newFacts: ['Suspect arrested']});
-    expect(groupingOf(null)).toEqual({storyId: null, newFacts: []});
+    expect(groupingOf({story_id: 4, new_facts: ['Suspect arrested', ''], changes_headline: true})).toEqual({storyId: 4, newFacts: ['Suspect arrested'], changesHeadline: true});
+    expect(groupingOf({story_id: 4, new_facts: ['Crews brought in sandbags'], changes_headline: false})?.changesHeadline).toBe(false);
+    // Anything but a yes or a no is no answer, which rewrites as before.
+    expect(groupingOf({story_id: 4, new_facts: [], changes_headline: 'yes'})?.changesHeadline).toBeNull();
+    expect(groupingOf(null)).toEqual({storyId: null, newFacts: [], changesHeadline: null});
     expect(writtenOf({headline: ' Brush fire grows ', one_line: 'Warnings widened', summary: 'Text.', lead_article_id: 3, image_article_id: null, importance: 72}))
       .toEqual({headline: 'Brush fire grows', oneLine: 'Warnings widened', summary: 'Text.', leadArticleId: 3, imageArticleId: null, importance: 72});
     // Importance is kept within 0–100; an answer without one leaves the story's as it was.

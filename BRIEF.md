@@ -390,8 +390,10 @@ Campaigns, polls, reactions, hearings, and bills being "debated" until they pass
   "KTLA +4". Identical wire copy (AP text republished by ABC and PBS) counts as **one** outlet.
 - **The headline is written by the model**, plain and neutral, not taken from whichever outlet
   wrote the most clickable one. One line of summary sits under it.
-- **One summary, written from all the sources.** It's rewritten only when an article brings new
-  facts. "Suspect arrested" is a new fact; a fifth outlet repeating the first four isn't.
+- **One summary, written from all the sources.** It's rewritten only when an article brings
+  headline news: new facts that change what the headline or one line say (D427). "Suspect arrested"
+  rewrites it; a quote or some background joins the story's facts and shows as new, and waits for the
+  next rewrite; a fifth outlet repeating the first four adds nothing.
 - A story can sit in **more than one section** (an Anthropic story that makes the national
   headlines). Its seen state is shared.
 - A story **leaves the page 48 hours after its last new fact**, so a story that keeps developing
@@ -519,8 +521,8 @@ subscription's API credits cover it).
 | Work | Model | About |
 | --- | --- | --- |
 | Each article: section, noise filter, key facts, best image | Haiku 5.5 | $3 a month |
-| Grouping: is this the same event, and does it bring new facts? | Haiku 5.5 | $2 |
-| Each story's headline, summary and importance, from Haiku's fact notes, rewritten only on new facts (D421) | Sonnet 5.5 | $15–25 |
+| Grouping: is this the same event, does it bring new facts, and are they headline news? | Haiku 5.5 | $3 |
+| Each story's headline, summary and importance, from Haiku's fact notes in its latest 10 sources and 20 facts, rewritten only on headline news (D421, D427) | Sonnet 5.5 | $30–36 |
 | Ranking: the formula again every hour, as recency moves | none | $0 |
 
 A **monthly cap** (default $40) switches story writing to Haiku for the rest of the month, so News
@@ -529,7 +531,10 @@ ledger.
 
 An hourly Sonnet call over every story on the page ran about $82 a month on prod (October 2026,
 SV-165), since it sent each story again every hour, so each story is judged as it's written instead
-(D421).
+(D421). Story writes ran about $78 a month (SV-167): every new fact rewrote its story, and each
+write was sent every fact and every article's notes, so a long story's rewrites ran up to 60k tokens
+each. A story is now written from its window, its current headline and summary carrying its past,
+and rewritten only on headline news (D427).
 
 ### When things break
 

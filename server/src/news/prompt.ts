@@ -3,11 +3,12 @@
 // - each article (Claude Haiku 5.5): its sections, what kind of thing it is and what it's about (the
 //   noise and politics policy is applied to that answer in src/domain/newsSorting.ts), its key facts,
 //   its importance against the section's guide, where it happened, and a keynote it announces;
-// - grouping (Haiku): whether an article is about one of a few likely stories, and what facts it adds;
+// - grouping (Haiku): whether an article is about one of a few likely stories, what facts it adds, and
+//   whether they change the story's headline or one line, which alone rewrites it (D427);
 // - a story (Claude Sonnet 5.5, Haiku past the monthly cap): the neutral headline, the one line and
-//   the summary, from Haiku's fact notes, with the lead article, the best image and how much the story
-//   matters against its sections' guides. That judgement is the story's importance in the ranking; no
-//   separate call ranks the stories (D421).
+//   the summary, from Haiku's fact notes in the story's window (D427), with the lead article, the best
+//   image and how much the story matters against its sections' guides. That judgement is the story's
+//   importance in the ranking; no separate call ranks the stories (D421).
 // Each system prompt is fixed text, so its cached prefix holds; what changes rides in the input.
 // Answers are read leniently, field by field: what doesn't fit is dropped, and only an answer missing
 // what the step can't do without is unusable (null).
@@ -19,7 +20,7 @@ import {zonedInstant} from '../domain/time.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
 
 /** Bumped when a prompt or tool changes. */
-export const NEWS_PROMPT_VERSION = 'n3-v2';
+export const NEWS_PROMPT_VERSION = 'n3-v3';
 
 /** An article's text is cut here: its opening says what happened. */
 export const ARTICLE_TEXT_LIMIT = 6_000;
@@ -111,31 +112,35 @@ export const GROUPING_SYSTEM = `You decide whether a new news article is about t
 
 - The same event means the same incident, announcement or decision: the same fire, the same arrest, the same product launch. The same topic is not enough: two different shootings, or two different Apple announcements, are different events.
 - story_id: the id of the story it is about, or null when it's about none of them.
-- new_facts: only facts the article states that the story's facts don't already have: a number that changed (acres, deaths, a price), an arrest, a new official action, a cause found, a date set. A fact said in other words is not new, and another outlet repeating what the story has is not new: answer an empty list. "Suspect arrested" is a new fact; a fifth outlet repeating the first four isn't. Each new fact is one short line, no outlet names.`;
+- new_facts: only facts the article states that the story's facts don't already have: a number that changed (acres, deaths, a price), an arrest, a new official action, a cause found, a date set. A fact said in other words is not new, and another outlet repeating what the story has is not new: answer an empty list. "Suspect arrested" is a new fact; a fifth outlet repeating the first four isn't. Each new fact is one short line, no outlet names.
+- changes_headline: true only when the new facts change what the story's headline or one line should say: a number in it that moved (acres, containment, deaths, a price), an arrest, a ruling, an order issued or lifted, a launch that happened, a cause found. False when they add detail the headline and one line don't need: background, reactions, quotes, what happened elsewhere, a broadcast repeating the story. False with no new facts.`;
 
 export const GROUPING_TOOL: ToolSpec = {
   name: 'submit_news_grouping',
-  description: 'Submit which story the article is about, if any, and the new facts it brings.',
+  description: 'Submit which story the article is about, if any, the new facts it brings, and whether they change the story\'s headline or one line.',
   schema: {
     type: 'object',
     properties: {
       story_id: nullable({type: 'integer'}),
       new_facts: {type: 'array', items: {type: 'string'}, maxItems: 3},
+      changes_headline: {type: 'boolean'},
     },
-    required: ['story_id', 'new_facts'],
+    required: ['story_id', 'new_facts', 'changes_headline'],
   },
 };
 
 export interface PromptStory {
   id: number;
   headline: string;
+  // Null until the story is written.
+  oneLine: string | null;
   sections: NewsSection[];
   // The timeline, oldest first.
   facts: {at: string; text: string}[];
   sources: {outlet: string; headline: string; publishedAt: string}[];
 }
 
-/** Each candidate is shown as it stands now, its window of facts and sources (storyWindow), as it was matched. */
+/** Each candidate is shown as it stands now: its headline and one line, and its window of facts and sources (storyWindow), as it was matched. */
 export function groupingInput(article: {outlet: string; headline: string; publishedAt: string; facts: string[]}, stories: readonly PromptStory[]): string {
   return [
     'New article:',
@@ -149,6 +154,7 @@ export function groupingInput(article: {outlet: string; headline: string; publis
       const window = storyWindow(story.facts, story.sources);
       return [
         `Story ${story.id} (${story.sections.join(', ')}): ${story.headline}`,
+        ...(story.oneLine ? [`  One line: ${story.oneLine}`] : []),
         ...window.facts.map(fact => `- ${fact.at}: ${fact.text}`),
         ...window.sources.map(source => `  Source: ${source.outlet}: ${source.headline}`),
       ];
@@ -160,7 +166,7 @@ export const STORY_SYSTEM = `You write one story for the user's news page from t
 
 - headline: plain and neutral, under 90 characters, in sentence case and the present tense, saying what happened. Never an outlet's clickbait, never a question, never an outlet's name. Use the newest facts ("Brush fire near the 210 grows to 400 acres").
 - one_line: under 100 characters: the most useful detail the headline doesn't say ("Evacuation warnings for foothill homes; crews held the west flank overnight").
-- summary: two to four sentences from all the sources, the newest facts first where they change the picture. Only what the notes say; never speculate, never add opinion, never name outlets.
+- summary: two to four sentences from all the sources, the newest facts first where they change the picture. On a rewrite, the current summary holds what came before the latest facts and articles: keep what still matters from it. Only what the notes and the current summary say; never speculate, never add opinion, never name outlets.
 - lead_article_id: the article that covers the event best and most fully.
 - image_article_id: the article whose image best shows the event, among those marked "has image"; null when none has one. Never describe or invent an image.
 - importance: how much the event matters, against the guide of each of its sections, below.
@@ -195,13 +201,18 @@ export interface PromptSource {
   hasImage: boolean;
 }
 
-export function storyInput(story: {headline: string | null; sections: NewsSection[]; facts: {at: string; text: string}[]}, sources: readonly PromptSource[]): string {
+/**
+ * The story as its writer sees it: on a rewrite, the headline and summary it has, which carry its past;
+ * then its window's facts and sources (writerWindow, D427).
+ */
+export function storyInput(story: {headline: string | null; summary: string | null; sections: NewsSection[]; facts: {at: string; text: string}[]}, sources: readonly PromptSource[]): string {
   return [
     `Sections: ${story.sections.join(', ')}`,
     ...(story.headline ? [`Current headline: ${story.headline}`] : []),
-    'Facts so far, oldest first:', ...story.facts.map(fact => `- ${fact.at}: ${fact.text}`),
+    ...(story.summary ? [`Current summary: ${story.summary}`] : []),
+    'Latest facts, oldest first:', ...story.facts.map(fact => `- ${fact.at}: ${fact.text}`),
     '',
-    'Articles:',
+    'Latest articles, newest first:',
     ...sources.flatMap(source => [
       `Article ${source.id} · ${source.outlet} · ${source.publishedAt}${source.hasImage ? ' · has image' : ''}`,
       `  Headline: ${source.headline}`,
@@ -271,11 +282,14 @@ export const fallbackNotes = (section: NewsSection, headline: string): ArticleNo
   sections: [section], kind: 'event', subject: 'other', facts: [headline], importance: 20, place: null, keynote: null,
 });
 
-/** The grouping tool's input; an unusable answer is no match. */
-export function groupingOf(input: Record<string, unknown> | null): {storyId: number | null; newFacts: string[]} {
-  if (!input) return {storyId: null, newFacts: []};
+/** The grouping tool's input; an unusable answer is no match, and one that doesn't say whether the headline changes is null. */
+export function groupingOf(input: Record<string, unknown> | null): {storyId: number | null; newFacts: string[]; changesHeadline: boolean | null} {
+  if (!input) return {storyId: null, newFacts: [], changesHeadline: null};
   const storyId = integer(input.story_id);
-  return {storyId, newFacts: Array.isArray(input.new_facts) ? input.new_facts.flatMap(fact => text(fact, 200) ?? []) : []};
+  return {
+    storyId, newFacts: Array.isArray(input.new_facts) ? input.new_facts.flatMap(fact => text(fact, 200) ?? []) : [],
+    changesHeadline: typeof input.changes_headline === 'boolean' ? input.changes_headline : null,
+  };
 }
 
 export interface WrittenStory {

@@ -1,8 +1,8 @@
 // News's sorting end to end (N3), on the sync engine against an ephemeral database, with the models
 // faked on 127.0.0.1 (Haiku and Sonnet answering as the Messages API does). A recorded set of
 // invented articles, across outlets and sections, groups and ranks as expected: wire copies count
-// once, a developing story gains facts (a hazard's revisions among them) and is rewritten only then,
-// a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
+// once, a developing story gains facts (a hazard's revisions among them) and is rewritten only when
+// they're headline news (D427), a repeat changes nothing, noise never becomes a story, a metered-only story never shows, a Google
 // News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
 // order follows the importance each story is judged as it's written (D421), and the hour re-scores
 // without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
@@ -80,9 +80,11 @@ interface Recorded {
   facts?: string[];
   importance?: number;
   keynote?: {company: string; date: string; time: string | null; time_zone: string | null};
-  // Haiku's grouping answer: the story whose text holds `join`, and the facts it says the article adds.
+  // Haiku's grouping answer: the story whose text holds `join`, the facts it says the article adds, and
+  // whether they change the story's headline or one line (left out, the answer doesn't say).
   join?: string;
   newFacts?: string[];
+  changesHeadline?: boolean;
 }
 
 const FIRE = 'https://fire.example/incidents/foothill-fire';
@@ -128,9 +130,9 @@ const SECOND: Recorded[] = [
     text: 'Foothill Fire in the foothills north of the 210: 400 acres, 10% contained.', subject: 'local', facts: ['The Foothill Fire grew to 400 acres', 'It is 10% contained'], importance: 80},
   {source: 'abc7', headline: 'Brush fire grows to 400 acres; evacuation warnings issued', published: 0.6, subject: 'local', sections: ['local'],
     facts: ['The fire grew to 400 acres', 'Evacuation warnings were issued for foothill homes'], importance: 80, join: 'brush fire',
-    newFacts: ['Evacuation warnings were issued for foothill homes', 'The fire grew to 400 acres']},
+    newFacts: ['Evacuation warnings were issued for foothill homes', 'The fire grew to 400 acres'], changesHeadline: true},
   {source: 'npr', headline: 'Ohio warehouse shooting suspect in custody', published: 0.65, subject: 'us', sections: ['general'], facts: ['A suspect is in custody'],
-    importance: 85, join: 'warehouse', newFacts: ['A suspect is in custody']},
+    importance: 85, join: 'warehouse', newFacts: ['A suspect is in custody'], changesHeadline: true},
 ];
 
 // Then a fifth outlet repeating the first four, and a new story after the first run.
@@ -152,10 +154,15 @@ const FLOOD: Recorded[] = [
     facts: ['Water from the swollen stream covered several neighborhood intersections after midnight',
       'The city asked motorists to stay off the affected streets until it recedes',
       'A shelter at the community center took in a handful of residents from riverside homes'],
-    join: 'fabrikam falls', newFacts: ['A shelter at the community center took in residents from riverside homes']},
+    join: 'fabrikam falls', newFacts: ['A shelter at the community center took in residents from riverside homes'], changesHeadline: false},
 ];
 
-const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD].map(article => [article.headline, article]));
+// Then the flood's news (D427): the creek crests and roads reopen.
+const FLOOD_NEWS: Recorded = {source: 'fox11', headline: 'Fabrikam Falls creek crests as 2 of 8 closed roads reopen', published: 1, subject: 'local', sections: ['local'], importance: 70,
+  facts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'], join: 'fabrikam falls', newFacts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'],
+  changesHeadline: true};
+
+const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD, FLOOD_NEWS].map(article => [article.headline, article]));
 
 // Sonnet's stories, by what their notes say (first match wins), with how much each matters: mostly
 // under Haiku's reading of an article, as on prod.
@@ -194,7 +201,10 @@ function recordedAnswer(request: FakeRequest): FakeAnswer {
       const article = RECORDED.get(headlineIn(input))!;
       const blocks = input.split('\nStories:\n')[1]!.split(/\n(?=Story \d+ )/);
       const story = article.join ? blocks.find(block => block.toLowerCase().includes(article.join!)) : undefined;
-      return {tool: {story_id: story ? Number(/^Story (\d+)/.exec(story)![1]) : null, new_facts: article.newFacts ?? []}};
+      return {tool: {
+        story_id: story ? Number(/^Story (\d+)/.exec(story)![1]) : null, new_facts: article.newFacts ?? [],
+        ...(article.changesHeadline === undefined ? {} : {changes_headline: article.changesHeadline}),
+      }};
     }
     case 'submit_news_story': {
       const written = STORIES.find(([pattern]) => pattern.test(input))![1](input);
@@ -424,6 +434,43 @@ describe('the same event, worded apart (the polish audit\'s extra-09)', () => {
     expect(s.calls('submit_news_grouping').map(request => headlineIn(request.input))).toEqual([FLOOD[1]!.headline]);
     expect(s.storyOf(FLOOD[1]!.headline)).toBe(story);
     expect(s.story(story).outlets).toBe(2);
+  });
+});
+
+describe('a story is rewritten only on headline news (D427)', () => {
+  test('facts that only add detail join the story and show as new without a rewrite; headline news rewrites it, from the story as it stands', async () => {
+    const s = await sortWorld();
+    const {w} = s;
+    s.deliver([FLOOD[0]!]);
+    await s.drain();
+    const flood = s.storyOf(FLOOD[0]!.headline)!;
+    const written = s.story(flood);
+    expect(written.headline).toBe('Flash flood closes 8 roads around Fabrikam Falls');
+
+    // The user looks; then a second station adds a shelter, which changes neither the headline nor the one line.
+    w.advance(30 * MINUTE);
+    markSeen(w.store, [flood]);
+    w.advance(15 * MINUTE);
+    s.deliver([FLOOD[1]!]);
+    await s.drain();
+    expect(s.storyOf(FLOOD[1]!.headline)).toBe(flood);
+    expect(s.calls('submit_news_story')).toHaveLength(1);
+    expect(s.story(flood)).toMatchObject({needsWriting: false, writtenAt: written.writtenAt, headline: written.headline, summary: written.summary, outlets: 2});
+    // It still keeps the story fresh, and the pane shows it as new since the user looked.
+    expect(s.story(flood).lastNewFactAt).toBe(at(0.75));
+    const pane = storySchema.parse(storyDetail(w.store, flood));
+    expect([pane.state, pane.new_since!.facts.map(fact => fact.text)]).toEqual(['updated', ['A shelter at the community center took in residents from riverside homes']]);
+
+    // Headline news rewrites it, shown the headline and summary it has.
+    w.advance(30 * MINUTE);
+    s.deliver([FLOOD_NEWS]);
+    await s.drain();
+    const writes = s.calls('submit_news_story');
+    expect(writes).toHaveLength(2);
+    expect(writes[1]!.input).toContain(`Current headline: ${written.headline}\nCurrent summary: ${written.summary}\n`);
+    // The shelter, held until now, is written in with the news.
+    expect(writes[1]!.input).toContain('A shelter at the community center took in residents from riverside homes');
+    expect(s.story(flood).writtenAt).toBe(isoNow(w.store));
   });
 });
 
