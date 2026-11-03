@@ -6,7 +6,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {airNowReportingAreas, calFireIncidents, isAirNowFile, hnStories, nwsAlerts, usgsQuakes} from '../src/domain/newsApis.ts';
 import {NotAFeed, parseFeed} from '../src/domain/newsFeeds.ts';
-import {datedSections, extractArticle, listedPosts} from '../src/domain/newsPages.ts';
+import {datedSections, extractArticle, hasProse, listedPosts} from '../src/domain/newsPages.ts';
 import {googleHeadline} from '../src/providers/news/feeds.ts';
 import {newsFixture, newsJson} from './fixtures/news.ts';
 
@@ -150,10 +150,34 @@ describe('article pages', () => {
     expect(extractArticle(newsFixture('wall.html', BASE), `${BASE}/story/1`)).toEqual({text: null, imageUrl: `${BASE}/images/wall-og.jpg`});
   });
 
+  test('a video page whose only text is the station\'s other videos has no text, and keeps its image (SV-166)', () => {
+    expect(extractArticle(newsFixture('video-page.html', BASE), `${BASE}/video/insurance-delays/`)).toEqual({text: null, imageUrl: `${BASE}/images/insurance-video-og.jpg`});
+  });
+
+  const headline = 'Northwind mayoral candidates make final campaign stops with days to go until the Nov. 3 vote';
+  const sentence = 'The county board voted 4 to 1 on Tuesday to approve the housing project near the station, which will add 300 homes.';
+  test.each([
+    ['a station\'s other videos', ['Fabrikam Ridge homeowners face insurance delays after the brush fire', headline, 'County prosecutors charge six Contoso residents accused of filing false permits'], false],
+    ['headlines that end as a question or a cry', ['Who is paying for the harbor cleanup? Fabrikam Bay residents ask the port commission', 'Contoso bagel shop celebrates 50 years!', headline], false],
+    ['an episode list', ['10/4/2026: The Long Count; The Harbor Pilots; A Northwind Summer', '9/27/2026: Fabrikam\'s Comeback; Night Shift; The Last Ferry', '9/20/2026: Inside Contoso; The Orchard'], false],
+    ['a latest-stories list with its times', ['Brush fire grows near Fabrikam Ridge as winds pick up1 hour ago', '• 1 hour ago', 'Contoso council delays its vote on the housing plan7 minutes ago', '• 7 minutes ago'], false],
+    ['an article\'s paragraphs', [sentence, 'Construction is expected to start next spring, the developer said.'], true],
+    ['a headline, then the one sentence of a breaking story', [headline, `NORTHWIND -- ${sentence}`], true],
+    ['a quote that ends the paragraph', ['“We\'ll be back,” the owner said. “The fire took the kitchen, not the recipes.”'], true],
+    ['a list after its lead-in', ['Here are the guests for Sunday, Oct. 18:', '• Mayor Dana Whitfield of Northwind', '• Contoso County Supervisor Priya Raman'], true],
+    ['a video\'s description, longer than a headline, ending with its date', ['Fabrikam Ridge homeowners say their insurers have been slow to pay a month after the brush fire, and a state lawmaker wants answers. Channel 4\'s Dana Whitfield reports.Oct. 11, 2026'], true],
+    ['answers signed by their writers', ['Seeing all the fruits of an incredible summer of moves. It feels like three years ago that the trade happened, since then the whole league has been reshuffled. Priya Raman'], true],
+  ])('prose: %s', (_, blocks, expected) => {
+    expect(hasProse(blocks)).toBe(expected);
+  });
+
   test('the JSON-LD articleBody stands in when the page draws itself', () => {
     const body = 'The county board voted 4 to 1 on Tuesday to approve the housing project near the station, which will add 300 homes.\nConstruction is expected to start next spring and take two years, the developer said in a statement after the vote.';
     const html = `<html><head><script type="application/ld+json">${JSON.stringify({'@context': 'https://schema.org', '@graph': [{'@type': 'NewsArticle', articleBody: body, image: {url: `${BASE}/ld.jpg`}}]})}</script></head><body><div id="app"></div></body></html>`;
     expect(extractArticle(html, `${BASE}/a`)).toEqual({text: body.replace('\n', '\n\n'), imageUrl: `${BASE}/ld.jpg`});
+    // One that's only the outlet's other headlines isn't the article either (SV-166).
+    const headlines = ['Fabrikam Ridge homeowners face insurance delays after the brush fire', 'County prosecutors charge six Contoso residents accused of filing false permits', 'Northwind mayoral candidates make final campaign stops with days to go'].join('\n');
+    expect(extractArticle(html.replace(JSON.stringify(body), JSON.stringify(headlines)), `${BASE}/a`).text).toBeNull();
   });
 
   test('a layout wrapper with a noisy class keeps its article; a promo with the same word goes', () => {

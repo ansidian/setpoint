@@ -115,6 +115,22 @@ const length = (texts: string[]) => texts.reduce((sum, text) => sum + text.lengt
 const MIN_ARTICLE_CHARS = 200;
 const MAX_ARTICLE_CHARS = 60_000;
 
+/** A headline is shorter than this (prod's CBS video lists never pass 100). */
+const HEADLINE_MAX = 150;
+// A block that ends as a sentence or a lead-in does, before any closing quotes or brackets. Not "!" or
+// "?", which headlines end with too.
+const SENTENCE_END = /[.…:]["'”’)\]]*$/u;
+
+/**
+ * Whether a page's text blocks hold any prose (SV-166). The outlet's list of other stories, which is
+ * all a video page gives (its other videos' headlines, a programme's episodes, the latest stories with
+ * their times), is lines no longer than a headline that don't end as a sentence does. An article has
+ * at least one block that does, or that runs longer than a headline.
+ */
+export function hasProse(blocks: readonly string[]): boolean {
+  return blocks.some(block => block.length >= HEADLINE_MAX || SENTENCE_END.test(block));
+}
+
 /** The container that holds the article: the <article> with the most text, the articleBody, <main>, or the element whose paragraphs weigh most. */
 function articleContainer(document: Document): Element | null {
   const byText = (candidates: Element[]) => candidates.map(element => ({element, size: length(blocks(element))})).sort((a, b) => b.size - a.size)[0];
@@ -195,8 +211,8 @@ const joinParagraphs = (paragraphs: string[]) => {
 /**
  * An article page's readable text, paragraphs and list items only (no navigation, sharing,
  * promotions, appeals or the page's own lines), and its image. A page that yields too little (a
- * teaser, a consent wall, an app shell that draws itself with scripts) has no text, and the article
- * falls back to its feed summary.
+ * teaser, a consent wall, an app shell that draws itself with scripts), or no prose (a video page's
+ * list of the outlet's other videos), has no text, and the article falls back to its feed summary.
  */
 export function extractArticle(html: string, pageUrl: string): ExtractedArticle {
   const document = parseDocument(html);
@@ -205,10 +221,11 @@ export function extractArticle(html: string, pageUrl: string): ExtractedArticle 
   stripNoise(document);
   const container = articleContainer(document);
   const paragraphs = container ? blocks(container, true) : [];
-  let text = length(paragraphs) >= MIN_ARTICLE_CHARS ? joinParagraphs(paragraphs) : null;
+  const readable = (texts: string[]) => length(texts) >= MIN_ARTICLE_CHARS && hasProse(texts);
+  let text = readable(paragraphs) ? joinParagraphs(paragraphs) : null;
   if (!text && ld.text) {
     const fromLd = ld.text.split(/\n\s*\n|\r\n\s*\r\n|\n/).map(paragraph => clip(paragraph)).filter(paragraph => paragraph.length > 0 && !APPEAL.test(paragraph));
-    if (length(fromLd) >= MIN_ARTICLE_CHARS) text = joinParagraphs(fromLd);
+    if (readable(fromLd)) text = joinParagraphs(fromLd);
   }
   return {text, imageUrl: imageUrl ?? absolute(ld.image, pageUrl)};
 }
