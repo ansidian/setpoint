@@ -5,10 +5,15 @@
 // says what it made. Undo puts those rows back exactly as they were, with their ids, and takes away
 // what it made, so a merge, a delete or a block comes back whole. The toast offers only the latest,
 // and a snapshot is kept a day.
+//
+// A JD's reading is the one thing written meanwhile that no correction makes (SV-170): a pasted JD
+// read since the snapshot keeps that reading through Undo, and one put back unread is read again.
 import {eq, inArray, lt, or} from 'drizzle-orm';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
+import {enqueueJob} from '../sync/jobs.ts';
 import {jobsDb} from './db.ts';
+import {pastedKey} from './lookup.ts';
 import * as j from './schema.ts';
 
 const KEEP_MS = 24 * 60 * 60_000;
@@ -106,6 +111,7 @@ export function undoCorrection(store: Store, token: number): {applications: numb
     }
     // Their rows, exactly as they were: wherever an event went (a move, a merge), it comes back.
     const scope = ids(applications);
+    const postings = keepReadings(rows.postings, db.select().from(j.jobsPostings).where(inArray(j.jobsPostings.applicationId, scope)).all());
     db.delete(j.jobsEvents).where(or(inArray(j.jobsEvents.applicationId, scope), inArray(j.jobsEvents.id, ids(rows.events.map(event => event.id))))).run();
     db.delete(j.jobsPostings).where(inArray(j.jobsPostings.applicationId, scope)).run();
     db.delete(j.jobsJdCandidates).where(inArray(j.jobsJdCandidates.applicationId, scope)).run();
@@ -114,7 +120,9 @@ export function undoCorrection(store: Store, token: number): {applications: numb
     db.delete(j.jobsRejectedPostings).where(inArray(j.jobsRejectedPostings.applicationId, scope)).run();
     db.delete(j.jobsNeedsYou).where(or(inArray(j.jobsNeedsYou.id, ids(needsYou)), inArray(j.jobsNeedsYou.applicationId, scope))).run();
     if (rows.events.length) db.insert(j.jobsEvents).values(rows.events).run();
-    if (rows.postings.length) db.insert(j.jobsPostings).values(rows.postings).run();
+    if (postings.length) db.insert(j.jobsPostings).values(postings).run();
+    // A pasted JD back unread, its reading having found it gone, is read again.
+    for (const posting of postings) if (posting.source === 'pasted' && !posting.summary) enqueueJob(store, {kind: 'jobs_read', key: pastedKey(posting.id)});
     if (rows.candidates.length) db.insert(j.jobsJdCandidates).values(rows.candidates).run();
     if (rows.handSet.length) db.insert(j.jobsHandSet).values(rows.handSet).run();
     if (rows.aliases.length) db.insert(j.jobsAliases).values(rows.aliases).run();
@@ -133,5 +141,24 @@ export function undoCorrection(store: Store, token: number): {applications: numb
     const changed = {applications: [...applications, ...created.applications], needs_you: [...needsYou, ...created.needsYou]};
     noteLive(store, {type: 'jobs', ...changed});
     return changed;
+  });
+}
+
+type Posting = typeof j.jobsPostings.$inferSelect;
+
+/**
+ * The JDs as the snapshot has them, each still there taking the reading it has now (SV-170). A
+ * location the user has set no reading changes, so it goes back to what it was; otherwise it's the
+ * reading's.
+ */
+function keepReadings(kept: Posting[], now: Posting[]): Posting[] {
+  const current = new Map(now.map(posting => [posting.id, posting]));
+  return kept.map(posting => {
+    const read = current.get(posting.id);
+    if (!read) return posting;
+    return {
+      ...posting, summary: read.summary, workplace: read.workplace, workplaceDetail: read.workplaceDetail, salary: read.salary, mustHaves: read.mustHaves,
+      niceToHaves: read.niceToHaves, location: read.locationSetAt ? posting.location : read.location,
+    };
   });
 }

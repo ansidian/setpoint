@@ -971,6 +971,31 @@ describe('the posting pasted in (SV-140)', () => {
     expect(applicationDetail(s.store, other).posting).toMatchObject({summary: READ.summary, source: 'pasted'});
   });
 
+  test('Undo keeps the reading that landed since its correction: a location, a title; and Not this posting undone before it was read is read again (SV-170)', async () => {
+    const s = await setup();
+    const id = s.make({company: 'Trey Research', title: 'Data Engineer I', platform: 'Breezy', jdLookup: 'not_found'});
+    await paste(s, id, TEXT);
+    const c = await routes(s);
+    const placed = await c.send('PATCH', `/api/jobs/applications/${id}`, {body: {location: 'Austin, TX'}});
+    const titled = await c.send('PATCH', `/api/jobs/applications/${id}`, {body: {title: 'Data Engineer'}});
+    s.answers({submit_posting_reading: reading(READ)});
+    await s.drain();
+    await undo(s, titled.body.undo);
+    expect(applicationDetail(s.store, id)).toMatchObject({title: 'Data Engineer I', posting: {summary: READ.summary, salary: READ.salary, location: 'Austin, TX'}});
+    // The location goes back to none, as before it was set; the reading kept the user's, so has none to give.
+    await undo(s, placed.body.undo);
+    expect(applicationDetail(s.store, id).posting).toMatchObject({summary: READ.summary, salary: READ.salary, location: null, location_set_at: null});
+
+    const other = s.make({company: 'Trey Research', title: 'Data Engineer II', platform: 'Breezy', jdLookup: 'not_found'});
+    await paste(s, other, TEXT);
+    const away = await c.send('POST', `/api/jobs/applications/${other}/not-this-posting`);
+    await s.drain();
+    expect(s.posting(other)).toBeUndefined();
+    await undo(s, away.body.undo);
+    await s.drain();
+    expect(applicationDetail(s.store, other).posting).toMatchObject({source: 'pasted', summary: READ.summary, location: READ.location});
+  });
+
   test('a lookup can\'t replace it: one queued when it was pasted, one under way, and Look it up by hand', async () => {
     const s = await setup();
     // Queued when it's pasted.
