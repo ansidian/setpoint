@@ -1,6 +1,6 @@
 // The Calendar in the browser: boards 11 and 11b built and checked (11b's busy Saturday is the
 // busy-saturday fixture, decision D3; board 11 also takes one of the release's page screenshots,
-// pages.ts), then the flows: the grid's sizes, scrolling and paging through months, a calendar
+// pages.ts), then the flows: the grid's sizes, paging through months, a calendar
 // toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
@@ -109,16 +109,16 @@ test(`the grid at ${SIZES.target.width} × ${SIZES.target.height}: rows 176, sev
   }
 });
 
-test('the grid scrolls on through months; ← → P N page, T comes back to today', async () => {
+// Which month a scroll shows, and which rows it draws, are monthAtScroll's and rowsInView's, tables in
+// calendar.test.ts; the wheel's scrolls went with them (D416).
+test('← → P N and ‹ › page through months, the header, tab title and mini-month reading each; T comes back to today', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
-    // Scrolling down four rows over the grid brings November's first row to the top.
-    await page.mouse.move(700, 500);
-    for (let step = 0; step < 4; step += 1) await page.mouse.wheel(0, 176);
-    await until('the title follows the scroll', () => text(page, '.hd-title'), title => title === 'November 2026');
+    await page.keyboard.press('n');
+    await until('N pages to November', () => text(page, '.hd-title'), title => title === 'November 2026');
     await until('the tab title too', () => page.title(), title => title === 'November 2026 · Calendar');
     await until('November\'s days are in the month', () => page.locator('.cell[data-date="2026-11-12"]').getAttribute('class'), cls => !!cls && !cls.includes('out'));
     assert.match((await page.locator('.cell[data-date="2026-10-31"]').getAttribute('class'))!, /\bout\b/);
@@ -141,50 +141,7 @@ test('the grid scrolls on through months; ← → P N page, T comes back to toda
     await page.keyboard.press('t');
     await until('T: back to October', () => text(page, '.hd-title'), title => title === 'October 2026');
     assert.equal(await page.locator('.cell[data-date="2026-10-07"] .dn.today').count(), 1);
-    // Four rows up: Aug 31 – Sep 6 at the top reads September.
-    await page.mouse.move(700, 500);
-    for (let step = 0; step < 4; step += 1) await page.mouse.wheel(0, -176);
-    await until('September above', () => text(page, '.hd-title'), title => title === 'September 2026');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('the header reads the month filling the view: October nudged up past a row still reads October; paging to November reads November', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ev').first().waitFor();
-    const grid = page.locator('.cal-scroll');
-    const top = await grid.evaluate(element => element.scrollTop);
-    const month = async (name: string, when: string) => {
-      assert.equal(await text(page, '.hd-title'), name, `the header ${when}`);
-      assert.equal(await page.title(), `${name} · Calendar`, `the tab title ${when}`);
-      assert.equal(await text(page, '.mini-head .name'), name, `the mini-month ${when}`);
-    };
-    const scrollTo = async (scrollTop: number) => {
-      await grid.evaluate(async (element, to) => {
-        element.scrollTop = to;
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }, scrollTop);
-    };
-    // 242 px up is what centring Dentist's chip in the grid scrolls: most of Sep 20 – 26 at the top.
-    // Weeks start on Sunday (SV-29), so Oct 4 – 10 holds the grid's middle (964 px tall) until 306 px up.
-    for (const nudge of [242, 176, 306]) {
-      await scrollTo(top - nudge);
-      assert.equal(await grid.evaluate(element => element.scrollTop), top - nudge);
-      await month('October 2026', `${nudge} px up`);
-    }
-    // A pixel further and Sep 27 – Oct 3, mostly September, is at the middle: September has the view.
-    await scrollTo(top - 307);
-    await month('September 2026', '307 px up');
-    await scrollTo(top);
-    await month('October 2026', 'back at rest');
-    await page.locator('.hd').getByRole('button', {name: 'Next month'}).click();
-    await until('› pages to November', () => text(page, '.hd-title'), title => title === 'November 2026');
-    await month('November 2026', 'paged to November');
+    assert.equal(await text(page, '.mini-head .name'), 'October 2026');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

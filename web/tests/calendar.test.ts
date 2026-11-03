@@ -6,7 +6,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
-  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
+  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
 } from '../src/logic/calendar.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -360,4 +360,15 @@ describe('SV-29: picking an event\'s days in one month', () => {
     ['the same day again: one day', 'end', '2026-10-13', '2026-10-13', {from: '2026-10-13', to: '2026-10-13', done: true}],
     ['a day before the first starts it there and ends it on the first (#103)', 'end', '2026-10-13', '2026-10-06', {from: '2026-10-06', to: '2026-10-13', done: true}],
   ] as const)('%s', (_, phase, from, day, picked) => expect(rangePick(phase, from, day)).toEqual(picked));
+});
+
+describe('the done moment: a task ticked off where it\'s drawn plays it, nothing else does', () => {
+  const was = (entries: [string, boolean][]) => new Map(entries);
+  test.each([
+    ['ticked off', was([['a', false]]), [{key: 'a', done: true}], ['a']],
+    ['reopened', was([['a', true]]), [{key: 'a', done: false}], []],
+    ['already done when first drawn', was([]), [{key: 'a', done: true}], []],
+    ['unchanged', was([['a', true], ['b', false]]), [{key: 'a', done: true}, {key: 'b', done: false}], []],
+    ['two at once, one of them reopened', was([['a', false], ['b', false], ['c', true]]), [{key: 'a', done: true}, {key: 'b', done: true}, {key: 'c', done: false}], ['a', 'b']],
+  ])('%s', (_name, before, tasks, played) => expect(playsDone(before, tasks)).toEqual(played));
 });

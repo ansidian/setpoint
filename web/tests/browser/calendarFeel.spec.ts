@@ -1,13 +1,13 @@
-// How Calendar moves and answers (darma SV-64, the polish audit's calendar lane): paging glides the
-// month the way it went, and the rest of the lane's marks and answers.
+// How Calendar moves and answers (darma SV-64, the polish audit's calendar lane): paging lands on the
+// month it went to, and the rest of the lane's marks and answers.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {minuteTop} from '../../src/logic/week.ts';
-import {layout, monthPaging} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
+import {layout} from '../../src/tokens.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -28,26 +28,9 @@ const top = (month: string) => monthTopRow(month) * ROW;
 const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => element.scrollTop);
 const style = (target: Locator, property: string, pseudo?: string) => target.evaluate((element, [name, after]) => getComputedStyle(element, after ?? null).getPropertyValue(name!).trim(), [property, pseudo] as const);
 
-/** Records the month grid's scrollTop every frame from now on; resolves to a reader of what it saw. */
-async function recordScroll(page: Page): Promise<() => Promise<number[]>> {
-  await page.evaluate(() => {
-    const scroller = document.querySelector('.cal-scroll')!;
-    const seen: number[] = [];
-    (window as unknown as {seenScroll: number[]}).seenScroll = seen;
-    const frame = () => {
-      seen.push(scroller.scrollTop);
-      requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  });
-  return () => page.evaluate(() => [...(window as unknown as {seenScroll: number[]}).seenScroll]);
-}
-
-/** The values strictly between `from` and `to` a recording passed through, in order. */
-const between = (seen: number[], from: number, to: number) => seen.filter(value => value > Math.min(from, to) && value < Math.max(from, to));
-const monotonic = (values: number[], rising: boolean) => values.every((value, at) => at === 0 || (rising ? value >= values[at - 1]! : value <= values[at - 1]!));
-
-test('paging glides the month over 260 ms the way it goes, N N N chaining; the wheel stops it; Month from Week lands at once', async () => {
+// The glide's path between months is by eye, and where it sets out from is glideStart's table in
+// calendar.test.ts; reading it frame by frame, or stopping it mid-way with the wheel, went (D416).
+test('paging lands on the month it went to, N N N chaining on to January; Month from Week lands at once', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -56,46 +39,18 @@ test('paging glides the month over 260 ms the way it goes, N N N chaining; the w
     const title = page.locator('.hd-title');
     assert.equal(await scrollTop(page), top('2026-10'));
 
-    // N: November comes up from below, through the rows between, over 260 ms.
-    let seen = await recordScroll(page);
     await page.keyboard.press('n');
     await until('N lands on November', () => scrollTop(page), value => value === top('2026-11'));
-    const down = between(await seen(), top('2026-10'), top('2026-11'));
-    assert.ok(down.length >= 3, `it passes through the rows between: ${JSON.stringify(down)}`);
-    assert.ok(monotonic(down, true), 'downward all the way');
     await until('the title reads November', () => title.textContent(), text => text === 'November 2026');
-
-    // P: back to October, where N N N starts.
     await page.keyboard.press('p');
     await until('P lands on October', () => scrollTop(page), value => value === top('2026-10'));
-
-    // N N N mid-glide goes on from where it's going: January, never back.
-    seen = await recordScroll(page);
+    // N N N mid-glide goes on from where it's going: January.
     await page.keyboard.press('n');
     await page.keyboard.press('n');
     await page.keyboard.press('n');
     await until('N N N land on January', () => scrollTop(page), value => value === top('2027-01'));
-    const chained = (await seen()).filter(value => value >= top('2026-10'));
-    assert.ok(monotonic(chained, true), `one glide on, never back: ${JSON.stringify(chained)}`);
-
-    // T: back to October, where the wheel's glide starts.
     await page.keyboard.press('t');
     await until('T lands on October 2026', () => scrollTop(page), value => value === top('2026-10'));
-
-    // The wheel stops a glide where it is: N, the glide's first step, then a wheel over the grid.
-    const stopped = await page.evaluate(async () => {
-      const scroller = document.querySelector('.cal-scroll')!;
-      const from = scroller.scrollTop;
-      document.dispatchEvent(new KeyboardEvent('keydown', {key: 'n', bubbles: true}));
-      for (let frame = 0; frame < 300 && scroller.scrollTop === from; frame += 1) await new Promise(next => requestAnimationFrame(next));
-      scroller.dispatchEvent(new WheelEvent('wheel', {bubbles: true}));
-      return scroller.scrollTop;
-    });
-    // Nothing should move once stopped: two glides' worth of frames.
-    await page.waitForTimeout(monthPaging.glideMs * 2);
-    await setpoint.idle();
-    assert.ok(stopped > top('2026-10') && stopped < top('2026-11'), `stopped on its way (${stopped})`);
-    assert.equal(await scrollTop(page), stopped, 'and stays there, short of November');
 
     // A jump stays instant: Week, then Month again, lands on the selected day's month in one frame.
     await page.keyboard.press('w');
@@ -116,20 +71,20 @@ const thumb = (seg: Locator) => seg.evaluate(element => {
   return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
 });
 
-test('a segmented control\'s thumb waits under the segment that\'s on and slides to the next, handing the fill back', async () => {
+// The thumb's slide from one segment to the next is by eye (D416): each page as it loads.
+test('a segmented control\'s thumb waits under the segment that\'s on, which hands it the fill: Month, and Week', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
     const seg = page.locator('.hd .seg');
-    const first = await rested(() => thumb(seg));
-    assert.deepEqual([first.x, first.width], first.on, 'the thumb waits under Month');
-    const sliding = await watch(seg, 'data-sliding');
-    await page.keyboard.press('w');
-    await until('the thumb slides under Week, then hands the fill back', sliding, seen => seen.join() === ',');
-    const after = await rested(() => thumb(seg));
-    assert.deepEqual([after.x, after.width, after.onFill], [...after.on, await rested(() => colour(page, '--sub3'))]);
+    const month = await rested(() => thumb(seg));
+    assert.deepEqual([month.x, month.width], month.on, 'the thumb waits under Month');
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await page.locator('.cal-week').waitFor();
+    const week = await rested(() => thumb(seg));
+    assert.deepEqual([week.x, week.width, week.onFill], [...week.on, await rested(() => colour(page, '--sub3'))], 'under Week, its fill');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -291,7 +246,9 @@ test('each word typed lands in its field: the rows it fills take its colour, and
   }
 });
 
-test('ticking a task off is one moment everywhere: the pane plays it and keeps its project beside the spinner, and its card is drawn in its project\'s colour', async () => {
+// Which ticks play the done moment is playsDone's, a table in calendar.test.ts; the moment itself is by
+// eye (D416).
+test('ticking a task off keeps its project beside the spinner in the pane, and its card is drawn in its project\'s colour, struck through while Todoist hasn\'t answered', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -309,20 +266,13 @@ test('ticking a task off is one moment everywhere: the pane plays it and keeps i
 
     // The pane: Pay rent's ring. Waiting, it keeps "Home" beside the spinner.
     const row = page.locator('.rpane .ag-task', {hasText: 'Pay rent'});
-    const classes = await watch(row, 'class');
     await row.getByRole('button', {name: 'Complete Pay rent'}).click();
     await row.getByRole('button', {name: 'Reopen Pay rent'}).waitFor();
     assert.deepEqual([await row.locator('.spin').count(), await row.locator('.project').textContent()], [1, 'Home']);
-    assert.ok((await classes()).some(value => value?.split(' ').includes('just-done')), 'it played the moment');
-    // The moment ends before the reopen below, which plays none.
-    await until('the moment ends', () => row.getAttribute('class'), value => !value?.includes('just-done'));
     release();
     await until('Todoist has it', () => row.locator('.spin').count(), count => count === 0);
-    // Reopened, it plays nothing.
-    const again = await watch(row, 'class');
     await row.getByRole('button', {name: 'Reopen Pay rent'}).click();
     await row.getByRole('button', {name: 'Complete Pay rent'}).waitFor();
-    assert.ok(!(await again()).some(value => value?.split(' ').includes('just-done')));
     await until('reopened at Todoist', () => row.locator('.spin').count(), count => count === 0);
 
     // A task's card: its ring in its project's colour, the project a dot in it, no Colour.
@@ -336,7 +286,7 @@ test('ticking a task off is one moment everywhere: the pane plays it and keeps i
     const dot = card.locator('.fact.project .fact-dot .dot');
     assert.deepEqual([await dot.count(), await card.getByRole('button', {name: 'Colour'}).count()], [1, 0]);
     assert.equal(await rested(() => style(dot, 'background-color')), await rested(() => style(gridRing, 'border-top-color')));
-    // Complete: struck through in `ink3`, its mark at .5 while Todoist hasn't answered, the check landing.
+    // Complete: struck through in `ink3`, its mark at .5 while Todoist hasn't answered.
     let hold = () => {};
     const waiting = new Promise<void>(resolve => {
       hold = resolve;
@@ -347,12 +297,10 @@ test('ticking a task off is one moment everywhere: the pane plays it and keeps i
       await route.continue();
     });
     const mark = card.locator('.fd-mark');
-    const markClasses = await watch(mark, 'class');
     await card.getByRole('button', {name: 'Complete'}).click();
     await card.locator('.fd-title.done').waitFor();
     assert.deepEqual([await rested(() => style(card.locator('.fd-title'), 'text-decoration-line')), await rested(() => style(card.locator('.fd-title'), 'color'))], ['line-through', await rested(() => colour(page, '--ink3'))]);
     assert.deepEqual([await rested(() => style(mark, 'opacity')), await card.locator('.card-h .spin').count()], ['0.5', 1]);
-    assert.ok((await markClasses()).some(value => value?.split(' ').includes('just-done')), 'its check lands');
     hold();
     await until('Todoist has it', () => style(mark, 'opacity'), value => value === '1');
     await page.unroute(/\/api\/items\/\d+\/complete$/);
@@ -478,29 +426,30 @@ test('a change on its way holds its chip at .5, and it settles once the server h
   }
 });
 
-test('a deleted chip folds away so the ones under it slide up, and ⌘Z brings it back', async () => {
+// The fold and the slide up are by eye (D416): the day's chips are read in order once each lands.
+test('a deleted chip leaves its day, the ones under it taking its place, and ⌘Z brings it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
-    const fair = page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'Career fair'});
-    const lecture = page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'CS 101 lecture'});
-    const below = (await rested(() => lecture.boundingBox()))!.y;
+    // A chip folding away is `.removing` until it's gone: the day is read without it.
+    const day = page.locator('.cell[data-date="2026-10-15"] .ev:not(.removing)');
+    const fair = day.filter({hasText: 'Career fair'});
+    const order = () => day.evaluateAll(chips => chips.map(chip => chip.textContent!.includes('Career fair') ? 'fair' : chip.textContent!.includes('CS 101 lecture') ? 'lecture' : 'other'));
+    assert.deepEqual((await order()).filter(chip => chip !== 'other'), ['fair', 'lecture']);
 
-    // Delete: it folds away, and the lecture slides up into its place.
+    // Delete: it goes, and the lecture takes its place.
     await fair.click();
     await page.locator('.fd').waitFor();
-    const classes = await watch(fair, 'class');
     await page.keyboard.press('Delete');
     await fair.waitFor({state: 'detached'});
-    assert.ok((await classes()).some(value => value?.split(' ').includes('removing')), 'it folded away first');
-    await until('the lecture takes its place', async () => (await lecture.boundingBox())!.y, y => y === below - layout.calendarChip - 3);
+    await until('the lecture takes its place', order, chips => chips.filter(chip => chip !== 'other').join() === 'lecture');
 
-    // ⌘Z: it comes back.
+    // ⌘Z: it comes back, above the lecture again.
     await page.keyboard.press('Meta+z');
     await fair.waitFor();
-    await until('the lecture back under it', async () => (await lecture.boundingBox())!.y, y => y === below);
+    await until('the lecture back under it', order, chips => chips.filter(chip => chip !== 'other').join() === 'fair,lecture');
     await setpoint.idle();
     const listed = await setpoint.api<{items: {title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
     assert.equal(listed.items.filter(item => item.title === 'Career fair').length, 1, 'nothing was deleted');

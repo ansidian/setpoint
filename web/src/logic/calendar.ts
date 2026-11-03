@@ -62,6 +62,14 @@ export function glideStart(from: number, to: number, rowHeight: number = layout.
   return to - Math.sign(to - from) * monthPaging.leadRows * rowHeight;
 }
 
+/**
+ * The tasks that play the done moment (app/calendar/done.ts): those that turned done since `before`, what
+ * each key was last drawn as. One already done when first drawn, or reopened, plays nothing.
+ */
+export function playsDone(before: ReadonlyMap<string, boolean>, tasks: readonly {key: string; done: boolean}[]): string[] {
+  return tasks.filter(task => task.done && before.get(task.key) === false).map(task => task.key);
+}
+
 /** The grid rows to draw for a viewport: the rows in view and `overscan` more on each side. */
 export function rowsInView(scrollTop: number, height: number, rowHeight: number = layout.monthRow, overscan = 2): {first: number; last: number} {
   const first = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
