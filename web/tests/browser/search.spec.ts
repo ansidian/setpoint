@@ -736,8 +736,10 @@ test('under a suggestion a later page keeps its chips, and the fold works as it 
     await until('the chip', () => chips(page), shown => shown.join() === 'OrgFourth Coffee');
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions:not(.left-out)');
+    // Tall once the chip's first page is answered and drawn, so its next comes, and the words' never
+    // does: the words' own rows, still on screen until then, would page in too.
+    await setpoint.idle();
     await rows.nth(49).waitFor();
-    // Tall once the chip's first page is in, so its next comes, and the words' never did.
     await page.setViewportSize(TALL);
     await fold.waitFor();
     assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
