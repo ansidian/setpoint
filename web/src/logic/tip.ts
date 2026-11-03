@@ -20,3 +20,11 @@ export function placeTip(anchor: {left: number; top: number; width: number; heig
     up,
   };
 }
+
+const squeezed = (text: string) => text.replace(/\s+/g, '');
+
+/**
+ * Whether a tip only repeats its element's own words (SV-171), there for when they're cut: every one of
+ * its words, in order, is in the element's text, spaces aside, as "Interview Tue" in "· Interview Tue".
+ */
+export const repeats = (text: string, words: string) => squeezed(text).includes(squeezed(words));

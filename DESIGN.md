@@ -3687,6 +3687,16 @@ it changes what's on screen.
     is held, as on a drag's way over the calendar's chips, and one gained under a resting mouse (the
     editor's line over a lit phrase, "Click to keep as words") shows once the mouse moves. A click that
     focuses a field shows none; the keyboard focusing one does.
+    Amended (Andy, 2026-11-03; darma SV-171, D432): one delay didn't fit, as a control's name popped
+    up the moment the mouse passed over it. A tip waits 500 ms, for control names, glyphs and what the
+    mouse passes over on its way (the inbox's and Jobs's rows, the calendar's chips and blocks, the
+    rail, a list's ages), and 80 ms where it's marked `data-tip-quick`, what it reveals where you've
+    stopped to read: the reader's sender, "to you" and time, and the timestamps, causes and cut lines
+    of the story pane, the Jobs detail and its email, the item card, the JD pop and Settings. A tip
+    that only repeats its element's own words shows only while some of them are cut, so "No reply
+    yet" shows none where it fits. Gone: the Jobs status chip's tip but "Ghosted", the JD column's
+    "No JD found" and "Looking for the posting", the editor footer's "From the email", and Jobs's tip
+    in the full sidebar, which the rail keeps.
 300. **Paste the posting skips the lookup, and the JD's location is the user's to set** (Andy,
     2026-11-03; darma SV-170, D431). While a JD is looked up, its row offers a quiet small **Paste
     the posting** at its right. A click stops the lookup at once, aborting its model calls, and opens

@@ -1187,7 +1187,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             {editing ? 'Save' : drafts.length > 1 ? `Create ${drafts.length} ${noun}s` : `Create ${noun}`}<span className="kbd">⌘Enter</span>
           </button>
           <button type="button" className="btn quiet" onClick={onClose}>Cancel<span className="kbd">Esc</span></button>
-          {draft.fromEmail.length > 0 && <span className="legend" data-tip="From the email"><Icon name="mail" size={14} /><span>From the email</span></span>}
+          {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
         </div>
       )}
     </form>

@@ -38,7 +38,7 @@ function SourceRow({source}: {source: NewsSourceOut}) {
       <span className="aico"><Icon name={sourceTile(source)} size={16} /></span>
       <div className="lines grow"><span className="t ell">{source.name}</span><span className="s ell">{source.reads}</span></div>
       <span className="prov">{everyLine(source.interval_seconds)}</span>
-      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? undefined}>
+      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? undefined} data-tip-quick>
         <HealthGlyph kind={state.kind} />
         <span className="num ell">{state.text}</span>
       </span>

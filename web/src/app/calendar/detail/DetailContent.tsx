@@ -87,7 +87,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           {item.kind === 'event' ? <span className="dot" style={{...colour, width: 10, height: 10}} />
             : item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
         </span>
-        <span className={`grow ell fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} data-tip={item.title}>{item.title}</span>
+        <span className={`grow ell fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} data-tip={item.title} data-tip-quick>{item.title}</span>
         {pending && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
         <button className="ibtn sm" aria-label="Close" data-tip="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
@@ -95,7 +95,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         <div className="ink2 num fd-when">{detailWhen(item, timeZone)}</div>
         {link?.only ? (
           <Fact icon="videocam" className="link">
-            <span className="grow"><span className="v fd-place" data-tip={link.url}>{link.host}</span></span>
+            <span className="grow"><span className="v fd-place" data-tip={link.url} data-tip-quick>{link.host}</span></span>
             <OpenLink url={link.url} />
           </Fact>
         ) : place && (

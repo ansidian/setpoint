@@ -247,7 +247,7 @@ function JdPopover({application, detail, today, timeZone, onLeave}: {
         ) : <NoJd detail={detail} timeZone={timeZone} today={today} />}
       </div>
       <div className="ft">
-        <span className="grow ell" data-tip={posting ? foundLine(posting, timeZone, today) : undefined}>{posting ? foundShort(posting, timeZone, today) : ''}</span>
+        <span className="grow ell" data-tip={posting ? foundLine(posting, timeZone, today) : undefined} data-tip-quick>{posting ? foundShort(posting, timeZone, today) : ''}</span>
         {posting && <button className="btn quiet sm" type="button" onClick={() => go('posting')}><Icon name="article" size={16} />Full posting</button>}
         <button className="btn quiet sm" type="button" onClick={() => go('top')}>Open in Jobs<Icon name="arrow_forward" size={16} /></button>
       </div>
@@ -272,7 +272,7 @@ function NoJd({detail, timeZone, today}: {detail: ApplicationOut; timeZone: stri
       ? {icon: 'pending' as const, lead: 'Is this the posting?', rest: `${jd.candidates} ${jd.candidates === 1 ? 'candidate' : 'candidates'} in Needs you`}
       : {icon: 'remove' as const, lead: 'Not looked up', rest: detail.status === 'rejected' || detail.status === 'withdrawn' ? 'it was closed before Jobs read it' : 'Jobs hasn\'t looked for it yet'};
   return (
-    <div className="jb-popnojd" data-tip={jd.looked_at ? fullTimestamp(jd.looked_at, timeZone) : undefined}>
+    <div className="jb-popnojd" data-tip={jd.looked_at ? fullTimestamp(jd.looked_at, timeZone) : undefined} data-tip-quick>
       <Icon name={line.icon} size={16} />
       <span className="ell"><span className="ink2">{line.lead}</span> <span className="num">· {line.rest}</span></span>
     </div>

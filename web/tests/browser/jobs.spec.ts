@@ -83,7 +83,8 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     // The shell: Jobs under News, its count the Needs you count in ink2, never caution (D313).
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
-    assert.equal(await item.getAttribute('data-tip'), 'Jobs · 3 need you');
+    // The full sidebar names it in its own words, so it has no tip; the rail's has (SV-171).
+    assert.equal(await item.getAttribute('data-tip'), null);
     assert.equal(await rested(() => item.locator('.cnt').evaluate(count => getComputedStyle(count).color)), await rested(() => colourOf(page, 'var(--ink2)')));
 
     await page.keyboard.press('4');
@@ -144,7 +145,8 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     };
     assert.deepEqual(await jd('Northwind Talent', 'Software Engineer I'), ['Greenhouse', 'Greenhouse · found Oct 1']);
     assert.deepEqual(await jd('Lucerne Publishing', 'Junior Developer'), ['In Needs you', '2 candidates in Needs you']);
-    assert.deepEqual(await jd('Trey Research', 'Data Engineer I'), ['No JD found', 'No JD found']);
+    // No tip where it would only say the words again (SV-171).
+    assert.deepEqual(await jd('Trey Research', 'Data Engineer I'), ['No JD found', null]);
     assert.deepEqual(await jd('Tailspin Toys', 'Full Stack Developer'), ['The email\'s link', 'The email\'s link · found Oct 2']);
     assert.deepEqual(await jd('Northwind Talent', 'Junior Developer'), ['', null]);
 
@@ -533,7 +535,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     await pane.locator('.jb-src.looking').waitFor();
     assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then searchPaste the posting');
     assert.equal(await pane.locator('[data-skeleton="jobs-jd"] .sk-bar').count(), 4);
-    await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('data-tip'), title => title === 'Looking for the posting');
+    await until('its row looking', () => row(page, trey).locator('.jd').textContent(), text => text === 'Looking it up…');
     await setpoint.idle();
     assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`)).jd.state, 'looking');
     assert.deepEqual(setpoint.pageErrors, []);

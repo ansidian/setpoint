@@ -71,7 +71,7 @@ export function JobsNavItem({current}: {current: boolean}) {
     navigate(JOBS);
   };
   return (
-    <a ref={was.arrives ? foldRef('in') : undefined} className={current ? 'nav jobs on' : 'nav jobs'} href={routePath(JOBS)} aria-label={rail ? tip : undefined} data-tip={tip} onClick={onClick}>
+    <a ref={was.arrives ? foldRef('in') : undefined} className={current ? 'nav jobs on' : 'nav jobs'} href={routePath(JOBS)} aria-label={rail ? tip : undefined} data-tip={rail ? tip : undefined} onClick={onClick}>
       <Icon name="work" />
       <span className="grow">Jobs</span>
       {count > 0 && <span className="cnt num"><Count value={count} /></span>}

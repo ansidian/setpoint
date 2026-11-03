@@ -31,7 +31,7 @@ export function ItemEmail({id, of, travel, accounts, now, timeZone, leaving, can
       <div className="rd-tools">
         <button className="ibtn rd-back" type="button" aria-label="Back" data-tip="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         <button className="tool" type="button" onClick={onInbox}><Icon name="inbox" />Open in Inbox</button>
-        {of && <span className="jb-of" data-tip={of}><Icon name="work" size={16} /><span className="ell">{of}</span></span>}
+        {of && <span className="jb-of" data-tip={of} data-tip-quick><Icon name="work" size={16} /><span className="ell">{of}</span></span>}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous email" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next email" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>

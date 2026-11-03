@@ -193,13 +193,13 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
       )}
       {editing && <div className="jb-hint">Enter to save · Esc</div>}
       <div className="jb-stat">
-        {/* One click on the chip sets the status by hand (D309, #267). */}
-        <button type="button" className="jb-stchip" data-tip={markLabel(row)} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
+        {/* One click on the chip sets the status by hand (D309, #267). Its tip is only Ghosted, which its label doesn't say (SV-171). */}
+        <button type="button" className="jb-stchip" data-tip={row.ghosted && row.status === 'applied' ? markLabel(row) : undefined} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
           <span key={mark} className={chip.changed ? 'swap changed' : 'swap'}><i className={`sd ${mark}`} />{STATUS_LABELS[row.status]}</span>
           <Icon name={chipOpen ? 'expand_less' : 'expand_more'} size={16} />
         </button>
-        {step && <span className={step.at ? 'step' : 'step quiet'} data-tip={step.text}>{step.text}</span>}
-        {step?.at && <span className="age" data-tip={fullTimestamp(step.at, timeZone)}>· {age(step.at, now, timeZone)}</span>}
+        {step && <span className={step.at ? 'step' : 'step quiet'} data-tip={step.text} data-tip-quick>{step.text}</span>}
+        {step?.at && <span className="age" data-tip={fullTimestamp(step.at, timeZone)} data-tip-quick>· {age(step.at, now, timeZone)}</span>}
       </div>
       {row.first_seen_in_email && <div className="jb-first"><Icon name="info" size={16} />First seen in this email, so Applied is its date</div>}
     </div>
@@ -354,7 +354,7 @@ export function JdFacts({posting, location, reading = true}: {posting: PostingOu
       </span>
     ) : (
       <button type="button" className={posting.location ? 'jb-tbtn jb-place' : 'jb-tbtn jb-place none'} onClick={location.onEdit}
-        data-tip={posting.location_set_at ? `Set by you on ${dayWord(localDate(posting.location_set_at, location.timeZone), location.today)}` : posting.location ? 'Edit location' : undefined}>
+        data-tip={posting.location_set_at ? `Set by you on ${dayWord(localDate(posting.location_set_at, location.timeZone), location.today)}` : posting.location ? 'Edit location' : undefined} data-tip-quick={!!posting.location_set_at || undefined}>
         <Icon name="location_on" size={16} /><span>{posting.location ?? 'Add location'}</span><Icon name="edit" size={14} className="pen" />
       </button>
     );
@@ -443,8 +443,8 @@ function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
           ].filter(Boolean).join(' ');
           return (
             <div key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-event={event.id} aria-hidden={leaving || undefined}
-              data-tip={messageId === null ? GONE_TIP : undefined} onContextMenu={leaving ? undefined : rightClick(event)}>
-              <span className={day === today ? 'd now' : 'd'} data-tip={fullTimestamp(event.at, timeZone)}>{day === today ? 'Today' : dayWord(day, today)}</span>
+              data-tip={messageId === null ? GONE_TIP : undefined} data-tip-quick onContextMenu={leaving ? undefined : rightClick(event)}>
+              <span className={day === today ? 'd now' : 'd'} data-tip={fullTimestamp(event.at, timeZone)} data-tip-quick>{day === today ? 'Today' : dayWord(day, today)}</span>
               <span className="node"><i /></span>
               <span className="t">
                 {!event.quiet && EVENT_KINDS[event.kind] && <span className="k">{EVENT_KINDS[event.kind]}</span>}

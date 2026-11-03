@@ -426,12 +426,12 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           {id: 'copy-address', label: 'Copy sender address', icon: 'alternate_email', run: () => copyText(listed.from_address)},
         ])}>
           <div className="ell selectable">
-            <span className="name" data-tip={listed.from_address}>{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
+            <span className="name" data-tip={listed.from_address} data-tip-quick>{listed.from_name}</span>{line && <> <span className={line.tone}><span className="rd-sep">· </span>{line.text}</span></>}
           </div>
-          <div className="to"><span data-tip={account?.address}>to you</span></div>
+          <div className="to"><span data-tip={account?.address} data-tip-quick>to you</span></div>
         </div>
         <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
-        <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)}>{readerTime(listed.received_at, now, timeZone)}</span>
+        <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)} data-tip-quick>{readerTime(listed.received_at, now, timeZone)}</span>
       </div>
       {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}

@@ -227,10 +227,12 @@ export const placement = {gapPx: 8, sides: ['right', 'left', 'above', 'below']} 
 export const drag = {thresholdPx: 4, tipOffset: {left: 18, top: 30}} as const;
 
 /**
- * The shared tooltip (DESIGN.md #299): how long the pointer rests before it shows, how far it sits
- * from what it names, and how close it may come to the window's edges.
+ * The shared tooltip (DESIGN.md #299): how long the pointer rests before it shows, quick on what it
+ * reveals where you've stopped to read (`data-tip-quick`) and patient elsewhere, on controls and on what
+ * the mouse passes over (SV-171); how far it sits from what it names, and how close it may come to the
+ * window's edges.
  */
-export const tip = {delayMs: 80, gapPx: 6, marginPx: 8} as const;
+export const tip = {quickMs: 80, patientMs: 500, gapPx: 6, marginPx: 8} as const;
 
 /**
  * The week view (DESIGN.md › Week view; board 16): the hour grid's measures, the all-day row's lines,

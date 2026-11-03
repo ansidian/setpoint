@@ -1,20 +1,27 @@
 // The shared tooltip (DESIGN.md › Decided while building #299), in place of the browser's own: any
-// element with `data-tip` names itself with it. The mouse resting on one 80 ms, or the keyboard
-// focusing one, shows the tip under it (logic/tip.ts), and leaving it, a press, a scroll, Esc, or the
-// window resizing or losing focus puts it away; so does the element going or losing its `data-tip`.
-// One gaining a `data-tip` under the mouse (the editor's line over a mark) shows it once the mouse moves.
+// element with `data-tip` names itself with it. The mouse resting on one, or the keyboard focusing one,
+// shows the tip under it (logic/tip.ts): after 80 ms where it's marked `data-tip-quick` (what it
+// reveals where you've stopped to read, as the reader's sender), 500 ms elsewhere (SV-171). Leaving it,
+// a press, a scroll, Esc, or the window resizing or losing focus puts it away; so does the element
+// going or losing its `data-tip`. A tip that only repeats the element's own words shows only while
+// some of them are cut. One gaining a `data-tip` under the mouse (the editor's line over a mark) shows
+// it once the mouse moves.
 // One listener on the document serves every element, so a tooltip is only an attribute. While it
 // shows, the element is described by it for a screen reader. A touch never shows one, and the phone
 // mounts none: its few `data-tip`s (the attention badges) were `title`s no touch showed either. An
 // element named only by its tooltip has an `aria-label` too, as the tip only describes.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {placeTip, type TipPlace} from '../logic/tip.ts';
+import {placeTip, repeats, type TipPlace} from '../logic/tip.ts';
 import {tip} from '../tokens.ts';
 
 const ID = 'tip';
 
 // The page's zoom from 2200 px (styles.css): rects are in the window's pixels, the tip's place in the page's.
 const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
+
+/** Whether some of `element`'s words are cut: a box in it that hides what overflows it, narrower than they are. */
+const cut = (element: HTMLElement) => [element, ...element.querySelectorAll('*')]
+  .some(each => each.scrollWidth > each.clientWidth && getComputedStyle(each).overflowX !== 'visible');
 
 /** Adds the tip to `element`'s aria-describedby, or takes it out, leaving its others. */
 function describe(element: HTMLElement, on: boolean) {
@@ -56,7 +63,8 @@ export function Tip() {
     };
     const show = (target: HTMLElement) => {
       hide();
-      if (!target.dataset.tip) return;
+      const words = target.dataset.tip;
+      if (!words || (repeats(target.textContent ?? '', words) && !cut(target))) return;
       anchor = target;
       describe(target, true);
       // Its words changing update it; it going, or losing them, puts it away.
@@ -65,7 +73,7 @@ export function Tip() {
         else setShown(now => (now && now.text !== target.dataset.tip ? {...now, text: target.dataset.tip!} : now));
       });
       watch.observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-tip']});
-      setShown({anchor: target, text: target.dataset.tip, n: ++n});
+      setShown({anchor: target, text: words, n: ++n});
     };
     const owner = (node: EventTarget | null) => (node instanceof Element ? node.closest<HTMLElement>('[data-tip]') : null);
 
@@ -78,7 +86,7 @@ export function Tip() {
       hide();
       if (!target) return;
       pending = target;
-      timer = window.setTimeout(() => show(target), tip.delayMs);
+      timer = window.setTimeout(() => show(target), target.dataset.tipQuick ? tip.quickMs : tip.patientMs);
     };
     const move = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' && owner(event.target) !== under) over(event);

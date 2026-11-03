@@ -123,7 +123,7 @@ function Sparkline({days}: {days: PrecisionOut['days']}) {
       {spark.line && <path className="line" d={spark.line} />}
       {spark.end && <circle className="end" cx={spark.end.x} cy={spark.end.y} r={3} />}
       {days.map((day, index) => (
-        <rect key={day.date} className="day" x={spark.columns[index]!.x} y={0} width={spark.columns[index]!.width} height={SPARK.height} data-tip={sparkTitle(day)} />
+        <rect key={day.date} className="day" x={spark.columns[index]!.x} y={0} width={spark.columns[index]!.width} height={SPARK.height} data-tip={sparkTitle(day)} data-tip-quick />
       ))}
     </svg>
   );
@@ -180,7 +180,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
         <div className="lines grow"><span className="t">{account.label}</span><span className="s selectable ell">{account.address}</span></div>
       )}
       <span className="prov">{source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'}</span>
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? undefined}>
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? undefined} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
@@ -228,7 +228,7 @@ function SourceRow({source, name, sub, now}: {source: SourceOut; name: string; s
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>
       <div className="lines grow"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
       <span className="prov">{syncLine(source, timeZone())}</span>
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? undefined}>
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? undefined} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
       </span>

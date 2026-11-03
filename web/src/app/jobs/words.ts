@@ -79,8 +79,11 @@ export function foundBy(jd: Pick<JdSummaryOut, 'source' | 'platform'>): string {
   return jd.source === 'search' ? 'Search' : 'The email\'s link';
 }
 
-/** The JD column: its glyph, its words and its tip, or nothing for a closed application from history (D311). */
-export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: IconName; text: string; title: string; spin?: boolean} | null {
+/**
+ * The JD column: its glyph, its words and its tip, or nothing for a closed application from history (D311).
+ * There's no tip where it would only say the words again (SV-171).
+ */
+export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: IconName; text: string; title?: string; spin?: boolean} | null {
   switch (jd.state) {
     case 'found': {
       const text = foundBy(jd);
@@ -93,9 +96,9 @@ export function jdCell(jd: JdSummaryOut, now: number, timeZone: string): {icon: 
       if (jd.stopped) return {icon: 'remove', text: 'Stopped', title: 'You stopped the lookup'};
       return jd.link
         ? {icon: 'remove', text: 'Couldn\'t read', title: 'Couldn\'t read the posting you picked'}
-        : {icon: 'remove', text: 'No JD found', title: 'No JD found'};
+        : {icon: 'remove', text: 'No JD found'};
     case 'looking':
-      return {icon: 'progress_activity', text: 'Looking it up…', title: 'Looking for the posting', spin: true};
+      return {icon: 'progress_activity', text: 'Looking it up…', spin: true};
     case 'none':
       return null;
   }
