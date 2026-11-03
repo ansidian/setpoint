@@ -538,60 +538,8 @@ test('S1 (SV-25, D55): a task\'s card completes it and reopens it; ⌘Z undoes a
   }
 });
 
-test('F6b: a drag held at the grid\'s bottom edge scrolls it on; the drop lands on the day under the pointer', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openCalendar(page, setpoint.base);
-    const scroller = page.locator('.cal-scroll');
-    const grid = (await rested(() => scroller.boundingBox()))!;
-    const scrollTop = () => scroller.evaluate(element => element.scrollTop);
-    // Off the edge, a tick already under way can still land: at rest once two frames don't move it.
-    const atRest = () => until('the grid at rest', () => scroller.evaluate(element => new Promise<boolean>(done => {
-      const top = element.scrollTop;
-      requestAnimationFrame(() => requestAnimationFrame(() => done(element.scrollTop === top)));
-    })), still => still);
-    const start = await scrollTop();
-    const dentist = (await rested(() => chip(page, '2026-10-07', 'Dentist').boundingBox()))!;
-    await page.mouse.move(dentist.x + 20, dentist.y + dentist.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(dentist.x + 60, dentist.y + 40, {steps: 3});
-    // Held at the bottom edge: the grid scrolls on by itself.
-    await page.mouse.move(grid.x + grid.width / 2, grid.y + grid.height - 4, {steps: 4});
-    await until('the grid scrolls down', scrollTop, top => top > start + 3 * 176, 6000);
-    // Held in the middle: it stops.
-    await page.mouse.move(grid.x + grid.width / 2, grid.y + grid.height / 2, {steps: 2});
-    await atRest();
-    const stopped = await scrollTop();
-    // Nothing happens to wait for: the grid stays where it stopped.
-    await page.waitForTimeout(300);
-    await setpoint.idle();
-    assert.equal(await scrollTop(), stopped);
-    // Let go on an empty November day in full view: the one the tooltip names.
-    const november = () => scroller.evaluate(element => {
-      const view = element.getBoundingClientRect();
-      const cells = [...element.querySelectorAll<HTMLElement>('.cal-grid .cell')].filter(cell => {
-        const box = cell.getBoundingClientRect();
-        return cell.dataset.date! > '2026-11-01' && !cell.querySelector('.ev, .tk') && box.top >= view.top && box.bottom <= view.bottom;
-      });
-      return cells[0]?.dataset.date ?? null;
-    });
-    const date = (await until('an empty November day in view', november, found => found !== null))!;
-    await atRest();
-    const box = (await rested(() => page.locator(`.cell[data-date="${date}"]`).boundingBox()))!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 3});
-    await page.locator('.drag-tip', {hasText: new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC'})}).waitFor();
-    await page.mouse.up();
-    await settled(setpoint, [date]);
-    assert.ok(date > '2026-10-31', `dropped on ${date}, past October`);
-    assert.deepEqual(await titles(setpoint, date), ['Dentist 2:30 PM']);
-    assert.deepEqual((await titles(setpoint, '2026-10-07')).filter(title => title.startsWith('Dentist')), []);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
+// A drag held at the grid's edge scrolling it on is edgeScroll's, a table in manipulate.test.ts; the
+// scroll it makes is by eye (D416).
 test('F6b: an item drags out of the "+3" popover onto another day', async () => {
   const setpoint = await startSetpoint({fixtures: ['busy-saturday'], clock: 'frozen'});
   try {

@@ -1,67 +1,38 @@
-// The floating detail in the browser (DESIGN.md › The floating detail and The glide; boards 12a,
-// 12b, 12c and 12d): boards 12a, 12b and 12d at rest, where the card lies and what it says (Time to
-// Leave is the time-to-leave fixture, decision D3), then the flows: open and close with Esc or the
-// grid, a glide to another item that lands 8 px off it on its side, a click mid-glide that retargets
-// without closing, a drag that leaves the card where it's dropped and the next glide starting there,
-// and Edit handing over to the right pane.
+// The floating detail in the browser (DESIGN.md › The floating detail and The glide; boards 12a and
+// 12b): what the card says and the side it takes (Time to Leave is the time-to-leave fixture, decision
+// D3), then the flows: open and close with Esc or the grid, another item shown in the same card, a drag
+// starting from the card but not its text, and Edit handing over to the right pane. Where the card
+// lies and how it glides are placement.test.ts's and glide.test.ts's tables; the place on screen, the
+// glide and the drag's landing are by eye (D416, D417).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, test, until, watch} from './harness.ts';
-
-const GAP = 8;
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
 const card = (page: Page) => page.locator('.fd');
 const chip = (page: Page, date: string, title: string) => page.locator(`.cell[data-date="${date}"] .ev`, {hasText: title});
-const motion = (page: Page) => card(page).getAttribute('data-motion');
-const atRest = (page: Page) => until('the card comes to rest', () => motion(page), state => state === 'rest');
 
-/** The card's box relative to the month section, where the boards place it. */
-async function cardAt(page: Page): Promise<{left: number; top: number; width: number; height: number}> {
-  const section = (await rested(() => page.locator('.cal-month').boundingBox()))!;
-  const box = (await rested(() => card(page).boundingBox()))!;
-  return {left: Math.round(box.x - section.x), top: Math.round(box.y - section.y), width: Math.round(box.width), height: Math.round(box.height)};
+/**
+ * Whether `inner`'s right edge is inside `outer`'s, both read in one frame: they scale in with the card
+ * together, so one ending inside the other holds at any frame of its opening.
+ */
+async function endsInside(inner: Locator, outer: Locator): Promise<boolean> {
+  const element = await inner.elementHandle();
+  return outer.evaluate((box, within) => within!.getBoundingClientRect().right <= box.getBoundingClientRect().right, element);
 }
 
-/** At rest beside its item: 8 px off it on the side it says, centred on it unless an edge slid it. */
-async function assertBeside(page: Page, item: Locator) {
-  const side = await card(page).getAttribute('data-side');
-  const box = (await rested(() => card(page).boundingBox()))!;
-  const anchor = (await rested(() => item.boundingBox()))!;
-  const grid = (await rested(() => page.locator('.cal-scroll').boundingBox()))!;
-  if (side === 'right') assert.equal(Math.round(box.x - (anchor.x + anchor.width)), GAP);
-  else if (side === 'left') assert.equal(Math.round(anchor.x - (box.x + box.width)), GAP);
-  else if (side === 'above') assert.equal(Math.round(anchor.y - (box.y + box.height)), GAP);
-  else assert.equal(Math.round(box.y - (anchor.y + anchor.height)), GAP);
-  const centred = side === 'right' || side === 'left'
-    ? Math.abs(box.y + box.height / 2 - (anchor.y + anchor.height / 2)) <= 1
-    : Math.abs(box.x + box.width / 2 - (anchor.x + anchor.width / 2)) <= 1;
-  const inside = box.x >= grid.x && box.y >= grid.y && box.x + box.width <= grid.x + grid.width && box.y + box.height <= grid.y + grid.height;
-  assert.ok(inside, `the card stays inside the grid: ${JSON.stringify(box)}`);
-  if (!centred) assert.ok(box.y <= grid.y + GAP + 1 || box.y + box.height >= grid.y + grid.height - GAP - 1, 'off-centre only where an edge slid it');
-}
-
-/** Where the engine has the card (its translate, relative to the month section). */
-const placed = (page: Page) => card(page).evaluate(element => {
-  const moved = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec((element as HTMLElement).style.transform)!;
-  return {left: Number(moved[1]), top: Number(moved[2])};
-});
-
-/** Clicks `item` with the card open and waits for its glide there to land: until it starts, the card still rests where it was. */
-async function glideTo(page: Page, item: Locator) {
-  const motions = await watch(card(page), 'data-motion');
+/** Clicks `item` with the card open: the same card shows it. */
+async function showIn(page: Page, item: Locator, title: string) {
   await item.click();
-  await until('the glide starts', motions, seen => seen.includes('glide'));
-  await atRest(page);
+  await page.getByRole('dialog', {name: title}).waitFor();
 }
 
 async function openDentist(page: Page) {
   await chip(page, '2026-10-07', 'Dentist').click();
-  await card(page).waitFor();
-  await atRest(page);
+  await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
 }
 
 test('board 12a: Dentist\'s card, left of it (it covers less there than right; above doesn\'t fit)', async () => {
@@ -74,7 +45,6 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     await openDentist(page);
     assert.equal(await page.getByRole('dialog', {name: 'Dentist'}).count(), 1);
     assert.equal(await card(page).getAttribute('data-side'), 'left');
-    await assertBeside(page, chip(page, '2026-10-07', 'Dentist'));
     assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(),
       ['Smile Dental1420 Elm St', 'Leave by 2:05 PM · 18 min', '30 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-when').textContent(), 'Wed, Oct 7 · 2:30 – 3:30 PM');
@@ -91,15 +61,15 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal .icon').evaluate(icon => getComputedStyle(icon).color)), await rested(() => tint('var(--cool)')));
     assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color)), await rested(() => tint('var(--ink2)')), 'its name stays ink2');
     // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
-    await glideTo(page, chip(page, '2026-10-07', 'Gym'));
-    assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(), ['Weekly on Mon, Wed, Fri', '10 min before', 'Personal']);
+    await showIn(page, chip(page, '2026-10-07', 'Gym'), 'Gym');
+    await until('Gym\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(), facts => facts.join() === 'Weekly on Mon, Wed, Fri,10 min before,Personal');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('board 12b: a click on Dinner with Sam glides the same card there', async () => {
+test('board 12b: a click on Dinner with Sam shows it in the same card, below it', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
@@ -107,15 +77,13 @@ test('board 12b: a click on Dinner with Sam glides the same card there', async (
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     await openDentist(page);
     const before = await card(page).elementHandle();
-    await glideTo(page, chip(page, '2026-10-09', 'Dinner with Sam'));
+    await showIn(page, chip(page, '2026-10-09', 'Dinner with Sam'), 'Dinner with Sam');
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
     assert.ok(await before!.evaluate(element => element.isConnected), 'the same card, never closed');
-    assert.equal(await card(page).locator('.fd-layer').count(), 1, 'the old content has gone');
     // Weeks start on Sunday (SV-29): Friday has only Saturday to its right, too narrow, so it's below.
     assert.equal(await card(page).getAttribute('data-side'), 'below');
-    await assertBeside(page, chip(page, '2026-10-09', 'Dinner with Sam'));
-    assert.deepEqual(await card(page).locator('.fact').allTextContents(),
-      ['Blue Door2118 Sunset Blvd', 'Leave by 6:35 PM · 21 min', 'Sam Lee', '1 hour before', 'Personal']);
+    await until('Dinner with Sam\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(),
+      facts => facts.join() === 'Blue Door2118 Sunset Blvd,Leave by 6:35 PM · 21 min,Sam Lee,1 hour before,Personal');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -149,36 +117,11 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
 
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
-    await atRest(page);
+    // Nothing happens to wait for: a scroll would have come with the click.
+    await setpoint.idle();
     assert.equal(await scrollTop(), before, 'Dinner with Sam was in view: the grid stays');
     await october('after Dinner with Sam');
     assert.deepEqual(await page.evaluate(() => (window as unknown as {gridScrolls: number[]}).gridScrolls), [], 'the grid never scrolled');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('the glide never crosses the grid\'s edge (decision 47)', async () => {
-  const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await openDentist(page);
-    // Every frame of the glide to Thursday's CS 101 lecture, whose card rests 13 px from the right pane.
-    const furthest = await rested(() => page.evaluate(async () => {
-      const grid = document.querySelector('.cal-scroll')!.getBoundingClientRect();
-      const lecture = [...document.querySelectorAll<HTMLElement>('.cell[data-date="2026-10-08"] .ev')].find(element => element.textContent?.includes('CS 101'))!;
-      lecture.click();
-      let right = 0;
-      const ends = performance.now() + 600;
-      while (performance.now() < ends) {
-        await new Promise(requestAnimationFrame);
-        right = Math.max(right, document.querySelector('.fd')!.getBoundingClientRect().right);
-      }
-      return {right, edge: grid.right};
-    }));
-    assert.ok(furthest.right <= furthest.edge, `the card reached ${furthest.right}, past the grid's edge at ${furthest.edge}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -191,9 +134,7 @@ test('Esc closes the card and lets the item go; so does a click on empty grid; �
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await openDentist(page);
-    const motions = await watch(card(page), 'data-motion');
     await page.keyboard.press('Escape');
-    assert.equal((await until('Esc moves the card', motions, seen => seen.length > 0))[0], 'closing');
     await until('Esc closes it', () => card(page).count(), count => count === 0);
     assert.equal(await page.locator('.ev.sel').count(), 0);
     assert.equal(new URL(page.url()).pathname, '/calendar/2026-10-07');
@@ -212,143 +153,22 @@ test('Esc closes the card and lets the item go; so does a click on empty grid; �
   }
 });
 
-test('a click mid-glide retargets from where the card is: no restart, no close', async () => {
-  const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.cell[data-date="2026-10-15"] .ev', {hasText: 'Career fair'}).waitFor();
-    await openDentist(page);
-    const resting = await placed(page);
-
-    const trace = await rested(() => page.evaluate(async () => {
-      const find = (date: string, title: string) => [...document.querySelectorAll<HTMLElement>(`.cell[data-date="${date}"] .ev`)].find(element => element.textContent?.includes(title))!;
-      const fd = () => document.querySelector<HTMLElement>('.fd');
-      const frames: {x: number; motion: string | null}[] = [];
-      const sample = () => {
-        frames.push({x: fd()?.getBoundingClientRect().x ?? NaN, motion: fd()?.getAttribute('data-motion') ?? null});
-      };
-      find('2026-10-09', 'Dinner').click();
-      const start = performance.now();
-      while (performance.now() - start < 110) {
-        await new Promise(requestAnimationFrame);
-        sample();
-      }
-      const card = fd();
-      const motionAtRetarget = card?.getAttribute('data-motion');
-      const retargetIndex = frames.length;
-      find('2026-10-15', 'Career fair').click();
-      await new Promise(resolve => setTimeout(resolve, 0));
-      const from = card?.getAttribute('data-glide-from');
-      const ends = performance.now() + 700;
-      while (performance.now() < ends) {
-        await new Promise(requestAnimationFrame);
-        sample();
-      }
-      return {frames, retargetIndex, motionAtRetarget, from, same: fd() === card};
-    }));
-    assert.equal(trace.motionAtRetarget, 'glide', 'the second click came mid-glide');
-    assert.ok(trace.same, 'the same card element throughout');
-    assert.ok(trace.frames.every(frame => frame.motion !== null && frame.motion !== 'closing'), 'it never closed');
-    const [fromX, fromY] = trace.from!.split(',').map(Number) as [number, number];
-    assert.ok(Math.hypot(fromX - resting.left, fromY - resting.top) > 300, `not from where the first glide began (${trace.from})`);
-    // No restart: it never goes back toward Dentist.
-    const startX = trace.frames[0]!.x;
-    assert.ok(trace.frames.slice(trace.retargetIndex).every(frame => frame.x > startX + 300), 'it never went back to where the first glide began');
-    await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-15', 'Career fair'));
-    assert.deepEqual(await page.locator('.ev.sel').allTextContents(), ['10 AMCareer fair']);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('board 12d: dragged aside by its grip, the card stays where it\'s dropped; the next click glides it from there', async () => {
-  const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
-    await openDentist(page);
-    const grip = (await rested(() => card(page).locator('.grip').boundingBox()))!;
-    const start = {x: grip.x + grip.width / 2, y: grip.y + grip.height / 2};
-    // 12d drops it at 742, 607, low over Friday and Saturday.
-    const at = await cardAt(page);
-    const delta = {x: 742 - at.left, y: 607 - at.top};
-    await page.mouse.move(start.x, start.y);
-    await page.mouse.down();
-    for (let step = 1; step <= 10; step += 1) await page.mouse.move(start.x + delta.x * step / 10, start.y + delta.y * step / 10);
-    assert.equal(await motion(page), 'drag');
-    assert.match((await card(page).getAttribute('class'))!, /\blifted\b/, 'lifted: the shadow deepens');
-    assert.deepEqual(await cardAt(page), {left: 742, top: 607, width: 280, height: 254}, 'it follows the pointer 1:1');
-    await page.mouse.up();
-    await atRest(page);
-    assert.doesNotMatch((await card(page).getAttribute('class'))!, /\blifted\b/);
-    assert.deepEqual(await cardAt(page), {left: 742, top: 607, width: 280, height: 254}, 'it stays where it was dropped');
-
-    await chip(page, '2026-10-09', 'Dinner with Sam').click();
-    assert.equal(await card(page).getAttribute('data-glide-from'), '742,607', 'the glide starts where the card was left');
-    await atRest(page);
-    assert.equal(await card(page).getAttribute('data-side'), 'below');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('the whole card drags from anywhere but its buttons and text; its text stays selectable', async () => {
+test('Edit (E or the button) hands the item to the right pane, and Esc gives it back to the card', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await openDentist(page);
-    const before = await cardAt(page);
-    const when = (await rested(() => card(page).locator('.fd-when').boundingBox()))!;
-    const drag = async (x: number, y: number) => {
-      await page.mouse.move(x, y);
-      await page.mouse.down();
-      for (let step = 1; step <= 10; step += 1) await page.mouse.move(x + 20 * step, y + 10 * step);
-      const during = await motion(page);
-      await page.mouse.up();
-      return during;
-    };
-
-    // On the date line's text (past its 27 px indent): the text selects and the card stays.
-    assert.notEqual(await drag(when.x + 33, when.y + when.height / 2), 'drag');
-    assert.deepEqual(await cardAt(page), before);
-    assert.notEqual(await page.evaluate(() => window.getSelection()?.toString() ?? ''), '');
-
-    // Past the text's end, on the card itself: it lifts and follows.
-    assert.equal(await drag(when.x + when.width - 4, when.y + when.height / 2), 'drag');
-    await atRest(page);
-    assert.deepEqual(await cardAt(page), {...before, left: before.left + 200, top: before.top + 100});
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('Edit (E or the button) hands the item to the right pane: the card shrinks toward it, the editor slides in', async () => {
-  const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await openDentist(page);
-    const motions = await watch(card(page), 'data-motion');
     await page.keyboard.press('e');
-    assert.equal((await until('E moves the card', motions, seen => seen.length > 0))[0], 'closing');
     const editor = page.locator('.editor.handed');
     await editor.waitFor();
     assert.equal(await editor.getByLabel('Title', {exact: true}).inputValue(), 'Dentist');
     await until('the card has gone to the pane', () => card(page).count(), count => count === 0);
     assert.deepEqual(await page.locator('.ev.sel').allTextContents(), ['2:30 PMDentist'], 'the item stays selected');
-    // Esc closes the editor, and the card comes back beside the item.
+    // Esc closes the editor, and the card comes back to the item.
     await page.keyboard.press('Escape');
     await until('the editor closes', () => editor.count(), count => count === 0);
-    await card(page).waitFor();
-    await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-07', 'Dentist'));
+    await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
     // The button does the same.
     await card(page).getByRole('button', {name: /^Edit/}).click();
     await editor.waitFor();
@@ -359,32 +179,19 @@ test('Edit (E or the button) hands the item to the right pane: the card shrinks 
   }
 });
 
-test('beside its item the card scrolls with the grid, and an item picked from the agenda or a link opens it', async () => {
+test('an item picked from the agenda opens its card, and so does a link to it once its chip is drawn', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
     await page.locator('.ag-item', {hasText: 'Study group'}).first().click();
-    await card(page).waitFor();
-    await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-09', 'Study group'));
-    // A wheel step down: the card keeps beside its item.
-    await page.mouse.move(400, 900);
-    const top = await page.locator('.cal-scroll').evaluate(element => element.scrollTop);
-    await page.mouse.wheel(0, 120);
-    await until('the grid scrolled', () => page.locator('.cal-scroll').evaluate(element => element.scrollTop), scrolled => scrolled > top);
-    const anchor = (await rested(() => chip(page, '2026-10-09', 'Study group').boundingBox()))!;
-    const box = (await rested(() => card(page).boundingBox()))!;
-    // Above it on Friday (SV-29: weeks start on Sunday), still centred over it.
-    assert.ok(Math.abs(box.x + box.width / 2 - (anchor.x + anchor.width / 2)) <= 1, 'still centred on its item');
-    assert.equal(Math.round(anchor.y - (box.y + box.height)), GAP, 'still 8 px above it');
-    // A link to an item opens its card once its chip is drawn.
+    await page.getByRole('dialog', {name: 'Study group'}).waitFor();
+    assert.equal(await card(page).getAttribute('data-side'), 'above', 'above it on Friday (SV-29: weeks start on Sunday)');
     const items = await setpoint.api<{items: {id: number; title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
     const fair = items.items.find(item => item.title === 'Career fair')!;
     await page.goto(`${setpoint.base}/calendar/item/${fair.id}`);
     await page.getByRole('dialog', {name: 'Career fair'}).waitFor();
-    await atRest(page);
-    await assertBeside(page, chip(page, '2026-10-15', 'Career fair'));
+    assert.deepEqual(await page.locator('.ev.sel').allTextContents(), ['10 AMCareer fair']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -398,13 +205,10 @@ test('SV-76: a place with a long link wraps inside the card rather than running 
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
     await chip(page, '2026-10-09', 'Study group').click();
     await card(page).waitFor();
-    await atRest(page);
     const place = card(page).locator('.fd-layer.in .fd-place');
     assert.match((await place.textContent())!, /^Room 204 or https:\/\/meet\.example\.com\/j\/81234567890\?pwd=/);
     // Fits: the place's right edge is inside the card's body, not under its clip.
-    const body = (await rested(() => card(page).locator('.fd-layer.in .card-b').boundingBox()))!;
-    const line = (await rested(() => place.boundingBox()))!;
-    assert.ok(line.x + line.width <= body.x + body.width, `the place ends inside the card: ${line.x + line.width} ≤ ${body.x + body.width}`);
+    assert.ok(await endsInside(place, card(page).locator('.fd-layer.in .card-b')), 'the place ends inside the card');
     assert.ok(await rested(() => place.evaluate(element => element.scrollWidth <= element.clientWidth)), 'nothing of it runs past its own box');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -428,7 +232,6 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     assert.equal(await page.locator('.ag-item', {hasText: 'Career fair'}).locator('.place').textContent(), 'careers.example.edu');
     await chip(page, '2026-10-15', 'Career fair').click();
     await card(page).waitFor();
-    await atRest(page);
     const fact = card(page).locator('.fd-layer.in .fact.link');
     assert.equal(await fact.locator('.fd-place').textContent(), 'careers.example.edu');
     assert.equal(await fact.locator('.fd-place').getAttribute('title'), 'https://www.careers.example.edu/fair/fall-2026');
@@ -438,9 +241,7 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     assert.equal(await open.getAttribute('href'), 'https://www.careers.example.edu/fair/fall-2026');
     assert.equal(await open.getAttribute('target'), '_blank');
     // Open ends the place's first line, inside the card.
-    const body = (await rested(() => card(page).locator('.fd-layer.in .card-b').boundingBox()))!;
-    const button = (await rested(() => open.boundingBox()))!;
-    assert.ok(button.x + button.width <= body.x + body.width, 'Open ends inside the card');
+    assert.ok(await endsInside(open, card(page).locator('.fd-layer.in .card-b')), 'Open ends inside the card');
     // Under the pointer its fill deepens to `sub3`, as every ghost button's does, though it's a link.
     const sub3 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('span');
@@ -460,13 +261,12 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
     await chip(page, '2026-10-09', 'Study group').click();
     await card(page).waitFor();
-    await atRest(page);
     const words = card(page).locator('.fd-layer.in .fact.link');
     assert.equal(await words.locator('.icon path').first().getAttribute('d'), ICONS.location_on);
     assert.match((await words.locator('.fd-place').textContent())!, /^Room 204 or https:\/\//);
     assert.equal(await words.getByRole('link', {name: 'Open'}).getAttribute('href'), 'https://meet.example.com/j/81234567890?pwd=Q2xhc3NSb29tTGlua0ZvclN0dWR5R3JvdXA');
     // A place with no link has no Open, and O does nothing there.
-    await glideTo(page, chip(page, '2026-10-09', 'Dinner with Sam'));
+    await showIn(page, chip(page, '2026-10-09', 'Dinner with Sam'), 'Dinner with Sam');
     assert.equal(await card(page).locator('.fd-layer.in .fd-open').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

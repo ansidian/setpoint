@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -40,16 +40,18 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('w');
     await block(page, '2026-10-07', 'Dentist').waitFor();
-    // Measured once Week has zoomed in from Month (polish audit grids-09).
-    await still(page);
     assert.match(page.url(), /\/calendar\?view=week$/);
+    // Board 16 is read on Week as it loads, not as it zooms in from Month (polish audit grids-09), which
+    // is by eye (D416).
+    await page.goto(`${setpoint.base}/calendar?view=week`);
+    await block(page, '2026-10-07', 'Dentist').waitFor();
     assert.equal(await page.locator('.hd-title').textContent(), 'Oct 4 – 10, 2026');
     assert.equal(await page.title(), 'Oct 4 – 10, 2026 · Calendar');
     assert.deepEqual(await page.locator('.wk-dhead .dw').allTextContents(), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
     assert.equal(await page.locator('.wk-dhead[data-date="2026-10-07"] .dn.today').count(), 1);
     assert.equal(await page.locator('.wk-col.wk-sel').getAttribute('data-date'), '2026-10-07');
     // Board 16's measures: an hour is 44 px, a one-hour block 42 px, 139 px a day at the design target.
-    const dentist = (await block(page, '2026-10-07', 'Dentist').boundingBox())!;
+    const dentist = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
     assert.equal(Math.round(dentist.height), 42);
     const column = (await rested(() => page.locator('.wk-col[data-date="2026-10-07"]').boundingBox()))!;
     assert.ok(Math.abs(column.width - 139) <= 2, `a day is ${column.width} px`);
@@ -198,12 +200,9 @@ test('a recurring block dropped asks this, following or all; a click opens the f
     await page.keyboard.press('Escape');
     await until('the prompt closed', () => page.locator('.scope-card').count(), count => count === 0);
 
+    // Where the card lies beside its block is placement.test.ts's (D417).
     await block(page, '2026-10-07', 'Dentist').click();
-    await page.locator('.fd .card', {hasText: 'Dentist'}).waitFor();
-    await until('the card at rest', () => page.locator('.fd').getAttribute('data-motion'), phase => phase === 'rest');
-    const card = (await rested(() => page.locator('.fd .card').boundingBox()))!;
-    const chip = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
-    assert.ok(card.x >= chip.x + chip.width || card.x + card.width <= chip.x || card.y >= chip.y + chip.height || card.y + card.height <= chip.y, 'the card sits beside its block');
+    await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

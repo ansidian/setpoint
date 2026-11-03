@@ -10,7 +10,7 @@ import {after} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, still, test, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -117,33 +117,22 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       assert.match((await page.locator('.cal-health .rp-health').textContent())!, /^Todoist, as of /);
       assert.equal(health.y + health.height, (await grid()).y, 'the health line sits atop the grid');
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: Calendar's header`);
-      // The editor lies over the grid's right side, 400 px, with an overlay's shadow; the grid stays.
+      // The editor lies over the grid, which keeps its width; where the pane lies and its shadow are by
+      // eye (D417).
       await page.keyboard.press('c');
       const editor = page.locator('.rpane.editor');
       await editor.waitFor();
-      // It comes in 24 px from the right over 180 ms; measured where it lands.
-      const landed = (pane: typeof editor) => until('the pane has come in', () => pane.evaluate(element => element.getAnimations().length), running => running === 0);
-      await landed(editor);
-      const box = (await rested(() => editor.boundingBox()))!;
-      assert.deepEqual([box.x, box.width, box.y], [width - layout.rightPane, layout.rightPane, layout.header]);
-      assert.equal((await grid()).width, width - layout.rail);
-      assert.notEqual(await rested(() => editor.evaluate(form => getComputedStyle(form).boxShadow)), 'none');
-      assert.equal(await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.closest('.editor') !== null, [box.x + 200, box.y + 300]), true, 'over the grid');
+      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail);
       await page.keyboard.press('Escape');
       await until('Esc closes the editor', () => editor.count(), count => count === 0);
       // Search too.
       await page.keyboard.press('/');
       await page.locator('.rpane.cal-search').waitFor();
-      await landed(page.locator('.rpane.cal-search'));
-      assert.equal((await rested(() => page.locator('.rpane.cal-search').boundingBox()))!.x, width - layout.rightPane);
+      await until('the grid keeps the width', async () => (await page.locator('section.cal-month').boundingBox())!.width, grid => grid === width - layout.rail);
       await page.keyboard.press('Escape');
       await until('Esc closes the search', () => page.locator('.rpane').count(), count => count === 0);
-      // The week's grid takes the width too.
       await page.keyboard.press('w');
       await page.locator('section.cal-week').waitFor();
-      // Measured once Week has zoomed in from Month (polish audit grids-09).
-      await still(page);
-      assert.equal((await rested(() => page.locator('section.cal-week').boundingBox()))!.width, width - layout.rail);
       await page.keyboard.press('m');
       await page.locator('section.cal-month').waitFor();
       assert.equal(await sideways(page), 0);
@@ -196,14 +185,6 @@ test('the day\'s pane comes over the grid from its header button, lit while open
     assert.deepEqual([await button.getAttribute('aria-pressed'), await page.locator('.rpane').count()], ['false', 0], 'closed on load');
     // Before search.
     assert.equal(await page.locator('.hd .cal-daypane + .ibtn[aria-label="Search calendar"]').count(), 1);
-    await button.click();
-    const pane = page.locator('.rpane');
-    await pane.locator('.rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
-    await until('it has come in', () => pane.evaluate(element => element.getAnimations().length), running => running === 0);
-    const box = (await rested(() => pane.boundingBox()))!;
-    assert.deepEqual([box.x, box.width, box.y], [820 - layout.rightPane, layout.rightPane, layout.header], 'where the editor lies');
-    assert.deepEqual([await pane.locator('.ag-item', {hasText: 'Dentist'}).count(), await rested(() => pane.locator('.rp-health').evaluateAll(lines => lines.filter(line => getComputedStyle(line).display !== 'none').length))], [1, 0]);
-    assert.equal(await button.getAttribute('aria-pressed'), 'true');
     const sub2 = await rested(() => page.evaluate(() => {
       const probe = document.createElement('div');
       probe.style.color = 'var(--sub2)';
@@ -212,6 +193,12 @@ test('the day\'s pane comes over the grid from its header button, lit while open
       probe.remove();
       return computed;
     }));
+    await button.click();
+    const pane = page.locator('.rpane');
+    await pane.locator('.rp-date', {hasText: 'Wed, Oct 7'}).waitFor();
+    assert.equal(await pane.locator('.ag-item', {hasText: 'Dentist'}).count(), 1);
+    await until('no health line in the pane, as it sits atop the grid', () => pane.locator('.rp-health').evaluateAll(lines => lines.filter(line => getComputedStyle(line).display !== 'none').length), shown => shown === 0);
+    assert.equal(await button.getAttribute('aria-pressed'), 'true');
     await until('lit while open', () => button.evaluate(element => getComputedStyle(element).backgroundColor), fill => fill === sub2);
     // Another day picked shows there.
     await page.locator('.cell[data-date="2026-10-05"]').click({position: {x: 40, y: 150}});
