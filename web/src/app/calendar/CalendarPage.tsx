@@ -918,23 +918,23 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       <header className="hd">
         <h1 className="hd-title cal-title num" key={titleKey} data-dir={titleMove.dir} data-view={mode}>
           {searching ? 'Search' : title}
-          {!searching && allHidden && <span className="cal-hidden ink3" title="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}
+          {!searching && allHidden && <span className="cal-hidden ink3" role="img" aria-label="Every calendar is hidden" data-tip="Every calendar is hidden"><Icon name="visibility_off" size={16} /></span>}
         </h1>
         <span className="cal-step">
-          <button className="ibtn sm" aria-label={`Previous ${mode}`} title={`Previous ${mode} · ←`} onClick={() => page(-1)}><Icon name="chevron_left" /></button>
-          <button className="btn ghost sm" title="Today · T" data-hint="t" onClick={goToday}>Today</button>
-          <button className="ibtn sm" aria-label={`Next ${mode}`} title={`Next ${mode} · →`} onClick={() => page(1)}><Icon name="chevron_right" /></button>
+          <button className="ibtn sm" aria-label={`Previous ${mode}`} data-tip={`Previous ${mode} · ←`} onClick={() => page(-1)}><Icon name="chevron_left" /></button>
+          <button className="btn ghost sm" data-tip="Today · T" data-hint="t" onClick={goToday}>Today</button>
+          <button className="ibtn sm" aria-label={`Next ${mode}`} data-tip={`Next ${mode} · →`} onClick={() => page(1)}><Icon name="chevron_right" /></button>
         </span>
         {/* Search hides Month | Week (D48); the grid still pages. */}
         {!searching && (
           <span className="seg" ref={segThumb} style={{marginLeft: 8}}>
-            <button type="button" className={mode === 'month' ? 'on' : undefined} aria-pressed={mode === 'month'} title="Month · M" onClick={() => switchMode('month')}>Month</button>
-            <button type="button" className={mode === 'week' ? 'on' : undefined} aria-pressed={mode === 'week'} title="Week · W" onClick={() => switchMode('week')}>Week</button>
+            <button type="button" className={mode === 'month' ? 'on' : undefined} aria-pressed={mode === 'month'} data-tip="Month · M" onClick={() => switchMode('month')}>Month</button>
+            <button type="button" className={mode === 'week' ? 'on' : undefined} aria-pressed={mode === 'week'} data-tip="Week · W" onClick={() => switchMode('week')}>Week</button>
           </span>
         )}
         <span className="grow" />
         {compact && !searching && (
-          <button className="ibtn cal-daypane" aria-label="The day" aria-pressed={dayPane} title={dayPane ? 'Hide the day · Esc' : 'Show the day'}
+          <button className="ibtn cal-daypane" aria-label="The day" aria-pressed={dayPane} data-tip={dayPane ? 'Hide the day · Esc' : 'Show the day'}
             onClick={() => {
               if (!dayPane) setSearching(false);
               setDayPane(!dayPane);
@@ -942,11 +942,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         )}
         {searching
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
-          : <button className="ibtn" aria-label="Search calendar" title="Search · /" onClick={() => {
+          : <button className="ibtn" aria-label="Search calendar" data-tip="Search · /" onClick={() => {
             setDayPane(false);
             setSearching(true);
           }}><Icon name="search" /></button>}
-        <button className="btn cal-new" data-hint="c" title="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
+        <button className="btn cal-new" data-hint="c" data-tip="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
       </header>
       <div className="content cal-content" onContextMenu={onContextMenu}>
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines

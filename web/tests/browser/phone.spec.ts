@@ -35,7 +35,7 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await page.locator('.list .row[title^="Interview availability"]').tap();
+    await page.locator('.list .row[data-tip^="Interview availability"]').tap();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     // Opening it read it: 18 (override 2).
     await until('the server read it', () => counts(setpoint), value => value.unread === 18);
@@ -144,7 +144,7 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
     assert.equal(scroll[0], scroll[1]);
     // The reader takes the whole screen, with Back.
-    await page.locator('.list .row[title^="Final exam schedule"]').tap();
+    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.deepEqual(await box(page, '.pane'), {x: 0, y: 0, width: 390, height: 844});
     assert.equal(await page.locator('.rd-tools').isVisible(), false);
@@ -168,14 +168,14 @@ test('read state on the phone: a tap opens and reads; scrolling and opening Nois
     const page = await inbox(setpoint);
     // Nothing reads on a scroll, so the check makes none (D416).
     await page.locator('.list .nfold').first().tap();
-    await page.locator('.row[title^="Fall sale"]').waitFor();
+    await page.locator('.row[data-tip^="Fall sale"]').waitFor();
     // Nothing happens to wait for: opening Noise reads nothing.
     await page.waitForTimeout(300);
     await setpoint.idle();
     assert.deepEqual(await counts(setpoint).then(value => [value.attention, value.unread]), [3, 19]);
     assert.equal(await page.locator('.hd .ph-count').textContent(), '19');
 
-    await page.locator('.row[title="Out for delivery"]').tap();
+    await page.locator('.row[data-tip="Out for delivery"]').tap();
     await page.locator('.rd-subj', {hasText: 'Out for delivery'}).waitFor();
     await until('the server read it', () => counts(setpoint), value => value.unread === 18 && value.attention === 3);
     await page.locator('.ph-back').tap();
@@ -208,12 +208,12 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await page.locator('.ph-acts button', {hasText: 'Done'}).tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await page.locator('.rd-subj').waitFor({state: 'detached'});
-    await page.locator('.list .row.unread[title^="Interview availability"]').waitFor();
+    await page.locator('.list .row.unread[data-tip^="Interview availability"]').waitFor();
     await until('the pill drops', () => counts(setpoint), value => value.attention === 2);
     assert.equal((await counts(setpoint)).unread, 18);
 
     // Trash on Contoso University, then Undo brings it back into the reader.
-    await page.locator('.list .row[title^="Final exam schedule"]').tap();
+    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await page.locator('.ph-acts button', {hasText: 'Trash'}).tap();
     // Undo while the toast offers it: a wait on the server first could outlast its 6 seconds.
@@ -230,7 +230,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await until('all but Security read', () => counts(setpoint), value => value.unread_fyi === 3 && value.unread === 4, 5000);
     // New empties; Northwind, left unread, joins Attention (#243).
     await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0, 5000);
-    await page.locator('.list .row.unread[data-key^="attention:"][title^="Interview availability"]').waitFor();
+    await page.locator('.list .row.unread[data-key^="attention:"][data-tip^="Interview availability"]').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -312,7 +312,7 @@ test('the agenda: today and the next 7 days, empty days folded, an item\'s detai
       'Today · Wed, Oct 778° / 61°', 'Thu, Oct 872° / 59°', 'Fri, Oct 9', 'Sat, Oct 10 – Sun, Oct 11No events', 'Mon, Oct 12', 'Tue, Oct 1364° / 55°', 'Wed, Oct 14',
     ]);
     // A forecast's high and low sit before its icon, as a month cell's do (Decided while building #83).
-    assert.equal(await page.locator('.ph-agenda .pwx').first().getAttribute('title'), 'Sunny · 78° / 61°');
+    assert.equal(await page.locator('.ph-agenda .pwx').first().getAttribute('data-tip'), 'Sunny · 78° / 61°');
     // The day heads never wrap.
     for (const head of await page.locator('.ph-agenda .pday').all()) assert.equal((await head.boundingBox())!.height, 30);
     // No month grid, no editor, no New.

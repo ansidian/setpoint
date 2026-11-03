@@ -46,7 +46,7 @@ interface Route {
 function sweepPage(): string[] {
   const found: string[] = [];
   const describe = (element: Element) => {
-    const label = element.getAttribute('aria-label') ?? element.getAttribute('title') ?? element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40) ?? '';
+    const label = element.getAttribute('aria-label') ?? element.getAttribute('data-tip') ?? element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 40) ?? '';
     const classes = [...element.classList].slice(0, 3).map(name => `.${name}`).join('');
     return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${classes}${label ? ` "${label}"` : ''}`;
   };

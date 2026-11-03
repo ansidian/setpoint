@@ -116,7 +116,7 @@ function HealthBar({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase;
   return (
     <div ref={ref} className={`hbar ${line.state === 'failing' ? 'failing' : 'muted'}`}>
       <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
-      <span className="num ell" title={line.text}>{line.text}</span>
+      <span className="num ell" data-tip={line.text}>{line.text}</span>
       {line.source !== null && <CheckNow check={check} />}
     </div>
   );

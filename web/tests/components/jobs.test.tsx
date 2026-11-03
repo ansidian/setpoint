@@ -533,7 +533,7 @@ async function chip(application = NORTHWIND, detail: ApplicationOut | undefined 
 test('the JD chip (37a): work, the role, "· Applied Oct 1 · In process" and its chevron, its tip saying what it is', async () => {
   const {button} = await chip();
   await expect.element(button).toHaveTextContent('Software Engineer I· Applied Oct 1 · In process');
-  await expect.element(button).toHaveAttribute('title', 'The job description you applied to');
+  await expect.element(button).toHaveAttribute('data-tip', 'The job description you applied to');
   await expect.element(button).toHaveAttribute('aria-expanded', 'false');
 });
 
@@ -560,7 +560,7 @@ test('its popover (37b): the head, What they want, the facts and both lists, and
   expect(parts('.ph-head > *')).toEqual(['Northwind Talent· via Greenhouse', 'Software Engineer I', 'In process· Applied Oct 1']);
   expect(parts('.bd .jb-label')).toEqual(['What they want', 'Must-haves 3', 'Nice-to-haves 2']);
   expect(parts('.bd .jb-facts > span')).toEqual(['Irvine, CA', 'Hybrid, 3 days', '$95,000–$115,000']);
-  await expect.element(popover.getByText('Found on Greenhouse · Oct 1', {exact: true})).toHaveAttribute('title', 'Found on Greenhouse · Oct 1, 10:41 AM');
+  await expect.element(popover.getByText('Found on Greenhouse · Oct 1', {exact: true})).toHaveAttribute('data-tip', 'Found on Greenhouse · Oct 1, 10:41 AM');
   expect([...popover.element().querySelectorAll('.ft button')].map(each => each.textContent)).toEqual(['Full posting', 'Open in Jobs']);
   // Under the chip, at its left edge, 460 wide, once it has grown in.
   await expect.poll(() => popover.element().getBoundingClientRect().width).toBe(460);
@@ -683,7 +683,9 @@ test('Applied before (37c): on the row and in the reader, each with its tip; a c
         <AppliedBefore before={CONTOSO} today={TODAY} large />
       </div>,
     );
-    const [row, reader] = [page.getByTitle('Open Jobs searched for Contoso Pharmaceuticals'), page.getByTitle('Open in Jobs · every application at Contoso Pharmaceuticals')];
+    const [row, reader] = [page.getByRole('button').nth(0), page.getByRole('button').nth(1)];
+    await expect.element(row).toHaveAttribute('data-tip', 'Open Jobs searched for Contoso Pharmaceuticals');
+    await expect.element(reader).toHaveAttribute('data-tip', 'Open in Jobs · every application at Contoso Pharmaceuticals');
     await expect.element(row).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
     await expect.element(reader).toHaveTextContent('Applied Sep 16 · Rejected Oct 5');
     await userEvent.hover(row);

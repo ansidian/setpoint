@@ -258,7 +258,7 @@ test('on the phone, a tapped email opens at once from its row, its body a skelet
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     const release = await hold(page, /^\/api\/mail\/messages\/\d+(\/open)?$/);
-    await page.locator('.list .row[title^="Final exam schedule"]').click();
+    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
     await page.locator('.pane .rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await shown(page, 'body');
     await release();

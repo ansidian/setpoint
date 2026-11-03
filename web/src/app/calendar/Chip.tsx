@@ -71,7 +71,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   const plain = !ghostly(look);
   if (item.kind === 'task') {
     return (
-      <div className={`tk${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
+      <div className={`tk${item.done ? ' done' : ''}${selected ? ' sel' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label} onClick={onClick} onPointerDown={onPointerDown}>
         {failed ? <Icon name="error" size={14} /> : item.done ? <TaskGlyph done size={12} /> : <span className="ring" style={ring(item.project)} />}
         {shownTime && <span className="t">{shownTime}</span>}
         {item.title}
@@ -81,7 +81,7 @@ export function Chip({item, calendar, selected, look, now, timeZone, onSelect, o
   }
   const time = shownTime === undefined ? chipTime(item, timeZone) : shownTime;
   return (
-    <div ref={landing} className={`ev${selected && plain ? ' sel' : ''}${isPast(item, now, timeZone) && plain && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} title={item.title} aria-label={label}
+    <div ref={landing} className={`ev${selected && plain ? ' sel' : ''}${isPast(item, now, timeZone) && plain && !selected ? ' past' : ''}${state}${ghost}`} role="button" data-key={item.key} data-tip={item.title} aria-label={label}
       style={{'--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties} onClick={onClick} onPointerDown={onPointerDown}>
       {failed && <Icon name="error" size={14} />}
       {time && <span className="t">{time}</span>}

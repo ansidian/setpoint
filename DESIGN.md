@@ -3673,6 +3673,12 @@ it changes what's on screen.
     bottom, and 8 px inside the window's sides, over everything but signing in. Leaving, a press, a
     scroll, Esc, or the window resizing or losing focus puts it away, and while it shows it describes
     its element for a screen reader. Touch and the phone have none. The reader's sender name, "to
-    you" (the account's address) and time are its first; the rest of the `title` tooltips move to it
-    next. Settled while building: 80 ms rather than the 500 ms first proposed, so there's no rule for
-    moving quickly between tips.
+    you" (the account's address) and time are its first. Settled while building: 80 ms rather than
+    the 500 ms first proposed, so there's no rule for moving quickly between tips.
+    Every tooltip is Setpoint's own now (SV-169): no element has a browser `title` tooltip, and only
+    the email's frame and a PDF's preview keep `title`, as the name a frame needs. An icon-only
+    control or glyph that its tooltip alone named (the rail's icons, a warning glyph) is named for a
+    screen reader by the same words too, as the tip only describes. None shows while a mouse button
+    is held, as on a drag's way over the calendar's chips, and one gained under a resting mouse (the
+    editor's line over a lit phrase, "Click to keep as words") shows once the mouse moves. A click that
+    focuses a field shows none; the keyboard focusing one does.

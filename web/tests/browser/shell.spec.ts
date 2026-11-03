@@ -149,7 +149,7 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       assert.equal((await box(page, '.hd')).height, 56);
       assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
       assert.equal((await box(page, '.list')).width, SIZES.target.width - 248);
-      await page.locator('.list .row[title^="Final exam schedule"]').click();
+      await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
       await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
       assert.equal((await box(page, '.pane')).width, 680);
       assert.equal((await box(page, '.list')).width, SIZES.target.width - 248 - 680);
@@ -201,7 +201,7 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row[title^="Interview availability"]').click();
+    await page.locator('.list .row[data-tip^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);

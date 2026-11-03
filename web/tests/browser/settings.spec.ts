@@ -143,7 +143,7 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
       sources.sections.map(({section, sources: list}) => `${{local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'}[section]} ${list.length}`));
     // FOX 11 fails in `caution` on a `caution` 7% row; the rest say when they were checked, each 44 px.
     assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
-    assert.equal(await fox.locator('.state').getAttribute('title'), '404 Not Found');
+    assert.equal(await fox.locator('.state').getAttribute('data-tip'), '404 Not Found');
     assert.equal(await rested(() => fox.locator('.state').evaluate(state => getComputedStyle(state).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
     assert.equal(await rested(() => fox.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'background', 'color-mix(in oklch, var(--caution) 7%, transparent)')));
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});

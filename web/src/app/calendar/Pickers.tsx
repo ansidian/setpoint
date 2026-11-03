@@ -253,7 +253,7 @@ export function DateField({className, label, value, shown, placeholder, today, r
             setOpen({...(open ?? at(cursor)), month: monthOf(cursor), cursor, hover: null});
           }, commit, () => pick(open!.cursor), () => setOpen(null))} />
         {onClear && value !== null && (
-          <button type="button" className="ibtn sm clear" aria-label={`Remove ${label.toLowerCase()}`} title="No date" onMouseDown={event => event.preventDefault()} onClick={() => {
+          <button type="button" className="ibtn sm clear" aria-label={`Remove ${label.toLowerCase()}`} data-tip="No date" onMouseDown={event => event.preventDefault()} onClick={() => {
             setText(null);
             setOpen(null);
             onClear();

@@ -33,12 +33,12 @@ import {openSettings} from './settings/store.ts';
 import {toastFailure} from './toast.ts';
 import {toInbox} from './toInbox.ts';
 
-/** A link that the app follows itself; ⌘-click still opens a new tab. */
-function Link({to, className, style, title, onContextMenu, children}: {
+/** A link that the app follows itself; ⌘-click still opens a new tab. `tip` names it, in its tooltip and for a screen reader. */
+function Link({to, className, style, tip, onContextMenu, children}: {
   to: Route;
   className: string;
   style?: CSSProperties;
-  title?: string;
+  tip?: string;
   onContextMenu?: (event: MouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
@@ -47,7 +47,7 @@ function Link({to, className, style, title, onContextMenu, children}: {
     event.preventDefault();
     navigate(to);
   };
-  return <a className={className} style={style} title={title} href={routePath(to)} onClick={onClick} onContextMenu={onContextMenu}>{children}</a>;
+  return <a className={className} style={style} aria-label={tip} data-tip={tip} href={routePath(to)} onClick={onClick} onContextMenu={onContextMenu}>{children}</a>;
 }
 
 /**
@@ -86,7 +86,7 @@ function AttentionPill({value}: {value: number}) {
   }, [going]);
   if (current.shown === 0) return null;
   const classes = ['apill num', current.arriving && !going && 'arriving', going && 'going'].filter(Boolean).join(' ');
-  return <span ref={pill} className={classes} title="Attention, not Done"><Count value={current.shown} /></span>;
+  return <span ref={pill} className={classes} data-tip="Attention, not Done"><Count value={current.shown} /></span>;
 }
 
 /** The sidebar. Its accounts are three skeleton rows until their answer comes. */
@@ -97,7 +97,7 @@ export function Sidebar({route}: {route: Route}) {
   const unreadOf = (id: number) => counts?.accounts.find(account => account.account_id === id)?.unread ?? 0;
   const filtered = route.page === 'inbox' ? route.account : null;
   const rail = useCompact();
-  // The rail names each icon in its tooltip; the full sidebar shows the names.
+  // The rail names each icon in its tooltip and for a screen reader; the full sidebar shows the names.
   const named = (label: string) => (rail ? label : undefined);
 
   return (
@@ -108,7 +108,7 @@ export function Sidebar({route}: {route: Route}) {
       </div>
       {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#166); the rail has no
           accounts, so there Inbox stays the current page. */}
-      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} title={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}
+      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} tip={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}
         onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
           {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadOf(null)},
         ])}>
@@ -136,7 +136,7 @@ export function Sidebar({route}: {route: Route}) {
                   ])}>
                   <span className="dot sm" />
                   {account.label}
-                  {reconnect && <span className="reconnect" title={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
+                  {reconnect && <span className="reconnect" role="img" aria-label={`${account.label} needs sign-in`} data-tip={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
                   {unread > 0 && <span className="cnt num"><Count value={unread} /></span>}
                 </Link>
               );
@@ -144,11 +144,11 @@ export function Sidebar({route}: {route: Route}) {
           </div>
         </div>
       )}
-      <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} title={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>
+      <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>
         <Icon name="calendar_month" />
         <span className="grow">Calendar</span>
       </Link>
-      <Link className={route.page === 'news' ? 'nav on' : 'nav'} title={named('News')} to={{page: 'news', view: 'all', story: null, article: null}}>
+      <Link className={route.page === 'news' ? 'nav on' : 'nav'} tip={named('News')} to={{page: 'news', view: 'all', story: null, article: null}}>
         <Icon name="newspaper" />
         <span className="grow">News</span>
       </Link>
@@ -156,7 +156,7 @@ export function Sidebar({route}: {route: Route}) {
       {!rail && (route.page === 'calendar' ? <CalendarSidebar route={route} /> : <TodayBlock />)}
       <div className="sb-foot">
         {/* Settings opens over the page (settings/store.ts); its address still works in a new tab. */}
-        <a className="nav" title={named('Settings · ⌘,')} href={routePath({page: 'settings', section: 'accounts'})} onClick={event => {
+        <a className="nav" aria-label={named('Settings')} data-tip={named('Settings · ⌘,')} href={routePath({page: 'settings', section: 'accounts'})} onClick={event => {
           if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
           event.preventDefault();
           openSettings('accounts');

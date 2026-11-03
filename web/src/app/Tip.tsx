@@ -2,9 +2,11 @@
 // element with `data-tip` names itself with it. The mouse resting on one 80 ms, or the keyboard
 // focusing one, shows the tip under it (logic/tip.ts), and leaving it, a press, a scroll, Esc, or the
 // window resizing or losing focus puts it away; so does the element going or losing its `data-tip`.
+// One gaining a `data-tip` under the mouse (the editor's line over a mark) shows it once the mouse moves.
 // One listener on the document serves every element, so a tooltip is only an attribute. While it
 // shows, the element is described by it for a screen reader. A touch never shows one, and the phone
-// has none, as it had no `title` tooltips either.
+// mounts none: its few `data-tip`s (the attention badges) were `title`s no touch showed either. An
+// element named only by its tooltip has an `aria-label` too, as the tip only describes.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {placeTip, type TipPlace} from '../logic/tip.ts';
 import {tip} from '../tokens.ts';
@@ -38,6 +40,10 @@ export function Tip() {
     let n = 0;
     let pending: HTMLElement | null = null;
     let anchor: HTMLElement | null = null;
+    // What the mouse was last over, so a move only counts when that changes; and what a press focused, as
+    // a field focused by a click matches :focus-visible too.
+    let under: HTMLElement | null = null;
+    let pressed: HTMLElement | null = null;
     let watch: MutationObserver | null = null;
     const hide = () => {
       clearTimeout(timer);
@@ -64,13 +70,22 @@ export function Tip() {
     const owner = (node: EventTarget | null) => (node instanceof Element ? node.closest<HTMLElement>('[data-tip]') : null);
 
     const over = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') return;
+      // None while a button is held, as across a drag's way over the calendar's chips.
+      if (event.pointerType !== 'mouse' || event.buttons) return;
       const target = owner(event.target);
+      under = target;
       if (target && (target === anchor || target === pending)) return;
       hide();
       if (!target) return;
       pending = target;
       timer = window.setTimeout(() => show(target), tip.delayMs);
+    };
+    const move = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse' && owner(event.target) !== under) over(event);
+    };
+    const press = (event: PointerEvent) => {
+      hide();
+      pressed = owner(event.target);
     };
     const out = (event: PointerEvent) => {
       const leaving = pending ?? anchor;
@@ -78,17 +93,19 @@ export function Tip() {
     };
     const focus = (event: FocusEvent) => {
       const target = owner(event.target);
-      if (target && target === event.target && target.matches(':focus-visible')) show(target);
+      if (target && target === event.target && target !== pressed && target.matches(':focus-visible')) show(target);
     };
     const blur = (event: FocusEvent) => {
       if (event.target === anchor) hide();
     };
     const key = (event: KeyboardEvent) => {
+      pressed = null;
       if (event.key === 'Escape') hide();
     };
     document.addEventListener('pointerover', over);
+    document.addEventListener('pointermove', move);
     document.addEventListener('pointerout', out);
-    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('pointerdown', press, true);
     document.addEventListener('focusin', focus);
     document.addEventListener('focusout', blur);
     document.addEventListener('keydown', key, true);
@@ -98,8 +115,9 @@ export function Tip() {
     return () => {
       hide();
       document.removeEventListener('pointerover', over);
+      document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerout', out);
-      document.removeEventListener('pointerdown', hide, true);
+      document.removeEventListener('pointerdown', press, true);
       document.removeEventListener('focusin', focus);
       document.removeEventListener('focusout', blur);
       document.removeEventListener('keydown', key, true);

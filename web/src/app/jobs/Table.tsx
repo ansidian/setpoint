@@ -69,7 +69,7 @@ export function HeaderRow({sort, first, onSort}: {sort: Sort; first: boolean; on
       {COLUMNS.map(column => {
         const on = sort.key === column.key;
         return (
-          <button key={column.key} type="button" className={['h', on && 'on', column.className].filter(Boolean).join(' ')} title={column.title}
+          <button key={column.key} type="button" className={['h', on && 'on', column.className].filter(Boolean).join(' ')} data-tip={column.title}
             data-sort={on ? (sort.down ? 'down' : 'up') : undefined} onClick={() => onSort(nextSort(sort, column.key))}>
             {column.label}{on && <Icon name={sort.down ? 'arrow_downward' : 'arrow_upward'} size={14} />}
           </button>
@@ -116,24 +116,24 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
       onMouseMove={() => !leaving && !state.cursor && onPoint(key)} onClick={() => !leaving && onClick(row.id)}
       onContextMenu={leaving || !onMenu ? undefined : event => onMenu(row, event)}>
       <span />
-      <span className="co" title={row.company}>{text(row.company)}</span>
-      <span className={row.title.trim() ? 'ro' : 'ro none'} title={titleOf(row)}>{row.title.trim() ? text(row.title) : titleOf(row)}</span>
+      <span className="co" data-tip={row.company}>{text(row.company)}</span>
+      <span className={row.title.trim() ? 'ro' : 'ro none'} data-tip={titleOf(row)}>{row.title.trim() ? text(row.title) : titleOf(row)}</span>
       <span className="pl c-plat">{row.platform ?? ''}</span>
       <span className="ap">{appliedWord(row.applied_on, today)}</span>
       <span className={mark === 'proc' ? 'st proc' : 'st'}>
         <i className={`sd ${mark}`} />
         <span className="st-t">
           <span className={`sl ${mark}`}>{markLabel(row)}</span>
-          {step && <span className="step" title={step}>· {step}</span>}
-          {row.status_set_by === 'user' && <span className="by" title={setByYou(row, today)}><Icon name="edit" size={14} /></span>}
+          {step && <span className="step" data-tip={step}>· {step}</span>}
+          {row.status_set_by === 'user' && <span className="by" role="img" aria-label={setByYou(row, today)} data-tip={setByYou(row, today)}><Icon name="edit" size={14} /></span>}
         </span>
       </span>
-      <span className="jd" title={jd?.title}>
+      <span className="jd" data-tip={jd?.title}>
         {jd && (jd.spin ? <span className="spin"><Icon name={jd.icon} size={16} /></span> : <Icon name={jd.icon} size={16} />)}
         {jd && <span className="t">{jd.text}</span>}
       </span>
       {line !== undefined && (
-        <span className="snip" title={line}><span className="lab">Full posting · </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
+        <span className="snip" data-tip={line}><span className="lab">Full posting · </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
       )}
     </div>
   );

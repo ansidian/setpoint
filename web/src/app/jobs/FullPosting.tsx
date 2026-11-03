@@ -159,7 +159,7 @@ export function FullPosting({posting, title, company, timeZone, today, arrived =
         <span className="t">Full posting</span>
         <span className="how">{how}</span>
         {posting.link && (
-          <a className="tool host" href={posting.link} target="_blank" rel="noopener noreferrer" title={posting.link}>
+          <a className="tool host" href={posting.link} target="_blank" rel="noopener noreferrer" data-tip={posting.link}>
             <Icon name="link" size={16} /><span>{hostOf(posting.link)}</span>
           </a>
         )}

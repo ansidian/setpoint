@@ -223,7 +223,7 @@ function Suggestion({search}: {search: Search}) {
   if (!search.suggestion) return null;
   const {filters, count} = suggestionLine(search.suggestion);
   return (
-    <button className="suggest" type="button" title={`${filters} · ${count}`} onMouseDown={event => event.preventDefault()} onClick={search.acceptSuggestion}>
+    <button className="suggest" type="button" data-tip={`${filters} · ${count}`} onMouseDown={event => event.preventDefault()} onClick={search.acceptSuggestion}>
       <span className="ell">{filters}</span>
       <span className="num ink3">· {count}</span>
       <span className="kbd">Tab</span>
@@ -368,7 +368,7 @@ function ResultRow({result, cursor, openId, selected, accounts, now, timeZone, o
       </div>
       <div className="r1">
         <Account account={accounts.get(result.account_id)} />
-        <span className="age" title={fullTimestamp(result.received_at, timeZone)}>{age(result.received_at, now, timeZone)}</span>
+        <span className="age" data-tip={fullTimestamp(result.received_at, timeZone)}>{age(result.received_at, now, timeZone)}</span>
       </div>
       <div className="l2"><Marked parts={fieldSegments(result, 'subject')} /></div>
       {result.excerpt && <div className="l3"><Marked parts={fieldSegments(result, 'excerpt')} /></div>}

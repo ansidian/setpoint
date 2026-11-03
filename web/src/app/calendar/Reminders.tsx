@@ -134,7 +134,7 @@ export function RemindersRow({reminders, anchor, countsFrom, timeZone, today, me
             <TimeField className="time num" label="Reminder time" value={picking.minutes} choices={timeChoices()}
               read={text => parseClock(text, picking.minutes)} onValue={minutes => setPicking({...picking, minutes})} />
             <button type="button" className="btn sm" disabled={!!problem} onClick={commit}>{picking.replaces === null ? 'Add' : 'Done'}</button>
-            <button type="button" className="ibtn sm" aria-label="Cancel custom reminder" title="Cancel · Esc" onClick={close}><Icon name="close" size={16} /></button>
+            <button type="button" className="ibtn sm" aria-label="Cancel custom reminder" data-tip="Cancel · Esc" onClick={close}><Icon name="close" size={16} /></button>
           </div>
           <span />
           {/* How far the moment is from the item's, and what that counts from; or why it can't be. */}

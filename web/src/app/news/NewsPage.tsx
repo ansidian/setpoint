@@ -358,14 +358,14 @@ export function NewsPage({route}: {route: NewsRoute}) {
           {!searching && unsorted && (
             <div className="nw-state failing">
               <Icon name="warning" size={16} />
-              <span className="grow num ell" title={unsorted.text}>{unsorted.settings ? <SettingsLink text={unsorted.text} /> : unsorted.text}</span>
+              <span className="grow num ell" data-tip={unsorted.text}>{unsorted.settings ? <SettingsLink text={unsorted.text} /> : unsorted.text}</span>
               <button className="btn ghost sm" type="button" aria-expanded={showHeadlines} onClick={() => setHeadlines(!headlines)}>{showHeadlines ? 'Hide headlines' : 'Show headlines'}</button>
             </div>
           )}
           {!searching && sorting && (
             <div className="nw-state muted progress" style={{'--done': sorted} as CSSProperties}>
               <span className="spin"><Icon name="progress_activity" size={16} /></span>
-              <span className="grow num ell" title={sorting}>{sorting}</span>
+              <span className="grow num ell" data-tip={sorting}>{sorting}</span>
             </div>
           )}
           <div className="nw-body">
@@ -401,7 +401,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                     <span className="hl">{article.headline}</span>
                     <span className="nw-meta">
                       <span>{SECTION_LABELS[article.section]}</span><span>·</span><span className="outlet">{article.outlet_short}</span><span>·</span>
-                      <span title={fullTimestamp(article.published_at, zone)}>{age(article.published_at, now, zone)}</span>
+                      <span data-tip={fullTimestamp(article.published_at, zone)}>{age(article.published_at, now, zone)}</span>
                     </span>
                     <Icon name="open_in_new" size={16} />
                   </a>
@@ -434,7 +434,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
               return (
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
-                  {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" title={line.text}>{line.text}</span></div>}
+                  {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" data-tip={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
                   {/* Still sorting, its section's line turns as the first run's does (news-13); once sorted, a quiet section is a paper. */}
                   {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
@@ -554,7 +554,7 @@ function Upcoming({upcoming, story, now, zone, onStory}: {upcoming: UpcomingOut;
       ])}>
       <span className="ico"><Icon name="event" size={16} /></span>
       <span className="lab">Upcoming</span>
-      <span className="ell" title={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span> <span className="num">· {when}</span></span>
+      <span className="ell" data-tip={`${upcoming.name} · ${when}`}><span className="what">{upcoming.name}</span> <span className="num">· {when}</span></span>
       <span className="grow" />
       <span className="nw-meta"><span className="outlet">{outletLine(upcoming.lead)}</span></span>
       <button className="btn out sm" type="button"

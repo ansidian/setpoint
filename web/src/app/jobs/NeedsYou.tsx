@@ -215,7 +215,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
                   <span>From history <span className="n">{liveHistory.length}</span></span>
                   <span className="why ink3">· what the history pass wasn't sure of</span>
                 </button>
-                {open && <button className="btn quiet sm" type="button" title="The same as ignoring each one: those emails make nothing" onClick={event => {
+                {open && <button className="btn quiet sm" type="button" data-tip="The same as ignoring each one: those emails make nothing" onClick={event => {
                   event.stopPropagation();
                   dismissAll();
                 }}>Dismiss all</button>}
@@ -273,15 +273,15 @@ function Item({item, account, cur, reading, own, answered, fold, menuOpen, now, 
       <span className="g"><Icon name={KIND_GLYPHS[item.kind]} size={16} /></span>
       <div className="l1">
         {item.message_id !== null
-          ? <button className="what" type="button" title="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          ? <button className="what" type="button" data-tip="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
           : <span className="what">{itemWhat(item)}</span>}
         <span className="from">· {jd ? 'Is this the posting?' : itemFrom(item)}</span>
       </div>
       <div className="r1">
         {jd ? <span>Applied {dayWord(localDate(item.at, timeZone), today)}</span> : (
           <>
-            {account && <span className="dot sm" style={dotStyle(account.colour)} title={account.label} />}
-            <span title={fullTimestamp(item.at, timeZone)}>{age(item.at, now, timeZone)}</span>
+            {account && <span className="dot sm" style={dotStyle(account.colour)} role="img" aria-label={account.label} data-tip={account.label} />}
+            <span data-tip={fullTimestamp(item.at, timeZone)}>{age(item.at, now, timeZone)}</span>
           </>
         )}
       </div>
@@ -325,7 +325,7 @@ function HistoryRow({item, reading, own, answered, fold, menuOpen, today, timeZo
       <Icon name={KIND_GLYPHS[item.kind]} size={16} />
       {item.message_id !== null ? (
         <span className="what opens">
-          <button type="button" title="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
+          <button type="button" data-tip="Read this email" aria-pressed={reading && own} onClick={() => on.read(item)}>{itemWhat(item)}</button>
           <span className="why"> · {historyWhy(item)}</span>
         </span>
       ) : <span className="what"><b>{itemWhat(item)}</b> · {historyWhy(item)}</span>}

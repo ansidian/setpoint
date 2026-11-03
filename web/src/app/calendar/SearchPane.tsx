@@ -75,7 +75,7 @@ function ResultRow({result, calendar, selected, today, timeZone, onSelect}: Resu
       {task ? <span className="check">{item.done ? <TaskGlyph done size={15} /> : <span className="ring" style={ring(item.project)} />}</span> : <span className="cbar" />}
       <span className="grow">
         <span className="title"><Marked parts={segments(item.title, result.highlights)} /></span>
-        <span className="ink3 num line ell" title={line}>{line}</span>
+        <span className="ink3 num line ell" data-tip={line}>{line}</span>
         {/* Only what the row doesn't already show (search-11). */}
         {reasons.length > 0 && (
           <span className="why">

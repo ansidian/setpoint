@@ -138,7 +138,7 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
       )}
       <div className="rd-tools">
         {/* Only in the compact tier, where the reader covers the list (#140). */}
-        <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
+        <button className="ibtn rd-back" type="button" aria-label="Back to the list" data-tip="Back · Esc" onClick={actions.close}><Icon name="arrow_back" /></button>
         {doneable && <button className="tool done" type="button" data-hint="h" onClick={actions.done}><Icon name="check" />Done<span className="kbd">H</span></button>}
         {isDone && <span className="rd-done"><Icon name="check" />Done</span>}
         <button className="tool trash" type="button" data-hint="e" onClick={actions.trash}><Icon name="delete" />Trash<span className="kbd">E</span></button>
@@ -417,7 +417,7 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
   return (
     <div className="rd-head">
       {listed.protected && <div className="protected-line"><Icon name="shield-fill" size={16} />Protected · always stays in Attention</div>}
-      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" title="Unread" />}{listed.subject}</h1>
+      <h1 className={listed.protected ? 'rd-subj protected' : 'rd-subj'}>{unread && <span className="rd-unread" role="img" aria-label="Unread" data-tip="Unread" />}{listed.subject}</h1>
       {/* Triage's summary, which the list shows in the subject's place, kept here once it's open (#238). */}
       {summary && <p className="rd-sum selectable">{summary}</p>}
       <div className="rd-meta">

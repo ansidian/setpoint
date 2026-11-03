@@ -158,7 +158,7 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
 
-    await page.locator('.list .row[title="Interview availability for Software Engineer I"]').click();
+    await page.locator('.list .row[data-tip="Interview availability for Software Engineer I"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const tools = page.locator('.pane > .rd-tools');
     await tools.evaluate(element => element.setAttribute('data-first', ''));

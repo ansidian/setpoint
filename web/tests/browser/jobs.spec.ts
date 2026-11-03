@@ -82,7 +82,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     // The shell: Jobs under News, its count the Needs you count in ink2, never caution (D313).
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
-    assert.equal(await item.getAttribute('title'), 'Jobs · 3 need you');
+    assert.equal(await item.getAttribute('data-tip'), 'Jobs · 3 need you');
     assert.equal(await rested(() => item.locator('.cnt').evaluate(count => getComputedStyle(count).color)), await rested(() => colourOf(page, 'var(--ink2)')));
 
     await page.keyboard.press('4');
@@ -131,7 +131,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await status('Proseware', 'Software Engineer, Platform'), 'Ghosted· no email in 48 days');
     assert.equal(await status('Woodgrove Bank', 'Application Developer'), 'Offer· Oct 6');
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
-    assert.equal(await alpine.locator('.st .by').getAttribute('title'), 'Set by you on Sep 10 · only an email that sets a status changes it');
+    assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10 · only an email that sets a status changes it');
     // Closed and Ghosted rows step down a shade, never in opacity.
     const fabrikam = row(page, await applicationId(setpoint, 'Fabrikam', 'Data Analyst'));
     const [open, closed] = await rested(() => Promise.all([fabrikam, alpine].map(one => one.locator('.co').evaluate(cell => [getComputedStyle(cell).color, getComputedStyle(cell.parentElement!).opacity]))));
@@ -139,7 +139,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     // The JD column: how it was found, or where it stands; nothing for a closed one from history (D311).
     const jd = async (company: string, title: string) => {
       const cell = row(page, await applicationId(setpoint, company, title)).locator('.jd');
-      return [await cell.textContent(), await cell.getAttribute('title')];
+      return [await cell.textContent(), await cell.getAttribute('data-tip')];
     };
     assert.deepEqual(await jd('Northwind Talent', 'Software Engineer I'), ['Greenhouse', 'Greenhouse · found Oct 1']);
     assert.deepEqual(await jd('Lucerne Publishing', 'Junior Developer'), ['In Needs you', '2 candidates in Needs you']);
@@ -488,7 +488,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     await pane.locator('.jb-src.looking').waitFor();
     assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then search');
     assert.equal(await pane.locator('[data-skeleton="jobs-jd"] .sk-bar').count(), 4);
-    await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('title'), title => title === 'Looking for the posting');
+    await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('data-tip'), title => title === 'Looking for the posting');
     await setpoint.idle();
     assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`)).jd.state, 'looking');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -510,7 +510,7 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     // The verification email isn't in mail: its line stays, says why, takes no hover fill and opens nothing.
     assert.deepEqual(await events.evaluateAll(all => all.map(one => Boolean(one.querySelector('button.open')))), [true, false, true]);
     const gone = events.nth(1);
-    assert.equal(await gone.getAttribute('title'), 'Gmail no longer has this email, so Jobs keeps only its line');
+    assert.equal(await gone.getAttribute('data-tip'), 'Gmail no longer has this email, so Jobs keeps only its line');
     assert.equal(await gone.locator('.gonetxt').textContent(), '· No longer in Gmail');
     await gone.hover();
     assert.equal(await rested(() => gone.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)');
@@ -598,7 +598,7 @@ test('SV-141: two lines hold a long note whole; past two it ends in an ellipsis 
     jobsChange(setpoint, `UPDATE jobs_applications SET step = '${note}' WHERE id = ${northwind}`);
     await page.reload();
     assert.equal(await clipped(), true, 'the rest ends in an ellipsis');
-    assert.equal(await row(page, northwind).locator('.step').getAttribute('title'), note, 'the whole note on hover');
+    assert.equal(await row(page, northwind).locator('.step').getAttribute('data-tip'), note, 'the whole note on hover');
 
     const steps = await rows(page).evaluateAll((all, id) => all.findIndex(each => (each as HTMLElement).dataset.application === String(id)), northwind);
     await rows(page).first().hover();
@@ -617,7 +617,7 @@ test('a narrow window, at 1024 (32b): Jobs in the rail with a neutral badge, the
     const [northwind, humongous] = [await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I'), await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims')];
     await page.goto(`${setpoint.base}/jobs`);
     // The rail's slot after News, its count a 16 px badge placed as the Inbox's, but neutral (D325).
-    assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('title'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,']);
+    assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,']);
     const [slot, badge, attention] = await rested(() => Promise.all([page.locator('.sb .nav.jobs').boundingBox(), page.locator('.sb .nav.jobs .cnt').boundingBox(), page.locator('.sb .nav .apill').boundingBox()]));
     assert.deepEqual([badge!.height, badge!.y - slot!.y, badge!.x + badge!.width - (slot!.x + slot!.width)], [attention!.height, 2, 2]);
     assert.deepEqual(await rested(() => page.locator('.sb .nav.jobs .cnt').evaluate(count => [getComputedStyle(count).backgroundColor, getComputedStyle(count).color])),
@@ -634,7 +634,7 @@ test('a narrow window, at 1024 (32b): Jobs in the rail with a neutral badge, the
     await page.locator('.jb-pane .jb-want').waitFor();
     assert.deepEqual(await rested(() => page.locator('.jb-pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: height - layout.header});
     const back = page.locator('.jb-pane .rd-back');
-    assert.deepEqual([await back.isVisible(), await back.getAttribute('title')], [true, 'Back · Esc']);
+    assert.deepEqual([await back.isVisible(), await back.getAttribute('data-tip')], [true, 'Back · Esc']);
     await page.keyboard.press('j');
     await until('the next one', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === `/jobs/${humongous}`);
     await page.keyboard.press('Escape');

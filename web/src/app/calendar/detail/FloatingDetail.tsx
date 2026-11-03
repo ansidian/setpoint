@@ -75,7 +75,7 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
           engine.pointerDown(event.nativeEvent, event.currentTarget);
         }} onPointerMove={event => engine.pointerMove(event.nativeEvent)}
         onPointerUp={event => engine.pointerUp(event.nativeEvent)} onPointerCancel={event => engine.pointerUp(event.nativeEvent)}>
-        <button className="grip" aria-label="Drag card" title="Drag to move" />
+        <button className="grip" aria-label="Drag card" data-tip="Drag to move" />
         <div className="fd-body" ref={element => {
           engine.attach({body: element});
         }}>

@@ -105,7 +105,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, arrive
     <section className={['pane', 'jb-pane', leaving && 'leaving', arrived && 'arrived'].filter(Boolean).join(' ')} aria-label="Application" style={style}>
       <PaneEdge width={width} />
       <div className="rd-tools">
-        <button className="ibtn rd-back" type="button" aria-label="Back" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
+        <button className="ibtn rd-back" type="button" aria-label="Back" data-tip="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         {link ? (
           <a className="tool" href={link} target="_blank" rel="noopener noreferrer" data-hint="o"><Icon name="open_in_new" />Open posting<span className="kbd">O</span></a>
         ) : detail?.jd.state === 'looking' && firstEmail !== null && (
@@ -114,7 +114,7 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, arrive
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous application" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next application" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>
-        <button className="ibtn" type="button" aria-label="More" title="More" aria-haspopup="menu" aria-expanded={menu?.owner === 'more'} disabled={!shown}
+        <button className="ibtn" type="button" aria-label="More" data-tip="More" aria-haspopup="menu" aria-expanded={menu?.owner === 'more'} disabled={!shown}
           onClick={event => more(event.currentTarget)}><Icon name="more_horiz" /></button>
       </div>
       <div className="rd-scroll">
@@ -183,7 +183,7 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
         <div className="jb-title">
           <h1 className={row.title.trim() ? 'rd-subj' : 'rd-subj none'}>
             {/* A click puts the title in a field on the same baseline (35a). */}
-            <button type="button" className="jb-tbtn" title="Edit title" onClick={() => onEdit('title')}>
+            <button type="button" className="jb-tbtn" data-tip="Edit title" onClick={() => onEdit('title')}>
               <span>{titleOf(row)}</span><Icon name="edit" size={16} className="pen" />
             </button>
           </h1>
@@ -192,12 +192,12 @@ function Head({row, detail, account, now, timeZone, today, editing, onEdit, onSa
       {editing && <div className="jb-hint">Enter to save · Esc</div>}
       <div className="jb-stat">
         {/* One click on the chip sets the status by hand (D309, #267). */}
-        <button type="button" className="jb-stchip" title={markLabel(row)} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
+        <button type="button" className="jb-stchip" data-tip={markLabel(row)} aria-haspopup="menu" aria-expanded={chipOpen} onClick={event => onChip(event.currentTarget)}>
           <span key={mark} className={chip.changed ? 'swap changed' : 'swap'}><i className={`sd ${mark}`} />{STATUS_LABELS[row.status]}</span>
           <Icon name={chipOpen ? 'expand_less' : 'expand_more'} size={16} />
         </button>
-        {step && <span className={step.at ? 'step' : 'step quiet'} title={step.text}>{step.text}</span>}
-        {step?.at && <span className="age" title={fullTimestamp(step.at, timeZone)}>· {age(step.at, now, timeZone)}</span>}
+        {step && <span className={step.at ? 'step' : 'step quiet'} data-tip={step.text}>{step.text}</span>}
+        {step?.at && <span className="age" data-tip={fullTimestamp(step.at, timeZone)}>· {age(step.at, now, timeZone)}</span>}
       </div>
       {row.first_seen_in_email && <div className="jb-first"><Icon name="info" size={16} />First seen in this email, so Applied is its date</div>}
     </div>
@@ -389,8 +389,8 @@ function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
           ].filter(Boolean).join(' ');
           return (
             <div key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-event={event.id} aria-hidden={leaving || undefined}
-              title={messageId === null ? GONE_TIP : undefined} onContextMenu={leaving ? undefined : rightClick(event)}>
-              <span className={day === today ? 'd now' : 'd'} title={fullTimestamp(event.at, timeZone)}>{day === today ? 'Today' : dayWord(day, today)}</span>
+              data-tip={messageId === null ? GONE_TIP : undefined} onContextMenu={leaving ? undefined : rightClick(event)}>
+              <span className={day === today ? 'd now' : 'd'} data-tip={fullTimestamp(event.at, timeZone)}>{day === today ? 'Today' : dayWord(day, today)}</span>
               <span className="node"><i /></span>
               <span className="t">
                 {!event.quiet && EVENT_KINDS[event.kind] && <span className="k">{EVENT_KINDS[event.kind]}</span>}
@@ -402,7 +402,7 @@ function Timeline({events, timeZone, today, onEmail, menuOpen, onMenu}: {
                 {messageId === null && <span className="gonetxt">· No longer in Gmail</span>}
               </span>
               <span className="go">
-                <button type="button" className="ibtn sm" aria-label="Event actions" title="More" aria-haspopup="menu" aria-expanded={open}
+                <button type="button" className="ibtn sm" aria-label="Event actions" data-tip="More" aria-haspopup="menu" aria-expanded={open}
                   onClick={click => onMenu(event, click.currentTarget)}><Icon name="more_horiz" size={16} /></button>
               </span>
             </div>

@@ -431,7 +431,7 @@ export function WeekGrid(props: WeekGridProps) {
                     <div key={date} className={`wk-dhead ${columnClass(date)}`} data-date={date} onClick={() => onSelectDay(date)}>
                       <span className="dw">{new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {weekday: 'short', timeZone: 'UTC'})}</span>
                       <span className={`dn${date === today ? ' today' : ''}`}>{Number(date.slice(8))}</span>
-                      {look && <span className={`wx ${look.tone}`} title={look.line}><Icon name={look.icon} size={16} /></span>}
+                      {look && <span className={`wx ${look.tone}`} role="img" aria-label={look.line} data-tip={look.line}><Icon name={look.icon} size={16} /></span>}
                     </div>
                   );
                 })}
@@ -605,7 +605,7 @@ function TimedBlock({block, calendar, selected, look, lifted, now, timeZone, onS
     ghost && 'ghost', look === 'faded' && 'faded', !ghost && look, lifted && 'lift', block.continued && 'cont-t', block.continues && 'cont-b'].filter(Boolean).join(' ');
   const edges = resizable(item) && !look && !lifted;
   return (
-    <div ref={landing} className={classes} role="button" data-key={item.key} title={`${item.title} · ${time}`} aria-label={blockLabel(item, block.date, calendar?.name, timeZone)}
+    <div ref={landing} className={classes} role="button" data-key={item.key} data-tip={`${item.title} · ${time}`} aria-label={blockLabel(item, block.date, calendar?.name, timeZone)}
       style={{...laneStyle(block.lane, block.lanes, box.top, box.height), '--c': colourVar(item.colour ?? calendar?.colour ?? 'cool')} as CSSProperties}
       onClick={event => {
         event.stopPropagation();

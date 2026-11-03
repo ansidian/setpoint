@@ -161,7 +161,7 @@ function HealthLine({line, phase, onMoveOn}: {line: SourceLine; phase: LinePhase
   return (
     <div ref={ref} className={`rp-health ${line.state}`}>
       <Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} />
-      <span className={line.state === 'failing' ? 'num' : 'num ell'} title={line.text}>{line.text}</span>
+      <span className={line.state === 'failing' ? 'num' : 'num ell'} data-tip={line.text}>{line.text}</span>
       {line.source !== null && <span className="rp-act"><CheckNow check={check} /></span>}
     </div>
   );

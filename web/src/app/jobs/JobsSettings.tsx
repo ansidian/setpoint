@@ -149,7 +149,7 @@ export function JobsUsageRow() {
   if (!ai) return null;
   const month = ai.this_month;
   return (
-    <Row title="Jobs" sub={<span className="num" title={usageLine(month)}>{jobsUsageParts(month)}</span>}>
+    <Row title="Jobs" sub={<span className="num" data-tip={usageLine(month)}>{jobsUsageParts(month)}</span>}>
       <span className="cost num">{dollars(month.cost_usd, true)}</span>
     </Row>
   );

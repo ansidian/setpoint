@@ -674,7 +674,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
       : one)));
   };
   const mark = (...fields: ProposalField[]) => (fields.some(field => draft.fromEmail.includes(field))
-    ? <span className="srcm" title="From the email" aria-label="From the email"><Icon name="mail" size={14} /></span> : null);
+    ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : null);
   // The email's title is the line's, so its mark sits at the line's trailing edge (D290).
   const titleMark = mark('title');
   // An edited item's Title is its line (SV-90), and so is a new item's (D290): its title words
@@ -910,7 +910,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             <span className={kind === 'task' ? 'on' : ''} role="tab" aria-selected={kind === 'task'} onClick={() => switchKind('task')}>Task</span>
           </span>
         )}
-        <button type="button" className="ibtn" aria-label="Close editor" title="Close · Esc" onClick={onClose}><Icon name="close" /></button>
+        <button type="button" className="ibtn" aria-label="Close editor" data-tip="Close · Esc" onClick={onClose}><Icon name="close" /></button>
       </div>
 
       <div className="ed-scroll">
@@ -924,7 +924,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             </span>
             <input ref={line} className="nl-input" aria-label={editing ? 'Title' : `Describe the ${noun}`} value={draft.text} spellCheck={false} autoComplete="off"
               placeholder={editing ? undefined : kind === 'event' ? 'Dinner with Sam fri 7-9pm @Blue Door' : 'Pay rent fri'}
-              title={overMark !== null ? 'Click to keep as words' : undefined}
+              data-tip={overMark !== null ? 'Click to keep as words' : undefined}
               onChange={event => typeLine(event.target.value)} onFocus={() => setLineFocused(true)} onBlur={() => setLineFocused(false)}
               onMouseMove={event => setOver(markAt(event.clientX, event.clientY)?.start ?? null)} onMouseLeave={() => setOver(null)}
               onMouseDown={event => {
@@ -968,10 +968,10 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                     <TimeField className={`time num${changed('end') ? ' changed' : ''}`} label="End" value={draft.end} blank={draft.end === draft.start ? NO_END : undefined}
                       choices={endChoices(draft.start, draft.end)}
                       read={text => readEnd(text, draft.start!, draft.end!)} onValue={end => change({end}, ['time'])} />
-                    {laterDays > 0 && <span className="later num" title={`Ends ${dayTitle(lastDay)}`}>+{laterDays}</span>}
+                    {laterDays > 0 && <span className="later num" data-tip={`Ends ${dayTitle(lastDay)}`}>+{laterDays}</span>}
                   </>
                 )}
-                <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} title={kind === 'event' ? 'All day' : 'Remove time'}
+                <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} data-tip={kind === 'event' ? 'All day' : 'Remove time'}
                   onClick={() => {
                     // An event keeps its days (SV-29).
                     change({start: null, end: null, days: extraDays(draft.start, draft.end, 1) + 1}, ['time']);
@@ -1133,7 +1133,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               change(byHand ? {reminders, lineReminders: []} : {reminders}, byHand ? ['reminders'] : []);
             }}
             chips={kind === 'event' && draft.leaveReminder && (
-              <span className="qchip ttl" title={leaveTitle}>
+              <span className="qchip ttl" data-tip={leaveTitle}>
                 <Icon name="directions_car" size={14} />Time to Leave
                 <button type="button" className="x" aria-label="Remove Time to Leave" onClick={() => change({leaveReminder: false})}><Icon name="close" size={14} /></button>
               </span>
@@ -1168,7 +1168,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                   <span className="ink3 num when">{dayTitle(one.date)}{one.start !== null ? ` · ${clockLabel(one.start)}` : ''}</span>
                   <span className="ink3"><Icon name="expand_more" size={16} /></span>
                 </button>
-                <button type="button" className="ibtn sm" aria-label={`Remove draft: ${one.text}`} title="Remove draft" onClick={() => removeDraft(one.id)}><Icon name="close" size={16} /></button>
+                <button type="button" className="ibtn sm" aria-label={`Remove draft: ${one.text}`} data-tip="Remove draft" onClick={() => removeDraft(one.id)}><Icon name="close" size={16} /></button>
               </div>
             ))}
             <button type="button" className="btn quiet sm another" onClick={() => addAnother()}><Icon name="add" size={17} />Add another</button>
@@ -1187,7 +1187,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             {editing ? 'Save' : drafts.length > 1 ? `Create ${drafts.length} ${noun}s` : `Create ${noun}`}<span className="kbd">⌘Enter</span>
           </button>
           <button type="button" className="btn quiet" onClick={onClose}>Cancel<span className="kbd">Esc</span></button>
-          {draft.fromEmail.length > 0 && <span className="legend" title="From the email"><Icon name="mail" size={14} /><span>From the email</span></span>}
+          {draft.fromEmail.length > 0 && <span className="legend" data-tip="From the email"><Icon name="mail" size={14} /><span>From the email</span></span>}
         </div>
       )}
     </form>

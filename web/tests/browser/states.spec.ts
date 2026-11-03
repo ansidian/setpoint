@@ -66,7 +66,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     // Northwind's email read once already, so this browser has it when the network goes.
-    await page.locator('.list .row[title^="Interview availability"]').click();
+    await page.locator('.list .row[data-tip^="Interview availability"]').click();
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
     await page.locator('.pane').waitFor({state: 'detached'});
@@ -99,7 +99,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     // Reading goes on: J moves the cursor, Enter opens an email this browser has.
     await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
-    await page.locator('.list .row.cur[title^="Interview availability"]').waitFor();
+    await page.locator('.list .row.cur[data-tip^="Interview availability"]').waitFor();
     await page.keyboard.press('Enter');
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
@@ -193,7 +193,7 @@ test('a failing account says why in caution', async () => {
     const line = page.locator('.hbar.failing');
     await line.waitFor();
     assert.equal(await line.locator('.num').textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
-    assert.equal(await line.locator('.num').getAttribute('title'), 'Work, as of 9:06 AM, Gmail answered 503.');
+    assert.equal(await line.locator('.num').getAttribute('data-tip'), 'Work, as of 9:06 AM, Gmail answered 503.');
     // A source failing is the `warning` triangle in `caution`, never the `error` circle of a failed change (states-04).
     assert.deepEqual(await toneGlyph(line), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     assert.equal(await page.locator('.hbar.caution').count(), 0);
@@ -249,7 +249,7 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
     assert.equal(await lines.nth(1).locator('.num').evaluate(text => text.scrollWidth <= text.clientWidth && text.scrollHeight <= text.clientHeight), true);
-    assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('title'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
+    assert.deepEqual(await lines.locator('.num').evaluateAll(all => all.map(text => text.getAttribute('data-tip'))), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     // The lines stay above the day as another day is picked.
     await page.locator('.cell[data-date="2026-10-09"]').click({position: {x: 100, y: 150}});
     await page.locator('.rpane .rp-date', {hasText: 'Fri, Oct 9'}).waitFor();

@@ -76,7 +76,7 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
     <section className="pane" aria-label="Story" style={style}>
       <PaneEdge width={width} />
       <div className="rd-tools">
-        <button className="ibtn rd-back" type="button" aria-label="Back to the list" title="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
+        <button className="ibtn rd-back" type="button" aria-label="Back to the list" data-tip="Back · Esc" onClick={onClose}><Icon name="arrow_back" /></button>
         {lead && <button className="tool" type="button" data-hint="o" onClick={onOriginal}><Icon name="open_in_new" />Open at {lead.outlet}<span className="kbd">O</span></button>}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous story" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
@@ -129,7 +129,7 @@ function NewSince({facts, lookedAt, now, timeZone}: {facts: StoryOut['facts']; l
   const [open, setOpen] = useState(false);
   const {shown, folded} = foldFacts(facts);
   const line = (fact: StoryOut['facts'][number]) => (
-    <div className="it" key={`${fact.at}:${fact.text}`}><span className="t" title={fullTimestamp(fact.at, timeZone)}>{dayWord(fact.at, now, timeZone)}</span><span>{fact.text}</span></div>
+    <div className="it" key={`${fact.at}:${fact.text}`}><span className="t" data-tip={fullTimestamp(fact.at, timeZone)}>{dayWord(fact.at, now, timeZone)}</span><span>{fact.text}</span></div>
   );
   return (
     <div className="st-new">
@@ -162,7 +162,7 @@ function Sources({sources, now, timeZone, onArticle}: {sources: StorySourceOut[]
             <span className="o">{source.outlet}{source.summary_only && <span className="tag">Summary only</span>}</span>
             <span className="h">{source.headline}</span>
           </span>
-          <span className="a" title={fullTimestamp(source.published_at, timeZone)}>{age(source.published_at, now, timeZone)}</span>
+          <span className="a" data-tip={fullTimestamp(source.published_at, timeZone)}>{age(source.published_at, now, timeZone)}</span>
           <span className="chev"><Icon name="chevron_right" /></span>
         </button>
       ))}
@@ -187,7 +187,7 @@ function Article({article, story, now, timeZone, onArticle, onOriginal}: {
           <span className="fav">{initials(article.outlet)}</span>
           <span className="name">{article.outlet}</span>
           <span className="ink3">·</span>
-          <span className="num" title={fullTimestamp(article.published_at, timeZone)}>{readerTime(article.published_at, now, timeZone)}</span>
+          <span className="num" data-tip={fullTimestamp(article.published_at, timeZone)}>{readerTime(article.published_at, now, timeZone)}</span>
           {article.byline && <><span className="ink3">·</span><span>{article.byline}</span></>}
         </div>
         <h1 className="ar-title">{article.headline}</h1>
@@ -233,7 +233,7 @@ function ArticleLoading({source, load, now, timeZone}: {source: StorySourceOut |
             <span className="fav">{initials(source.outlet)}</span>
             <span className="name">{source.outlet}</span>
             <span className="ink3">·</span>
-            <span className="num" title={fullTimestamp(source.published_at, timeZone)}>{readerTime(source.published_at, now, timeZone)}</span>
+            <span className="num" data-tip={fullTimestamp(source.published_at, timeZone)}>{readerTime(source.published_at, now, timeZone)}</span>
           </div>
           <h1 className="ar-title">{source.headline}</h1>
         </div>

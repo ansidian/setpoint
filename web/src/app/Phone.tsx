@@ -59,7 +59,7 @@ export function PhoneTabs({route}: {route: Route}) {
             if (was === tab.page) document.querySelector(tab.scroller)?.scrollTo({top: 0, behavior: 'smooth'});
           }}>
             <Icon name={on ? `${tab.icon}-fill` : tab.icon} size={22} />{tab.label}
-            {tab.page === 'inbox' && waiting > 0 && <span className="ph-badge num" title="Attention, not Done">{waiting}</span>}
+            {tab.page === 'inbox' && waiting > 0 && <span className="ph-badge num" data-tip="Attention, not Done">{waiting}</span>}
           </a>
         );
       })}

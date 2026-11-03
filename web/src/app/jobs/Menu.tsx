@@ -310,7 +310,7 @@ function Entries({entries, current, sub, looked, role, label, onPoint, onPick, o
     if (entry.kind === 'label') return <div key={`label-${index}`} className="jb-mlab" role="presentation">{entry.label}</div>;
     const classes = ['menu-i', entry.sub && 'tall', entry === current && 'cur', entry.danger && 'danger', sub === entry.id && 'open'].filter(Boolean).join(' ');
     const button = (
-      <button key={entry.id} type="button" role="menuitem" className={classes} tabIndex={-1} disabled={entry.disabled} title={entry.title} data-item={entry.id}
+      <button key={entry.id} type="button" role="menuitem" className={classes} tabIndex={-1} disabled={entry.disabled} data-tip={entry.title} data-item={entry.id}
         aria-haspopup={entry.submenu ? 'menu' : undefined} aria-expanded={entry.submenu ? sub === entry.id : undefined} aria-checked={entry.checked === undefined ? undefined : entry.checked}
         onPointerMove={event => !entry.disabled && onPoint(entry, event.currentTarget)} onClick={() => onPick(entry)}>
         {entry.mark ? <span className="mk"><i className={`sd ${entry.mark}`} /></span> : entry.icon && <Icon name={entry.icon} size={16} />}
@@ -326,7 +326,7 @@ function Entries({entries, current, sub, looked, role, label, onPoint, onPick, o
       return (
         <div key={entry.id} className="jb-mrow">
           {button}
-          <button type="button" role="menuitem" className={looked === entry.id ? 'ibtn sm on' : 'ibtn sm'} aria-label="Read its email" title="Read its email · →" tabIndex={-1}
+          <button type="button" role="menuitem" className={looked === entry.id ? 'ibtn sm on' : 'ibtn sm'} aria-label="Read its email" data-tip="Read its email · →" tabIndex={-1}
             onClick={() => onLook(entry)}><Icon name="mail" size={16} /></button>
         </div>
       );
@@ -335,7 +335,7 @@ function Entries({entries, current, sub, looked, role, label, onPoint, onPick, o
     return (
       <div key={entry.id} className="jb-mrow">
         {button}
-        <a className="ibtn sm" role="menuitem" href={entry.peek} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${entry.label}`} title="Look at this posting" tabIndex={-1}>
+        <a className="ibtn sm" role="menuitem" href={entry.peek} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${entry.label}`} data-tip="Look at this posting" tabIndex={-1}>
           <Icon name="open_in_new" size={16} />
         </a>
       </div>

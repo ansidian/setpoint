@@ -48,11 +48,11 @@ export function SelectionPane({rows, on, onOpen, onDrop}: {
             const line = allRowLine(row);
             return (
               <li key={row.id} data-id={row.id}>
-                <button className="sel-open" type="button" title={line.title ?? undefined} onClick={() => onOpen(row.id)}>
+                <button className="sel-open" type="button" data-tip={line.title ?? undefined} onClick={() => onOpen(row.id)}>
                   <span className="from">{line.from}</span>
                   <span className="subj">{line.subject}</span>
                 </button>
-                <button className="ibtn sel-drop" type="button" aria-label={`Unselect ${row.subject}`} title="Unselect" onClick={() => onDrop(row.id)}><Icon name="close" size={16} /></button>
+                <button className="ibtn sel-drop" type="button" aria-label={`Unselect ${row.subject}`} data-tip="Unselect" onClick={() => onDrop(row.id)}><Icon name="close" size={16} /></button>
               </li>
             );
           })}

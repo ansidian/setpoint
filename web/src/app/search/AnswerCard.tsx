@@ -100,10 +100,10 @@ export function AnswerCard({alfred, scoped, openId, accounts, now, timeZone, onO
                     <span className="line">
                       <span className="who">{source.organisation ?? source.from_name}</span>
                       <span className="grow ell">{source.subject}</span>
-                      {source.pinned && <span className="pin" title="Pinned"><Icon name="keep" size={16} /></span>}
+                      {source.pinned && <span className="pin" role="img" aria-label="Pinned" data-tip="Pinned"><Icon name="keep" size={16} /></span>}
                     </span>
-                    <span className="ac" title={accounts.get(source.account_id)?.label}><Account account={accounts.get(source.account_id)} /></span>
-                    <span className="age num" title={fullTimestamp(source.received_at, timeZone)}>{age(source.received_at, now, timeZone)}</span>
+                    <span className="ac" data-tip={accounts.get(source.account_id)?.label}><Account account={accounts.get(source.account_id)} /></span>
+                    <span className="age num" data-tip={fullTimestamp(source.received_at, timeZone)}>{age(source.received_at, now, timeZone)}</span>
                   </button>
                 ))}
                 <MoreSources more={shownSources(turn.sources, allSources.has(turn.turn_id)).more} onToggle={() => setAllSources(current => {

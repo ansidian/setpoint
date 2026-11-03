@@ -108,7 +108,7 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
     const badge = row.locator('.jb-badge');
     await badge.waitFor();
     assert.equal(await badge.textContent(), 'Applied Sep 16 · Rejected Oct 5');
-    assert.equal(await badge.getAttribute('title'), 'Open Jobs searched for Contoso Pharmaceuticals');
+    assert.equal(await badge.getAttribute('data-tip'), 'Open Jobs searched for Contoso Pharmaceuticals');
     assert.equal(await row.getAttribute('class'), 'row noise');
     // After the subject, before the account.
     const [subject, at, account] = await rested(() => Promise.all([row.locator('.subj'), badge, row.locator('.ac')].map(each => each.boundingBox())));

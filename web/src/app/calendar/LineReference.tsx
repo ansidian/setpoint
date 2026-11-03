@@ -45,7 +45,7 @@ export function LineReference() {
       onBlur={event => {
         if (open && !event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
       }}>
-      <button ref={button} type="button" className="lr-q" aria-label={NAME} title={NAME} aria-haspopup="dialog" aria-expanded={open}
+      <button ref={button} type="button" className="lr-q" aria-label={NAME} data-tip={NAME} aria-haspopup="dialog" aria-expanded={open}
         // The press keeps focus where it is, so the card's blur doesn't close it before the click does.
         onMouseDown={event => event.preventDefault()}
         onClick={() => (open ? close() : setOpen(true))}>?</button>

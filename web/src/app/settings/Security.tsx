@@ -211,7 +211,7 @@ function PairingPanel({code, onCancel, onAgain}: {code: PairingOut; onCancel: ()
       <Qr value={code.link} label="Pairing QR code" expired={countdown.expired} />
       <div className="lines grow">
         <span className="t">Scan with Setpoint on your iPhone</span>
-        <span className="pair-link"><code className="topic" title={code.link}>{code.link}</code><CodeCopy value={code.link} /></span>
+        <span className="pair-link"><code className="topic" data-tip={code.link}>{code.link}</code><CodeCopy value={code.link} /></span>
         {countdown.expired
           ? <span className="s">Expired · <button className="again" type="button" onClick={onAgain}>New code</button></span>
           : <span className={countdown.soon ? 's soon' : 's'}>Works once · {countdown.text}</span>}

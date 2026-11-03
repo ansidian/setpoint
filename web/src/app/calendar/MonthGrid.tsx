@@ -404,13 +404,13 @@ function DayCell({date, shown, today, selectedDay, selected, looks, items: own, 
       <div className="dhead">
         <span className={`dn${date === today ? ' today' : ''}${head.monthStart ? ' month' : ''}`}>{head.label}</span>
         {/* Under the pointer a day offers + to make an event on it (polish audit grids-06); a click on the day only selects it. */}
-        <button type="button" className="dadd" aria-label={`New event on ${dayTitle(date)}`} title="New event · C"
+        <button type="button" className="dadd" aria-label={`New event on ${dayTitle(date)}`} data-tip="New event · C"
           onPointerDown={event => event.stopPropagation()}
           onClick={event => {
             event.stopPropagation();
             onNew(date);
           }}><Icon name="add" size={14} /></button>
-        {wx && <span className={`wx ${wx.tone}`} title={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={16} /></span>}
+        {wx && <span className={`wx ${wx.tone}`} data-tip={wx.line}><span className="temps num"><span className="hi">{wx.high}</span> / {wx.low}</span><Icon name={wx.icon} size={16} /></span>}
       </div>
       {items.slice(0, fits).map(item => (item.key.startsWith('slot:')
         ? <div key={item.key} className="ev slot" aria-hidden="true" style={{'--c': liftedColour} as CSSProperties} />

@@ -1419,12 +1419,16 @@ test('D290: a click on a lit phrase, or ⌥⌫ inside it, makes it title words, 
     assert.equal(await may.count(), 1, 'May 12 still lit');
     // Over the lit phrase, the focused line says what a click does.
     await page.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
-    await until('the tooltip', () => line.getAttribute('title'), title => title === 'Click to keep as words');
+    await until('the tooltip', () => line.getAttribute('data-tip'), title => title === 'Click to keep as words');
+    // Gained under the mouse, the tip shows once it moves, and the click puts it away (DESIGN.md #299).
+    await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2);
+    await page.locator('.tip', {hasText: 'Click to keep as words'}).waitFor();
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
     await may.waitFor({state: 'detached'});
+    assert.equal(await page.locator('.tip').count(), 0);
     // The title has May in it, and the draft is back on the day it opened on.
     assert.deepEqual([await titleWords(page), await date.inputValue()], ['Lunch with May 12', 'Wed, Oct 7']);
-    assert.equal(await line.getAttribute('title'), null);
+    assert.equal(await line.getAttribute('data-tip'), null);
     // It stays words as the line goes on; a phrase typed after it lights.
     await line.press('End');
     await line.pressSequentially(' fri 1pm');

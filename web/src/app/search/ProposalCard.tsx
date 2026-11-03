@@ -100,7 +100,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   const defaultReminder = settings?.reminders.event_minutes_before ?? null;
   const shownReminder = reminder ? reminder.minutes : defaultReminder;
   const fromEmail = (...fields: ProposalField[]) => (fields.some(field => proposal.from_email.includes(field))
-    ? <span className="srcm" title="From the email"><Icon name="mail" size={14} /></span> : <span />);
+    ? <span className="srcm" role="img" aria-label="From the email" data-tip="From the email"><Icon name="mail" size={14} /></span> : <span />);
 
   // The item as the fields hold it now.
   const current = (): ProposalItemOut => ({
@@ -176,7 +176,7 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
                     <TimeField className="time num" label="End" value={when.end} choices={timeChoices(when.start)} read={text => parseEnd(text, when.start!, when.end)} onValue={end => setWhen({...when, end})} />
                   </>
                 )}
-                <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} title={kind === 'event' ? 'All day' : 'Remove time'}
+                <button type="button" className="ibtn sm" aria-label={kind === 'event' ? 'All day' : 'Remove time'} data-tip={kind === 'event' ? 'All day' : 'Remove time'}
                   onClick={() => setWhen({...when, start: null, end: null})}><Icon name="close" size={16} /></button>
               </>
             ) : when.date && (

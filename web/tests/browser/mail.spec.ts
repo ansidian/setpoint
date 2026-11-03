@@ -45,7 +45,7 @@ async function load(setpoint: Setpoint, path = '/inbox'): Promise<Page> {
 }
 
 /** An email's row in the list, by its text or its tooltip's (a subject a summary took the place of), not one folding away. */
-const rowOf = (page: Page, text: string) => page.locator('.list .row[data-key]', {hasText: text}).or(page.locator(`.list .row[data-key][title*="${text}"]`));
+const rowOf = (page: Page, text: string) => page.locator('.list .row[data-key]', {hasText: text}).or(page.locator(`.list .row[data-key][data-tip*="${text}"]`));
 
 /** Opens New's Noise line, folded until then (#48, #243). */
 const openNoise = (page: Page) => page.locator('.list .nfold.collapsed').first().click();
@@ -167,7 +167,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.keyboard.press('Escape');
     await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
     const ups = await idOf(setpoint, 'Out for delivery');
-    await point(page.locator('.row[title="Out for delivery"]'));
+    await point(page.locator('.row[data-tip="Out for delivery"]'));
     // The row leaves at once, before the server has the Trash (held here at its door).
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -182,11 +182,11 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.keyboard.press('e');
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
     assert.equal(await page.locator('.pane').count(), 0, 'Trash from the row opens nothing');
-    await until('Consolidated Messenger leaves', () => page.locator('.row[title="Out for delivery"]').count(), count => count === 0);
+    await until('Consolidated Messenger leaves', () => page.locator('.row[data-tip="Out for delivery"]').count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), true, `the server doesn't have it yet (Consolidated Messenger is ${ups}; sent ${JSON.stringify(sent)}, held ${JSON.stringify(heldAt)})`);
     release();
     await until('trashed at the provider', () => inAll(setpoint, ups), present => !present, 5000);
-    assert.equal(await page.locator('.row[title="Out for delivery"]').count(), 0, 'and it stays gone');
+    assert.equal(await page.locator('.row[data-tip="Out for delivery"]').count(), 0, 'and it stays gone');
     await page.clock.fastForward(UNDO_MS);
     await until('the toast goes after 6 seconds', () => page.locator('.toast').count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), false);
@@ -201,7 +201,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
   try {
     const page = await load(setpoint);
     const ups = await idOf(setpoint, 'Out for delivery');
-    await point(page.locator('.row[title="Out for delivery"]'));
+    await point(page.locator('.row[data-tip="Out for delivery"]'));
     let release = () => {};
     const held = new Promise<void>(resolve => {
       release = resolve;
@@ -218,7 +218,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
     await page.keyboard.press('e');
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     // Back as a row of the list: the one folding away keeps its title but has no key.
-    await page.locator('.row[data-key][title="Out for delivery"]').waitFor();
+    await page.locator('.row[data-key][data-tip="Out for delivery"]').waitFor();
     release();
     const row = async () => (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.flatMap(day => day.rows).find(one => one.id === ups);
     // Two trips through the dev provider (600 ms each), the Trash's and the Undo's, and the wait between.
@@ -241,13 +241,13 @@ test('Pin and Unpin: the reader\'s P, and Unpin on the shelf under the pointer',
     // after it (SV-25), Attention's too since the Inbox is one list (#243).
     const parkside = page.locator('.row.shelf', {hasText: 'Parkside Apartments'});
     assert.equal(await parkside.locator('.subj').textContent(), 'Renewal offer for the lease ending Nov 30 · sign by Oct 31');
-    assert.equal(await parkside.getAttribute('title'), 'Lease renewal terms');
+    assert.equal(await parkside.getAttribute('data-tip'), 'Lease renewal terms');
     const fabrikam = page.locator('.row', {hasText: 'Fabrikam'});
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
-    assert.equal(await fabrikam.getAttribute('title'), 'Application received');
+    assert.equal(await fabrikam.getAttribute('data-tip'), 'Application received');
     const northwind = rowOf(page, 'Pick a 30-minute slot');
-    assert.deepEqual([await northwind.locator('.subj').textContent(), await northwind.getAttribute('title')], ['Pick a 30-minute slot this week · via Greenhouse', 'Interview availability for Software Engineer I']);
-    assert.equal(await page.locator('.row', {hasText: 'New sign-in'}).getAttribute('title'), null, 'a security row keeps its fact');
+    assert.deepEqual([await northwind.locator('.subj').textContent(), await northwind.getAttribute('data-tip')], ['Pick a 30-minute slot this week · via Greenhouse', 'Interview availability for Software Engineer I']);
+    assert.equal(await page.locator('.row', {hasText: 'New sign-in'}).getAttribute('data-tip'), null, 'a security row keeps its fact');
     await northwind.click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('p');
@@ -984,11 +984,11 @@ test('the one list: New, Attention, the shelf, then the days with clock times; l
     // The summary takes the subject's place; the subject is the row's tooltip.
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
-    assert.equal(await fabrikam.getAttribute('title'), 'Application received');
+    assert.equal(await fabrikam.getAttribute('data-tip'), 'Application received');
     // Above the days, ages; in them, clock times. The pinned lease is on the shelf only.
     assert.equal(await fabrikam.locator('.age').textContent(), '7h');
-    assert.match((await page.locator('.list.all .row[title="Lab 5 posted"] .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
-    assert.deepEqual(await page.locator('.list.all .row[title="Lease renewal terms"]').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
+    assert.match((await page.locator('.list.all .row[data-tip="Lab 5 posted"] .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
+    assert.deepEqual(await page.locator('.list.all .row[data-tip="Lease renewal terms"]').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
       [[true, 'Sep 30']]);
     // New's Noise is one line; J and K stop on it after New's 13 rows, and Enter opens it in place.
     const coffee = page.locator('.list.all .row', {hasText: 'Contoso Coffee'});
@@ -1010,7 +1010,7 @@ test('the one list: New, Attention, the shelf, then the days with clock times; l
     assert.equal(await coffee.first().locator('.ac').isVisible(), true);
     // Trash takes the row out, and ⌘Z brings it back; the folds are by eye (D416).
     await page.keyboard.press('Escape');
-    const lease = page.locator('.list.all .row[title="Lease renewal terms"]');
+    const lease = page.locator('.list.all .row[data-tip="Lease renewal terms"]');
     await point(lease);
     await page.keyboard.press('e');
     await until('it goes', () => lease.count(), count => count === 0);
@@ -1155,7 +1155,7 @@ test('U takes the cursor from a day\'s row to New\'s first email; ⌘K\'s Go to 
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .gh.new').waitFor();
     // The cursor on a day's row.
-    const lab = page.locator('.list .row[title="Lab 5 posted"]');
+    const lab = page.locator('.list .row[data-tip="Lab 5 posted"]');
     await point(lab);
     await page.keyboard.press('u');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();

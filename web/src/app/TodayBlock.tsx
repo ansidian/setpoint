@@ -183,7 +183,7 @@ export function TodayBlock() {
         return (
           <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
             href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
-            <button className="check" type="button" aria-label={`Complete ${title}`} title="Complete"
+            <button className="check" type="button" aria-label={`Complete ${title}`} data-tip="Complete"
               onClick={event => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -191,7 +191,7 @@ export function TodayBlock() {
               }}>
               {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
             </button>
-            <span className="ell title" title={title}>{title}</span>
+            <span className="ell title" data-tip={title}>{title}</span>
             {label && <span className="in">{label}</span>}
           </a>
         );

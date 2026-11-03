@@ -663,7 +663,7 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
     const what = upcoming.locator('span:has(> .what)');
     assert.deepEqual(await rested(() => what.evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).textOverflow, element.scrollWidth > element.clientWidth])),
       ['nowrap', 'ellipsis', true], 'name · date is one line, cut short with an ellipsis');
-    assert.equal(await what.getAttribute('title'), 'Apple event · Tue Oct 20 · 10 AM');
+    assert.equal(await what.getAttribute('data-tip'), 'Apple event · Tue Oct 20 · 10 AM');
     assert.equal(await upcoming.locator('.lab').isVisible(), false, 'no UPCOMING label');
     assert.equal(await upcoming.locator('.nw-meta').isVisible(), false, 'no outlet');
     const inside = await rested(() => upcoming.evaluate(element => {

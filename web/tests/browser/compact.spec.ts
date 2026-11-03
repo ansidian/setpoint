@@ -37,7 +37,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.deepEqual([rail.x, rail.width], [0, layout.rail], `${width}: the rail`);
       const items = await rested(() => page.locator('.sb .nav').evaluateAll(links => links.map(link => {
         const box = link.getBoundingClientRect();
-        return [link.getAttribute('title'), box.width, box.height, (link.querySelector('.grow') as HTMLElement).offsetWidth];
+        return [link.getAttribute('data-tip'), box.width, box.height, (link.querySelector('.grow') as HTMLElement).offsetWidth];
       })));
       assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Jobs · 3 need you', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
@@ -47,12 +47,12 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.equal(await sideways(page), 0);
 
       // An email covers the list, under the header: Back leads its tools.
-      await page.locator('.list .row[title^="Interview availability"]').click();
+      await page.locator('.list .row[data-tip^="Interview availability"]').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
       assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
-      assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('title')], [true, 'Back · Esc']);
+      assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('data-tip')], [true, 'Back · Esc']);
       // J, K, Esc and Back have no width in them. J: the next email, New's code.
       if (width === 640) {
         await page.keyboard.press('j');
@@ -61,10 +61,10 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
         await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
         await page.keyboard.press('Escape');
         await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
-        await page.locator('.list .row[title^="Interview availability"]').click();
+        await page.locator('.list .row[data-tip^="Interview availability"]').click();
         await backButton.click();
         await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
-        assert.ok(await page.locator('.list .row[title^="Interview availability"]').isVisible());
+        assert.ok(await page.locator('.list .row[data-tip^="Interview availability"]').isVisible());
       }
 
       // News: its header whole, a story over the list with Back.
@@ -91,7 +91,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
     await wide.locator('.list .row').first().waitFor();
     assert.equal((await rested(() => wide.locator('aside.sb').boundingBox()))!.width, layout.sidebar);
     assert.ok(await wide.locator('.sb .acct').first().isVisible());
-    await wide.locator('.list .row[title^="Interview availability"]').click();
+    await wide.locator('.list .row[data-tip^="Interview availability"]').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane').boundingBox()))!];
     assert.equal(pane.x, list.x + list.width, 'beside the list');

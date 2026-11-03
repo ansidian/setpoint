@@ -45,6 +45,12 @@ test('the reader\'s sender and "to you" show their addresses in the tooltip, und
     await tip(page).waitFor();
     await page.mouse.down();
     await tip(page).waitFor({state: 'detached'});
+    // With the button held, as on a drag's way over the calendar's chips, none shows.
+    await name.hover();
+    // Nothing should show: a pause for it to have done so.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
+    assert.equal(await tip(page).count(), 0);
     await page.mouse.up();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

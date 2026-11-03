@@ -234,7 +234,7 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     await card(page).waitFor();
     const fact = card(page).locator('.fd-layer.in .fact.link');
     assert.equal(await fact.locator('.fd-place').textContent(), 'careers.example.edu');
-    assert.equal(await fact.locator('.fd-place').getAttribute('title'), 'https://www.careers.example.edu/fair/fall-2026');
+    assert.equal(await fact.locator('.fd-place').getAttribute('data-tip'), 'https://www.careers.example.edu/fair/fall-2026');
     assert.equal(await fact.locator('.icon path').first().getAttribute('d'), ICONS.videocam);
     assert.equal(await page.locator('.ag-item', {hasText: 'Career fair'}).locator('.place .icon path').getAttribute('d'), ICONS.videocam);
     const open = fact.getByRole('link', {name: 'Open'});

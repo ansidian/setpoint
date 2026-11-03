@@ -63,11 +63,11 @@ for (const size of sizes) {
         // opening it again. Nothing reads on a scroll, so the check makes none (D416).
         await point(row(page, 'noise:new'));
         await page.keyboard.press('Enter');
-        await page.locator('.row[title^="Fall sale"]').waitFor();
+        await page.locator('.row[data-tip^="Fall sale"]').waitFor();
         await page.locator('.list .nfold').first().click();
-        await until('Noise folded', () => page.locator('.row[title^="Fall sale"]').count(), count => count === 0);
+        await until('Noise folded', () => page.locator('.row[data-tip^="Fall sale"]').count(), count => count === 0);
         await page.locator('.list .nfold').first().click();
-        await page.locator('.row[title^="Fall sale"]').waitFor();
+        await page.locator('.row[data-tip^="Fall sale"]').waitFor();
         // Nothing happens to wait for: opening Noise opens and reads nothing.
         await page.waitForTimeout(300);
         await setpoint.idle();

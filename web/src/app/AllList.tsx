@@ -213,7 +213,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
           onUnpin(row.id);
         };
         return (
-          <div key={key} ref={ref} className={classes} title={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
+          <div key={key} ref={ref} className={classes} data-tip={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
@@ -230,7 +230,7 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
             {afterSubject(row)}
             {row.done && <span className="tag"><Icon name="check" size={14} />Done</span>}
             <span className="ac"><span className="dot sm" style={dotStyle(account?.colour)} /><span className="label">{account?.label}</span></span>
-            <span className="age" title={fullTimestamp(row.received_at, timeZone)}>{item.aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>
+            <span className="age" data-tip={fullTimestamp(row.received_at, timeZone)}>{item.aged ? age(row.received_at, now, timeZone) : clockTime(row.received_at, timeZone)}</span>
             {/* On the Pinned shelf, Unpin takes the age's place under the pointer (board 10). */}
             {item.shelf && <span className="hact"><button className="unpin" type="button" onClick={unpin}><Icon name="keep_off" size={15} />Unpin</button></span>}
           </div>

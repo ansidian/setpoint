@@ -100,8 +100,8 @@ function Open({page}: {page: SettingsPage}) {
             <button key={name} type="button" className={name === page ? 'nav on' : 'nav'} aria-current={name === page ? 'page' : undefined} onClick={() => openSettings(name)}>
               <Icon name={SETTINGS_NAV[name].icon} />
               <span className="grow">{SETTINGS_NAV[name].label}</span>
-              {name === 'accounts' && reconnect && <span className="warn" title="An account needs sign-in"><Icon name="sync_problem" size={16} /></span>}
-              {name === 'news' && failing && <span className="warn" title="A feed is failing"><Icon name="warning" size={16} /></span>}
+              {name === 'accounts' && reconnect && <span className="warn" role="img" aria-label="An account needs sign-in" data-tip="An account needs sign-in"><Icon name="sync_problem" size={16} /></span>}
+              {name === 'news' && failing && <span className="warn" role="img" aria-label="A feed is failing" data-tip="A feed is failing"><Icon name="warning" size={16} /></span>}
             </button>
           ))}
           <button type="button" className="nav foot" onClick={() => {

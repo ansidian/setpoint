@@ -89,11 +89,11 @@ function ProjectRow({project}: {project: TodoistProjectOut}) {
   const label = `${project.name} colour`;
   return (
     <div className={command?.state === 'pending' ? 'set-row one cal-row pending' : 'set-row one cal-row'} data-project={project.id}>
-      <Menu label={label} align="left" button={<button className="sw" type="button" style={swatch(project.colour)} aria-label={label} title={project.colour ? colourName(project.colour) : undefined} disabled={!!command} />}>
+      <Menu label={label} align="left" button={<button className="sw" type="button" style={swatch(project.colour)} aria-label={label} data-tip={project.colour ? colourName(project.colour) : undefined} disabled={!!command} />}>
         {close => (
           <div className="swatches todoist">
             {TODOIST_COLOUR_NAMES.map(colour => (
-              <button key={colour} type="button" className={colour === project.colour ? 'sw on' : 'sw'} style={swatch(colour)} aria-label={colourName(colour)} title={colourName(colour)} data-colour={colour} onClick={() => {
+              <button key={colour} type="button" className={colour === project.colour ? 'sw on' : 'sw'} style={swatch(colour)} aria-label={colourName(colour)} data-tip={colourName(colour)} data-colour={colour} onClick={() => {
                 close();
                 if (colour !== project.colour) void pick.attempt(() => setProjectColour(project.id, colour));
               }} />

@@ -57,7 +57,7 @@ export function CandidatePicker({candidates, active, picked, onPick, onNone}: {
           {content}
         </button>
         {peek && (
-          <a className="ibtn sm" href={peek.link} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${peek.title}`} title="Look at this posting">
+          <a className="ibtn sm" href={peek.link} target="_blank" rel="noopener noreferrer" aria-label={`Look at ${peek.title}`} data-tip="Look at this posting">
             <Icon name="open_in_new" size={16} />
           </a>
         )}

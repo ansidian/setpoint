@@ -44,7 +44,7 @@ function DownLine({text, phase, onMoveOn}: {text: string; phase: LinePhase; onMo
   return (
     <div ref={ref} className="jb-state failing" role="alert">
       <Icon name="warning" size={16} />
-      <span className="grow num ell" title={text}>{text.endsWith('Settings › AI') ? <SettingsLink text={text} /> : text}</span>
+      <span className="grow num ell" data-tip={text}>{text.endsWith('Settings › AI') ? <SettingsLink text={text} /> : text}</span>
     </div>
   );
 }
@@ -64,7 +64,7 @@ function HistoryLine({history, done, phase, onMoveOn}: {history: Pick<JobsHistor
   return (
     <div ref={ref} className="jb-state muted progress" role="status" style={{'--done': `${historyShare(history) * 100}%`} as CSSProperties}>
       <span className="spin"><Icon name="progress_activity" size={16} /></span>
-      <span className="grow num ell" title={text}>{text}</span>
+      <span className="grow num ell" data-tip={text}>{text}</span>
     </div>
   );
 }

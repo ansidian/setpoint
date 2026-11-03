@@ -13,6 +13,7 @@ import {Icon} from '../../ui/Icon.tsx';
 import {Count} from '../Count.tsx';
 import type {Command} from '../palette/commands.ts';
 import {foldRef} from '../fold.ts';
+import {useCompact} from '../Phone.tsx';
 import {navigate} from '../router.ts';
 import {cachedNav, NAV_PATH} from './api.ts';
 
@@ -60,15 +61,17 @@ export function JobsNavItem({current}: {current: boolean}) {
   // Turned on while Setpoint is open: the item folds in, rather than being there at once.
   const [was, setWas] = useState({on, arrives: false});
   if (was.on !== on) setWas({on, arrives: on});
+  const rail = useCompact();
   if (!nav?.enabled) return null;
   const count = nav.needs_you;
+  const tip = count > 0 ? `Jobs · ${count} need${count === 1 ? 's' : ''} you` : 'Jobs';
   const onClick = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
     event.preventDefault();
     navigate(JOBS);
   };
   return (
-    <a ref={was.arrives ? foldRef('in') : undefined} className={current ? 'nav jobs on' : 'nav jobs'} href={routePath(JOBS)} title={count > 0 ? `Jobs · ${count} need${count === 1 ? 's' : ''} you` : 'Jobs'} onClick={onClick}>
+    <a ref={was.arrives ? foldRef('in') : undefined} className={current ? 'nav jobs on' : 'nav jobs'} href={routePath(JOBS)} aria-label={rail ? tip : undefined} data-tip={tip} onClick={onClick}>
       <Icon name="work" />
       <span className="grow">Jobs</span>
       {count > 0 && <span className="cnt num"><Count value={count} /></span>}

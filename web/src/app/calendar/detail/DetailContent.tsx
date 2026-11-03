@@ -51,7 +51,7 @@ function Fact({icon, className, style, children}: {icon: IconName; className?: s
 /** Open (SV-77): the place's link in a new tab, as `O` does on Calendar. */
 function OpenLink({url}: {url: string}) {
   return (
-    <a className="btn ghost sm fd-open" href={url} target="_blank" rel="noopener noreferrer" data-hint="o" title={`Open ${url} · O`}>
+    <a className="btn ghost sm fd-open" href={url} target="_blank" rel="noopener noreferrer" data-hint="o" data-tip={`Open ${url} · O`}>
       <Icon name="open_in_new" size={16} />Open
     </a>
   );
@@ -87,15 +87,15 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           {item.kind === 'event' ? <span className="dot" style={{...colour, width: 10, height: 10}} />
             : item.done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)} />}
         </span>
-        <span className={`grow ell fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} title={item.title}>{item.title}</span>
+        <span className={`grow ell fd-title${item.kind === 'task' && item.done ? ' done' : ''}`} data-tip={item.title}>{item.title}</span>
         {pending && <span className="spin" aria-label="Saving"><Icon name="progress_activity" size={16} /></span>}
-        <button className="ibtn sm" aria-label="Close" title="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
+        <button className="ibtn sm" aria-label="Close" data-tip="Close · Esc" onClick={onClose}><Icon name="close" size={16} /></button>
       </div>
       <div className="card-b">
         <div className="ink2 num fd-when">{detailWhen(item, timeZone)}</div>
         {link?.only ? (
           <Fact icon="videocam" className="link">
-            <span className="grow"><span className="v fd-place" title={link.url}>{link.host}</span></span>
+            <span className="grow"><span className="v fd-place" data-tip={link.url}>{link.host}</span></span>
             <OpenLink url={link.url} />
           </Fact>
         ) : place && (
@@ -121,27 +121,27 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
       </div>
       <div className="card-acts">
-        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} title={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}
+        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} data-tip={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}
           onClick={item.read_only ? undefined : onEdit}>
           <Icon name="edit" size={16} />Edit<span className="kbd">E</span>
         </button>
         <span className="grow" />
         {item.kind === 'task' && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || !!item.command || (item.done && item.recurring) || undefined}
-            title={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
+            data-tip={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
             onClick={act(task => !task.command && !(task.done && task.recurring) && actions!.complete(task))}>
             <Icon name={item.done ? 'undo' : 'task_alt'} size={16} />
           </button>
         )}
-        {actions?.open && <button className="ibtn sm" aria-label="Open in Calendar" title="Open in Calendar" onClick={() => actions.open!(item)}><Icon name="calendar_month" size={16} /></button>}
-        {offers('clone') && <button className="ibtn sm" aria-label="Clone" aria-disabled={fixed || undefined} title="Clone" onClick={act(one => actions!.clone!(one))}><Icon name="control_point_duplicate" size={16} /></button>}
-        {offers('copy') && <button className="ibtn sm" aria-label="Copy" aria-disabled={fixed || undefined} title="Copy · ⌘C" onClick={act(one => actions!.copy!(one))}><Icon name="content_copy" size={16} /></button>}
+        {actions?.open && <button className="ibtn sm" aria-label="Open in Calendar" data-tip="Open in Calendar" onClick={() => actions.open!(item)}><Icon name="calendar_month" size={16} /></button>}
+        {offers('clone') && <button className="ibtn sm" aria-label="Clone" aria-disabled={fixed || undefined} data-tip="Clone" onClick={act(one => actions!.clone!(one))}><Icon name="control_point_duplicate" size={16} /></button>}
+        {offers('copy') && <button className="ibtn sm" aria-label="Copy" aria-disabled={fixed || undefined} data-tip="Copy · ⌘C" onClick={act(one => actions!.copy!(one))}><Icon name="content_copy" size={16} /></button>}
         {offers('colour') && item.kind === 'event' && (
-          <button className="ibtn sm" aria-label="Colour" aria-expanded={picking} aria-disabled={fixed || undefined} title="Colour" onClick={() => !fixed && setPicking(!picking)}>
+          <button className="ibtn sm" aria-label="Colour" aria-expanded={picking} aria-disabled={fixed || undefined} data-tip="Colour" onClick={() => !fixed && setPicking(!picking)}>
             <span className="dot" style={{...colour, width: 12, height: 12}} />
           </button>
         )}
-        {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} title="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
+        {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} data-tip="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
       </div>
       {picking && (
         <ColourPanel item={item} calendar={calendar} onPick={swatch => {
@@ -162,7 +162,7 @@ export function ColourPanel({item, calendar, onPick}: {item: ItemOut | null; cal
   const own = item ? `${calendar?.name ?? 'Calendar'}'s colour` : 'Each one\'s calendar\'s colour';
   return (
     <div className="fd-swatches" role="radiogroup" aria-label="Colour">
-      <button role="radio" aria-checked={item?.colour === null} aria-label={own} title={own}
+      <button role="radio" aria-checked={item?.colour === null} aria-label={own} data-tip={own}
         className={`swatch calendar${item?.colour === null ? ' on' : ''}`} style={{'--c': colourVar(item ? calendar?.colour ?? 'cool' : 'ink3')} as CSSProperties}
         onClick={() => onPick(null)} />
       {EVENT_COLOURS.map(swatch => (
