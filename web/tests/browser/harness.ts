@@ -538,10 +538,11 @@ export async function point(row: Locator): Promise<void> {
 /**
  * Resolves once nothing on the page is moving: every entrance, exit, fold and fade (a finite
  * animation or transition under 2 s; the toast's Undo clock and spinners aside) has run its course,
- * and the page has drawn twice since, so what a check measures or screenshots is where it rests
- * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own).
+ * and the page has drawn twice since, so what `rested` reads or a golden screenshots is where it rests
+ * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own). Not for a check to
+ * call: a check doesn't wait out a motion it started (D416).
  */
-export async function still(page: Page): Promise<void> {
+async function still(page: Page): Promise<void> {
   await until('nothing moving', () => page.evaluate(() => document.getAnimations()
     .filter(animation => animation.playState === 'running' && (animation.effect?.getComputedTiming().endTime as number) < 2000)
     .map(animation => (animation as CSSAnimation).animationName ?? animation.constructor.name)), moving => moving.length === 0);
@@ -549,24 +550,6 @@ export async function still(page: Page): Promise<void> {
   // fires only as the check runs the clock, so its frames are the check's to wait for.
   if (await page.evaluate(() => '__pwClock' in window)) return;
   await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
-}
-
-/**
- * Records each value `attribute` takes on `target` from now on, for a state too short-lived to read
- * after the action that starts it (a card's 120 ms close): a busy machine can take longer than that
- * between the action and the read. Resolves to a reader of what it has seen.
- */
-export async function watch(target: Locator, attribute: string): Promise<() => Promise<(string | null)[]>> {
-  const index = await target.evaluate((element, name) => {
-    const seen: (string | null)[] = [];
-    // Each record holds the value before its change; the next one's, or the current, is after it.
-    new MutationObserver(records => records.forEach((_, at) => seen.push(at + 1 < records.length ? records[at + 1]!.oldValue : element.getAttribute(name))))
-      .observe(element, {attributes: true, attributeFilter: [name], attributeOldValue: true});
-    const scope = window as unknown as {watched?: (string | null)[][]};
-    scope.watched ??= [];
-    return scope.watched.push(seen) - 1;
-  }, attribute);
-  return () => target.page().evaluate(at => (window as unknown as {watched: (string | null)[][]}).watched[at]!, index);
 }
 
 /**

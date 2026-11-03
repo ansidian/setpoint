@@ -136,7 +136,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   and Andy looks at each changed image beside its diff before it's committed; a session never
   re-captures one just to make a run pass. The board audit (`npm run audit:boards`) sets them
   beside their boards at release.
-- A browser check waits for what it reads (`until`, a waiting locator, `point`, `watch` in
+- A browser check waits for what it reads (`until`, a waiting locator, `point` in
   harness.ts; `goto` already waits for the page's first data and fonts). A fixed pause is only for
   a "nothing happened" check or a hover settling before a screenshot, and says so on the line
   before it (the lint asks, D82). So does a bound under the 5 s default: "at once" is proven by
@@ -149,11 +149,13 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   reads is a reader, and so is one that calls a reader; each use of one rests, polls (`until`), or
   says why on the line before it, a read meant to catch motion (the lint asks, SV-75).
 - A check doesn't depend on animation or scrolling (Andy, 2026-11-02): it doesn't wait out an
-  animation (`still`) or read one on its way, and doesn't scroll to put something in or out of
-  sight, since those kept making checks that race. A choice made from what's in sight or from
-  timing goes to a pure rule and its table (`inSight` for inbox-09), and the check keeps the outcome
-  on a page as it loads. A check that races is fixed by taking the dependence out, never by adding
-  a wait; an older check that still has one is brought into line when it's next touched.
+  animation or read one on its way, and doesn't scroll to put something in or out of sight, since
+  those kept making checks that race. A choice made from what's in sight or from timing goes to a
+  pure rule and its table (`inSight` for inbox-09, `phoneSlide`, `nextAsk`), and the check keeps
+  the outcome on a page as it loads, or opens the state by its address. A check that races is fixed
+  by taking the dependence out, never by adding a wait. SV-162 brought every spec into line (D417:
+  a measure that would need a motion waited out is dropped, not reshaped), and harness.ts no longer
+  exports `still` or `watch`: only `rested` and the goldens wait for a page at rest.
 - Every bug fix starts with a failing test. There is no known-failing list.
 - A fix whose browser check went red on its own, not because the design changed, says so in its
   commit message ("the X check caught it"): git has no other record of a check catching something,
