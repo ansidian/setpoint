@@ -114,20 +114,29 @@ describe('wire copy counts as one outlet (D86)', () => {
   });
 });
 
-const story = (id: number, text: string, extra: {incidents?: string[]; wireKeys?: string[]} = {}) =>
-  ({id, words: significantWords(text), incidents: new Set(extra.incidents ?? []), wireKeys: new Set(extra.wireKeys ?? [])});
+// A TV station's video page opens with its latest videos, whatever the video is about (SV-164).
+const FURNITURE = 'Latest videos: Crews clear debris after the storm in Fabrikam Falls; Contoso council votes on a parking plan; '
+  + 'Northwind Harbor marks fifty years of its fishing fleet; Weekend forecast brings sun and mild temperatures to the valley.';
+
+const story = (id: number, text: string, extra: {incidents?: string[]; wire?: [string, string][]} = {}) => ({
+  id, words: significantWords(text), incidents: new Set(extra.incidents ?? []),
+  wireKeys: new Map((extra.wire ?? []).map(([text, outlet]) => [wireKey(text)!, new Set([outlet])])),
+});
 
 describe('grouping: cheap candidates first', () => {
   const stories = [
     story(1, 'Brush fire near the 210 burns 150 acres. A brush fire broke out near the 210 freeway in the foothills', {incidents: ['https://fire.example/incidents/foothill-fire']}),
-    story(2, 'Four killed in a warehouse shooting in Ohio', {wireKeys: [wireKey(AP)!]}),
+    story(2, 'Four killed in a warehouse shooting in Ohio', {wire: [[AP, 'ABC News']]}),
     story(3, 'Pixel Watch 5 goes on sale with two-day battery life'),
+    story(4, 'Storm surf floods homes in Fabrikam Falls', {wire: [[FURNITURE, 'Contoso 7']]}),
   ];
 
-  test.each<[string, {words: Set<string>; incident: string | null; wireKey: string | null}, {storyId: number; by: 'incident' | 'wire'} | null]>([
-    ['a hazard\'s next revision joins its incident\'s story', {words: significantWords('Foothill Fire: 400 acres'), incident: 'https://fire.example/incidents/foothill-fire', wireKey: null}, {storyId: 1, by: 'incident'}],
-    ['the same wire text joins its story', {words: significantWords('Ohio warehouse shooting'), incident: null, wireKey: wireKey(AP)}, {storyId: 2, by: 'wire'}],
-    ['anything else needs the model', {words: significantWords('Crews battle a brush fire near the 210'), incident: null, wireKey: null}, null],
+  test.each<[string, {words: Set<string>; incident: string | null; wireKey: string | null; outlet: string}, {storyId: number; by: 'incident' | 'wire'} | null]>([
+    ['a hazard\'s next revision joins its incident\'s story', {words: significantWords('Foothill Fire: 400 acres'), incident: 'https://fire.example/incidents/foothill-fire', wireKey: null, outlet: 'Cal Fire'}, {storyId: 1, by: 'incident'}],
+    ['the same wire text from another outlet joins its story', {words: significantWords('Ohio warehouse shooting'), incident: null, wireKey: wireKey(AP), outlet: 'PBS News'}, {storyId: 2, by: 'wire'}],
+    // The opening is the station's page around the video, not the event's text.
+    ['the same opening from the same outlet is its page, not wire copy', {words: significantWords('Contoso man denies voter fraud charges'), incident: null, wireKey: wireKey(FURNITURE), outlet: 'Contoso 7'}, null],
+    ['anything else needs the model', {words: significantWords('Crews battle a brush fire near the 210'), incident: null, wireKey: null, outlet: 'KTLA'}, null],
   ])('%s', (_, article, match) => {
     expect(ruleMatch(article, stories)).toEqual(match);
   });
@@ -138,7 +147,7 @@ describe('grouping: cheap candidates first', () => {
     ['one shared word isn\'t a candidate', 'Apple sends invites for a watch event', []],
     ['the closest first', 'Ohio warehouse shooting: suspect in custody, four killed', [2]],
   ])('%s', (_, headline, ids) => {
-    expect(candidates({words: significantWords(headline), incident: null, wireKey: null}, stories).map(candidate => candidate.id)).toEqual(ids);
+    expect(candidates({words: significantWords(headline)}, stories).map(candidate => candidate.id)).toEqual(ids);
   });
 
   // The polish audit's extra-09, invented: one flood, two stations, facts worded apart.
@@ -147,7 +156,7 @@ describe('grouping: cheap candidates first', () => {
   const flood = (headline: string, at: string) => ({
     id: 9, words: significantWords(headline, 'Heavy rain sent the creek over its banks late Tuesday, flooding low-lying blocks near downtown',
       'Public works put up barricades at each closed crossing and urged drivers to find detours'),
-    incidents: new Set<string>(), wireKeys: new Set<string>(), events: [eventMark(headline, at)],
+    incidents: new Set<string>(), wireKeys: new Map<string, Set<string>>(), events: [eventMark(headline, at)],
   });
   const wanted = (headline: string, at: string) => ({
     words: significantWords(headline, 'Water from the swollen stream covered several neighborhood intersections after midnight',
@@ -170,7 +179,7 @@ describe('grouping: cheap candidates first', () => {
   });
 
   test('a story marking the same event comes before closer wording, so the cap never drops it', () => {
-    const close = (id: number) => ({id, words: wanted(FLOOD_ARTICLE, ago(0)).words, incidents: new Set<string>(), wireKeys: new Set<string>()});
+    const close = (id: number) => ({id, words: wanted(FLOOD_ARTICLE, ago(0)).words, incidents: new Set<string>(), wireKeys: new Map<string, Set<string>>()});
     expect(candidates(wanted(FLOOD_ARTICLE, ago(0)), [close(1), close(2), close(3), flood(FLOOD_STORY, ago(4))]).map(candidate => candidate.id)).toEqual([9, 3, 2]);
   });
 

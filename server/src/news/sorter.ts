@@ -5,7 +5,7 @@
 //    (sections, kind and subject, key facts, importance, place, a keynote), and the policy settles
 //    noise (src/domain/newsSorting.ts). Noise is done with; the rest is grouped.
 // 2. Grouping, one article at a time in the order published: the same hazard incident (each revision
-//    a new fact) or the same wire text (a repeat) joins its story by rule; otherwise cheap candidate
+//    a new fact) or another outlet's same wire text (a repeat) joins its story by rule; otherwise cheap candidate
 //    matching finds the likely stories (enough words in common, or a headline a day apart with the
 //    same count and place) and Haiku confirms whether it's the same event and what facts it brings.
 //    No match starts a story.
@@ -136,11 +136,13 @@ function liveStories(store: Store, sources: Map<number, SourceRow>): LiveStory[]
 }
 
 function matchable(live: LiveStory, sources: Map<number, SourceRow>): MatchableStory {
+  const wireKeys = new Map<string, Set<string>>();
+  for (const article of live.articles) if (article.wireKey) wireKeys.set(article.wireKey, (wireKeys.get(article.wireKey) ?? new Set()).add(article.outlet));
   return {
     id: live.story.id,
     words: significantWords(live.story.headline, ...live.facts.map(fact => fact.text), ...live.articles.map(article => article.headline)),
     incidents: new Set(live.articles.flatMap(article => incidentKey(article.canonicalUrl, sourceRule(sources.get(article.sourceId)!).hazard) ?? [])),
-    wireKeys: new Set(live.articles.flatMap(article => article.wireKey ?? [])),
+    wireKeys,
     events: [eventMark(live.story.headline, live.story.lastNewFactAt), ...live.articles.map(article => eventMark(article.headline, article.publishedAt))],
   };
 }
@@ -204,7 +206,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
   const stories = live.map(story => matchable(story, sources));
   const wanted = {
     words: significantWords(article.headline, ...notes.facts), incident: incidentKey(article.canonicalUrl, hazard), wireKey: article.wireKey,
-    event: eventMark(article.headline, article.publishedAt),
+    outlet: article.outlet, event: eventMark(article.headline, article.publishedAt),
   };
 
   const ruled = ruleMatch(wanted, stories);

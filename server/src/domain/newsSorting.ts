@@ -252,7 +252,8 @@ export interface MatchableStory {
   id: number;
   words: Set<string>;
   incidents: ReadonlySet<string>;
-  wireKeys: ReadonlySet<string>;
+  // Its articles' wire keys, each with the outlets that ran that text.
+  wireKeys: ReadonlyMap<string, ReadonlySet<string>>;
   // Its headline's and each of its articles' headlines' marks.
   events?: readonly EventMark[];
 }
@@ -261,12 +262,15 @@ export interface MatchableArticle {
   words: Set<string>;
   incident: string | null;
   wireKey: string | null;
+  outlet: string;
   event?: EventMark;
 }
 
 /**
  * A story the article certainly belongs to without asking a model: the same hazard incident (each
- * revision a new fact), or the same wire text (a repeat).
+ * revision a new fact), or the same wire text from another outlet (a repeat). An outlet's own opening
+ * seen twice is its page around the article (a TV station's latest videos), not wire copy, so it goes
+ * to the candidates like any other.
  */
 export function ruleMatch(article: MatchableArticle, stories: readonly MatchableStory[]): {storyId: number; by: 'incident' | 'wire'} | null {
   if (article.incident) {
@@ -274,7 +278,7 @@ export function ruleMatch(article: MatchableArticle, stories: readonly Matchable
     if (story) return {storyId: story.id, by: 'incident'};
   }
   if (article.wireKey) {
-    const story = stories.find(candidate => candidate.wireKeys.has(article.wireKey!));
+    const story = stories.find(candidate => [...candidate.wireKeys.get(article.wireKey!) ?? []].some(outlet => outlet !== article.outlet));
     if (story) return {storyId: story.id, by: 'wire'};
   }
   return null;
@@ -291,7 +295,7 @@ export const CANDIDATES_MAX = 3;
  * outlets' facts can be worded too far apart to share enough words. Only these go to the model,
  * which confirms whether one is the same event.
  */
-export function candidates(article: MatchableArticle, stories: readonly MatchableStory[], max = CANDIDATES_MAX): {id: number; overlap: number}[] {
+export function candidates(article: Pick<MatchableArticle, 'words' | 'event'>, stories: readonly MatchableStory[], max = CANDIDATES_MAX): {id: number; overlap: number}[] {
   return stories.flatMap(story => {
     const shared = [...article.words].filter(word => story.words.has(word)).length;
     const smaller = Math.min(article.words.size, story.words.size);
