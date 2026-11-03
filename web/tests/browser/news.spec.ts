@@ -139,7 +139,7 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
       [['history', '14', ink3], ['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
     assert.equal(await rested(() => page.locator('.nw-sec').nth(1).evaluate(header => getComputedStyle(header).color)), await rested(() => colourOf(page, 'var(--ink2)')));
     assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '7 more in Tech', '4 more in AI', '9 more in General']);
-    assert.equal(await page.locator('.nw-recap [data-story]').count(), 11);
+    assert.equal(await page.locator('.nw-recap [data-story]').count(), 8);
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
     // The meta: the lead's on one line, a row's on two.
     assert.equal(await row(page, 'Brush fire near the 210').locator('.nw-meta').textContent(), 'KTLA +4·1h·Updated 8:40 AM');
@@ -383,7 +383,7 @@ test('a section (27): "12 more in Local" opens Local\'s full list, biggest first
   }
 });
 
-test('While you were away (#298): All opens with the recap, each section\'s biggest three without dots, naming their sections; opened, one dims; nothing slides in, and the pill counts none of it', async () => {
+test('While you were away (#298): All opens with the recap, each section\'s biggest two without dots, naming their sections; opened, one dims; nothing slides in, and the pill counts none of it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -396,7 +396,7 @@ test('While you were away (#298): All opens with the recap, each section\'s bigg
     const headlines = () => recap.locator('[data-story] .hl').evaluateAll(all => all.map(element => element.textContent!.split(' ').slice(0, 2).join(' ')));
     const before = await headlines();
     assert.deepEqual(before, [
-      'Overnight closures', 'Teen hurt', 'Power outage', 'iOS 26.1', 'Samsung sets', 'Google DeepMind', 'OpenAI opens', 'Mistral releases', 'Tornado outbreak', 'Amtrak derailment', 'Measles cases',
+      'Overnight closures', 'Teen hurt', 'iOS 26.1', 'Samsung sets', 'Google DeepMind', 'OpenAI opens', 'Tornado outbreak', 'Amtrak derailment',
     ]);
     assert.deepEqual(fixed.recap, (await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id), 'the page tells the server what it shows');
     const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
@@ -455,7 +455,7 @@ test('Done folds the recap away and says "Recap put away · Undo", its stories s
     assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen (D426)');
 
     await toast.getByRole('button', {name: 'Undo'}).click();
-    await until('the recap back', () => recap.locator('[data-story]').count(), count => count === 11);
+    await until('the recap back', () => recap.locator('[data-story]').count(), count => count === 8);
     assert.deepEqual((await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id), ids);
 
     await recap.getByRole('button', {name: 'Done'}).click();

@@ -6,7 +6,7 @@
 // - All: Local, Tech, AI and General with the brief's stories, then enough more for "12 more in
 //   Local", "7 more in Tech", "4 more in AI" and "9 more in General" (one AI story is also General's).
 // - While you were away: 14 stories that left the page unseen on Tuesday (Local 3, Tech 2, AI 4,
-//   General 5), of which the recap shows each section's biggest 3: their last facts came on Sunday, 48
+//   General 5), of which the recap shows each section's biggest 2: their last facts came on Sunday, 48
 //   hours before. They're archived as the expiry leaves them: no facts, no text, only their own
 //   image's thumbnail. No recap has been put away yet, so it's the first: what Missed held.
 // - Upcoming: the Apple event, Tue Oct 20 at 10 AM, from the invites story.

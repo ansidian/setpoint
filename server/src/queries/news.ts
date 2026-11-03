@@ -142,7 +142,7 @@ function lastLookBefore(store: Store, at: string): string | null {
 
 /**
  * While you were away (#298): the stories it was fixed with once on screen, else those that can be in
- * it, biggest first, each named by its main section (D102); then up to three per section, in the
+ * it, biggest first, each named by its main section (D102); then up to two per section, in the
  * blocks' order. Null when it holds nothing.
  */
 export function newsRecap(store: Store): RecapOut | null {

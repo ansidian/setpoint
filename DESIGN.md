@@ -802,8 +802,8 @@ than kept as a list to clear. No board draws it.
   right "since Fri 6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one) and
   a ghost small **Done**.
 - **Rows:** each section's biggest stories that left the page unseen since the last recap was put
-  away, up to 3 per section (12 at most), grouped in the blocks' order (Local, Tech, AI, General)
-  and biggest first within each. Story rows only, no lead. Each row names its section in the meta.
+  away, up to 2 per section (8 at most, D429), grouped in the blocks' order (Local, Tech, AI,
+  General) and biggest first within each. Story rows only, no lead. Each row names its section in the meta.
 - **No dots:** everything in it is unseen. An opened story's headline turns `ink2` 400, as a seen
   row's does, so the user can tell what they've read.
 - **Fixed on arrival:** the recap is chosen when All opens and holds for the visit. Nothing slides
@@ -3654,13 +3654,14 @@ it changes what's on screen.
     Settled while building: the wording. Board audit: 30b and 39b still draw the old line
     (override 41).
 298. **Catch-up is a recap offered once, not a list to clear** (Andy, 2026-11-02; darma SV-163,
-    D418, D419, D422 to D424, D426; superseding D92's strip, #115 and #117). Missed kept a story
+    D418, D419, D422 to D424, D426, D429; superseding D92's strip, #115 and #117). Missed kept a story
     until it was seen, which made it an unread count with homework: seeing one let the next of its
     day slide in under its five-per-section limit, and the pill counted those as new. All now opens
-    with [While you were away](#while-you-were-away): up to 3 per section, compact rows, put away
+    with [While you were away](#while-you-were-away): up to 2 per section, compact rows, put away
     after an hour away once it has shown, or by Done. The Missed strip, Catch up and the Missed view
     go, and with no leads a story that leaves unseen keeps only its thumbnail. Desktop first: the
     iPhone app keeps its strip and Catch up, fed the recap's stories, until setpoint-ios has its own
     recap. What was in Missed at release is the first recap. Settled while drafting: Done's fold and
-    Undo, as Dismiss all's. Board audit: boards 25 and 28 still draw the strip and Missed (override
-    42).
+    Undo, as Dismiss all's. Settled while building: 2 per section rather than 3, as 3 filled the
+    whole first screen of board 25 (D429). Board audit: boards 25 and 28 still draw the strip and
+    Missed (override 42).

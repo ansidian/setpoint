@@ -160,10 +160,10 @@ export function sectionHealth(healths: readonly (Health | null)[]): {state: 'sta
   return {state: checked.some(health => health.state === 'stale') ? 'stale' : 'failing', asOf};
 }
 
-// ---- While you were away (#298, D418, D419, D422) ----
+// ---- While you were away (#298, D418, D419, D422, D429) ----
 
-/** The recap holds up to this many stories per section (12 at most). */
-export const RECAP_PER_SECTION = 3;
+/** The recap holds up to this many stories per section (8 at most, D429). */
+export const RECAP_PER_SECTION = 2;
 /** Once it has been on screen, the recap is put away after the user has been away from News this long. */
 export const RECAP_AWAY_MS = HOUR;
 
@@ -191,8 +191,8 @@ export function recapAt(state: RecapState, now: string): RecapState {
 }
 
 /**
- * The recap's stories from those that can be in it, biggest first: up to three per section (the one
- * its row names), grouped in the blocks' order. The rest aren't shown or counted anywhere (D422).
+ * The recap's stories from those that can be in it, biggest first: up to two per section (the one
+ * its row names), grouped in the blocks' order. The rest aren't shown or counted anywhere (D422, D429).
  */
 export function recapStories<S extends {section: NewsSection}>(stories: readonly S[], perSection = RECAP_PER_SECTION): S[] {
   return NEWS_SECTIONS.flatMap(section => stories.filter(story => story.section === section).slice(0, perSection));

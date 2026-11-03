@@ -174,10 +174,10 @@ describe('While you were away (#298)', () => {
   const story = (id: number, section: NewsSection) => ({id, section});
   test.each<[string, {id: number; section: NewsSection}[], number[]]>([
     ['nothing', [], []],
-    ['up to three per section, biggest first as given', [1, 2, 3, 4, 5].map(id => story(id, 'local')), [1, 2, 3]],
+    ['up to two per section, biggest first as given (D429)', [1, 2, 3, 4, 5].map(id => story(id, 'local')), [1, 2]],
     ['grouped in the blocks\' order, whatever the order of size', [story(1, 'general'), story(2, 'ai'), story(3, 'local'), story(4, 'tech')], [3, 4, 2, 1]],
-    ['a big week in General doesn\'t crowd out Local', [...[1, 2, 3, 4, 5, 6].map(id => story(id, 'general')), story(7, 'local')], [7, 1, 2, 3]],
-    ['twelve at most', NEWS_SECTIONS.flatMap((section, at) => [1, 2, 3, 4].map(id => story(at * 10 + id, section))), [1, 2, 3, 11, 12, 13, 21, 22, 23, 31, 32, 33]],
+    ['a big week in General doesn\'t crowd out Local', [...[1, 2, 3, 4, 5, 6].map(id => story(id, 'general')), story(7, 'local')], [7, 1, 2]],
+    ['eight at most', NEWS_SECTIONS.flatMap((section, at) => [1, 2, 3, 4].map(id => story(at * 10 + id, section))), [1, 2, 11, 12, 21, 22, 31, 32]],
   ])('its stories: %s', (_, stories, ids) => {
     expect(recapStories(stories).map(one => one.id)).toEqual(ids);
   });

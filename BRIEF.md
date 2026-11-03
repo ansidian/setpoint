@@ -469,7 +469,8 @@ The list's order **holds**, so nothing moves under the cursor:
 
 When stories left the page before Andy saw them, All opens with a recap of them, offered once
 rather than kept to clear (DESIGN.md › While you were away):
-- Each section's biggest, up to 3 per section, under "While you were away · since Fri 6:10 PM".
+- Each section's biggest, 2 per section at most (D429), under "While you were away · since Fri
+  6:10 PM".
 - It's put away once it has shown and Andy has been away from News for about an hour, or by Done.
 - Its stories stay unseen and in search's archive; nothing counts them.
 - The iPhone app keeps its Missed line and Catch up until it has its own recap (D424).

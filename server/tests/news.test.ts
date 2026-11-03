@@ -240,10 +240,10 @@ describe('All shows a story once, in its main section\'s block (D102)', () => {
     expect(newsSection(w.store, 'general').stories.map(story => story.id)).toEqual([unread]);
     for (const one of page.blocks) expect(one.more).toBe(newsSection(w.store, one.section).stories.length - one.stories.length);
 
-    // The recap names the main section too, and groups by it: Tech's biggest three, then AI's.
+    // The recap names the main section too, and groups by it: Tech's biggest two, then AI's.
     w.advance(49 * HOUR);
     expireNews(w.store, images);
-    expect(recapSchema.parse(newsRecap(w.store)).stories.map(story => [story.id, story.section])).toEqual([...tech.slice(0, 3).map(id => [id, 'tech']), [both, 'ai'], [unread, 'ai']]);
+    expect(recapSchema.parse(newsRecap(w.store)).stories.map(story => [story.id, story.section])).toEqual([...tech.slice(0, 2).map(id => [id, 'tech']), [both, 'ai'], [unread, 'ai']]);
   });
 });
 
@@ -256,21 +256,21 @@ describe('While you were away (#298)', () => {
     return ids;
   }
 
-  test('what Missed held at release is the first recap: each section\'s biggest three, since the user\'s last look; Done puts it away and the next holds what leaves after', () => {
+  test('what Missed held at release is the first recap: each section\'s biggest two, since the user\'s last look; Done puts it away and the next holds what leaves after', () => {
     const w = world({seed: true});
     const recap = recapSchema.parse(newsRecap(w.store));
     expect(recap.since).toBe(NEWS_LAST_LOOKED);
     expect(recap.stories.map(story => [story.section, story.headline.split(' ').slice(0, 2).join(' ')])).toEqual([
-      ['local', 'Overnight closures'], ['local', 'Teen hurt'], ['local', 'Power outage'],
+      ['local', 'Overnight closures'], ['local', 'Teen hurt'],
       ['tech', 'iOS 26.1'], ['tech', 'Samsung sets'],
-      ['ai', 'Google DeepMind'], ['ai', 'OpenAI opens'], ['ai', 'Mistral releases'],
-      ['general', 'Tornado outbreak'], ['general', 'Amtrak derailment'], ['general', 'Measles cases'],
+      ['ai', 'Google DeepMind'], ['ai', 'OpenAI opens'],
+      ['general', 'Tornado outbreak'], ['general', 'Amtrak derailment'],
     ]);
-    expect(newsPage(w.store).missed).toEqual({count: 11, since: NEWS_LAST_LOOKED});
+    expect(newsPage(w.store).missed).toEqual({count: 8, since: NEWS_LAST_LOOKED});
     // The iPhone app's Catch up: the same stories by the day they left, biggest first.
     const catchUp = missedSchema.parse(missed(w.store));
-    expect(catchUp).toMatchObject({since: NEWS_LAST_LOOKED, count: 11, days: [{date: '2026-10-06'}]});
-    expect(catchUp.days[0]!.stories.map(story => story.headline.split(' ')[0])).toEqual(['Tornado', 'Google', 'Overnight', 'OpenAI', 'Amtrak', 'iOS', 'Measles', 'Teen', 'Mistral', 'Samsung', 'Power']);
+    expect(catchUp).toMatchObject({since: NEWS_LAST_LOOKED, count: 8, days: [{date: '2026-10-06'}]});
+    expect(catchUp.days[0]!.stories.map(story => story.headline.split(' ')[0])).toEqual(['Tornado', 'Google', 'Overnight', 'OpenAI', 'Amtrak', 'iOS', 'Teen', 'Samsung']);
 
     putRecapAway(w.store);
     expect(newsPage(w.store)).toMatchObject({missed: null, recap: null});
@@ -286,17 +286,16 @@ describe('While you were away (#298)', () => {
 
   test('fixed once on screen: seeing its stories, or a bigger one leaving, changes nothing, so nothing slides in', () => {
     const {w, source} = newsWorld();
-    const [first, second, third, fourth] = leftUnseen(w, source.id, [90, 80, 70, 60]);
-    expect(recapIds(w)).toEqual([first, second, third]);
+    const [first, second] = leftUnseen(w, source.id, [90, 80, 70]);
+    expect(recapIds(w)).toEqual([first, second]);
     // Not on screen yet, it's what can be in it now.
     const bigger = leftUnseen(w, source.id, [99]);
-    expect(recapIds(w)).toEqual([...bigger, first, second]);
+    expect(recapIds(w)).toEqual([...bigger, first]);
 
     noteHere(w.store, recapIds(w));
     markSeen(w.store, [bigger[0]!, first!]);
     leftUnseen(w, source.id, [100]);
-    expect(newsRecap(w.store)?.stories.map(story => [story.id, story.state])).toEqual([[bigger[0], 'seen'], [first, 'seen'], [second, 'new']]);
-    expect(recapIds(w)).not.toContain(fourth);
+    expect(newsRecap(w.store)?.stories.map(story => [story.id, story.state])).toEqual([[bigger[0], 'seen'], [first, 'seen']]);
   });
 
   test('put away once it has been on screen and the user has then been away from News for an hour; the next holds what left while they were away', () => {
@@ -357,11 +356,11 @@ describe('While you were away (#298)', () => {
     const left = [80, 70, 60, 50].map(score => addStory(w, [addArticle(w, source.id)], {lastFact: recent, score}));
     w.advance(HOUR);
     expireNews(w.store, null);
-    expect(recapIds(w)).toEqual(left.slice(0, 3));
+    expect(recapIds(w)).toEqual(left.slice(0, 2));
     await c.send('POST', '/api/news/seen', {body: {story_ids: [left[0]]}});
-    expect(recapState(w.store)).toMatchObject({storyIds: left.slice(0, 3), hereAt: w.store.now().toISOString()});
+    expect(recapState(w.store)).toMatchObject({storyIds: left.slice(0, 2), hereAt: w.store.now().toISOString()});
     expect(missedSchema.parse((await c.send('GET', '/api/news/missed')).body).days[0]!.stories.map(story => [story.id, story.state]))
-      .toEqual([[left[0], 'seen'], [left[1], 'new'], [left[2], 'new']]);
+      .toEqual([[left[0], 'seen'], [left[1], 'new']]);
   });
 });
 
@@ -378,7 +377,7 @@ describe('the routes', () => {
     expect(articleSchema.parse((await c.send('GET', `/api/news/articles/${nbc.article_id}`)).body)).toMatchObject({byline: 'Staff report', summary_only: false});
     const metered = w.store.db.select().from(t.newsArticles).where(eq(t.newsArticles.metered, true)).get()!;
     expect((await c.send('GET', `/api/news/articles/${metered.id}`)).status).toBe(404);
-    expect(missedSchema.parse((await c.send('GET', '/api/news/missed')).body).count).toBe(11);
+    expect(missedSchema.parse((await c.send('GET', '/api/news/missed')).body).count).toBe(8);
     newsSourcesSchema.parse((await c.send('GET', '/api/news/sources')).body);
     expect((await c.send('GET', '/api/news/stories/99999')).status).toBe(404);
 

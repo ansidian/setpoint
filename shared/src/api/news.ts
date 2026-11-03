@@ -133,6 +133,9 @@ export const newsBlockSchema = z.strictObject({
 });
 export type NewsBlockOut = z.infer<typeof newsBlockSchema>;
 
+/** The recap holds at most 2 per section (D429). */
+const RECAP_MAX = NEWS_SECTIONS.length * 2;
+
 /** A story in the recap: its row names its section ("General · NPR +9 · Tue"), its main one (D102). */
 export const recapStorySchema = storyRowSchema.extend({
   section: newsSectionSchema,
@@ -142,13 +145,13 @@ export type RecapStoryOut = z.infer<typeof recapStorySchema>;
 
 /**
  * While you were away (#298): each section's biggest stories that left the page unseen since the last
- * recap was put away, up to 3 per section, grouped in the blocks' order. `since` is when that was
- * ("since Fri 6:10 PM"); before any was, the user's last look before the first of them left, or null
- * if they never looked. Fixed once it's on screen, until it's put away.
+ * recap was put away, up to 2 per section (D429), grouped in the blocks' order. `since` is when that
+ * was ("since Fri 6:10 PM"); before any was, the user's last look before the first of them left, or
+ * null if they never looked. Fixed once it's on screen, until it's put away.
  */
 export const recapSchema = z.strictObject({
   since: instant.nullable(),
-  stories: z.array(recapStorySchema).min(1).max(NEWS_SECTIONS.length * 3),
+  stories: z.array(recapStorySchema).min(1).max(RECAP_MAX),
 });
 export type RecapOut = z.infer<typeof recapSchema>;
 
@@ -311,14 +314,14 @@ export const newsSeenSchema = z.strictObject({stories: z.array(storyRowSchema)})
 export type NewsSeenOut = z.infer<typeof newsSeenSchema>;
 
 /** News on screen; `recap` the recap's stories once it's on screen, which fixes it (#298). */
-export const newsHereInput = z.strictObject({recap: z.array(id).min(1).max(NEWS_SECTIONS.length * 3).nullable()});
+export const newsHereInput = z.strictObject({recap: z.array(id).min(1).max(RECAP_MAX).nullable()});
 export type NewsHereInput = z.infer<typeof newsHereInput>;
 
 /** What Done's Undo puts back: the recap's state before it (src/domain/news.ts). */
 export const recapUndoSchema = z.strictObject({
   put_away_at: instant.nullable(),
   shown_at: instant.nullable(),
-  story_ids: z.array(id).max(NEWS_SECTIONS.length * 3).nullable(),
+  story_ids: z.array(id).max(RECAP_MAX).nullable(),
 });
 export type RecapUndoOut = z.infer<typeof recapUndoSchema>;
 export const recapDoneSchema = z.strictObject({undo: recapUndoSchema});

@@ -304,7 +304,7 @@ async function recordAll() {
   await app.record('news-article', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/2');
   await app.record('news-article-summary-only', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/1');
   await app.record('news-article-discovery', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/42');
-  // Catch up: the recap's 11, all from Tuesday (D424).
+  // Catch up: the recap's 8, all from Tuesday (D424).
   await app.record('news-missed', 'MissedOut', 'GET', '/api/news/missed', '/api/news/missed');
   // Sorting as the seed has it: nothing waiting, no first run.
   await app.record('news-status', 'NewsStatusOut', 'GET', '/api/news/status', '/api/news/status');
