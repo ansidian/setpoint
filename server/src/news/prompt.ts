@@ -13,7 +13,7 @@
 // what the step can't do without is unusable (null).
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
-import {ARTICLE_KINDS, ARTICLE_SUBJECTS, keynoteName} from '../domain/newsSorting.ts';
+import {ARTICLE_KINDS, ARTICLE_SUBJECTS, keynoteName, storyWindow} from '../domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteNote} from '../domain/newsSorting.ts';
 import {zonedInstant} from '../domain/time.ts';
 import type {ToolSpec} from '../providers/ai/index.ts';
@@ -130,10 +130,12 @@ export interface PromptStory {
   id: number;
   headline: string;
   sections: NewsSection[];
+  // The timeline, oldest first.
   facts: {at: string; text: string}[];
-  sources: string[];
+  sources: {outlet: string; headline: string; publishedAt: string}[];
 }
 
+/** Each candidate is shown as it stands now, its window of facts and sources (storyWindow), as it was matched. */
 export function groupingInput(article: {outlet: string; headline: string; publishedAt: string; facts: string[]}, stories: readonly PromptStory[]): string {
   return [
     'New article:',
@@ -143,11 +145,14 @@ export function groupingInput(article: {outlet: string; headline: string; publis
     'Facts:', ...article.facts.map(fact => `- ${fact}`),
     '',
     'Stories:',
-    ...stories.flatMap(story => [
-      `Story ${story.id} (${story.sections.join(', ')}): ${story.headline}`,
-      ...story.facts.map(fact => `- ${fact.at}: ${fact.text}`),
-      ...story.sources.map(source => `  Source: ${source}`),
-    ]),
+    ...stories.flatMap(story => {
+      const window = storyWindow(story.facts, story.sources);
+      return [
+        `Story ${story.id} (${story.sections.join(', ')}): ${story.headline}`,
+        ...window.facts.map(fact => `- ${fact.at}: ${fact.text}`),
+        ...window.sources.map(source => `  Source: ${source.outlet}: ${source.headline}`),
+      ];
+    }),
   ].join('\n');
 }
 

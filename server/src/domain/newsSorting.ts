@@ -248,6 +248,30 @@ export function sameEvent(a: EventMark, b: EventMark): boolean {
   return Math.abs(a.at - b.at) <= SAME_EVENT_MS && [...a.counts].some(count => b.counts.has(count)) && [...a.names].some(name => b.names.has(name));
 }
 
+/** A story is matched by, and shown to the grouping model as, this many of its latest facts and sources. */
+export const STORY_FACTS_SHOWN = 20;
+export const STORY_SOURCES_SHOWN = 10;
+
+/**
+ * A story as it stands now: its latest facts (given oldest first, as the timeline) and its latest
+ * sources by publication. A long story's whole past once made it share enough place words with any
+ * local article to be its candidate, and the model, shown hundreds of facts, sometimes joined one,
+ * whose facts kept the story on the page for good (SV-164). New facts are still checked against the
+ * whole timeline (freshFacts).
+ */
+export function storyWindow<F, S extends {publishedAt: string}>(facts: readonly F[], sources: readonly S[]): {facts: F[]; sources: S[]} {
+  return {
+    facts: facts.slice(-STORY_FACTS_SHOWN),
+    sources: [...sources].sort((a, b) => a.publishedAt.localeCompare(b.publishedAt)).slice(-STORY_SOURCES_SHOWN),
+  };
+}
+
+/** A story's words for its candidates: its headline, and its window's facts and sources' headlines. */
+export function storyWords(headline: string, facts: readonly {text: string}[], sources: readonly {headline: string; publishedAt: string}[]): Set<string> {
+  const window = storyWindow(facts, sources);
+  return significantWords(headline, ...window.facts.map(fact => fact.text), ...window.sources.map(source => source.headline));
+}
+
 export interface MatchableStory {
   id: number;
   words: Set<string>;
@@ -290,8 +314,8 @@ export const CANDIDATES_MAX = 3;
 
 /**
  * The likely stories for an article, closest first: those sharing enough of its words (the overlap
- * of the article's headline and facts with the story's headline, facts and sources' headlines), and
- * those whose headlines mark the same event as its own (sameEvent), which come first, as two
+ * of the article's headline and facts with the story as it stands now, storyWords), and those whose
+ * headlines mark the same event as its own (sameEvent), which come first, as two
  * outlets' facts can be worded too far apart to share enough words. Only these go to the model,
  * which confirms whether one is the same event.
  */

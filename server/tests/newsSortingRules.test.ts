@@ -7,10 +7,11 @@ import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
-  rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, storyScore, summaryModel, wireKey,
+  rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, STORY_FACTS_SHOWN, STORY_SOURCES_SHOWN,
+  storyScore, storyWords, summaryModel, wireKey,
 } from '../src/domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteClaim, NoiseReason, RankSignals, SourceRule} from '../src/domain/newsSorting.ts';
-import {ARTICLE_SYSTEM, groupingOf, keynoteOf, notesOf, writtenOf} from '../src/news/prompt.ts';
+import {ARTICLE_SYSTEM, groupingInput, groupingOf, keynoteOf, notesOf, writtenOf} from '../src/news/prompt.ts';
 
 const ZONE = 'America/Los_Angeles';
 const NOW = '2026-10-07T16:12:00.000Z';
@@ -181,6 +182,58 @@ describe('grouping: cheap candidates first', () => {
   test('a story marking the same event comes before closer wording, so the cap never drops it', () => {
     const close = (id: number) => ({id, words: wanted(FLOOD_ARTICLE, ago(0)).words, incidents: new Set<string>(), wireKeys: new Map<string, Set<string>>()});
     expect(candidates(wanted(FLOOD_ARTICLE, ago(0)), [close(1), close(2), close(3), flood(FLOOD_STORY, ago(4))]).map(candidate => candidate.id)).toEqual([9, 3, 2]);
+  });
+
+  // SV-164, invented after prod's story 17: a coastal flood weeks old. Its past (the storm, the
+  // council's money, the closures) once made it share enough place words with any local article to be
+  // a candidate, and the model sometimes joined one, its facts keeping the story on the page for good.
+  const day = (n: number) => ago((30 - n) * 24);
+  const LONG_STORY = {
+    headline: 'King tides flood the Fabrikam coast for a record 12th day',
+    facts: [
+      ...[
+        'Tropical Storm Mira sent 8-foot surf into homes on the Northwind peninsula',
+        'Contoso City Council voted Tuesday to spend $2 million on emergency pumps',
+        'County officials opened sandbag stations at three fire stations',
+        'Residents were told to leave the peninsula by Monday night',
+        'Power was cut to 2,000 customers while crews pumped water from substations',
+        'Officials said repairs to the seawall would take weeks',
+        'A council member asked the state for disaster aid',
+      ].map((text, n) => ({at: day(n), text})),
+      ...Array.from({length: STORY_FACTS_SHOWN}, (_, n) => ({at: day(10 + n), text: `High tide reached ${7 + n % 3} feet at the harbor gauge on day ${n + 1} of tidal flooding`})),
+    ],
+    sources: [
+      ...['Contoso council approves emergency pump money', 'Storm Mira floods Northwind peninsula homes', 'Residents told to leave as surf pounds the peninsula']
+        .map((headline, n) => ({headline, publishedAt: day(n)})),
+      ...Array.from({length: STORY_SOURCES_SHOWN}, (_, n) => ({headline: `Day ${n + 3} of king tides floods Fabrikam streets`, publishedAt: day(18 + n)})),
+    ],
+  };
+  const longStory = {id: 17, words: storyWords(LONG_STORY.headline, LONG_STORY.facts, LONG_STORY.sources), incidents: new Set<string>(), wireKeys: new Map<string, Set<string>>()};
+
+  test.each<[string, string, string[], number[]]>([
+    ['a local article sharing only its past\'s place words isn\'t a candidate', 'Contoso council pauses new data centers for 45 days', [
+      'The Contoso City Council voted Tuesday to pause permits for data centers and car washes',
+      'Officials said the pause gives the city time to study power and water use',
+      'Residents asked the council to extend it',
+    ], []],
+    ['its next turn still is', 'Fabrikam coast logs a record 12th day of tidal flooding', [
+      'High tide reached 9 feet at the harbor gauge, the highest since 1983',
+      'Water covered streets on the Northwind peninsula for a 12th straight day',
+    ], [17]],
+  ])('a long story is matched by what it says now: %s', (_, headline, facts, ids) => {
+    expect(candidates({words: significantWords(headline, ...facts)}, [longStory]).map(candidate => candidate.id)).toEqual(ids);
+  });
+
+  test('the grouping prompt shows a candidate as it was matched: its latest facts, and its latest sources by publication', () => {
+    const sources = LONG_STORY.sources.map(source => ({...source, outlet: 'KTLA'})).reverse();
+    const input = groupingInput({outlet: 'NBC Los Angeles', headline: 'Fabrikam coast logs a record 12th day of tidal flooding', publishedAt: NOW, facts: []},
+      [{id: 17, headline: LONG_STORY.headline, sections: ['local'], facts: LONG_STORY.facts, sources}]);
+    const facts = input.split('\n').filter(line => line.startsWith('- '));
+    const shown = input.split('\n').filter(line => line.startsWith('  Source: '));
+    expect([facts.length, facts[0], shown.length, shown[0], shown.at(-1)]).toEqual([
+      STORY_FACTS_SHOWN, `- ${day(10)}: High tide reached 7 feet at the harbor gauge on day 1 of tidal flooding`,
+      STORY_SOURCES_SHOWN, '  Source: KTLA: Day 3 of king tides floods Fabrikam streets', `  Source: KTLA: Day ${STORY_SOURCES_SHOWN + 2} of king tides floods Fabrikam streets`,
+    ]);
   });
 
   test.each<[string, number[], string[]]>([

@@ -29,7 +29,7 @@ import * as t from '../db/schema.ts';
 import {STORY_TTL_MS} from '../domain/news.ts';
 import {
   applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
-  significantWords, sourceRule, storyScore, wireKey,
+  significantWords, sourceRule, storyScore, storyWords, wireKey,
 } from '../domain/newsSorting.ts';
 import type {ArticleNotes, KeynoteClaim, MatchableStory} from '../domain/newsSorting.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
@@ -140,7 +140,7 @@ function matchable(live: LiveStory, sources: Map<number, SourceRow>): MatchableS
   for (const article of live.articles) if (article.wireKey) wireKeys.set(article.wireKey, (wireKeys.get(article.wireKey) ?? new Set()).add(article.outlet));
   return {
     id: live.story.id,
-    words: significantWords(live.story.headline, ...live.facts.map(fact => fact.text), ...live.articles.map(article => article.headline)),
+    words: storyWords(live.story.headline, live.facts, live.articles),
     incidents: new Set(live.articles.flatMap(article => incidentKey(article.canonicalUrl, sourceRule(sources.get(article.sourceId)!).hazard) ?? [])),
     wireKeys,
     events: [eventMark(live.story.headline, live.story.lastNewFactAt), ...live.articles.map(article => eventMark(article.headline, article.publishedAt))],
@@ -223,7 +223,7 @@ export async function groupArticle(ctx: SortContext, articleId: number, sources:
       system: GROUPING_SYSTEM, tool: GROUPING_TOOL, maxOutputTokens: MAX_OUTPUT_TOKENS.grouping,
       input: groupingInput({outlet: article.outlet, headline: article.headline, publishedAt: article.publishedAt, facts: notes.facts}, shown.map(story => ({
         id: story.story.id, headline: story.story.headline, sections: story.sections, facts: story.facts,
-        sources: story.articles.filter(other => !other.metered).map(other => `${other.outlet}: ${other.headline}`),
+        sources: story.articles.filter(other => !other.metered),
       }))),
     });
     const said = groupingOf(answer.toolInput);
