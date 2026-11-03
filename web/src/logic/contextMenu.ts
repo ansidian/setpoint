@@ -23,3 +23,11 @@ export function placeMenuAt(point: {x: number; y: number}, size: {width: number;
     up,
   };
 }
+
+/**
+ * Whether a menu hanging under its anchor opens upward instead (ui/popover.ts › placeMenu, darma SV-21):
+ * when its foot would run past what can show it and there's more room above the anchor than below.
+ */
+export function opensUp(bottom: number, anchor: {top: number; bottom: number}, room: {top: number; bottom: number}): boolean {
+  return bottom > room.bottom && anchor.top - room.top > room.bottom - anchor.bottom;
+}

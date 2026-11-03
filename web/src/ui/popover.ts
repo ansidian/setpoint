@@ -2,6 +2,7 @@
 // clips or scrolls it (Settings' page, the editor's pane) and there's more room above (darma SV-21),
 // and lines up with its anchor's right edge when it would run past the right (SV-29: the End list).
 import {useCallback, useEffect, useRef} from 'react';
+import {opensUp} from '../logic/contextMenu.ts';
 
 /** The area `element` can show in: its clipping ancestors' and the viewport's. */
 function room(element: HTMLElement): {top: number; bottom: number; right: number} {
@@ -33,7 +34,7 @@ export function placeMenu(menu: HTMLElement | null) {
   const {top, bottom, right} = room(menu);
   const anchor = menu.parentElement.getBoundingClientRect();
   if (rect.right > right) menu.dataset.right = '';
-  if (rect.bottom > bottom && anchor.top - top > bottom - anchor.bottom) menu.dataset.up = '';
+  if (opensUp(rect.bottom, anchor, {top, bottom})) menu.dataset.up = '';
 }
 
 /**

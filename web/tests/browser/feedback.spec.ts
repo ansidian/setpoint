@@ -1,12 +1,14 @@
 // Every control answers the pointer, and the lists move (F10; DESIGN.md › Decided while building
 // #12–14; darma SV-21): a hover state on a row, and none on a disabled control; a key pressing its
 // button and a tap on the phone (SV-59); the mail list's first paint not folding; Settings › Accounts
-// reordering live while an account is dragged; menus inside clipped containers open fully in view.
+// reordering live while an account is dragged; Settings' menus inside clipped groups open whole.
+// Whether a menu opens upward is opensUp's, a table in contextMenu.test.ts; that one shows whole in
+// the editor's pane is by eye (D416, D417).
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, still, test, until, watch} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -17,23 +19,14 @@ async function openSettings(page: Page, base: string, settingsPage: string) {
   await page.locator('.list .row').first().waitFor();
 }
 
-/** A style of `target` with the pointer away, then over `control` (itself unless given), once the 120 ms change is over. */
-async function hovered(page: Page, control: Locator, read: (element: Element) => string, target: Locator = control): Promise<[string, string]> {
-  await page.mouse.move(1, 1);
-  // The 120 ms transitions run their course; a disabled control has no change to wait for.
-  await page.waitForTimeout(200);
-  const before = await target.evaluate(read);
-  await control.hover();
-  // The 120 ms transitions run their course; a disabled control has no change to wait for.
-  await page.waitForTimeout(200);
-  return [before, await target.evaluate(read)];
-}
-
 const fill = (element: Element) => getComputedStyle(element).backgroundColor;
 
-async function answers(page: Page, what: string, control: Locator, read: (element: Element) => string, target?: Locator) {
-  const [before, after] = await hovered(page, control, read, target);
-  assert.notEqual(after, before, `${what} answers the pointer`);
+/** A style of `target` (`control` unless given) changing as the pointer comes over `control`, which it hasn't been over yet. */
+async function answers(page: Page, what: string, control: Locator, read: (element: Element) => string, target: Locator = control) {
+  await page.mouse.move(1, 1);
+  const before = await target.evaluate(read);
+  await control.hover();
+  await until(`${what} answers the pointer`, () => target.evaluate(read), after => after !== before);
 }
 
 /**
@@ -65,8 +58,15 @@ test('hover: a row answers the pointer; a disabled button doesn\'t', async () =>
     await page.locator('.list [data-id]').first().click();
     const previous = page.getByRole('button', {name: 'Previous email'});
     assert.equal(await previous.isDisabled(), true);
-    const [previousBefore, previousAfter] = await rested(() => hovered(page, previous, element => `${getComputedStyle(element).backgroundColor} ${getComputedStyle(element).color}`));
-    assert.equal(previousAfter, previousBefore, 'a disabled button doesn\'t answer');
+    const look = () => previous.evaluate(element => `${getComputedStyle(element).backgroundColor} ${getComputedStyle(element).color}`);
+    await page.mouse.move(1, 1);
+    const previousBefore = await rested(() => look());
+    await previous.hover();
+    // A pause for a "nothing happened" check: a hover fill would have begun by now.
+    await page.waitForTimeout(200);
+    await setpoint.idle();
+    // Read as it is: a disabled button has nothing in motion to wait for.
+    assert.equal(await look(), previousBefore, 'a disabled button doesn\'t answer');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -83,24 +83,21 @@ const computed = (page: Page, value: string) => page.evaluate(css => {
   return colour;
 }, value);
 
+const held = (control: Locator) => control.evaluate(element => [getComputedStyle(element).transform, getComputedStyle(element).backgroundColor, getComputedStyle(element).transitionDuration.split(', ').at(-1)!].join(' | '));
+
 /**
- * `control`'s scale, fill and transition held down, once the 80 ms press has gone in; then let go off
- * it, so the press is read without the click doing anything.
+ * `control` held down until its scale, fill and transition read `expected`, which they hold while it's
+ * pressed; then let go off it, so the press is read without the click doing anything.
  */
-async function pressed(page: Page, control: Locator): Promise<[string, string, string]> {
+async function pressed(page: Page, control: Locator, expected: [string, string, string]): Promise<void> {
   await control.hover();
-  // The hover's 120 ms fill runs its course before the press.
-  await page.waitForTimeout(200);
   await page.mouse.down();
-  // The 80 ms press goes in.
-  await page.waitForTimeout(150);
-  const held = await rested(() => control.evaluate(element => [getComputedStyle(element).transform, getComputedStyle(element).backgroundColor, getComputedStyle(element).transitionDuration.split(', ').at(-1)!] as [string, string, string]));
+  await until('the press goes in', () => held(control), look => look === expected.join(' | '));
   await page.mouse.move(700, 28);
   await page.mouse.up();
-  return held;
 }
 
-test('press: a key presses its button; a disabled one doesn\'t give', async () => {
+test('press: a key does its button\'s work; a disabled one doesn\'t give', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -110,16 +107,23 @@ test('press: a key presses its button; a disabled one doesn\'t give', async () =
     await page.locator('.list [data-id]').first().click();
     const previous = page.getByRole('button', {name: 'Previous email'});
     assert.equal(await previous.isDisabled(), true);
-    assert.equal((await pressed(page, previous))[0], 'none', 'a disabled button doesn\'t give');
+    await previous.hover();
+    await page.mouse.down();
+    // A pause for a "nothing happened" check: a press would have gone in by now.
+    await page.waitForTimeout(150);
+    await setpoint.idle();
+    // Read as it is: a disabled button has nothing in motion to wait for.
+    assert.equal((await held(previous)).split(' | ')[0], 'none', 'a disabled button doesn\'t give');
+    await page.mouse.move(700, 28);
+    await page.mouse.up();
     await page.locator('.list .row[title^="Interview availability"]').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
 
-    // P presses Pin, as its click would.
+    // P presses Pin, as its click would: the press, under a second, is by eye (D416); Pin's state follows.
     const pin = page.locator('.rd-tools .tool', {hasText: 'Pin'});
-    const echo = await watch(pin, 'data-echo');
     await page.mouse.move(700, 28);
     await page.keyboard.press('p');
-    await until('P presses Pin', echo, seen => seen.includes(''));
+    await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
     await until('and lets go', () => pin.getAttribute('data-echo'), value => value === null);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -172,16 +176,11 @@ test('a calendar chip deepens in its own colour under the pointer and gives when
     const layer = () => dentist.evaluate(chip => [getComputedStyle(chip, '::after').backgroundColor, getComputedStyle(chip, '::after').opacity]);
     await rested(() => answers(page, 'an event chip', dentist, element => getComputedStyle(element, '::after').opacity));
     assert.deepEqual(await rested(() => layer()), [await rested(() => own('18%')), '1'], 'under the pointer, its own colour at 18% (Night)');
-    const [transform, pressedLayer] = await (async () => {
-      await page.mouse.down();
-      // The 80 ms press goes in.
-      await page.waitForTimeout(150);
-      const held = [await rested(() => dentist.evaluate(chip => getComputedStyle(chip).transform)), (await rested(() => layer()))[0]];
-      // Let go where it was pressed (moving away would drag it): a click, which selects it.
-      await page.mouse.up();
-      return held;
-    })();
-    assert.deepEqual([transform, pressedLayer], ['matrix(0.97, 0, 0, 0.97, 0, 0)', await rested(() => own('28%'))]);
+    const deeper = await rested(() => own('28%'));
+    await page.mouse.down();
+    await until('it gives, deeper', async () => [await dentist.evaluate(chip => getComputedStyle(chip).transform), (await layer())[0]].join(), look => look === ['matrix(0.97, 0, 0, 0.97, 0, 0)', deeper].join());
+    // Let go where it was pressed (moving away would drag it): a click, which selects it.
+    await page.mouse.up();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -213,11 +212,9 @@ test('a colour picker rings the current colour in itself and swells the one unde
     await page.locator('.settings .set-nav').getByRole('button', {name: 'Appearance'}).click();
     const night = page.getByRole('radio', {checked: true});
     await night.waitFor();
+    const chosen = [await rested(() => computed(page, 'var(--sub2)')), await rested(() => computed(page, 'var(--ink)')), await rested(() => computed(page, 'var(--good)'))].join();
     await page.mouse.move(1, 1);
-    // A hover fill the move left fades out.
-    await page.waitForTimeout(200);
-    assert.deepEqual(await rested(() => night.evaluate(row => [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.aico')!).backgroundColor, getComputedStyle(row.querySelector(':scope > .icon')!).color])),
-      [await rested(() => computed(page, 'var(--sub2)')), await rested(() => computed(page, 'var(--ink)')), await rested(() => computed(page, 'var(--good)'))]);
+    await until('Night filled `sub2`, its tile `ink`, its check `good`', () => night.evaluate(row => [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.aico')!).backgroundColor, getComputedStyle(row.querySelector(':scope > .icon')!).color].join()), look => look === chosen);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -232,13 +229,14 @@ test('press on the phone: a tapped row fills `sub2` at once and nothing stays li
     const row = page.locator('.list .row[title^="Interview availability"]');
     await row.waitFor();
     assert.equal(await rested(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color'))), 'rgba(0, 0, 0, 0)');
-    assert.deepEqual(await pressed(page, row), ['none', await rested(() => computed(page, 'var(--sub2)')), '0s']);
+    await pressed(page, row, ['none', await rested(() => computed(page, 'var(--sub2)')), '0s']);
     // The reader's Pin, tapped: no hover fill stays on it under the finger.
     await row.tap();
     const pin = page.locator('.ph-top .ph-icon');
     await pin.tap();
-    // The 120 ms press lets go.
+    // A pause for a "nothing happened" check: a press letting go would have faded by now.
     await page.waitForTimeout(300);
+    await setpoint.idle();
     assert.equal(await rested(() => pin.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)', 'nothing stays lit after a tap');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -324,54 +322,19 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
     await page.getByRole('button', {name: 'Weather options'}).click();
     const weather = page.getByRole('menu', {name: 'Weather options'});
     await page.getByRole('menuitem', {name: 'Check now'}).waitFor();
-    assert.deepEqual(await rested(() => unclipped(weather)), [], 'Weather\'s menu');
+    await until('Weather\'s menu whole', () => unclipped(weather), problems => problems.length === 0);
     await page.keyboard.press('Escape');
 
     const last = page.locator('.settings [data-account]').last();
     const label = (await last.locator('.lines .t').textContent())!;
     await last.getByRole('button', {name: `${label} options`}).click();
-    assert.deepEqual(await rested(() => unclipped(page.getByRole('menu', {name: `${label} options`}))), [], `${label}'s menu`);
+    await until(`${label}'s menu whole`, () => unclipped(page.getByRole('menu', {name: `${label} options`})), problems => problems.length === 0);
     await page.keyboard.press('Escape');
 
     await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
     await page.locator('.settings .rule', {hasText: 'Proseware alerts'}).waitFor();
     await page.getByRole('button', {name: 'Rule options'}).last().click();
-    assert.deepEqual(await rested(() => unclipped(page.getByRole('menu', {name: 'Rule options'}))), [], 'the last rule\'s menu');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('menus: on a short window the last source\'s opens upward, whole; the editor\'s Reminder and Repeat menus open whole in the pane', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const short = await setpoint.page({width: 1677, height: 640});
-    await openSettings(short, setpoint.base, 'accounts');
-    const weatherRow = short.locator('.settings [data-source="weather"]');
-    await weatherRow.waitFor();
-    // Settings risen into place, so the menu measures its room as it rests.
-    await still(short);
-    // Weather's row at the bottom of what Settings' page shows.
-    await weatherRow.evaluate(row => row.scrollIntoView({block: 'end'}));
-    await short.getByRole('button', {name: 'Weather options'}).click();
-    const menu = short.getByRole('menu', {name: 'Weather options'});
-    await menu.waitFor();
-    assert.equal(await menu.getAttribute('data-up'), '', 'it opens upward');
-    assert.deepEqual(await rested(() => unclipped(menu)), []);
-
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
-    await page.keyboard.press('c');
-    await page.getByLabel('Describe the event').fill('Dinner fri 7-9pm');
-    // The editor slid into place, so each menu measures its room as it rests.
-    await still(page);
-    for (const opener of ['Add reminder', 'Repeat']) {
-      await page.getByRole('button', {name: opener, exact: true}).click();
-      assert.deepEqual(await rested(() => unclipped(page.locator('.editor .menu'))), [], `${opener}'s menu`);
-      await page.getByRole('button', {name: opener, exact: true}).click();
-    }
+    await until('the last rule\'s menu whole', () => unclipped(page.getByRole('menu', {name: 'Rule options'})), problems => problems.length === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

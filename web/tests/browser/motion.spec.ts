@@ -56,8 +56,9 @@ test('a menu\'s button stays lit while it\'s open', async () => {
     const more = page.getByRole('menu');
     await more.waitFor();
     await page.mouse.move(700, 28);
-    // The button's 120 ms fill runs its course with the pointer gone.
+    // A pause for a "nothing happened" check: a fill letting go of the pointer would have faded by now.
     await page.waitForTimeout(200);
+    await setpoint.idle();
     assert.equal(await rested(() => style(moreButton, 'background-color')), await rested(() => colour(page, '--sub2')), 'More stays lit');
     await page.keyboard.press('Escape');
 
@@ -70,8 +71,9 @@ test('a menu\'s button stays lit while it\'s open', async () => {
     const menu = settings.getByRole('menu', {name: 'Business options'});
     await menu.waitFor();
     await page.mouse.move(700, 28);
-    // The button's 120 ms fill runs its course with the pointer gone.
+    // A pause for a "nothing happened" check: a fill letting go of the pointer would have faded by now.
     await page.waitForTimeout(200);
+    await setpoint.idle();
     assert.equal(await rested(() => style(options, 'background-color')), await rested(() => colour(page, '--sub2')), 'the row\'s … stays lit');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
