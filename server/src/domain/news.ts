@@ -1,7 +1,8 @@
-// News's rules for the store (N1; BRIEF.md › News › Stories, New and seen, Missed; DESIGN.md › News):
-// when a story leaves the page and when its archive goes, its dot, what's new since the user looked,
-// which image copies an expired story keeps, how many stories a block shows, the leading outlet, a
-// story's main section, and when a whole section's line shows. Pure, so each is tested as a table.
+// News's rules for the store (N1; BRIEF.md › News › Stories, New and seen, While you were away;
+// DESIGN.md › News): when a story leaves the page and when its archive goes, its dot, what's new since
+// the user looked, which image copies an expired story keeps, how many stories a block shows, the
+// leading outlet, a story's main section, when a whole section's line shows, and the recap's stories
+// and when it's put away. Pure, so each is tested as a table.
 import type {HealthState, NewsSection, StoryState} from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import type {Health} from './health.ts';
@@ -53,19 +54,15 @@ export const IMAGE_SIZES: Record<ImageVariant, {width: number; height: number}> 
 };
 
 /**
- * The copies an expired story keeps of its own image: in Missed (it left unseen), the large copy and
- * the thumbnail, so each day's lead is drawn from the large one as on the page, never a thumbnail
- * stretched to fit (the polish audit's news-09); in the archive, only the thumbnail, for its rows in
- * search. Every other article's copy goes with the page, and all of them when the archive does.
+ * The copies an expired story keeps of its own image: in the archive, only the thumbnail, for its rows
+ * in search and the recap, which has no leads (#298). Every other article's copy goes with the page,
+ * and all of them when the archive does.
  */
-export function keepsImage(stage: 'page' | 'missed' | 'archive' | 'purge', image: {articleId: number; variant: ImageVariant}, storyImageArticleId: number | null): boolean {
+export function keepsImage(stage: 'page' | 'archive' | 'purge', image: {articleId: number; variant: ImageVariant}, storyImageArticleId: number | null): boolean {
   if (stage === 'page') return true;
   if (stage === 'purge' || image.articleId !== storyImageArticleId) return false;
-  return stage === 'missed' || image.variant === 'thumb';
+  return image.variant === 'thumb';
 }
-
-/** A story seen out of Missed keeps its large copy this long, so the visit that saw it keeps its leads' images. */
-export const CAUGHT_UP_MS = HOUR;
 
 /** A block shows at least this many stories, when it has them, … */
 export const BLOCK_MIN = 3;
@@ -161,4 +158,42 @@ export function sectionHealth(healths: readonly (Health | null)[]): {state: 'sta
   if (!checked.every(health => down.includes(health.state))) return null;
   const asOf = checked.map(health => health.asOf).filter((at): at is string => at !== null).sort().at(-1) ?? null;
   return {state: checked.some(health => health.state === 'stale') ? 'stale' : 'failing', asOf};
+}
+
+// ---- While you were away (#298, D418, D419, D422) ----
+
+/** The recap holds up to this many stories per section (12 at most). */
+export const RECAP_PER_SECTION = 3;
+/** Once it has been on screen, the recap is put away after the user has been away from News this long. */
+export const RECAP_AWAY_MS = HOUR;
+
+/**
+ * The recap's state, kept by the server so a reload or another tab agrees: when the last recap was
+ * put away (null before the first was), when this one was first on screen and the stories it was
+ * fixed with then, and when the user was last on News.
+ */
+export interface RecapState {
+  putAwayAt: string | null;
+  shownAt: string | null;
+  storyIds: number[] | null;
+  hereAt: string | null;
+}
+
+/**
+ * The recap as it stands at `now`: once it has been on screen and the user has then been away from
+ * News for about an hour, it's put away as of when they left, so the next one holds what left while
+ * they were away. A shorter trip, or a recap not yet on screen, keeps it.
+ */
+export function recapAt(state: RecapState, now: string): RecapState {
+  if (state.shownAt === null || state.hereAt === null) return state;
+  if (Date.parse(now) - Date.parse(state.hereAt) < RECAP_AWAY_MS) return state;
+  return {putAwayAt: state.hereAt, shownAt: null, storyIds: null, hereAt: state.hereAt};
+}
+
+/**
+ * The recap's stories from those that can be in it, biggest first: up to three per section (the one
+ * its row names), grouped in the blocks' order. The rest aren't shown or counted anywhere (D422).
+ */
+export function recapStories<S extends {section: NewsSection}>(stories: readonly S[], perSection = RECAP_PER_SECTION): S[] {
+  return NEWS_SECTIONS.flatMap(section => stories.filter(story => story.section === section).slice(0, perSection));
 }

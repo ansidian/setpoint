@@ -1,12 +1,9 @@
 /* News (DESIGN.md › News; boards 25–28, design-export/news/news.css). */
 
-/* The list's column: the lines above it (N5), the Missed strip, then the pill over the scrolling list. */
+/* The list's column: the lines above it (N5), then the pill over the scrolling list. */
 .nw-list { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; container-type: inline-size; }
 .nw-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
 .nw-body > .list { flex: 1 1 auto; min-height: 0; }
-.nw-missed { flex: none; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 max(12px, calc(100% - var(--listRowMax))) 0 22px; color: var(--ink); background: color-mix(in oklch, var(--accent) 9%, var(--page)); border-bottom: 1px solid color-mix(in oklch, var(--accent) 22%, transparent); }
-.nw-missed > .icon { color: var(--accent); }
-.nw-missed b { font-weight: 500; }
 /* The pill drops in 8 px as it fades in over 180 ms, and under the pointer its ring and arrow deepen (#131). */
 .nw-pill { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); color: var(--ink); font-size: 12.5px; font-weight: 500; white-space: nowrap; z-index: 3;
   transition: box-shadow var(--dur-fast) var(--ease); animation: nw-pill-in var(--dur-medium) var(--ease); }
@@ -19,10 +16,19 @@
 .nw-pill .upd { color: var(--accent); }
 
 .nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
-/* Each section's glyph before its name (#120), Missed's days on `history`: ink3, its optical edge on the list's 24 px line. */
+/* Each section's glyph before its name (#120), the recap's `history`: ink3, its optical edge on the list's 24 px line. */
 .nw-sec > .icon { color: var(--ink3); margin-left: -2px; }
 .nw-sec.first { border-top: 0; }
 .nw-sec .day { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); margin-left: auto; }
+
+/* While you were away (#298): All's first block, its header a section header with "since Fri 6:10 PM"
+   and a ghost small Done on the right. Done folds it away as Dismiss all folds its rows (180 ms). Its
+   rows have no dot, their headlines a new row's until opened, then a seen row's. */
+.nw-recap { flex: none; display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--dur-medium) var(--ease); }
+.nw-recap.closing { grid-template-rows: 0fr; }
+.nw-recap > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.nw-recap .nw-sec .btn { text-transform: none; letter-spacing: 0; }
+.nw-row.rc:not(.seen) .hl { color: var(--ink); font-weight: 500; }
 
 /* N5's states (DESIGN.md › States; boards 29a, 29b): the Unsorted line in `caution` with Show headlines, the
    first run's muted line, a whole section's line under its header, and a section with nothing to show. */
@@ -148,9 +154,6 @@
 .nw-more { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 16px 0 24px; color: var(--ink2); font-size: 12.5px; flex: none; width: 100%; text-align: left; }
 .nw-more:hover { color: var(--ink); background: var(--sub); }
 .nw-more .icon { color: var(--ink3); }
-.nw-back { flex: none; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 14px; border-bottom: 1px solid var(--hair); }
-.nw-back .t { font-size: 14px; font-weight: 500; color: var(--ink); }
-.nw-back .n { color: var(--ink3); font-size: 12.5px; }
 
 /* The story pane. A story's or an article's content eases in as it's opened or stepped to (news-05, #232). */
 .st-swap { display: flex; flex-direction: column; flex: none; animation: st-in var(--dur-medium) var(--ease); }

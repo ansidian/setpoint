@@ -5,9 +5,10 @@
 //
 // - All: Local, Tech, AI and General with the brief's stories, then enough more for "12 more in
 //   Local", "7 more in Tech", "4 more in AI" and "9 more in General" (one AI story is also General's).
-// - Missed: 14 stories that left the page unseen on Tuesday (Local 3, Tech 2, AI 4, General 5): their
-//   last facts came on Sunday, 48 hours before. They're archived as the expiry leaves them: no facts,
-//   no text, only their own image's large copy and thumbnail.
+// - While you were away: 14 stories that left the page unseen on Tuesday (Local 3, Tech 2, AI 4,
+//   General 5), of which the recap shows each section's biggest 3: their last facts came on Sunday, 48
+//   hours before. They're archived as the expiry leaves them: no facts, no text, only their own
+//   image's thumbnail. No recap has been put away yet, so it's the first: what Missed held.
 // - Upcoming: the Apple event, Tue Oct 20 at 10 AM, from the invites story.
 // - Sources: the built-in list and the local stand-ins, with invented `.example` URLs for anything
 //   not on the built-in list, all `dev` so nothing ever fetches them. FOX 11 is failing (board 30a).
@@ -116,7 +117,7 @@ interface SampleStory {
   // The leading outlet's article first, then the others; a string is an outlet whose article carries
   // the story's headline, a little before the lead's.
   articles: [SampleArticle, ...(SampleArticle | string)[]];
-  // Left the page before the user saw it: archived, in Missed.
+  // Left the page before the user saw it: archived, in the recap.
   missed?: true;
   upcoming?: {name: string; startsAt: string};
 }
@@ -131,7 +132,7 @@ A Red Flag Warning takes effect at noon and runs through Thursday evening, with 
 
 Two schools inside the warning area closed for the day. Officials asked residents to keep their cars fueled and to sign up for the county's emergency alerts.`;
 
-/** A Missed story: last facts on Sunday, so it left the page on Tuesday, 48 hours later. */
+/** A story for the recap: last facts on Sunday, so it left the page on Tuesday, 48 hours later. */
 const gone = (time: string) => ({first: at('sun', time), facts: [[at('sun', time), 'First reported']] as [string, string][], missed: true as const});
 
 export const SAMPLE_STORIES: SampleStory[] = [
@@ -312,7 +313,7 @@ export const SAMPLE_STORIES: SampleStory[] = [
     score: 44, first: at('mon', '16:10'), seen: true, facts: [[at('mon', '16:10'), 'The bridge closed']],
     articles: [{outlet: 'PBS News', at: at('mon', '16:10')}, 'AP News']},
 
-  // ---- Missed: left the page unseen on Tuesday (Local 3, Tech 2, AI 4, General 5 = 14), biggest first ----
+  // ---- The recap's: left the page unseen on Tuesday (Local 3, Tech 2, AI 4, General 5 = 14), biggest first ----
   {sections: ['general'], headline: 'Tornado outbreak across Oklahoma and Kansas leaves 6 dead', oneLine: 'More than 30 tornadoes touched down overnight; thousands without power',
     score: 90, ...gone('09:10'), articles: [{outlet: 'NPR', at: at('tue', '06:40'), image: 215}, 'ABC News', 'CBS News', 'NBC News', 'Reuters', 'AP News', 'USA Today', 'The Guardian', 'CNN', 'PBS News']},
   {sections: ['ai'], headline: 'Google DeepMind releases Gemini 3.5 Flash', oneLine: 'Cheaper and faster, rolling out in the Gemini app and API',
@@ -395,9 +396,11 @@ export function seedNews(store: Store, imagesDir: string | null) {
         articleIds.push(row.id);
         if (article.image !== undefined) {
           imageArticle ??= {id: row.id, hue: article.image};
-          // A story in Missed keeps only its own image's copies, as the expiry leaves them (keepsImage).
-          if (!story.missed || imageArticle.id === row.id) {
+          // A story that left the page keeps only its own image's thumbnail, as the expiry leaves it (keepsImage).
+          if (!story.missed) {
             saveNewsImage(store, imagesDir, row.id, 'large', {bytes: tintedImage(LARGE_SIZE.width, LARGE_SIZE.height, article.image), mimeType: 'image/png', ...LARGE_SIZE});
+          }
+          if (!story.missed || imageArticle.id === row.id) {
             saveNewsImage(store, imagesDir, row.id, 'thumb', {bytes: tintedImage(THUMB_SIZE.width, THUMB_SIZE.height, article.image), mimeType: 'image/png', ...THUMB_SIZE});
           }
         }

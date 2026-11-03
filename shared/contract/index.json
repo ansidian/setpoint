@@ -1113,7 +1113,10 @@
       "unseen": [
         "blocks[].stories[].expired_at: always null",
         "blocks[].upcoming[].lead.hazard: always null",
-        "blocks[].health: always null"
+        "blocks[].health: always null",
+        "recap.stories[].lead.hazard: always null",
+        "recap.stories[].image.large: always null",
+        "recap.stories[].seen_at: always null"
       ]
     },
     {
@@ -1227,6 +1230,7 @@
       "file": "responses/news-missed.json",
       "unseen": [
         "days[].stories[].lead.hazard: always null",
+        "days[].stories[].image.large: always null",
         "days[].stories[].seen_at: always null"
       ]
     },

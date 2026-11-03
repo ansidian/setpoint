@@ -8,7 +8,7 @@
 //   news-stale-ai    29a: every AI source last checked at 7:02 AM ("AI, as of 7:02 AM")
 //   news-quiet-tech  29a: no Tech story on the page, nor its keynote ("Nothing new in Tech since Mon")
 //   news-first-run   29b: the first run sorting the last 48 hours, 186 of 312 articles; nothing
-//                    seen yet, no Missed, and nothing sorted into AI yet
+//                    seen yet, no recap, and nothing sorted into AI yet
 //   news-capped      the cap reached: $22 more of story summaries this month, $40.40 of $40
 import {SEED_NOW} from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
@@ -114,7 +114,7 @@ const FIRST_RUN_SECTIONS: NewsSection[] = ['local', 'tech', 'ai', 'general'];
 export function newsFirstRun({db}: OpenDatabase) {
   sorting(db, {firstRunStartedAt: zoned('2026-10-07', '08:40'), firstRunDoneAt: null});
   holdSorting(db);
-  // A first run has no history: nothing seen yet and nothing missed.
+  // A first run has no history: nothing seen yet and no recap.
   removeStories(db, db.select({id: t.newsStories.id}).from(t.newsStories).where(isNotNull(t.newsStories.expiredAt)).all().map(row => row.id));
   db.update(t.newsStories).set({seenAt: null}).run();
   // Nothing sorted into AI yet: its own stories aren't made, and a story it shares keeps its other section.

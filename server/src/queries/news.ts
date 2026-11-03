@@ -1,24 +1,25 @@
 // News's reads (N1; shapes in `@setpoint/shared` src/api/news.ts): All's blocks, a section's list,
-// a story and its sources, an article, Missed and Settings › News. Order is the stored score, biggest
-// first (N3 ranks); dots, the leading outlet, the block's size, a story's main section (All's one
-// block for it and Missed's name for it, D102) and a section's line follow src/domain/news.ts. N3
-// adds the bar (a story under it never shows: not on the page, in Missed or in search), Missed's
-// limit of five per section per day, and search over the 90-day archive.
+// a story and its sources, an article, the recap (While you were away, #298) and Settings › News.
+// Order is the stored score, biggest first (N3 ranks); dots, the leading outlet, the block's size, a
+// story's main section (All's one block for it and the recap's name for it, D102), a section's line
+// and the recap's stories follow src/domain/news.ts. N3 adds the bar (a story under it never shows:
+// not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
-  ArticleOut, MissedOut, MissedStoryOut, NewsBlockOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
-  SectionHealthOut, StoryFactOut, StoryOut, StoryRowOut, UpcomingOut,
+  ArticleOut, MissedOut, NewsBlockOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
+  RecapOut, RecapStoryOut, SectionHealthOut, StoryFactOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS, NEWS_SOURCE_ICONS} from '@setpoint/shared';
 import type {NewsSourceIcon} from '@setpoint/shared';
 import {and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lte, max} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import type {Health} from '../domain/health.ts';
-import {ARCHIVE_MS, blockSize, leadOf, listedArticles, mainSection, newSince, sectionHealth, sectionOrder, storyState} from '../domain/news.ts';
-import {hazardOf, limitMissed, matchesAll, searchWords} from '../domain/newsSorting.ts';
+import {ARCHIVE_MS, blockSize, leadOf, listedArticles, mainSection, newSince, recapStories, sectionHealth, sectionOrder, storyState} from '../domain/news.ts';
+import {hazardOf, matchesAll, searchWords} from '../domain/newsSorting.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {activeNewsSources} from '../news/sources.ts';
-import {liveCondition, missedCondition, newsSourceHealth, overBar} from '../news/store.ts';
+import {recapState} from '../news/recap.ts';
+import {liveCondition, newsSourceHealth, overBar, recapCondition} from '../news/store.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 
@@ -130,25 +131,44 @@ function sectionLines(store: Store, now: string): Map<NewsSection, SectionHealth
   }));
 }
 
-/** The stories in Missed, biggest first. */
-function missedIds(store: Store): number[] {
-  return store.db.select({id: t.newsStories.id}).from(t.newsStories).where(and(missedCondition(), overBar()))
-    .orderBy(desc(t.newsStories.score), desc(t.newsStories.lastNewFactAt), desc(t.newsStories.id)).all().map(row => row.id);
-}
-
 /**
- * Missed's "since Mon 10:40 PM": the user's last look before the first of these stories left the page,
- * the newest time they saw any story up to then. Null when they'd seen none.
+ * The user's last look before a story left the page, the newest time they saw any story up to then:
+ * the first recap's "since" (what Missed held at release). Null when they'd seen none.
  */
-function missedSince(store: Store, firstExpiry: string): string | null {
+function lastLookBefore(store: Store, at: string): string | null {
   return store.db.select({at: max(t.newsStories.seenAt)}).from(t.newsStories)
-    .where(and(isNotNull(t.newsStories.seenAt), lte(t.newsStories.seenAt, firstExpiry))).get()?.at ?? null;
+    .where(and(isNotNull(t.newsStories.seenAt), lte(t.newsStories.seenAt, at))).get()?.at ?? null;
 }
 
 /**
- * All: one block per section in its fixed order, and the Missed strip. A block holds only the stories
- * whose main section it is, so a story shows once (D102), and is sized from them. "N more" is the rest
- * of the section's list, which holds every story in the section, those shown in another block too.
+ * While you were away (#298): the stories it was fixed with once on screen, else those that can be in
+ * it, biggest first, each named by its main section (D102); then up to three per section, in the
+ * blocks' order. Null when it holds nothing.
+ */
+export function newsRecap(store: Store): RecapOut | null {
+  const recap = rankedRecap(store);
+  return recap && {since: recap.since, stories: recap.stories};
+}
+
+/** The recap, and its stories' ids biggest first, as Catch up orders a day. */
+function rankedRecap(store: Store): RecapOut & {ids: number[]} | null {
+  const state = recapState(store);
+  const ids = store.db.select({id: t.newsStories.id}).from(t.newsStories)
+    .where(state.storyIds ? and(inArray(t.newsStories.id, state.storyIds), overBar()) : recapCondition(state.putAwayAt))
+    .orderBy(desc(t.newsStories.score), desc(t.newsStories.lastNewFactAt), desc(t.newsStories.id)).all().map(row => row.id);
+  const {rows, main} = loadRows(store, ids);
+  const stories = recapStories(ids.flatMap((id): RecapStoryOut[] => {
+    const row = rows.get(id);
+    return row?.expired_at ? [{...row, section: main.get(id) ?? row.sections[0]!, expired_at: row.expired_at}] : [];
+  }));
+  if (!stories.length) return null;
+  return {since: state.putAwayAt ?? lastLookBefore(store, stories.map(story => story.expired_at).sort()[0]!), stories, ids};
+}
+
+/**
+ * All: one block per section in its fixed order, and the recap. A block holds only the stories whose
+ * main section it is, so a story shows once (D102), and is sized from them. "N more" is the rest of
+ * the section's list, which holds every story in the section, those shown in another block too.
  */
 export function newsPage(store: Store): NewsPageOut {
   const now = isoNow(store);
@@ -161,8 +181,8 @@ export function newsPage(store: Store): NewsPageOut {
     const shown = blockSize(own.map(story => story.score));
     return {section, stories: own.slice(0, shown).map(story => loaded.get(story.id)!), more: rows.length - shown, upcoming: upcoming(store, section, now), health: lines.get(section) ?? null};
   });
-  const missed = missedStories(store);
-  return {blocks, missed: missed.length ? {count: missed.length, since: missedSince(store, firstExpiry(missed))} : null};
+  const recap = newsRecap(store);
+  return {blocks, missed: recap && {count: recap.stories.length, since: recap.since}, recap};
 }
 
 /** A section's full list, biggest first. */
@@ -208,34 +228,19 @@ export function articleDetail(store: Store, articleId: number): ArticleOut {
 }
 
 /**
- * Missed's stories, biggest first, each named by its main section (D102), at most five per section per
- * day (N3); the rest never show there.
- */
-function missedStories(store: Store): MissedStoryOut[] {
-  const ids = missedIds(store);
-  const {rows, main} = loadRows(store, ids);
-  const stories = ids.flatMap(id => {
-    const row = rows.get(id);
-    return row?.expired_at ? [{...row, section: main.get(id) ?? row.sections[0]!, expired_at: row.expired_at}] : [];
-  });
-  return limitMissed(stories, store.timeZone);
-}
-
-const firstExpiry = (stories: readonly MissedStoryOut[]) => stories.map(story => story.expired_at).sort()[0]!;
-
-/**
- * Catch up: by the local day each story left the page, newest day first, biggest first within it, at
- * most five per section per day. A story that left unseen is here until it's seen.
+ * The iPhone app's Catch up (D424), until setpoint-ios has its own recap: the recap's stories by the
+ * local day each left the page, newest day first, biggest first within it.
  */
 export function missed(store: Store): MissedOut {
-  const stories = missedStories(store);
-  const days = new Map<string, MissedStoryOut[]>();
+  const recap = rankedRecap(store);
+  const stories = recap ? [...recap.stories].sort((a, b) => recap.ids.indexOf(a.id) - recap.ids.indexOf(b.id)) : [];
+  const days = new Map<string, RecapStoryOut[]>();
   for (const story of stories) {
     const date = localDay(story.expired_at, store.timeZone);
     days.set(date, [...(days.get(date) ?? []), story]);
   }
   return {
-    since: stories.length ? missedSince(store, firstExpiry(stories)) : null,
+    since: recap?.since ?? null,
     count: stories.length,
     days: [...days.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([date, list]) => ({date, stories: list})),
   };

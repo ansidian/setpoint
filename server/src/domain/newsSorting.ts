@@ -1,8 +1,8 @@
-// News's sorting rules (N3; BRIEF.md › News › What it covers, Stories, Ranking, Models and cost,
-// Missed; D86–D91): the rules that map a source to a likely section, the noise and politics policy
+// News's sorting rules (N3; BRIEF.md › News › What it covers, Stories, Ranking, Models and cost;
+// D86–D91): the rules that map a source to a likely section, the noise and politics policy
 // as applied to the model's reading of an article, wire copy, candidate matching and how a grouping
 // answer is applied (new facts versus repeats, and which rewrite the story), what a story's writer is
-// sent, the ranking formula and the bar, the monthly cap, Missed's limits, keynote confirmation, and
+// sent, the ranking formula and the bar, the monthly cap, keynote confirmation, and
 // search's matching. Pure, so each is tested as a table; src/news/sorter.ts asks the models and keeps
 // what these decide.
 import type {NewsHazard, NewsSection} from '@setpoint/shared';
@@ -468,26 +468,6 @@ export function monthStart(now: string, timeZone: string): string {
 
 /** How often every story on the page is scored again by the formula, as recency moves with the clock. */
 export const RANK_EVERY_MS = HOUR;
-
-// ---- Missed (D87) ----
-
-/** Catch up lists at most this many per section per day, biggest first. */
-export const MISSED_PER_SECTION_PER_DAY = 5;
-
-/**
- * Missed's limit: stories in the order given (biggest first), at most five per section (the one its
- * row names) per local day it left the page; the rest never show in Missed.
- */
-export function limitMissed<S extends {section: NewsSection; expired_at: string}>(stories: readonly S[], timeZone: string, max = MISSED_PER_SECTION_PER_DAY): S[] {
-  const counts = new Map<string, number>();
-  return stories.filter(story => {
-    const key = `${localDay(story.expired_at, timeZone)}:${story.section}`;
-    const count = counts.get(key) ?? 0;
-    if (count >= max) return false;
-    counts.set(key, count + 1);
-    return true;
-  });
-}
 
 // ---- Upcoming (BRIEF.md › The page) ----
 

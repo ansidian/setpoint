@@ -6,8 +6,8 @@
 // News one shows its headline alone, a keynote confirmed by a second outlet goes to Upcoming, the
 // order follows the importance each story is judged as it's written (D421), and the hour re-scores
 // without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
-// the first run, Missed's limit, search and Add to calendar.
-import {missedSchema, newsPageSchema, newsSearchSchema, newsStatusSchema, newsUnsortedSchema, SEED_NOW, storySchema} from '@setpoint/shared';
+// the first run and the recap, search and Add to calendar.
+import {newsPageSchema, newsSearchSchema, newsStatusSchema, newsUnsortedSchema, recapSchema, SEED_NOW, storySchema} from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
@@ -21,7 +21,7 @@ import type {NewsSourceSpec} from '../src/news/sources.ts';
 import {markRanked, newsStatus, sortingRow, unsortedArticles} from '../src/news/sortState.ts';
 import {NewsSortWorker, sortAfterFetch} from '../src/news/sortWorker.ts';
 import {expireNews, markSeen, storeArticles} from '../src/news/store.ts';
-import {missed, newsPage, newsSearch, newsSection, storyDetail} from '../src/queries/news.ts';
+import {newsPage, newsRecap, newsSearch, newsSection, storyDetail} from '../src/queries/news.ts';
 import {setSecret} from '../src/secrets/store.ts';
 import {updateSettings} from '../src/settings.ts';
 import {isoNow} from '../src/store.ts';
@@ -396,7 +396,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(liveEvents(w).some(event => event.type === 'news' && event.stories.includes(fire) && event.sections.includes('local'))).toBe(true);
   });
 
-  test('the first run never goes to Missed; a later story left unseen does, and search keeps the archive', async () => {
+  test('the first run never goes to the recap; a later story left unseen does, and search keeps the archive', async () => {
     const s = await sortWorld();
     const {w} = s;
     s.deliver(FIRST);
@@ -418,8 +418,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     w.advance(49 * HOUR);
     expireNews(w.store, null);
     expect(newsPage(w.store).blocks.every(block => !block.stories.length)).toBe(true);
-    const out = missedSchema.parse(missed(w.store));
-    expect(out.days.flatMap(day => day.stories.map(story => story.id))).toEqual([ramp]);
+    expect(recapSchema.parse(newsRecap(w.store)).stories.map(story => story.id)).toEqual([ramp]);
     // Expired stories are still found.
     expect(newsSearch(w.store, {q: 'warehouse', limit: 50}).stories.map(story => story.expired_at !== null)).toEqual([true]);
   });
@@ -590,32 +589,6 @@ describe('the seed\'s stand-ins', () => {
     expect(fake.requests).toHaveLength(0);
     expect(scores()).toEqual(before);
     expect(newsStatus(w.store)).toEqual({unsorted: 0, down: null, first_run: null});
-  });
-});
-
-describe('Missed\'s limit (D87)', () => {
-  test('Catch up holds at most five per section per day, biggest first; the strip counts what it holds', async () => {
-    const s = await sortWorld();
-    const {w} = s;
-    const source = w.store.db.select().from(t.newsSources).where(eq(t.newsSources.key, 'test:nbcla')).get()!;
-    const ids: number[] = [];
-    for (let index = 0; index < 7; index += 1) {
-      const url = `https://nbcla.example/missed/${index}`;
-      const article = w.store.db.insert(t.newsArticles).values({sourceId: source.id, url, canonicalUrl: url, outlet: 'NBC Los Angeles', headline: `Local story ${index}`, publishedAt: at(-50), fetchedAt: at(-50), sortedAt: at(-50)}).returning().get();
-      const story = w.store.db.insert(t.newsStories).values({headline: `Local story ${index}`, score: 90 - index, firstReportedAt: at(-50), lastNewFactAt: at(-49), createdAt: at(-50)}).returning().get();
-      w.store.db.insert(t.newsStorySections).values({storyId: story.id, section: 'local', position: 0}).run();
-      w.store.db.insert(t.newsStoryArticles).values({storyId: story.id, articleId: article.id, linkedAt: at(-50)}).run();
-      ids.push(story.id);
-    }
-    expireNews(w.store, null);
-    const out = missedSchema.parse(missed(w.store));
-    expect(out.days).toHaveLength(1);
-    expect(out.days[0]!.stories.map(story => story.id)).toEqual(ids.slice(0, 5));
-    expect(out.count).toBe(5);
-    expect(newsPage(w.store).missed?.count).toBe(5);
-    // Each leaves as it's seen.
-    markSeen(w.store, [ids[0]!]);
-    expect(missed(w.store).days[0]!.stories.map(story => story.id)).toEqual(ids.slice(1, 6));
   });
 });
 

@@ -1,14 +1,16 @@
 // News's store rules as tables (src/domain/news.ts): the page's 48 hours and the archive's 90 days,
 // the dot per story, what's new since the user looked, which image copies the archive keeps, a block's
-// size, the leading outlet with "+N", a story's main section, and a section's line.
+// size, the leading outlet with "+N", a story's main section, a section's line, and the recap's
+// stories and the hour away that puts it away (#298).
 import type {NewsSection} from '@setpoint/shared';
+import {NEWS_SECTIONS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {Health} from '../src/domain/health.ts';
 import {
-  blockSize, expiresAt, keepsImage, leadOf, listedArticles, mainSection, newSince, purgeAt, sectionHealth, sectionOrder, storyStage,
-  storyState,
+  blockSize, expiresAt, keepsImage, leadOf, listedArticles, mainSection, newSince, purgeAt, recapAt, recapStories, sectionHealth, sectionOrder,
+  storyStage, storyState,
 } from '../src/domain/news.ts';
-import type {OutletArticle, StoryReading} from '../src/domain/news.ts';
+import type {OutletArticle, RecapState, StoryReading} from '../src/domain/news.ts';
 
 const FACT = '2026-10-05T15:40:00.000Z';
 const after = (hours: number, from = FACT) => new Date(Date.parse(from) + hours * 3_600_000).toISOString();
@@ -65,9 +67,6 @@ describe('image copies', () => {
     ['archived: the story\'s thumbnail stays for its rows', 'archive', 'thumb', 1, true],
     ['archived: the story\'s large copy goes', 'archive', 'large', 1, false],
     ['archived: another source\'s thumbnail goes', 'archive', 'thumb', 2, false],
-    ['in Missed: the story\'s large copy stays for its lead (news-09)', 'missed', 'large', 1, true],
-    ['in Missed: the story\'s thumbnail stays', 'missed', 'thumb', 1, true],
-    ['in Missed: another source\'s large copy goes', 'missed', 'large', 2, false],
     ['purged: even the thumbnail goes', 'purge', 'thumb', 1, false],
   ])('%s', (_, stage, variant, articleId, kept) => {
     expect(keepsImage(stage, {articleId, variant}, 1)).toBe(kept);
@@ -152,5 +151,34 @@ describe('a section\'s line', () => {
     ['no sources', [], null],
   ])('%s', (_, healths, line) => {
     expect(sectionHealth(healths)).toEqual(line);
+  });
+});
+
+describe('While you were away (#298)', () => {
+  const LEFT = '2026-10-06T17:00:00.000Z';
+  const NOW = '2026-10-07T15:00:00.000Z';
+  const minutes = (count: number) => new Date(Date.parse(NOW) - count * 60_000).toISOString();
+  const state = (shownAt: string | null, hereAt: string | null): RecapState => ({putAwayAt: LEFT, shownAt, storyIds: shownAt ? [1, 2] : null, hereAt});
+
+  test.each<[string, RecapState, RecapState]>([
+    ['never on screen: kept, however long the user is away', state(null, minutes(600)), state(null, minutes(600))],
+    ['on screen, the user still on News: kept', state(minutes(20), minutes(1)), state(minutes(20), minutes(1))],
+    ['on screen, then a trip to the Inbox under an hour: kept', state(minutes(80), minutes(59)), state(minutes(80), minutes(59))],
+    ['on screen, then an hour away: put away as of when they left', state(minutes(80), minutes(60)), {putAwayAt: minutes(60), shownAt: null, storyIds: null, hereAt: minutes(60)}],
+    ['on screen, then away overnight', state(minutes(900), minutes(700)), {putAwayAt: minutes(700), shownAt: null, storyIds: null, hereAt: minutes(700)}],
+    ['nothing yet: no recap put away', {putAwayAt: null, shownAt: null, storyIds: null, hereAt: null}, {putAwayAt: null, shownAt: null, storyIds: null, hereAt: null}],
+  ])('the hour away: %s', (_, before, after) => {
+    expect(recapAt(before, NOW)).toEqual(after);
+  });
+
+  const story = (id: number, section: NewsSection) => ({id, section});
+  test.each<[string, {id: number; section: NewsSection}[], number[]]>([
+    ['nothing', [], []],
+    ['up to three per section, biggest first as given', [1, 2, 3, 4, 5].map(id => story(id, 'local')), [1, 2, 3]],
+    ['grouped in the blocks\' order, whatever the order of size', [story(1, 'general'), story(2, 'ai'), story(3, 'local'), story(4, 'tech')], [3, 4, 2, 1]],
+    ['a big week in General doesn\'t crowd out Local', [...[1, 2, 3, 4, 5, 6].map(id => story(id, 'general')), story(7, 'local')], [7, 1, 2, 3]],
+    ['twelve at most', NEWS_SECTIONS.flatMap((section, at) => [1, 2, 3, 4].map(id => story(at * 10 + id, section))), [1, 2, 3, 11, 12, 13, 21, 22, 23, 31, 32, 33]],
+  ])('its stories: %s', (_, stories, ids) => {
+    expect(recapStories(stories).map(one => one.id)).toEqual(ids);
   });
 });

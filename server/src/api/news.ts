@@ -1,19 +1,21 @@
 // News's routes (shapes and the list in `@setpoint/shared` src/api/news.ts): All, a section, a story,
-// an article, Missed, Settings › News, Setpoint's image copies, and stories seen; N3's sorting state
-// (Unsorted and the first run), Show headlines, search, and Upcoming's Add to calendar. Mounted under
-// /api behind the session, like the rest of the API. Read-only but for seen; ingest (N2) and sorting
+// an article, the iPhone app's Catch up, Settings › News, Setpoint's image copies, and stories seen;
+// N3's sorting state (Unsorted and the first run), Show headlines, search, and Upcoming's Add to
+// calendar; and the recap's state (#298): News on screen, Done and its Undo. Mounted under /api behind
+// the session, like the rest of the API. Read-only but for seen and the recap; ingest (N2) and sorting
 // (N3) write the rest, and every change goes out as a `news` live event.
-import {newsSearchInput, newsSectionSchema, newsSeenInput} from '@setpoint/shared';
-import type {NewsSeenOut} from '@setpoint/shared';
+import {newsHereInput, newsSearchInput, newsSectionSchema, newsSeenInput, recapUndoSchema} from '@setpoint/shared';
+import type {NewsSeenOut, RecapDoneOut} from '@setpoint/shared';
 import {Hono} from 'hono';
 import type {Context} from 'hono';
 import {z} from 'zod';
 import {invalid, notFound, parse} from '../errors.ts';
 import {readNewsImage} from '../news/images.ts';
 import {proposeFromNewsEvent} from '../news/proposal.ts';
+import {noteHere, putRecapAway, undoPutAway} from '../news/recap.ts';
 import {newsStatus, unsortedArticles} from '../news/sortState.ts';
 import {markSeen} from '../news/store.ts';
-import {articleDetail, missed, newsPage, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
+import {articleDetail, missed, newsPage, newsRecap, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
 import type {Store} from '../store.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
@@ -54,8 +56,22 @@ export function newsApi(store: Store, {imagesDir = null}: NewsApiOptions = {}) {
     return c.body(new Uint8Array(image.bytes));
   });
   api.post('/news/seen', async c => {
-    const seen = markSeen(store, parse(newsSeenInput, await body(c)).story_ids);
+    const ids = parse(newsSeenInput, await body(c)).story_ids;
+    // Seeing a story is being on News, and seeing one of the recap's means it's on screen: the iPhone
+    // app's Catch up (D424) fixes it as the page does.
+    const recap = newsRecap(store)?.stories.map(story => story.id) ?? [];
+    noteHere(store, recap.some(id => ids.includes(id)) ? recap : null);
+    const seen = markSeen(store, ids);
     return c.json({stories: storyRows(store, seen)} satisfies NewsSeenOut);
+  });
+  api.post('/news/here', async c => {
+    noteHere(store, parse(newsHereInput, await body(c)).recap);
+    return c.body(null, 204);
+  });
+  api.post('/news/recap/done', c => c.json({undo: putRecapAway(store)} satisfies RecapDoneOut));
+  api.post('/news/recap/undo', async c => {
+    undoPutAway(store, parse(recapUndoSchema, await body(c)));
+    return c.body(null, 204);
   });
   return api;
 }

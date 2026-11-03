@@ -1,14 +1,13 @@
-// News's resources and its one change, seen (shared/src/api/news.ts has the routes). Seen shows at
-// once wherever the story is loaded, its dot gone, then the server's answer and its `news` event take
-// over. An opened story is loaded before it's marked seen, so the pane still has what was new since
-// the user last looked. N5 adds sorting's state and Show headlines, Settings › News, search, and
-// Upcoming's proposal.
-import type {MissedOut, NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, StoryOut, StoryRowOut} from '@setpoint/shared';
+// News's resources and its changes, seen and the recap's (shared/src/api/news.ts has the routes).
+// Seen shows at once wherever the story is loaded, its dot gone, then the server's answer and its
+// `news` event take over. An opened story is loaded before it's marked seen, so the pane still has
+// what was new since the user last looked. N5 adds sorting's state and Show headlines, Settings ›
+// News, search, and Upcoming's proposal; #298 the user on News, the recap on screen, Done and Undo.
+import type {NewsPageOut, NewsProposalOut, NewsSearchOut, NewsSection, NewsSectionOut, NewsSeenOut, RecapDoneOut, RecapUndoOut, StoryOut, StoryRowOut} from '@setpoint/shared';
 import {serverNow} from './auth.ts';
 import {cachedPaths, getCached, getJson, refresh, refreshIfShown, sendJson, updateCached} from './client.ts';
 
 export const NEWS_PATH = '/news';
-export const MISSED_PATH = '/news/missed';
 export const sectionPath = (section: NewsSection) => `/news/sections/${section}`;
 export const storyPath = (id: number) => `/news/stories/${id}`;
 export const articlePath = (id: number) => `/news/articles/${id}`;
@@ -23,17 +22,19 @@ const seenRow = <R extends StoryRowOut>(row: R, ids: ReadonlySet<number>, at: st
 
 /** Turns the stories seen in every loaded list and story, at once. */
 function showSeen(ids: ReadonlySet<number>, at: string) {
-  updateCached<NewsPageOut>(NEWS_PATH, page => ({...page, blocks: page.blocks.map(block => ({...block, stories: block.stories.map(row => seenRow(row, ids, at))}))}));
+  updateCached<NewsPageOut>(NEWS_PATH, page => ({
+    ...page, blocks: page.blocks.map(block => ({...block, stories: block.stories.map(row => seenRow(row, ids, at))})),
+    recap: page.recap && {...page.recap, stories: page.recap.stories.map(row => seenRow(row, ids, at))},
+  }));
   for (const path of cachedPaths('/news/sections')) {
     updateCached<NewsSectionOut>(path, list => ({...list, stories: list.stories.map(row => seenRow(row, ids, at))}));
   }
-  updateCached<MissedOut>(MISSED_PATH, missed => ({...missed, days: missed.days.map(day => ({...day, stories: day.stories.map(row => seenRow(row, ids, at))}))}));
   for (const path of cachedPaths('/news/stories')) updateCached<StoryOut>(path, story => seenRow(story, ids, at));
 }
 
 /** Loads News's lists again: a refused seen puts their dots back. */
 function refreshLists() {
-  for (const path of [NEWS_PATH, MISSED_PATH, ...cachedPaths('/news/sections')]) refreshIfShown(path);
+  for (const path of [NEWS_PATH, ...cachedPaths('/news/sections')]) refreshIfShown(path);
 }
 
 /** Stories seen: a row fully on screen for about a second, or opened (D87). */
@@ -57,6 +58,23 @@ export async function openStory(id: number, onFailed: (error: Error) => void): P
   if (before?.id !== id) return null;
   markSeen([id]).catch(onFailed);
   return before;
+}
+
+/**
+ * The user is on News (#298), with the recap's stories once it's on screen, which fixes it there: the
+ * server puts it away once it has shown and they've then been away an hour.
+ */
+export const noteHere = (recap: number[] | null) => sendJson<void>('POST', '/news/here', {recap});
+
+/** Done: the recap put away at once, its stories still unseen (D426). Resolves with what Undo puts back. */
+export async function putRecapAway(): Promise<RecapUndoOut> {
+  return (await sendJson<RecapDoneOut>('POST', '/news/recap/done')).undo;
+}
+
+/** Done's Undo: the recap back as it was. */
+export async function undoRecap(undo: RecapUndoOut): Promise<void> {
+  await sendJson<void>('POST', '/news/recap/undo', undo);
+  refreshIfShown(NEWS_PATH);
 }
 
 /** Search news over the 90-day archive, expired stories included, newest first. */

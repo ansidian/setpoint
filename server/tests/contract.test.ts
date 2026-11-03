@@ -292,7 +292,7 @@ async function recordAll() {
   await app.record('error-item-when', 'ApiError', 'POST', '/api/items', '/api/items', {kind: 'event', calendar_id: 1, title: 'Lunch', starts_at: '2026-10-09T19:00:00.000Z'});
   await app.record('error-item-nothing-to-change', 'ApiError', 'PATCH', '/api/items/:id', '/api/items/2', {changes: {}});
 
-  // SV-104: News. All, with the Missed strip, a hazard's lead (Local's Red Flag Warning) and Tech's block
+  // SV-104: News. All, with the recap and the Missed strip it feeds the app (D424), a hazard's lead (Local's Red Flag Warning) and Tech's block
   // holding Upcoming (the Apple event); a section with more than its block shows, and Tech's with Upcoming.
   await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news');
   await app.record('news-section', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/local');
@@ -304,7 +304,7 @@ async function recordAll() {
   await app.record('news-article', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/2');
   await app.record('news-article-summary-only', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/1');
   await app.record('news-article-discovery', 'ArticleOut', 'GET', '/api/news/articles/:id', '/api/news/articles/42');
-  // Catch up: Tuesday's 14.
+  // Catch up: the recap's 11, all from Tuesday (D424).
   await app.record('news-missed', 'MissedOut', 'GET', '/api/news/missed', '/api/news/missed');
   // Sorting as the seed has it: nothing waiting, no first run.
   await app.record('news-status', 'NewsStatusOut', 'GET', '/api/news/status', '/api/news/status');

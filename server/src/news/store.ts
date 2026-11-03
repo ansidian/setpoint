@@ -7,7 +7,7 @@ import {NEWS_SECTIONS} from '@setpoint/shared';
 import {and, eq, gt, gte, inArray, isNotNull, isNull, lte, notExists, sql} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {deriveHealth} from '../domain/health.ts';
-import {ARCHIVE_MS, CAUGHT_UP_MS, expiresAt, keepsImage, STORY_TTL_MS} from '../domain/news.ts';
+import {ARCHIVE_MS, expiresAt, keepsImage, STORY_TTL_MS} from '../domain/news.ts';
 import {STORY_BAR} from '../domain/newsSorting.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -91,8 +91,8 @@ function sectionsOf(store: Store, storyIds: number[]): NewsSection[] {
 
 /**
  * Stories seen (D87): a row fully on screen for about a second, or opened. Per story, never per
- * article; seeing an updated story clears its dot until the next new fact, and seeing a Missed one
- * takes it out of Missed. Returns the stories that exist.
+ * article; seeing an updated story clears its dot until the next new fact. Returns the stories that
+ * exist.
  */
 export function markSeen(store: Store, storyIds: readonly number[]): number[] {
   const now = isoNow(store);
@@ -104,9 +104,9 @@ export function markSeen(store: Store, storyIds: readonly number[]): number[] {
 }
 
 export interface ExpiryOutcome {
-  // Moved from the page to the archive, and the ones of them the user hadn't seen (Missed).
+  // Moved from the page to the archive, and the ones of them the user hadn't seen (the recap's).
   expired: number[];
-  missed: number[];
+  unseen: number[];
   // Gone with their archive.
   purged: number[];
   // Image files deleted.
@@ -116,10 +116,10 @@ export interface ExpiryOutcome {
 /**
  * Moves stories 48 h past their last new fact into the archive, recording which left unseen, and
  * drops what the archive doesn't keep: the articles' extracted text, the facts timeline, and every
- * image copy but the story's own thumbnail, and its large copy too while it's in Missed (keepsImage),
- * until an hour after it's seen. Stories 90 days past their last fact go entirely, with their
- * articles, as do articles that never joined a story in that time. Image files are deleted once the
- * transaction commits. `imagesDir` null leaves files alone (tests without a data directory).
+ * image copy but the story's own thumbnail (keepsImage). Stories 90 days past their last fact go
+ * entirely, with their articles, as do articles that never joined a story in that time. Image files
+ * are deleted once the transaction commits. `imagesDir` null leaves files alone (tests without a data
+ * directory).
  */
 export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcome {
   const now = store.now().getTime();
@@ -129,30 +129,27 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
     const files: string[] = [];
     const leaving = store.db.select().from(t.newsStories).where(and(isNull(t.newsStories.expiredAt), lte(t.newsStories.lastNewFactAt, pageCutoff))).all();
     for (const story of leaving) {
-      // The first run's fill never goes to Missed: Missed stays empty until there's history (N3).
+      // The first run's fill never goes to the recap: there's none until there's history (N3).
       const unseen = story.seenAt === null && !story.backfill;
       store.db.update(t.newsStories).set({expiredAt: expiresAt(story.lastNewFactAt), expiredUnseen: unseen}).where(eq(t.newsStories.id, story.id)).run();
       const articleIds = store.db.select({id: t.newsStoryArticles.articleId}).from(t.newsStoryArticles).where(eq(t.newsStoryArticles.storyId, story.id)).all().map(row => row.id);
       if (articleIds.length) {
         store.db.update(t.newsArticles).set({extractedText: null}).where(inArray(t.newsArticles.id, articleIds)).run();
         const images = store.db.select().from(t.newsImages).where(inArray(t.newsImages.articleId, articleIds)).all();
-        // Missed shows only a story over the bar; one under it never shows again.
-        const stage = unseen && story.score >= STORY_BAR ? 'missed' : 'archive';
-        const dropped = images.filter(image => !keepsImage(stage, image, story.imageArticleId));
+        const dropped = images.filter(image => !keepsImage('archive', image, story.imageArticleId));
         if (dropped.length) store.db.delete(t.newsImages).where(inArray(t.newsImages.id, dropped.map(image => image.id))).run();
         files.push(...dropped.map(image => image.file));
       }
       store.db.delete(t.newsFacts).where(eq(t.newsFacts.storyId, story.id)).run();
     }
 
-    // Seen an hour ago or more, a story is out of Missed for good: its large copy goes, as the archive's.
-    const caughtUp = store.db.select({imageArticleId: t.newsStories.imageArticleId, image: t.newsImages}).from(t.newsStories)
+    // The large copies Missed kept for its leads (#115) go as the archive's do, now the recap has none (#298).
+    const missedLeads = store.db.select({image: t.newsImages}).from(t.newsStories)
       .innerJoin(t.newsStoryArticles, eq(t.newsStoryArticles.storyId, t.newsStories.id))
       .innerJoin(t.newsImages, eq(t.newsImages.articleId, t.newsStoryArticles.articleId))
-      .where(and(isNotNull(t.newsStories.expiredAt), eq(t.newsStories.expiredUnseen, true), lte(t.newsStories.seenAt, new Date(now - CAUGHT_UP_MS).toISOString()), eq(t.newsImages.variant, 'large')))
-      .all().filter(({imageArticleId, image}) => !keepsImage('archive', image, imageArticleId)).map(({image}) => image);
-    if (caughtUp.length) store.db.delete(t.newsImages).where(inArray(t.newsImages.id, caughtUp.map(image => image.id))).run();
-    files.push(...caughtUp.map(image => image.file));
+      .where(and(eq(t.newsStories.expiredUnseen, true), eq(t.newsImages.variant, 'large'))).all().map(({image}) => image);
+    if (missedLeads.length) store.db.delete(t.newsImages).where(inArray(t.newsImages.id, missedLeads.map(image => image.id))).run();
+    files.push(...missedLeads.map(image => image.file));
 
     // The archive's end: the stories, their articles (and so their images), and articles that never
     // joined a story within the archive's span.
@@ -173,17 +170,24 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
     }
     const expired = leaving.map(story => story.id);
     if (expired.length || purging.length) noteLive(store, {type: 'news', stories: [...expired, ...purging], sections, sources: []});
-    return {expired, missed: leaving.filter(story => story.seenAt === null && !story.backfill).map(story => story.id), purged: purging, files};
+    return {expired, unseen: leaving.filter(story => story.seenAt === null && !story.backfill).map(story => story.id), purged: purging, files};
   });
   deleteImageFiles(imagesDir, outcome.files);
   return outcome;
 }
 
-/** Missed: stories that left the page before the user saw them and haven't been seen since. */
-export const missedCondition = () => and(eq(t.newsStories.expiredUnseen, true), isNull(t.newsStories.seenAt), isNotNull(t.newsStories.expiredAt));
+/**
+ * What a recap can hold (#298): stories over the bar that left the page before the user saw them,
+ * after the last recap was put away. Before the first was, it's what Missed held: those that left
+ * unseen and haven't been seen since.
+ */
+export const recapCondition = (putAwayAt: string | null) => and(
+  eq(t.newsStories.expiredUnseen, true), isNotNull(t.newsStories.expiredAt), overBar(),
+  putAwayAt === null ? isNull(t.newsStories.seenAt) : gt(t.newsStories.expiredAt, putAwayAt),
+);
 
 /** On the page: not yet expired, and not past the 48 hours even if the expiry hasn't run yet. */
 export const liveCondition = (now: string) => and(isNull(t.newsStories.expiredAt), gt(t.newsStories.lastNewFactAt, new Date(Date.parse(now) - STORY_TTL_MS).toISOString()));
 
-/** Shown: a story under the bar never shows (N3, D86), on the page, in Missed or in search. */
+/** Shown: a story under the bar never shows (N3, D86), on the page, in the recap or in search. */
 export const overBar = () => gte(t.newsStories.score, STORY_BAR);

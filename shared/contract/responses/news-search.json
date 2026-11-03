@@ -104,17 +104,12 @@
       },
       "image": {
         "thumb": {
-          "id": 76,
-          "url": "/api/news/images/76",
+          "id": 68,
+          "url": "/api/news/images/68",
           "width": 144,
           "height": 96
         },
-        "large": {
-          "id": 75,
-          "url": "/api/news/images/75",
-          "width": 640,
-          "height": 360
-        },
+        "large": null,
         "outlet": "ABC News"
       },
       "first_reported_at": "2026-10-05T03:45:00.000Z",

@@ -967,8 +967,8 @@ export const newsArticles = sqliteTable('news_articles', {
  * A story: the articles about one event (D86), with the model's headline, one line and summary.
  * `score` is N3's ranking, biggest first. `last_new_fact_at` moves only on a new fact: the dot comes
  * back as updated, and the story leaves the page 48 h after it. Seen is per story (`seen_at`, the
- * last time the user saw it); `expired_unseen` records that it left the page before they did, which Missed
- * is built on. The lead and image articles are N3's picks among its sources.
+ * last time the user saw it); `expired_unseen` records that it left the page before they did, which the
+ * recap is built on (#298). The lead and image articles are N3's picks among its sources.
  */
 export const newsStories = sqliteTable('news_stories', {
   id: integer('id').primaryKey({autoIncrement: true}),
@@ -993,7 +993,7 @@ export const newsStories = sqliteTable('news_stories', {
   // N3: the headline and summary are due to be written (a new story, or new facts), and when they were.
   needsWriting: integer('needs_writing', {mode: 'boolean'}).notNull().default(false),
   writtenAt: text('written_at'),
-  // N3: made by the first run's fill of the last 48 hours: it never goes to Missed.
+  // N3: made by the first run's fill of the last 48 hours: it never goes to the recap.
   backfill: integer('backfill', {mode: 'boolean'}).notNull().default(false),
 }, table => [
   index('news_stories_live').on(table.expiredAt, table.score),
@@ -1001,7 +1001,7 @@ export const newsStories = sqliteTable('news_stories', {
   check('news_stories_unseen', sql`not ${table.expiredUnseen} or ${table.expiredAt} is not null`),
 ]);
 
-/** The sections a story sits in (one or more); `position` 0 is the one its Missed row names. */
+/** The sections a story sits in (one or more), in the order sorting gave them. */
 export const newsStorySections = sqliteTable('news_story_sections', {
   storyId: integer('story_id').notNull().references(() => newsStories.id, {onDelete: 'cascade'}),
   section: text('section', {enum: NEWS_SECTIONS}).notNull(),
@@ -1072,6 +1072,20 @@ export const newsEvents = sqliteTable('news_events', {
   index('news_events_starts').on(table.startsAt),
   check('news_events_section', sql`${table.section} in (${quoted(NEWS_SECTIONS)})`),
 ]);
+
+/**
+ * While you were away (#298), one row: when the last recap was put away (null before the first was,
+ * so the first holds what Missed held), when this one was first on screen and the stories it was fixed
+ * with then, and when the user was last on News, for the hour away that puts it away
+ * (src/domain/news.ts).
+ */
+export const newsRecap = sqliteTable('news_recap', {
+  id: integer('id').primaryKey(),
+  putAwayAt: text('put_away_at'),
+  shownAt: text('shown_at'),
+  storyIds: text('story_ids', {mode: 'json'}).$type<number[]>(),
+  hereAt: text('here_at'),
+}, table => [check('news_recap_singleton', sql`${table.id} = 1`)]);
 
 /**
  * N3: News's sorting, one row: its health as triage's is (down while its last model call failed, or

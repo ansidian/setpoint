@@ -142,7 +142,8 @@ describe('routes', () => {
     ['/calendar/new', '?kind=event&upcoming=4', {page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null, upcoming: 4}}],
     ['/news', '', {page: 'news', view: 'all', story: null, article: null}],
     ['/news/local', '', {page: 'news', view: 'local', story: null, article: null}],
-    ['/news/missed', '', {page: 'news', view: 'missed', story: null, article: null}],
+    // Catch up's old address is All, where the recap is (#298).
+    ['/news/missed', '', {page: 'news', view: 'all', story: null, article: null}],
     ['/news/story/18', '', {page: 'news', view: 'all', story: 18, article: null}],
     ['/news/ai/story/28/article/40', '', {page: 'news', view: 'ai', story: 28, article: 40}],
     ['/news/sports/story/3', '', {page: 'news', view: 'all', story: null, article: null}],
@@ -207,13 +208,13 @@ describe('live events refresh only what they name', () => {
 
   // News (N4): the lists refetch, and the page holds their order (logic/news.ts).
   // N5: sorting's state and Show headlines on every one.
-  const news = ['/news', '/news/sections/local', '/news/missed', '/news/stories/1', '/news/stories/2', '/news/articles/3', '/news/sources', '/news/status', '/news/unsorted', '/mail/inbox'];
+  const news = ['/news', '/news/sections/local', '/news/stories/1', '/news/stories/2', '/news/articles/3', '/news/sources', '/news/status', '/news/unsorted', '/mail/inbox'];
   test.each([
     ['stories changed in place: the lists, and the open story only when it\'s named', {type: 'news', stories: [1], sections: [], sources: []},
-      ['/news', '/news/sections/local', '/news/missed', '/news/stories/1', '/news/status', '/news/unsorted']],
-    ['sections re-ranked: the lists', {type: 'news', stories: [], sections: ['tech'], sources: []}, ['/news', '/news/sections/local', '/news/missed', '/news/status', '/news/unsorted']],
+      ['/news', '/news/sections/local', '/news/stories/1', '/news/status', '/news/unsorted']],
+    ['sections re-ranked, or the recap put away: the lists', {type: 'news', stories: [], sections: ['tech'], sources: []}, ['/news', '/news/sections/local', '/news/status', '/news/unsorted']],
     ['a source\'s health or its articles: the lists\' lines and Settings › News', {type: 'news', stories: [], sections: [], sources: [4]},
-      ['/news', '/news/sections/local', '/news/missed', '/news/sources', '/news/status', '/news/unsorted']],
+      ['/news', '/news/sections/local', '/news/sources', '/news/status', '/news/unsorted']],
     ['nothing named, sorting\'s state changed: the Unsorted and first-run lines', {type: 'news', stories: [], sections: [], sources: []}, ['/news/status', '/news/unsorted']],
   ] as [string, LiveEvent, string[]][])('news: %s', (_name, event, expected) => {
     expect(pathsForEvent(event, news)).toEqual(expected);

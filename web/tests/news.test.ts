@@ -1,16 +1,16 @@
 // News's rules as tables (DESIGN.md › News; D87): the meta copy and ages against the seed's moment
 // (Wed, Oct 7, 2026, 9:12 AM Pacific; the user last looked Mon at 10:40 PM), the held order and what the
-// pill counts, seen timing, the cursor, and Upcoming's line; N5's states, Settings › News and
-// Settings › AI's News group.
-import type {StoryRowOut} from '@setpoint/shared';
+// pill counts, the recap held for the visit and where it shows (#298), seen timing, the cursor, and
+// Upcoming's line; N5's states, Settings › News and Settings › AI's News group.
+import type {RecapOut, StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, foldFacts, foldLine, initials, landed, lookedAt, openedInVisit, shownState, visitDots, missedDay, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pillParts,
-  rowMeta, sameLayout, sight, stamp, storiesCount, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
+  articleNote, dueSeen, factsSince, foldFacts, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moreLine, moveStory, neighbourStory, nextSeen,
+  outletLine, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, sameLayout, sight, stamp, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
-import type {Layout} from '../src/logic/news.ts';
+import type {HeldRecap, Layout} from '../src/logic/news.ts';
 import {news} from '../src/tokens.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -68,15 +68,14 @@ describe('meta copy', () => {
   });
 
   test.each([
-    ['the sample\'s 14, since Monday', 14, LAST_LOOK, '14 stories', 'you missed since Mon', 'Missed since Mon 10:40 PM'],
-    ['one, since this morning', 1, '2026-10-07T14:00:00.000Z', '1 story', 'you missed since 7:00 AM', 'Missed since 7:00 AM'],
-    ['never looked', 3, null, '3 stories', 'you missed', 'Missed'],
-  ])('the Missed strip and title: %s', (_name, count, since, strip, rest, title) => {
-    expect([storiesCount(count), missedSince(since, now, zone), missedTitle(since, now, zone)]).toEqual([strip, rest, title]);
+    ['the seed\'s, since the user\'s last look', LAST_LOOK, 'since Mon 10:40 PM'],
+    ['put away this morning', '2026-10-07T14:00:00.000Z', 'since 7:00 AM'],
+    ['never looked', null, null],
+  ])('the recap\'s since: %s', (_name, since, expected) => {
+    expect(recapSince(since, now, zone)).toBe(expected);
   });
 
-  test('a day of Missed, "more" and the pane\'s meta', () => {
-    expect(missedDay('2026-10-06')).toEqual({day: 'Tuesday', date: 'Oct 6'});
+  test('"more" and the pane\'s meta', () => {
     expect(moreLine(12, 'local')).toBe('12 more in Local');
     // A block showing none of its section's stories (news-13): not "more" than nothing.
     expect(moreLine(2, 'tech', true)).toBe('2 in Tech');
@@ -187,6 +186,43 @@ describe('the held order and the pill', () => {
 
   test('the fold\'s line', () => {
     expect([foldLine(6, false), foldLine(6, true), foldLine(1, false)]).toEqual(['6 more', 'Show fewer', '1 more']);
+  });
+});
+
+describe('While you were away (#298): held for the visit, so nothing slides in', () => {
+  const recapOf = (since: string | null, ids: number[]): RecapOut => ({
+    since, stories: ids.map(id => ({...story({id}), section: 'local' as const, expired_at: '2026-10-06T16:00:00.000Z'})),
+  });
+  const held = (since: string | null, ids: number[]): HeldRecap => ({since, ids, named: Object.fromEntries(ids.map(id => [id, 'local']))});
+  const MON = LAST_LOOK;
+  const TUE = '2026-10-07T01:00:00.000Z';
+
+  test.each<[string, HeldRecap | null | undefined, RecapOut | null, HeldRecap | null]>([
+    ['the visit\'s first answer is held', undefined, recapOf(MON, [1, 2]), held(MON, [1, 2])],
+    ['with none, the visit has none', undefined, null, null],
+    ['a later answer of the same one keeps what was held: a bigger one that left since doesn\'t slide in', held(MON, [1, 2]), recapOf(MON, [9, 1]), held(MON, [1, 2])],
+    ['put away elsewhere (Done in another tab): it goes', held(MON, [1, 2]), null, null],
+    ['put away and a new one begun: it goes, the new one waits for the next visit', held(MON, [1, 2]), recapOf(TUE, [7]), null],
+    ['none on arrival: one that comes during the visit waits for the next', null, recapOf(MON, [3]), null],
+  ])('%s', (_name, before, latest, after) => {
+    expect(holdRecap(before, latest)).toEqual(after);
+  });
+
+  test.each<[string, Parameters<typeof recapDrawn>, boolean]>([
+    ['on All', ['all', false, false], true],
+    ['in a section\'s list', ['local', false, false], false],
+    ['over search\'s results', ['all', true, false], false],
+    ['during the first run', ['all', false, true], false],
+  ])('drawn: %s', (_name, args, expected) => {
+    expect(recapDrawn(...args)).toBe(expected);
+  });
+
+  test.each<[string, boolean, boolean, boolean]>([
+    ['drawn on All with nothing open: on screen', true, false, true],
+    ['drawn beside a story opened from a link: not yet, so the visit doesn\'t use it up (D419)', true, true, false],
+    ['not drawn', false, false, false],
+  ])('on screen: %s', (_name, drawn, storyOpen, expected) => {
+    expect(recapOnScreen(drawn, storyOpen)).toBe(expected);
   });
 });
 

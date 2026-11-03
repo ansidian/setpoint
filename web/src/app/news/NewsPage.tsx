@@ -1,13 +1,19 @@
-// The News page (DESIGN.md › News; boards 25–28): the header (News, All | Local | Tech | AI |
+// The News page (DESIGN.md › News; boards 25–27): the header (News, All | Local | Tech | AI |
 // General, Search news), the list and the story pane. All shows each section's block in a fixed
-// order, with Upcoming in Tech, the Missed strip and the new-stories pill; a section its full list;
-// Missed (Catch up) its stories by day. The list's order holds while the page is open (D87): rows on
-// screen take their sources and summary from each new answer, and everything else waits behind the
-// pill, which `N` or a click takes, scrolling to the top (logic/news.ts). A story is seen when its
-// row has been fully on screen for about a second, or when it's opened (useSeen below), but its dot
-// stays for the visit (#95): a visit is the page's time on screen, from opening News (from another
-// page, a link or a reload) until leaving it, All, the sections and Missed all one visit. An opened
-// story loses its dot at once, and a fact during the visit brings it back as updated.
+// order, with Upcoming in Tech and the new-stories pill; a section its full list. The list's order
+// holds while the page is open (D87): rows on screen take their sources and summary from each new
+// answer, and everything else waits behind the pill, which `N` or a click takes, scrolling to the top
+// (logic/news.ts). A story is seen when its row has been fully on screen for about a second, or when
+// it's opened (useSeen below), but its dot stays for the visit (#95): a visit is the page's time on
+// screen, from opening News (from another page, a link or a reload) until leaving it, All and the
+// sections all one visit. An opened story loses its dot at once, and a fact during the visit brings it
+// back as updated.
+//
+// All opens with While you were away (#298), the recap of what left the page unseen: chosen from the
+// visit's first answer and held for it, outside the order the pill counts, its rows without dots and
+// never seen by being on screen, only by opening. The page tells the server when the user is on News,
+// and the recap's stories once it's on screen (useHere below), so an hour away puts it away; Done
+// puts it away at once, folding it, with Undo.
 //
 // N5 adds the states (DESIGN.md › States; boards 29a, 29b): the Unsorted line while sorting is down,
 // with Show headlines listing what waits, and the first run's line, both above the list from
@@ -20,36 +26,37 @@
 // opens; `O` opens the original article; `N` takes the new stories; Esc goes from an article back to
 // its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
 import type {
-  ArticleOut, MissedOut, NewsPageOut, NewsSection, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
+  ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {getCached, useResource, useResources} from '../../api/client.ts';
-import {articlePath, MISSED_PATH, markSeen, NEWS_PATH, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
+import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, putRecapAway, sectionPath, STATUS_PATH, storyPath, undoRecap, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, keyStory, landed, missedDay, missedLayout, missedSince, missedTitle, moreLine, moveStory, neighbourStory, nextSeen, outletLine, pageLayout,
-  pillParts, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState, visitDots, sectionLayout, sight, storiesCount, storiesOnScreen, storyKey,
-  unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
+  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moreLine, moveStory, neighbourStory, nextSeen, outletLine,
+  pageLayout, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
+  visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
 import {resultsLine} from '../../logic/search.ts';
-import type {Layout, Sightings, VisitDots} from '../../logic/news.ts';
+import type {HeldRecap, Layout, Sightings, VisitDots} from '../../logic/news.ts';
 import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
-import {news as newsTiming} from '../../tokens.ts';
+import {motion, news as newsTiming} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
 import {useNow} from '../clock.ts';
 import {copyText, openContextMenu} from '../ContextMenu.tsx';
+import {useHold} from '../hold.ts';
 import {navigate} from '../router.ts';
 import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
-import {toastFailure} from '../toast.ts';
+import {showToast, toastFailure} from '../toast.ts';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import {NewsSkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
@@ -57,57 +64,48 @@ import {StoryPane} from './StoryPane.tsx';
 import './news.css';
 
 type NewsRoute = Extract<Route, {page: 'news'}>;
-type Answer = NewsPageOut | NewsSectionOut | MissedOut;
+type Answer = NewsPageOut | NewsSectionOut;
 
-/** An answer as the page reads it: its shelves, its rows, and All's and Missed's extras. */
+/** An answer as the page reads it: its shelves, its rows (the recap's among them), and All's recap. */
 interface Listing {
   layout: Layout;
   rows: Map<number, StoryRowOut>;
   upcoming: UpcomingOut[];
-  missed: {count: number; since: string | null} | null;
   // Each section's line, stale or failing (N5), by its shelf.
   health: ReadonlyMap<string, SectionHealthOut | null>;
-  // The section Missed's rows name: each story's main one (D102).
-  named: Readonly<Record<number, NewsSection>>;
+  recap: RecapOut | null;
 }
 
 function listing(view: NewsView, answer: Answer): Listing {
   if (view === 'all') {
     const page = answer as NewsPageOut;
     return {
-      layout: pageLayout(page), rows: rowsById(page.blocks.flatMap(block => block.stories)), upcoming: page.blocks.flatMap(block => block.upcoming), missed: page.missed,
-      health: new Map(page.blocks.map(block => [block.section, block.health])), named: {},
-    };
-  }
-  if (view === 'missed') {
-    const missed = answer as MissedOut;
-    const stories = missed.days.flatMap(day => day.stories);
-    return {
-      layout: missedLayout(missed), rows: rowsById(stories), upcoming: [], missed: {count: missed.count, since: missed.since}, health: new Map(),
-      named: Object.fromEntries(stories.map(story => [story.id, story.section])),
+      layout: pageLayout(page), rows: rowsById([...page.blocks.flatMap(block => block.stories), ...page.recap?.stories ?? []]),
+      upcoming: page.blocks.flatMap(block => block.upcoming), health: new Map(page.blocks.map(block => [block.section, block.health])), recap: page.recap,
     };
   }
   const list = answer as NewsSectionOut;
-  return {layout: sectionLayout(list), rows: rowsById(list.stories), upcoming: list.upcoming, missed: null, health: new Map([[list.section, list.health]]), named: {}};
+  return {layout: sectionLayout(list), rows: rowsById(list.stories), upcoming: list.upcoming, health: new Map([[list.section, list.health]]), recap: null};
 }
 
 /** Search's results as one shelf, newest first. */
 const SEARCH_SHELF = 'search';
+/** The recap's rows, as their own shelf for the cursor's keys. */
+const RECAP_SHELF = 'recap';
 
-const pathOf = (view: NewsView) => (view === 'all' ? NEWS_PATH : view === 'missed' ? MISSED_PATH : sectionPath(view));
+const pathOf = (view: NewsView) => (view === 'all' ? NEWS_PATH : sectionPath(view));
 
 /**
  * The order held for this visit to a list. What the cache held when the visit began is drawn as it
  * is until the page's own first answer comes; that one is held, so opening the page shows the latest.
  * `known` is each row as the latest answer that held it had it, so a row the latest order drops
- * still follows its story, and `named` the section Missed's answers named it by.
+ * still follows its story.
  */
 interface Hold {
   path: string;
   stale: unknown;
   held: {layout: Layout} | null;
   known: Map<number, StoryRowOut>;
-  named: Readonly<Record<number, NewsSection>>;
   from: Listing | null;
 }
 
@@ -125,13 +123,20 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const listFailed = useLoadFailed([listLoad]);
   const listArrived = useArrival(latest !== null, view);
 
-  const [hold, setHold] = useState<Hold>(() => ({path, stale: getCached(path), held: null, known: new Map(), named: {}, from: null}));
-  let current: Hold = hold.path === path ? hold : {path, stale: getCached(path), held: null, known: new Map(), named: {}, from: null};
+  const [hold, setHold] = useState<Hold>(() => ({path, stale: getCached(path), held: null, known: new Map(), from: null}));
+  let current: Hold = hold.path === path ? hold : {path, stale: getCached(path), held: null, known: new Map(), from: null};
   if (latest && current.held === null && data !== current.stale) current = {...current, held: {layout: latest.layout}};
-  if (latest && current.from !== latest) current = {...current, known: new Map([...current.known, ...latest.rows]), named: {...current.named, ...latest.named}, from: latest};
+  if (latest && current.from !== latest) current = {...current, known: new Map([...current.known, ...latest.rows]), from: latest};
   if (current !== hold) setHold(current);
   const held = current.held;
-  const named = current.named;
+
+  // The recap held for the visit, from All's first answer of it, across the sections (#298); undefined
+  // until that answer, while the cache's is drawn.
+  const [recapHold, setRecapHold] = useState<{stale: unknown; from: RecapOut | null | undefined; held: HeldRecap | null | undefined}>(() => ({stale: getCached(NEWS_PATH), from: undefined, held: undefined}));
+  let recapNow = recapHold;
+  if (view === 'all' && latest && data !== recapNow.stale && latest.recap !== recapNow.from) recapNow = {...recapNow, from: latest.recap, held: holdRecap(recapNow.held, latest.recap)};
+  if (recapNow !== recapHold) setRecapHold(recapNow);
+  const setHeldRecap = (next: HeldRecap | null) => setRecapHold(state => ({...state, held: next}));
 
   const layout = useMemo(() => held?.layout ?? latest?.layout ?? [], [held, latest]);
   // A row the latest answer no longer holds is loaded on its own, so its dot and sources still follow.
@@ -173,14 +178,26 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return () => window.clearTimeout(timer);
   }, [arrived]);
 
-  // Missed, opened with nothing left in it, is All (D92). Emptied during the visit, as its rows are
-  // seen, its held order keeps the list until the visit leaves it, as All's does (the polish audit's news-01).
-  const emptyMissed = view === 'missed' && held !== null && held.layout.every(shelf => shelf.ids.length === 0) && latest?.missed?.count === 0;
-  useEffect(() => {
-    if (emptyMissed) navigate({page: 'news', view: 'all', story: null, article: null}, {replace: true});
-  }, [emptyMissed]);
+  // Sorting's state above the list (N5): the Unsorted line, with Show headlines, and the first run's.
+  const {data: status} = useResource<NewsStatusOut>(STATUS_PATH);
+  const firstRun = Boolean(status?.first_run);
 
-  const keys = useMemo(() => shown.flatMap(shelf => shelf.ids.filter(id => rows.has(id)).map(id => storyKey(shelf.key, id))), [shown, rows]);
+  // The recap, on All while it holds stories; the cache's until the visit's first answer.
+  const drawn = recapDrawn(view, searching, firstRun);
+  const latestRecap = latest?.recap ?? null;
+  const recapHeld = useMemo(() => (recapNow.held === undefined ? holdRecap(undefined, latestRecap) : recapNow.held), [recapNow.held, latestRecap]);
+  const recapShown = useMemo(() => {
+    const ids = drawn && recapHeld ? recapHeld.ids.filter(id => rows.has(id)) : [];
+    return ids.length ? {...recapHeld!, ids} : null;
+  }, [drawn, recapHeld, rows]);
+  // Kept drawn on All while it folds away; a section or search simply hasn't it.
+  const folding = useHold(recapShown, motion.medium);
+  const recap = drawn ? folding : {shown: null, closing: false};
+
+  const keys = useMemo(() => [
+    ...(recapShown?.ids.map(id => storyKey(RECAP_SHELF, id)) ?? []),
+    ...shown.flatMap(shelf => shelf.ids.filter(id => rows.has(id)).map(id => storyKey(shelf.key, id))),
+  ], [recapShown, shown, rows]);
   const [cursor, setCursor] = useState<string | null>(null);
   const open = route.story;
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -257,6 +274,21 @@ export function NewsPage({route}: {route: NewsRoute}) {
   }
 
   useSeen(list, shown, rows);
+  // The user on News, with the recap's stories once it's on screen: fixed, and put away an hour after they leave.
+  useHere(recapNow.held !== undefined && recapOnScreen(drawn, open !== null) ? recapShown?.ids ?? null : null);
+
+  /** Done (D426): the recap folds away, its stories still unseen; Undo brings it back. */
+  function recapDone() {
+    const before = recapHeld;
+    setHeldRecap(null);
+    void putRecapAway().then(undo => showToast('Recap put away', {
+      label: 'Undo',
+      run: () => void undoRecap(undo).then(() => setHeldRecap(before), toastFailure('Couldn\'t undo it')),
+    }, 'gone'), error => {
+      setHeldRecap(before);
+      toastFailure('Couldn\'t put it away')(error);
+    });
+  }
 
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -292,9 +324,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  // Sorting's state above the list (N5): the Unsorted line, with Show headlines, and the first run's.
-  const {data: status} = useResource<NewsStatusOut>(STATUS_PATH);
-  const firstRun = Boolean(status?.first_run);
   const unsorted = status ? unsortedLine(status, now, zone) : null;
   const sorting = status ? firstRunLine(status) : null;
   // How far the first run has come, for its line's foot (news-13).
@@ -307,10 +336,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
     search.clear();
     navigate({page: 'news', view: next, story: null, article: null});
   };
-  const segOn = (section: NewsView) => ((view === 'missed' ? 'all' : view) === section ? 'on' : undefined);
-  const missed = view === 'all' && !searching ? latest?.missed ?? null : null;
+  const segOn = (section: NewsView) => (view === section ? 'on' : undefined);
   const rowProps = {rows, cursor, openKey: shownOpenKey, arrived, now, zone, onPoint: (key: string) => key !== cursor && setCursor(key), onOpen: openAt};
-  const firstShelf = !showHeadlines;
+  const firstShelf = !showHeadlines && !recap.shown;
 
   return (
     <>
@@ -326,7 +354,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
         <SearchField search={search} label="Search news" onEnter={first => setCursor(storyKey(SEARCH_SHELF, first.id))} />
       </header>
       <div className="content">
-        <section className="nw-list" onContextMenu={onContextMenu} aria-label={searching ? 'Stories found' : view === 'missed' ? 'Missed stories' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
+        <section className="nw-list" onContextMenu={onContextMenu} aria-label={searching ? 'Stories found' : view === 'all' ? 'Stories' : `${SECTION_LABELS[view]} stories`}>
           {!searching && unsorted && (
             <div className="nw-state failing">
               <Icon name="warning" size={16} />
@@ -338,13 +366,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
             <div className="nw-state muted progress" style={{'--done': sorted} as CSSProperties}>
               <span className="spin"><Icon name="progress_activity" size={16} /></span>
               <span className="grow num ell" title={sorting}>{sorting}</span>
-            </div>
-          )}
-          {missed && (
-            <div className="nw-missed">
-              <Icon name="history" size={16} />
-              <span className="grow"><b className="num">{storiesCount(missed.count)}</b> {missedSince(missed.since, now, zone)}</span>
-              <button className="btn sm" type="button" onClick={() => switchTo('missed')}>Catch up</button>
             </div>
           )}
           <div className="nw-body">
@@ -387,33 +408,38 @@ export function NewsPage({route}: {route: NewsRoute}) {
                 ))}
               </>
             )}
-            {view === 'missed' && latest && (
-              <div className="nw-back">
-                <button className="ibtn sm" type="button" aria-label="Back to All" onClick={() => switchTo('all')}><Icon name="arrow_back" size={18} /></button>
-                <span className="t">{missedTitle(latest.missed?.since ?? null, now, zone)}</span>
-                <span className="grow" />
-                <span className="n num">{storiesCount(layout.reduce((sum, shelf) => sum + shelf.ids.length, 0))}</span>
+            {recap.shown && (
+              <div className={recap.closing ? 'nw-recap closing' : 'nw-recap'} inert={recap.closing}>
+                <div>
+                  <div className={showHeadlines ? 'nw-sec' : 'nw-sec first'}>
+                    <Icon name="history" size={14} />While you were away<span className="grow" />
+                    {recapSince(recap.shown.since, now, zone) && <span className="day num">{recapSince(recap.shown.since, now, zone)}</span>}
+                    <button className="btn ghost sm" type="button" onClick={recapDone}>Done</button>
+                  </div>
+                  {recap.shown.ids.flatMap(id => rows.get(id) ?? []).map(row => (
+                    <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={false} recap rowKey={storyKey(RECAP_SHELF, row.id)} section={recap.shown!.named[row.id] ?? row.sections[0]!} {...rowProps} />
+                  ))}
+                </div>
               </div>
             )}
             {layout.map((shelf, index) => {
               const shelfRows = shelf.ids.flatMap(id => rows.get(id) ?? []);
               const section = view === 'all' ? NEWS_SECTIONS.find(one => one === shelf.key) : undefined;
-              const upcoming = view === 'all' ? (latest?.upcoming ?? []).filter(one => one.section === shelf.key) : view === 'missed' ? [] : latest?.upcoming ?? [];
+              const upcoming = view === 'all' ? (latest?.upcoming ?? []).filter(one => one.section === shelf.key) : latest?.upcoming ?? [];
               const header = index === 0 && firstShelf ? 'nw-sec first' : 'nw-sec';
-              // A section's own line and its empty line (N5); Missed's days have neither.
-              const own = view === 'missed' ? null : NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
+              // A section's own line and its empty line (N5).
+              const own = NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
               const empty = own && latest ? emptySectionLine(own, shelfRows.length, shelf.more, firstRun, now, zone) : null;
               return (
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
-                  {view === 'missed' && <div className={header}><Icon name="history" size={14} />{missedDay(shelf.key).day}<span className="day num">{missedDay(shelf.key).date}</span></div>}
                   {line && <div className={`nw-line ${line.state}`}><Icon name={line.state === 'failing' ? 'warning' : 'history'} size={16} /><span className="num ell" title={line.text}>{line.text}</span></div>}
                   {upcoming.map(one => <Upcoming key={one.id} upcoming={one} story={rows.get(one.story_id)} now={now} zone={zone} onStory={openStoryOf} />)}
                   {/* Still sorting, its section's line turns as the first run's does (news-13); once sorted, a quiet section is a paper. */}
                   {empty && <div className="nw-empty">{firstRun ? <span className="spin"><Icon name="progress_activity" size={16} /></span> : <Icon name="newspaper" size={16} />}{empty}</div>}
                   {shelfRows.map((row, at) => (
-                    <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={view === 'missed' ? named[row.id] ?? row.sections[0]! : null} {...rowProps} />
+                    <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={null} {...rowProps} />
                   ))}
                   {section && shelf.more > 0 && (
                     <button className="nw-more" type="button" onClick={() => switchTo(section)}>{moreLine(shelf.more, section, shelfRows.length === 0)}<Icon name="chevron_right" size={16} /></button>
@@ -438,6 +464,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
 interface RowProps {
   row: StoryRowOut;
   lead: boolean;
+  // The recap's: no dot, its headline as a new one's until it's opened (#298).
+  recap?: boolean;
   rowKey: string;
   section: StoryRowOut['sections'][number] | null;
   cursor: string | null;
@@ -453,12 +481,14 @@ interface RowProps {
 const STATE_CLASS = {new: 'new', updated: 'upd', seen: 'seen'} as const;
 
 /** A story's row: a block's lead (its large image, headline, two lines of summary, meta), or a row with its thumbnail. */
-function StoryRow({row, lead, rowKey, section, cursor, openKey, arrived, now, zone, onPoint, onOpen}: RowProps) {
+function StoryRow({row, lead, recap = false, rowKey, section, cursor, openKey, arrived, now, zone, onPoint, onOpen}: RowProps) {
   const meta = rowMeta(row, now, zone, section);
   const image = lead ? row.image?.large ?? row.image?.thumb : row.image?.thumb;
   // A hazard source's story without a photo shows its hazard's glyph instead (#121).
   const hazard = hazardGlyph(row);
-  const classes = [lead ? 'nw-lead' : 'nw-row', STATE_CLASS[row.state], lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open', arrived.has(row.id) && 'landed'].filter(Boolean).join(' ');
+  const state = recap ? row.state === 'seen' && 'seen' : STATE_CLASS[row.state];
+  const classes = [lead ? 'nw-lead' : 'nw-row', recap && 'rc', state, lead && !image && 'noimg', cursor === rowKey && 'cur', openKey === rowKey && 'open', arrived.has(row.id) && 'landed']
+    .filter(Boolean).join(' ');
   const attributes = {className: classes, 'data-key': rowKey, 'data-story': row.id, onMouseMove: () => onPoint(rowKey), onClick: () => onOpen(rowKey)};
   if (lead) {
     return (
@@ -560,6 +590,29 @@ function UpcomingMeta({row, now, zone}: {row: StoryRowOut; now: number; zone: st
       {meta.updated && <><span>·</span><span className="upd">{meta.updated}</span></>}
     </span>
   );
+}
+
+/**
+ * The user on News (#298): said as the page comes on screen, every few minutes while it stays, and
+ * whenever the recap's stories on screen change, with them, so the server fixes the recap and puts it
+ * away once the user has been away an hour. A hidden tab says nothing.
+ */
+function useHere(recap: number[] | null) {
+  const shownKey = recap?.join(',') ?? '';
+  useEffect(() => {
+    const ids = shownKey ? shownKey.split(',').map(Number) : null;
+    const say = () => {
+      // Best effort: the next one says it again.
+      if (document.visibilityState === 'visible') noteHere(ids).catch(() => undefined);
+    };
+    say();
+    const timer = window.setInterval(say, HERE_EVERY_MS);
+    document.addEventListener('visibilitychange', say);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', say);
+    };
+  }, [shownKey]);
 }
 
 /**

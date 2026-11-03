@@ -7,8 +7,9 @@
 // Today block's card's Edit, DESIGN.md › Decided while building #78). The week view rides in the
 // query on every calendar address (?view=week); Month is the address without it (DESIGN.md › Week view).
 // /calendar/new?kind=event&upcoming=4 opens it on News's Upcoming keynote 4 (its Add to calendar).
-// News (after 2.0): /news is All, /news/local a section, /news/missed Catch up; /story/18 after any of
-// them opens a story in the pane, and /article/2 after that one of its sources.
+// News (after 2.0): /news is All, /news/local a section; /story/18 after either opens a story in the
+// pane, and /article/2 after that one of its sources. Catch up's old address, /news/missed, is All,
+// where the recap is (#298).
 // Jobs (after News): /jobs is the page, /jobs/12 with application 12 open in its detail; from mail
 // (J7), /jobs/12/posting arrives with its full posting unfolded, and /jobs?q=contoso searched; from
 // Settings › Jobs's Show (J8), /jobs/from-history arrives with From history unfolded.
@@ -19,8 +20,8 @@ export const SETTINGS_PAGES = ['accounts', 'calendar', 'todoist', 'notifications
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 export type Compose = {kind: ItemKind; message: number | null; upcoming?: number};
-/** News's list: All, a section, or Missed (Catch up). */
-export type NewsView = 'all' | 'missed' | NewsSection;
+/** News's list: All or a section. */
+export type NewsView = 'all' | NewsSection;
 /** Calendar's view. A route asking for none keeps the one showing (router.ts). */
 export type CalendarMode = 'month' | 'week';
 
@@ -50,7 +51,8 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   if (first === 'news') {
     const parts = pathname.split('/').filter(Boolean).slice(1);
-    const view: NewsView = (NEWS_SECTIONS as readonly string[]).includes(parts[0] ?? '') || parts[0] === 'missed' ? parts.shift() as NewsView : 'all';
+    if (parts[0] === 'missed') parts.shift();
+    const view: NewsView = (NEWS_SECTIONS as readonly string[]).includes(parts[0] ?? '') ? parts.shift() as NewsView : 'all';
     const story = parts[0] === 'story' ? positive(parts[1]) : null;
     const article = story && parts[2] === 'article' ? positive(parts[3]) : null;
     return {page: 'news', view, story, article};

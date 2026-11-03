@@ -1,13 +1,12 @@
 // News's sorting policy as tables (N3; BRIEF.md › What it covers, Stories, Ranking, Models and cost,
-// Missed, The page › Upcoming): the rules for a source, noise and politics as applied to the model's
-// reading ("events, not arguments", the subject wins), wire copy, candidate matching, new facts
-// versus repeats and which rewrite the story, what its writer is sent, the ranking formula and its
-// order, the cap, Missed's limits, keynote confirmation, how the model's answers are read, and
-// search's matching.
+// The page › Upcoming): the rules for a source, noise and politics as applied to the model's reading
+// ("events, not arguments", the subject wins), wire copy, candidate matching, new facts versus
+// repeats and which rewrite the story, what its writer is sent, the ranking formula and its order,
+// the cap, keynote confirmation, how the model's answers are read, and search's matching.
 import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, limitMissed, matchesAll, monthStart, NEWS_MODELS, outletCount,
+  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, matchesAll, monthStart, NEWS_MODELS, outletCount,
   rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, STORY_FACTS_SHOWN, STORY_SOURCES_SHOWN,
   storyScore, storyWords, summaryModel, wireKey, writerWindow,
 } from '../src/domain/newsSorting.ts';
@@ -413,27 +412,6 @@ describe('models and cost (D90)', () => {
     expect(monthStart(now, ZONE)).toBe(start);
   });
 
-});
-
-describe('Missed\'s limits (D87)', () => {
-  const missed = (id: number, section: NewsSection, expired: string) => ({id, section, expired_at: expired});
-
-  test('at most five per section per day, biggest first as given', () => {
-    const tuesday = '2026-10-06T18:00:00.000Z';
-    const stories = [
-      ...Array.from({length: 7}, (_, index) => missed(index + 1, 'local', tuesday)),
-      missed(8, 'tech', tuesday),
-      // Monday's Local is its own day.
-      missed(9, 'local', '2026-10-05T18:00:00.000Z'),
-    ];
-    expect(limitMissed(stories, ZONE).map(story => story.id)).toEqual([1, 2, 3, 4, 5, 8, 9]);
-  });
-
-  test('a day is the user\'s local day', () => {
-    // 11 PM Tuesday and 1 AM Wednesday, Pacific.
-    const stories = [...Array.from({length: 5}, (_, index) => missed(index + 1, 'ai', '2026-10-07T06:00:00.000Z')), missed(6, 'ai', '2026-10-07T08:00:00.000Z')];
-    expect(limitMissed(stories, ZONE).map(story => story.id)).toEqual([1, 2, 3, 4, 5, 6]);
-  });
 });
 
 const claim = (outlet: string, extra: Partial<KeynoteClaim> = {}): KeynoteClaim => ({

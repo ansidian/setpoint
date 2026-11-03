@@ -1,15 +1,21 @@
-// News (after 2.0): All's blocks, a section, a story and its sources, an article, Missed, Upcoming
+// News (after 2.0): All's blocks, a section, a story and its sources, an article, the recap, Upcoming
 // and Settings › News (BRIEF.md › News; DESIGN.md › News, boards 25–31; darma D85–D92). Outputs
 // are Zod schemas as well as types, so tests and the seed check the shapes the page draws from.
 //
-//   GET  /api/news                         NewsPageOut (All: the blocks in their fixed order, the Missed strip)
+//   GET  /api/news                         NewsPageOut (All: the blocks in their fixed order, the recap)
 //   GET  /api/news/sections/:section       NewsSectionOut (that section's full list, biggest first)
 //   GET  /api/news/stories/:id             StoryOut (the story pane), without marking it seen
 //   GET  /api/news/articles/:id            ArticleOut (a source opened in the pane); a metered article is 404
-//   GET  /api/news/missed                  MissedOut (Catch up: by day, biggest first)
+//   GET  /api/news/missed                  MissedOut (the iPhone app's Catch up: the recap's stories by day)
 //   GET  /api/news/sources                 NewsSourcesOut (Settings › News)
 //   GET  /api/news/images/:id              Setpoint's own copy of an image (outlets never see the user's browsing)
 //   POST /api/news/seen      {story_ids}   NewsSeenOut (a row on screen for about a second, or opened)
+//
+// While you were away (#298, D418–D426), the recap's state, kept so a reload or another tab agrees:
+//
+//   POST /api/news/here      {recap}       204 (News on screen; `recap` the recap's stories once it's on screen)
+//   POST /api/news/recap/done              RecapDoneOut (Done: put away at once, with what Undo puts back)
+//   POST /api/news/recap/undo  RecapUndoOut  204 (Done's Undo)
 //
 // N3 adds sorting's side (BRIEF.md › Models and cost, When things break; DESIGN.md › States):
 //
@@ -70,7 +76,7 @@ export const storyLeadSchema = z.strictObject({
 });
 export type StoryLeadOut = z.infer<typeof storyLeadSchema>;
 
-/** One story in a list: All's blocks, a section, Missed. */
+/** One story in a list: All's blocks, a section, the recap. */
 export const storyRowSchema = z.strictObject({
   id,
   // Written by the model, plain and neutral (D86).
@@ -127,18 +133,40 @@ export const newsBlockSchema = z.strictObject({
 });
 export type NewsBlockOut = z.infer<typeof newsBlockSchema>;
 
-/** The Missed strip at the top of All, while Missed holds stories: "14 stories you missed since Mon". */
+/** A story in the recap: its row names its section ("General · NPR +9 · Tue"), its main one (D102). */
+export const recapStorySchema = storyRowSchema.extend({
+  section: newsSectionSchema,
+  expired_at: instant,
+});
+export type RecapStoryOut = z.infer<typeof recapStorySchema>;
+
+/**
+ * While you were away (#298): each section's biggest stories that left the page unseen since the last
+ * recap was put away, up to 3 per section, grouped in the blocks' order. `since` is when that was
+ * ("since Fri 6:10 PM"); before any was, the user's last look before the first of them left, or null
+ * if they never looked. Fixed once it's on screen, until it's put away.
+ */
+export const recapSchema = z.strictObject({
+  since: instant.nullable(),
+  stories: z.array(recapStorySchema).min(1).max(NEWS_SECTIONS.length * 3),
+});
+export type RecapOut = z.infer<typeof recapSchema>;
+
+/**
+ * The iPhone app's Missed strip at the top of All (D424), fed the recap until setpoint-ios has its own:
+ * "11 stories you missed since Mon".
+ */
 export const missedStripSchema = z.strictObject({
   count: z.int().positive(),
-  // The user's last look before these stories left the page; null if they never looked.
   since: instant.nullable(),
 });
 export type MissedStripOut = z.infer<typeof missedStripSchema>;
 
-/** All: one block per section in NEWS_SECTIONS order, and the Missed strip. */
+/** All: one block per section in NEWS_SECTIONS order, and the recap (and the iPhone app's strip from it). */
 export const newsPageSchema = z.strictObject({
   blocks: z.array(newsBlockSchema).length(NEWS_SECTIONS.length),
   missed: missedStripSchema.nullable(),
+  recap: recapSchema.nullable(),
 });
 export type NewsPageOut = z.infer<typeof newsPageSchema>;
 
@@ -214,23 +242,16 @@ export const articleSchema = z.strictObject({
 });
 export type ArticleOut = z.infer<typeof articleSchema>;
 
-/** A story in Missed: its row names its section ("General · NPR +9 · Tue"). */
-export const missedStorySchema = storyRowSchema.extend({
-  section: newsSectionSchema,
-  expired_at: instant,
-});
-export type MissedStoryOut = z.infer<typeof missedStorySchema>;
-
-/** One day of Missed, by the local day its stories left the page ("TUESDAY", "Oct 6"). */
+/** One day of the iPhone app's Catch up, by the local day its stories left the page ("TUESDAY", "Oct 6"). */
 export const missedDaySchema = z.strictObject({
   date: localDate,
-  stories: z.array(missedStorySchema).min(1),
+  stories: z.array(recapStorySchema).min(1),
 });
 export type MissedDayOut = z.infer<typeof missedDaySchema>;
 
 /**
- * Catch up (board 28): the stories that left the page before the user saw them, by day, newest day first,
- * biggest first within a day, at most five per section per day (N3). Each leaves as it's seen.
+ * The iPhone app's Catch up (board 28, D424): the recap's stories by the day they left the page, newest
+ * day first, biggest first within a day. Fixed as the recap is, so nothing slides in as they're seen.
  */
 export const missedSchema = z.strictObject({
   since: instant.nullable(),
@@ -288,6 +309,20 @@ export const newsSeenInput = z.strictObject({story_ids: z.array(id).min(1).max(5
 export type NewsSeenInput = z.infer<typeof newsSeenInput>;
 export const newsSeenSchema = z.strictObject({stories: z.array(storyRowSchema)});
 export type NewsSeenOut = z.infer<typeof newsSeenSchema>;
+
+/** News on screen; `recap` the recap's stories once it's on screen, which fixes it (#298). */
+export const newsHereInput = z.strictObject({recap: z.array(id).min(1).max(NEWS_SECTIONS.length * 3).nullable()});
+export type NewsHereInput = z.infer<typeof newsHereInput>;
+
+/** What Done's Undo puts back: the recap's state before it (src/domain/news.ts). */
+export const recapUndoSchema = z.strictObject({
+  put_away_at: instant.nullable(),
+  shown_at: instant.nullable(),
+  story_ids: z.array(id).max(NEWS_SECTIONS.length * 3).nullable(),
+});
+export type RecapUndoOut = z.infer<typeof recapUndoSchema>;
+export const recapDoneSchema = z.strictObject({undo: recapUndoSchema});
+export type RecapDoneOut = z.infer<typeof recapDoneSchema>;
 
 // ---- N3: sorting's state, Unsorted, the first run, search and Add to calendar ----
 

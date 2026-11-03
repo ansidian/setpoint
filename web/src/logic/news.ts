@@ -1,7 +1,8 @@
 // News's rules (DESIGN.md › News; BRIEF.md › News, D85–D92), kept out of the components: the meta
 // copy and ages, the held order and what the pill counts, when a row on screen counts as seen, the
-// cursor's stops; N5's states above the list and in a section (boards 29a, 29b), and Settings › News
-// and Settings › AI's News group (boards 30a, 30b).
+// cursor's stops; the recap held for the visit and where it shows (#298); N5's states above the list
+// and in a section (boards 29a, 29b), and Settings › News and Settings › AI's News group (boards 30a,
+// 30b).
 //
 // The held order (D87): the page draws the order it last took (on opening, or from the pill) and
 // takes each story's dot, sources and summary from the latest answer, so nothing moves under the
@@ -9,14 +10,15 @@
 // new or updated by its dot; a seen story moving into view, one leaving, or a re-ranking among the
 // stories already shown wait too, but say nothing until the pill has something to count.
 import type {
-  AiOut, AiUsageOut, MissedOut, NewsAdapterKey, NewsAiOut, NewsSourceOut, NewsPageOut, NewsSection, NewsSectionOut, NewsSourceHealthOut, NewsSourcesOut, NewsStatusOut,
-  SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
+  AiOut, AiUsageOut, NewsAdapterKey, NewsAiOut, NewsSourceOut, NewsPageOut, NewsSection, NewsSectionOut, NewsSourceHealthOut, NewsSourcesOut, NewsStatusOut,
+  RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {news} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {age, clockTime, daysBetween, localDate} from './format.ts';
 import {asOf, every} from './health.ts';
 import type {HealthKind} from './health.ts';
+import type {NewsView} from './route.ts';
 
 export const SECTION_LABELS: Record<NewsSection, string> = {local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'};
 
@@ -46,7 +48,7 @@ export function stamp(at: string, now: number, timeZone: string): string {
 }
 
 export interface RowMeta {
-  // Missed's rows lead with their section: "General · NPR +9 · Tue".
+  // The recap's rows lead with their section: "General · NPR +9 · Tue".
   section: string | null;
   outlet: string;
   age: string;
@@ -67,19 +69,8 @@ export function rowMeta(row: StoryRowOut, now: number, timeZone: string, section
 /** "12 more in Local"; "2 in Tech" when its block shows none of them (news-13), so it doesn't read as more than nothing. */
 export const moreLine = (count: number, section: NewsSection, none = false) => `${count} ${none ? '' : 'more '}in ${SECTION_LABELS[section]}`;
 
-/** The Missed strip's count: "14 stories", "1 story". */
-export const storiesCount = (count: number) => `${count} ${count === 1 ? 'story' : 'stories'}`;
-
-/** The rest of the strip: "you missed since Mon" (the clock time when the user last looked today); "you missed" when they never had. */
-export function missedSince(since: string | null, now: number, timeZone: string): string {
-  return since ? `you missed since ${dayWord(since, now, timeZone)}` : 'you missed';
-}
-
-/** Missed's back row: "Missed since Mon 10:40 PM", or "Missed". */
-export const missedTitle = (since: string | null, now: number, timeZone: string) => (since ? `Missed since ${stamp(since, now, timeZone)}` : 'Missed');
-
-/** A day of Missed: "Tuesday" (the header's capitals are its style) and "Oct 6" on the right. */
-export const missedDay = (date: string) => ({day: onDay(date, {weekday: 'long'}), date: onDay(date, {month: 'short', day: 'numeric'})});
+/** The recap's header, on the right: "since Fri 6:10 PM", a stamp as the pane's meta words one; none when the user never looked. */
+export const recapSince = (since: string | null, now: number, timeZone: string) => (since ? `since ${stamp(since, now, timeZone)}` : null);
 
 /** The pane's meta: "5 outlets · first reported 6:12 AM · updated 8:40 AM"; "updated" only once a later fact came. */
 export function storyMeta(story: Pick<StoryOut, 'outlets' | 'first_reported_at' | 'last_new_fact_at'>, now: number, timeZone: string): string[] {
@@ -122,7 +113,7 @@ export function upcomingWhen(upcoming: Pick<UpcomingOut, 'starts_at' | 'all_day'
 
 // ---- The held order (D87) ----
 
-/** One list on screen: an All block (with its "N more"), a section's list, or a day of Missed. */
+/** One list on screen: an All block (with its "N more") or a section's list. */
 export interface Shelf {
   key: string;
   ids: number[];
@@ -132,7 +123,6 @@ export type Layout = Shelf[];
 
 export const pageLayout = (page: NewsPageOut): Layout => page.blocks.map(block => ({key: block.section, ids: block.stories.map(story => story.id), more: block.more}));
 export const sectionLayout = (list: NewsSectionOut): Layout => [{key: list.section, ids: list.stories.map(story => story.id), more: 0}];
-export const missedLayout = (missed: MissedOut): Layout => missed.days.map(day => ({key: day.date, ids: day.stories.map(story => story.id), more: 0}));
 
 /** Every row an answer holds, by id. */
 export function rowsById(rows: readonly StoryRowOut[]): Map<number, StoryRowOut> {
@@ -170,6 +160,41 @@ export function pillParts({fresh, updated}: Pick<Waiting, 'fresh' | 'updated'>):
   if (!fresh && !updated) return null;
   return {fresh: fresh ? `${fresh} new` : null, updated: updated ? `${updated} updated` : null};
 }
+
+// ---- While you were away (#298) ----
+
+/** The recap the page holds for the visit: its stories in order, each with the section its row names. */
+export interface HeldRecap {
+  since: string | null;
+  ids: number[];
+  named: Readonly<Record<number, NewsSection>>;
+}
+
+const heldFrom = (recap: RecapOut): HeldRecap => ({
+  since: recap.since, ids: recap.stories.map(story => story.id), named: Object.fromEntries(recap.stories.map(story => [story.id, story.section])),
+});
+
+/**
+ * The recap after an answer: chosen from the visit's first (undefined until then) and fixed for the
+ * visit, so nothing slides in; one put away goes, by Done here or elsewhere. A recap the visit didn't
+ * open with, or a new one after it's put away, waits for the next visit.
+ */
+export function holdRecap(held: HeldRecap | null | undefined, latest: RecapOut | null): HeldRecap | null {
+  if (held === undefined) return latest && heldFrom(latest);
+  return held && latest?.since === held.since ? held : null;
+}
+
+/** Where the recap is drawn: on All, not over search's results or during the first run. */
+export const recapDrawn = (view: NewsView, searching: boolean, firstRun: boolean) => view === 'all' && !searching && !firstRun;
+
+/**
+ * Whether the recap counts as on screen, so an hour away then puts it away (D419): drawn, with no
+ * story open, as opening News from a story link doesn't use it up.
+ */
+export const recapOnScreen = (drawn: boolean, storyOpen: boolean) => drawn && !storyOpen;
+
+/** How often the page says the user is on News while it's on screen, for the recap's hour away. */
+export const HERE_EVERY_MS = 5 * 60_000;
 
 // ---- Seen (D87) ----
 
@@ -366,7 +391,7 @@ export const STORY_HOURS = 48;
 /**
  * A section with no story to show, in All's block or its own list (29a, 29b). A story stays on the
  * page for 48 hours after its last new fact, so an empty section has had nothing new for 48 hours:
- * "Nothing new in Tech since Mon", from then; anything that came and left unseen before is Missed's.
+ * "Nothing new in Tech since Mon", from then; anything that came and left unseen before is the recap's.
  * During the first run it's still being sorted: "Nothing sorted in AI yet". A section with stories
  * shows them, seen or not: the dots aren't a to-do list (D87). An empty block in All whose section
  * has `more` (its stories shown in other blocks, #96) isn't an empty section: its "2 more in Tech"

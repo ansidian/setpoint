@@ -47,13 +47,13 @@ import type {Travel} from '../Reader.tsx';
 import {navigate} from '../router.ts';
 import {copyText, takesContextMenu} from '../ContextMenu.tsx';
 import {Bar, LoadFailed, Sk, useLoadFailed} from '../states/Loading.tsx';
+import {useHold} from '../hold.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {act} from './act.ts';
 import {
   applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
   pickCandidate, searchPath, setStatus,
 } from './api.ts';
-import {useHold} from './hold.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {rowMenu} from './menus.ts';

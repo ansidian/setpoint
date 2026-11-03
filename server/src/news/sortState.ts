@@ -71,7 +71,7 @@ export function finishFirstRun(store: Store): boolean {
   return true;
 }
 
-/** Stories made now are the first run's fill (they never go to Missed). */
+/** Stories made now are the first run's fill (they never go to the recap). */
 export const inFirstRun = (store: Store) => {
   const row = sortingRow(store);
   return row.firstRunStartedAt !== null && row.firstRunDoneAt === null;
