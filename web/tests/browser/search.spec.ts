@@ -26,6 +26,20 @@ async function load(setpoint: Setpoint): Promise<Page> {
   return page;
 }
 
+/**
+ * A window tall enough that a first page of results ends within the list's reach for the next, so
+ * later pages come as the results load, with no scroll (D416). What the list's end asks for is
+ * nextAsk's, a table in search.test.ts.
+ */
+const TALL = {width: 1677, height: 4400};
+
+async function loadTall(setpoint: Setpoint): Promise<Page> {
+  const page = await setpoint.page(TALL);
+  await page.goto(`${setpoint.base}/inbox`);
+  await page.locator('.list .row').first().waitFor();
+  return page;
+}
+
 async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
   const all = await setpoint.api<AllOut>('GET', '/mail/all?limit=500');
   return all.days.flatMap(day => day.rows).find(row => row.subject.startsWith(subjectStart))!.id;
@@ -723,15 +737,14 @@ test('under a suggestion a later page keeps its chips, and the fold works as it 
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions:not(.left-out)');
     await rows.nth(49).waitFor();
-    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
-    await rows.last().scrollIntoViewIfNeeded();
+    // Tall once the chip's first page is in, so its next comes, and the words' never did.
+    await page.setViewportSize(TALL);
     await fold.waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
     assert.equal(await fold.textContent(), '60 more mention these words');
     assert.equal(await rows.count(), 60);
     await fold.click();
-    await until('the rows under it', () => rows.count(), count => count > 60);
-    await rows.last().scrollIntoViewIfNeeded();
-    await until('every row', () => rows.count(), count => count === 120);
+    await until('every row, the ones under it too', () => rows.count(), count => count === 120);
     const later = searches.filter(search => search.offset);
     assert.deepEqual(later.map(({read, text, typed, chips: sent, offset}) => [read, text, typed, sent.length, offset]), [['kept', 'ledger audit', 'ledger audit', 1, 50], ['kept', 'ledger audit', 'ledger audit', 1, 100]]);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -810,7 +823,7 @@ test('a thin first section hides nothing: its fold starts open with its line, J 
 test('a fold that starts open pages in with no click, page 2 and on, and closing it stops there', async () => {
   const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
   try {
-    const page = await load(setpoint);
+    const page = await loadTall(setpoint);
     await page.keyboard.press('/');
     await page.keyboard.type('vault inventory');
     await page.keyboard.press('Enter');
@@ -820,7 +833,8 @@ test('a fold that starts open pages in with no click, page 2 and on, and closing
     assert.equal(await page.locator('.search-list .bar').textContent(), '3 results');
     assert.equal(await fold.textContent(), '60 more mention these words');
     assert.equal(await fold.getAttribute('aria-expanded'), 'true');
-    assert.equal(await rows.count(), 50);
+    // Page 2 comes with no click, as the list's end is in reach.
+    await until('every row', () => rows.count(), count => count === 63);
     // Off the fold, by the keys, to the place the row shows at.
     await page.locator('.arow.result.cur').waitFor();
     await page.keyboard.press('j');
@@ -836,9 +850,6 @@ test('a fold that starts open pages in with no click, page 2 and on, and closing
     assert.equal((JSON.parse((await opened).postData()!) as {position: number}).position, 3);
     await page.keyboard.press('Escape');
     await page.locator('.rd-subj').waitFor({state: 'detached'});
-    // Page 2 comes as the list nears its end.
-    await rows.last().scrollIntoViewIfNeeded();
-    await until('every row', () => rows.count(), count => count === 63);
     // Closed, its rows go, and it stays closed.
     await fold.click();
     await until('the rows above it', () => rows.count(), count => count === 3);
@@ -849,10 +860,10 @@ test('a fold that starts open pages in with no click, page 2 and on, and closing
   }
 });
 
-test('search\'s fold across pages: what\'s above it pages in, nothing under it is asked for until it opens, then its pages come', async () => {
+test('search\'s fold across pages: what\'s above it pages in, nothing under it is asked for until it opens, then its rows come', async () => {
   const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
   try {
-    const page = await load(setpoint);
+    const page = await loadTall(setpoint);
     const searches: {offset?: number}[] = [];
     page.on('request', request => {
       if (request.url().endsWith('/api/search')) searches.push(JSON.parse(request.postData()!) as {offset?: number});
@@ -862,17 +873,12 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
     await page.keyboard.press('Enter');
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions');
-    await rows.nth(49).waitFor();
-    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
-    assert.equal(await rows.count(), 50);
-    assert.equal(await fold.count(), 0);
-    // To the list's end: the rest of the first section, and only then the fold under it.
-    await rows.last().scrollIntoViewIfNeeded();
+    // The rest of the first section, and only then the fold under it.
     await fold.waitFor();
+    assert.equal(await page.locator('.search-list .bar').textContent(), '60 results');
     assert.equal(await rows.count(), 60);
     assert.equal(await fold.textContent(), '60 more mention these words');
     assert.equal(await rows.last().locator('.l2').textContent(), 'Ledger audit, part 1');
-    await fold.scrollIntoViewIfNeeded();
     // A pause for a "nothing happened" check: the page under the fold isn't asked for.
     await page.waitForTimeout(300);
     await setpoint.idle();
@@ -897,9 +903,6 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
     assert.equal(log.position, 61);
     await page.keyboard.press('Escape');
     await page.locator('.rd-subj').waitFor({state: 'detached'});
-    // Their last page comes as the list nears its end.
-    await rows.last().scrollIntoViewIfNeeded();
-    await until('every row', () => rows.count(), count => count === 120);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

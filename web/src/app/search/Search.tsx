@@ -10,7 +10,7 @@ import type {CSSProperties, KeyboardEvent, MouseEvent, ReactNode} from 'react';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import type {Entry, Fold, FoldRules} from '../../logic/fold.ts';
 import {LEFT_OUT_KEY, MENTIONS_KEY} from '../../logic/inbox.ts';
-import {fieldSegments, firstSection, indexingLine, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons, suggestionLine} from '../../logic/search.ts';
+import {fieldSegments, firstSection, indexingLine, nextAsk, leftOutLine, mentionsLine, queryParts, reasonParts, resultSender, resultsLine, shownReasons, suggestionLine} from '../../logic/search.ts';
 import type {Segment} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -237,15 +237,14 @@ export function SearchResults(props: ResultsProps) {
   const end = useRef<HTMLDivElement>(null);
   // The next page as the list nears its end, which is the fold while it's folded: the rows under it
   // aren't asked for until they'd show.
-  const ended = out !== null && !search.mentions && search.results.length >= firstSection(out);
-  const moreResults = !ended && out?.next_offset != null;
+  const ask = nextAsk(out, search.mentions, search.results.length, search.moreLeftOut);
   useEffect(() => {
     const target = end.current;
-    if (!target || (ended && !search.moreLeftOut)) return;
+    if (!target || !ask) return;
     // The list is the root: its margin means nothing for a box scrolling inside the page, and at the
     // very end a fraction of a pixel can leave the empty marker just outside what the list shows.
     const observer = new IntersectionObserver(entries => {
-      if (entries.some(entry => entry.isIntersecting)) (moreResults ? search.loadMore : search.loadLeftOut)();
+      if (entries.some(entry => entry.isIntersecting)) (ask === 'more' ? search.loadMore : search.loadLeftOut)();
     }, {root: target.parentElement, rootMargin: '400px'});
     observer.observe(target);
     return () => observer.disconnect();

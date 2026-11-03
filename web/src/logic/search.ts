@@ -103,6 +103,17 @@ export function resultsLine(out: Pick<SearchOut, 'total'> & Partial<Pick<SearchO
 export const firstSection = (out: Pick<SearchOut, 'total' | 'first_section'>) => out.first_section || out.total;
 
 /**
+ * What the list's end asks for as it nears (Search.tsx): the next page while the section above the fold
+ * is still paging, or the fold is open and its pages are; else the rows left out under an open fold; and
+ * nothing once the section above a closed fold is all here, so the rows under it wait until it opens.
+ */
+export function nextAsk(out: Pick<SearchOut, 'total' | 'first_section' | 'next_offset'> | null, mentions: boolean, shown: number, moreLeftOut: boolean): 'more' | 'left-out' | null {
+  const ended = out !== null && !mentions && shown >= firstSection(out);
+  if (ended && !moreLeftOut) return null;
+  return !ended && out?.next_offset != null ? 'more' : 'left-out';
+}
+
+/**
  * The results as the list shows them: those about the search, then, once they're all here, a fold
  * with how many `more` only mention it, and their rows once it's `open`. The server's order runs
  * straight through, so a result's index among all the results is its place in the list however it's

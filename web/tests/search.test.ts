@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, Se
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {ProposalWhen, Run} from '../src/logic/search.ts';
 
@@ -554,4 +554,16 @@ describe('the Answer card while Alfred works, and its sources', () => {
   ])('shownSources: %s', (_name, count, all, shown, more) => {
     expect(shownSources(ids(count), all)).toEqual({shown, more});
   });
+});
+
+describe('what the end of the list asks for next: the next page, the left-out rows under an open fold, or nothing', () => {
+  const out = (next_offset: number | null, first_section = 0) => ({total: 60, first_section, next_offset});
+  test.each([
+    ['the first section still paging: its next page', out(50), false, 50, false, 'more'],
+    ['before the first answer: the left-out rows, which have none yet', null, false, 0, false, 'left-out'],
+    ['the first section all shown under a closed fold: nothing, the rows under it wait', out(60, 60), false, 60, false, null],
+    ['the fold open with more under it: the left-out rows', out(60, 60), false, 60, true, 'left-out'],
+    ['a fold that starts open, its pages still coming: the next page', out(50, 3), true, 50, false, 'more'],
+    ['a fold that starts open, every page in: the left-out rows', out(null, 3), true, 63, false, 'left-out'],
+  ] as const)('%s', (_, answer, mentions, shown, moreLeftOut, ask) => expect(nextAsk(answer, mentions, shown, moreLeftOut)).toBe(ask));
 });
