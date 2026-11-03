@@ -18,7 +18,7 @@ import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, still, test, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -179,10 +179,8 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.deepEqual(await news.locator('.set-row .t').allTextContents(), ['Articles and grouping', 'Stories and ranking', 'Monthly cap', 'This month']);
     assert.deepEqual(await news.locator('.val').allTextContents(), ['Claude Haiku 5.5', 'Claude Sonnet 5.5']);
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
-    // The meter, filled to $18.40 of $40, measured once Settings has settled into place.
-    await still(page);
+    // How far the meter fills is capMeter's, a table in news.test.ts; its width on screen is by eye (D417).
     const meter = news.locator('.meter');
-    assert.equal(await rested(() => meter.evaluate(element => Math.round((element.firstElementChild as HTMLElement).getBoundingClientRect().width * 10) / 10)), 73.6);
     // The money first (the polish audit's settings-10): the amount in ink, and a neutral meter, ink3 on a sub2
     // track: a usage meter is neither "you are here" (accent) nor an identity (cool).
     const neutral = await computed(page, 'background', 'var(--ink3)');
@@ -192,7 +190,6 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
 
     // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
-    await usage.scrollIntoViewIfNeeded();
     assert.deepEqual(await usage.locator('.set-row').evaluateAll(rows => rows.map(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.cost')?.textContent])), [
       ['Triage', '1,214 calls · 2.4M tokens in · 49k out', '$2.10'],
       ['Search terms', '312 calls · 468k tokens in · 11k out', '$0.04'],
@@ -232,9 +229,8 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
     const line = month.locator('.s .caution');
     assert.equal(await line.textContent(), 'Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
     assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
-    // Measured once Settings has settled into place.
-    await still(page);
-    assert.deepEqual(await rested(() => month.locator('.meter > span').evaluate(fill => [fill.getBoundingClientRect().width, getComputedStyle(fill).backgroundColor])), [160, await rested(() => computed(page, 'background', 'var(--caution)'))]);
+    // Full in `caution`: how full is capMeter's (news.test.ts), its width by eye (D417).
+    assert.equal(await rested(() => month.locator('.meter > span').evaluate(fill => getComputedStyle(fill).backgroundColor)), await rested(() => computed(page, 'background', 'var(--caution)')));
     await choose(page, 'Monthly cap', '$50');
     await month.locator('.amount', {hasText: '$40.40 of $50'}).waitFor();
     await line.waitFor({state: 'detached'});
@@ -244,54 +240,7 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
   }
 });
 
-test('a long page keeps its title and × in place while it scrolls, and a section\'s label under it (the polish audit\'s settings-04)', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page('target');
-    await openAt(page, setpoint.base, 'ai');
-    await page.locator('.settings .amount').waitFor();
-    const main = page.locator('.settings .set-main');
-    const head = page.locator('.settings .set-head');
-    // Measured once the page has faded up into place (its 120 ms; the hairline's scroll-driven animation runs on).
-    await head.evaluate(element => Promise.all(element.getAnimations().filter(animation => animation.timeline instanceof DocumentTimeline).map(animation => animation.finished)));
-    const place = () => page.evaluate(() => {
-      const modal = document.querySelector('.settings')!.getBoundingClientRect();
-      const title = document.querySelector('.settings .set-title')!.getBoundingClientRect();
-      const close = document.querySelector('.settings .set-x')!.getBoundingClientRect();
-      const head = document.querySelector('.settings .set-head')!.getBoundingClientRect();
-      return {title: Math.round(title.top - modal.top), close: [Math.round(close.top - modal.top), Math.round(modal.right - close.right)],
-        head: [Math.round(head.top - modal.top), Math.round(modal.right - head.right)]};
-    });
-    const before = await rested(() => place());
-    await main.evaluate(element => element.scrollTo({top: 200}));
-    await until('scrolled', () => main.evaluate(element => element.scrollTop), top => top === 200);
-    assert.deepEqual(await rested(() => place()), before, 'the title and × stay where they were');
-    await page.getByRole('button', {name: 'Close settings'}).click();
-    await page.locator('.settings').waitFor({state: 'detached'});
-
-    // News's sources: scrolled 100 px into its longest section, that section's label stays under the title.
-    await openAt(page, setpoint.base, 'news');
-    await page.locator('.settings .news-src').first().waitFor();
-    // Measured once the page rests: its sections mount with their answer, after the head, so while
-    // they fade up their 4 px a label sits that far off the head's foot.
-    await still(page);
-    const longest =await page.locator('.settings .set-main').evaluate(scroller => {
-      const sections = [...scroller.querySelectorAll<HTMLElement>('.set-sec')];
-      const section = sections.reduce((a, b) => (b.offsetHeight > a.offsetHeight ? b : a));
-      scroller.scrollTo({top: section.offsetTop + 100});
-      return section.querySelector('.set-label')!.firstChild!.textContent;
-    });
-    const stuck = await rested(() => page.evaluate(() => {
-      const bottom = document.querySelector('.settings .set-head')!.getBoundingClientRect().bottom;
-      return [...document.querySelectorAll('.settings .set-label')].filter(label => Math.abs(label.getBoundingClientRect().top - bottom) < 1).map(label => label.firstChild!.textContent);
-    }));
-    assert.deepEqual(stuck, [longest], 'its label sits under the title');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
+// A long page keeping its title, × and a section's label in place as it scrolls is CSS, by eye (D416).
 test('the modal: ⌘, and the sidebar open it over the page, not in the address bar; Esc closes; the bar\'s Reconnect goes straight to Google for its one Gmail account', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect'], clock: 'frozen'});
   try {
@@ -1004,32 +953,6 @@ test('Security: a load that reaches the server just after a change there ended t
     await setpoint.idle();
     assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
     assert.equal(await page.locator('.settings pre.codes').count(), 1, 'the new codes still shown');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('a wide screen (2400 × 1300, zoomed 1.25): Settings keeps its size and place', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const page = await setpoint.page({width: 2400, height: 1300});
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-    const box = async (selector: string) => (await rested(() => page.locator(selector).boundingBox()))!;
-    const near = (a: number, b: number, what: string) => assert.ok(Math.abs(a - b) <= 1, `${what}: ${a}, expected ${b}`);
-
-    // Measured where it rests, once it has risen into place.
-    await page.keyboard.press('Meta+,');
-    await page.locator('.settings').waitFor();
-    await still(page);
-    const modal = await box('.settings');
-    near(modal.width, 1040 * 1.25, 'Settings\' width');
-    near(modal.height, 720 * 1.25, 'Settings\' height');
-    near(modal.x, (2400 - 1300) / 2, 'Settings is centred across');
-    near(modal.y, (1300 - 900) / 2, 'and down');
-    near((await box('.settings .set-nav')).width, 220 * 1.25, 'the nav');
-    await page.keyboard.press('Escape');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

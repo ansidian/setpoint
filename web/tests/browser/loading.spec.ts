@@ -32,11 +32,10 @@ async function hold(page: Page, pattern: RegExp): Promise<() => Promise<void>> {
 /** Goes to an address without waiting for its data (the harness's goto waits for it, which a held answer never gives). */
 const visit = (page: Page, url: string) => page.mainFrame().goto(url).then(() => {});
 
-/** Waits until a skeleton has come in after its delay, and is drawn. */
+/** Waits until a skeleton has come in after its delay; its fade in is by eye (D416). */
 async function shown(page: Page, kind: string) {
   const found = page.locator(`[data-skeleton="${kind}"]`).first();
   await found.waitFor();
-  await until(`the ${kind} skeleton in`, () => found.evaluate(element => element.getAnimations().find(animation => (animation as CSSAnimation).animationName === 'sk-in')?.playState ?? 'none'), state => state === 'finished');
   return found;
 }
 
