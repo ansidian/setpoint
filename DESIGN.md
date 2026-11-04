@@ -3813,3 +3813,14 @@ it changes what's on screen.
       calendar file", and for a file with no events to import, such as one that only cancels,
       "Nothing to import, the file has 1 event cancelled" ("Nothing to import, the file has no
       events"). Board audit: no board draws it.
+305. **A file dragged over the grid shows it will import** (Andy, 2026-11-04; darma SV-190,
+    amending #304). While a file is dragged over the month or week grid, the grid lights as a task's
+    drop does (#194), in `ink3`: a 9% fill (Light 7%) under a 1.5 px dashed ring at 70%, 6 px inside
+    its edges, and the drag tip's pill sits at its centre with `download` and "Drop to import .ics".
+    A file the browser already knows isn't a calendar (a PDF, an image) shows only the pill, "Only an
+    .ics file imports", in `ink2`, and the drop does nothing. Several files at once say "One .ics
+    file at a time", refused the same way. Leaving the grid, Esc or the drop clears it at once. It
+    fades in over 120 ms. Only the grid takes the drop: the right pane doesn't. In the compact tier,
+    the pill centres in the part of the grid the pane leaves uncovered. A file of unknown type lights
+    as an .ics, and its drop says "‹name› isn't an .ics calendar file" if it isn't one. Board audit:
+    no board draws it.
