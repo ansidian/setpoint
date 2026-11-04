@@ -373,7 +373,7 @@ building](#decided-while-building) #48). Done mail stays in its day, quiet, with
   placeholder (#211).
 - **Attachments:** 44 px cards (radius 14, 280 wide, wider to show the whole name, #61) with the
   type's tile (#122), name and size, then the preview's eye and **Download** with its glyph; PDF,
-  image and CSV open a preview.
+  image and CSV open a preview, and an invitation (ICS) has **Add to calendar** before Download (#122).
 - **Opening:** the tools and the head draw from the email's row at once; only the body waits, a
   skeleton meanwhile (#229).
 
@@ -2228,7 +2228,13 @@ it changes what's on screen.
     Numbers) `comf` `table_chart`, document (Word, Pages, RTF, text) `cool` `description`, archive
     (ZIP, gzip, RAR, 7z) `warm` `folder_zip`, invitation (ICS) `caution` `calendar_month`, anything
     else `ink2` `draft`; the type from the name's extension, else the MIME type. **Download** carries
-    a 16 px `download` (gap 6, padding 0 10 0 8). Under the pointer the ring stays `edgeHover`, the
+    a 16 px `download` (gap 6, padding 0 10 0 8). An invitation's card has **Add to calendar** before
+    Download, the same pill with a 16 px `event`, and a right-click offers both (#248): it reads the
+    stored attachment on the server into the same review as an import from Calendar (#304), so
+    Calendar opens on the event's day with one event in the editor as a draft, or two or more in the
+    right pane's list on the first upcoming event's day. The pill is disabled while it reads. A file
+    with nothing to import says so in the toast (D444), and one that can't be read says so in place of
+    its size, in `alert`, in the parser's words (SV-182, D441). Under the pointer the ring stays `edgeHover`, the
     tile deepens to 22%, the eye turns `ink`, and in Night the card fills `cardOn` (Light stays
     white) (Andy, 2026-10-11, polish audit reader-07).
 123. **A glyph means one thing, at one size per role:** account trouble is `sync_problem` everywhere
