@@ -1,4 +1,6 @@
-# Only what the image builds from; never databases, keys, exports or env files.
+# Only what the image builds from; never databases, keys, exports or env files. It applies to a
+# folder context: OPERATIONS.md's `git archive HEAD | docker build -` sends a tarball, which Docker
+# takes whole (committed files only), so there the web stage has web/tests (SV-188).
 **
 !package.json
 !package-lock.json

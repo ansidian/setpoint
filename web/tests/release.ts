@@ -1,5 +1,5 @@
 // `npm run release:check` (SV-83, D274): the release checks, run only where they haven't already
-// passed on HEAD's exact content (passes.ts): npm test, each browser spec file in the normal run and
+// passed on HEAD's exact content (passes.ts): npm test, the image build (SV-188), each browser spec file in the normal run and
 // under stress, the page screenshots (pages.ts, D281), and the board audit when its inputs have
 // changed since it last ran. Stress, the screenshots and the audit run only here, not per change. It says what it
 // skipped and why, stops at the first check that fails, and ends by saying whether HEAD is ready to
@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import type {Pass} from './passes.ts';
-import {auditKey, head, missing, passesOf, specName} from './passes.ts';
+import {auditKey, head, missing, passesOf, record, specName} from './passes.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const BROWSER = path.join(ROOT, 'web', 'tests', 'browser');
@@ -59,6 +59,26 @@ if (units.length) {
   run(['test']);
   recorded(passesOf(tree).some(pass => pass.check === 'unit'), 'npm test');
   summary.push('npm test: passed.');
+}
+
+// SV-188: the image, built as OPERATIONS.md's deploy builds it, from `git archive` on stdin. A
+// tarball context skips .dockerignore, so the web stage's typecheck reads web/tests too, and a file
+// they import from outside what it copies fails here rather than at the deploy (SV-174's
+// extension/src/words.ts did). It exports nothing, so no image is left behind; this Mac's own
+// platform, which a build failure of this kind doesn't depend on.
+const images = passesOf(tree).filter(pass => pass.check === 'image');
+if (images.length) {
+  summary.push(`Image build: skipped, it built from this content ${when(images)}.`);
+  console.log(`\n${summary.at(-1)}`);
+} else {
+  console.log('\nImage build: running (git archive HEAD | docker build).');
+  const {status} = spawnSync('bash', ['-o', 'pipefail', '-c', 'git archive --format=tar HEAD | docker build --progress=quiet --output type=cacheonly -'], {cwd: ROOT, stdio: 'inherit'});
+  if (status !== 0) {
+    console.error(`\nrelease:check stopped: the image didn't build from ${rev} (is Docker running?), so it isn't ready to release.`);
+    process.exit(status ?? 1);
+  }
+  record(tree, {check: 'image'});
+  summary.push('Image build: built.');
 }
 
 for (const check of ['browser', 'stress'] as const) {

@@ -63,7 +63,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   file that is new or largely rewritten runs once under stress before its commit
   (`npm run test:browser:stress -- mail`), so a check that reads before what it reads has come is
   caught there rather than at the release.
-- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the browser checks,
+- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the image build as
+  a deploy builds it (`git archive HEAD | docker build`, exporting nothing, so Docker must be running,
+  SV-188), the browser checks,
   the same under stress (`npm run test:browser:stress`: a CPU slowed 4×, /api answering late, one
   at a time and last-asked first, and the web fonts late, D81, so a check that reads before what it
   reads has come fails every time), the page screenshots (`npm run test:pages`) and the board
