@@ -4,8 +4,14 @@
 // already on Jobs), imported one at a time, a refused event retried, the events on the grid, and
 // Undo taking back only the ones the import made. Then one event from the header's Import .ics…,
 // opened in the editor and created there; and ⌘K's Import .ics… with files that can't be imported.
+// SV-182: the same from an email's .ics tile, Add to calendar reading the stored attachment on the
+// server (the dev provider serves src/dev/icsFiles.ts by name): the seed's interview invite into the
+// editor, and, linked to that email by SQL, a schedule into the review, one that only cancels, and
+// one that can't be read, said in place.
 // The list's own behaviour (ticks, counts, the picker) is the component test's (importPane.test.tsx).
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
@@ -158,6 +164,78 @@ test('SV-181: ⌘K\'s Import .ics… with a file that can\'t be read, or has not
     ]));
     await page.locator('.toast', {hasText: 'Nothing to import, the file has 1 event cancelled'}).waitFor();
     assert.equal(await page.locator('.cal-import, .editor').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/** The seed's interview confirmation (Done, so in All mail), with any more .ics files linked to it. */
+function interviewEmail(setpoint: Setpoint, more: string[] = []) {
+  const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+  try {
+    database.exec('PRAGMA busy_timeout = 5000');
+    const {id} = database.prepare('SELECT id FROM messages WHERE subject = ?').get('Interview confirmed: Data Engineer I') as {id: number};
+    const insert = database.prepare('INSERT INTO attachments (message_id, provider_id, filename, mime_type, size_bytes) VALUES (?, ?, ?, ?, 900)');
+    more.forEach((filename, index) => insert.run(id, `sv182-${index}`, filename, 'text/calendar'));
+    return id;
+  } finally {
+    database.close();
+  }
+}
+
+async function openEmail(page: Page, base: string, id: number) {
+  await page.goto(`${base}/inbox/${id}`);
+  await page.locator('.rd-subj', {hasText: 'Interview confirmed: Data Engineer I'}).waitFor();
+}
+
+const invitation = (page: Page, filename: string) => page.locator('.attach[data-type="calendar"]', {hasText: filename});
+
+test('SV-182: an email\'s invite has Add to calendar, which opens Calendar on its day with the editor filled in, and Create imports it', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await openEmail(page, setpoint.base, interviewEmail(setpoint));
+    await invitation(page, 'invite.ics').getByRole('button', {name: 'Add to calendar'}).click();
+    const editor = page.locator('.editor');
+    await editor.getByText('Create event').waitFor();
+    assert.equal(new URL(page.url()).pathname, '/calendar/2026-10-20');
+    assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue(), await page.getByLabel('End', {exact: true}).inputValue(), await page.getByLabel('Place', {exact: true}).inputValue()],
+      ['Tue, Oct 20', '2:00 PM', '2:45 PM', 'https://meet.example.com/j/615-204-883']);
+    await editor.locator('.qchip', {hasText: '30 min before'}).waitFor();
+    await page.locator('.cell[data-date="2026-10-20"] .ev.ghost', {hasText: 'Interview with Trey Research'}).waitFor();
+    await editor.getByRole('button', {name: /^Create event/}).click();
+    await page.locator('.toast', {hasText: 'Imported Interview with Trey Research: Data Engineer I to Personal'}).waitFor({timeout: 10_000});
+    const imported = await until('the interview on Oct 20', () => day(setpoint, '2026-10-20'), items => items.some(item => item.line.startsWith('Interview') && item.state === null));
+    assert.deepEqual(imported.filter(item => item.line.startsWith('Interview')), [{line: 'Interview with Trey Research: Data Engineer I 2:00 PM – 2:45 PM', state: null, reminders: [30]}]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-182: an email\'s schedule opens the review on its first day, one that only cancels says so in the toast, and one that can\'t be read says so on its tile', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await openEmail(page, setpoint.base, interviewEmail(setpoint, ['notes.ics', 'cancelled.ics', 'northwind-devcon.ics']));
+
+    // The parser's line, in place of the file's size; nothing else moves.
+    await invitation(page, 'notes.ics').getByRole('button', {name: 'Add to calendar'}).click();
+    await invitation(page, 'notes.ics').getByRole('alert').filter({hasText: 'This file can\'t be read, it isn\'t an .ics calendar'}).waitFor();
+    await invitation(page, 'cancelled.ics').getByRole('button', {name: 'Add to calendar'}).click();
+    await page.locator('.toast', {hasText: 'Nothing to import, the file has 1 event cancelled'}).waitFor();
+    assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
+
+    await invitation(page, 'northwind-devcon.ics').getByRole('button', {name: 'Add to calendar'}).click();
+    const pane = page.getByRole('region', {name: 'Import events'});
+    await pane.getByText('Import northwind-devcon.ics').waitFor();
+    assert.equal(new URL(page.url()).pathname, '/calendar/2026-10-15');
+    assert.deepEqual(await pane.locator('.imp-item .title').allTextContents(), ['Opening keynote', 'Hiring panel', 'Closing remarks']);
+    await pane.getByRole('button', {name: 'Import 3 events'}).click();
+    await page.locator('.toast', {hasText: 'Imported 3 events to Personal'}).waitFor({timeout: 20_000});
+    await until('the schedule on Oct 15', () => day(setpoint, '2026-10-15'), items => items.length === 4 && items.every(item => item.state === null));
+    assert.deepEqual(await lines(setpoint, '2026-10-15'), ['Opening keynote 9:00 AM – 10:00 AM', 'Career fair 10:00 AM – 2:00 PM', 'Hiring panel 1:00 PM – 2:00 PM', 'CS 101 lecture 6:00 PM – 7:15 PM']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
