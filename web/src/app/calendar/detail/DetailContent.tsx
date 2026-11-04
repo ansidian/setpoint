@@ -64,6 +64,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const now = useNow();
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
+  // Read-only is a yes or no: the calendar says why (SV-191), else it's one of Google's own kinds of event.
+  const readOnlyTip = calendar?.writable === false ? 'This calendar is read-only' : 'Google doesn\'t let this kind of event change';
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
   // Without actions (Google's own kinds, the phone) every one is drawn, unavailable.
   const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !actions || !!actions[action];
@@ -130,7 +132,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
         <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
       </div>
       <div className="card-acts">
-        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} data-tip={item.read_only ? 'Google doesn\'t let this kind of event change' : 'Edit · E'}
+        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} data-tip={item.read_only ? readOnlyTip : 'Edit · E'}
           onClick={item.read_only ? undefined : onEdit}>
           <Icon name="edit" size={16} />Edit<span className="kbd">E</span>
         </button>

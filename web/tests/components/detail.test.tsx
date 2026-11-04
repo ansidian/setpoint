@@ -2,7 +2,8 @@
 // event whose place has no link but which has its own (Google's source.url) gets a line of its own,
 // `link` and the host with the whole link as its tip, and Open taking it to a new tab. A place that is
 // a link keeps SV-77's line and its one Open, and a task or an event with no link has none. `O` and the
-// card on the seed's Career fair stay in detail.spec.ts.
+// card on the seed's Career fair stay in detail.spec.ts. SV-191: a read-only event's Edit says why,
+// from its calendar.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test} from 'vitest';
@@ -25,11 +26,11 @@ function event(fields: Partial<ItemOut>): ItemOut {
 }
 
 /** The card as the floating detail draws it, its width the detail's own. */
-async function card(item: ItemOut) {
+async function card(item: ItemOut, calendar: CalendarOut = CALENDAR) {
   return render(
     <div className="fd" role="dialog" aria-label={item.title} style={{position: 'relative'}}>
       <div className="card float"><div className="fd-body"><div className="fd-layer in">
-        <DetailContent target={{item, date: '2026-10-15', calendar: CALENDAR}} timeZone={SEED_TIME_ZONE} onClose={() => {}} onEdit={() => {}} />
+        <DetailContent target={{item, date: '2026-10-15', calendar}} timeZone={SEED_TIME_ZONE} onClose={() => {}} onEdit={() => {}} />
       </div></div></div>
     </div>,
   );
@@ -74,4 +75,15 @@ test('a link the server wouldn\'t send (javascript:) is never drawn as one', asy
   await card(event({link: 'javascript:alert(1)'}));
   await expect.element(page.getByText('University Student Union')).toBeVisible();
   expect(document.querySelector('a.fd-open')).toBeNull();
+});
+
+test('SV-191: a read-only event\'s Edit says why: its calendar is read-only, else it\'s one of Google\'s own kinds', async () => {
+  const edit = () => page.getByRole('button', {name: /^Edit/});
+  const screen = await card(event({read_only: true}), {...CALENDAR, name: 'Holidays in United States', writable: false});
+  await expect.element(edit()).toHaveAttribute('aria-disabled', 'true');
+  await expect.element(edit()).toHaveAttribute('data-tip', 'This calendar is read-only');
+  await screen.unmount();
+  await card(event({read_only: true}));
+  await expect.element(edit()).toHaveAttribute('aria-disabled', 'true');
+  await expect.element(edit()).toHaveAttribute('data-tip', 'Google doesn\'t let this kind of event change');
 });
