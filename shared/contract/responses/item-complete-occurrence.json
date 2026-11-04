@@ -1,7 +1,7 @@
 {
   "id": 24,
   "target": "item",
-  "target_id": 20,
+  "target_id": 21,
   "kind": "item_complete",
   "state": "pending",
   "provider": "todoist",

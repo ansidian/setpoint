@@ -551,7 +551,7 @@
     }
   ],
   "missed": {
-    "count": 11,
+    "count": 8,
     "since": "2026-10-06T05:40:00.000Z"
   },
   "recap": {
@@ -612,39 +612,6 @@
         "last_new_fact_at": "2026-10-04T23:40:00.000Z",
         "seen_at": null,
         "expired_at": "2026-10-06T23:40:00.000Z",
-        "section": "local"
-      },
-      {
-        "id": 57,
-        "headline": "Power outage leaves 8,000 homes without service for three hours",
-        "one_line": "A blown transformer was replaced by morning",
-        "sections": [
-          "local"
-        ],
-        "state": "new",
-        "lead": {
-          "article_id": 229,
-          "outlet": "ABC7",
-          "outlet_short": "ABC7",
-          "more": 1,
-          "published_at": "2026-10-06T13:20:00.000Z",
-          "url": "https://abc7.example/news/power-outage-leaves-8-000-homes-without-service-for-three-ho",
-          "hazard": null
-        },
-        "image": {
-          "thumb": {
-            "id": 67,
-            "url": "/api/news/images/67",
-            "width": 144,
-            "height": 96
-          },
-          "large": null,
-          "outlet": "ABC7"
-        },
-        "first_reported_at": "2026-10-05T02:00:00.000Z",
-        "last_new_fact_at": "2026-10-05T02:00:00.000Z",
-        "seen_at": null,
-        "expired_at": "2026-10-07T02:00:00.000Z",
         "section": "local"
       },
       {
@@ -762,39 +729,6 @@
         "section": "ai"
       },
       {
-        "id": 55,
-        "headline": "Mistral releases an open-weights coding model",
-        "one_line": "Licensed for commercial use",
-        "sections": [
-          "ai"
-        ],
-        "state": "new",
-        "lead": {
-          "article_id": 221,
-          "outlet": "Mistral AI",
-          "outlet_short": "Mistral",
-          "more": 3,
-          "published_at": "2026-10-06T14:10:00.000Z",
-          "url": "https://mistral-ai.example/news/mistral-releases-an-open-weights-coding-model",
-          "hazard": null
-        },
-        "image": {
-          "thumb": {
-            "id": 66,
-            "url": "/api/news/images/66",
-            "width": 144,
-            "height": 96
-          },
-          "large": null,
-          "outlet": "Mistral AI"
-        },
-        "first_reported_at": "2026-10-05T00:30:00.000Z",
-        "last_new_fact_at": "2026-10-05T00:30:00.000Z",
-        "seen_at": null,
-        "expired_at": "2026-10-07T00:30:00.000Z",
-        "section": "ai"
-      },
-      {
         "id": 47,
         "headline": "Tornado outbreak across Oklahoma and Kansas leaves 6 dead",
         "one_line": "More than 30 tornadoes touched down overnight; thousands without power",
@@ -849,39 +783,6 @@
         "last_new_fact_at": "2026-10-04T20:05:00.000Z",
         "seen_at": null,
         "expired_at": "2026-10-06T20:05:00.000Z",
-        "section": "general"
-      },
-      {
-        "id": 53,
-        "headline": "Measles cases pass 400 across 12 states",
-        "one_line": "Health officials urge vaccination before the holidays",
-        "sections": [
-          "general"
-        ],
-        "state": "new",
-        "lead": {
-          "article_id": 212,
-          "outlet": "NPR",
-          "outlet_short": "NPR",
-          "more": 5,
-          "published_at": "2026-10-06T14:05:00.000Z",
-          "url": "https://npr.example/news/measles-cases-pass-400-across-12-states",
-          "hazard": null
-        },
-        "image": {
-          "thumb": {
-            "id": 65,
-            "url": "/api/news/images/65",
-            "width": 144,
-            "height": 96
-          },
-          "large": null,
-          "outlet": "NPR"
-        },
-        "first_reported_at": "2026-10-04T22:00:00.000Z",
-        "last_new_fact_at": "2026-10-04T22:00:00.000Z",
-        "seen_at": null,
-        "expired_at": "2026-10-06T22:00:00.000Z",
         "section": "general"
       }
     ]

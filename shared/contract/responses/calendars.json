@@ -7,6 +7,7 @@
     "colour": "cool",
     "position": 0,
     "visible": true,
+    "writable": true,
     "command": null
   },
   {
@@ -17,6 +18,7 @@
     "colour": "cyan",
     "position": 1,
     "visible": true,
+    "writable": true,
     "command": null
   },
   {
@@ -27,6 +29,18 @@
     "colour": "violet",
     "position": 2,
     "visible": true,
+    "writable": true,
+    "command": null
+  },
+  {
+    "id": 5,
+    "provider": "google",
+    "account_id": 2,
+    "name": "Holidays in United States",
+    "colour": "good",
+    "position": 4,
+    "visible": true,
+    "writable": false,
     "command": null
   },
   {
@@ -35,8 +49,9 @@
     "account_id": null,
     "name": "Todoist",
     "colour": null,
-    "position": 3,
+    "position": 5,
     "visible": true,
+    "writable": true,
     "command": null
   }
 ]

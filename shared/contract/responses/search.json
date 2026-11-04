@@ -1,15 +1,10 @@
 {
   "search_id": 1,
-  "chips": [
-    {
-      "kind": "organisation",
-      "value": "Northwind",
-      "label": "Northwind"
-    }
-  ],
-  "text": "interview",
-  "order": "newest",
+  "chips": [],
+  "text": "northwind interview",
+  "order": "match",
   "total": 1,
+  "first_section": 1,
   "partial": false,
   "results": [
     {
@@ -48,10 +43,10 @@
       },
       "reasons": [
         {
-          "field": "organisation",
-          "label": "Org Northwind",
+          "field": "sender",
+          "label": "Sender northwind",
           "matched": [
-            "Northwind"
+            "northwind"
           ]
         },
         {
@@ -83,5 +78,6 @@
     }
   ],
   "next_offset": null,
-  "indexing": null
+  "indexing": null,
+  "reading": null
 }

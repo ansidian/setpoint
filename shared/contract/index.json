@@ -580,6 +580,7 @@
       "content_type": "application/json",
       "file": "responses/search.json",
       "unseen": [
+        "chips: always empty",
         "results[].type: always null",
         "results[].fact: always null",
         "results[].code: always null",
@@ -587,7 +588,8 @@
         "results[].command.previous: always null",
         "results[].command.settled_at: always null",
         "next_offset: always null",
-        "indexing: always null"
+        "indexing: always null",
+        "reading: always null"
       ]
     },
     {
@@ -1063,7 +1065,7 @@
       "type": "CommandOut",
       "method": "POST",
       "route": "/api/items/:id/complete",
-      "path": "/api/items/17/complete",
+      "path": "/api/items/18/complete",
       "request": {
         "done": true,
         "occurrence_date": "2026-10-12"
