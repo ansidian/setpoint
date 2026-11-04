@@ -3783,12 +3783,14 @@ it changes what's on screen.
       "From the email" is. **Create event** imports it.
     - **Two or more** open the review in the right pane, in place of the day, as the editor and
       search take it: "Import northwind-devcon.ics" with "5 events" under it and a close ×; "Into"
-      and the board's select of the user's Google calendars (the first one shown by default), with
-      "1 already on Jobs (will update)" under it for the ticked events that calendar holds; **Tick
-      all** (**Untick all** once all are); then a row per event in start order: the sidebar's 14 px
-      checkbox in the chosen calendar's colour, the title (`ink3` and 400 while unticked), and "Thu,
-      Oct 15 · 9:00 – 10:00 AM" in `ink3` 12.5 with "repeats", "past" or "will update" after it.
-      Past events start unticked. What the file had that an import leaves out closes the list in
+      and the board's select of the user's Google calendars (the first one shown by default). Its
+      menu is Settings' (#149), each calendar with its dot as the editor's Calendar menu has, lying
+      over the list from the select's left edge, so opening it moves nothing. "1 already on Jobs
+      (will update)" sits under it for the ticked events that calendar holds; **Tick all** (**Untick
+      all** once all are); then a row per event in start order: the sidebar's 14 px checkbox in the
+      chosen calendar's colour, the title (`ink3` and 400 while unticked), and "Thu, Oct 15 · 9:00 –
+      10:00 AM" in `ink3` 12.5 with "repeats", "past" or "will update" after it. Past events start
+      unticked. What the file had that an import leaves out closes the list in
       `ink3`, one line: "Left out: 2 events cancelled · categories on 35 events", each reason as "2
       events cancelled", "3 to-dos and notes" (VTODO, VJOURNAL, VFREEBUSY), "1 event with no start",
       "a reminder after the start", "a reminder at a set time", "a reminder past Google's limit"
