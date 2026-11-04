@@ -523,7 +523,7 @@ on (board 12b), leaving free events out (#303), the **now-line** in `alert` with
 bars as the week's (#184), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#190).
 An empty day offers New event C and New task D as dashed ghost rows (#191); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
-editor and calendar search results; while those show, the grid dims what they don't match (#195). Until the day's items and the calendars have come, its line is
+editor, calendar search results and an .ics file's import review (#304); while those show, the grid dims what they don't match (#195). Until the day's items and the calendars have come, its line is
 a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" or the empty day.
 
 ### The floating detail
@@ -3766,3 +3766,42 @@ it changes what's on screen.
     or `transparent`, Google's words), so the iPhone app can read it. The seed's Career fair is
     marked free. Board audit: no board draws a free event; boards 08, 12b and 13 overlap busy
     events, so they're unchanged.
+304. **An .ics file imports through a review** (Andy, 2026-11-04; darma SV-181, D436–D438).
+    **Import .ics…** (the header's `download` button, before the compact tier's day button and
+    Search, and ⌘K's Commands) opens the file picker; an .ics file dropped on the grid does the same.
+    Under 720 px the button leaves the header, as New loses its label there, and ⌘K and a dropped
+    file still import. Nothing goes to Google until the user says so.
+    - **One event** opens the editor (board 13) filled in: its title as words only (D290), day,
+      time, place, repeat and its own reminders, never Settings' default; the calendar already
+      holding it, if one does, with "Already on Jobs (will update)" as the footer's legend, as
+      "From the email" is. **Create event** imports it.
+    - **Two or more** open the review in the right pane, in place of the day, as the editor and
+      search take it: "Import northwind-devcon.ics" with "5 events" under it and a close ×; "Into"
+      and the board's select of the user's Google calendars (the first one shown by default), with
+      "1 already on Jobs (will update)" under it for the ticked events that calendar holds; **Tick
+      all** (**Untick all** once all are); then a row per event in start order: the sidebar's 14 px
+      checkbox in the chosen calendar's colour, the title (`ink3` and 400 while unticked), and "Thu,
+      Oct 15 · 9:00 – 10:00 AM" in `ink3` 12.5 with "repeats", "past" or "will update" after it.
+      Past events start unticked. What the file had that an import leaves out closes the list in
+      `ink3`, one line: "Left out: 2 events cancelled · categories on 35 events", each reason as "2
+      events cancelled", "3 to-dos and notes" (VTODO, VJOURNAL, VFREEBUSY), "1 event with no start",
+      "a reminder after the start", "a reminder at a set time", "a reminder past Google's limit"
+      (over 5, or over 4 weeks), "categories on 35 events", "a second copy of an event" and "a
+      changed occurrence without its event" (counts in place of "a" from two). The footer: **Import
+      4 events** ("Import 1 event") and Cancel Esc.
+    - **Sending:** the rows lock, the button gives way to "Importing 2 of 4", and each row has the
+      spinner while it's sent and a `good` check once Google has it. One Google refuses keeps its
+      row, with `warning` and Google's words in `caution` under it and **Retry** (`btn ghost sm`);
+      the footer says "1 event wasn't imported" ("2 events weren't imported") with Close Esc. The
+      grid's failed card waits while the review is open, so there's one place to retry.
+    - **Done:** once every event is in, the review closes and the toast says "Imported 4 events to
+      Jobs · Undo" (from the editor, "Imported Interview with Contoso to Personal · Undo"; refused
+      there, "Couldn't import Interview with Contoso, ‹Google's words› · Try again"). Undo deletes
+      the events the import made, never the ones it updated ("Couldn't undo the import, ‹why›" if it
+      can't). With refusals left, the toast counts what went, and the review stays.
+    - **Nothing to review** says so in the toast (amending D436's "the review says so"): "This file
+      can't be read, it isn't an .ics calendar", "This file is over 2 MB, the most an import takes",
+      "This file has 1,001 events, over the 1,000 an import takes", "notes.pdf isn't an .ics
+      calendar file", and for a file with no events to import, such as one that only cancels,
+      "Nothing to import, the file has 1 event cancelled" ("Nothing to import, the file has no
+      events"). Board audit: no board draws it.
