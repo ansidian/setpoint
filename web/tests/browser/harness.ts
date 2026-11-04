@@ -135,14 +135,18 @@ const WIDTH = Math.max(1, Number(process.env.SETPOINT_FILE_CONCURRENCY ?? 1));
 const queued: (() => void)[] = [];
 let replaying = false;
 
-/** Holds a file's top-level checks and suites until it has loaded, then registers them in one suite of WIDTH. */
+/**
+ * Holds a file's top-level checks and suites until it has loaded, then registers them in one suite of
+ * WIDTH, named for the spec file: the reporters see harness.ts as every check's file, so the slowest
+ * list (slowest.ts) takes each check's from the suite that ends after it.
+ */
 function register(entry: () => void) {
   if (replaying) {
     entry();
     return;
   }
   if (!queued.length) {
-    queueMicrotask(() => void nodeDescribe('', {concurrency: WIDTH}, () => {
+    queueMicrotask(() => void nodeDescribe(path.basename(process.argv[1] ?? ''), {concurrency: WIDTH}, () => {
       replaying = true;
       try {
         for (const next of queued) next();
