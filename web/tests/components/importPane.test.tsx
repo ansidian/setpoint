@@ -14,7 +14,7 @@ import {closeReview, openReview, useImportReview} from '../../src/app/calendar/i
 import {colour} from './colour.ts';
 
 const calendar = (id: number, name: string, colour: CalendarOut['colour']): CalendarOut =>
-  ({id, provider: 'google', account_id: 1, name, colour, position: id, visible: true, command: null});
+  ({id, provider: 'google', account_id: 1, name, colour, position: id, visible: true, writable: true, command: null});
 const CALENDARS = [calendar(1, 'Personal', 'cool'), calendar(3, 'Jobs', 'violet')];
 // Enough calendars that an in-flow menu would push the list well down (SV-189).
 const MANY = [...CALENDARS, calendar(4, 'Family', 'good'), calendar(5, 'Classes', 'sun'), calendar(6, 'Gym', 'warm'), calendar(7, 'Travel', 'cyan')];

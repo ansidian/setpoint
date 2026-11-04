@@ -203,6 +203,9 @@ export interface CalendarOut {
   colour: Colour | null;
   position: number;
   visible: boolean;
+  // SV-191: false for a calendar the user can only read (Google's accessRole reader or freeBusyReader,
+  // as a subscribed holiday calendar is): its events are read-only and no picker offers it.
+  writable: boolean;
   // SV-20: the colour change waiting for Google, or failed in place with its words; null otherwise.
   command: CommandOut | null;
 }

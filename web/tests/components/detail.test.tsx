@@ -12,7 +12,7 @@ import '../../src/app/calendar/detail/detail.css';
 import {DetailContent} from '../../src/app/calendar/detail/DetailContent.tsx';
 import {ICONS} from '../../src/ui/glyphs.ts';
 
-const CALENDAR: CalendarOut = {id: 2, provider: 'google', account_id: 1, name: 'Jobs', colour: 'good', position: 1, visible: true, command: null};
+const CALENDAR: CalendarOut = {id: 2, provider: 'google', account_id: 1, name: 'Jobs', colour: 'good', position: 1, visible: true, writable: true, command: null};
 const URL_OF_FAIR = 'https://www.careers.example.edu/fair/fall-2026/schedule?track=engineering&day=1';
 
 function event(fields: Partial<ItemOut>): ItemOut {

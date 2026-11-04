@@ -403,3 +403,16 @@ export function hangFrom(anchor: Rect, size: {width: number; height: number}, bo
 
 /** An item's key in the address: an occurrence of a recurring event is `id@start`. */
 export const itemKey = (id: number, at: string | null) => (at ? `${id}@${at}` : String(id));
+
+// ---------- Calendars by name ----------
+
+/**
+ * SV-191: a calendar's name as a list shows it (the sidebar's Calendars, Into, the editor's Calendar
+ * menu). A name that appears more than once in `all` (one holiday calendar subscribed from two Google
+ * accounts) carries its account's label, shown after it in `ink3`; a name that appears once doesn't.
+ */
+export function calendarLabel(calendar: Pick<CalendarOut, 'name' | 'account_id'>, all: Pick<CalendarOut, 'name'>[], accounts: {id: number; label: string}[]): {name: string; account: string | null} {
+  const twice = all.filter(one => one.name === calendar.name).length > 1;
+  const account = twice && calendar.account_id !== null ? accounts.find(one => one.id === calendar.account_id)?.label ?? null : null;
+  return {name: calendar.name, account};
+}

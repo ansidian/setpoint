@@ -250,7 +250,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
 
   const {items, weather} = useMonths([addMonths(shown, -1), shown, addMonths(shown, 1), addMonths(shown, 2)]);
   const calendarsById = useMemo(() => new Map((calendars ?? []).map(calendar => [calendar.id, calendar])), [calendars]);
-  const googleCalendars = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google'), [calendars]);
+  // The Google calendars an import can go into: not one the user can only read (SV-191).
+  const googleCalendars = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google' && calendar.writable), [calendars]);
 
   // Items as they show: changes on their way where they're going, deletes on their way gone.
   const present = useCallback((list: ItemOut[]) => list.flatMap(item => {

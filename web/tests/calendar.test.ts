@@ -5,7 +5,7 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  addMonths, agenda, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
+  addMonths, agenda, calendarLabel, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
   itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
 } from '../src/logic/calendar.ts';
 
@@ -28,9 +28,9 @@ const event = (title: string, date: string, start: string, end: string, fields: 
 const task = (title: string, due: string, fields: Partial<ItemOut> = {}) => item({kind: 'task', title, all_day: true, due_date: due, calendar_id: 4, ...fields});
 
 const calendars: CalendarOut[] = [
-  {id: 1, provider: 'google', account_id: 2, name: 'Personal', colour: 'cool', position: 0, visible: true, command: null},
-  {id: 2, provider: 'google', account_id: 2, name: 'Classes', colour: 'cyan', position: 1, visible: true, command: null},
-  {id: 4, provider: 'todoist', account_id: null, name: 'Todoist', colour: null, position: 3, visible: true, command: null},
+  {id: 1, provider: 'google', account_id: 2, name: 'Personal', colour: 'cool', position: 0, visible: true, writable: true, command: null},
+  {id: 2, provider: 'google', account_id: 2, name: 'Classes', colour: 'cyan', position: 1, visible: true, writable: true, command: null},
+  {id: 4, provider: 'todoist', account_id: null, name: 'Todoist', colour: null, position: 3, visible: true, writable: true, command: null},
 ];
 
 describe('weeks and months', () => {
@@ -371,4 +371,18 @@ describe('the done moment: a task ticked off where it\'s drawn plays it, nothing
     ['unchanged', was([['a', true], ['b', false]]), [{key: 'a', done: true}, {key: 'b', done: false}], []],
     ['two at once, one of them reopened', was([['a', false], ['b', false], ['c', true]]), [{key: 'a', done: true}, {key: 'b', done: true}, {key: 'c', done: false}], ['a', 'b']],
   ])('%s', (_name, before, tasks, played) => expect(playsDone(before, tasks)).toEqual(played));
+});
+
+describe('SV-191: a calendar\'s name in a list', () => {
+  const accounts = [{id: 1, label: 'Personal'}, {id: 2, label: 'Jobs'}];
+  const cal = (name: string, account_id: number | null) => ({name, account_id});
+  const holidays = cal('Holidays in United States', 2);
+  test.each([
+    ['a name that appears once stays as it is', holidays, [cal('Personal', 1), holidays], {name: 'Holidays in United States', account: null}],
+    ['a name that appears twice carries its account', holidays, [cal('Holidays in United States', 1), holidays], {name: 'Holidays in United States', account: 'Jobs'}],
+    ['and so does the other', cal('Holidays in United States', 1), [cal('Holidays in United States', 1), holidays], {name: 'Holidays in United States', account: 'Personal'}],
+    ['only the same name counts, case and all', holidays, [cal('holidays in united states', 1), holidays], {name: 'Holidays in United States', account: null}],
+    ['one without an account (Todoist\'s) carries none', cal('Todoist', null), [cal('Todoist', null), cal('Todoist', 1)], {name: 'Todoist', account: null}],
+    ['an account not loaded yet shows none', cal('Work', 9), [cal('Work', 9), cal('Work', 1)], {name: 'Work', account: null}],
+  ])('%s', (_, calendar, all, label) => expect(calendarLabel(calendar, all, accounts)).toEqual(label));
 });

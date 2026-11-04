@@ -7,16 +7,18 @@
 // event stays in the list with Google's words and Retry. Esc or Cancel closes it.
 import type {CalendarOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
+import {calendarLabel} from '../../logic/calendar.ts';
 import {alreadyLine, droppedLine, importLabel, progressLine, refusedLine, rowMarks, rowTitle, rowWhen, runCounts} from '../../logic/icsImport.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {colourVar} from '../accounts.ts';
+import {colourVar, useAccounts} from '../accounts.ts';
 import {Select} from '../settings/parts.tsx';
+import {CalendarName} from './Pickers.tsx';
 import {closeReview, pickCalendar, retryRow, runImport, tick, tickAll} from './importRun.ts';
 import type {ImportReview} from './importRun.ts';
 
 interface ImportPaneProps {
   review: ImportReview;
-  // The Google calendars an import can go into.
+  // The Google calendars an import can go into: those the user can write to (SV-191).
   calendars: CalendarOut[];
   // The one picked until the user picks another.
   fallback: number | null;
@@ -27,6 +29,8 @@ export function ImportPane({review, calendars, fallback, timeZone}: ImportPanePr
   const {read, ticked, rows, order, running} = review;
   const calendarId = review.calendarId ?? fallback;
   const calendar = calendars.find(one => one.id === calendarId) ?? null;
+  const {list: accounts} = useAccounts();
+  const label = (one: CalendarOut) => calendarLabel(one, calendars, accounts);
   const counts = order ? runCounts(order, rows) : null;
   const already = alreadyLine(read.events, ticked, calendarId, calendar?.name ?? null);
   const left = droppedLine(read.dropped);
@@ -45,8 +49,8 @@ export function ImportPane({review, calendars, fallback, timeZone}: ImportPanePr
       <div className="imp-to">
         <span className="ink2">Into</span>
         {calendar && (running || ran
-          ? <span className="num">{calendar.name}</span>
-          : <Select label="Calendar" align="left" value={calendar.id} options={calendars.map(one => ({value: one.id, label: one.name, colour: one.colour}))} onChange={pickCalendar} />)}
+          ? <span className="num"><CalendarName label={label(calendar)} /></span>
+          : <Select label="Calendar" align="left" value={calendar.id} options={calendars.map(one => ({value: one.id, label: one.name, colour: one.colour, detail: label(one).account}))} onChange={pickCalendar} />)}
         {already && <span className="imp-already ink3 num">{already}</span>}
       </div>
       <div className="rp-scroll">

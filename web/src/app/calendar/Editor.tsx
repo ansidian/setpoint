@@ -19,7 +19,7 @@ import {useResource} from '../../api/client.ts';
 import {placeSuggestions, proposalFrom, RECENT_PLACES_PATH, SETTINGS_PATH, TODOIST_LABELS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {newsProposal} from '../../api/news.ts';
 import {findPlace} from '../../api/settings.ts';
-import {dayTitle, timeRange} from '../../logic/calendar.ts';
+import {calendarLabel, dayTitle, timeRange} from '../../logic/calendar.ts';
 import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, draftStarted, editedWhen, endChoices, extraDays, NO_END, parseClock, parseDay, parseDays, parseTitle, PLACE_URL, readEnd, repeatChoices, spanTo, taskRepeat, taskRepeatChoices, timeChoices, typedSpan} from '../../logic/compose.ts';
 import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
@@ -35,9 +35,9 @@ import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {segThumb} from '../../ui/seg.ts';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
-import {colourVar} from '../accounts.ts';
+import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
-import {DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
+import {CalendarName, DateField, ProjectField, stepCursor, TimeField} from './Pickers.tsx';
 import {RemindersRow} from './Reminders.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
 import './editor.css';
@@ -516,7 +516,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // Where a task with no project goes, as the server picks it: Settings' default project, else Todoist's Inbox.
   const defaultProject = projects?.find(one => one.name === settings?.todoist.default_project)?.name ?? projects?.find(one => one.inbox)?.name ?? null;
   const {data: todoistLabels} = useResource<TodoistLabelOut[]>(open.kind === 'task' ? TODOIST_LABELS_PATH : null);
-  const google = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google'), [calendars]);
+  // The Google calendars an event can go in: not one the user can only read (SV-191).
+  const google = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google' && calendar.writable), [calendars]);
   const projectNames = useMemo(() => (projects ?? []).map(project => project.name), [projects]);
   const todoist = (calendars ?? []).find(calendar => calendar.provider === 'todoist')?.id ?? null;
   const fallbackCalendar = google.find(calendar => calendar.visible)?.id ?? google[0]?.id ?? null;
@@ -531,6 +532,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // An event moves only between the calendars of its own Google account (Google's events.move).
   const accountOf = editing ? (calendars ?? []).find(one => one.id === editing.calendar_id)?.account_id : undefined;
   const calendarChoices = useMemo(() => (editing ? google.filter(one => one.account_id === accountOf) : google), [editing, google, accountOf]);
+  const {list: accounts} = useAccounts();
+  // A name the menu lists twice carries its account (SV-191).
+  const calendarName = (one: CalendarOut) => <CalendarName label={calendarLabel(one, calendarChoices, accounts)} />;
 
   const [original] = useState(() => (editing ? fromItem(editing, timeZone) : null));
   const [drafts, setDrafts] = useState<Draft[]>(() => open.kept?.drafts ?? [original ? {...original} : open.ics ? fromIcs(open.ics, timeZone) : emptyDraft(open.kind, open.date, open.slot ?? null)]);
@@ -1078,7 +1082,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                 <button type="button" className="field" aria-label="Calendar" aria-expanded={menu === 'calendar'}
                   onClick={() => setMenu(menu === 'calendar' ? null : 'calendar')}>
                   <span className="dot sm" style={{'--c': colourVar(calendar?.colour ?? undefined)} as CSSProperties} />
-                  <span className="grow left">{calendar?.name ?? 'Calendar'}</span>
+                  <span className="grow left">{calendar ? calendarName(calendar) : 'Calendar'}</span>
                   <span className="ink3"><Icon name="expand_more" size={16} /></span>
                 </button>
                 {lineOpen && menu !== 'calendar' && (
@@ -1086,7 +1090,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                     {calendarLine.map((one, index) => (
                       <div key={one.id} role="option" aria-selected={index === lineCur} className={`menu-i${index === lineCur ? ' cur' : ''}`}
                         onMouseDown={event => event.preventDefault()} onClick={() => pickLine(index)}>
-                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{one.name}
+                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
                         {index === lineCur && <span className="kbd">↵</span>}
                       </div>
                     ))}
@@ -1099,7 +1103,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
                         change({calendarId: one.id}, ['calendar']);
                         setMenu(null);
                       }}>
-                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{one.name}
+                        <span className="dot sm" style={{'--c': colourVar(one.colour ?? undefined)} as CSSProperties} />{calendarName(one)}
                         {one.id === draft.calendarId && <Icon name="check" size={16} />}
                       </button>
                     ))}

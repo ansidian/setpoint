@@ -1,23 +1,24 @@
 // The sidebar's section on Calendar (DESIGN.md › Sidebar on Calendar): the mini-month (26 px days,
 // today a disc, the selected day `sub` or the week view's shown week, ‹ › stepping), and the Calendars toggles, each a 14 px
 // checkbox in its calendar's colour, Todoist's too with no mark of its own (polish audit calpanes-13), which filter the grid and
-// the agenda, a calendar's items fading out or in as it's toggled and its name `ink3` while it's off (calpanes-11).
+// the agenda, a calendar's items fading out or in as it's toggled and its name `ink3` while it's off (calpanes-11). A name
+// listed twice carries its account after it (SV-191).
 import type {CalendarOut} from '@setpoint/shared';
 import type {CSSProperties} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, setCalendarVisible} from '../../api/items.ts';
-import {monthOf} from '../../logic/calendar.ts';
+import {calendarLabel, monthOf} from '../../logic/calendar.ts';
 import {weekStart} from '../../logic/week.ts';
 import {localDate} from '../../logic/format.ts';
 import type {Route} from '../../logic/route.ts';
 import {motion} from '../../tokens.ts';
-import {colourVar} from '../accounts.ts';
+import {colourVar, useAccounts} from '../accounts.ts';
 import {useNow} from '../clock.ts';
 import {showToast, toastFailure} from '../toast.ts';
 import {navigate} from '../router.ts';
 import {CalendarsSkeleton} from '../states/Skeletons.tsx';
-import {MiniMonth} from './Pickers.tsx';
+import {CalendarName, MiniMonth} from './Pickers.tsx';
 import {fadeCalendar, revealDay, stepMini, useCalendarView} from './view.ts';
 
 // Hides waiting out their items' fade, by calendar.
@@ -68,6 +69,7 @@ export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar
   const today = localDate(now, timeZone());
   const view = useCalendarView();
   const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  const {list: accounts} = useAccounts();
   const month = view.mini ?? monthOf(route.date ?? today);
   const selected = view.selected ?? route.date ?? today;
 
@@ -90,7 +92,7 @@ export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar
             style={{'--c': colourVar(calendar.colour ?? 'ink2')} as CSSProperties}
             onClick={() => void setVisible(calendar, !calendar.visible)}>
             <span className={calendar.visible ? 'chk' : 'chk off'} />
-            <span className="grow">{calendar.name}</span>
+            <span className="grow ell"><CalendarName label={calendarLabel(calendar, calendars, accounts)} /></span>
           </button>
         ))}
       </div>

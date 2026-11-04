@@ -132,7 +132,7 @@ export function calendarList(store: Store): CalendarOut[] {
   const commands = new Map(activeCommands(store, 'calendar').map(row => [row.targetId, presentCommand(row)]));
   return store.db.select().from(t.calendars).orderBy(asc(t.calendars.position)).all().map(row => ({
     id: row.id, provider: row.provider, account_id: row.accountId, name: row.name, colour: row.colour, position: row.position, visible: row.visible,
-    command: commands.get(row.id) ?? null,
+    writable: calendarWritable(row.accessRole), command: commands.get(row.id) ?? null,
   }));
 }
 
