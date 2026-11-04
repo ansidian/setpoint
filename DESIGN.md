@@ -3742,3 +3742,14 @@ it changes what's on screen.
     dot. Each is 75% over the text colour with a 12% fill and a 45% ring, in place of violet and the
     closed one's step down. Amber for another role, quiet for none, `alert` words for can't answer and
     the violet focus ring stay.
+302. **An event's own link has Open** (extending #245; Andy, 2026-11-04; darma SV-179, D439, D442).
+    A Google event with a link of its own (Google's `source.url`, which an imported .ics file's URL
+    line fills) and no link in its place shows it on a line of its own after the place: a 17 px
+    `link` glyph and the link's host ("careers.example.edu") in `ink`, the whole link as its
+    tooltip, ended by #245's **Open** (`btn ghost sm`, a 16 px `open_in_new`), which opens it in a
+    new tab. `O` and the right-click menu's **Open ‹host›** do the same. A place with a link keeps
+    #245's line, and its link wins over the event's own, so a card never has two Opens. A link in
+    the place is #245's, bare domains with a real top-level domain included (D442). The event's own
+    link must be `http://` or `https://`, and links in the description are never picked out (D439).
+    The server sends the choice as `ItemOut.link` (one rule, shared/src/link.ts), so the iPhone app
+    can read it too. Board audit: no board draws it.
