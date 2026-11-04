@@ -72,7 +72,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   audit, each only where it hasn't already passed on HEAD's exact content. Every passing run records
   itself by the working tree's content, so the runs before a commit count, spec file by spec file,
   and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
-  about 13 minutes.
+  about 11 minutes, against its own budget of 12 (the normal run's is 5, SV-187).
 - When Andy says a release is coming, the session that pushes its commit runs
   `npm run release:check` in the background straight after, so the release finds it done. Each of
   its checks takes the test lock while it runs.

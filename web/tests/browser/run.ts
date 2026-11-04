@@ -26,10 +26,11 @@ const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const HERE = fileURLToPath(new URL('./', import.meta.url));
 const minutes = (name: string, fallback: number) => Number(process.env[name] ?? fallback) * 60_000;
 const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
-// Stress takes 13 alone, and more beside an `npm test`, which takes no lock.
+// Stress takes about 11 alone, and more beside an `npm test`, which takes no lock.
 const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', STRESS ? 25 : 15);
-// A full run alone, with some room; past it, the run says so (it doesn't fail).
-const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
+// A full run alone, with some room; past it, the run says so (it doesn't fail). Stress has its own:
+// it took 10m24s to 10m59s in November 2026, about 3.5 times the normal run's 3 (SV-187).
+const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', STRESS ? 12 : 5);
 // Checks at once on this machine (the files a whole run runs side by side): 10 and 12 took about
 // 2m20s, against 8's 2m34s and 6's 3m04s, at a higher peak (SV-146).
 const SLOTS = 8;
