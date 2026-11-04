@@ -314,3 +314,15 @@ export const jobsReader = sqliteTable('jobs_reader', {
 }, table => [
   check('jobs_reader_one', sql`${table.id} = 1`),
 ]);
+
+/**
+ * The browser extension's bearer token for POST /api/jobs/check (SV-173), one row, as Home Assistant's
+ * is: only its SHA-256 kept, issued and rotated by the CLI (`jobs-token`), and revoking deletes it.
+ */
+export const jobsCheckToken = sqliteTable('jobs_check_token', {
+  id: integer('id').primaryKey(),
+  hash: text('hash').notNull(),
+  createdAt: text('created_at').notNull(),
+}, table => [
+  check('jobs_check_token_one', sql`${table.id} = 1`),
+]);

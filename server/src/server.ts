@@ -33,7 +33,7 @@ import {Adapters} from './sync/registry.ts';
 import {SearchTermsWorker} from './search/terms.ts';
 import {HistoryExtractor} from './triage/history.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
-import {JobsReader, jobsApi, jobsWeb, migrateJobs} from './jobs/index.ts';
+import {JobsReader, jobsApi, jobsTokenApi, jobsWeb, migrateJobs} from './jobs/index.ts';
 import {TriageWorker} from './triage/worker.ts';
 
 const config = loadConfig();
@@ -88,6 +88,7 @@ const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
   routes: [jobsApi(store)],
+  tokenRoutes: [jobsTokenApi(store)],
 });
 // Gmail's push: pulls v2's own Pub/Sub subscription and queues each account's sync.
 const puller = pubsub ? new GmailPushPuller({store, settings: pubsub, endpoints: GOOGLE_ENDPOINTS, onPush: sourceId => engine.pushed(sourceId)}) : null;

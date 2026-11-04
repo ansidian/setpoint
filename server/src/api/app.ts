@@ -135,6 +135,9 @@ export interface AppOptions {
   // A removable module's routes (Jobs, from server.ts), mounted under /api behind the session after
   // the app's own, so the app never names the module.
   routes?: Hono[];
+  // A removable module's routes that check their own bearer token (Jobs's check for the browser
+  // extension, SV-173), mounted under /api before the session, as Home Assistant's status is.
+  tokenRoutes?: Hono[];
 }
 
 const MAX_STREAMS = 20;
@@ -156,7 +159,7 @@ const WEB_POLICY = [
   "frame-src 'self' blob:", "object-src 'none'", "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'",
 ].join('; ');
 
-export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, reading = {}, news = {}, newsSort = null, routes = []}: AppOptions) {
+export function createApp({store, webDir = null, publicUrl = null, production = false, engine = null, notifier = null, keepAliveMs = 25_000, bcryptCost = BCRYPT_COST, connectors = {}, providers = {}, triage = null, alfred = {}, reading = {}, news = {}, newsSort = null, routes = [], tokenRoutes = []}: AppOptions) {
   const app = new Hono<Env>();
   const searchReader = new SearchReader({store, ...reading});
   const cookies = cookieNames(publicUrl?.startsWith('https:') ?? false);
@@ -379,6 +382,10 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
     return c.json(haStatus(store, origin(c)) satisfies HaStatusOut);
   });
+
+  // ---- A removable module's own-token routes: whatever server.ts passes ----
+
+  for (const module of tokenRoutes) app.route('/api', module);
 
   // ---- Everything else needs the session, or a paired iPhone's token ----
 

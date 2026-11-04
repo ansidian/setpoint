@@ -2,7 +2,8 @@
 // seed, the worker that reads mail (J2) and looks up JDs (J3), the web those lookups read in production,
 // and the commands that read again or repair (SV-128, SV-129, SV-130). Nothing outside server/src/jobs/ imports anything else from here.
 export {migrateJobs} from './db.ts';
-export {jobsApi} from './api.ts';
+export {jobsApi, jobsTokenApi} from './api.ts';
+export {issueJobsToken, jobsTokenIssuedAt, revokeJobsToken} from './token.ts';
 export {seedJobs} from './seed.ts';
 export {JobsReader} from './reader.ts';
 export {jobsWeb} from './web.ts';

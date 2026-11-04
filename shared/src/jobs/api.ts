@@ -13,6 +13,7 @@
 //   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
 //   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (J7: what mail's slots draw for a page of rows, or the email open)
 //   GET  /api/jobs/ai                    JobsAiOut (J8: Settings › AI's Jobs group and its row in Usage this month)
+//   POST /api/jobs/check                 jobsCheckInput → JobsCheckOut (SV-173: the browser extension's, with its own token, not the session)
 //
 // J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
 //   POST   /api/jobs/applications/:id/jd/pick           jobsPickInput (a JD to confirm, Choose…, or after Not this posting)
@@ -344,6 +345,33 @@ export type JobsMailMessageOut = z.infer<typeof jobsMailMessageSchema>;
 /** GET /api/jobs/mail: only the emails with something to show; none while Jobs is off (D313: mail's counts never change). */
 export const jobsMailSchema = z.strictObject({messages: z.array(jobsMailMessageSchema)});
 export type JobsMailOut = z.infer<typeof jobsMailSchema>;
+
+/**
+ * The browser extension's question (SV-173): postings as the job board shows them, a company and a
+ * title each: the one open in its job pane, or a page of its list's cards, in one request. At most 50.
+ */
+export const JOBS_CHECK_MAX = 50;
+export const jobsCheckInput = z.strictObject({
+  postings: z.array(z.strictObject({company: z.string().trim().min(1).max(200), title: z.string().trim().max(300)})).min(1).max(JOBS_CHECK_MAX),
+});
+
+/**
+ * One posting's answer: the applications for its role and the company's others, each newest first, as
+ * Applied before matches companies; `query` is Jobs's search for them all, null when there are none.
+ */
+export const jobsCheckPostingSchema = z.strictObject({
+  role: z.array(jobsMailApplicationSchema),
+  others: z.array(jobsMailApplicationSchema),
+  query: z.string().nullable(),
+});
+export type JobsCheckPostingOut = z.infer<typeof jobsCheckPostingSchema>;
+
+/**
+ * POST /api/jobs/check, with the extension's own bearer token (SV-173): each posting's answer, in the
+ * order asked. Nothing while Jobs is off, which `enabled` says.
+ */
+export const jobsCheckSchema = z.strictObject({enabled: z.boolean(), postings: z.array(jobsCheckPostingSchema)});
+export type JobsCheckOut = z.infer<typeof jobsCheckSchema>;
 
 /** An account Jobs reads and how (decision 56); an account not listed is off. */
 export const jobsReadAccountSchema = z.strictObject({account_id: id, reads: z.enum(JOB_READ_MODES)});

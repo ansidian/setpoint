@@ -8,7 +8,7 @@ import {describe, expect, test} from 'vitest';
 import {emailBody} from '../mail.ts';
 import {emailReadingOf, jobsPromptInput} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
-import {appliedBefore, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
+import {appliedBefore, checkPosting, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
 
 describe('companies match loosely (decision 51)', () => {
@@ -348,5 +348,34 @@ describe('Applied before in mail (J7, D306): a match email\'s company, loosely a
     const fabrikam = app('Fabrikam', 'Data Analyst', 'applied', {appliedAt: '2026-10-05T18:00:00.000Z', aliases: [{company: 'Trey Research', titleKey: null, requisitionId: null}]});
     const trey = app('Trey Research', 'Data Engineer I', 'applied', {appliedAt: '2026-10-01T18:00:00.000Z'});
     expect(appliedBefore({event: 'match', company: 'Trey Research'}, [trey, fabrikam])).toEqual({matches: [fabrikam, trey], query: 'fabrikam'});
+  });
+});
+
+describe('a posting on a job board (the LinkedIn extension\'s check): its role first, then the company\'s others', () => {
+  const contoso = app('Contoso Pharmaceuticals', 'Associate Software Engineer', 'rejected', {appliedAt: '2026-09-16T18:00:00.000Z'});
+  const contosoAgain = app('Contoso Pharmaceuticals', 'Associate Software Engineer (Remote)', 'applied', {appliedAt: '2026-10-20T18:00:00.000Z'});
+  const contosoQa = app('Contoso, Inc.', 'QA Engineer', 'applied', {appliedAt: '2026-08-10T18:00:00.000Z'});
+  // Merged from Wingtip Toys's Web Developer, which it still answers to (stick.ts).
+  const merged = app('Tailspin Toys', 'Full Stack Developer', 'applied', {aliases: [{company: 'Wingtip Toys', titleKey: 'web developer', requisitionId: null}]});
+  const withReq = app('Humongous Insurance', 'Data Analyst', 'applied', {requisitionId: 'R-100'});
+  const waiting = app('Indeed', 'Data Analyst', 'applied', {companyUnknown: true});
+  const all = [contoso, contosoAgain, contosoQa, merged, withReq, waiting];
+
+  test.each<[string, {company: string; title: string}, number[], number[], string | null]>([
+    // "Contoso, Inc." is loosely "Contoso Pharmaceuticals" too, as Applied before has it.
+    ['the role, by its normalised title, newest first; the company\'s other role after', {company: 'Contoso Pharmaceuticals', title: 'Associate Software Engineer - Hybrid'}, [contosoAgain.id, contoso.id], [contosoQa.id], 'contoso'],
+    ['another role at the company', {company: 'Contoso Pharmaceuticals', title: 'Data Scientist'}, [], [contosoAgain.id, contoso.id, contosoQa.id], 'contoso'],
+    ['one application at the company: its own name is the search', {company: 'Humongous Insurance', title: 'Data Scientist'}, [], [withReq.id], 'humongous insurance'],
+    ['the role and company a merge left it answering to', {company: 'Wingtip Toys', title: 'Web Developer'}, [merged.id], [], 'tailspin toys'],
+    ['an application with a requisition ID still matches by title', {company: 'Humongous Insurance', title: 'Data Analyst'}, [withReq.id], [], 'humongous insurance'],
+    ['a title that\'s only a tag names no role', {company: 'Humongous Insurance', title: '(Remote)'}, [], [withReq.id], 'humongous insurance'],
+    ['no application at the company', {company: 'Northwind Traders', title: 'Data Analyst'}, [], [], null],
+    ['a company-less confirmation waiting for its pair is never one', {company: 'Indeed', title: 'Data Analyst'}, [], [], null],
+    ['no company', {company: ' ', title: 'Data Analyst'}, [], [], null],
+  ])('%s', (_, posting, role, others, query) => {
+    const found = checkPosting(posting, all);
+    expect(found.role.map(each => each.id)).toEqual(role);
+    expect(found.others.map(each => each.id)).toEqual(others);
+    expect(found.query).toBe(query);
   });
 });

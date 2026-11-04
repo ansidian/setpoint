@@ -15,4 +15,5 @@ DROP TABLE IF EXISTS `jobs_settings`;
 DROP TABLE IF EXISTS `jobs_reader`;
 DROP TABLE IF EXISTS `jobs_history`;
 DROP TABLE IF EXISTS `jobs_undo`;
+DROP TABLE IF EXISTS `jobs_check_token`;
 DROP TABLE IF EXISTS `jobs_migrations`;

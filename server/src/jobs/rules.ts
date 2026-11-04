@@ -192,16 +192,36 @@ export function matchApplication(applications: KnownApplication[], company: stri
  */
 export function appliedBefore<T extends KnownApplication>(email: {event: string | null; company: string | null}, applications: T[]): {matches: T[]; query: string} | null {
   if (email.event !== 'match' || !email.company?.trim()) return null;
-  const company = email.company;
-  const matches = applications.filter(application => !application.companyUnknown && answersTo(application, company)).sort(newestFirst);
-  if (!matches.length) return null;
+  const matches = atCompany(applications, email.company);
+  return matches.length ? {matches, query: searchFor(matches)} : null;
+}
+
+/** A company's applications, loosely and by the companies corrections gave them, newest first. */
+const atCompany = <T extends KnownApplication>(applications: T[], company: string) =>
+  applications.filter(application => !application.companyUnknown && answersTo(application, company)).sort(newestFirst);
+
+/** The search that shows these applications on Jobs: the words their companies share, or the newest's company. */
+function searchFor(matches: KnownApplication[]): string {
   const words = matches.map(application => companyWords(application.company));
   const shared: string[] = [];
   for (const [index, word] of words[0]!.entries()) {
     if (!words.every(each => each[index] === word)) break;
     shared.push(word);
   }
-  return {matches, query: shared.length ? shared.join(' ') : companyKey(matches[0]!.company)};
+  return shared.length ? shared.join(' ') : companyKey(matches[0]!.company);
+}
+
+/**
+ * A posting seen on a job board (the LinkedIn extension's check, SV-173): the applications at its
+ * company, as Applied before finds them, split into those for its role (its normalised title, or one
+ * a correction gave them) and the company's others, each newest first. `query` is Jobs's search for
+ * them all, null when there are none.
+ */
+export function checkPosting<T extends KnownApplication>(posting: {company: string; title: string}, applications: T[]): {role: T[]; others: T[]; query: string | null} {
+  const matches = posting.company.trim() ? atCompany(applications, posting.company) : [];
+  const role: Role = {titleKey: titleKey(posting.title) || null, requisitionId: null};
+  const forRole = matches.filter(application => hasRole(application, posting.company, role));
+  return {role: forRole, others: matches.filter(application => !forRole.includes(application)), query: matches.length ? searchFor(matches) : null};
 }
 
 /**

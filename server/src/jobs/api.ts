@@ -9,10 +9,10 @@ import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
 import {
-  jobsAssignInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPasteInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
+  jobsAssignInput, jobsCheckInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPasteInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
 } from '@setpoint/shared';
-import type {JobsChangeOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
-import {conflict, invalid, notFound, parse} from '../errors.ts';
+import type {JobsChangeOut, JobsCheckOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
+import {conflict, invalid, notFound, parse, unauthorized} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup, stopLookup} from './lookup.ts';
 import {
@@ -20,8 +20,9 @@ import {
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
 import {jobsAi} from './models.ts';
-import {applicationDetail, jobsInMail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
+import {applicationDetail, jobsCheck, jobsInMail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
+import {jobsTokenMatches} from './token.ts';
 import {undoCorrection} from './undo.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
@@ -91,6 +92,25 @@ export function jobsApi(store: Store) {
     const undone = undoCorrection(store, id(c.req.param('token')));
     if (!undone) throw notFound('That can no longer be undone.');
     return c.json(undone satisfies JobsUndoneOut);
+  });
+  return api;
+}
+
+/**
+ * The browser extension's route (SV-173): POST /api/jobs/check, postings' applications, read with
+ * Jobs's own bearer token (./token.ts) rather than the session, as Home Assistant's status is. It's a
+ * POST only to carry a page of cards' companies and titles; it writes nothing. Mounted before the
+ * session by server.ts through createApp's `tokenRoutes`; any other method falls through to the
+ * session's rules, and the token opens nothing else. The header is never logged.
+ */
+export function jobsTokenApi(store: Store) {
+  const api = new Hono();
+  api.post('/jobs/check', async c => {
+    if (!jobsTokenMatches(store, c.req.header('authorization'))) {
+      c.header('WWW-Authenticate', 'Bearer realm="setpoint"');
+      throw unauthorized('Send Setpoint\'s Jobs token as a bearer token.');
+    }
+    return c.json(jobsCheck(store, parse(jobsCheckInput, await body(c)).postings) satisfies JobsCheckOut);
   });
   return api;
 }

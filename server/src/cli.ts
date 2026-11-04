@@ -5,6 +5,9 @@
 //   npm run cli -- ha-token         a new bearer token for Home Assistant's GET /api/status/ha,
 //                                   replacing (revoking) any earlier one; shown once
 //   npm run cli -- ha-token --revoke   revoke Home Assistant's token
+//   npm run cli -- jobs-token       a new bearer token for the browser extension's POST /api/jobs/check
+//                                   (SV-173), replacing (revoking) any earlier one; shown once
+//   npm run cli -- jobs-token --revoke   revoke the extension's token
 //   npm run cli -- pair-link        a setpoint://pair link for the iPhone app, as Settings › Security's
 //                                   Add iPhone shows, for the server at SETPOINT_PUBLIC_URL (else
 //                                   localhost); works once, for five minutes, replacing any earlier one
@@ -24,7 +27,7 @@ import {issuePairingCode} from './auth/devices.ts';
 import {haTokenIssuedAt, issueHaToken, revokeHaToken} from './auth/haToken.ts';
 import {getOwner, issueSetupToken} from './auth/owner.ts';
 import {SetpointError} from './errors.ts';
-import {jobsWeb, repairFactsPlan, repairFactsWithHaiku, repairPostings, repairPostingsPlan, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
+import {issueJobsToken, jobsTokenIssuedAt, jobsWeb, migrateJobs, repairFactsPlan, repairFactsWithHaiku, repairPostings, repairPostingsPlan, revokeJobsToken, rereadPlan, rereadWithHaiku} from './jobs/index.ts';
 import {AI_ENDPOINTS} from './providers/ai/index.ts';
 import {sourceList} from './queries/sources.ts';
 import {searchTermsProgress, startSearchTermsPass} from './search/terms.ts';
@@ -39,6 +42,8 @@ const USAGE = `Usage:
   status          whether Setpoint is claimed, and each source's health
   ha-token        print a new token for Home Assistant's status endpoint, replacing any earlier one
   ha-token --revoke   revoke Home Assistant's token
+  jobs-token      print a new token for the browser extension's Jobs check, replacing any earlier one
+  jobs-token --revoke   revoke the extension's token
   pair-link       print a one-time link that pairs the iPhone app, as Settings › Security's Add iPhone does
   jobs-reread [--apply]   what Jobs would read again now it reads HTML; --apply does it (the server reads them)
   jobs-repair-facts [--apply]   the JDs' salaries and locations that were cut; --apply reads them again from the saved JDs
@@ -50,7 +55,7 @@ const USAGE = `Usage:
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
-  const valid = (command === 'ha-token' && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
+  const valid = ((command === 'ha-token' || command === 'jobs-token') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--revoke')))
     || ((command === 'codes' || command === 'search-terms' || command === 'jobs-reread' || command === 'jobs-repair-facts' || command === 'jobs-repair-postings') && (rest.length === 0 || (rest.length === 1 && rest[0] === '--apply')))
     || (['setup-token', 'status', 'triage-history', 'pair-link'].includes(command ?? '') && rest.length === 0);
   if (!command || !valid) {
@@ -76,6 +81,19 @@ async function main(argv: string[]): Promise<number> {
       const {token} = issueHaToken(store);
       console.log(`Home Assistant token for ${config.databasePath}${replaced ? ' (the earlier one no longer works)' : ''}. It's shown once:\n\n${token}\n`);
       console.log('Send it as "Authorization: Bearer <token>" to GET /api/status/ha.');
+      return 0;
+    }
+    if (command === 'jobs-token') {
+      // Jobs's tables as the server has them, should it not have started on this version yet.
+      migrateJobs(sqlite);
+      if (rest[0] === '--revoke') {
+        console.log(revokeJobsToken(store) ? 'The extension\'s Jobs token is revoked.' : 'There was no Jobs token.');
+        return 0;
+      }
+      const replaced = jobsTokenIssuedAt(store) !== null;
+      const {token} = issueJobsToken(store);
+      console.log(`Jobs token for ${config.databasePath}${replaced ? ' (the earlier one no longer works)' : ''}. It's shown once:\n\n${token}\n`);
+      console.log('Paste it into the extension\'s options, beside Setpoint\'s address.');
       return 0;
     }
     if (command === 'pair-link') {

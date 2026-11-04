@@ -21,10 +21,10 @@ test('Jobs\'s tables come from its own migrations, in its own migrations table, 
   migrateJobs(w.store.sqlite);
   migrateJobs(w.store.sqlite);
   expect(tables(w).filter(name => name.startsWith('jobs_'))).toEqual([
-    'jobs_aliases', 'jobs_applications', 'jobs_blocked_emails', 'jobs_emails_read', 'jobs_events', 'jobs_hand_set', 'jobs_history', 'jobs_jd_candidates',
-    'jobs_migrations', 'jobs_needs_you', 'jobs_postings', 'jobs_reader', 'jobs_rejected_postings', 'jobs_settings', 'jobs_undo',
+    'jobs_aliases', 'jobs_applications', 'jobs_blocked_emails', 'jobs_check_token', 'jobs_emails_read', 'jobs_events', 'jobs_hand_set', 'jobs_history',
+    'jobs_jd_candidates', 'jobs_migrations', 'jobs_needs_you', 'jobs_postings', 'jobs_reader', 'jobs_rejected_postings', 'jobs_settings', 'jobs_undo',
   ]);
-  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual({n: 8});
+  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual({n: 9});
   const appMigrations = w.store.sqlite.prepare('SELECT count(*) AS n FROM __drizzle_migrations').get() as {n: number};
   expect(appMigrations.n).toBeGreaterThan(1);
   // Off until the user turns it on, reading nothing, with nothing to show.

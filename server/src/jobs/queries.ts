@@ -2,7 +2,7 @@
 // pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; J5's search and
 // the shell's item; J7's emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
 import type {
-  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
+  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
   JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {isQuietJobEvent} from '@setpoint/shared';
@@ -15,7 +15,7 @@ import {jobsDb} from './db.ts';
 import {historyStatus} from './historyState.ts';
 import {existingMessages} from './mail.ts';
 import {readingStatus} from './readerState.ts';
-import {appliedBefore, countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
+import {appliedBefore, checkPosting, countsByStatus, daysWithoutEmail, isGhosted, relatedApplications, sameCompany, weeklyCounts} from './rules.ts';
 import * as j from './schema.ts';
 import {searchApplications} from './search.ts';
 import {knownApplications} from './stick.ts';
@@ -203,4 +203,26 @@ export function jobsInMail(store: Store, messageIds: number[]): JobsMailOut {
     if (found && latest) entry(email.messageId).applied_before = {query: found.query, count: found.matches.length, latest};
   }
   return {messages: messageIds.filter(id => out.has(id)).map(id => out.get(id)!)};
+}
+
+/**
+ * POST /api/jobs/check (SV-173): postings' applications for the browser extension, each its role's and
+ * the company's others (rules.ts `checkPosting`), as mail's badge has an application, in the order
+ * asked. Nothing while Jobs is off. Nothing here writes.
+ */
+export function jobsCheck(store: Store, postings: {company: string; title: string}[]): JobsCheckOut {
+  if (!jobsEnabled(store)) return {enabled: false, postings: postings.map(() => ({role: [], others: [], query: null}))};
+  const {byId, rowOf} = loadRows(store);
+  const summary = (id: number): JobsMailApplicationOut => {
+    const row = rowOf(byId.get(id)!);
+    return {id: row.id, company: row.company, title: row.title, applied_on: row.applied_on, status: row.status, status_on: row.status_on, ghosted: row.ghosted};
+  };
+  const known = knownApplications(store).filter(application => byId.has(application.id));
+  return {
+    enabled: true,
+    postings: postings.map(posting => {
+      const found = checkPosting(posting, known);
+      return {role: found.role.map(application => summary(application.id)), others: found.others.map(application => summary(application.id)), query: found.query};
+    }),
+  };
 }

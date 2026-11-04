@@ -56,6 +56,8 @@ files marked *imports* import the folders.
 | `server/src/cli.ts`, the `./jobs/index.ts` and `./providers/ai/index.ts` imports (*imports*), `jobs-reread`, `jobs-repair-facts` and `jobs-repair-postings` and their lines in `USAGE` (SV-128, SV-129, SV-130) | reading again what was read before Jobs read HTML, the salaries and locations a reading cut, and taking away the application pages saved as JDs; the `./providers/ai/index.ts` import, the commands' `await` and `async` on `main` can stay, and `eslint.config.js`'s `JOBS_WIRING` line goes with it |
 | `server/src/server.ts`, after `openDatabase` | `migrateJobs(sqlite)`: Jobs's tables, after the app's migrations |
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
+| `server/src/server.ts`, `createApp`'s `tokenRoutes` (SV-173) | `tokenRoutes: [jobsTokenApi(store)]`: the browser extension's POST /api/jobs/check, before the session, with Jobs's own token ([`token.ts`](token.ts)) |
+| `server/src/cli.ts`, `jobs-token` and its lines in `USAGE` (SV-173) | issuing, rotating and revoking the extension's token |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
 | `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, each JD lookup (J3) and each pasted posting's reading (SV-140) |
 | `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
