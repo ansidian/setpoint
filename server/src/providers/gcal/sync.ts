@@ -35,7 +35,7 @@ type CalendarRow = typeof t.calendars.$inferSelect;
 /** Calendars the user shows in Google (v1: selected, not hidden or deleted). */
 export const listedCalendar = (entry: GoogleCalendarEntry) => entry.selected !== false && entry.hidden !== true && entry.deleted !== true;
 
-/** The calendar list into `calendars`: new ones added, names and colours kept current, removed ones dropped. */
+/** The calendar list into `calendars`: new ones added, names, colours and roles kept current, removed ones dropped. */
 export function applyCalendarList(store: Store, source: SourceRow, entries: GoogleCalendarEntry[]): CalendarRow[] {
   const listed = entries.filter(listedCalendar).sort((a, b) => Number(Boolean(b.primary)) - Number(Boolean(a.primary)) || (a.summaryOverride ?? a.summary ?? '').localeCompare(b.summaryOverride ?? b.summary ?? ''));
   return transaction(store, () => {
@@ -50,11 +50,13 @@ export function applyCalendarList(store: Store, source: SourceRow, entries: Goog
       const found = existing.find(row => row.providerId === entry.id);
       // A colour change waiting for Google, or failed in place, keeps the colour picked (SV-20).
       const colour = found && heldCalendars.has(found.id) ? found.colour : swatchFor(entry.backgroundColor);
+      // SV-191: the user's role on it, which says whether its events can change (calendarWritable).
+      const accessRole = entry.accessRole ?? null;
       if (found) {
-        if (found.name !== name || found.colour !== colour) touched.push(found.id);
-        kept.push(store.db.update(t.calendars).set({name, colour}).where(eq(t.calendars.id, found.id)).returning().get()!);
+        if (found.name !== name || found.colour !== colour || found.accessRole !== accessRole) touched.push(found.id);
+        kept.push(store.db.update(t.calendars).set({name, colour, accessRole}).where(eq(t.calendars.id, found.id)).returning().get()!);
       } else {
-        const row = store.db.insert(t.calendars).values({provider: 'google', providerId: entry.id, accountId: source.accountId, name, colour, position: base + index}).returning().get();
+        const row = store.db.insert(t.calendars).values({provider: 'google', providerId: entry.id, accountId: source.accountId, name, colour, accessRole, position: base + index}).returning().get();
         touched.push(row.id);
         kept.push(row);
       }

@@ -163,6 +163,9 @@ export const calendars = sqliteTable('calendars', {
   colour: text('colour', {enum: COLOURS}),
   position: integer('position').notNull(),
   visible: integer('visible', {mode: 'boolean'}).notNull().default(true),
+  // SV-191: Google's accessRole for the calendar (calendarWritable reads it); null for Todoist and
+  // for a Google calendar not listed since the column came.
+  accessRole: text('access_role'),
 }, table => [
   // Per account (SV-9): a calendar shared with two Google accounts is on both lists with one id.
   uniqueIndex('calendars_account_provider').on(table.accountId, table.provider, table.providerId),

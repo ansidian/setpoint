@@ -211,6 +211,13 @@
       "when": 1793822849388,
       "tag": "0029_item_ical_uid",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1793834856073,
+      "tag": "0030_calendar_access_role",
+      "breakpoints": true
     }
   ]
 }
