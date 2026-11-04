@@ -79,6 +79,14 @@ describe('overlaps (the conflict preview)', () => {
     expect(overlapsWith(span('18:00', '20:00'), [call])).toEqual([]);
     expect(agendaOverlap(call, [study, call], zone)).toBeNull();
   });
+  test.each([
+    // A conference's tracks: three sessions at once, all marked free.
+    ['a free event during the draft', [event('Keynote', '2026-10-09', '19:00', '20:00', {transparency: 'transparent'})], false, 'No conflicts'],
+    ['a free and a busy one', [event('Keynote', '2026-10-09', '18:00', '22:00', {transparency: 'transparent'}), study], false, 'Overlaps Study group · 1h 30m'],
+    ['a free draft over a busy one', [study], true, 'No conflicts'],
+    ['a free draft over a free one', [event('Workshop', '2026-10-09', '19:00', '20:00', {transparency: 'transparent'})], true, 'No conflicts'],
+    ['a busy one still clashes', [event('Workshop', '2026-10-09', '19:00', '20:00', {transparency: 'opaque'})], false, 'Overlaps Workshop · 1h'],
+  ])('SV-180, D440: free time clashes with nothing: %s', (_, others, free, line) => expect(conflictLine(overlapsWith(span('19:00', '21:00'), others, null, free)).text).toBe(line));
   test('an event doesn\'t overlap itself', () => expect(overlapsWith(spanOf(study)!, [study], study.key)).toEqual([]));
   test.each([[90 * 60_000, '1h 30m'], [45 * 60_000, '45m'], [2 * 3600_000, '2h']])('%i ms is %s', (ms, text) => expect(shortDuration(ms)).toBe(text));
   const h = (hour: number, minute = 0) => hour * 60 + minute;

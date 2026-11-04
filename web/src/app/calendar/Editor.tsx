@@ -24,7 +24,7 @@ import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, 
 import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
-import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
+import {conflictLine, isFree, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';
@@ -1154,7 +1154,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
 
         {/* An empty new draft has nothing to conflict yet: the preview waits for a title or a time. */}
         {kind === 'event' && draft.start !== null && lastDay === draft.date && (editing || draft.text.trim() !== '' || draft.manual.includes('time')) && (
-          <ConflictPreview draft={draft} items={dayItems(draft.date)} except={editing?.key ?? null} title={draft.title || draft.text} colour={calendar?.colour ?? null}
+          <ConflictPreview draft={draft} items={dayItems(draft.date)} except={editing?.key ?? null} free={editing ? isFree(editing) : false} title={draft.title || draft.text} colour={calendar?.colour ?? null}
             calendarColour={id => (calendars ?? []).find(one => one.id === id)?.colour ?? null} isNew={!editing} timeZone={timeZone} />
         )}
 
@@ -1249,6 +1249,8 @@ interface ConflictPreviewProps {
   draft: Draft;
   items: ItemOut[];
   except: string | null;
+  // A free event (D440): it clashes with nothing.
+  free: boolean;
   title: string;
   colour: Colour | null;
   calendarColour: (calendarId: number) => Colour | null;
@@ -1258,13 +1260,14 @@ interface ConflictPreviewProps {
 
 /**
  * A small timeline of the day (boards 13 and 14): what the event overlaps in one lane, the event
- * (dashed while new) in the next, the shared time hatched in `caution`, and the line under it.
+ * (dashed while new) in the next, the shared time hatched in `caution`, and the line under it. Free
+ * events are left out, and a free event overlaps nothing (D440).
  */
-function ConflictPreview({draft, items, except, title, colour, calendarColour, isNew, timeZone}: ConflictPreviewProps) {
+function ConflictPreview({draft, items, except, free, title, colour, calendarColour, isNew, timeZone}: ConflictPreviewProps) {
   const start = draft.start!;
   const end = draft.end ?? start + DEFAULT_LENGTH;
   const span = {start: Date.parse(instantAt(draft.date, start, timeZone)), end: Date.parse(instantAt(draft.date, end, timeZone))};
-  const overlaps = overlapsWith(span, items.filter(item => item.id > 0), except);
+  const overlaps = overlapsWith(span, items.filter(item => item.id > 0), except, free);
   const inMinutes = (at: number) => minutesFrom(draft.date, at, timeZone);
   const others = overlaps.map(overlap => ({
     item: overlap.item, start: inMinutes(Date.parse(overlap.item.starts_at!)), end: inMinutes(Date.parse(overlap.item.ends_at!)),

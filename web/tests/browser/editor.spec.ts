@@ -853,6 +853,33 @@ test('SV-78: No end in the End list makes an event that ends as it starts; it sa
   }
 });
 
+test('SV-180: a free event clashes with nothing in the conflict preview: an event during the Career fair, and the fair over it (D440)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    // The seed's Career fair, 10 AM – 2 PM on Thu, Oct 15, is marked free.
+    await page.keyboard.press('c');
+    await page.getByLabel('Describe the event').pressSequentially('Coffee chat oct 15 11am-12pm');
+    assert.deepEqual([await page.getByLabel('Date', {exact: true}).inputValue(), await page.getByLabel('Start', {exact: true}).inputValue()], ['Thu, Oct 15', '11:00 AM']);
+    await page.locator('.editor .verdict', {hasText: 'No conflicts'}).waitFor();
+    assert.equal(await page.locator('.editor .conflict .bk.other').count(), 0, 'no Career fair block on the timeline');
+    await page.keyboard.press('Meta+Enter');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await settled(setpoint, '2026-10-15');
+
+    // The fair itself, with Coffee chat (busy) inside it, is free: no conflicts either.
+    await chip(page, '2026-10-15', 'Career fair').click();
+    await page.locator('.fd').waitFor();
+    await page.keyboard.press('e');
+    await page.locator('.editor[aria-label="Edit event"]').waitFor();
+    await page.locator('.editor .verdict', {hasText: 'No conflicts'}).waitFor();
+    assert.equal(await page.locator('.editor .conflict .bk.other').count(), 0, 'no Coffee chat block on the timeline');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('SV-108: the line\'s "2pm no end" and "2pm to 2pm" pick No end in End, lit with the time; saved, it ends as it starts and opens as No end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

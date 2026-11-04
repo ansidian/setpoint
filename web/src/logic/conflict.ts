@@ -27,11 +27,18 @@ export function spanOf(item: ItemOut): Span | null {
   return span.end > span.start ? span : null;
 }
 
-/** The timed events `span` shares time with (touching isn't overlapping), earliest first; `except` is the event itself. */
-export function overlapsWith(span: Span, items: ItemOut[], except: string | null = null): Overlap[] {
-  if (span.end <= span.start) return [];
+/** A free event (Google's transparency `transparent`): it clashes with nothing, and nothing with it (D440). */
+export const isFree = (item: Pick<ItemOut, 'transparency'>) => item.transparency === 'transparent';
+
+/**
+ * The busy timed events `span` shares time with (touching isn't overlapping), earliest first;
+ * `except` is the event itself. Free events are left out, and a free `span` overlaps nothing, so a
+ * conference's overlapping free sessions aren't clashes (SV-180, D440).
+ */
+export function overlapsWith(span: Span, items: ItemOut[], except: string | null = null, free = false): Overlap[] {
+  if (free || span.end <= span.start) return [];
   return items.flatMap(item => {
-    const other = item.key === except ? null : spanOf(item);
+    const other = item.key === except || isFree(item) ? null : spanOf(item);
     if (!other || other.start >= span.end || other.end <= span.start) return [];
     return [{item, start: Math.max(span.start, other.start), end: Math.min(span.end, other.end)}];
   }).sort((a, b) => Date.parse(a.item.starts_at!) - Date.parse(b.item.starts_at!) || a.item.title.localeCompare(b.item.title));
