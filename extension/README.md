@@ -4,7 +4,8 @@ A Chromium extension that puts a chip on LinkedIn's jobs saying whether Setpoint
 application to one (BRIEF.md › Applied before?, D433; darma SV-172):
 
 - **Applied Sep 16 · Rejected Oct 5**: an application for this role, the newest named, as mail's
-  Applied before badge words it. A click opens it in Setpoint.
+  Applied before badge words it, green while it's open and red once it's closed (Rejected,
+  Withdrawn, Ghosted). A click opens it in Setpoint.
 - **Applied to 2 other roles here**: applications at the company, but for other roles. A click opens
   Jobs searched for the company.
 - **Not applied**: nothing at the company, in the job pane only.
@@ -14,7 +15,7 @@ answer: **Set up Setpoint**, **Setpoint refused the token**, **Setpoint unreacha
 in Setpoint**, or **Couldn't read Setpoint's answer**. On the list's cards it follows the company,
 smaller, and only when there's an application, as mail's rows show Applied before. A click on a chip
 never selects the card under it. The words are [`src/words.ts`](src/words.ts), and the look is
-[`src/chip.ts`](src/chip.ts) (DESIGN.md › Decided while building #301, D434).
+[`src/chip.ts`](src/chip.ts) (DESIGN.md › Decided while building #301, D434, D435).
 
 It's desktop Chrome only, loaded unpacked, with no Web Store listing (D433).
 

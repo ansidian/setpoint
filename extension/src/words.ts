@@ -24,7 +24,7 @@ export function appliedStanding(application: Application, today: string): string
   return after ? `${applied} · ${after}` : applied;
 }
 
-/** Rejected, Withdrawn and Ghosted step down a shade, as Jobs's rows do. */
+/** Rejected, Withdrawn and Ghosted are closed, and their chip is red rather than green (D435). */
 export const closes = (application: Pick<JobsMailApplicationOut, 'status' | 'ghosted'>) =>
   application.status === 'rejected' || application.status === 'withdrawn' || (application.status === 'applied' && application.ghosted);
 
@@ -42,7 +42,7 @@ export type Answer =
   | {ok: true; origin: string; enabled: boolean; posting: JobsCheckPostingOut}
   | {ok: false; reason: Failure; detail?: string};
 
-/** Violet as Jobs for this role (a shade down once closed), amber for another role, quiet for none, warn for a failure. */
+/** This role's application green while open and red once closed (D435), amber for another role, quiet for none, warn for a failure. */
 export type Tone = 'applied' | 'closed' | 'other' | 'quiet' | 'warn';
 
 /** A chip: its words, its tooltip, and where a click goes (Setpoint, or the extension's options). */

@@ -3730,3 +3730,9 @@ it changes what's on screen.
     stayed unread for 5 s. Settled while building: Setpoint's `violet`, `sunGlyph` and `alert` in
     place of the spike's own violet, amber and red, and "Couldn't read Setpoint's answer" for an
     answer the build can't read. No board draws it.
+    Amended (Andy, 2026-11-03; darma SV-176, D435), once the chips showed against prod: **this
+    role** is green while its application is open (Applied, In process, Offer), Setpoint's `good` as
+    Jobs's Offer, and red once it's closed (Rejected, Withdrawn, Ghosted), `alert` as Jobs's Rejected
+    dot. Each is 75% over the text colour with a 12% fill and a 45% ring, in place of violet and the
+    closed one's step down. Amber for another role, quiet for none, `alert` words for can't answer and
+    the violet focus ring stay.
