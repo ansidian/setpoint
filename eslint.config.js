@@ -218,6 +218,16 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
     languageOptions: {globals: globals.browser},
   },
+  {
+    // Setpoint on LinkedIn (SV-174): its scripts and tests run in Chromium, with the extension's APIs;
+    // its build and Vitest config run in Node.
+    files: ['extension/src/**/*.ts', 'extension/tests/**/*.ts'],
+    languageOptions: {globals: {...globals.browser, ...globals.webextensions}},
+  },
+  {
+    files: ['extension/*.ts'],
+    languageOptions: {globals: globals.node},
+  },
 
   // Boundaries. ESLint replaces a rule's options per matching block rather than merging them, so
   // each block lists every pattern that applies to its files.

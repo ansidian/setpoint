@@ -38,6 +38,10 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   Settings › AI's Jobs group ([`JobsSettings.tsx`](../../../web/src/app/jobs/JobsSettings.tsx)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
 
+- `extension/` (SV-174): Setpoint on LinkedIn, the Chromium extension that asks `POST /api/jobs/check`
+  with Jobs's token ([its README](../../../extension/README.md)). It reaches Jobs only over HTTP and
+  imports only `@setpoint/shared`, so it isn't one of the lint's folders, but it goes with Jobs.
+
 Its tables point at mail by message id and account id only, as plain integers with no foreign key,
 and nothing in mail's tables points back.
 
@@ -58,6 +62,9 @@ files marked *imports* import the folders.
 | `server/src/server.ts`, `createApp`'s `routes` | `routes: [jobsApi(store)]`: Jobs's routes under /api, behind the session |
 | `server/src/server.ts`, `createApp`'s `tokenRoutes` (SV-173) | `tokenRoutes: [jobsTokenApi(store)]`: the browser extension's POST /api/jobs/check, before the session, with Jobs's own token ([`token.ts`](token.ts)) |
 | `server/src/cli.ts`, `jobs-token` and its lines in `USAGE` (SV-173) | issuing, rotating and revoking the extension's token |
+| `package.json`, `extension:build`, the `typecheck` script's `tsc -p extension/tsconfig.json` and `@types/chrome` (SV-174) | building the extension and typechecking it |
+| `vitest.config.ts`, the `extension/vitest.config.ts` project (SV-174) | the extension's tests in `npm test` |
+| `eslint.config.js`, the extension's two blocks (SV-174) | its globals: Chromium's and the extension APIs' for `src/` and `tests/`, Node's for its build and config |
 | `server/src/server.ts`, `jobsReader` and TriageWorker's `onSorted` (J2) | Jobs's reading worker, nudged each time triage sorts an email |
 | `server/src/server.ts`, the engine's `workers` (J2) | `jobsReader` runs its `jobs_read` jobs on the sync engine: the reading, each JD lookup (J3) and each pasted posting's reading (SV-140) |
 | `server/src/server.ts`, `jobsReader`'s `web` (J3) | `jobsWeb()`, the platforms' real APIs and posting hosts and GovernmentJobs' site, given only in production |
@@ -85,7 +92,7 @@ files marked *imports* import the folders.
 | `web/src/app/settings/parts.tsx`, `Page`'s `note` (J8) | the generic hook Settings › Jobs's "62 applications" uses; it names no module, so it can stay |
 | `web/src/logic/route.ts`, `'jobs'` in `SETTINGS_PAGES` (J8) | Settings › Jobs between News and AI, and /settings/jobs |
 | `web/src/logic/settings.ts`, `SETTINGS_NAV`'s `jobs` (J8) | Settings' nav item, Jobs with `work` |
-| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, and J8's words (removed with the module) |
+| `web/tests/components/jobs.test.tsx` (*imports*, J5) | the component tests of Per week, the status filter and the full posting, J6's menus, candidate picker and title field, J7's JD chip, popover and Applied before, J8's words, and the extension's chip saying an application's standing as mail does (SV-174) (removed with the module) |
 | `web/tests/browser/jobsMail.spec.ts` (J7) | the browser checks of the slots against the seed; with Jobs removed it goes, as `jobs.spec.ts` does; it imports nothing from the folders |
 | `web/tests/browser/jobsStates.spec.ts` (J8) | the browser checks of the states, Settings › Jobs and Settings › AI's Jobs group in Night and Light; it goes with Jobs, and imports nothing from the folders |
 | Jobs's lines in `web/tests/browser/settings.spec.ts` (30a's nav, 30b's Jobs group, its usage row and the total with it, $25.20 for $21.35), `sweep.spec.ts` (J8's states and Jobs off, with their `node:path` and `node:sqlite` imports), `pages.ts` (Jobs's page screenshot, `32-jobs-a-typical-morning`, and `jobs.spec.ts`'s `matchGolden`), `audit.ts` (from override 37's patches to `JOBS_EVERYWHERE`, from Jobs's icons to `JOBS_BOARDS`, and `JOBS_DIR` with its test in `patchedBoard`) and `web/tests/shell.test.ts` (`/jobs/from-history`), and `web/tests/browser/goldens/32-jobs-a-typical-morning.png` once approved (J8) | they import nothing from the folders; with Jobs removed, the boards' Jobs patches and its screenshot go too |
@@ -336,7 +343,7 @@ npx drizzle-kit generate --config src/jobs/drizzle.config.ts --name <what change
 
 ## Removal
 
-1. Delete `server/src/jobs/`, `web/src/app/jobs/` and `shared/src/jobs/`.
+1. Delete `server/src/jobs/`, `web/src/app/jobs/`, `shared/src/jobs/` and `extension/`.
 2. Delete the wiring lines above (the generic `routes` hook in `app.ts`, triage's generic `onSorted`
    option and the Indeed email may stay), and `'jobs'` from `LIVE_EVENT_TYPES`. `'jobs_read'` in
    `JOB_KINDS` and the `jobs_*` purposes in `AI_PURPOSES` may stay too, as the AirNow key's name does:

@@ -4,7 +4,8 @@
 // slots draw them (boards 37a–37c); and J8's words, as tables: the history pass's and the AI down's
 // lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
 // wrapping in their boxes (SV-129); the area that takes a pasted posting and a candidate Jobs can't
-// read (SV-140); an item's subject, which opens its email (D401). What they do with the props and the pointer or keys they're
+// read (SV-140); an item's subject, which opens its email (D401); Setpoint on LinkedIn's chip saying an
+// application's standing as mail does (SV-174). What they do with the props and the pointer or keys they're
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
@@ -32,7 +33,8 @@ import {NeedsYou} from '../../src/app/jobs/NeedsYou.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
-import {foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine} from '../../src/app/jobs/words.ts';
+import {appliedStanding, foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine, recedes} from '../../src/app/jobs/words.ts';
+import {appliedStanding as chipStanding, closes as chipCloses} from '../../../extension/src/words.ts';
 import {colour} from './colour.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -874,4 +876,21 @@ test('D402: a press in what keeps the menu leaves it open, and Esc with the focu
   document.removeEventListener('keydown', pageKey);
   beside.remove();
   anchor.remove();
+});
+
+test('SV-174: Setpoint on LinkedIn\'s chip says an application\'s standing, and steps a closed one down, as mail\'s Applied before does', () => {
+  const today = '2026-11-03';
+  const applications: Pick<JobsMailApplicationOut, 'applied_on' | 'status' | 'status_on' | 'ghosted'>[] = [
+    {applied_on: '2026-10-28', status: 'applied', status_on: '2026-10-28', ghosted: false},
+    {applied_on: today, status: 'applied', status_on: today, ghosted: false},
+    {applied_on: '2026-08-02', status: 'applied', status_on: '2026-08-02', ghosted: true},
+    {applied_on: '2026-10-20', status: 'in_process', status_on: '2026-11-01', ghosted: false},
+    {applied_on: '2026-09-16', status: 'rejected', status_on: '2026-10-05', ghosted: false},
+    {applied_on: '2025-12-12', status: 'offer', status_on: '2026-01-09', ghosted: false},
+    {applied_on: '2026-09-02', status: 'withdrawn', status_on: '2026-09-30', ghosted: false},
+  ];
+  for (const application of applications) {
+    expect(chipStanding(application, today)).toBe(appliedStanding(application, today));
+    expect(chipCloses(application)).toBe(recedes(application));
+  }
 });

@@ -19,5 +19,5 @@ if (cores) process.env.VITEST_MAX_WORKERS ??= String(cores);
 
 // Each tested workspace has its own config.
 export default defineConfig({
-  test: {projects: ['server', 'web', 'web/vitest.components.config.ts']},
+  test: {projects: ['server', 'web', 'web/vitest.components.config.ts', 'extension/vitest.config.ts']},
 });

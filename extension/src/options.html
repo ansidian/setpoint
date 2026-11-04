@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Setpoint on LinkedIn</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; padding: 24px; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 520px; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    p { margin: 0 0 16px; color: color-mix(in srgb, currentColor 70%, transparent); }
+    label { display: block; font-weight: 600; margin: 14px 0 4px; }
+    input { box-sizing: border-box; width: 100%; padding: 7px 9px; font: inherit; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; }
+    code { font-size: 12.5px; }
+    button { margin-top: 18px; padding: 7px 14px; font: inherit; font-weight: 600; border-radius: 6px; border: 0; background: oklch(0.54 0.14 300); color: #fff; cursor: pointer; }
+    #status { margin-top: 14px; min-height: 1.5em; white-space: pre-line; }
+    .bad { color: oklch(0.535 0.185 25); }
+    /* Setpoint's violet and alert, as the extension's chip uses them (DESIGN.md › Colour). */
+    @media (prefers-color-scheme: dark) { .bad { color: oklch(0.72 0.17 25); } }
+  </style>
+</head>
+<body>
+  <h1>Setpoint on LinkedIn</h1>
+  <p>Shows beside a LinkedIn job whether Setpoint's Jobs has your application to it. Only the job's company and title are sent, and only to your Setpoint.</p>
+  <form id="form">
+    <label for="origin">Setpoint's address</label>
+    <input id="origin" type="url" placeholder="https://setpoint.example" required autocomplete="off">
+    <label for="token">Jobs token</label>
+    <input id="token" type="password" placeholder="sp_jobs_…" required autocomplete="off">
+    <p>From <code>npm run cli -- jobs-token</code> on Setpoint's server. It reads only the Jobs check.</p>
+    <button type="submit">Save and test</button>
+  </form>
+  <div id="status" role="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>
