@@ -989,6 +989,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           </span>
         )}
         <span className="grow" />
+        {!searching && (
+          <button className="ibtn cal-import-open" aria-label="Import .ics…" data-tip="Import .ics…" onClick={pickIcs}><Icon name="download" /></button>
+        )}
         {compact && !searching && (
           <button className="ibtn cal-daypane" aria-label="The day" aria-pressed={dayPane} data-tip={dayPane ? 'Hide the day · Esc' : 'Show the day'}
             onClick={() => {
@@ -996,14 +999,6 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               setDayPane(!dayPane);
             }}><Icon name="right_panel_open" /></button>
         )}
-        {!searching && (
-          <button className="ibtn" aria-label="Import .ics…" data-tip="Import .ics…" onClick={pickIcs}><Icon name="download" /></button>
-        )}
-        <input ref={icsInput} type="file" accept={ICS_ACCEPT} hidden aria-hidden="true" tabIndex={-1} onChange={event => {
-          const file = event.target.files?.[0];
-          event.target.value = '';
-          if (file) openIcs(file);
-        }} />
         {searching
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
           : <button className="ibtn" aria-label="Search calendar" data-tip="Search · /" onClick={() => {
@@ -1011,6 +1006,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             setSearching(true);
           }}><Icon name="search" /></button>}
         <button className="btn cal-new" data-hint="c" data-tip="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
+        {/* SV-181: the file picker behind Import .ics…, last so the header's buttons stay side by side. */}
+        <input ref={icsInput} type="file" accept={ICS_ACCEPT} hidden aria-hidden="true" tabIndex={-1} onChange={event => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) openIcs(file);
+        }} />
       </header>
       <div className="content cal-content" onContextMenu={onContextMenu}
         onDragOver={event => {
