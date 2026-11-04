@@ -1,8 +1,8 @@
-// What Setpoint on LinkedIn's chip says (SV-174, DESIGN.md › Decided while building): an application's
-// standing as mail's Applied before badge says it ("Applied Sep 16 · Rejected Oct 5"), the company's
-// other roles, "Not applied", and why there's no answer. The standing is written here rather than
-// imported, as web/src/app/jobs/words.ts brings the web app's modules with it; jobs.test.tsx holds the
-// two to the same words.
+// What Setpoint on LinkedIn's chip says (SV-174, DESIGN.md › Decided while building #301, D434): an
+// application's standing as mail's Applied before badge says it ("Applied Sep 16 · Rejected
+// Oct 5"), the company's other roles, "Not applied", and why there's no answer. The standing is
+// written here rather than imported, as web/src/app/jobs/words.ts brings the web app's modules with
+// it; jobs.test.tsx holds the two to the same words.
 import type {JobsCheckPostingOut, JobsMailApplicationOut, JobStatus} from '@setpoint/shared';
 
 type Application = Pick<JobsMailApplicationOut, 'applied_on' | 'status' | 'status_on' | 'ghosted'>;

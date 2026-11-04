@@ -3706,3 +3706,27 @@ it changes what's on screen.
     a pencil on hover, "Add location" in `ink3` when there's none, and an emptied field takes it
     away, with Undo. A location set by hand is kept over any reading, its tip "Set by you on Oct 7".
     Before a pasted JD is read, its facts line holds only the location, claiming nothing else.
+301. **Setpoint on LinkedIn's chip** (Andy, 2026-11-03; darma SV-174, D433, D434). LinkedIn's page
+    has none of Setpoint's tokens or fonts, so the extension's chip carries its own: a pill in its
+    own shadow root, in the system font at 500, with a 6 px dot before its words, its colours
+    Setpoint's Light values mixed over LinkedIn's own text colour, so it reads in LinkedIn's light
+    and dark themes alike. In the job pane (and on a job's own page) it's 22 px with 12 px words,
+    padding 0 9 0 7, 8 px after the title, and always says something. On a card it's 19 px with 11 px
+    words, padding 0 7 0 6, 6 px after the company, and only for an application. **This role** is
+    `violet` as Jobs (75% over the text colour, a 12% fill, a 45% ring): "Applied Sep 16 · Rejected
+    Oct 5", mail's Applied before words, with " · 2 times" for more than one; a closed one (Rejected,
+    Withdrawn, Ghosted) steps down to `violet` at 45% on the quiet fill and ring. A click opens it in
+    Setpoint, its tooltip "Open in Setpoint" and a line per application. **Another role** is an
+    amber, `sunGlyph`'s Light value (70%, a 10% fill, a 40% ring): "Applied to another role here",
+    "Applied to 2 other roles here"; a click opens Jobs searched for the company. **None** is quiet
+    (the text colour at 70%, a 7% fill, an 18% ring), in the pane only: "Not applied", and
+    "Setpoint…" while it asks. **Can't answer**, in the pane only: "Set up Setpoint" and "Jobs is off
+    in Setpoint" quiet, "Setpoint refused the token", "Setpoint unreachable" and "Couldn't read
+    Setpoint's answer" in `alert`; Set up, the refused token and unreachable open the extension's
+    options. Under the pointer the fill deepens to 14%, and the keyboard's focus draws a violet ring.
+    A click never selects the card under it. Its tooltips are the browser's, as the page isn't
+    Setpoint's. **The toolbar badge** is "!" on `caution`, its tooltip "Setpoint couldn't read this
+    LinkedIn page, its job pane" ("its job cards", "its job pane and cards"), once a jobs page has
+    stayed unread for 5 s. Settled while building: Setpoint's `violet`, `sunGlyph` and `alert` in
+    place of the spike's own violet, amber and red, and "Couldn't read Setpoint's answer" for an
+    answer the build can't read. No board draws it.

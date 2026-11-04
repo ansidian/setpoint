@@ -14,7 +14,7 @@ answer: **Set up Setpoint**, **Setpoint refused the token**, **Setpoint unreacha
 in Setpoint**, or **Couldn't read Setpoint's answer**. On the list's cards it follows the company,
 smaller, and only when there's an application, as mail's rows show Applied before. A click on a chip
 never selects the card under it. The words are [`src/words.ts`](src/words.ts), and the look is
-[`src/chip.ts`](src/chip.ts) (DESIGN.md › Decided while building).
+[`src/chip.ts`](src/chip.ts) (DESIGN.md › Decided while building #301, D434).
 
 It's desktop Chrome only, loaded unpacked, with no Web Store listing (D433).
 
