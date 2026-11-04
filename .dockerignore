@@ -12,6 +12,7 @@
 !server/drizzle/**
 !web/
 !web/**
+!extension/src/words.ts
 **/node_modules
 **/dist
 **/.env*

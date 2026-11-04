@@ -17,6 +17,9 @@ COPY web/package.json web/
 RUN npm ci --ignore-scripts --no-audit --no-fund
 COPY shared shared
 COPY web web
+# web's typecheck covers its tests, and jobs.test.tsx holds the LinkedIn extension's chip words to
+# Jobs's (SV-174), so the one extension file it reads comes too.
+COPY extension/src/words.ts extension/src/words.ts
 RUN npm run build -w web
 
 # The server: production dependencies only. better-sqlite3 ships prebuilt glibc binaries, so install
