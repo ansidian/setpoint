@@ -283,7 +283,7 @@ const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'todoist'; name: string
 ];
 
 type SampleItem = {calendar: (typeof CALENDARS)[number]['key']; title: string} & (
-  | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true}
+  | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string}
   | {kind: 'task'; due: string; project: string; done?: [string, string]}
 );
 
@@ -298,7 +298,9 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'jobs', kind: 'event', title: 'Career fair', date: '2026-10-15', start: '10:00', end: '14:00',
     // SV-179: the fair's own page, as Google's source.url, so its card has Open. SV-180: drop-in, so
     // it's marked free, and an event during it has no conflict.
-    place: 'University Student Union', reminders: [10], url: 'https://careers.example.edu/fair/fall-2026', free: true},
+    place: 'University Student Union', reminders: [10], url: 'https://careers.example.edu/fair/fall-2026', free: true,
+    // SV-181: as if imported from the fair's .ics, so a re-import finds it already on Jobs (will update).
+    uid: 'career-fair-fall-2026@careers.example.edu'},
   // Fall term: Tue and Thu until finals week.
   {calendar: 'classes', kind: 'event', title: 'CS 101 lecture', date: '2026-08-25', start: '18:00', end: '19:15',
     recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261204T075959Z', reminders: [10]},
@@ -412,6 +414,7 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
           startsAt: zoned(item.date, item.start), endsAt: zoned(item.date, item.end), timeZone: SEED_TIME_ZONE,
           recurrence: item.recurrence ?? null, place: item.place ?? null, address: item.address ?? null,
           attendees: item.attendees ?? null, reminders: item.reminders ?? null, leaveReminder: item.leave ?? false, sourceUrl: item.url ?? null, transparency: item.free ? 'transparent' : 'opaque',
+          icalUid: item.uid ?? null,
         }).run();
       } else {
         tx.insert(t.items).values({

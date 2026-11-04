@@ -47,7 +47,7 @@ export function googleCalendarAdapter(options: GoogleCalendarOptions): SourceAda
     },
     sweep: context => run(context, true),
     ...(address ? {watch: (context: AdapterContext) => reconcileWatches(context.store, api(context), context.source, address)} : {}),
-    execute: (context, command) => executeEventCommand(context.store, api(context), command),
+    execute: (context, command) => executeEventCommand(context.store, api(context), command, context.source.id),
   };
 }
 

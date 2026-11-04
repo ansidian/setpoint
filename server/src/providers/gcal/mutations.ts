@@ -23,8 +23,12 @@ import type {Store} from '../../store.ts';
 import {ProviderError} from '../../sync/errors.ts';
 import {isAlreadyThere, isNotFound} from './api.ts';
 import type {GoogleCalendarApi, GoogleEvent} from './api.ts';
-import {colorIdOf, eventBody, isFirstOccurrence, ruleEndingBefore, withRule} from './normalize.ts';
+import {colorIdOf, eventBody, isFirstOccurrence, joinLocation, ruleEndingBefore, withRule} from './normalize.ts';
 import {claimProviderId} from '../../commands/itemMirror.ts';
+import {importOf} from '../../calendar/icsImport.ts';
+import {enqueueJob} from '../../sync/jobs.ts';
+import type {IcsImportEvent} from '@setpoint/shared';
+import {eventTimes} from './normalize.ts';
 
 /** A Google event id Setpoint chooses (base32hex, `[0-9a-v]{5,1024}`), the same on every retry. */
 export const chosenEventId = (command: CommandRow, itemId: number) => `sp${createHash('sha256').update(`setpoint:${command.id}:${itemId}`).digest('hex').slice(0, 30)}`;
@@ -75,7 +79,10 @@ async function instanceOf(api: GoogleCalendarApi, calendarId: string, master: It
   return instance;
 }
 
-export async function executeEventCommand(store: Store, api: GoogleCalendarApi, command: CommandRow) {
+export async function executeEventCommand(store: Store, api: GoogleCalendarApi, command: CommandRow, sourceId?: number) {
+  // SV-181: an .ics event, new to its calendar or already in it, goes by events.import.
+  const imported = importOf(command);
+  if (imported) return importOne(store, api, command, imported.event, sourceId);
   switch (command.kind) {
     case 'item_create':
       return create(store, api, command);
@@ -245,3 +252,38 @@ async function removeSeries(store: Store, api: GoogleCalendarApi, calendarId: st
   claimProviderId(store, master.id, patched.id, patched.etag ?? null);
 }
 
+
+/**
+ * SV-181: one .ics event by Google's events.import, keyed on its iCalUID, so a calendar that holds it
+ * already has it updated rather than a second made, and no invitation is sent (D436). It carries the
+ * description, `source.url`, free/busy and the file's own reminders (never the calendar's default,
+ * D438); then each changed occurrence, as the series' iCalUID with the start it replaces. A retry
+ * imports the same again, which Google takes as the same event. The sync after it brings Google's
+ * expansion of the series and its changes into the mirror.
+ */
+async function importOne(store: Store, api: GoogleCalendarApi, command: CommandRow, event: IcsImportEvent, sourceId: number | undefined) {
+  const row = itemRow(store, command.targetId);
+  if (!row) return;
+  const calendarId = calendarOf(store, row).providerId;
+  const zone = event.time_zone ?? store.timeZone;
+  const shared = (fields: Pick<IcsImportEvent, 'title' | 'description' | 'url' | 'transparency' | 'reminders'>) => ({
+    iCalUID: event.ical_uid, sequence: event.sequence,
+    // No title stays none (Google's "(No title)"), not the mirror's words for it.
+    summary: fields.title || undefined,
+    ...(fields.description ? {description: fields.description} : {}),
+    ...(fields.url ? {source: {url: fields.url, title: fields.title || fields.url}} : {}),
+    transparency: fields.transparency,
+    reminders: {useDefault: false, overrides: fields.reminders.map(minutes => ({method: 'popup', minutes}))},
+  });
+  const body = {...eventBody(row, store.timeZone), ...shared(event), ...(row.colour ? {colorId: colorIdOf(row.colour)} : {}), ...(event.recurrence.length ? {recurrence: event.recurrence} : {})};
+  const master = await api.importEvent(calendarId, body);
+  claimProviderId(store, row.id, master.id, master.etag ?? null);
+  for (const change of event.changes) {
+    const times = eventTimes({allDay: change.all_day, startsAt: change.starts_at, endsAt: change.ends_at, startDate: change.start_date, endDate: change.end_date, timeZone: change.time_zone ?? zone}, zone);
+    await api.importEvent(calendarId, {
+      ...shared(change), ...times, location: joinLocation(change.place, change.address),
+      originalStartTime: change.original_start_at ? {dateTime: change.original_start_at, timeZone: zone} : {date: change.original_start_date!},
+    });
+  }
+  if (sourceId !== undefined && (event.recurrence.length || event.changes.length)) enqueueJob(store, {kind: 'sync', key: `sync:${sourceId}`, sourceId});
+}

@@ -41,6 +41,17 @@ export type ItemKind = (typeof ITEM_KINDS)[number];
 export const TRANSPARENCIES = ['opaque', 'transparent'] as const;
 export type Transparency = (typeof TRANSPARENCIES)[number];
 
+/**
+ * What an .ics import leaves out of a file, each counted in the review (SV-178, SV-181, D438): a
+ * cancelled event, a to-do or other non-event, an event with no start, an alarm after the start, at
+ * a fixed time or past Google's 5 reminders and 4 weeks, an event's categories, a second copy of an
+ * event, and a changed occurrence whose repeating event isn't in the file.
+ */
+export const ICS_DROP_REASONS = [
+  'cancelled', 'not_an_event', 'no_start', 'alarm_after_start', 'alarm_at_fixed_time', 'alarm_over_limit', 'categories', 'duplicate', 'occurrence_without_series',
+] as const;
+export type IcsDropReason = (typeof ICS_DROP_REASONS)[number];
+
 /** A day's forecast, drawn as sunny, partly_cloudy_day, cloud and rainy (DESIGN.md › Month grid). */
 export const WEATHER_CONDITIONS = ['sun', 'partly_cloudy', 'cloud', 'rain'] as const;
 export type WeatherCondition = (typeof WEATHER_CONDITIONS)[number];

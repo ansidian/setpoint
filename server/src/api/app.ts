@@ -6,7 +6,7 @@ import path from 'node:path';
 import {serveStatic} from '@hono/node-server/serve-static';
 import {
   accountOrderInput, accountUpdateInput, allInput, gmailAuthorizeInput, icloudConnectInput, authModeInput, calendarUpdateInput, changePasswordInput, claimInput, commandListInput,
-  confirmPasswordInput, credentialsInput, doneInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
+  confirmPasswordInput, credentialsInput, doneInput, icsImportInput, inboxInput, itemCompleteInput, itemCreateInput, itemScopeInput, itemsRangeInput,
   itemUpdateInput, markAllReadInput, pairInput, passkeyLabelInput, passkeyResponseInput, pinInput, placeInput, placesInput, readInput, recoverInput, registerPasskeyInput,
   askInput, calendarSearchInput, proposalInput, searchChipRemovedInput, searchInput, searchOpenedInput, searchSuggestionInput, searchSuggestionLogInput, SECRET_NAMES, secretInput, settingsPatchInput, signInInput, todoistProjectUpdateInput, trustedDomainInput, weatherRangeInput,
 } from '@setpoint/shared';
@@ -42,6 +42,8 @@ import type {Session} from '../auth/sessions.ts';
 import {commandPresenter, activeCommands, getCommand, moveBackCommand, retryCommand} from '../commands/index.ts';
 import type {CommandRow} from '../commands/index.ts';
 import {completeItem, createItem, deleteItem, setCalendarColour, setProjectColour, updateItem} from '../commands/items.ts';
+import {importEvent, readImport} from '../calendar/icsImport.ts';
+import {ICS_MAX_BYTES} from '../domain/icsImport.ts';
 import {markAllRead, openMessage, setDone, setPinned, setRead, trashMessage} from '../commands/mail.ts';
 import * as t from '../db/schema.ts';
 import {conflict, forbidden, invalid, parse, SetpointError, unauthorized} from '../errors.ts';
@@ -141,6 +143,7 @@ export interface AppOptions {
 }
 
 const MAX_STREAMS = 20;
+const ICS_READ_PATH = '/api/calendar/import/read';
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
 
 async function body(c: Context): Promise<unknown> {
@@ -195,7 +198,11 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     }
   });
 
-  app.use('/api/*', bodyLimit({maxSize: 1024 * 1024}), async (c, next) => {
+  // SV-181: an .ics file is read up to twice the most an import takes, so one over it is refused in
+  // readIcs's words ("over 2 MB") rather than by the body limit.
+  const normalLimit = bodyLimit({maxSize: 1024 * 1024});
+  const fileLimit = bodyLimit({maxSize: 2 * ICS_MAX_BYTES});
+  app.use('/api/*', (c, next) => (c.req.path === ICS_READ_PATH ? fileLimit(c, next) : normalLimit(c, next)), async (c, next) => {
     c.header('Cache-Control', 'no-store');
     await next();
   });
@@ -683,6 +690,9 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     const input = parse(itemCompleteInput, await body(c));
     return c.json(presentCommand(completeItem(store, id(c.req.param('id')), input.done, input.occurrence_date)));
   });
+  // SV-181: an .ics file's events, read for review (its bytes as the body), then imported one at a time.
+  app.post(ICS_READ_PATH, async c => c.json(readImport(store, new Uint8Array(await c.req.arrayBuffer()))));
+  app.post('/api/calendar/import', async c => c.json(presentCommand(importEvent(store, parse(icsImportInput, await body(c)))), 201));
   app.get('/api/calendars', c => c.json(calendarList(store)));
   app.patch('/api/calendars/:id', async c => {
     const calendarId = id(c.req.param('id'));

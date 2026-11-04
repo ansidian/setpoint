@@ -11,7 +11,8 @@
 // Outlook Windows name too), and a floating time takes the user's zone.
 import {createHash} from 'node:crypto';
 import ICAL from 'ical.js';
-import type {ItemWhen} from '@setpoint/shared';
+import {ICS_DROP_REASONS} from '@setpoint/shared';
+import type {IcsDropReason, ItemWhen} from '@setpoint/shared';
 import {addDays, localDay, zonedInstant} from './time.ts';
 import {windowsZone} from './windowsZones.ts';
 
@@ -57,26 +58,9 @@ export interface IcsDraft extends IcsEvent {
   changes: IcsChange[];
 }
 
-export const ICS_DROP_REASONS = [
-  // STATUS:CANCELLED, or any event in a METHOD:CANCEL file.
-  'cancelled',
-  // VTODO, VJOURNAL, VFREEBUSY and anything else that isn't a VEVENT (time zones aside).
-  'not_an_event',
-  // An event whose DTSTART is missing or can't be read.
-  'no_start',
-  'alarm_after_start',
-  'alarm_at_fixed_time',
-  // Past Google's 5 reminders or 4 weeks before.
-  'alarm_over_limit',
-  // An event with CATEGORIES (counted once per event).
-  'categories',
-  // A second copy of an event (the same iCalUID, or the same changed occurrence): the one with the
-  // highest SEQUENCE is kept, the later one on a tie.
-  'duplicate',
-  // A changed occurrence whose repeating event isn't in the file, or doesn't repeat.
-  'occurrence_without_series',
-] as const;
-export type IcsDropReason = (typeof ICS_DROP_REASONS)[number];
+// What's left out, by reason (shared/src/enums.ts has each one's meaning).
+export {ICS_DROP_REASONS};
+export type {IcsDropReason};
 export type IcsDropped = Record<IcsDropReason, number>;
 
 export type IcsRead = {ok: true; drafts: IcsDraft[]; dropped: IcsDropped} | {ok: false; error: string};

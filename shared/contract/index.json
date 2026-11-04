@@ -1317,6 +1317,63 @@
       ]
     },
     {
+      "name": "calendar-import-read",
+      "type": "IcsReadOut",
+      "method": "POST",
+      "route": "/api/calendar/import/read",
+      "path": "/api/calendar/import/read",
+      "request": "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example Events//Schedule Export//EN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Northwind DevCon 2026\r\nX-WR-TIMEZONE:America/Chicago\r\nBEGIN:VEVENT\r\nUID:101@devcon.example.com\r\nDTSTAMP:20261020T120000Z\r\nDTSTART:20261112T150000Z\r\nDTEND:20261112T160000Z\r\nSUMMARY:Opening keynote\r\nLOCATION:Main Hall\\, Northwind Conference Center\r\nDESCRIPTION:Opening keynote\\, a session at Northwind DevCon.\r\nURL:https://devcon.example.com/sessions/101\r\nCATEGORIES:Main,Sessions\r\nTRANSP:TRANSPARENT\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:201@devcon.example.com\r\nDTSTAMP:20261020T120000Z\r\nDTSTART:20261112T161500Z\r\nDTEND:20261112T170000Z\r\nSUMMARY:Typed SQL in practice\r\nLOCATION:Track A Hall\\, Northwind Conference Center\r\nDESCRIPTION:Typed SQL in practice\\, a session at Northwind DevCon.\r\nURL:https://devcon.example.com/sessions/201\r\nCATEGORIES:Track A,Sessions\r\nTRANSP:TRANSPARENT\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:202@devcon.example.com\r\nDTSTAMP:20261020T120000Z\r\nDTSTART:20261112T161500Z\r\nDTEND:20261112T170000Z\r\nSUMMARY:Calendars are hard\r\nLOCATION:Track B Hall\\, Northwind Conference Center\r\nDESCRIPTION:Calendars are hard\\, a session at Northwind DevCon.\r\nURL:https://devcon.example.com/sessions/202\r\nCATEGORIES:Track B,Sessions\r\nTRANSP:TRANSPARENT\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:203@devcon.example.com\r\nDTSTAMP:20261020T120000Z\r\nDTSTART:20261112T163000Z\r\nDTEND:20261112T171500Z\r\nSUMMARY:Accessible tables\r\nLOCATION:Track C Hall\\, Northwind Conference Center\r\nDESCRIPTION:Accessible tables\\, a session at Northwind DevCon.\r\nURL:https://devcon.example.com/sessions/203\r\nCATEGORIES:Track C,Sessions\r\nTRANSP:TRANSPARENT\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:301@devcon.example.com\r\nDTSTAMP:20261020T120000Z\r\nDTSTART:20261113T200000Z\r\nDTEND:20261113T210000Z\r\nSUMMARY:Closing panel\r\nLOCATION:Main Hall\\, Northwind Conference Center\r\nDESCRIPTION:Closing panel\\, a session at Northwind DevCon.\r\nURL:https://devcon.example.com/sessions/301\r\nCATEGORIES:Main,Sessions\r\nTRANSP:TRANSPARENT\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/calendar-import-read.json",
+      "unseen": [
+        "events[].start_date: always null",
+        "events[].end_date: always null",
+        "events[].time_zone: always null",
+        "events[].reminders: always empty",
+        "events[].recurrence: always empty",
+        "events[].changes: always empty",
+        "events[].existing: always empty"
+      ]
+    },
+    {
+      "name": "calendar-import",
+      "type": "CommandOut",
+      "method": "POST",
+      "route": "/api/calendar/import",
+      "path": "/api/calendar/import",
+      "request": {
+        "calendar_id": 1,
+        "event": {
+          "title": "Opening keynote",
+          "all_day": false,
+          "starts_at": "2026-11-12T15:00:00.000Z",
+          "ends_at": "2026-11-12T16:00:00.000Z",
+          "start_date": null,
+          "end_date": null,
+          "time_zone": null,
+          "place": "Main Hall",
+          "address": "Northwind Conference Center",
+          "description": "Opening keynote, a session at Northwind DevCon.",
+          "url": "https://devcon.example.com/sessions/101",
+          "transparency": "transparent",
+          "reminders": [],
+          "ical_uid": "101@devcon.example.com",
+          "sequence": 0,
+          "recurrence": [],
+          "changes": []
+        }
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "file": "responses/calendar-import.json",
+      "unseen": [
+        "provider_message: always null",
+        "previous: always null",
+        "settled_at: always null"
+      ]
+    },
+    {
       "name": "device-unpair",
       "type": "(no body)",
       "method": "DELETE",

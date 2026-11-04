@@ -38,6 +38,9 @@ export interface GoogleEvent {
   source?: {url?: string; title?: string};
   // SV-180: free/busy; Google leaves it out for busy ("opaque", its default).
   transparency?: 'opaque' | 'transparent';
+  // SV-181: the RFC 5545 UID an .ics import writes by (events.import), and the file's SEQUENCE.
+  iCalUID?: string;
+  sequence?: number;
   // SV-31: Setpoint's own flags (normalize.ts's LEAVE_PROPERTY).
   extendedProperties?: {private?: Record<string, string>; shared?: Record<string, string>};
 }
@@ -201,6 +204,15 @@ export class GoogleCalendarApi {
 
   insertEvent(calendarId: string, body: Partial<GoogleEvent>): Promise<GoogleEvent> {
     return this.call('POST', `calendars/${encodeURIComponent(calendarId)}/events`, {body});
+  }
+
+  /**
+   * SV-181: events.import, a private copy of an .ics event keyed on its iCalUID: one the calendar
+   * already has is updated in place, rather than a second made, and no invitation is sent (D436).
+   * An exception to a series is imported with the series' iCalUID and its originalStartTime.
+   */
+  importEvent(calendarId: string, body: Partial<GoogleEvent> & {iCalUID: string}): Promise<GoogleEvent> {
+    return this.call('POST', `calendars/${encodeURIComponent(calendarId)}/events/import`, {body});
   }
 
   /** A field-level change; `etag` (what Setpoint last saw) makes Google refuse it if the event changed since. */

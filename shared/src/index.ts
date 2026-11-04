@@ -10,6 +10,7 @@ export * from './api/live.ts';
 export * from './api/mail.ts';
 export * from './api/search.ts';
 export * from './api/items.ts';
+export * from './api/icsImport.ts';
 export * from './api/sources.ts';
 export * from './api/links.ts';
 export * from './api/status.ts';

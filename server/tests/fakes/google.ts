@@ -1,5 +1,5 @@
 // A fake Google on 127.0.0.1: OAuth's token endpoint, Calendar v3 (calendar list and its colours, events with sync
-// tokens, instances, insert/patch/delete with etags, watch channels), Places (New) autocomplete and
+// tokens, instances, insert/patch/delete with etags, import by iCalUID, watch channels), Places (New) autocomplete and
 // Routes. It answers in Google's shapes and with Google's errors: 401 for a token it didn't issue,
 // invalid_grant for a revoked refresh token, 409 for an id that exists, 410 for a sync token it
 // dropped or an event already deleted, 412 when If-Match doesn't match, 400 for a calendar that
@@ -70,6 +70,10 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
   const droppedTokens = new Set<string>();
   const channels: {id: string; calendarId: string; address: string; token: string; resourceId: string; expiration: number}[] = [];
   const stopped: {id: string; resourceId: string}[] = [];
+  // Every events.import body, as sent (SV-181).
+  const imports: {calendarId: string; body: GoogleEvent}[] = [];
+  // iCalUIDs events.import refuses, with Google's code and words.
+  const importRefusals = new Map<string, {code: number; message: string}>();
   const placesKeys = new Set(['maps-key']);
   let places: {placeId: string; main: string; secondary: string; distanceMeters: number; radius: number; lat?: number; lng?: number}[] = [];
   let routes = new Map<string, {duration: string; distanceMeters: number}>();
@@ -103,7 +107,8 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     for (const date of occurrenceDates(rule, firstDay, localDay(timeMin, zone), localDay(timeMax, zone))) {
       const originalStart = allDay ? date : zonedInstant(date, localTime(master.start!.dateTime!, zone), zone);
       if (rule.untilAt && originalStart > rule.untilAt) continue;
-      if (exdates.has(allDay ? date.replace(/-/g, '') : `${date.replace(/-/g, '')}T${localTime(master.start!.dateTime!, zone).replace(':', '')}00`)) continue;
+      // An EXDATE in the series' zone or in UTC (an .ics import's, SV-181).
+      if (exdates.has(allDay ? date.replace(/-/g, '') : `${date.replace(/-/g, '')}T${localTime(master.start!.dateTime!, zone).replace(':', '')}00`) || exdates.has(compact(originalStart))) continue;
       const id = `${master.id}_${compact(originalStart)}`;
       const exception = calendarEvents(calendarId).get(id);
       if (exception) {
@@ -217,6 +222,37 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
       if (invalid) return invalid;
       return {status: 200, body: publicEvent(store(calendarId, inserted))};
     }),
+    // events.import (SV-181): a private copy keyed on its iCalUID. One the calendar holds (deleted
+    // ones too, taken back as Google does) is replaced in place, keeping its id; an exception is the
+    // series' iCalUID with the start it replaces. No invitations; only `default` events.
+    on('POST', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/import$/, (request, match) => {
+      if (!authorized(request)) return unauthorized();
+      const calendarId = decodeURIComponent(match[1]!);
+      if (!calendars.some(calendar => calendar.id === calendarId)) return googleError(404, 'Not Found', 'notFound');
+      const body = request.body as GoogleEvent;
+      if (!body.iCalUID) return googleError(400, 'Missing iCalUID.', 'required');
+      const refusal = importRefusals.get(body.iCalUID);
+      if (refusal) return googleError(refusal.code, refusal.message, 'invalid');
+      if (!body.start || !body.end) return googleError(400, `Missing ${body.start ? 'end' : 'start'} time.`, 'required');
+      if (body.source?.url && !/^https?:\/\//.test(body.source.url)) return googleError(400, 'Invalid source URL.', 'invalid');
+      const list = [...calendarEvents(calendarId).values()];
+      const master = list.find(event => event.iCalUID === body.iCalUID && !event.recurringEventId);
+      let id: string;
+      let extra: Partial<GoogleEvent> = {};
+      if (body.originalStartTime) {
+        if (!master?.recurrence) return googleError(400, 'The recurring event of this exception is missing.', 'invalid');
+        const originalStart = body.originalStartTime.dateTime ? new Date(body.originalStartTime.dateTime).toISOString() : body.originalStartTime.date!;
+        id = `${master.id}_${compact(originalStart)}`;
+        extra = {recurringEventId: master.id};
+      } else {
+        id = master?.id ?? `imp${(seq + 1).toString(32)}x`;
+      }
+      const imported = {...body, ...extra, id, status: 'confirmed' as const, start: patchedTime(undefined, body.start), end: patchedTime(undefined, body.end)};
+      const invalid = timeRefusal(imported);
+      if (invalid) return invalid;
+      imports.push({calendarId, body});
+      return {status: 200, body: publicEvent(store(calendarId, imported))};
+    }),
     on('PATCH', /^\/calendar\/v3\/calendars\/([^/]+)\/events\/([^/]+)$/, (request, match) => {
       if (!authorized(request)) return unauthorized();
       const calendarId = decodeURIComponent(match[1]!);
@@ -305,7 +341,7 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     ...server,
     tokenUrl: `${server.url}/token`,
     calendarApi: `${server.url}/calendar/v3`,
-    channels, stopped,
+    channels, stopped, imports,
     /** A calendar on every account's list, or only on those of `accounts` (refresh tokens). */
     addCalendar(entry: GoogleCalendarEntry & {timeZone?: string}, accounts?: string[]) {
       calendars.push({timeZone: 'America/Los_Angeles', accessRole: 'owner', ...entry});
@@ -328,6 +364,11 @@ export async function fakeGoogle({pageSize = 50}: FakeCalendarOptions = {}) {
     },
     instances(calendarId: string, masterId: string, from: string, to: string) {
       return instancesOf(calendarId, calendarEvents(calendarId).get(masterId)!, from, to);
+    },
+    /** events.import refuses this iCalUID in Google's words until told otherwise (null). */
+    refuseImport(uid: string, refusal: {code: number; message: string} | null) {
+      if (refusal) importRefusals.set(uid, refusal);
+      else importRefusals.delete(uid);
     },
     /** The user revoked Setpoint's access in their Google account. */
     revoke() {

@@ -14,7 +14,7 @@ import {
   LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SORT_CAUSES, PROPOSAL_FIELDS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS,
   SEARCH_CHIP_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, STORY_STATES, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, TRANSPARENCIES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
-import type {ApiError, HighlightOut, MeOut, SearchOut, SectionHealthOut} from '@setpoint/shared';
+import type {ApiError, HighlightOut, IcsReadOut, MeOut, SearchOut, SectionHealthOut} from '@setpoint/shared';
 import {describe, expect, onTestFinished, test} from 'vitest';
 import type {AppOptions} from '../src/api/app.ts';
 import {confirmCommand, failCommand} from '../src/commands/index.ts';
@@ -24,6 +24,7 @@ import {noteLive} from '../src/store.ts';
 import {SyncEngine} from '../src/sync/engine.ts';
 import {Adapters} from '../src/sync/registry.ts';
 import {addedValues, breaks, shapeOf, unseen} from './contractShape.ts';
+import {CONFERENCE_SCHEDULE, crlf} from './fixtures/icsFiles.ts';
 import {readEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 
@@ -83,8 +84,9 @@ function phone(app: {request: (url: string, init: RequestInit) => Response | Pro
   const send = async (method: string, url: string, body?: unknown) => {
     const response = await app.request(url, {
       method,
-      headers: {...(body === undefined ? {} : {'content-type': 'application/json'}), ...(token ? {authorization: `Bearer ${token}`} : {})},
-      ...(body === undefined ? {} : {body: JSON.stringify(body)}),
+      // A string is a file's text (SV-181's .ics read), sent as it is.
+      headers: {...(body === undefined ? {} : {'content-type': typeof body === 'string' ? 'text/calendar' : 'application/json'}), ...(token ? {authorization: `Bearer ${token}`} : {})},
+      ...(body === undefined ? {} : {body: typeof body === 'string' ? body : JSON.stringify(body)}),
     });
     const contentType = response.headers.get('content-type')?.split(';')[0] ?? null;
     const text = await response.text();
@@ -316,6 +318,11 @@ async function recordAll() {
   await app.record('news-proposal', 'NewsProposalOut', 'POST', '/api/news/events/:id/proposal', '/api/news/events/1/proposal');
   // Last, as it changes their dots: the new story and the updated one seen.
   await app.record('news-seen', 'NewsSeenOut', 'POST', '/api/news/seen', '/api/news/seen', {story_ids: [18, 1]});
+
+  // SV-181: an .ics file read for review (the invented conference schedule), then its keynote imported.
+  const read = await app.record('calendar-import-read', 'IcsReadOut', 'POST', '/api/calendar/import/read', '/api/calendar/import/read', crlf(CONFERENCE_SCHEDULE)) as IcsReadOut;
+  const {past: _past, existing: _existing, ...keynote} = read.events[0]!;
+  await app.record('calendar-import', 'CommandOut', 'POST', '/api/calendar/import', '/api/calendar/import', {calendar_id: 1, event: keynote});
 
   // Unpairing, and what every request gets after it.
   await app.record('device-unpair', '(no body)', 'DELETE', '/api/device', '/api/device');

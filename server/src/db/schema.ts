@@ -235,7 +235,11 @@ export const items = sqliteTable('items', {
   // SV-180: a Google event's free/busy (its `transparency`); a free one is left out of the editor's
   // conflict preview (D440). Tasks keep Google's default, busy.
   transparency: text('transparency', {enum: TRANSPARENCIES}).notNull().default('opaque'),
+  // SV-181: a Google event's iCalUID, the key an .ics import (Google's events.import) writes by, so
+  // the review can say which of a file's events the chosen calendar already has (D436).
+  icalUid: text('ical_uid'),
 }, table => [
+  index('items_ical_uid').on(table.calendarId, table.icalUid),
   uniqueIndex('items_calendar_provider').on(table.calendarId, table.providerId),
   index('items_starts').on(table.startsAt),
   index('items_due').on(table.dueDate),

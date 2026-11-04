@@ -78,12 +78,23 @@ export function devProvider({delayMs = 0, refuse, held}: DevProviderOptions = {}
  * Board 19b's failure, for building the failed state against `npm run dev`: moving Dinner with Sam
  * to Saturday, Oct 10 is refused with Google Calendar's 409.
  */
+// The imports refused once, by command, so a Retry goes through.
+const refusedImports = new Set<number>();
+
 export function boardRefusals(store: Store, command: CommandRow): string | null {
   // SV-20's failed colour, for Settings › Calendar: Google refuses `sun` as a calendar's colour (one
   // Settings offers, which `alert` no longer is, #163).
   if (command.kind === 'calendar_colour') return command.payload.colour === 'sun' ? 'The caller does not have permission (403 Forbidden)' : null;
   // SV-25's failed colour, for Settings › Todoist: Todoist refuses taupe as a project's colour.
   if (command.kind === 'project_colour') return command.payload.colour === 'taupe' ? 'Insufficient permissions (403 Forbidden)' : null;
+  // SV-181's refused import, left in the review with Retry: Google refuses "Poster session" the first
+  // time it's sent, and takes it on Retry.
+  const imported = (command.payload.import as {event?: {title?: string}} | undefined)?.event;
+  if (imported) {
+    if (imported.title !== 'Poster session' || refusedImports.has(command.id)) return null;
+    refusedImports.add(command.id);
+    return 'Invalid start time. (400 Bad Request)';
+  }
   // SV-74's refused task with no date, which says so in a toast: Todoist refuses "Renew passport".
   if (command.kind === 'item_create') return (command.payload.input as {title?: string} | undefined)?.title === 'Renew passport' ? 'Insufficient permissions (403 Forbidden)' : null;
   if (command.kind !== 'item_update') return null;
