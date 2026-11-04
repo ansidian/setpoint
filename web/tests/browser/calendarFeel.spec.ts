@@ -251,6 +251,8 @@ test('each word typed lands in its field: the rows it fills take its colour, and
 test('ticking a task off keeps its project beside the spinner in the pane, and its card is drawn in its project\'s colour, struck through while Todoist hasn\'t answered', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
+    // Pay rent (Oct 7) and Renew car registration (Oct 8), as the server has them.
+    const task = async (title: string) => (await setpoint.api<{items: {title: string; done: boolean; command: unknown}[]}>('GET', '/items?from=2026-10-07&to=2026-10-09')).items.find(item => item.title === title)!;
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
@@ -269,11 +271,10 @@ test('ticking a task off keeps its project beside the spinner in the pane, and i
     await row.getByRole('button', {name: 'Complete Pay rent'}).click();
     await row.getByRole('button', {name: 'Reopen Pay rent'}).waitFor();
     assert.deepEqual([await row.locator('.spin').count(), await row.locator('.project').textContent()], [1, 'Home']);
+    // Todoist's answer is read at the server: on the screen it comes through the refetches, which
+    // stress holds for as long as the machine is busy (SV-185). Reopen is manipulation.spec's S1.
     release();
-    await until('Todoist has it', () => row.locator('.spin').count(), count => count === 0);
-    await row.getByRole('button', {name: 'Reopen Pay rent'}).click();
-    await row.getByRole('button', {name: 'Complete Pay rent'}).waitFor();
-    await until('reopened at Todoist', () => row.locator('.spin').count(), count => count === 0);
+    await until('Todoist has Pay rent', () => task('Pay rent'), item => item.done && !item.command);
 
     // A task's card: its ring in its project's colour, the project a dot in it, no Colour.
     await page.locator('.cell[data-date="2026-10-08"] .tk', {hasText: 'Renew car registration'}).click();
@@ -302,8 +303,13 @@ test('ticking a task off keeps its project beside the spinner in the pane, and i
     assert.deepEqual([await rested(() => style(card.locator('.fd-title'), 'text-decoration-line')), await rested(() => style(card.locator('.fd-title'), 'color'))], ['line-through', await rested(() => colour(page, '--ink3'))]);
     assert.deepEqual([await rested(() => style(mark, 'opacity')), await card.locator('.card-h .spin').count()], ['0.5', 1]);
     hold();
-    await until('Todoist has it', () => style(mark, 'opacity'), value => value === '1');
+    await until('Todoist has Renew car registration', () => task('Renew car registration'), item => item.done && !item.command);
     await page.unroute(/\/api\/items\/\d+\/complete$/);
+    // Once it has, the card (its address keeps it open) loads struck through, its mark whole, no spinner.
+    await page.reload();
+    const settled = card.locator('.fd-layer.in');
+    await settled.locator('.fd-title.done').waitFor();
+    assert.deepEqual([await rested(() => style(settled.locator('.fd-mark'), 'opacity')), await settled.locator('.card-h .spin').count()], ['1', 0]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
