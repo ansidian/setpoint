@@ -46,7 +46,7 @@ export function ImportPane({review, calendars, fallback, timeZone}: ImportPanePr
         <span className="ink2">Into</span>
         {calendar && (running || ran
           ? <span className="num">{calendar.name}</span>
-          : <Select label="Calendar" value={calendar.id} options={calendars.map(one => ({value: one.id, label: one.name}))} onChange={pickCalendar} />)}
+          : <Select label="Calendar" align="left" value={calendar.id} options={calendars.map(one => ({value: one.id, label: one.name, colour: one.colour}))} onChange={pickCalendar} />)}
         {already && <span className="imp-already ink3 num">{already}</span>}
       </div>
       <div className="rp-scroll">

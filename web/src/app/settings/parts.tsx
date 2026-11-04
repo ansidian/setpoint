@@ -3,9 +3,11 @@
 // page is built from these, the drawn ones (boards 17, 18a, 18b) and the rest alike.
 import {cloneElement, useCallback, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactElement, ReactNode} from 'react';
+import type {Colour} from '@setpoint/shared';
 import type {HealthKind} from '../../logic/health.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {placeMenu} from '../../ui/popover.ts';
+import {dotStyle} from '../accounts.ts';
 import {Bar, LoadFailed, Sk, useLoadFailed} from '../states/Loading.tsx';
 import type {Load} from '../states/Loading.tsx';
 import {closeSettings} from './store.ts';
@@ -57,19 +59,20 @@ export function Switch({on, label, disabled, onChange}: {on: boolean; label: str
 
 /**
  * The board's select (a 30 px chip with a chevron): it opens the same small menu as a row's options,
- * its choices as items with a check on the current one, never the browser's own list.
+ * its choices as items with a check on the current one, never the browser's own list. A choice with a
+ * `colour` leads with its dot, as the editor's Calendar menu does; `align` is the menu's (SV-189).
  */
-export function Select<T extends string | number>({value, options, label, onChange}: {value: T; options: {value: T; label: string; disabled?: boolean}[]; label: string; onChange: (value: T) => void}) {
+export function Select<T extends string | number>({value, options, label, align, onChange}: {value: T; options: {value: T; label: string; disabled?: boolean; colour?: Colour | null}[]; label: string; align?: 'left' | 'right'; onChange: (value: T) => void}) {
   const shown = options.find(option => option.value === value)?.label ?? String(value);
   return (
-    <Menu label={label} className="pick" button={(
+    <Menu label={label} align={align} className="pick" button={(
       <button className="select" type="button" aria-label={label} aria-haspopup="menu"><span className="num">{shown}</span><Icon name="expand_more" size={16} /></button>
     )}>
       {close => options.map(option => (
         <button key={String(option.value)} className="menu-i" type="button" role="menuitemradio" aria-checked={option.value === value} disabled={option.disabled} onClick={() => {
           close();
           if (option.value !== value) onChange(option.value);
-        }}>{option.label}{option.value === value && <Icon name="check" size={16} />}</button>
+        }}>{option.colour !== undefined && <span className="dot sm" style={dotStyle(option.colour ?? undefined)} />}{option.label}{option.value === value && <Icon name="check" size={16} />}</button>
       ))}
     </Menu>
   );

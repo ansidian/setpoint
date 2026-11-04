@@ -104,3 +104,28 @@ test('the chip is the board\'s, not the browser\'s list, its ring `edgeOn` while
   await expect.poll(ring).toBe(`${colour('var(--edgeOn)')} 0px 0px 0px 1px inset`);
 });
 
+
+test('align="left" opens the menu under the chip\'s left edge, the default under its right (SV-189)', async () => {
+  await render(
+    <div className="settings" style={{padding: 240}}>
+      <Select value={10} options={OPTIONS} label="Left" align="left" onChange={() => {}} />
+      <Select value={10} options={OPTIONS} label="Right" onChange={() => {}} />
+    </div>,
+  );
+  // Each edge from layout (the anchor's box and the menu's offset), not the grow-in's transformed box.
+  const edges = async (label: string) => {
+    const chip = page.getByRole('button', {name: label});
+    await chip.click();
+    const menu = page.getByRole('menu', {name: label}).element() as HTMLElement;
+    const anchor = menu.parentElement!.getBoundingClientRect();
+    const box = chip.element().getBoundingClientRect();
+    const edges = {menuLeft: anchor.left + menu.offsetLeft, menuRight: anchor.left + menu.offsetLeft + menu.offsetWidth, chipLeft: box.left, chipRight: box.right};
+    await userEvent.keyboard('{Escape}');
+    return edges;
+  };
+  const left = await edges('Left');
+  expect(left.menuLeft).toBe(left.chipLeft);
+  const right = await edges('Right');
+  // offsetWidth is whole pixels, so the right edge is to within one.
+  expect(right.menuRight).toBeCloseTo(right.chipRight, 0);
+});
