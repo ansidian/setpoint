@@ -3079,11 +3079,17 @@ it changes what's on screen.
     https://…") keeps the words as written after `location_on`, breaking anywhere so a long link
     wraps inside the card. Either way an **Open** button (`btn ghost sm`, a 16 px `open_in_new`)
     ends the place's first line and opens the first link in a new tab; `O` does the same while the
-    card is open. A link is `http://`, `https://` or `www.` (a bare domain isn't), without
-    punctuation after it, read from the place and an address Google kept on the same line
-    (`placeLink` in web/src/logic/place.ts, which the right pane's line now uses too). Time to Leave
+    card is open. A link is `http://`, `https://`, `www.` or a bare domain (see the amendment below),
+    without punctuation after it, read from the place and an address Google kept on the same line
+    (`placeLink` in shared/src/link.ts since SV-179, which the right pane's line uses too). Time to Leave
     keeps its own test for a link (server/src/domain/timeToLeave.ts) (Andy, 2026-10-15; darma SV-77).
     Board audit: no board draws a link as a place, so it's unchanged (11 0.70%, 12a 0.43%).
+    Amended (Andy, 2026-11-04; darma SV-179, D442): a bare domain counts as a link, alone or among
+    words, when its top-level domain is a real one ("example.tv/live" opens as
+    `https://example.tv/live`). The list in shared/src/tlds.ts has the common generic ones and every
+    country code, leaving out .zip, .mov, .md, .py and .sh, which read as file names. "Room 3.14",
+    "St.Louis", "v2.0" and an email address's domain aren't links. This covers the right pane's
+    link-alone line (#125) too.
 246. **An event can have no end:** End's list starts with **No end**, and "no end" or "none" typed
     there does the same. A new event still gets an hour; No end is picked. Google needs an end, so
     the event ends as it starts (v1 kept the same zero-length hold), and that's how one made in
