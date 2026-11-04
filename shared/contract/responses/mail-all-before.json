@@ -210,6 +210,33 @@
       ]
     },
     {
+      "date": "2026-09-29",
+      "rows": [
+        {
+          "id": 34,
+          "account_id": 4,
+          "from_name": "Trey Research Recruiting",
+          "from_address": "recruiting@treyresearch.example",
+          "organisation": "Trey Research",
+          "via": "Breezy",
+          "subject": "Interview confirmed: Data Engineer I",
+          "summary": "Tue, Oct 20 · 2:00 PM · video call",
+          "received_at": "2026-09-29T17:30:00.000Z",
+          "unread": false,
+          "lane": "fyi",
+          "kind": "career",
+          "type": "confirmation",
+          "protected": false,
+          "pinned": false,
+          "done": true,
+          "fact": null,
+          "code": null,
+          "attachment_count": 1,
+          "command": null
+        }
+      ]
+    },
+    {
       "date": "2026-09-28",
       "rows": [
         {

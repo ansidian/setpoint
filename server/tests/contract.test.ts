@@ -323,6 +323,9 @@ async function recordAll() {
   const read = await app.record('calendar-import-read', 'IcsReadOut', 'POST', '/api/calendar/import/read', '/api/calendar/import/read', crlf(CONFERENCE_SCHEDULE)) as IcsReadOut;
   const {past: _past, existing: _existing, ...keynote} = read.events[0]!;
   await app.record('calendar-import', 'CommandOut', 'POST', '/api/calendar/import', '/api/calendar/import', {calendar_id: 1, event: keynote});
+  // SV-182: the seed's interview invite, read from its email for the same review.
+  const invite = w.store.sqlite.prepare('SELECT message_id AS message, id FROM attachments WHERE filename = ?').get('invite.ics') as {message: number; id: number};
+  await app.record('mail-attachment-ics', 'IcsReadOut', 'POST', '/api/mail/messages/:id/attachments/:attachment/ics', `/api/mail/messages/${invite.message}/attachments/${invite.id}/ics`);
 
   // Unpairing, and what every request gets after it.
   await app.record('device-unpair', '(no body)', 'DELETE', '/api/device', '/api/device');

@@ -1,0 +1,38 @@
+{
+  "events": [
+    {
+      "title": "Interview with Trey Research: Data Engineer I",
+      "all_day": false,
+      "starts_at": "2026-10-20T21:00:00.000Z",
+      "ends_at": "2026-10-20T21:45:00.000Z",
+      "start_date": null,
+      "end_date": null,
+      "time_zone": null,
+      "place": "https://meet.example.com/j/615-204-883",
+      "address": null,
+      "description": "Your interview with Trey Research is confirmed.\nJoin: https://meet.example.com/j/615-204-883",
+      "url": null,
+      "transparency": "opaque",
+      "reminders": [
+        30
+      ],
+      "ical_uid": "interview-trey-5c21e8@jobs.example.com",
+      "sequence": 0,
+      "recurrence": [],
+      "changes": [],
+      "past": false,
+      "existing": []
+    }
+  ],
+  "dropped": {
+    "cancelled": 0,
+    "not_an_event": 0,
+    "no_start": 0,
+    "alarm_after_start": 0,
+    "alarm_at_fixed_time": 0,
+    "alarm_over_limit": 0,
+    "categories": 0,
+    "duplicate": 0,
+    "occurrence_without_series": 0
+  }
+}

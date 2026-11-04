@@ -543,19 +543,27 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.html(page.html);
   });
   // An attachment's bytes, through its account's adapter, for the reader's preview.
-  app.get('/api/mail/messages/:id/attachments/:attachment', async c => {
-    let file;
+  const fetchAttachment = async (messageId: string, attachmentId: string) => {
     try {
-      file = await attachmentFile(store, engine, id(c.req.param('id')), id(c.req.param('attachment')));
+      return await attachmentFile(store, engine, id(messageId), id(attachmentId));
     } catch (error) {
       if (error instanceof ProviderError) throw new SetpointError('provider_failed', error.message, 502);
       throw error;
     }
+  };
+  app.get('/api/mail/messages/:id/attachments/:attachment', async c => {
+    const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
     c.header('Content-Type', file.contentType);
     c.header('Content-Disposition', file.disposition);
     c.header('Content-Security-Policy', "default-src 'none'; sandbox");
     c.header('X-Content-Type-Options', 'nosniff');
     return c.body(new Uint8Array(file.content));
+  });
+  // SV-182: an email's .ics read for the same review as a file from Calendar (D441), from the
+  // attachment's bytes on the server, nothing uploaded from the browser.
+  app.post('/api/mail/messages/:id/attachments/:attachment/ics', async c => {
+    const file = await fetchAttachment(c.req.param('id'), c.req.param('attachment'));
+    return c.json(readImport(store, new Uint8Array(file.content)));
   });
   app.post('/api/mail/messages/:id/open', c => {
     const messageId = id(c.req.param('id'));

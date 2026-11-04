@@ -1374,6 +1374,26 @@
       ]
     },
     {
+      "name": "mail-attachment-ics",
+      "type": "IcsReadOut",
+      "method": "POST",
+      "route": "/api/mail/messages/:id/attachments/:attachment/ics",
+      "path": "/api/mail/messages/34/attachments/2/ics",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/mail-attachment-ics.json",
+      "unseen": [
+        "events[].start_date: always null",
+        "events[].end_date: always null",
+        "events[].time_zone: always null",
+        "events[].address: always null",
+        "events[].url: always null",
+        "events[].recurrence: always empty",
+        "events[].changes: always empty",
+        "events[].existing: always empty"
+      ]
+    },
+    {
       "name": "device-unpair",
       "type": "(no body)",
       "method": "DELETE",

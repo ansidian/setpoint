@@ -163,7 +163,8 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
     const jobs = broad(w, 'jobs career');
     expect(jobs.chips.map(chip => `${chip.kind} ${chip.label}`)).toEqual(['account Jobs', 'kind Career']);
     expect(subjects(jobs)).toEqual([
-      'Interview availability for Software Engineer I', 'Application received', 'Thanks for applying', 'Update on your application', 'Your application for Data Engineer Intern',
+      'Interview availability for Software Engineer I', 'Application received', 'Thanks for applying', 'Interview confirmed: Data Engineer I', 'Update on your application',
+      'Your application for Data Engineer Intern',
     ]);
     expect(reasons(jobs.results[0]!)).toBe('Account Jobs · Kind Career');
     expect(subjects(broad(w, 'parkside'))).toEqual(['October rent received', 'Lease renewal terms']);
@@ -225,12 +226,13 @@ describe('search over the seed: the brief\'s and the boards\' examples', () => {
 
   test('pages, with the indexing line while the first backfill runs', () => {
     const w = world({seed: true});
-    // The Jobs account's six emails (the brief's five and Jobs's Indeed match email, round 4).
+    // The Jobs account's seven emails (the brief's five, Jobs's Indeed match email, round 4, and the
+    // interview invite, SV-182).
     const jobs = w.store.db.select().from(t.accounts).where(eq(t.accounts.label, 'Jobs')).get()!.id;
     const first = search(w, '', {chips: [{kind: 'account', value: jobs, label: 'Jobs'}], limit: 2});
-    expect(first).toMatchObject({total: 6, next_offset: 2});
+    expect(first).toMatchObject({total: 7, next_offset: 2});
     const second = search(w, '', {chips: first.chips, limit: 2, offset: 2, search_id: first.search_id});
-    expect(second).toMatchObject({search_id: first.search_id, total: 6, next_offset: 4});
+    expect(second).toMatchObject({search_id: first.search_id, total: 7, next_offset: 4});
     expect(searchLogEntry(w.store, first.search_id)!.resultIds).toEqual([...first.results, ...second.results].map(result => result.id));
     const source = w.store.db.select().from(t.sources).where(eq(t.sources.provider, 'gmail')).get()!;
     startBackfill(w.store, source.id, 100, null);

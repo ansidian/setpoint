@@ -2,13 +2,15 @@
 //
 //   POST /api/calendar/import/read     the file's bytes (text/calendar)   IcsReadOut
 //   POST /api/calendar/import          IcsImportInput                     CommandOut
+//   POST /api/mail/messages/:id/attachments/:attachment/ics   (no body)  IcsReadOut   (SV-182)
 //
 // The read sends nothing to Google: it answers the file's events as drafts, in start order, each
 // with the calendars that already hold its iCalUID, or refuses the file with one line (400). The
 // import writes one event through Google's events.import, as a command of its own: `item_create`
 // for an event new to the calendar, `item_update` for one it already holds (Google updates it in
 // place). The web app sends them one at a time, waiting for each to settle; SV-182's Add to calendar
-// on an email's .ics reads the attachment into the same IcsReadOut and imports the same way.
+// on an email's .ics reads the stored attachment into the same IcsReadOut, through its account's
+// adapter, and imports the same way.
 import {z} from 'zod';
 import {EVENT_COLOURS, TRANSPARENCIES} from '../enums.ts';
 import type {IcsDropReason, Transparency} from '../enums.ts';

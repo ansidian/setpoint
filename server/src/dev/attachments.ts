@@ -1,8 +1,10 @@
 // The dev provider's attachment bytes: the seed and its fixtures record attachments by name, type
 // and size only, so `npm run dev` and the browser checks preview a small stand-in of the same type
-// (a one-page PDF naming the file, a grey PNG, a two-line CSV, else the name as text).
+// (a one-page PDF naming the file, a grey PNG, a two-line CSV, an invented .ics by its name, else the
+// name as text).
 import {crc32, deflateSync} from 'node:zlib';
 import type {AttachmentBytes} from '../sync/adapter.ts';
+import {DEV_ICS_FILES} from './icsFiles.ts';
 
 /** A small grey PNG, `size` pixels square. */
 export function stubPng(size = 2): Buffer {
@@ -54,6 +56,7 @@ export function devAttachment(filename: string, mimeType: string): AttachmentByt
   if (type === 'application/pdf') content = stubPdf(filename);
   else if (type.startsWith('image/')) content = PNG;
   else if (type === 'text/csv') content = Buffer.from('Name,Value\r\nSample,1\r\n');
+  else if (type === 'text/calendar' && DEV_ICS_FILES[filename]) content = Buffer.from(DEV_ICS_FILES[filename]);
   else content = Buffer.from(`${filename}\n`);
   return {content, mimeType: type.startsWith('image/') ? 'image/png' : type, filename};
 }

@@ -1,5 +1,6 @@
 // The reader's two byte routes over the seed: an email's HTML body as its own page with its own
 // policy (images by the remote-content rule, or Show), and an attachment through the dev provider.
+import type {IcsReadOut} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
@@ -90,6 +91,21 @@ describe('GET /api/mail/messages/:id/attachments/:attachment through the dev pro
     expect(response.headers.get('content-type')).toBe('application/pdf');
     expect(response.headers.get('content-disposition')).toBe(`inline; filename="Renewal agreement.pdf"; filename*=UTF-8''Renewal%20agreement.pdf`);
     expect(response.body).toMatch(/^%PDF-1\.4[\s\S]*\(Renewal agreement\.pdf\) Tj[\s\S]*%%EOF\n$/);
+  });
+
+  test('SV-182: the seed\'s interview invite reads into one event for review, nothing sent to Google', async () => {
+    const w = world({seed: true});
+    const engine = new SyncEngine({store: w.store, adapters: new Adapters({}, devProvider())});
+    const api = await signedIn(w, {engine});
+    const id = idOf(w, 'Interview confirmed: Data Engineer I');
+    const file = w.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, id)).get()!;
+    expect(file).toMatchObject({filename: 'invite.ics', mimeType: 'text/calendar'});
+    const read = await api.send('POST', `/api/mail/messages/${id}/attachments/${file.id}/ics`);
+    expect(read.status).toBe(200);
+    expect((read.body as IcsReadOut).events.map(event => [event.title, event.starts_at, event.ends_at, event.place, event.reminders])).toEqual([
+      ['Interview with Trey Research: Data Engineer I', '2026-10-20T21:00:00.000Z', '2026-10-20T21:45:00.000Z', 'https://meet.example.com/j/615-204-883', [30]],
+    ]);
+    expect(w.store.db.select().from(t.commands).all()).toEqual([]);
   });
 
   test('without an engine, nothing serves it', async () => {

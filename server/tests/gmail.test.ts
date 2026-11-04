@@ -4,9 +4,11 @@
 // 429, timeouts, an expired access token and a revoked one; with the counts following the rules.
 import {generateKeyPairSync} from 'node:crypto';
 import {SEED_NOW} from '@setpoint/shared';
+import type {IcsReadOut} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import * as t from '../src/db/schema.ts';
+import {ICS_ERRORS} from '../src/domain/icsImport.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {GmailAdapter} from '../src/providers/gmail/adapter.ts';
 import type {GmailAdapterOptions} from '../src/providers/gmail/adapter.ts';
@@ -21,6 +23,7 @@ import {Adapters} from '../src/sync/registry.ts';
 import {fakeGoogle} from './fakeGoogle.ts';
 import type {FakeGoogle} from './fakeGoogle.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
+import {crlf, INTERVIEW_INVITE} from './fixtures/icsFiles.ts';
 import {client, liveEvents, signedIn, world} from './helpers.ts';
 import type {World} from './helpers.ts';
 import {gmailVerdict, rawEmail} from './rawEmail.ts';
@@ -443,6 +446,32 @@ describe('Gmail: an attachment for the reader\'s preview', () => {
     google.deleteForever(ADDRESS, message.providerId);
     const gone = await api.send('GET', `/api/mail/messages/${message.id}/attachments/${row[0]!.id}`);
     expect(gone.status).toBe(404);
+  });
+
+  test('SV-182: an invite\'s .ics is read for review from Gmail\'s bytes, nothing uploaded; one that isn\'t a calendar is refused in the parser\'s words', async () => {
+    const env = await setup({pageSize: 50});
+    const {w, google, api} = env;
+    google.deliver(ADDRESS, {raw: rawEmail({
+      from: 'Contoso Recruiting <recruiting@contoso.example.com>', subject: 'Interview confirmed', date: ago(DAY), text: 'The invite is attached.', received: gmailVerdict('contoso.example.com'),
+      attachments: [
+        {filename: 'invite.ics', contentType: 'text/calendar', content: crlf(INTERVIEW_INVITE)},
+        {filename: 'notes.ics', contentType: 'text/calendar', content: 'Not a calendar.'},
+      ],
+    }), date: ago(DAY), labels: ['INBOX']});
+    await connect(env);
+    await env.drain();
+    const message = bySubject(w, 'Interview confirmed');
+    const [invite, notes] = w.store.db.select().from(t.attachments).where(eq(t.attachments.messageId, message.id)).all();
+    const read = await api.send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`);
+    expect(read.status).toBe(200);
+    const body = read.body as IcsReadOut;
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0]).toMatchObject({title: 'Interview with Contoso: Software Engineer', ical_uid: 'interview-7f3a9c@jobs.example.com', place: 'https://meet.example.com/j/482-193-775', reminders: [30], past: false, existing: []});
+    expect(await api.send('POST', `/api/mail/messages/${message.id}/attachments/${notes!.id}/ics`)).toMatchObject({status: 400, body: {error: {message: ICS_ERRORS.unreadable}}});
+    expect((await api.send('POST', `/api/mail/messages/${message.id}/attachments/999/ics`)).status).toBe(404);
+    expect((await client(w).send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(401);
+    google.deleteForever(ADDRESS, message.providerId);
+    expect((await api.send('POST', `/api/mail/messages/${message.id}/attachments/${invite!.id}/ics`)).status).toBe(404);
   });
 });
 

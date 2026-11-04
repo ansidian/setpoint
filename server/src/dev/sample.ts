@@ -75,6 +75,15 @@ Best,
 Priya Raman
 Recruiting Coordinator, Northwind`;
 
+const TREY_INTERVIEW = `Hi there,
+
+Your interview for the Data Engineer I role at Trey Research is confirmed for Tuesday, October 20 at 2:00 PM Pacific. It's a 45-minute video call with two engineers from the data team.
+
+The invite is attached, with the link to join.
+
+Best,
+Trey Research Recruiting`;
+
 const PARKSIDE_RENEWAL = `Hi there,
 
 Your lease for Unit 4B ends on Nov 30, 2026, and we'd love to have you stay. Here are your renewal terms:
@@ -273,6 +282,13 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
   {account: 'Jobs', at: ['2026-09-15', '06:05'], from: ['Indeed', 'alert@indeed.example'], organisation: 'Indeed',
     subject: 'Associate Software Engineer @ Contoso Pharmaceuticals', summary: '$78,000–$92,000 · Hybrid', body: INDEED_MATCH,
     unread: false, lane: 'noise', type: 'newsletter'},
+  // SV-182: an interview confirmed with its invite attached (src/dev/icsFiles.ts has the file), for
+  // Add to calendar on its .ics tile. Done and dated weeks back, so it's out of the lanes and below the
+  // Inbox's first screen, as the boards have it; last, so the emails above keep their ids.
+  {account: 'Jobs', at: ['2026-09-29', '10:30'], from: ['Trey Research Recruiting', 'recruiting@treyresearch.example'], organisation: 'Trey Research', via: 'Breezy',
+    subject: 'Interview confirmed: Data Engineer I', summary: 'Tue, Oct 20 · 2:00 PM · video call', body: TREY_INTERVIEW,
+    unread: false, lane: 'fyi', kind: 'career', type: 'confirmation', done: {at: ['2026-09-29', '10:41'], opened: true},
+    attachments: [{filename: 'invite.ics', mimeType: 'text/calendar', sizeBytes: 1024}]},
 ];
 
 const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'todoist'; name: string; provider: 'google' | 'todoist'; colour: Colour | null; account: AccountLabel | null}[] = [
