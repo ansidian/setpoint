@@ -25,6 +25,7 @@
     "drizzle-orm": "0.45.3",
     "hono": "4.13.13",
     "htmlparser2": "10.1.0",
+    "ical.js": "2.2.1",
     "imapflow": "1.7.8",
     "mailparser": "3.14.1",
     "sharp": "0.35.5",
