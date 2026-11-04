@@ -454,7 +454,7 @@ half strength until the answer is in (#108).
 
 **Add to calendar** and **Add as task** open a proposal card at the top of the reading pane (board
 08): the fields pre-filled from the email, each marked "from the email", the conflict line ("Free
-that evening" or "Overlaps …"), **Create**, and **More options**, which opens the full editor in
+that evening" or "Overlaps …", leaving free events out, #303), **Create**, and **More options**, which opens the full editor in
 Calendar. Nothing is created until Andy creates it. The day and times take typing as the editor's
 do, blank ("Pick a day") when the email gave none; once they change, the mark and the conflict line
 go. A task's card has no Place, and its Project suggests Todoist's projects as Andy types, making a
@@ -518,7 +518,8 @@ line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zo
 #125; recurring glyph; the next one today lifted on a tint of its colour with "in 5h" in it, and
 once under way under the now-line with "45m left" and its bar filling, #183; past ones grey, #183; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
-then gone, #112), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
+then gone, #112), "Overlaps Study group until 8:30 PM" under an event that starts while another is
+on (board 12b), leaving free events out (#303), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
 bars as the week's (#184), then **Tasks · due today** with their projects. Another day picked slides its items in 6 px from its side and fades its heading in (#190).
 An empty day offers New event C and New task D as dashed ghost rows (#191); one whose items are only
 hidden reads "4 hidden · Show all" (#113). The footer holds "New event C · New task D". The pane also holds the
@@ -583,7 +584,7 @@ suggestions under the place, the calendar picker, recurrence, reminders (default
 Notifications; the presets, then **Custom…** last for a date and time, before or after the start,
 #255) with **Time to Leave** added from the same menu, never by default (#86), and the
 **conflict preview** (a small timeline of the day: "Overlaps Study group ·
-1h 30m"). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
+1h 30m"), which leaves free events out (#303). In the date picker the chosen day is the strongest mark and today a ring, and the editor's
 menus tick their current choice (#189). Each row the line filled takes its mark's colour on its glyph, a mark still being typed is
 only dashed until it's picked and lands, and a field another's change moved flashes (#187). **Batch drafts** add a second event ("Create 2 events ⌘Enter"). A Todoist task uses the same
 editor with project, labels and due date; a new one's due date has an × that sends it with no date (#244).
@@ -3753,3 +3754,15 @@ it changes what's on screen.
     link must be `http://` or `https://`, and links in the description are never picked out (D439).
     The server sends the choice as `ItemOut.link` (one rule, shared/src/link.ts), so the iPhone app
     can read it too. Board audit: no board draws it.
+303. **Free events are never a clash** (Andy, 2026-11-04; darma SV-180, D440, D443). An event
+    marked free (Google's transparency `transparent`, which an imported .ics file's
+    TRANSP:TRANSPARENT sets) overlaps nothing, and nothing overlaps it, as #246's event with no end.
+    The editor's conflict preview draws no block for it and says No conflicts, and a free event's
+    own preview, edited, does the same. The agenda's Overlaps line (board 12b) is never under a free
+    event and never names one. A proposal card's conflict line (board 08, and News's and Alfred's
+    proposals) leaves it out ("Free that evening"). So a conference's overlapping free sessions are
+    never clashes. The week grid still lays free events beside the others in lanes, and nothing on
+    the card or block marks an event free. The server sends it as `ItemOut.transparency` (`opaque`
+    or `transparent`, Google's words), so the iPhone app can read it. The seed's Career fair is
+    marked free. Board audit: no board draws a free event; boards 08, 12b and 13 overlap busy
+    events, so they're unchanged.
