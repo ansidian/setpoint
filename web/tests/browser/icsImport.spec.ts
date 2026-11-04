@@ -8,14 +8,17 @@
 // server (the dev provider serves src/dev/icsFiles.ts by name): the seed's interview invite into the
 // editor, and, linked to that email by SQL, a schedule into the review, one that only cancels, and
 // one that can't be read, said in place.
+// SV-190: while a file is dragged over the grid it lights and says whether it will import (DESIGN.md
+// #305): leaving, Esc or the drop clears it; a PDF or several files are refused before the drop; the
+// review takes none; and at 820 wide the pill centres beside the open review.
 // The list's own behaviour (ticks, counts, the picker) is the component test's (importPane.test.tsx).
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
-import {cleanUp, startSetpoint, test, until} from './harness.ts';
+import type {Locator, Page} from 'playwright-core';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -59,15 +62,52 @@ async function openCalendar(page: Page, base: string) {
   await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
 }
 
-/** A file dropped on the grid, as the browser hands one over. */
-async function drop(page: Page, name: string, text: string) {
-  await page.locator('.cal-content').evaluate((grid, {name, text}) => {
-    const transfer = new DataTransfer();
-    transfer.items.add(new File([text], name, {type: 'text/calendar'}));
-    grid.dispatchEvent(new DragEvent('dragover', {dataTransfer: transfer, bubbles: true, cancelable: true}));
-    grid.dispatchEvent(new DragEvent('drop', {dataTransfer: transfer, bubbles: true, cancelable: true}));
-  }, {name, text});
+/** A file as a drag carries it: its name, its text and the type the browser gives it. */
+interface Dragged {
+  name: string;
+  text: string;
+  type: string;
 }
+const ics = (name: string, text: string): Dragged => ({name, text, type: 'text/calendar'});
+
+/**
+ * One drag event on `target` carrying `files`, as the browser hands it over (a real drag shows only
+ * each file's kind and type before the drop, which is all the page reads then). `to` is where a
+ * dragleave goes; null is out of the window, or Esc. Says what the page answered: the drop effect,
+ * and whether it took the event.
+ */
+async function dragEvent(target: Locator, type: 'dragenter' | 'dragover' | 'dragleave' | 'drop', files: Dragged[], to: Locator | null = null) {
+  const related = to && await to.elementHandle();
+  return target.evaluate((element, {type, files, related}) => {
+    const transfer = new DataTransfer();
+    for (const file of files) transfer.items.add(new File([file.text], file.name, {type: file.type}));
+    // Chromium keeps a drop effect only on a real drag's transfer, so this one records what the page sets.
+    let effect = 'unset';
+    Object.defineProperty(transfer, 'dropEffect', {get: () => effect, set: (value: string) => effect = value});
+    const event = new DragEvent(type, {dataTransfer: transfer, bubbles: true, cancelable: true, relatedTarget: related});
+    element.dispatchEvent(event);
+    return {effect, taken: event.defaultPrevented};
+  }, {type, files, related});
+}
+
+/** Files dragged onto `target`, as they come in: an enter, then an over, whose answer it returns. */
+async function enter(target: Locator, files: Dragged[]) {
+  await dragEvent(target, 'dragenter', files);
+  return dragEvent(target, 'dragover', files);
+}
+
+/** Files dragged off `target`, to `to` (null: out of the window, or Esc). */
+const leave = (target: Locator, files: Dragged[], to: Locator | null = null) => dragEvent(target, 'dragleave', files, to);
+
+/** A file dropped on the month grid, as the browser hands one over. */
+async function drop(page: Page, name: string, text: string) {
+  const grid = page.locator('.cal-month');
+  await enter(grid, [ics(name, text)]);
+  await dragEvent(grid, 'drop', [ics(name, text)]);
+}
+
+/** The pill at the grid's centre while a file is over it. */
+const dropTip = (page: Page, line: string) => page.getByRole('status').filter({hasText: line});
 
 const row = (page: Page, title: string) => page.locator('.cal-import .imp-item', {has: page.locator('.title', {hasText: title})});
 
@@ -164,6 +204,95 @@ test('SV-181: ⌘K\'s Import .ics… with a file that can\'t be read, or has not
     ]));
     await page.locator('.toast', {hasText: 'Nothing to import, the file has 1 event cancelled'}).waitFor();
     assert.equal(await page.locator('.cal-import, .editor').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-190: a file dragged over the grid says it will import, leaving or Esc clears it, and a file that isn\'t an .ics is refused before the drop', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    const grid = page.locator('.cal-month');
+    const cell = grid.locator('.cell[data-date="2026-10-15"]');
+    const invite = [ics('invite.ics', INVITE)];
+    assert.deepEqual(await enter(grid, invite), {effect: 'copy', taken: true});
+    await dropTip(page, 'Drop to import .ics').waitFor();
+    await page.locator('.cal-month[data-file-drop="ics"]').waitFor();
+    // Crossing into a day keeps it: the day's enter comes before the grid's leave.
+    await dragEvent(cell, 'dragenter', invite);
+    await leave(grid, invite, cell);
+    // Nothing should clear: a pause for it to have done so.
+    await page.waitForTimeout(150);
+    await setpoint.idle();
+    assert.equal(await grid.getAttribute('data-file-drop'), 'ics');
+    // Out of the window, or Esc: a leave with nothing after it.
+    await leave(cell, invite);
+    await page.locator('.cal-month[data-file-drop]').waitFor({state: 'detached'});
+    await dropTip(page, 'Drop to import .ics').waitFor({state: 'detached'});
+
+    // A PDF is refused before the drop: the pill alone, and the drop does nothing.
+    const agenda = [{name: 'agenda.pdf', text: '%PDF-1.7', type: 'application/pdf'}];
+    assert.deepEqual(await enter(grid, agenda), {effect: 'none', taken: true});
+    await dropTip(page, 'Only an .ics file imports').waitFor();
+    assert.equal(await grid.getAttribute('data-file-drop'), 'other');
+    // A browser sends no drop after "none"; one sent anyway imports nothing and says nothing.
+    await dragEvent(grid, 'drop', agenda);
+    await dropTip(page, 'Only an .ics file imports').waitFor({state: 'detached'});
+    // Nothing should open or be said: a pause for it to have done so.
+    await page.waitForTimeout(150);
+    await setpoint.idle();
+    assert.equal(await page.locator('.toast', {hasText: 'agenda.pdf'}).count(), 0);
+    assert.equal(await page.locator('.cal-import, .editor').count(), 0);
+
+    // Two files at once, on the week: refused the same way.
+    await page.keyboard.press('w');
+    const week = page.locator('.cal-week');
+    await week.waitFor();
+    const two = [ics('invite.ics', INVITE), ics('northwind-devcon.ics', SCHEDULE)];
+    assert.deepEqual(await enter(week, two), {effect: 'none', taken: true});
+    await dropTip(page, 'One .ics file at a time').waitFor();
+    assert.equal(await week.getAttribute('data-file-drop'), 'several');
+    await leave(week, two);
+    await dropTip(page, 'One .ics file at a time').waitFor({state: 'detached'});
+    assert.deepEqual(await enter(week, invite), {effect: 'copy', taken: true});
+    await page.locator('.cal-week[data-file-drop="ics"]').waitFor();
+    await leave(week, invite);
+    await page.locator('.cal-week[data-file-drop]').waitFor({state: 'detached'});
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-190: at 820 wide the pill centres beside the open review, and the review takes no file', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page({width: 820, height: 760});
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).waitFor();
+    await drop(page, 'northwind-devcon.ics', SCHEDULE);
+    const pane = page.getByRole('region', {name: 'Import events'});
+    await pane.getByText('Import northwind-devcon.ics').waitFor();
+    const invite = [ics('invite.ics', INVITE)];
+    // Over the review, a file is refused and nothing lights.
+    assert.deepEqual(await enter(pane, invite), {effect: 'none', taken: true});
+    await leave(pane, invite);
+    assert.equal(await page.locator('[data-file-drop]').count(), 0);
+
+    const grid = page.locator('.cal-month');
+    await enter(grid, invite);
+    const tip = dropTip(page, 'Drop to import .ics');
+    await tip.waitFor();
+    const box = (locator: Locator) => locator.evaluate(element => element.getBoundingClientRect().toJSON() as {left: number; right: number});
+    const [tipBox, paneBox, gridBox] = await rested(() => Promise.all([box(tip), box(pane), box(grid)]));
+    assert.ok(tipBox.right <= paneBox.left, `the pill (${tipBox.left}–${tipBox.right}) lies left of the pane (${paneBox.left})`);
+    // At the centre of the grid the pane leaves uncovered.
+    assert.ok(Math.abs((tipBox.left + tipBox.right) / 2 - (gridBox.left + paneBox.left) / 2) <= 1);
+    await leave(grid, invite);
+    await tip.waitFor({state: 'detached'});
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

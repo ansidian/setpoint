@@ -62,6 +62,7 @@ import {ImportPane} from './ImportPane.tsx';
 import {closeReview, handIcs, importFromEditor, openReview, useHandedIcs, useImportReview} from './importRun.ts';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
 import {FailedCard} from './FailedCard.tsx';
+import {useFileDrop} from './FileDrop.tsx';
 import {expectLanding} from './landing.ts';
 import {MonthGrid} from './MonthGrid.tsx';
 import {ScopePrompt} from './ScopePrompt.tsx';
@@ -515,7 +516,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       openReview(file.name, read);
     }, error => showToast(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.name}`, error), null, 'failed'));
   };
-  // A file dragged over the grid can be dropped there; an item's own drag isn't a file's.
+  // SV-190: only the grid takes a dropped file, and shows while one is over it (FileDrop.tsx).
+  const fileDrop = useFileDrop(openIcs);
+  // An item's own drag isn't a file's.
   const dragsFile = (event: ReactDragEvent) => [...event.dataTransfer.types].includes('Files');
   /**
    * Esc closes the topmost thing: the "+N" popover, the floating detail, a multi-selection (⌘ or Ctrl
@@ -1030,17 +1033,16 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           if (file) openIcs(file);
         }} />
       </header>
+      {/* A file over the right pane, which the grid hasn't taken, is refused there rather than opened in the tab (#305). */}
       <div className="content cal-content" onContextMenu={onContextMenu}
         onDragOver={event => {
-          if (!dragsFile(event)) return;
+          if (event.defaultPrevented || !dragsFile(event)) return;
           event.preventDefault();
-          event.dataTransfer.dropEffect = 'copy';
+          event.dataTransfer.dropEffect = 'none';
         }}
         onDrop={event => {
-          if (!dragsFile(event)) return;
+          if (event.defaultPrevented || !dragsFile(event)) return;
           event.preventDefault();
-          const file = event.dataTransfer.files[0];
-          if (file) openIcs(file);
         }}>
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
             sit atop the grid instead, so a failing one still shows (#140). */}
@@ -1049,11 +1051,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           <WeekGrid enter={zoom?.to === 'week' ? zoom.y : null} onEntered={() => setZoom(null)} week={week} weekJump={view.weekJump} today={today} selectedDay={paneDay} selected={selected} looks={looks} items={weekItems} byDay={byDay} weather={weather}
             calendars={calendarsById} now={now} timeZone={zone} scroll={view.scroll} popover={popover} onSelectDay={clickDay} onSelectItem={selectItem} onPopover={setPopover}
             onWeek={showWeek} onCreate={createAt} onChange={onWeekChange} onSlotMenu={(event, date, minutes) => openContextMenu(event, event.currentTarget, dayMenu(date, minutes))}
-            detail={detailProps} overlays={overlays} />
+            detail={detailProps} overlays={overlays} fileDrop={fileDrop} />
         ) : (
           <MonthGrid enter={zoom?.to === 'month' ? zoom.y : null} onEntered={() => setZoom(null)} shown={shown} today={today} selectedDay={paneDay} selected={selected} looks={looks} byDay={byDay} weather={weather} calendars={calendarsById}
             now={now} timeZone={zone} scroll={view.scroll} popover={popover} onShownMonth={setShownMonth} onSelectDay={clickDay}
-            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} onNew={newOn} detail={detailProps} overlays={overlays} />
+            onSelectItem={selectItem} onPopover={setPopover} onDrop={onDrop} onNew={newOn} detail={detailProps} overlays={overlays} fileDrop={fileDrop} />
         )}
         {editor ? (
           <Editor key={editor.seq} open={editor} calendars={calendars} today={today} timeZone={zone} handed={editor.handed}

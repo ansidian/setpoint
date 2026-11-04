@@ -296,6 +296,16 @@
 .drag-tip { position: absolute; z-index: 6; height: 22px; display: flex; align-items: center; padding: 0 9px; border-radius: 999px; background: var(--cardOn);
   box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-pill); font-size: 12px; color: var(--ink); white-space: nowrap; pointer-events: none; }
 .ev, .tk { touch-action: none; }
+/* SV-190: a file dragged over the grid (DESIGN.md #305) lights it as a task's drop does, in `ink3`: its
+   fill at the drop tint (9%, Light 7%) under a 1.5 px dashed ring at 70%, 6 px inside its edges, with
+   the drag tip's pill at its centre. A file that can't import shows the pill alone, in `ink2`. Both
+   fade in over 120 ms, opacity only, and go at once. At z 4 they sit over the week's sticky top, and
+   under the compact tier's pane, which comes after the grid. */
+:is(.cal-month, .cal-week)[data-file-drop="ics"]::after { content: ""; position: absolute; inset: 6px; z-index: 4; pointer-events: none; border-radius: var(--r-row);
+  background: color-mix(in oklch, var(--ink3) var(--droptint), transparent); border: 1.5px dashed color-mix(in oklch, var(--ink3) 70%, transparent);
+  animation: fade-in var(--dur-fast) var(--ease); }
+.drag-tip.file-drop-tip { left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; gap: 6px; animation: fade-in var(--dur-fast) var(--ease); }
+.drag-tip.file-drop-tip:not(.ics) { color: var(--ink2); }
 /* Waiting for the provider: a spinner after the title; failed: an error glyph before it (board 19b). */
 .ev .icon, .tk .icon { display: inline-block; vertical-align: -2px; }
 .ev.failed .icon, .tk.failed .icon { margin-right: 4px; }
@@ -370,6 +380,8 @@
      editor does; its sources' health already sits atop the grid. The button is lit `sub2` while it's open. */
   .cal-content > .rpane > .rp-health { display: none; }
   .ibtn.cal-daypane[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
+  /* SV-190: a file's pill centres in the part of the grid an open pane leaves uncovered (#305). */
+  .cal-content:has(> .rpane) .drag-tip.file-drop-tip { left: calc((100% - var(--rightPane)) / 2); }
 }
 /* Under 720 px, with the day's button beside search, New is its + alone, so the header stays whole (D183). */
 @media (min-width: 640px) and (max-width: 719px) {

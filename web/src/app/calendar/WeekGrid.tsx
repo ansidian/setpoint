@@ -25,6 +25,8 @@ import {colourVar} from '../accounts.ts';
 import {Chip, ghostly} from './Chip.tsx';
 import type {ChipLook} from './Chip.tsx';
 import {DayPopover} from './DayPopover.tsx';
+import {FileDropTip} from './FileDrop.tsx';
+import type {FileDropBinding} from './FileDrop.tsx';
 import {FloatingDetail} from './detail/FloatingDetail.tsx';
 import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
 import type {Slot} from './Editor.tsx';
@@ -68,6 +70,8 @@ export interface WeekGridProps {
   onSlotMenu?: (event: ReactMouseEvent<HTMLElement>, date: string, minutes: number) => void;
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   overlays?: ReactNode;
+  // SV-190: a file dragged over the section, which takes its drop (FileDrop.tsx).
+  fileDrop?: FileDropBinding;
   // Arriving from Month: it zooms in from this height in the section, the selected week's row there (polish audit grids-09).
   enter?: number | null;
   onEntered?: () => void;
@@ -96,7 +100,7 @@ interface Drag {
 const resizable = (item: ItemOut) => item.kind === 'event' && canMove(item) && item.id > 0;
 
 export function WeekGrid(props: WeekGridProps) {
-  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays, enter = null, onEntered} = props;
+  const {week, weekJump, today, selectedDay, selected, looks, items, byDay, weather, calendars, now, timeZone, scroll, popover, onSelectDay, onSelectItem, onPopover, onWeek, detail, overlays, fileDrop, enter = null, onEntered} = props;
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -414,7 +418,7 @@ export function WeekGrid(props: WeekGridProps) {
   const calendarName = (item: ItemOut) => calendars.get(item.calendar_id)?.name;
 
   return (
-    <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section data-enter={enter === null ? undefined : 'in'}
+    <section className={`cal-week${drag ? ` dragging ${drag.press.kind}` : ''}`} aria-label="Week" ref={section} data-cal-section {...fileDrop?.handlers} data-file-drop={fileDrop?.over ?? undefined} data-enter={enter === null ? undefined : 'in'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
       onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
       {/* Focusable, so the hours scroll from the keyboard too (axe's scrollable-region-focusable, SV-99). */}
@@ -540,6 +544,7 @@ export function WeekGrid(props: WeekGridProps) {
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}
+      {fileDrop && <FileDropTip over={fileDrop.over} />}
       {drag && drag.press.kind !== 'create' && (
         <div className="drag-tip num" role="status" style={{left: drag.pointer.left + dragTokens.tipOffset.left, top: drag.pointer.top + dragTokens.tipOffset.top / 2}}>
           {drag.tip}

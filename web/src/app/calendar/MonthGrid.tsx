@@ -28,6 +28,8 @@ import {colourVar} from '../accounts.ts';
 import {Chip, useRingColour} from './Chip.tsx';
 import type {ChipLook} from './Chip.tsx';
 import {DayPopover} from './DayPopover.tsx';
+import {FileDropTip} from './FileDrop.tsx';
+import type {FileDropBinding} from './FileDrop.tsx';
 import {FloatingDetail} from './detail/FloatingDetail.tsx';
 import {pointIn, rectIn} from './geometry.ts';
 import type {FloatingDetailProps} from './detail/FloatingDetail.tsx';
@@ -66,6 +68,8 @@ export interface MonthGridProps {
   detail?: Omit<FloatingDetailProps, 'section' | 'scroller'>;
   // Overlays anchored to items (the drop prompt, the failed card), drawn in the month section.
   overlays?: ReactNode;
+  // SV-190: a file dragged over the section, which takes its drop (FileDrop.tsx).
+  fileDrop?: FileDropBinding;
   // Arriving from Week: it settles out around this height in the section, the selected week's row (polish audit grids-09).
   enter?: number | null;
   onEntered?: () => void;
@@ -82,7 +86,7 @@ interface Drag {
 }
 
 export function MonthGrid(props: MonthGridProps) {
-  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, onNew, detail, overlays, enter = null, onEntered} = props;
+  const {shown, today, selectedDay, selected, looks, byDay, weather, calendars, now, timeZone, scroll, popover, onShownMonth, onSelectDay, onSelectItem, onPopover, onDrop, onNew, detail, overlays, fileDrop, enter = null, onEntered} = props;
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [rows, setRows] = useState(() => rowsInView(monthTopRow(monthOf(selectedDay)) * ROW, 1000));
@@ -333,7 +337,7 @@ export function MonthGrid(props: MonthGridProps) {
 
   const popoverItems = popover ? byDay.get(popover) ?? [] : [];
   return (
-    <section className={drag ? 'cal-month dragging' : 'cal-month'} aria-label="Month" ref={section} data-cal-section data-enter={enter === null ? undefined : 'out'}
+    <section className={drag ? 'cal-month dragging' : 'cal-month'} aria-label="Month" ref={section} data-cal-section {...fileDrop?.handlers} data-file-drop={fileDrop?.over ?? undefined} data-enter={enter === null ? undefined : 'out'}
       style={enter === null ? undefined : {'--zoom-y': `${enter}px`} as CSSProperties}
       onAnimationEnd={event => event.target === event.currentTarget && onEntered?.()}>
       <div className="cal-dow">{WEEKDAYS.map(name => <span key={name}>{name}</span>)}</div>
@@ -349,6 +353,7 @@ export function MonthGrid(props: MonthGridProps) {
       )}
       {detail && <FloatingDetail {...detail} section={section} scroller={scroller} />}
       {overlays}
+      {fileDrop && <FileDropTip over={fileDrop.over} />}
       {drag && (
         <>
           <div className={drag.item.kind === 'task' ? 'tk sel lift' : 'ev sel lift'} aria-hidden="true"
