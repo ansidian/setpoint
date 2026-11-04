@@ -267,7 +267,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .row.ticked .ud > .icon { color: var(--good); animation: beat-in var(--dur-fast) var(--ease), tick-out var(--dur-slow) var(--ease) var(--dur-fast) forwards; }
 .list.all .row.done .ud::before { background: transparent; box-shadow: none; }
 .list.all .row.done :is(.from, .subj b, .subj .alertsubj) { color: var(--ink3); font-weight: 400; transition: color var(--dur-medium) var(--ease); }
-.list.all .row .tag { margin-right: 10px; animation: beat-in var(--dur-fast) var(--ease); }
+/* The tag lands with the tick; a row already Done when the list first shows it has it at rest. */
+.list.all .row .tag { margin-right: 10px; }
+.list.all .row.ticked .tag { animation: beat-in var(--dur-fast) var(--ease); }
 @keyframes tick-settle { from, 32% { background: color-mix(in oklch, var(--good) 14%, transparent); } }
 @keyframes tick-out { to { opacity: 0; } }
 .row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
