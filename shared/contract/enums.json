@@ -250,6 +250,10 @@
     "grey",
     "taupe"
   ],
+  "TRANSPARENCIES": [
+    "opaque",
+    "transparent"
+  ],
   "WEATHER_CONDITIONS": [
     "sun",
     "partly_cloudy",

@@ -36,6 +36,8 @@ export interface GoogleEvent {
   colorId?: string | null;
   // SV-179: where the event came from (an .ics file's URL line); its url is the event's link when the location has none.
   source?: {url?: string; title?: string};
+  // SV-180: free/busy; Google leaves it out for busy ("opaque", its default).
+  transparency?: 'opaque' | 'transparent';
   // SV-31: Setpoint's own flags (normalize.ts's LEAVE_PROPERTY).
   extendedProperties?: {private?: Record<string, string>; shared?: Record<string, string>};
 }

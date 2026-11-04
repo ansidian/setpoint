@@ -34,7 +34,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": null
     },
     {
       "key": "8",
@@ -81,7 +82,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": null
     },
     {
       "key": "1@2026-10-07T14:00:00.000Z",
@@ -117,7 +119,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "2",
@@ -153,7 +156,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "9",
@@ -187,7 +191,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": null
     },
     {
       "key": "5@2026-10-09T01:00:00.000Z",
@@ -223,7 +228,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "1@2026-10-09T14:00:00.000Z",
@@ -259,7 +265,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "6",
@@ -295,7 +302,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "3",
@@ -333,7 +341,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "1@2026-10-12T14:00:00.000Z",
@@ -369,7 +378,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "5@2026-10-14T01:00:00.000Z",
@@ -405,7 +415,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     },
     {
       "key": "1@2026-10-14T14:00:00.000Z",
@@ -441,7 +452,8 @@
       "colour": null,
       "labels": [],
       "repeat": null,
-      "link": null
+      "link": null,
+      "transparency": "opaque"
     }
   ]
 }

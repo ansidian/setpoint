@@ -13,7 +13,7 @@ import type {EventTime, GoogleEvent} from './api.ts';
 
 /** The columns an event fills, as the mirror stores it. */
 export type EventColumns = Pick<ItemRow,
-  'title' | 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone' | 'recurrence' | 'place' | 'address' | 'attendees' | 'reminders' | 'leaveReminder' | 'etag' | 'expanded' | 'readOnly' | 'colour' | 'sourceUrl'>;
+  'title' | 'allDay' | 'startsAt' | 'endsAt' | 'startDate' | 'endDate' | 'timeZone' | 'recurrence' | 'place' | 'address' | 'attendees' | 'reminders' | 'leaveReminder' | 'etag' | 'expanded' | 'readOnly' | 'colour' | 'sourceUrl' | 'transparency'>;
 
 /** SV-31: an event's Time to Leave, as a private extended property only Setpoint reads ("on" or "off"). */
 export const LEAVE_PROPERTY = 'setpointTimeToLeave';
@@ -95,6 +95,7 @@ export function eventColumns(event: GoogleEvent, calendarZone: string, calendarD
     readOnly: (event.eventType ?? 'default') !== 'default',
     colour: eventColourOf(event.colorId),
     sourceUrl: event.source?.url?.trim() || null,
+    transparency: event.transparency === 'transparent' ? 'transparent' : 'opaque',
   };
 }
 

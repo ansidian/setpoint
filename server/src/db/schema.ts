@@ -14,7 +14,7 @@ import {check, index, integer, real, sqliteTable, text, uniqueIndex, type AnySQL
 import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
-  NEWS_ADAPTERS, NEWS_SECTIONS, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
+  NEWS_ADAPTERS, NEWS_SECTIONS, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
   type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
@@ -232,6 +232,9 @@ export const items = sqliteTable('items', {
   labels: text('labels', {mode: 'json'}).$type<string[]>(),
   // SV-179: a Google event's own URL (its `source.url`, an .ics file's URL line), for Open (D439).
   sourceUrl: text('source_url'),
+  // SV-180: a Google event's free/busy (its `transparency`); a free one is left out of the editor's
+  // conflict preview (D440). Tasks keep Google's default, busy.
+  transparency: text('transparency', {enum: TRANSPARENCIES}).notNull().default('opaque'),
 }, table => [
   uniqueIndex('items_calendar_provider').on(table.calendarId, table.providerId),
   index('items_starts').on(table.startsAt),

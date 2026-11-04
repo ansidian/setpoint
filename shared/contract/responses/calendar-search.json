@@ -40,7 +40,8 @@
         "colour": null,
         "labels": [],
         "repeat": null,
-        "link": null
+        "link": null,
+        "transparency": "opaque"
       },
       "date": "2026-10-09",
       "upcoming": true,

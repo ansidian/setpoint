@@ -34,6 +34,13 @@ export type CalendarProvider = (typeof CALENDAR_PROVIDERS)[number];
 export const ITEM_KINDS = ['event', 'task'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
+/**
+ * An event's free/busy, as Google names it (its `transparency`): `transparent` is free time, which
+ * the editor's conflict preview leaves out (SV-180, D440), and `opaque` busy, Google's default.
+ */
+export const TRANSPARENCIES = ['opaque', 'transparent'] as const;
+export type Transparency = (typeof TRANSPARENCIES)[number];
+
 /** A day's forecast, drawn as sunny, partly_cloudy_day, cloud and rainy (DESIGN.md › Month grid). */
 export const WEATHER_CONDITIONS = ['sun', 'partly_cloudy', 'cloud', 'rain'] as const;
 export type WeatherCondition = (typeof WEATHER_CONDITIONS)[number];

@@ -28,6 +28,7 @@ function present(row: ItemRow, command: CommandOut | null, occurrence?: {start: 
     read_only: row.readOnly, due_string: row.dueString, time_to_leave: (row.leaveReminder && start && leave.get(`${row.id}@${start}`)) || null, colour: row.colour,
     labels: row.labels ?? [], repeat: row.dueRecurring ? repeatOf(row.dueString) : null,
     link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
+    transparency: row.kind === 'event' ? row.transparency : null,
   };
 }
 

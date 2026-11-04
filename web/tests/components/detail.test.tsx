@@ -20,7 +20,7 @@ function event(fields: Partial<ItemOut>): ItemOut {
     key: '4', id: 4, calendar_id: 2, kind: 'event', title: 'Career fair', time_zone: SEED_TIME_ZONE, recurring: false, recurrence: null, occurrence_start: null,
     place: 'University Student Union', address: null, attendees: [], reminders: [], leave_reminder: false, project: null, done: false, done_at: null, command: null,
     all_day: false, starts_at: '2026-10-15T17:00:00.000Z', ends_at: '2026-10-15T21:00:00.000Z', start_date: null, end_date: null, due_date: null, due_at: null,
-    read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, ...fields,
+    read_only: false, due_string: null, time_to_leave: null, colour: null, labels: [], repeat: null, link: null, transparency: 'opaque', ...fields,
   };
 }
 

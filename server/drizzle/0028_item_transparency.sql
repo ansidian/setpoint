@@ -1,0 +1,1 @@
+ALTER TABLE `items` ADD `transparency` text DEFAULT 'opaque' NOT NULL;

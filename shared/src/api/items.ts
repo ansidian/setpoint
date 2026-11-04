@@ -20,7 +20,7 @@
 //   POST   /api/calendar/push                                 Google Calendar's watch notifications (no session)
 import {z} from 'zod';
 import {CALENDAR_PROVIDERS, COLOURS, EVENT_COLOURS, ITEM_KINDS, RECURRING_SCOPES} from '../enums.ts';
-import type {CalendarProvider, Colour, ItemKind, WeatherCondition} from '../enums.ts';
+import type {CalendarProvider, Colour, ItemKind, Transparency, WeatherCondition} from '../enums.ts';
 import {id, instant, localDate} from './common.ts';
 import type {CommandOut, ItemWhen} from './common.ts';
 
@@ -67,6 +67,9 @@ export interface ItemOut extends ItemWhen {
   // SV-179: what Open opens (D439): a web link in the place, else the event's own URL (Google's
   // source.url), else null. Tasks have none.
   link: string | null;
+  // SV-180: an event's free/busy, as Google names it: `transparent` is free, left out of the
+  // editor's conflict preview (D440). Tasks have none.
+  transparency: Transparency | null;
 }
 
 /** Time to Leave for one occurrence (DESIGN.md › Right pane). */

@@ -122,6 +122,29 @@ describe('the mirror', () => {
     expect(day('2026-10-08').find(item => item.title === 'Opening keynote')!.link).toBe('https://conf.example.org/talks/keynote');
   });
 
+  test('SV-180: an event\'s free/busy (transparency) is kept, busy when Google leaves it out; a change here keeps it in Google', async () => {
+    const {w, google, run, day, command} = await calendarWorld();
+    google.put(PERSONAL, {id: 'track-a', summary: 'Workshop A', transparency: 'transparent',
+      start: {dateTime: zoned('2026-10-08', '09:00')}, end: {dateTime: zoned('2026-10-08', '10:00')}});
+    google.put(PERSONAL, {id: 'standup', summary: 'Standup', transparency: 'opaque',
+      start: {dateTime: zoned('2026-10-08', '09:30')}, end: {dateTime: zoned('2026-10-08', '10:00')}});
+    await run();
+    const workshop = day('2026-10-08').find(item => item.title === 'Workshop A')!;
+    expect(workshop.transparency).toBe('transparent');
+    expect(day('2026-10-08').find(item => item.title === 'Standup')!.transparency).toBe('opaque');
+    expect(day('2026-10-09').find(item => item.title === 'Dinner with Sam')!.transparency).toBe('opaque');
+    // Setpoint doesn't write transparency yet, so Google keeps it through a change made here.
+    const changed = updateItem(w.store, workshop.id, itemUpdateInput.parse({changes: {title: 'Workshop A: tooling'}}));
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'track-a')!.transparency).toBe('transparent');
+    // Marked busy at Google, it reads busy here on the next read.
+    google.put(PERSONAL, {...google.event(PERSONAL, 'track-a')!, transparency: undefined});
+    w.advance(16 * 60_000);
+    await run();
+    expect(day('2026-10-08').find(item => item.title === 'Workshop A: tooling')!.transparency).toBe('opaque');
+  });
+
   test('pages are followed to the last, which carries the sync token', async () => {
     const {google, run, titles} = await calendarWorld();
     for (let at = 0; at < 60; at += 1) google.put(PERSONAL, {id: `filler${at}`, summary: `Filler ${at}`, start: {dateTime: zoned('2026-11-02', '12:00')}, end: {dateTime: zoned('2026-11-02', '12:30')}});

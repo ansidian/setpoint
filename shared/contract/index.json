@@ -563,7 +563,8 @@
         "colour: always null",
         "labels: always empty",
         "repeat: always null",
-        "link: always null"
+        "link: always null",
+        "transparency: always null"
       ]
     },
     {
