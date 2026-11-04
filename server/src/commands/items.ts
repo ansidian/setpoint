@@ -5,6 +5,7 @@ import type {Colour, TodoistColour, ItemCreateInput, ItemUpdateInput, ItemScopeI
 import {whenProblem} from '@setpoint/shared';
 import {and, asc, eq} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
+import {calendarWritable} from '../domain/calendarAccess.ts';
 import {conflict, invalid, notFound} from '../errors.ts';
 import {getSettings} from '../settings.ts';
 import {isoNow} from '../store.ts';
@@ -20,6 +21,11 @@ function calendar(store: Store, calendarId: number) {
   const row = store.db.select().from(t.calendars).where(eq(t.calendars.id, calendarId)).get();
   if (!row) throw notFound('No such calendar.');
   return row;
+}
+
+/** SV-191: a calendar the user can only read (a subscribed holiday calendar) takes no change. */
+export function refuseReadOnlyCalendar(row: {accessRole: string | null}) {
+  if (!calendarWritable(row.accessRole)) throw invalid('This calendar is read-only.');
 }
 
 /** The source a calendar's changes go through. */
@@ -49,6 +55,7 @@ function taskProjectByDefault(store: Store, defaultProject: string | null): stri
 
 export function createItem(store: Store, input: ItemCreateInput): CommandRow {
   const target = calendar(store, input.calendar_id);
+  refuseReadOnlyCalendar(target);
   if ((target.provider === 'todoist') !== (input.kind === 'task')) throw invalid(input.kind === 'task' ? 'Tasks go in Todoist.' : 'Events go in a Google calendar.');
   if (input.kind === 'task' && input.colour) throw invalid('Todoist tasks have no colour of their own.');
   if (input.kind === 'event' && (input.labels.length || input.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
@@ -75,6 +82,7 @@ export function createItem(store: Store, input: ItemCreateInput): CommandRow {
 export function updateItem(store: Store, itemId: number, input: ItemUpdateInput): CommandRow {
   const row = item(store, itemId);
   if (row.readOnly) throw invalid('Google Calendar doesn\'t let this kind of event be changed here.');
+  refuseReadOnlyCalendar(calendar(store, row.calendarId));
   if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be changed.');
   if (row.kind === 'event' && ((input.changes.labels?.length ?? 0) > 0 || input.changes.repeat)) throw invalid('Labels and a Todoist repeat are a task\'s; an event repeats by its rule.');
   // SV-74: a date is taken off only in Todoist (Setpoint would need Todoist's "no date"), so an existing task keeps one.
@@ -93,6 +101,7 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
   if (moving) {
     const from = calendar(store, row.calendarId);
     const to = calendar(store, changes.calendar_id!);
+    refuseReadOnlyCalendar(to);
     if (to.provider !== from.provider) throw invalid('An item stays an event or a task.');
     // Google's events.move: within one Google account, and a series as a whole (it refuses an
     // occurrence, "cannotChangeOrganizerOfInstance"); This and following starts a new series there.
@@ -115,6 +124,7 @@ export function updateItem(store: Store, itemId: number, input: ItemUpdateInput)
 export function deleteItem(store: Store, itemId: number, input: ItemScopeInput): CommandRow {
   const row = item(store, itemId);
   if (row.readOnly) throw invalid('Google Calendar doesn\'t let this kind of event be deleted here.');
+  refuseReadOnlyCalendar(calendar(store, row.calendarId));
   if (row.kind === 'task' && row.recurringItemId !== null) throw invalid('A completed occurrence can\'t be deleted.');
   if (row.recurrence && row.recurringItemId === null && input.scope !== 'all' && !input.occurrence_start) throw invalid('Name the occurrence (occurrence_start) to delete part of a recurring event.');
   return createCommand(store, {

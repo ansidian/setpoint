@@ -18,6 +18,7 @@ import {eq} from 'drizzle-orm';
 import type {CommandRow, Previous} from '../../commands/index.ts';
 import type {ItemDeletion, ItemRow} from '../../commands/itemMirror.ts';
 import * as t from '../../db/schema.ts';
+import {calendarWritable} from '../../domain/calendarAccess.ts';
 import {CALENDAR_HEX, foregroundFor} from '../../domain/colours.ts';
 import type {Store} from '../../store.ts';
 import {ProviderError} from '../../sync/errors.ts';
@@ -36,8 +37,11 @@ export const chosenEventId = (command: CommandRow, itemId: number) => `sp${creat
 const itemRow = (store: Store, id: number) => store.db.select().from(t.items).where(eq(t.items.id, id)).get() ?? null;
 const calendarOf = (store: Store, row: ItemRow) => store.db.select().from(t.calendars).where(eq(t.calendars.id, row.calendarId)).get()!;
 
-function refuseReadOnly(row: ItemRow) {
+// Google's own kinds of event, and SV-191's calendars the user can only read: a command sent before
+// the role came, or by an older client, fails in place in Setpoint's words rather than Google's 403.
+function refuseReadOnly(store: Store, row: ItemRow) {
   if (row.readOnly) throw new ProviderError('permanent', 'Google Calendar doesn\'t let this kind of event be changed here.');
+  if (!calendarWritable(calendarOf(store, row).accessRole)) throw new ProviderError('permanent', 'This calendar is read-only.');
 }
 
 /** Inserts with Setpoint's id; a retry that finds it already there takes Google's copy. */
@@ -117,6 +121,7 @@ async function setColour(store: Store, api: GoogleCalendarApi, command: CommandR
 async function create(store: Store, api: GoogleCalendarApi, command: CommandRow) {
   const row = itemRow(store, command.targetId);
   if (!row) return;
+  refuseReadOnly(store, row);
   const calendar = calendarOf(store, row);
   const id = row.providerId.startsWith('local-') ? chosenEventId(command, row.id) : row.providerId;
   // The id goes on the row first, so a sync that sees the new event meanwhile finds this row.
@@ -138,7 +143,10 @@ async function update(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const payload = command.payload as unknown as UpdatePayload;
   const target = itemRow(store, command.targetId);
   if (!target) return;
-  refuseReadOnly(target);
+  refuseReadOnly(store, target);
+  // A move: the mirror already shows it in the calendar it goes to, so the one it leaves is asked too.
+  const leaving = payload.from_calendar_id === undefined ? undefined : store.db.select().from(t.calendars).where(eq(t.calendars.id, payload.from_calendar_id)).get();
+  if (leaving && !calendarWritable(leaving.accessRole)) throw new ProviderError('permanent', 'This calendar is read-only.');
   const calendar = calendarOf(store, target);
   const calendarId = calendar.providerId;
   const created = (command.previous as Previous | null)?.created ?? [];
@@ -208,7 +216,7 @@ async function remove(store: Store, api: GoogleCalendarApi, command: CommandRow)
   const payload = command.payload as unknown as ItemDeletion;
   const row = itemRow(store, payload.item_id);
   if (!row) return;
-  refuseReadOnly(row);
+  refuseReadOnly(store, row);
   const calendarId = calendarOf(store, row).providerId;
   const gone = async (work: Promise<unknown>) => {
     try {
@@ -264,6 +272,7 @@ async function removeSeries(store: Store, api: GoogleCalendarApi, calendarId: st
 async function importOne(store: Store, api: GoogleCalendarApi, command: CommandRow, event: IcsImportEvent, sourceId: number | undefined) {
   const row = itemRow(store, command.targetId);
   if (!row) return;
+  refuseReadOnly(store, row);
   const calendarId = calendarOf(store, row).providerId;
   const zone = event.time_zone ?? store.timeZone;
   const shared = (fields: Pick<IcsImportEvent, 'title' | 'description' | 'url' | 'transparency' | 'reminders'>) => ({

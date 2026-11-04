@@ -10,7 +10,7 @@ import type {IcsEventOut, IcsImportEvent, IcsImportInput, IcsReadOut} from '@set
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import {createCommand} from '../commands/index.ts';
 import type {CommandRow} from '../commands/index.ts';
-import {calendarSourceId} from '../commands/items.ts';
+import {calendarSourceId, refuseReadOnlyCalendar} from '../commands/items.ts';
 import {localProviderId, whenOf} from '../commands/itemMirror.ts';
 import type {ItemRow} from '../commands/itemMirror.ts';
 import * as t from '../db/schema.ts';
@@ -77,12 +77,13 @@ function columnsOf(store: Store, event: IcsImportEvent): Partial<ItemRow> {
 
 /**
  * One event into a Google calendar by its iCalUID. Refused, changing nothing, for a calendar that
- * isn't Google's, or while the event the calendar holds for it has a change of its own on its way.
+ * isn't Google's or that the user can only read (SV-191), or while the event the calendar holds for it has a change of its own on its way.
  */
 export function importEvent(store: Store, input: IcsImportInput): CommandRow {
   const calendar = store.db.select().from(t.calendars).where(eq(t.calendars.id, input.calendar_id)).get();
   if (!calendar) throw notFound('No such calendar.');
   if (calendar.provider !== 'google') throw invalid('An .ics file imports into a Google calendar.');
+  refuseReadOnlyCalendar(calendar);
   const {event} = input;
   const held = heldRow(store, calendar.id, event.ical_uid);
   const payload = {import: {calendar_id: calendar.id, event}};
