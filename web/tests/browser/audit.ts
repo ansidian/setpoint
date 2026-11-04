@@ -145,6 +145,15 @@ const JOBS_EVERYWHERE: Patch[] = [
     to: `<span class="grow">News</span><span class="ms s16" style="color: var(--caution)">warning</span></a>${SETTINGS_JOBS}\n    <a class="nav" href="#"><span class="ms">auto_awesome</span>`},
 ];
 
+// Decided while building #304 (SV-181): Calendar's header has Import .ics… before Search; its
+// `download` glyph is drawn from glyphs/icons.json, which the round-2 font lacks.
+const DOWNLOAD = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-export', 'glyphs', 'icons.json'), 'utf8')).download.d as string;
+const IMPORT_ICS: Patch = {
+  why: 'Decided while building #304: Import .ics…, the header\'s download button before Search',
+  from: '<button class="ibtn" aria-label="Search calendar"><span class="ms">search</span></button>',
+  to: `<button class="ibtn" aria-label="Import .ics…"><svg class="ms" width="18" height="18" viewBox="0 -960 960 960" fill="currentColor" style="display: block; flex: none"><path d="${DOWNLOAD}"></path></svg></button>\n    <button class="ibtn" aria-label="Search calendar"><span class="ms">search</span></button>`,
+};
+
 /** Patches for every board that draws what they change; a board without it skips them. */
 const EVERY_BOARD: Patch[] = [AUDIT_TOKENS, TODAY_NAMED];
 /** And for every board from before Jobs (01–31): Jobs's boards draw News and Jobs themselves. */
@@ -584,6 +593,7 @@ export const BOARDS: Board[] = [
       ...AGENDA_OCT_7_PATCHES,
       ...GRID_RINGS,
       ...AGENDA_OCT_7_RINGS,
+      IMPORT_ICS,
     ],
   },
   // F6: the editor.
@@ -595,6 +605,7 @@ export const BOARDS: Board[] = [
       ...SUNDAY_FIRST,
       ...CALENDAR_SEED_PATCHES,
       ...GRID_RINGS,
+      IMPORT_ICS,
       {why: 'DESIGN.md › Sidebar on Calendar: the selected day is `sub` in the mini-month (the board draws `sub2` with `ink` text)',
         from: '<span style="background: var(--sub2); color: var(--ink)">9</span>', to: '<span class="vis">9</span>'},
       {why: 'The line\'s marks draw 2 px either side of their text without moving it, so the caret stays on its letter (the board pads them)',
@@ -637,7 +648,7 @@ export const BOARDS: Board[] = [
   // F7: Settings and Light. 22a and 22b are boards 01 and 11 in Light, so
   // they take the same patches, plus Light's page.
   {name: '22a-light-inbox', file: '22a-light-inbox.html', width: 1677, height: 1050, patches: [...BOARD_01_PATCHES, LIGHT_PAGE]},
-  {name: '22b-light-calendar', file: '22b-light-calendar.html', width: 1677, height: 1050, patches: [...SUNDAY_FIRST, ...CALENDAR_SEED_PATCHES, ...AGENDA_OCT_7_PATCHES, ...GRID_RINGS, ...AGENDA_OCT_7_RINGS, LIGHT_PAGE]},
+  {name: '22b-light-calendar', file: '22b-light-calendar.html', width: 1677, height: 1050, patches: [...SUNDAY_FIRST, ...CALENDAR_SEED_PATCHES, ...AGENDA_OCT_7_PATCHES, ...GRID_RINGS, ...AGENDA_OCT_7_RINGS, IMPORT_ICS, LIGHT_PAGE]},
   {
     // Fixtures needs-reconnect, stale-personal, checked, precision and ntfy (Home); Settings › Accounts over the Inbox.
     name: '17-settings-accounts', file: '17-settings-accounts.html', width: 1677, height: 1050,
