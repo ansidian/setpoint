@@ -15,6 +15,29 @@ export const ICS_TOO_BIG = 'This file is over 2 MB, the most an import takes';
 /** Whether a dropped or picked file is an .ics calendar, by its type or its name. */
 export const isIcsFile = (file: {name: string; type: string}) => file.type === 'text/calendar' || /\.ics$/i.test(file.name);
 
+/**
+ * SV-190: what a drag over the grid holds, before the drop (DESIGN.md #305). A page sees only each
+ * item's kind and type then, not its name or size, so: one file of `text/calendar`, or of a type the
+ * browser doesn't know (''), might import ('ics', the drop then judges it by name); one of any other
+ * type can't ('other'); more than one file can't ('several'); and a drag that isn't of files is none
+ * of these (null), as an item's own drag on the grid.
+ */
+export type FileDrag = 'ics' | 'other' | 'several' | null;
+export function fileDrag(types: readonly string[], items: readonly {kind: string; type: string}[]): FileDrag {
+  if (!types.includes('Files')) return null;
+  const files = items.filter(item => item.kind === 'file');
+  if (files.length > 1) return 'several';
+  const type = files[0]?.type ?? '';
+  return type === 'text/calendar' || type === '' ? 'ics' : 'other';
+}
+
+/** The words the grid shows while a file is over it. */
+export const FILE_DRAG_LINES: Record<NonNullable<FileDrag>, string> = {
+  ics: 'Drop to import .ics',
+  other: 'Only an .ics file imports',
+  several: 'One .ics file at a time',
+};
+
 /** The ticks the review starts with: every event but the past ones. */
 export const initialTicks = (events: IcsEventOut[]) => new Set(events.filter(event => !event.past).map(event => event.ical_uid));
 
