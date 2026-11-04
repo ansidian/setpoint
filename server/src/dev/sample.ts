@@ -13,7 +13,7 @@ import type {OpenDatabase} from '../db/open.ts';
 import type {Store} from '../store.ts';
 import {searchBody} from '../domain/searchBody.ts';
 import {DEFAULT_SCHEDULES} from '../domain/sources.ts';
-import {zonedInstant} from '../domain/time.ts';
+import {addDays, zonedInstant} from '../domain/time.ts';
 import * as t from '../db/schema.ts';
 import {seedNews} from './news.ts';
 // Jobs (after News): a module that can be removed whole (src/jobs/README.md lists its wiring points).
@@ -291,16 +291,20 @@ export const SAMPLE_EMAILS: SampleEmail[] = [
     attachments: [{filename: 'invite.ics', mimeType: 'text/calendar', sizeBytes: 1024}]},
 ];
 
-const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'todoist'; name: string; provider: 'google' | 'todoist'; colour: Colour | null; account: AccountLabel | null}[] = [
-  {key: 'personal', name: 'Personal', provider: 'google', colour: 'cool', account: 'Personal'},
-  {key: 'classes', name: 'Classes', provider: 'google', colour: 'cyan', account: 'Personal'},
-  {key: 'jobs', name: 'Jobs', provider: 'google', colour: 'violet', account: 'Jobs'},
+const CALENDARS: {key: 'personal' | 'classes' | 'jobs' | 'holidays' | 'todoist'; name: string; provider: 'google' | 'todoist'; colour: Colour | null; account: AccountLabel | null; accessRole?: string}[] = [
+  {key: 'personal', name: 'Personal', provider: 'google', colour: 'cool', account: 'Personal', accessRole: 'owner'},
+  {key: 'classes', name: 'Classes', provider: 'google', colour: 'cyan', account: 'Personal', accessRole: 'owner'},
+  {key: 'jobs', name: 'Jobs', provider: 'google', colour: 'violet', account: 'Jobs', accessRole: 'owner'},
   {key: 'todoist', name: 'Todoist', provider: 'todoist', colour: null, account: null},
+  // SV-191: a subscribed holiday calendar, which Google lets the user only read. Last, so the others
+  // keep the ids the iPhone app's recorded contract names; listed before Todoist all the same.
+  {key: 'holidays', name: 'Holidays in United States', provider: 'google', colour: 'good', account: 'Personal', accessRole: 'reader'},
 ];
 
 type SampleItem = {calendar: (typeof CALENDARS)[number]['key']; title: string} & (
   | {kind: 'event'; date: string; start: string; end: string; recurrence?: string; place?: string; address?: string; attendees?: string[]; reminders?: number[]; leave?: true; url?: string; free?: true; uid?: string}
   | {kind: 'task'; due: string; project: string; done?: [string, string]}
+  | {kind: 'day'; date: string}
 );
 
 /** October 2026's calendar (BRIEF.md › Sample data; boards 11, 12a, 12b, 14, 16). */
@@ -325,6 +329,8 @@ export const SAMPLE_ITEMS: SampleItem[] = [
   {calendar: 'todoist', kind: 'task', title: 'Pay rent', due: '2026-10-07', project: 'Home'},
   {calendar: 'todoist', kind: 'task', title: 'Renew car registration', due: '2026-10-08', project: 'Home'},
   {calendar: 'todoist', kind: 'task', title: 'Return library books', due: '2026-10-05', project: 'Inbox', done: ['2026-10-05', '17:30']},
+  // SV-191: an all-day event on the read-only holiday calendar, after October's busy weeks.
+  {calendar: 'holidays', kind: 'day', title: 'Veterans Day', date: '2026-11-11'},
 ];
 
 /** Forecasts only where the brief draws them: sun on the 7th, clouds on the 8th, rain on the 13th. */
@@ -417,7 +423,8 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
     CALENDARS.forEach((calendar, position) => {
       const row = tx.insert(t.calendars).values({
         provider: calendar.provider, providerId: `seed-${calendar.key}`, name: calendar.name, colour: calendar.colour,
-        accountId: calendar.account ? accountIds.get(calendar.account)! : null, position,
+        accountId: calendar.account ? accountIds.get(calendar.account)! : null, accessRole: calendar.accessRole ?? null,
+        position: calendar.provider === 'todoist' ? CALENDARS.length : position,
       }).returning({id: t.calendars.id}).get();
       calendarIds.set(calendar.key, row.id);
     });
@@ -432,6 +439,8 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
           attendees: item.attendees ?? null, reminders: item.reminders ?? null, leaveReminder: item.leave ?? false, sourceUrl: item.url ?? null, transparency: item.free ? 'transparent' : 'opaque',
           icalUid: item.uid ?? null,
         }).run();
+      } else if (item.kind === 'day') {
+        tx.insert(t.items).values({...common, kind: 'event', allDay: true, startDate: item.date, endDate: addDays(item.date, 1)}).run();
       } else {
         tx.insert(t.items).values({
           ...common, kind: 'task', allDay: true, dueDate: item.due, project: item.project, doneAt: item.done ? iso(item.done) : null,

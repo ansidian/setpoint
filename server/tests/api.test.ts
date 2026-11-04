@@ -91,7 +91,7 @@ describe('reads', () => {
     const c = await signedIn(w);
     const month = (await c.send('GET', '/api/items?from=2026-10-01&to=2026-11-01')).body;
     expect(month.items.filter((item: {title: string}) => item.title === 'Dentist')).toMatchObject([{place: 'Smile Dental', address: '1420 Elm St', reminders: [30]}]);
-    expect((await c.send('GET', '/api/calendars')).body).toHaveLength(4);
+    expect((await c.send('GET', '/api/calendars')).body).toHaveLength(5);
     expect((await c.send('PATCH', '/api/calendars/2', {body: {visible: false}})).body).toMatchObject({name: 'Classes', visible: false, command: null});
     // SV-20: a colour answers with its command pending; Todoist's has none, and an empty change is refused.
     expect((await c.send('PATCH', '/api/calendars/2', {body: {colour: 'sun'}})).body).toMatchObject({name: 'Classes', colour: 'sun', command: {kind: 'calendar_colour', state: 'pending'}});

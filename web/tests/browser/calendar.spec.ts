@@ -306,7 +306,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     const empty = page.locator('.rpane .ag-empty');
     const hiddenMark = page.locator('.hd .cal-hidden');
     const names = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).map(calendar => calendar.name);
-    assert.deepEqual(names, ['Personal', 'Classes', 'Jobs', 'Todoist']);
+    assert.deepEqual(names, ['Personal', 'Classes', 'Jobs', 'Holidays in United States', 'Todoist']);
     // Some calendars off: the day still has what's shown, and the header is as it was.
     await page.locator('.calrow', {hasText: 'Personal'}).click();
     await until('Gym and Dentist leave the pane', () => page.locator('.rpane .ag-item').allTextContents(), rows => rows.length === 2);
@@ -326,7 +326,7 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     await until('Wed Oct 7 shows all four again', () => chips(page, '2026-10-07'), list => list.join() === '7 AMGym,2:30 PMDentist,CS 101 lab report,Pay rent');
     assert.equal(await hiddenMark.count(), 0);
     const toast = page.locator('.toast');
-    await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 4 calendars') ?? false);
+    await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 5 calendars') ?? false);
     await until('kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.every(calendar => calendar.visible));
     await toast.getByRole('button', {name: 'Undo'}).click();
     await until('Undo hides them again', () => empty.textContent(), line => line === '4 hidden · Show all');

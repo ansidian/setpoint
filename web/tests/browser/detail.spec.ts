@@ -3,7 +3,8 @@
 // D3), then the flows: open and close with Esc or the grid, another item shown in the same card, a drag
 // starting from the card but not its text, and Edit handing over to the right pane. Where the card
 // lies and how it glides are placement.test.ts's and glide.test.ts's tables; the place on screen, the
-// glide and the drag's landing are by eye (D416, D417).
+// glide and the drag's landing are by eye (D416, D417). SV-191: an event on a calendar the user can
+// only read (the seed's holiday) changes nowhere, and no picker offers its calendar.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
@@ -299,6 +300,64 @@ test('SV-179: the seed\'s Career fair has its own link (Google\'s source.url) on
     await page.keyboard.press('o');
     await until('the link opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
     assert.deepEqual(await page.evaluate(() => (window as unknown as {opened: string[]}).opened), ['https://careers.example.edu/fair/fall-2026']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// Two invented events, so the file opens the import's review (one would open the editor).
+const TWO_EVENTS = `${['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Example Events//Schedule Export//EN',
+  'BEGIN:VEVENT', 'UID:one@events.example.com', 'DTSTAMP:20261001T120000Z', 'DTSTART:20261020T160000Z', 'DTEND:20261020T170000Z', 'SUMMARY:Planning', 'END:VEVENT',
+  'BEGIN:VEVENT', 'UID:two@events.example.com', 'DTSTAMP:20261001T120000Z', 'DTSTART:20261021T160000Z', 'DTEND:20261021T170000Z', 'SUMMARY:Review', 'END:VEVENT',
+  'END:VCALENDAR'].join('\r\n')}\r\n`;
+
+test('SV-191: the seed\'s Veterans Day, on a holiday calendar the user can only read: its menu and card change nothing, E does nothing, and neither the editor nor Into offers the calendar', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-11-11`);
+    const holiday = chip(page, '2026-11-11', 'Veterans Day');
+    await holiday.waitFor();
+    // The right-click menu: every action there, each off.
+    await holiday.click({button: 'right'});
+    const menu = page.locator('.ctx-menu');
+    await menu.waitFor();
+    assert.deepEqual(await menu.locator('.menu-i').evaluateAll(items => items.map(item => [item.textContent, (item as HTMLButtonElement).disabled])),
+      [['EditE', true], ['Clone', true], ['Copy⌘C', true], ['Colour', true], ['DeleteDel', true]]);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({state: 'detached'});
+
+    // The card: Edit off, saying the calendar is read-only, and its other controls off.
+    await holiday.click();
+    const dialog = page.getByRole('dialog', {name: 'Veterans Day'});
+    await dialog.waitFor();
+    const edit = dialog.getByRole('button', {name: /^Edit/});
+    assert.deepEqual([await edit.getAttribute('aria-disabled'), await edit.getAttribute('data-tip')], ['true', 'This calendar is read-only']);
+    for (const name of ['Clone', 'Copy', 'Colour', 'Delete']) assert.equal(await dialog.getByRole('button', {name, exact: true}).getAttribute('aria-disabled'), 'true', name);
+    await page.keyboard.press('e');
+    // Nothing happens to wait for: E leaves the event alone.
+    await page.waitForTimeout(250);
+    await setpoint.idle();
+    assert.equal(await page.locator('.editor').count(), 0);
+    assert.equal(await dialog.count(), 1, 'the card stays');
+
+    // The editor's Calendar menu lists only the calendars an event can go in.
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    await page.keyboard.press('c');
+    await page.locator('.editor').getByRole('button', {name: 'Calendar'}).click();
+    assert.deepEqual(await page.locator('.editor').getByRole('menuitemradio').allTextContents(), ['Personal', 'Classes', 'Jobs']);
+
+    // So does the import's Into.
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', {name: 'Import .ics…'}).click();
+    await (await chooser).setFiles({name: 'two.ics', mimeType: 'text/calendar', buffer: Buffer.from(TWO_EVENTS)});
+    const pane = page.getByRole('region', {name: 'Import events'});
+    await pane.getByRole('button', {name: 'Calendar'}).click();
+    assert.deepEqual(await page.getByRole('menuitemradio').allTextContents(), ['Personal', 'Classes', 'Jobs']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

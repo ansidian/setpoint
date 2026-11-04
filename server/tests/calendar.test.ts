@@ -49,8 +49,10 @@ describe('items in a range', () => {
 
   test('calendars and weather', () => {
     const w = world({seed: true});
-    expect(calendarList(w.store).map(calendar => [calendar.name, calendar.colour, calendar.visible])).toEqual([
-      ['Personal', 'cool', true], ['Classes', 'cyan', true], ['Jobs', 'violet', true], ['Todoist', null, true],
+    expect(calendarList(w.store).map(calendar => [calendar.name, calendar.colour, calendar.visible, calendar.writable])).toEqual([
+      ['Personal', 'cool', true, true], ['Classes', 'cyan', true, true], ['Jobs', 'violet', true, true],
+      // SV-191: the seed's subscribed holiday calendar, which the user can only read.
+      ['Holidays in United States', 'good', true, false], ['Todoist', null, true, true],
     ]);
     expect(weatherDays(w.store, '2026-10-01', '2026-11-01', true).map(day => [day.date, day.condition])).toEqual([
       ['2026-10-07', 'sun'], ['2026-10-08', 'cloud'], ['2026-10-13', 'rain'],
