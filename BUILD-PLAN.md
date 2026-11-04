@@ -728,6 +728,66 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   - The browser checks cover each state, both Settings pages and Light.
   - The board audit is clean or has its differences listed in DESIGN.md.
 
+### Jobs on LinkedIn (after Jobs)
+
+> **Added 2026-11-03 (Andy, darma SV-172, D433):** decision 52's "Not now: a browser extension" is
+> reopened for LinkedIn only ([BRIEF.md › Applied before?](BRIEF.md#applied-before-decision-52)).
+> Setpoint on LinkedIn is a desktop Chrome extension loaded unpacked from `extension/`, reading
+> `POST /api/jobs/check` with its own token. Three slices take the spike on `spike/linkedin-chip`
+> to a release, one session each and in order: SV-173 to SV-175, each blocked by the one before.
+
+### SV-173. The check route and its token
+
+- **`POST /api/jobs/check`** (`jobsTokenApi` in `server/src/jobs/api.ts`): at most 50 postings, a
+  company and a title each, answered in order. Each gets its applications for the role and the
+  company's others (`checkPosting` in rules.ts, matching companies as Applied before does). Nothing
+  while Jobs is off, which the answer says.
+- **Its own bearer token** (`server/src/jobs/token.ts`, the `jobs_check_token` table, Jobs's
+  migration 0008), as Home Assistant's is: issued, rotated and revoked by
+  `npm run cli -- jobs-token [--revoke]`. It opens nothing else. The route is mounted before the
+  session through createApp's `tokenRoutes`, a wiring point in the Jobs README.
+- **Done when:**
+  - `npm test` passes, including check.test.ts (a batch in order, Jobs off, refused postings and the
+    token's limits), reading.test.ts's `checkPosting` table, store.test.ts (the table list and
+    Jobs's nine migrations), drop.test.ts and boundary.test.ts.
+  - `shared/contract` is unchanged: the route is new, and nothing the iPhone app reads moves.
+  - No browser spec covers it (no web change). Pushed to master (D119), not deployed (SV-175).
+
+### SV-174. The extension, built and tested
+
+- **TypeScript in `extension/src/`,** bundled by esbuild into `extension/dist/`, which Chrome loads:
+  one `npm run extension:build`, typechecked in `npm run typecheck`, and the service worker checks
+  Setpoint's answer against `jobsCheckSchema` from `@setpoint/shared`.
+- **Pure parts tested:** reading the pane and the cards against saved LinkedIn DOM fixtures (trimmed
+  from the live page, with invented companies and titles) in Vitest's Chromium, and the chip's words
+  as a table, in step with `web/src/app/jobs/words.ts`'s `standing`.
+- **A broken reader says so:** on a LinkedIn jobs page whose pane or cards can't be read for a few
+  seconds, the toolbar icon shows a badge and the tooltip "Setpoint couldn't read this LinkedIn
+  page", so a LinkedIn change doesn't just make chips quietly disappear.
+- **DESIGN.md** gets the chip's look and words in "Decided while building", with Andy's agreement.
+  `extension/README.md` covers the build, loading it unpacked, the options and the hooks it reads.
+- **Done when:**
+  - `npm test` covers the readers (pane and cards, including "Selected, …" and "… (Verified job)"
+    titles, and a pane whose title still names the last job), the words table and the badge's rule.
+    Lint and typecheck pass.
+  - It's built and loaded unpacked in Chrome against `npm run try`, by Andy or with him at the
+    keyboard (an agent can't load an unpacked extension). Options save and test, the permission
+    prompt grants the address, and chips draw on LinkedIn.
+
+### SV-175. Live against prod, and a week of real use
+
+- **Release:** `npm run release:check` on HEAD, then the deploy with Andy's go-ahead. The prod token
+  comes from `jobs-token` on the server, through the ops workspace, and Andy pastes it into the
+  extension's options. The spike's branch and worktree are deleted.
+- **The natural check, about a week** (Waiting):
+  - Where LinkedIn marks a job Applied, the chip agrees. A miss with the company matched points at
+    `checkPosting`'s title rule, and one without at a company-name difference.
+  - An application made on the company's own hiring site shows a chip once its confirmation is read.
+  - No "couldn't read this page" badge over the week. If one shows, the README's hooks are where to
+    fix it.
+  - A page of cards is one request, and Setpoint's log shows no errors from the route.
+- **Done when:** the check holds, or what it found is filed as its own issue.
+
 ## Order and parallelism
 
 ```
@@ -741,6 +801,8 @@ After B8 (News): N1 ──┬──► N2 ──► N3 ──┐
                       └──► N4 ─────────┴──► N5
 
 After News (Jobs): J1 ──► J2 ──► J3 ──► J4 ──► J5 ──► J6 ──► J7 ──► J8
+
+After Jobs (Jobs on LinkedIn): SV-173 ──► SV-174 ──► SV-175
 ```
 
 - **News waits for the cutover** and doesn't hold up any 2.0 slice. N4 builds against N1's seed while
@@ -765,5 +827,5 @@ After News (Jobs): J1 ──► J2 ──► J3 ──► J4 ──► J5 ──
 - Reply and compose, ntfy action buttons, full phone parity, the real mark.
 - Matching a security email to a reconnect Andy just did.
 - News's tuning round (muting topics, "less like this", choosing sources) and News on the phone.
-- Jobs on the phone and in the iPhone app; a browser extension or a read-only check endpoint for
-  Applied before; matching a JD against a résumé (BRIEF › Jobs).
+- Jobs on the phone and in the iPhone app; the extension on other job boards or in other browsers;
+  matching a JD against a résumé (BRIEF › Jobs).

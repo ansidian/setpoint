@@ -611,9 +611,17 @@ be where he looks before applying:
   date and outcome.
 - **A badge on job-match emails** in mail, on the row and in the reader, when the company matches:
   "Applied Sep 24 · Rejected Oct 5".
+- **On LinkedIn's postings** (D433, SV-172): Setpoint on LinkedIn, a desktop Chrome extension loaded
+  unpacked from this repo's `extension/`, with no Web Store listing. It reads LinkedIn's job search,
+  its job pane and a job's own page:
+  - **The pane** has a chip after the title: "Applied Sep 16 · Rejected Oct 5", "Applied to 2 other
+    roles here" or "Not applied".
+  - **A card** has a smaller one only when there's an application.
+  - **It reads** through `POST /api/jobs/check` with its own token from `npm run cli -- jobs-token`,
+    apart from the session. The token opens nothing else.
 
-Not now: a browser extension on the posting itself, or a badge in other apps. Either could use a
-read-only check endpoint later.
+Not now: other job boards and other browsers, since each board needs its own readers, or a badge in
+other apps.
 
 ### The JD (decisions 53, 54)
 
@@ -1311,7 +1319,8 @@ about 330 emails in the Jobs account since May, and Business's Career mail.
     confirmation is a duplicate while the application is open, and a re-application once it's
     closed. Prod data had both: a role re-applied to after a rejection, and one confirmed twice.
 52. **Applied before** is checked where Andy looks before applying: Jobs search and a badge on
-    job-match emails. The point is not applying twice, above all after a rejection.
+    job-match emails, and LinkedIn's postings through an extension (D433). The point is not applying
+    twice, above all after a rejection.
 53. **The JD is kept as it was:** full text, source and date, a what-they-want summary, location and
     setting, salary, must-haves and nice-to-haves. No résumé matching. Prod data: confirmations
     almost never link to the posting, and some don't name the role.
