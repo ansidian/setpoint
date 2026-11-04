@@ -266,7 +266,13 @@
 /* The location in place (SV-170): the title's pencil and fill under the pointer; "Add location" in ink3. */
 .jb-facts .jb-place { display: inline-flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; color: inherit; }
 .jb-facts .jb-place.none { color: var(--ink3); }
-.jb-facts .jb-place .pen { margin: calc((1lh - 14px) / 2) 0 0 2px; }
+/* The pencil takes no room on the line: it sits 2 px after the place, in the 18 px before the next
+   fact, and the fill, drawn behind, reaches over it, so the facts stand where board 32 has them. */
+.jb-facts button.jb-place { position: relative; isolation: isolate; }
+.jb-facts button.jb-place .pen { margin: calc((1lh - 14px) / 2) -16px 0 -4px; }
+.jb-facts button.jb-place::before { content: ''; position: absolute; inset: -4px -18px -4px -4px; z-index: -1; border-radius: 12px; background: var(--sub);
+  opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) { .jb-facts button.jb-place:hover { background: none; box-shadow: none; } .jb-facts button.jb-place:hover::before { opacity: 1; } }
 .jb-facts span.jb-place { align-items: center; gap: 6px 8px; flex-wrap: wrap; }
 .jb-facts span.jb-place .icon { margin-top: 0; }
 .jb-facts .jb-place .jb-edit.sm { margin: -4px 0; flex: 0 1 240px; width: 240px; }
