@@ -15,6 +15,7 @@ import {spawn, spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {cliLine} from './dev/cliLine.ts';
 import {newsSnapshotIn} from './dev/newsSnapshot.ts';
 import {seedFile} from './dev/seedFile.ts';
 
@@ -86,7 +87,7 @@ function pairingLink(): string {
   const issued = spawnSync(process.execPath, ['src/cli.ts', 'pair-link'], {cwd: SERVER, env, encoding: 'utf8'});
   const link = issued.stdout.match(/^setpoint:\/\/pair\?\S+$/m)?.[0];
   if (issued.status !== 0 || !link) return `Couldn't make a pairing link: ${issued.stderr.trim() || 'no link'}\n`;
-  return `Pair the iPhone app (once; a new link: SETPOINT_DATA_DIR=${path.relative(ROOT, dataDir)} SETPOINT_PORT=${port} npm run cli -- pair-link):
+  return `Pair the iPhone app (once; a new link: ${cliLine(dataDir, port, 'pair-link')}):
   xcrun simctl openurl booted '${link}'
 `;
 }
