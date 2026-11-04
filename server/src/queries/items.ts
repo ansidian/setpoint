@@ -1,7 +1,7 @@
 // The calendar's read queries (SV-2 decision D4): items in a range with recurring events expanded,
 // one item, the calendars and the weather. Events and Todoist tasks are one item model.
 import type {CalendarOut, CommandOut, ItemOut, ItemsOut, RecentPlaceOut, TimeToLeaveOut, TodoistLabelOut, TodoistProjectOut, WeatherDayOut} from '@setpoint/shared';
-import {isTodoistColour} from '@setpoint/shared';
+import {eventLink, isTodoistColour} from '@setpoint/shared';
 import {and, asc, eq, gte, isNotNull, lt} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
@@ -27,6 +27,7 @@ function present(row: ItemRow, command: CommandOut | null, occurrence?: {start: 
     done: row.doneAt !== null, done_at: row.doneAt, command,
     read_only: row.readOnly, due_string: row.dueString, time_to_leave: (row.leaveReminder && start && leave.get(`${row.id}@${start}`)) || null, colour: row.colour,
     labels: row.labels ?? [], repeat: row.dueRecurring ? repeatOf(row.dueString) : null,
+    link: row.kind === 'event' ? eventLink({place: row.place, address: row.address, source_url: row.sourceUrl}) : null,
   };
 }
 

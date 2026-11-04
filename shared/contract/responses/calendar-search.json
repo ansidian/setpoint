@@ -39,7 +39,8 @@
         "time_to_leave": null,
         "colour": null,
         "labels": [],
-        "repeat": null
+        "repeat": null,
+        "link": null
       },
       "date": "2026-10-09",
       "upcoming": true,

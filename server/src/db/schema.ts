@@ -230,6 +230,8 @@ export const items = sqliteTable('items', {
   colour: text('colour', {enum: COLOURS}),
   // F6b: a task's Todoist labels, by name (Todoist's key for them).
   labels: text('labels', {mode: 'json'}).$type<string[]>(),
+  // SV-179: a Google event's own URL (its `source.url`, an .ics file's URL line), for Open (D439).
+  sourceUrl: text('source_url'),
 }, table => [
   uniqueIndex('items_calendar_provider').on(table.calendarId, table.providerId),
   index('items_starts').on(table.startsAt),

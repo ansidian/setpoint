@@ -101,6 +101,27 @@ describe('the mirror', () => {
     expect(reads.map(request => [request.query.get('syncToken') !== null, request.query.get('timeMin') !== null])).toEqual([[true, false], [false, true]]);
   });
 
+  test('SV-179: an event\'s own URL (source.url) is kept and is its link, unless its location has one; a change here keeps it in Google', async () => {
+    const {w, google, run, day, command} = await calendarWorld();
+    google.put(PERSONAL, {id: 'talk', summary: 'Keynote', location: 'Hall B', source: {url: 'https://conf.example.org/talks/keynote', title: 'Fall conference'},
+      start: {dateTime: zoned('2026-10-08', '09:00')}, end: {dateTime: zoned('2026-10-08', '10:00')}});
+    google.put(PERSONAL, {id: 'call', summary: 'Interview', location: 'https://meet.example.com/j/1', source: {url: 'https://jobs.example.com/apply/1'},
+      start: {dateTime: zoned('2026-10-08', '11:00')}, end: {dateTime: zoned('2026-10-08', '12:00')}});
+    await run();
+    const talk = day('2026-10-08').find(item => item.title === 'Keynote')!;
+    expect(talk).toMatchObject({place: 'Hall B', link: 'https://conf.example.org/talks/keynote'});
+    expect(day('2026-10-08').find(item => item.title === 'Interview')!.link).toBe('https://meet.example.com/j/1');
+    expect(day('2026-10-09').find(item => item.title === 'Dinner with Sam')!.link).toBeNull();
+    // Setpoint never writes source, so Google keeps it through a change made here.
+    const changed = updateItem(w.store, talk.id, itemUpdateInput.parse({changes: {title: 'Opening keynote'}}));
+    await run();
+    expect(command(changed.id).state).toBe('confirmed');
+    expect(google.event(PERSONAL, 'talk')!.source?.url).toBe('https://conf.example.org/talks/keynote');
+    w.advance(16 * 60_000);
+    await run();
+    expect(day('2026-10-08').find(item => item.title === 'Opening keynote')!.link).toBe('https://conf.example.org/talks/keynote');
+  });
+
   test('pages are followed to the last, which carries the sync token', async () => {
     const {google, run, titles} = await calendarWorld();
     for (let at = 0; at < 60; at += 1) google.put(PERSONAL, {id: `filler${at}`, summary: `Filler ${at}`, start: {dateTime: zoned('2026-11-02', '12:00')}, end: {dateTime: zoned('2026-11-02', '12:30')}});

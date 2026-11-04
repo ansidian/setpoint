@@ -34,6 +34,8 @@ export interface GoogleEvent {
   updated?: string;
   // "1" … "11", Google's event colours (F6).
   colorId?: string | null;
+  // SV-179: where the event came from (an .ics file's URL line); its url is the event's link when the location has none.
+  source?: {url?: string; title?: string};
   // SV-31: Setpoint's own flags (normalize.ts's LEAVE_PROPERTY).
   extendedProperties?: {private?: Record<string, string>; shared?: Record<string, string>};
 }

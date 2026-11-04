@@ -493,7 +493,8 @@
         "items[].time_to_leave: always null",
         "items[].colour: always null",
         "items[].labels: always empty",
-        "items[].repeat: always null"
+        "items[].repeat: always null",
+        "items[].link: always null"
       ]
     },
     {
@@ -529,7 +530,8 @@
         "time_to_leave: always null",
         "colour: always null",
         "labels: always empty",
-        "repeat: always null"
+        "repeat: always null",
+        "link: always null"
       ]
     },
     {
@@ -560,7 +562,8 @@
         "time_to_leave: always null",
         "colour: always null",
         "labels: always empty",
-        "repeat: always null"
+        "repeat: always null",
+        "link: always null"
       ]
     },
     {
@@ -629,6 +632,7 @@
         "results[].item.colour: always null",
         "results[].item.labels: always empty",
         "results[].item.repeat: always null",
+        "results[].item.link: always null",
         "results[].rule: always null",
         "next_offset: always null"
       ]

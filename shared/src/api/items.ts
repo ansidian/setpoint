@@ -64,6 +64,9 @@ export interface ItemOut extends ItemWhen {
   labels: string[];
   // F6b: a repeating task's repeat in Todoist's words ("every mon"), without its time or start.
   repeat: string | null;
+  // SV-179: what Open opens (D439): a web link in the place, else the event's own URL (Google's
+  // source.url), else null. Tasks have none.
+  link: string | null;
 }
 
 /** Time to Leave for one occurrence (DESIGN.md › Right pane). */

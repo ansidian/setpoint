@@ -78,6 +78,7 @@ export function pendingItem(input: ItemCreateInput, id: number, at: string): Ite
     // copyOf and the editor leave the server's defaults out (no repeat, no labels).
     ...input, key: `new:${-id}`, id, recurring: !!input.recurrence || !!input.repeat, occurrence_start: null, reminders: input.reminders ?? [],
     labels: input.labels ?? [], repeat: input.repeat ?? null, done: false, done_at: null, command, read_only: false, due_string: input.repeat ?? null, time_to_leave: null,
+    link: null,
   };
 }
 

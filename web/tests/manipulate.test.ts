@@ -20,7 +20,7 @@ const item = (fields: Partial<ItemOut>): ItemOut => {
     key: String(id), id, calendar_id: 1, kind: 'event', title: 'Item', time_zone: zone, recurring: false, recurrence: null, occurrence_start: null,
     place: null, address: null, attendees: [], reminders: [10], leave_reminder: false, project: null, done: false, done_at: null, command: null,
     all_day: false, starts_at: null, ends_at: null, start_date: null, end_date: null, due_date: null, due_at: null, read_only: false, due_string: null,
-    time_to_leave: null, colour: null, labels: [], repeat: null, ...fields,
+    time_to_leave: null, colour: null, labels: [], repeat: null, link: null, ...fields,
   };
 };
 const event = (title: string, date: string, start: string, end: string, fields: Partial<ItemOut> = {}) => item({title, starts_at: at(date, start), ends_at: at(date, end), ...fields});
