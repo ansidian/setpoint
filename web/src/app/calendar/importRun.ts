@@ -3,13 +3,14 @@
 // waiting for Google's answer (`untilSettled`); one Google refuses stays in the list with its words
 // and Retry, so a partial import never reads as done. Once every event has gone, the review closes
 // and the toast says so, with Undo deleting the events the import created (never ones it updated).
-import type {IcsReadOut} from '@setpoint/shared';
+import type {IcsEventOut, IcsReadOut} from '@setpoint/shared';
 import {useSyncExternalStore} from 'react';
 import {ApiFailure} from '../../api/client.ts';
 import {importIcsEvent} from '../../api/icsImport.ts';
 import {deleteItem, retryChange, untilSettled} from '../../api/items.ts';
-import {importedLine, importOf, initialTicks, runCounts} from '../../logic/icsImport.ts';
+import {icsLanding, importedLine, importOf, initialTicks, runCounts} from '../../logic/icsImport.ts';
 import type {RowState} from '../../logic/icsImport.ts';
+import {navigate} from '../router.ts';
 import {showToast, toastFailure} from '../toast.ts';
 
 export interface ImportReview {
@@ -41,6 +42,31 @@ const subscribe = (listener: () => void) => {
 };
 
 export const useImportReview = () => useSyncExternalStore(subscribe, () => review);
+
+// A file of one event, handed to Calendar to open in the editor as a draft once it's drawn: from
+// Calendar's own picker or drop, or from an email's .ics on another page (SV-182).
+let handed: IcsEventOut | null = null;
+export const useHandedIcs = () => useSyncExternalStore(subscribe, () => handed);
+export function handIcs(event: IcsEventOut | null) {
+  handed = event;
+  listeners.forEach(listener => listener());
+}
+
+/**
+ * SV-182: an email's .ics, read, lands as a file from Calendar does (icsLanding): nothing to import
+ * says so in the toast (D444); otherwise Calendar opens on the event's day, one event in the editor
+ * and two or more in the review.
+ */
+export function landIcs(name: string, read: IcsReadOut, timeZone: string) {
+  const landing = icsLanding(read, timeZone);
+  if (landing.kind === 'nothing') {
+    showToast(landing.line);
+    return;
+  }
+  if (landing.kind === 'draft') handIcs(landing.event);
+  else openReview(name, read);
+  navigate({page: 'calendar', date: landing.date, item: null, at: null});
+}
 
 /** A file of two or more events opens the review, its past events unticked. */
 export function openReview(name: string, read: IcsReadOut) {

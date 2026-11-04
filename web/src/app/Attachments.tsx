@@ -1,16 +1,25 @@
 // An email's attachments (DESIGN.md › The reader): 44 px cards, radius 14, 280 wide, with the type's
 // tile (its colour and glyph, #122), the name and "PDF · 184 KB". PDF, image and CSV open a preview
 // over the reading pane, which Esc or × closes. Every card and the preview's head offer Download; a
-// card with no preview is one Download link (SV-25).
+// card with no preview is one Download link (SV-25). An invitation (.ics) has Add to calendar, which
+// reads the stored attachment on the server into the same review as an import from Calendar (SV-182,
+// D441); one that can't be read says so in place of its size. Desktop only: on the phone (frozen,
+// D275) it stays a Download link.
 import type {AttachmentOut} from '@setpoint/shared';
 import {useEffect, useState} from 'react';
+import {timeZone} from '../api/auth.ts';
+import {ApiFailure} from '../api/client.ts';
+import {readIcsAttachment} from '../api/icsImport.ts';
 import {attachmentBlob, attachmentUrl} from '../api/mail.ts';
 import {attachmentLabel, attachmentType, parseCsv, previewKind} from '../logic/reader.ts';
 import type {AttachmentType, PreviewKind} from '../logic/reader.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
+import {landIcs} from './calendar/importRun.ts';
 import {openContextMenu} from './ContextMenu.tsx';
+import {usePhone} from './Phone.tsx';
 import {PreviewSkeleton} from './states/Skeletons.tsx';
+import {failureLine} from './toast.ts';
 
 const CSV_ROWS = 500;
 
@@ -21,6 +30,7 @@ const TYPE_GLYPHS: Record<AttachmentType, IconName> = {
 
 export function Attachments({messageId, files}: {messageId: number; files: AttachmentOut[]}) {
   const [open, setOpen] = useState<AttachmentOut | null>(null);
+  const phone = usePhone();
   if (!files.length) return null;
   return (
     <>
@@ -28,6 +38,7 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
         {files.map(file => {
           const kind = previewKind(file);
           const type = attachmentType(file);
+          if (type === 'calendar' && !phone) return <Invitation key={file.id} messageId={messageId} file={file} />;
           const about = (
             <>
               <span className="type"><Icon name={TYPE_GLYPHS[type]} /></span>
@@ -53,6 +64,42 @@ export function Attachments({messageId, files}: {messageId: number; files: Attac
       </div>
       {open && <Preview key={open.id} messageId={messageId} file={open} kind={previewKind(open)!} onClose={() => setOpen(null)} />}
     </>
+  );
+}
+
+/**
+ * An .ics card: Add to calendar reads it on the server and lands where a file from Calendar would
+ * (landIcs: the editor's draft, the review, or the toast when there's nothing to import). A file
+ * that can't be read says so in place of its size, in the parser's words.
+ */
+function Invitation({messageId, file}: {messageId: number; file: AttachmentOut}) {
+  const [reading, setReading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const add = () => {
+    if (reading) return;
+    setReading(true);
+    setProblem(null);
+    readIcsAttachment(messageId, file.id).then(read => {
+      setReading(false);
+      landIcs(file.filename, read, timeZone());
+    }, (error: unknown) => {
+      setReading(false);
+      setProblem(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.filename}`, error));
+    });
+  };
+  return (
+    <div className="attach" data-id={file.id} data-type="calendar" onContextMenu={event => openContextMenu(event, event.currentTarget, [
+      {id: 'add', label: 'Add to calendar', icon: 'event', run: add},
+      {id: 'download', label: 'Download', icon: 'download', run: () => download(attachmentUrl(messageId, file.id), file.filename)},
+    ])}>
+      <span className="type"><Icon name="calendar_month" /></span>
+      <span className="grow names">
+        <span className="ell name selectable">{file.filename}</span>
+        {problem ? <span className="size problem" role="alert">{problem}</span> : <span className="size num">{attachmentLabel(file)}</span>}
+      </span>
+      <button type="button" className="dl" disabled={reading} aria-busy={reading || undefined} onClick={add}><Icon name="event" size={16} />Add to calendar</button>
+      <Download messageId={messageId} file={file} />
+    </div>
   );
 }
 

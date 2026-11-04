@@ -85,6 +85,23 @@ export function nothingLine(dropped: IcsReadOut['dropped']): string {
   return left ? `Nothing to import, ${left.replace(/^Left out: /, 'the file has ')}` : 'Nothing to import, the file has no events';
 }
 
+/** The day an event starts on, in the user's zone. */
+export const eventDay = (event: Pick<IcsEventOut, 'all_day' | 'start_date' | 'starts_at'>, timeZone: string) =>
+  event.all_day ? event.start_date! : localDate(event.starts_at!, timeZone);
+
+/**
+ * Where a read file lands (D437, D444): nothing to import says so in the toast; one event opens the
+ * editor as a draft on its day; two or more open the review, on the first upcoming event's day (or the
+ * first event's, when all are past), so Calendar from an email shows where they'd go (SV-182).
+ */
+export type IcsLanding = {kind: 'nothing'; line: string} | {kind: 'draft'; event: IcsEventOut; date: string} | {kind: 'review'; date: string};
+export function icsLanding(read: IcsReadOut, timeZone: string): IcsLanding {
+  const [first] = read.events;
+  if (!first) return {kind: 'nothing', line: nothingLine(read.dropped)};
+  if (read.events.length === 1) return {kind: 'draft', event: first, date: eventDay(first, timeZone)};
+  return {kind: 'review', date: eventDay(read.events.find(event => !event.past) ?? first, timeZone)};
+}
+
 /** What the review sends for an event: the draft as read, without the review's own fields. */
 export function importOf(event: IcsEventOut): IcsImportEvent {
   const {past: _past, existing: _existing, ...rest} = event;

@@ -3,7 +3,7 @@
 import type {IcsEventOut, IcsReadOut, ItemCreateInput} from '@setpoint/shared';
 import {ICS_DROP_REASONS, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {alreadyLine, droppedLine, editedImport, importedLine, importLabel, importOf, initialTicks, isIcsFile, nothingLine, progressLine, refusedLine, rowMarks, rowTitle, rowWhen, runCounts} from '../src/logic/icsImport.ts';
+import {alreadyLine, droppedLine, editedImport, icsLanding, importedLine, importLabel, importOf, initialTicks, isIcsFile, nothingLine, progressLine, refusedLine, rowMarks, rowTitle, rowWhen, runCounts} from '../src/logic/icsImport.ts';
 import type {RowState} from '../src/logic/icsImport.ts';
 
 const zone = SEED_TIME_ZONE;
@@ -120,4 +120,20 @@ test('a run\'s counts: sent, refused and settled, of the events it takes', () =>
     ['a', {state: 'done', created: true, itemId: 1}], ['b', {state: 'failed', message: 'Invalid start time. (400 Bad Request)', commandId: 4}], ['c', {state: 'sending'}],
   ]);
   expect(runCounts(['a', 'b', 'c', 'd'], rows)).toEqual({done: 1, failed: 1, settled: 2, total: 4});
+});
+
+describe('SV-182: where a read file lands', () => {
+  const keynote = event({});
+  const mixer = event({ical_uid: 'mixer@example.com', starts_at: '2026-10-01T01:00:00.000Z', ends_at: '2026-10-01T03:00:00.000Z', past: true});
+  const fair = event({ical_uid: 'fair@example.com', all_day: true, starts_at: null, ends_at: null, start_date: '2026-11-14', end_date: '2026-11-15'});
+  test.each([
+    ['nothing in it', [], {...none, cancelled: 1}, {kind: 'nothing', line: 'Nothing to import, the file has 1 event cancelled'}],
+    ['one event: the editor, on its day', [keynote], none, {kind: 'draft', event: keynote, date: '2026-10-15'}],
+    ['one all-day event, on its own date', [fair], none, {kind: 'draft', event: fair, date: '2026-11-14'}],
+    ['one past event still opens as a draft', [mixer], none, {kind: 'draft', event: mixer, date: '2026-09-30'}],
+    ['several: the review, on the first upcoming one\'s day', [mixer, keynote, fair], none, {kind: 'review', date: '2026-10-15'}],
+    ['several, all past: the first one\'s day', [mixer, {...keynote, past: true}], none, {kind: 'review', date: '2026-09-30'}],
+  ] as const)('%s', (_, events, dropped, landing) => {
+    expect(icsLanding({events: [...events], dropped}, zone)).toEqual(landing);
+  });
 });

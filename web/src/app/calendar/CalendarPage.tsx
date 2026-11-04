@@ -29,7 +29,7 @@ import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pas
 import type {Creating} from '../../logic/manipulate.ts';
 import type {Deleting} from '../../logic/manipulate.ts';
 import {openLink} from '../../logic/place.ts';
-import {editedImport, ICS_ACCEPT, ICS_MAX_BYTES, ICS_TOO_BIG, isIcsFile, nothingLine} from '../../logic/icsImport.ts';
+import {editedImport, eventDay, ICS_ACCEPT, ICS_MAX_BYTES, ICS_TOO_BIG, icsLanding, isIcsFile} from '../../logic/icsImport.ts';
 import {readIcsFile} from '../../api/icsImport.ts';
 import {routePath} from '../../logic/route.ts';
 import type {CalendarMode, Route} from '../../logic/route.ts';
@@ -59,7 +59,7 @@ import {ColourPanel} from './detail/DetailContent.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import {ImportPane} from './ImportPane.tsx';
-import {closeReview, importFromEditor, openReview, useImportReview} from './importRun.ts';
+import {closeReview, handIcs, importFromEditor, openReview, useHandedIcs, useImportReview} from './importRun.ts';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
 import {FailedCard} from './FailedCard.tsx';
 import {expectLanding} from './landing.ts';
@@ -460,6 +460,25 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     setEditorDirty(false);
     if (route.compose) navigate({page: 'calendar', date: null, item: null, at: null}, {replace: true});
   };
+  // A file of one event opens in the editor as a filled-in draft on its day (D437): picked or dropped
+  // here, or an email's .ics from the reader's Add to calendar (SV-182), handed over by importRun.ts.
+  const handedIcs = useHandedIcs();
+  useEffect(() => {
+    if (!handedIcs) return;
+    handIcs(null);
+    closeReview();
+    const date = eventDay(handedIcs, zone);
+    // As openEditor does; Calendar's own picker has already kept a started draft (openIcs).
+    editorSeq.current += 1;
+    setEditor({kind: 'event', date, ics: handedIcs, handed: false, seq: editorSeq.current, at: addressOf({page: 'calendar', date, item: null, at: null})});
+    setEditorDirty(false);
+    setPopover(null);
+    setAsk(null);
+    setDayPane(false);
+    // Only when an event is handed over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handedIcs]);
+
   /**
    * SV-181: an .ics file picked (Import .ics… in the header or ⌘K) or dropped on the grid (D437). Read
    * for review, nothing sent: one event opens the editor as a filled-in draft, two or more the review
@@ -480,16 +499,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       return;
     }
     void readIcsFile(file).then(read => {
-      if (!read.events.length) {
-        showToast(nothingLine(read.dropped));
+      const landing = icsLanding(read, zone);
+      if (landing.kind === 'nothing') {
+        showToast(landing.line);
         return;
       }
-      if (read.events.length === 1) {
-        const event = read.events[0]!;
-        closeReview();
-        const date = event.all_day ? event.start_date! : localDate(event.starts_at!, zone);
-        selectDay(date);
-        openEditor({kind: 'event', date, ics: event}, false, addressOf({page: 'calendar', date, item: null, at: null}));
+      if (landing.kind === 'draft') {
+        selectDay(landing.date);
+        handIcs(landing.event);
         return;
       }
       if (editor) closeEditor();
