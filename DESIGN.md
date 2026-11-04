@@ -3783,7 +3783,8 @@ it changes what's on screen.
       "From the email" is. **Create event** imports it.
     - **Two or more** open the review in the right pane, in place of the day, as the editor and
       search take it: "Import northwind-devcon.ics" with "5 events" under it and a close ×; "Into"
-      and the board's select of the user's Google calendars (the first one shown by default). Its
+      and the board's select of the user's Google calendars an import can write to (#306; the first
+      one shown by default). Its
       menu is Settings' (#149), each calendar with its dot as the editor's Calendar menu has, lying
       over the list from the select's left edge, so opening it moves nothing. "1 already on Jobs
       (will update)" sits under it for the ticked events that calendar holds; **Tick all** (**Untick
@@ -3824,3 +3825,16 @@ it changes what's on screen.
     the pill centres in the part of the grid the pane leaves uncovered. A file of unknown type lights
     as an .ics, and its drop says "‹name› isn't an .ics calendar file" if it isn't one. Board audit:
     no board draws it.
+306. **An event on a calendar the user can only read can't be changed, and the calendar leaves
+    the pickers** (Andy, 2026-11-04; darma SV-191, amending #304). A Google calendar the user can
+    only read (Google's `reader` or `freeBusyReader`, as a subscribed holiday calendar is) still
+    shows its events, each read-only as Google's own kinds of event are: the right-click menu's
+    Edit, Clone, Copy, Colour and Delete, the floating detail's controls, E, Delete and Backspace,
+    and dragging and resizing are all off, and the server refuses a change. The detail's Edit says
+    "This calendar is read-only"; Google's own kinds keep "Google doesn't let this kind of event
+    change". A `writerWithoutPrivateAccess` calendar counts as writable. Into, the editor's
+    Calendar menu and the calendar New starts in leave such a calendar out; the sidebar's
+    Calendars keeps it, to show or hide. Wherever calendars are listed (the sidebar's Calendars,
+    Into, the editor's Calendar menu), a name that appears more than once gets its account's label
+    after it in `ink3`, as in "Holidays in United States · Jobs", cut with an ellipsis where the
+    row runs out; a name that appears once stays as it is. Board audit: no board draws it.
