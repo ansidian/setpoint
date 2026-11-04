@@ -20,6 +20,19 @@ export function placeLines(place: string | null, address: string | null): {name:
 /** The place in one line: its name, or the street of an address alone. */
 export const placeName = (item: {place: string | null; address: string | null}) => placeLines(item.place, item.address)?.name ?? null;
 
+import {placeLink, webLink} from '@setpoint/shared';
+import type {ItemOut} from '@setpoint/shared';
+
 // SV-77's link in the place lives in shared/, where the server reads an event's link with it (SV-179).
-export {placeLink} from '@setpoint/shared';
+export {placeLink};
 export type {PlaceLink} from '@setpoint/shared';
+
+/**
+ * What the card's Open, `O` and the right-click menu open (D439): the place's link as it stands here,
+ * so a place changed and still waiting for Google has it at once, else the server's `link` (the
+ * event's own URL). An event's only; null for a task.
+ */
+export function openLink(item: Pick<ItemOut, 'kind' | 'place' | 'address' | 'link'>): {url: string; host: string} | null {
+  if (item.kind !== 'event') return null;
+  return placeLink(item) ?? webLink(item.link);
+}

@@ -1,6 +1,7 @@
 // What the floating detail shows of an item (board 12a; DESIGN.md › The floating detail): the
 // colour dot and title, the date and time, the place and its address (a link alone as `videocam` and
-// its host, and any link with Open, SV-77), Time to Leave (in `caution`
+// its host, and any link with Open, SV-77), the event's own link when its place has none (`link` and
+// its host, with Open, SV-179), Time to Leave (in `caution`
 // once it's time to go and gone once the event starts, as in the day agenda, SV-56), attendees, a
 // recurring event's repeat (#126), reminders and the calendar, its glyph in the item's colour; then Edit E and the icon actions (F6): Clone, Copy (⌘V pastes on the
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
@@ -15,7 +16,7 @@ import {describeTaskRepeat} from '../../../logic/compose.ts';
 import {useResource} from '../../../api/client.ts';
 import {SETTINGS_PATH} from '../../../api/items.ts';
 import {attendeesLine, detailWhen, leaveBy, repeatLine} from '../../../logic/detail.ts';
-import {placeLines, placeLink} from '../../../logic/place.ts';
+import {openLink, placeLines, placeLink} from '../../../logic/place.ts';
 import {reminderAnchor, reminderLines} from '../../../logic/reminders.ts';
 import {Icon, TaskGlyph} from '../../../ui/Icon.tsx';
 import type {IconName} from '../../../ui/glyphs.ts';
@@ -73,6 +74,8 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const reminders = reminderLines(item.reminders, reminderAnchor(item, settings?.reminders.task_time ?? null, timeZone), timeZone);
   const place = placeLines(item.place, item.address);
   const link = item.kind === 'event' ? placeLink(item) : null;
+  // SV-179 (D439): with no link in its place, the event's own (Google's source.url) has a line of its own.
+  const own = link ? null : openLink(item);
   const repeat = repeatLine(item, timeZone);
   // A task's card is drawn as the task is on the grid (polish audit calflows-10, shell-15): its ring in
   // its project's colour, struck through once done, at .5 with the spinner while Todoist hasn't
@@ -102,6 +105,12 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           <Fact icon="location_on" className={link ? 'link' : undefined}>
             <span className="grow"><span className="v fd-place">{place.name}</span>{place.address && <span className="ink3 fd-address">{place.address}</span>}</span>
             {link && <OpenLink url={link.url} />}
+          </Fact>
+        )}
+        {own && (
+          <Fact icon="link" className="link own">
+            <span className="grow"><span className="v fd-link" data-tip={own.url} data-tip-quick>{own.host}</span></span>
+            <OpenLink url={own.url} />
           </Fact>
         )}
         {leave && <Fact icon="directions_car" className={leave.state === 'due' ? 'leave due' : 'leave'}><span className="num"><span className="v">{leave.at}</span> · {leave.travel}</span></Fact>}

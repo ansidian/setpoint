@@ -28,7 +28,7 @@ import {addDays, localDate, monthName} from '../../logic/format.ts';
 import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pasteOn, pendingItem, selectWith, withCreating} from '../../logic/manipulate.ts';
 import type {Creating} from '../../logic/manipulate.ts';
 import type {Deleting} from '../../logic/manipulate.ts';
-import {placeLink} from '../../logic/place.ts';
+import {openLink} from '../../logic/place.ts';
 import {routePath} from '../../logic/route.ts';
 import type {CalendarMode, Route} from '../../logic/route.ts';
 import {DEFAULT_SCOPE, moveLine, scopeChoices} from '../../logic/scope.ts';
@@ -732,7 +732,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       ];
     }
     const fixed = item.read_only || item.command !== null;
-    const link = item.kind === 'event' ? placeLink(item) : null;
+    // The event's link (SV-77's in its place, else SV-179's own URL), as the card's Open.
+    const link = openLink(item);
     const calendar = calendarsById.get(item.calendar_id);
     return [
       ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && item.recurring), run: () => complete(item)} satisfies MenuAction] : []),
@@ -860,10 +861,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         echoKey('e');
         editItem(selectedItem, true);
       }
-      else if (plainKey(event, 'o') && detailTarget?.item.kind === 'event' && placeLink(detailTarget.item)) {
-        // SV-77: the open card's place link, as its Open does.
+      else if (plainKey(event, 'o') && detailTarget && openLink(detailTarget.item)) {
+        // SV-77, SV-179: the open card's link, as its Open does.
         echoKey('o');
-        window.open(placeLink(detailTarget.item)!.url, '_blank', 'noopener');
+        window.open(openLink(detailTarget.item)!.url, '_blank', 'noopener');
       }
       else if (plain && (event.key === 'Delete' || event.key === 'Backspace') && writable.length && !editor) remove(writable);
       else if (command && event.key.toLowerCase() === 'c' && selectedItems.length && !window.getSelection()?.toString()) copy(selectedItems);

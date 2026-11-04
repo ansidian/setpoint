@@ -273,3 +273,34 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     await setpoint.stop();
   }
 });
+
+test('SV-179: the seed\'s Career fair has its own link (Google\'s source.url) on a line of its own, with Open to a new tab; O opens it', async () => {
+  // The line's look, and a place's link winning over the event's own, are the component test's (components/detail.test.tsx).
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar/2026-10-15`);
+    await page.evaluate(() => {
+      (window as unknown as {opened: string[]}).opened = [];
+      window.open = (url?: string | URL) => {
+        (window as unknown as {opened: string[]}).opened.push(String(url));
+        return null;
+      };
+    });
+    await chip(page, '2026-10-15', 'Career fair').click();
+    await card(page).waitFor();
+    const line = card(page).locator('.fd-layer.in .fact.own');
+    assert.equal(await line.locator('.fd-link').textContent(), 'careers.example.edu');
+    assert.equal(await card(page).locator('.fd-layer.in .fd-place').textContent(), 'University Student Union');
+    const open = line.getByRole('link', {name: 'Open'});
+    assert.equal(await open.getAttribute('href'), 'https://careers.example.edu/fair/fall-2026');
+    assert.equal(await open.getAttribute('target'), '_blank');
+    await page.mouse.move(1000, 28);
+    await page.keyboard.press('o');
+    await until('the link opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
+    assert.deepEqual(await page.evaluate(() => (window as unknown as {opened: string[]}).opened), ['https://careers.example.edu/fair/fall-2026']);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
