@@ -107,7 +107,7 @@
 .settings .spark .line { fill: none; stroke: var(--good); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
 .settings .spark .end { fill: var(--good); stroke: var(--modal); stroke-width: 1.5; }
 .settings .spark .day { fill: transparent; }
-.settings .anchor { position: relative; display: inline-flex; flex: none; }
+:is(.settings, .cal-import) .anchor { position: relative; display: inline-flex; flex: none; }
 /* A row's menu and a select's: the app's one menu (styles.css), under its button's right edge. */
 .settings .menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; min-width: 180px; }
 .settings .menu.left { right: auto; left: 0; }
@@ -175,9 +175,10 @@
 
 /* Notifications (board 18b). */
 .settings .topic { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
-.settings .select { position: relative; height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); white-space: nowrap; flex: none; }
-.settings .select .icon { color: var(--ink3); }
-.settings .select:focus-visible, .settings .select[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--edgeOn); }
+/* The board's select, in Settings and SV-181's import review. */
+:is(.settings, .cal-import) .select { position: relative; height: 30px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; border-radius: var(--r-row); background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); color: var(--ink); white-space: nowrap; flex: none; }
+:is(.settings, .cal-import) .select .icon { color: var(--ink3); }
+:is(.settings, .cal-import) .select:focus-visible, :is(.settings, .cal-import) .select[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--edgeOn); }
 .settings .stepper { height: 30px; display: inline-flex; align-items: center; gap: 2px; padding: 0 2px; border-radius: 999px; background: var(--chip); box-shadow: inset 0 0 0 1px var(--edge); flex: none; }
 .settings .stepper .v { min-width: 52px; text-align: center; color: var(--ink); }
 .settings .okdot { width: 7px; height: 7px; border-radius: 999px; background: var(--good); flex: none; }
@@ -209,12 +210,12 @@
    Appearance's choices) take a `sub` fill, fields an `edgeHover` border, the handle darkens, and a
    switch's knob (off) or track (on) turns as the primary button does. */
 .settings button.set-row, .settings .set-empty button, .settings .sw, .settings .icons button, .settings .dom, .settings .dom .x, .settings .handle,
-.settings .fld, .settings .select, .settings .mini-field { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+.settings .fld, :is(.settings, .cal-import) .select, .settings .mini-field { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .settings button.set-row:hover { background: var(--sub); }
   .settings .set-empty button:hover { color: var(--ink); }
   .settings .handle:hover { color: var(--ink); }
-  .settings .fld:not(:focus):hover, .settings .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
+  .settings .fld:not(:focus):hover, :is(.settings, .cal-import) .select:not(:focus-visible):hover, .settings .mini-field:not(:focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
   .settings .switch:not(.on):enabled:hover::after { background: var(--ink); }
   .settings .switch.on:enabled:hover { background: color-mix(in oklch, var(--switchOn) 86%, var(--modal)); }
 }

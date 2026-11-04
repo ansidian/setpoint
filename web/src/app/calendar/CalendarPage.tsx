@@ -18,9 +18,9 @@
 // is, the recurring scope asked first. The view rides in the address (?view=week).
 import type {CalendarOut, CalendarSearchResultOut, CommandOut, EventColour, ItemChanges, ItemCreateInput, ItemOut, ItemsOut, RecurringScope, WeatherDayOut} from '@setpoint/shared';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {MouseEvent as ReactMouseEvent} from 'react';
+import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from 'react';
 import {timeZone} from '../../api/auth.ts';
-import {useResource} from '../../api/client.ts';
+import {ApiFailure, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, completeItem, createItems, deleteItem, itemPath, monthItemsPath, monthWeatherPath, moveBack, retryChange, untilSettled, updateItem} from '../../api/items.ts';
 import {addMonths, dayTitle, FIRST_WEEK, hiddenOn, itemDays, itemKey, itemsByDay, monthOf, monthTopRow, timeRange, weekIndex} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
@@ -29,6 +29,8 @@ import {asRetried, copyOf, dayOf, deletes, dropChange, inverseOf, movedItem, pas
 import type {Creating} from '../../logic/manipulate.ts';
 import type {Deleting} from '../../logic/manipulate.ts';
 import {openLink} from '../../logic/place.ts';
+import {editedImport, ICS_ACCEPT, ICS_MAX_BYTES, ICS_TOO_BIG, isIcsFile, nothingLine} from '../../logic/icsImport.ts';
+import {readIcsFile} from '../../api/icsImport.ts';
 import {routePath} from '../../logic/route.ts';
 import type {CalendarMode, Route} from '../../logic/route.ts';
 import {DEFAULT_SCOPE, moveLine, scopeChoices} from '../../logic/scope.ts';
@@ -46,7 +48,7 @@ import {useCommands} from '../palette/commands.ts';
 import {useCompact} from '../Phone.tsx';
 import {SearchField} from '../search/Search.tsx';
 import {useCalendarSearch} from '../search/state.ts';
-import {dismissToast, showToast, toastFailure, UNDO_MS} from '../toast.ts';
+import {dismissToast, failureLine, showToast, toastFailure, UNDO_MS} from '../toast.ts';
 import {AnchoredCard} from './AnchoredCard.tsx';
 import {setVisible, showHidden} from './CalendarSidebar.tsx';
 import './calendar.css';
@@ -56,6 +58,8 @@ import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
 import {ColourPanel} from './detail/DetailContent.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
+import {ImportPane} from './ImportPane.tsx';
+import {closeReview, importFromEditor, openReview, useImportReview} from './importRun.ts';
 import type {EditorOpen, KeptDrafts, Slot} from './Editor.tsx';
 import {FailedCard} from './FailedCard.tsx';
 import {expectLanding} from './landing.ts';
@@ -167,11 +171,17 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const compact = useCompact();
   // ⌘K shows or hides each calendar, as the sidebar's Calendars do, so the rail (which has none) keeps
   // the filter (#140).
-  useCommands(() => ({commands: (calendars ?? []).map(calendar => ({
-    id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
-    keywords: 'calendar calendars filter toggle',
-    run: () => void setVisible(calendar, !calendar.visible),
-  }))}));
+  // SV-181: the file picker Import .ics… opens (the header's button and ⌘K).
+  const icsInput = useRef<HTMLInputElement>(null);
+  useCommands(() => ({commands: [
+    // SV-181: an .ics file's events into a Google calendar, reviewed first (D437).
+    {id: 'import-ics', section: 'more' as const, label: 'Import .ics…', icon: 'download' as const, keywords: 'ics ical import file calendar events', run: () => icsInput.current?.click()},
+    ...(calendars ?? []).map(calendar => ({
+      id: `calendar-${calendar.id}`, section: 'more' as const, label: `${calendar.visible ? 'Hide' : 'Show'} ${calendar.name}`, icon: calendar.visible ? 'visibility_off' as const : 'visibility' as const,
+      keywords: 'calendar calendars filter toggle',
+      run: () => void setVisible(calendar, !calendar.visible),
+    })),
+  ]}));
   const selectedKey = route.item ? itemKey(route.item, route.at) : null;
   // A single event or a task's address has only its id: its day comes from the grid, else from it.
   const known = selectedKey ? knownDay(selectedKey) : null;
@@ -234,9 +244,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // In the compact tier the day's pane is brought over the grid by its header button, closed on every
   // load (D183, polish audit calpanes-14); the editor and search take its place as they take each other's.
   const [dayPane, setDayPane] = useState(false);
+  // SV-181: an .ics file under review (two or more events), kept while a run goes on elsewhere.
+  const review = useImportReview();
 
   const {items, weather} = useMonths([addMonths(shown, -1), shown, addMonths(shown, 1), addMonths(shown, 2)]);
   const calendarsById = useMemo(() => new Map((calendars ?? []).map(calendar => [calendar.id, calendar])), [calendars]);
+  const googleCalendars = useMemo(() => (calendars ?? []).filter(calendar => calendar.provider === 'google'), [calendars]);
 
   // Items as they show: changes on their way where they're going, deletes on their way gone.
   const present = useCallback((list: ItemOut[]) => list.flatMap(item => {
@@ -288,12 +301,13 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const selectedItems = useMemo(() => (selection.length ? drawn.filter(item => selection.includes(item.key)) : selectedItem ? [selectedItem] : []), [selection, drawn, selectedItem]);
 
   // A failed change shows its card: the selected item's, else the newest one on screen nobody closed.
+  // While an import's review is open, its refused events have their Retry there (SV-181).
   const failed = useMemo(() => {
     if (selectedItem?.command?.state === 'failed') return selectedItem;
-    if (selectedItem || selection.length || ask || editor) return null;
+    if (selectedItem || selection.length || ask || editor || review) return null;
     return drawn.filter(item => item.command?.state === 'failed' && !dismissed.has(item.command.id))
       .sort((a, b) => b.command!.created_at.localeCompare(a.command!.created_at))[0] ?? null;
-  }, [selectedItem, selection.length, ask, editor, drawn, dismissed]);
+  }, [selectedItem, selection.length, ask, editor, review, drawn, dismissed]);
 
   // The floating detail shows the one selected item while its chip is on the grid, the editor open
   // or not; Edit hands it to the pane's editor, and the card goes there.
@@ -447,6 +461,46 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (route.compose) navigate({page: 'calendar', date: null, item: null, at: null}, {replace: true});
   };
   /**
+   * SV-181: an .ics file picked (Import .ics… in the header or ⌘K) or dropped on the grid (D437). Read
+   * for review, nothing sent: one event opens the editor as a filled-in draft, two or more the review
+   * list in the right pane; a file that can't be read, or has nothing to import, says so in the toast.
+   */
+  const pickIcs = () => icsInput.current?.click();
+  const openIcs = (file: File) => {
+    if (!isIcsFile(file)) {
+      showToast(`${file.name} isn't an .ics calendar file`, null, 'failed');
+      return;
+    }
+    if (file.size > ICS_MAX_BYTES) {
+      showToast(ICS_TOO_BIG, null, 'failed');
+      return;
+    }
+    if (editor && editorDirty) {
+      openEditor({kind: 'event', date: selectedDay});
+      return;
+    }
+    void readIcsFile(file).then(read => {
+      if (!read.events.length) {
+        showToast(nothingLine(read.dropped));
+        return;
+      }
+      if (read.events.length === 1) {
+        const event = read.events[0]!;
+        closeReview();
+        const date = event.all_day ? event.start_date! : localDate(event.starts_at!, zone);
+        selectDay(date);
+        openEditor({kind: 'event', date, ics: event}, false, addressOf({page: 'calendar', date, item: null, at: null}));
+        return;
+      }
+      if (editor) closeEditor();
+      setSearching(false);
+      setDayPane(false);
+      openReview(file.name, read);
+    }, error => showToast(error instanceof ApiFailure && error.code === 'invalid_input' ? error.message : failureLine(`Couldn't read ${file.name}`, error), null, 'failed'));
+  };
+  // A file dragged over the grid can be dropped there; an item's own drag isn't a file's.
+  const dragsFile = (event: ReactDragEvent) => [...event.dataTransfer.types].includes('Files');
+  /**
    * Esc closes the topmost thing: the "+N" popover, the floating detail, a multi-selection (⌘ or Ctrl
    * alone turns the detail's item into one), then the editor (its draft goes), then the selection,
    * then a failed card. Also the editor's own Esc.
@@ -456,6 +510,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else if (detailTarget) selectDay(selectedDay);
     else if (selection.length) setSelection([]);
     else if (editor) closeEditor();
+    else if (review) closeReview();
     else if (searching) closeSearch();
     else if (compact && dayPane) setDayPane(false);
     else if (route.item) selectDay(selectedDay);
@@ -941,6 +996,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               setDayPane(!dayPane);
             }}><Icon name="right_panel_open" /></button>
         )}
+        {!searching && (
+          <button className="ibtn" aria-label="Import .ics…" data-tip="Import .ics…" onClick={pickIcs}><Icon name="download" /></button>
+        )}
+        <input ref={icsInput} type="file" accept={ICS_ACCEPT} hidden aria-hidden="true" tabIndex={-1} onChange={event => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) openIcs(file);
+        }} />
         {searching
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
           : <button className="ibtn" aria-label="Search calendar" data-tip="Search · /" onClick={() => {
@@ -949,7 +1012,18 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           }}><Icon name="search" /></button>}
         <button className="btn cal-new" data-hint="c" data-tip="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
       </header>
-      <div className="content cal-content" onContextMenu={onContextMenu}>
+      <div className="content cal-content" onContextMenu={onContextMenu}
+        onDragOver={event => {
+          if (!dragsFile(event)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={event => {
+          if (!dragsFile(event)) return;
+          event.preventDefault();
+          const file = event.dataTransfer.files[0];
+          if (file) openIcs(file);
+        }}>
         {/* In the compact tier the day's pane isn't drawn (calendar.css): its sources' health lines
             sit atop the grid instead, so a failing one still shows (#140). */}
         {compact && <div className="cal-health"><HealthLines now={now} timeZone={zone} /></div>}
@@ -968,7 +1042,11 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
             dayItems={date => byDay.get(date) ?? EMPTY_ITEMS} onPreview={onPreview}
             onCreate={inputs => {
               closeEditor();
-              create(inputs, inputs.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${inputs[0]!.title}`, null);
+              // SV-181: the .ics draft is imported with its iCalUID; any drafts added beside it are created as usual.
+              const imported = editor.ics ? inputs[0]! : null;
+              if (editor.ics && imported) void importFromEditor(imported.calendar_id, calendarsById.get(imported.calendar_id)?.name ?? 'the calendar', editedImport(editor.ics, imported));
+              const rest = imported ? inputs.slice(1) : inputs;
+              if (rest.length) create(rest, rest.length > 1 ? 'Couldn\'t create them' : `Couldn't create ${rest[0]!.title}`, null);
             }}
             onSave={(item, changes, scope) => {
               closeEditor();
@@ -979,6 +1057,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               remove([item]);
             }}
             onClose={closeEditor} onEscape={escape} onDirty={setEditorDirty} onKeep={keepDrafts} place={editor.place} />
+        ) : review ? (
+          <ImportPane review={review} calendars={googleCalendars} fallback={googleCalendars.find(one => one.visible)?.id ?? googleCalendars[0]?.id ?? null} timeZone={zone} />
         ) : searching ? (
           <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
         ) : compact && !dayPane ? null : (

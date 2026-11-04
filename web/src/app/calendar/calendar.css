@@ -415,3 +415,31 @@
   .ag-task .check:enabled:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
   .ag-task .check:enabled:hover .ring > .icon { opacity: 1; }
 }
+
+/* ---------- SV-181: an .ics file's review, in the right pane (D437) ---------- */
+/* The calendar it goes into, and how many of the ticked it already holds, under the heading. */
+.imp-to { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 8px 16px 10px 20px; border-bottom: 1px solid var(--hair); font-size: 12.5px; }
+.imp-to .imp-already { flex-basis: 100%; }
+.imp-list { display: flex; flex-direction: column; padding: 6px 8px 8px; }
+/* A row: the sidebar's 14 px checkbox in the chosen calendar's colour, the title, then its day and time. */
+.imp-row { width: 100%; display: flex; align-items: flex-start; gap: 10px; padding: 7px 12px; border-radius: 10px; text-align: left; color: var(--ink); }
+.imp-row > .chk { margin-top: 3px; }
+.imp-row .title { display: block; font-weight: 500; }
+.imp-row .line { display: block; font-size: 12.5px; }
+.imp-row:enabled:hover { background: var(--sub); }
+.imp-row:disabled { cursor: default; }
+.imp-item.off .title { color: var(--ink3); font-weight: 400; }
+.imp-all { align-items: center; padding-top: 6px; padding-bottom: 6px; }
+.imp-all > .chk { margin-top: 0; }
+.imp-row .spin, .imp-row .imp-done { flex: none; margin-top: 2px; color: var(--ink3); }
+.imp-row .imp-done { color: var(--good); }
+/* Refused: Google's words in `caution` under the row, with Retry. */
+.imp-refused { display: flex; align-items: flex-start; gap: 8px; margin: -2px 0 6px 36px; padding-right: 8px; color: var(--caution); font-size: 12.5px; line-height: 18px; }
+.imp-refused > .icon { margin-top: 1px; flex: none; }
+.imp-refused .btn { flex: none; margin-top: -4px; }
+.imp-left { padding: 6px 20px 18px; font-size: 12.5px; }
+.imp-foot { color: var(--ink2); }
+.imp-progress { font-size: 12.5px; padding-right: 4px; }
+.imp-progress.failing { color: var(--caution); }
+.imp-foot .btn.quiet { margin-left: auto; }
+.imp-foot .btn.quiet .kbd { margin-left: 4px; }

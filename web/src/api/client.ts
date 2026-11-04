@@ -50,8 +50,9 @@ async function request<T>(method: string, path: string, body?: unknown, {quiet40
   try {
     response = await fetch(`/api${path}`, {
       method,
-      headers: {Accept: 'application/json', ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
-      body: body === undefined ? undefined : JSON.stringify(body),
+      // A file (SV-181's .ics) goes as its own bytes, in its own type.
+      headers: {Accept: 'application/json', ...(body === undefined ? {} : {'Content-Type': body instanceof Blob ? body.type || 'application/octet-stream' : 'application/json'})},
+      body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body),
       // A change sent as the page goes away (a delete still waiting out its Undo) outlives it.
       keepalive,
       signal,

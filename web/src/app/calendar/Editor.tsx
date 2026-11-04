@@ -11,7 +11,7 @@
 // the same way (N3), but with no "from the email" marks. Editing an item shows its fields directly (board 14), says
 // what it was ("Was 7:00 – 8:00 AM"), and a recurring event asks This event, This and following or
 // All events in place of the footer before it saves. Nothing is created or changed until ⌘Enter.
-import type {CalendarOut, Colour, ItemChanges, ItemCreateInput, ItemKind, ItemOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
+import type {CalendarOut, Colour, IcsEventOut, ItemChanges, ItemCreateInput, ItemKind, ItemOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
 import {isFree, TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject} from 'react';
@@ -54,6 +54,8 @@ export interface EditorOpen {
   kept?: KeptDrafts;
   // A range dragged on the week view: its times (null for all day) and days.
   slot?: Slot;
+  // SV-181: a one-event .ics file, as a filled-in draft that Create imports with its iCalUID (D437).
+  ics?: IcsEventOut;
 }
 
 /** Where a new event was put on the week view: its time when the line names none (DESIGN.md › Week view). */
@@ -186,6 +188,25 @@ const withDefaults = (draft: Draft, calendar: number | null, reminders: number[]
   ...draft, calendarId: draft.calendarId ?? (draft.kind === 'event' ? calendar : null),
   reminders: remindersOf(draft, taskTime, timeZone) ?? (draft.kind === 'event' ? reminders : []),
 });
+
+/**
+ * SV-181: an .ics file's one event as a new draft (D437): its title as words only, none of them read
+ * (D290), its day and time in the user's zone, place, repeat, and its own reminders, never Settings'
+ * default (D438); the calendar already holding it, if one does. The fields are set, so the line's parse
+ * leaves them be.
+ */
+function fromIcs(event: IcsEventOut, timeZone: string): Draft {
+  const date = event.all_day ? event.start_date! : localDate(event.starts_at!, timeZone);
+  const start = event.all_day ? null : minutesOf(event.starts_at!, timeZone);
+  const end = start === null ? null : start + Math.round((Date.parse(event.ends_at ?? event.starts_at!) - Date.parse(event.starts_at!)) / 60_000);
+  return {
+    ...emptyDraft('event', date), text: event.title, title: event.title, plain: wordSpans(event.title), start, end,
+    days: event.all_day ? Math.max(1, daysBetween(event.start_date!, event.end_date!)) : 1,
+    place: event.place ?? '', address: event.address, calendarId: event.existing[0] ?? null, reminders: event.reminders,
+    recurrence: event.recurrence.find(line => line.startsWith('RRULE:')) ?? null,
+    manual: ['date', 'time', 'place', 'reminders', 'recurrence', ...(event.existing.length ? ['calendar' as const] : [])],
+  };
+}
 
 /** An item as the editor's fields. */
 function fromItem(item: ItemOut, timeZone: string): Draft {
@@ -512,7 +533,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const calendarChoices = useMemo(() => (editing ? google.filter(one => one.account_id === accountOf) : google), [editing, google, accountOf]);
 
   const [original] = useState(() => (editing ? fromItem(editing, timeZone) : null));
-  const [drafts, setDrafts] = useState<Draft[]>(() => open.kept?.drafts ?? [original ? {...original} : emptyDraft(open.kind, open.date, open.slot ?? null)]);
+  const [drafts, setDrafts] = useState<Draft[]>(() => open.kept?.drafts ?? [original ? {...original} : open.ics ? fromIcs(open.ics, timeZone) : emptyDraft(open.kind, open.date, open.slot ?? null)]);
   const [active, setActive] = useState(open.kept?.active ?? drafts[0]!.id);
   const [kind, setKind] = useState<ItemKind>(open.kept?.kind ?? open.kind);
   useEffect(() => onKeep?.({drafts, active, kind}), [drafts, active, kind, onKeep]);
@@ -876,6 +897,9 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   // A recurring event moving to another calendar goes as a series (Google can't move one occurrence).
   const choices = original && draft.calendarId !== original.calendarId && calendar ? calendarMoveChoices(original.date, calendar.name) : original ? scopeChoices(original.date, draft.date) : [];
   const noun = kind === 'event' ? 'event' : 'task';
+  // SV-181: an .ics event the picked calendar already holds is updated there by Create (D436).
+  const updating = open.ics && draft.id === drafts[0]!.id && draft.calendarId !== null && open.ics.existing.includes(draft.calendarId)
+    ? google.find(one => one.id === draft.calendarId)?.name ?? null : null;
   const changed = (field: 'date' | 'start' | 'end') => !!original && draft[field] !== original[field];
   const was = original && original.kind === 'event' && original.start !== null && (draft.date !== original.date || draft.start !== original.start || draft.end !== original.end) && editing
     ? `Was ${draft.date !== original.date ? `${dayTitle(original.date)} · ` : ''}${timeRange(editing, timeZone)}`
@@ -1188,6 +1212,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
           </button>
           <button type="button" className="btn quiet" onClick={onClose}>Cancel<span className="kbd">Esc</span></button>
           {draft.fromEmail.length > 0 && <span className="legend"><Icon name="mail" size={14} /><span>From the email</span></span>}
+          {updating && <span className="legend"><Icon name="event" size={14} /><span>Already on {updating} (will update)</span></span>}
         </div>
       )}
     </form>
