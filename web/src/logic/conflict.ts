@@ -1,7 +1,9 @@
 // Overlaps (DESIGN.md › Editor's conflict preview; boards 12b, 13 and 14): the editor's small
 // timeline of the day ("Overlaps Study group · 1h 30m", or "No conflicts") and the agenda's line
-// under an event that starts during another ("Overlaps Study group until 8:30 PM").
+// under an event that starts during another ("Overlaps Study group until 8:30 PM"). Free events are
+// never a clash in either (shared/src/freeBusy.ts, SV-180).
 import type {ItemOut} from '@setpoint/shared';
+import {isFree} from '@setpoint/shared';
 import {clockTime, instantAt} from './format.ts';
 
 const MINUTE = 60_000;
@@ -26,9 +28,6 @@ export function spanOf(item: ItemOut): Span | null {
   const span = {start: Date.parse(item.starts_at), end: Date.parse(item.ends_at)};
   return span.end > span.start ? span : null;
 }
-
-/** A free event (Google's transparency `transparent`): it clashes with nothing, and nothing with it (D440). */
-export const isFree = (item: Pick<ItemOut, 'transparency'>) => item.transparency === 'transparent';
 
 /**
  * The busy timed events `span` shares time with (touching isn't overlapping), earliest first;
@@ -99,13 +98,14 @@ export const minutesFrom = (date: string, at: number, timeZone: string) => (at -
 /**
  * The agenda's line under an event that starts while another is on (board 12b: Dinner with Sam at
  * 7 PM during Study group, 6:30 – 8:30 PM): "Overlaps Study group until 8:30 PM", until the
- * earlier of the two ends. The event that was on first says nothing.
+ * earlier of the two ends. The event that was on first says nothing, and a free event neither
+ * says it nor is named (SV-180).
  */
 export function agendaOverlap(item: ItemOut, dayItems: ItemOut[], timeZone: string): string | null {
-  const span = spanOf(item);
+  const span = isFree(item) ? null : spanOf(item);
   if (!span) return null;
   const during = dayItems.find(other => {
-    const theirs = other.key === item.key ? null : spanOf(other);
+    const theirs = other.key === item.key || isFree(other) ? null : spanOf(other);
     return theirs !== null && theirs.start < span.start && span.start < theirs.end;
   });
   if (!during) return null;

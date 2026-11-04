@@ -3,6 +3,7 @@ export * from './message.ts';
 export * from './seed.ts';
 export * from './settings.ts';
 export * from './link.ts';
+export * from './freeBusy.ts';
 export * from './api/common.ts';
 export * from './api/auth.ts';
 export * from './api/live.ts';

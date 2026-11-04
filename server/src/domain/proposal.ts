@@ -9,7 +9,7 @@
 // calendar proposal flow (SV-5): a date with no time is all day, and an end before the start is
 // refused; v1's 30-minute default end became an hour (Google Calendar's own default).
 import * as chrono from 'chrono-node';
-import type {ProposalField} from '@setpoint/shared';
+import type {ProposalField, Transparency} from '@setpoint/shared';import {isFree} from '@setpoint/shared';
 import {fold, wordsOf} from './searchChips.ts';
 import {addDays} from './time.ts';
 
@@ -146,6 +146,8 @@ export interface DayItem {
   all_day: boolean;
   starts_at: string | null;
   ends_at: string | null;
+  // SV-180: a free event (Google's `transparent`) is never a clash.
+  transparency?: Transparency | null;
 }
 
 /** "1h 30m", "2h", "45m". */
@@ -160,10 +162,11 @@ const more = (count: number) => (count > 0 ? ` and ${count} more` : '');
 /**
  * Board 08's line for an event: "Free that evening" or "Overlaps Study group · 1h 30m" (the time the
  * two share). A timed event is checked against the day's timed events; an all-day one against any.
- * `startHour` is the proposal's local start hour, for morning, afternoon or evening.
+ * `startHour` is the proposal's local start hour, for morning, afternoon or evening. Free events
+ * are left out (SV-180).
  */
 export function conflictLine(proposal: {all_day: boolean; starts_at: string | null; ends_at: string | null; startHour: number | null}, items: DayItem[]): {free: boolean; label: string} {
-  const events = items.filter(item => item.kind === 'event');
+  const events = items.filter(item => item.kind === 'event' && !isFree(item));
   if (proposal.all_day || !proposal.starts_at || !proposal.ends_at) {
     if (!events.length) return {free: true, label: 'Free that day'};
     return {free: false, label: `Overlaps ${events[0]!.title}${more(events.length - 1)}`};

@@ -853,7 +853,7 @@ test('SV-78: No end in the End list makes an event that ends as it starts; it sa
   }
 });
 
-test('SV-180: a free event clashes with nothing in the conflict preview: an event during the Career fair, and the fair over it (D440)', async () => {
+test('SV-180: a free event clashes with nothing in the conflict preview or the agenda: an event during the Career fair, and the fair over it (D440)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -867,6 +867,12 @@ test('SV-180: a free event clashes with nothing in the conflict preview: an even
     await page.keyboard.press('Meta+Enter');
     await page.locator('.editor').waitFor({state: 'detached'});
     await settled(setpoint, '2026-10-15');
+
+    // The agenda's Overlaps line leaves the free fair out: Coffee chat starts during it and says nothing.
+    await page.goto(`${setpoint.base}/calendar/2026-10-15`);
+    const coffee = page.locator('.ag-item', {hasText: 'Coffee chat'});
+    await coffee.waitFor();
+    assert.equal(await coffee.locator('.overlap').count(), 0, 'no Overlaps line under Coffee chat');
 
     // The fair itself, with Coffee chat (busy) inside it, is free: no conflicts either.
     await chip(page, '2026-10-15', 'Career fair').click();

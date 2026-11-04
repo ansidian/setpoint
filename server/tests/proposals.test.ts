@@ -42,13 +42,13 @@ describe('the pure rules', () => {
     expect(durationLabel(minutes)).toBe(label);
   });
 
+  const day = [
+    {title: 'Gym', kind: 'event' as const, all_day: false, starts_at: '2026-10-09T14:00:00.000Z', ends_at: '2026-10-09T15:00:00.000Z'},
+    {title: 'Study group', kind: 'event' as const, all_day: false, starts_at: '2026-10-10T01:30:00.000Z', ends_at: '2026-10-10T03:30:00.000Z'},
+    {title: 'Pay rent', kind: 'task' as const, all_day: true, starts_at: null, ends_at: null},
+  ];
+  const dinner = {all_day: false, starts_at: '2026-10-10T02:00:00.000Z', ends_at: '2026-10-10T04:00:00.000Z', startHour: 19};
   test('the conflict line', () => {
-    const day = [
-      {title: 'Gym', kind: 'event' as const, all_day: false, starts_at: '2026-10-09T14:00:00.000Z', ends_at: '2026-10-09T15:00:00.000Z'},
-      {title: 'Study group', kind: 'event' as const, all_day: false, starts_at: '2026-10-10T01:30:00.000Z', ends_at: '2026-10-10T03:30:00.000Z'},
-      {title: 'Pay rent', kind: 'task' as const, all_day: true, starts_at: null, ends_at: null},
-    ];
-    const dinner = {all_day: false, starts_at: '2026-10-10T02:00:00.000Z', ends_at: '2026-10-10T04:00:00.000Z', startHour: 19};
     expect(conflictLine(dinner, day)).toEqual({free: false, label: 'Overlaps Study group · 1h 30m'});
     expect(conflictLine({...dinner, starts_at: '2026-10-09T13:30:00.000Z', ends_at: '2026-10-10T03:00:00.000Z'}, day)).toEqual({free: false, label: 'Overlaps Gym · 1h and 1 more'});
     expect(conflictLine({...dinner, starts_at: '2026-10-10T04:00:00.000Z', ends_at: '2026-10-10T05:00:00.000Z', startHour: 21}, day)).toEqual({free: true, label: 'Free that evening'});
@@ -56,6 +56,15 @@ describe('the pure rules', () => {
     expect(conflictLine({...dinner, starts_at: '2026-10-09T21:00:00.000Z', ends_at: '2026-10-09T22:00:00.000Z', startHour: 14}, day)).toEqual({free: true, label: 'Free that afternoon'});
     expect(conflictLine({all_day: true, starts_at: null, ends_at: null, startHour: null}, day)).toEqual({free: false, label: 'Overlaps Gym and 1 more'});
     expect(conflictLine({all_day: true, starts_at: null, ends_at: null, startHour: null}, [day[2]!])).toEqual({free: true, label: 'Free that day'});
+  });
+
+  test.each([
+    ['a free event over it', [{...day[1]!, transparency: 'transparent' as const}], {free: true, label: 'Free that evening'}],
+    ['a free one and a busy one', [{...day[1]!, title: 'Workshop', transparency: 'transparent' as const}, {...day[1]!, transparency: 'opaque' as const}], {free: false, label: 'Overlaps Study group · 1h 30m'}],
+    ['a busy one still clashes', [{...day[1]!, transparency: 'opaque' as const}], {free: false, label: 'Overlaps Study group · 1h 30m'}],
+  ])('SV-180: the conflict line leaves free events out: %s', (_, items, line) => expect(conflictLine(dinner, items)).toEqual(line));
+  test('SV-180: an all-day proposal leaves free events out too', () => {
+    expect(conflictLine({all_day: true, starts_at: null, ends_at: null, startHour: null}, [{...day[0]!, transparency: 'transparent'}, day[2]!])).toEqual({free: true, label: 'Free that day'});
   });
 
   test('"from the email" marks only what the email says', () => {

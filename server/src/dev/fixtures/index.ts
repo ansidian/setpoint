@@ -13,6 +13,7 @@ import {failedChange, noDinner} from './calendarChanges.ts';
 import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, stitchedHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
+import {freeReview} from './freeReview.ts';
 import {linkPlaces} from './linkPlaces.ts';
 import {timeToLeave} from './timeToLeave.ts';
 import {weekendForecast} from './weekendForecast.ts';
@@ -33,6 +34,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'stitched-html': {board: 'mail checks', apply: stitchedHtml},
   // Not a board: the floating detail's place line with a link in it (SV-76, SV-77).
   'link-places': {board: 'detail checks', apply: linkPlaces},
+  // Not a board: a free event during the CS 101 final's proposed evening (SV-180).
+  'free-review': {board: 'search checks', apply: freeReview},
   // Not a board: search's rows and Alfred's sources hold an age with its year.
   'last-year': {board: 'search checks', apply: lastYear},
   // Not a board: search's fold, with more above it than a page holds and more under it than one.

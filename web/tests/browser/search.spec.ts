@@ -1310,6 +1310,22 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
   }
 });
 
+test('SV-180: a free event that evening leaves the proposal card\'s conflict line free', async () => {
+  // Exam review drop-in, 7 – 8 PM on Wed, Dec 9, is marked free; a busy one would read "Overlaps Exam review drop-in · 1h".
+  const setpoint = await startSetpoint({fixtures: ['free-review']});
+  try {
+    const page = await load(setpoint);
+    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
+    const card = page.locator('.pane .prop:not([aria-hidden])');
+    await card.waitFor();
+    assert.deepEqual(await card.locator('.prow .field input').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)), ['Wed, Dec 9', '7:00 PM', '9:00 PM']);
+    assert.equal(await card.locator('.conflict').textContent(), 'Free that evening');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the proposal card: Add to calendar pre-fills from the email, Create waits for Google Calendar, More options opens the editor', async () => {
   const setpoint = await startSetpoint();
   try {

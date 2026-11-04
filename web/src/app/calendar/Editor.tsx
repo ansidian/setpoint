@@ -12,7 +12,7 @@
 // what it was ("Was 7:00 – 8:00 AM"), and a recurring event asks This event, This and following or
 // All events in place of the footer before it saves. Nothing is created or changed until ⌘Enter.
 import type {CalendarOut, Colour, ItemChanges, ItemCreateInput, ItemKind, ItemOut, PlaceSuggestionOut, ProposalField, ProposalOut, RecentPlaceOut, RecurringScope, Settings, TodoistLabelOut, TodoistProjectOut} from '@setpoint/shared';
-import {TODOIST_COLOURS} from '@setpoint/shared';
+import {isFree, TODOIST_COLOURS} from '@setpoint/shared';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject} from 'react';
 import {useResource} from '../../api/client.ts';
@@ -24,7 +24,7 @@ import {bareToken, clockLabel, completeToken, describeRule, describeTaskRepeat, 
 import type {Mark, ParsedTitle, ReminderBase, ReminderRead} from '../../logic/compose.ts';
 import {markInside, masked, retyped, titleRun, unmasked, wordSpans} from '../../logic/plain.ts';
 import type {Span} from '../../logic/plain.ts';
-import {conflictLine, isFree, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
+import {conflictLine, minutesFrom, overlapsWith, timelineLabels, timelineWindow} from '../../logic/conflict.ts';
 import {placeName} from '../../logic/place.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from '../../logic/format.ts';
 import {dayOf} from '../../logic/manipulate.ts';

@@ -102,6 +102,14 @@ describe('overlaps (the conflict preview)', () => {
     ]);
     expect(timelineLabels({from: h(5), to: h(9)}).map(label => label.label)).toEqual(['5 AM', '6', '7', '8', '9 AM']);
   });
+  const freeStudy = {...study, transparency: 'transparent' as const};
+  const freeDinner = {...dinner, transparency: 'transparent' as const};
+  test.each([
+    ['during a free event', dinner, [freeStudy, dinner], null],
+    ['a free event during a busy one', freeDinner, [study, freeDinner], null],
+    ['both free', freeDinner, [freeStudy, freeDinner], null],
+    ['busy during busy still says so', dinner, [study, dinner], 'Overlaps Study group until 8:30 PM'],
+  ])('SV-180: the agenda\'s line leaves free events out: %s', (_, one, day, line) => expect(agendaOverlap(one, day, zone)).toBe(line));
   test('the agenda: an event that starts during another says so (board 12b); the other says nothing', () => {
     expect(agendaOverlap(dinner, [study, dinner], zone)).toBe('Overlaps Study group until 8:30 PM');
     expect(agendaOverlap(study, [study, dinner], zone)).toBeNull();
