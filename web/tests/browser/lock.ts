@@ -2,7 +2,7 @@
 // side by side slow each other into failing. The lock is a file in /tmp, not the session's own
 // temp directory, so every session sees it; a lock whose process has gone is taken over. Every way
 // in takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global
-// setup in its globalSetup, and anything else (a bare `node --test` of a spec, the board audit) when
+// setup in its globalSetup, release:check (release.ts) for as long as it runs anything, and anything else (a bare `node --test` of a spec, the board audit) when
 // it first launches Chromium (harness.ts › launchBrowser). `npm test` doesn't. A checkout from before the lock doesn't take it, so a run also waits while a Playwright
 // Chromium outside it is open.
 import {execFileSync} from 'node:child_process';
@@ -76,10 +76,12 @@ function unlockedBrowser(owner: number): {pid: number; dir: string} | null {
 
 /**
  * Takes the lock for the run whose process is `owner`, waiting for another run to finish;
- * resolves with how long it waited. A lock `owner` already holds is kept.
+ * resolves with how long it waited. A lock `owner` already holds is kept, and so is one held by the
+ * run that started this process (release:check's, for the browser runs it starts).
  */
 export async function acquire(owner = process.pid): Promise<number> {
   const started = Date.now();
+  const held = Number(process.env[HELD]);
   let told = 0;
   const tell = (message: string) => {
     if (Date.now() - told < 60_000) return;
@@ -88,7 +90,7 @@ export async function acquire(owner = process.pid): Promise<number> {
   };
   for (;;) {
     const other = holder();
-    if (other?.pid === owner) return Date.now() - started;
+    if (other && (other.pid === owner || other.pid === held)) return Date.now() - started;
     if (other && !alive(other.pid)) {
       // Its run died without letting go. Two waiters seeing this at once could both run, which is
       // only what happened before the lock.
@@ -119,9 +121,10 @@ export function release(owner = process.pid) {
   if (holder()?.pid === owner) fs.rmSync(LOCK, {force: true});
 }
 
-/** Marks the processes this one starts as part of its run, which holds the lock. */
+/** Marks the processes this one starts as part of its run, which holds the lock (or a run above it does). */
 export function handDown() {
-  process.env[HELD] = String(process.pid);
+  const held = Number(process.env[HELD]);
+  if (!held || holder()?.pid !== held) process.env[HELD] = String(process.pid);
 }
 
 let holding = false;

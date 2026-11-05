@@ -31,7 +31,8 @@
     "contract:record": "SETPOINT_UPDATE_CONTRACT=1 vitest run --project server contract.test",
     "compose:record": "SETPOINT_UPDATE_COMPOSE=1 vitest run --project web composeBundle",
     "audit:boards": "node web/tests/browser/audit.ts",
-    "release:check": "node web/tests/release.ts"
+    "release:check": "node web/tests/release.ts",
+    "ahead": "node web/tests/ahead.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

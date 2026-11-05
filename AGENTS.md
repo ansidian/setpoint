@@ -77,9 +77,19 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   and the lockfile; the audit by the goldens and boards. So a docs-only commit leaves everything
   passed, and a goldens-only one only the screenshots and the audit to run. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
   about 11 minutes, against its own budget of 12 (the normal run's is 5, SV-187).
-- When Andy says a release is coming, the session that pushes its commit runs
-  `npm run release:check` in the background straight after, so the release finds it done. Each of
-  its checks takes the test lock while it runs.
+- Checks run ahead, at landing (SV-194). After each push to `master` on this Mac, a
+  reference-transaction hook (`npm run ahead -- install` puts it in) starts the check ahead
+  (web/tests/ahead.ts): `release:check --keep-going` on origin/master in its own worktree,
+  `.claude/worktrees/check-ahead`, in the background, one at a time, a push meanwhile checked when
+  it's done. So a release finds its checks passed, and a `release:check` started while it runs waits
+  for it and then finds it all recorded. `npm run ahead -- status` says how the last one went and
+  where its log is; read it before a release, and fix what failed rather than waiting for the
+  release to find it. `release:check` waits for the browser lock and holds it for as long as it runs
+  anything (none when everything has passed), so the check ahead never runs beside another
+  browser run, and an interactive run waits for it, saying whose.
+- A slice that changes the screen runs `npm run release:check -- pages image` on its commit before
+  it lands (any of `unit image browser stress pages audit` runs just those), so a golden that
+  changed or an image that won't build is found while the slice is open, not at the release.
 - `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
   how to sign in: the quickest way to see a change or reproduce a report by hand.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
