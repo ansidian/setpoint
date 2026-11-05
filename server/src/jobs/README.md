@@ -38,7 +38,7 @@ never imports Jobs; Jobs reads mail through [`mail.ts`](mail.ts), its one read-o
   Settings › AI's Jobs group ([`JobsSettings.tsx`](../../../web/src/app/jobs/JobsSettings.tsx)). The shell imports only
   [`index.ts`](../../../web/src/app/jobs/index.ts).
 
-- `extension/` (SV-174): Setpoint on LinkedIn, the Chromium extension that asks `POST /api/jobs/check`
+- `extension/` (SV-174, SV-202): Setpoint on job boards, the Chromium extension that asks `POST /api/jobs/check`
   with Jobs's token ([its README](../../../extension/README.md)). It reaches Jobs only over HTTP and
   imports only `@setpoint/shared`, so it isn't one of the lint's folders, but it goes with Jobs.
 

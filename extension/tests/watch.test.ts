@@ -1,7 +1,7 @@
 // The toolbar badge's rule (SV-174): a jobs page that stays unread past the grace says so, and one
 // that reads takes it away.
 import {describe, expect, test} from 'vitest';
-import {badgeOf, GRACE_MS, NAME, watch} from '../src/watch.ts';
+import {badgeOf, GRACE_MS, watch} from '../src/watch.ts';
 
 describe('the badge', () => {
   test.each([
@@ -21,11 +21,12 @@ describe('the badge', () => {
   });
 
   test.each([
-    ['pane', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane'}],
-    ['cards', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job cards'}],
-    ['both', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane and cards'}],
-    [null, {text: '', title: NAME}],
-  ] as const)('%s says %o', (unread, expected) => {
-    expect(badgeOf(unread)).toEqual(expected);
+    ['pane', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane'}],
+    ['cards', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job cards'}],
+    ['both', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane and cards'}],
+    ['pane', 'Indeed', {text: '!', title: 'Setpoint couldn\'t read this Indeed page, its job pane'}],
+    [null, 'Indeed', {text: '', title: 'Setpoint on job boards'}],
+  ] as const)('%s on %s says %o', (unread, board, expected) => {
+    expect(badgeOf(unread, board)).toEqual(expected);
   });
 });

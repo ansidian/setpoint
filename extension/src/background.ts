@@ -1,7 +1,7 @@
-// Setpoint on LinkedIn's service worker (SV-174). It asks Setpoint's POST /api/jobs/check about
+// Setpoint on job boards' service worker (SV-174). It asks Setpoint's POST /api/jobs/check about
 // postings (the job pane's, or a page of the list's cards at once) with the extension's own token,
 // kept in chrome.storage.local beside Setpoint's address. The request is made here rather than on
-// LinkedIn's page, so the page never sees the token, and the host permission the options page asks
+// the board's page, so the page never sees the token, and the host permission the options page asks
 // for lets it reach Setpoint without CORS. It also keeps each tab's toolbar badge, which says when
 // the page couldn't be read (watch.ts).
 import {JOBS_CHECK_MAX} from '@setpoint/shared';
@@ -22,7 +22,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, reply) => {
   if (message?.type === 'options') chrome.runtime.openOptionsPage();
   if (message?.type === 'page' && sender.tab?.id !== undefined) {
     const tabId = sender.tab.id;
-    const badge = badgeOf(message.unread);
+    const badge = badgeOf(message.unread, message.board);
     chrome.action.setBadgeText({tabId, text: badge.text});
     chrome.action.setBadgeBackgroundColor({tabId, color: CAUTION});
     chrome.action.setTitle({tabId, title: badge.title});

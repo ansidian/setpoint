@@ -1,13 +1,14 @@
-// Setpoint on LinkedIn's content script (SV-174): a chip saying whether Setpoint's Jobs has an
-// application to a job. In the job pane (and on a job's own page) it follows the title and says "Not
-// applied" or why it can't answer too; on the list's cards it follows the company, smaller, and only
-// when there's an application, as mail's rows show Applied before. LinkedIn draws all of it without
-// loading a page, rebuilding the pane for each job and the cards for each page of results, so a
-// MutationObserver places chips wherever they're missing, asking Setpoint once for all the postings
-// it hasn't asked about yet. A page it should read but can't shows the toolbar's badge (watch.ts).
+// Setpoint on job boards' content script (SV-174, SV-202): a chip saying whether Setpoint's Jobs has
+// an application to a job on LinkedIn or Indeed, each read by its own readers (boards.ts). In the job
+// pane (and on a job's own page) it follows the title and says "Not applied" or why it can't answer
+// too; on the list's cards it follows the company, smaller, and only when there's an application, as
+// mail's rows show Applied before. The boards draw all of it without loading a page, rebuilding the
+// pane for each job and the cards for each page of results, so a MutationObserver places chips
+// wherever they're missing, asking Setpoint once for all the postings it hasn't asked about yet. A
+// page it should read but can't shows the toolbar's badge (watch.ts).
+import {boardOf} from './boards.ts';
 import {draw, HOST} from './chip.ts';
-import {readPage} from './linkedin.ts';
-import type {Posting, Unread} from './linkedin.ts';
+import type {Posting, Unread} from './posting.ts';
 import type {Asked, CheckReply, Message} from './reply.ts';
 import {watch} from './watch.ts';
 import {chipFor, todayOf} from './words.ts';
@@ -24,6 +25,9 @@ function send(message: Message): Promise<unknown> {
 }
 
 const openOptions = () => void send({type: 'options'});
+
+// The manifest runs this only on the boards' hosts.
+const board = boardOf(location.hostname);
 
 // ---- Asking, once per posting while the page is open ----
 
@@ -53,7 +57,7 @@ function ask(postings: Posting[]): Promise<Answer>[] {
 // ---- Placing ----
 
 // A card's line with nothing to show (or still asked about): the job it was decided for, so it isn't
-// asked about again until LinkedIn draws another job there.
+// asked about again until the board draws another job there.
 const quiet = new WeakMap<Element, string>();
 
 const drawnOn = (line: Element) => line.querySelector<HTMLElement>(`:scope > ${HOST}`);
@@ -81,7 +85,7 @@ function place(posting: Posting, answer: Promise<Answer>, where: Place): void {
   };
   show(null);
   void answer.then(got => {
-    // LinkedIn may have drawn another job on this line meanwhile; that one has its own.
+    // The board may have drawn another job on this line meanwhile; that one has its own.
     if (line.isConnected && placed(posting)) show(got);
   });
 }
@@ -100,12 +104,13 @@ function report(unread: Unread | null): void {
   if (next.again !== null) again = setTimeout(refresh, next.again);
   if (next.badge !== shown) {
     shown = next.badge;
-    void send({type: 'page', unread: shown});
+    if (board) void send({type: 'page', board: board.name, unread: shown});
   }
 }
 
 function refresh(): void {
-  const page = readPage(new URL(location.href));
+  if (!board) return;
+  const page = board.readPage(new URL(location.href));
   report(page.unread);
   const postings = [
     ...(page.pane ? [{posting: page.pane, where: 'pane' as const}] : []),

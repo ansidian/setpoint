@@ -3752,6 +3752,11 @@ it changes what's on screen.
     dot. Each is 75% over the text colour with a 12% fill and a 45% ring, in place of violet and the
     closed one's step down. Amber for another role, quiet for none, `alert` words for can't answer and
     the violet focus ring stay.
+    Extended to Indeed (Andy, 2026-11-05; darma SV-202, D450): the same chips, unchanged, on Indeed's
+    job search, its home feed and a job's own page. In the pane the chip follows the title; on a card
+    it follows the company, on the company's line beside its name, which clips itself with an
+    ellipsis. The extension is Setpoint on job boards, and the badge's tooltip names the board:
+    "Setpoint couldn't read this Indeed page, its job pane", LinkedIn's as before.
 302. **An event's own link has Open** (extending #245; Andy, 2026-11-04; darma SV-179, D439, D442).
     A Google event with a link of its own (Google's `source.url`, which an imported .ics file's URL
     line fills) and no link in its place shows it on a line of its own after the place: a 17 px

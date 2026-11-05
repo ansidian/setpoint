@@ -3,20 +3,21 @@
 // pane rather than drawing wrong chips; or why there's none.
 import {jobsCheckSchema} from '@setpoint/shared';
 import type {JobsCheckOut} from '@setpoint/shared';
-import type {Unread} from './linkedin.ts';
+import type {BoardName} from './boards.ts';
+import type {Unread} from './posting.ts';
 import type {Failure} from './words.ts';
 
-/** A posting as the route takes it: its company and title as LinkedIn shows them. */
+/** A posting as the route takes it: its company and title as the board shows them. */
 export interface Asked {
   company: string;
   title: string;
 }
 
-/** What LinkedIn's page and the options page send the service worker. */
+/** What a board's page and the options page send the service worker. */
 export type Message =
   | {type: 'check'; postings: Asked[]}
   | {type: 'options'}
-  | {type: 'page'; unread: Unread | null};
+  | {type: 'page'; board: BoardName; unread: Unread | null};
 
 /** The service worker's answer to a check: Setpoint's, for the postings in the order asked, or why there's none. */
 export type CheckReply = {ok: true; origin: string; data: JobsCheckOut} | {ok: false; reason: Failure; detail?: string};

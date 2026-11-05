@@ -2,8 +2,8 @@
 // page expects to read, which the toolbar's badge goes by. In Chromium, as LinkedIn's page is.
 import {beforeEach, describe, expect, test} from 'vitest';
 import {expects, jobIdOf, readCards, readPage, readPane} from '../src/linkedin.ts';
-import search from './fixtures/search.html?raw';
-import view from './fixtures/view.html?raw';
+import search from './fixtures/linkedin-search.html?raw';
+import view from './fixtures/linkedin-view.html?raw';
 
 const SEARCH = 'https://www.linkedin.com/jobs/search-results/?currentJobId=4100000002&keywords=software';
 const VIEW = 'https://www.linkedin.com/jobs/view/4100000009/';

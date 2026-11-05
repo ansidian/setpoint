@@ -1,4 +1,4 @@
-// What Setpoint on LinkedIn reads on LinkedIn's job pages (SV-174). LinkedIn's class names are
+// What Setpoint on job boards reads on LinkedIn's job pages (SV-174). LinkedIn's class names are
 // generated and change, so it reads only what has stayed put (README.md › What it reads on LinkedIn):
 //
 // - The job pane: the job's id in the address (`currentJobId`, or /jobs/view/<id>/), the company's
@@ -8,16 +8,11 @@
 // - A card: the innermost element keyed job-card-component-ref-<id> (each card is keyed twice), its
 //   title from its "Dismiss <title> job" button, its company the line after the title's.
 
+import {unreadOf} from './posting.ts';
+import type {PageRead, Posting} from './posting.ts';
+
 const CARD_KEY = 'job-card-component-ref-';
 const CARDS = `[componentkey^="${CARD_KEY}"]`;
-
-/** A posting as LinkedIn shows it, and the line its chip goes at the end of. */
-export interface Posting {
-  jobId: string;
-  company: string;
-  title: string;
-  line: Element;
-}
 
 /** The job open: the search's `currentJobId`, or the id in /jobs/view/<id>/. */
 export function jobIdOf(url: URL): string | null {
@@ -76,17 +71,10 @@ export function readCards(doc: Document = document): Posting[] {
   return cards;
 }
 
-/** What a page that should be readable couldn't be read, or null when it read (or expects nothing). */
-export type Unread = 'pane' | 'cards' | 'both';
-
 /** The page as read now: what it expects that it couldn't read, the pane, and the cards. */
-export function readPage(url: URL, doc: Document = document): {unread: Unread | null; pane: Posting | null; cards: Posting[]} {
+export function readPage(url: URL, doc: Document = document): PageRead {
   const jobId = jobIdOf(url);
   const pane = jobId && url.pathname.startsWith('/jobs') ? readPane(jobId, doc) : null;
   const cards = url.pathname.startsWith('/jobs') ? readCards(doc) : [];
-  const expected = expects(url);
-  const paneMissing = expected.pane && !pane;
-  const cardsMissing = expected.cards && !cards.length;
-  const unread = paneMissing && cardsMissing ? 'both' : paneMissing ? 'pane' : cardsMissing ? 'cards' : null;
-  return {unread, pane, cards};
+  return {unread: unreadOf(expects(url), pane, cards), pane, cards};
 }

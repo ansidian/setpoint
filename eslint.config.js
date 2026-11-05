@@ -219,7 +219,7 @@ export default tseslint.config(
     languageOptions: {globals: globals.browser},
   },
   {
-    // Setpoint on LinkedIn (SV-174): its scripts and tests run in Chromium, with the extension's APIs;
+    // Setpoint on job boards (SV-174): its scripts and tests run in Chromium, with the extension's APIs;
     // its build and Vitest config run in Node.
     files: ['extension/src/**/*.ts', 'extension/tests/**/*.ts'],
     languageOptions: {globals: {...globals.browser, ...globals.webextensions}},

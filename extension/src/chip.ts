@@ -1,8 +1,8 @@
-// The chip on LinkedIn's page (SV-174, DESIGN.md › Decided while building #301, D434, D435). Each is
-// in its own shadow root, so LinkedIn's styles don't reach it. Its colours are Setpoint's (good while
+// The chip on a board's page (SV-174, DESIGN.md › Decided while building #301, D434, D435). Each is
+// in its own shadow root, so the board's styles don't reach it. Its colours are Setpoint's (good while
 // this role's application is open and alert once it's closed, as Jobs's Offer and Rejected, an amber
 // for another role, alert for a failure, violet for focus) mixed with the page's own text colour, so
-// it reads in LinkedIn's light and dark themes alike.
+// it reads in the boards' light and dark themes alike.
 import type {Chip, Place} from './words.ts';
 
 export const HOST = 'setpoint-chip';

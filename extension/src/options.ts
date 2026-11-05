@@ -1,6 +1,6 @@
 // The options page (SV-174): Setpoint's address and the Jobs token, kept in chrome.storage.local
 // (never synced). Saving asks Chrome for access to that address, which is how the service worker
-// reaches Setpoint, then tries a check so a wrong address or token shows here rather than on LinkedIn.
+// reaches Setpoint, then tries a check so a wrong address or token shows here rather than on a job board.
 import type {CheckReply, Message} from './reply.ts';
 
 const form = document.querySelector<HTMLFormElement>('#form')!;

@@ -619,6 +619,9 @@ be where he looks before applying:
   - **A card** has a smaller one only when there's an application.
   - **It reads** through `POST /api/jobs/check` with its own token from `npm run cli -- jobs-token`,
     apart from the session. The token opens nothing else.
+- **On Indeed's postings too** (D450, SV-202): the same extension, renamed Setpoint on job boards,
+  reads Indeed's job search, its home feed and a job's own page with Indeed's own readers, drawing the
+  same chips through the same route and token.
 
 Not now: other job boards and other browsers, since each board needs its own readers, or a badge in
 other apps.

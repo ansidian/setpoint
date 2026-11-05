@@ -788,6 +788,21 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   - A page of cards is one request, and Setpoint's log shows no errors from the route.
 - **Done when:** the check holds, or what it found is filed as its own issue.
 
+### SV-202. Indeed, beside LinkedIn
+
+> **Added 2026-11-05 (Andy, darma SV-202, D450):** D433's "other job boards stay out" is reopened
+> for Indeed. The one extension, renamed Setpoint on job boards, reads both boards, each by its own
+> readers (`extension/src/linkedin.ts`, `extension/src/indeed.ts`), picked by the page's host.
+
+- **Indeed's readers:** the job pane (a search's, the home feed's and a job's own page's header) and
+  the list's cards, by Indeed's test ids and job keys, with the same chips, check route and token.
+  The badge names the board ("Setpoint couldn't read this Indeed page, its job pane").
+- **Done when:**
+  - `npm test` covers Indeed's readers against trimmed Indeed pages (a pane still showing the last
+    job, the hidden made-up card, the carousel's cards), the board by host, and the badge's words.
+  - The built content script, injected with stand-in answers, draws chips on Indeed's live search,
+    home feed and a job's own page. Loaded unpacked against prod, Indeed's pages draw chips.
+
 ## Order and parallelism
 
 ```
@@ -802,7 +817,7 @@ After B8 (News): N1 ──┬──► N2 ──► N3 ──┐
 
 After News (Jobs): J1 ──► J2 ──► J3 ──► J4 ──► J5 ──► J6 ──► J7 ──► J8
 
-After Jobs (Jobs on LinkedIn): SV-173 ──► SV-174 ──► SV-175
+After Jobs (Jobs on LinkedIn): SV-173 ──► SV-174 ──► SV-175 ──► SV-202 (Indeed)
 ```
 
 - **News waits for the cutover** and doesn't hold up any 2.0 slice. N4 builds against N1's seed while
