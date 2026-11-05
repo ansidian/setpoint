@@ -7,7 +7,10 @@
 // selected day), Colour (an event's own, from the swatches Google's event colours fall on) and
 // Delete; a Todoist task also has Complete, Reopen once it's done (SV-25, D55). Google's own kinds
 // of event take none of them. Off Calendar (the Today block's card, #78) a page offers the ones it
-// can carry out and Open in Calendar; the others aren't drawn.
+// can carry out and Open in Calendar; the others aren't drawn. A read-only event (a calendar the user
+// can only read, or one of Google's own kinds) says so on its calendar's line, `lock` and "Read-only ·
+// ‹calendar›" with the reason as its tip, and leaves out what it can't do, the row going with nothing
+// left (D447, amending #306).
 import type {CalendarOut, EventColour, ItemOut, Settings} from '@setpoint/shared';
 import {EVENT_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
@@ -45,6 +48,11 @@ interface DetailContentProps {
   onEdit: () => void;
 }
 
+/** Why a read-only item can't change (SV-191): its calendar is read-only, else it's one of Google's own kinds of event. */
+export function readOnlyReason(calendar: CalendarOut | undefined): string {
+  return calendar?.writable === false ? 'This calendar is read-only' : 'Google doesn\'t let this kind of event change';
+}
+
 function Fact({icon, className, style, children}: {icon: IconName; className?: string; style?: CSSProperties; children: ReactNode}) {
   return <div className={className ? `fact ${className}` : 'fact'} style={style}><Icon name={icon} size={17} />{children}</div>;
 }
@@ -64,11 +72,11 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
   const now = useNow();
   const colour = {'--c': colourVar(item.colour ?? calendar?.colour ?? (item.kind === 'task' ? undefined : 'cool'))} as CSSProperties;
   const fixed = item.read_only || !actions;
-  // Read-only is a yes or no: the calendar says why (SV-191), else it's one of Google's own kinds of event.
-  const readOnlyTip = calendar?.writable === false ? 'This calendar is read-only' : 'Google doesn\'t let this kind of event change';
   const act = (run: (one: ItemOut) => void) => () => !fixed && run(item);
-  // Without actions (Google's own kinds, the phone) every one is drawn, unavailable.
-  const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !actions || !!actions[action];
+  // Without actions (the phone) every one is drawn, unavailable; a read-only item leaves them out (D447).
+  const offers = (action: 'clone' | 'copy' | 'colour' | 'remove') => !item.read_only && (!actions || !!actions[action]);
+  const complete = item.kind === 'task';
+  const acts = !item.read_only || complete || !!actions?.open;
   const leave = leaveBy(item, timeZone, now);
   const attendees = attendeesLine(item.attendees);
   // A dated task without a time counts its reminders from Settings' task time (D288), read only for one.
@@ -129,15 +137,20 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
             </span>
           </Fact>
         )}
-        <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>
+        {item.read_only ? (
+          <Fact icon="lock" className="cal read-only" style={colour}>
+            <span data-tip={readOnlyReason(calendar)}>Read-only · {calendar?.name ?? 'Calendar'}</span>
+          </Fact>
+        ) : <Fact icon="calendar_today" className="cal" style={colour}><span>{calendar?.name ?? 'Calendar'}</span></Fact>}
       </div>
-      <div className="card-acts">
-        <button className="btn ghost sm" data-hint="e" aria-disabled={item.read_only || undefined} data-tip={item.read_only ? readOnlyTip : 'Edit · E'}
-          onClick={item.read_only ? undefined : onEdit}>
-          <Icon name="edit" size={16} />Edit<span className="kbd">E</span>
-        </button>
+      {acts && <div className="card-acts">
+        {!item.read_only && (
+          <button className="btn ghost sm" data-hint="e" data-tip="Edit · E" onClick={onEdit}>
+            <Icon name="edit" size={16} />Edit<span className="kbd">E</span>
+          </button>
+        )}
         <span className="grow" />
-        {item.kind === 'task' && (
+        {complete && (
           <button className={item.done ? 'ibtn sm' : 'ibtn sm affirm'} aria-label={item.done ? 'Reopen' : 'Complete'} aria-disabled={fixed || !!item.command || (item.done && item.recurring) || undefined}
             data-tip={item.command ? 'Waiting for Todoist' : item.done && item.recurring ? 'Todoist has moved this repeating task on' : item.done ? 'Reopen' : 'Complete'}
             onClick={act(task => !task.command && !(task.done && task.recurring) && actions!.complete(task))}>
@@ -153,7 +166,7 @@ export function DetailContent({target, timeZone, actions, onClose, onEdit}: Deta
           </button>
         )}
         {offers('remove') && <button className="ibtn sm danger" aria-label="Delete" aria-disabled={fixed || undefined} data-tip="Delete · Del" onClick={act(one => actions!.remove!(one))}><Icon name="delete" size={16} /></button>}
-      </div>
+      </div>}
       {picking && (
         <ColourPanel item={item} calendar={calendar} onPick={swatch => {
           setPicking(false);

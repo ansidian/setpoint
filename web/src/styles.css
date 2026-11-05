@@ -561,7 +561,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .menu-i[aria-checked="true"] { color: var(--ink); }
 .menu-i[aria-checked] > .icon:last-child, .menu-i .kbd { margin-left: auto; }
 .menu-i[aria-checked] > .icon:last-child { color: var(--ink); }
-.menu-i:disabled { opacity: .5; background: none; color: var(--ink2); }
+/* A disabled item reads as unavailable: `ink3` at .6, its key hint left out (ContextMenu.tsx, D447). A
+   note is a quiet line, `ink3` at full strength, with nothing to press. */
+.menu-i:disabled { opacity: .6; background: none; color: var(--ink3); }
+.menu-i.note:disabled { opacity: 1; cursor: default; }
 /* The right-click menu (#248): the same menu at the pointer, over everything but the palette and Settings' scrims, its groups apart by a hairline. */
 .ctx-menu { position: fixed; z-index: 38; min-width: 208px; max-width: 320px; }
 .ctx-menu .menu-i > .ell { min-width: 0; }

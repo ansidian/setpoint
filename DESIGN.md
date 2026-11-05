@@ -3838,3 +3838,16 @@ it changes what's on screen.
     Into, the editor's Calendar menu), a name that appears more than once gets its account's label
     after it in `ink3`, as in "Holidays in United States · Jobs", cut with an ellipsis where the
     row runs out; a name that appears once stays as it is. Board audit: no board draws it.
+307. **A read-only event says so at a glance and leaves out what it can't do** (Andy, 2026-11-05;
+    darma SV-196, D447, amending #306 and #248). In the floating detail, a read-only event's
+    calendar line (a calendar the user can only read, or one of Google's own kinds of event) is
+    `lock`, still in the calendar's colour, and "Read-only · Holidays in United States", its tip the
+    reason: "This calendar is read-only", or "Google doesn't let this kind of event change". Edit,
+    Clone, Copy, Colour and Delete are left out rather than drawn off; what still works stays (the
+    Today block card's Open in Calendar, an Open ‹link› line), and the actions row goes when nothing
+    is left. Its right-click menu, on the grid and in the Today block, leaves the same actions out
+    and opens with the reason as a note: `lock` and the words in `ink3`, at full strength, which the
+    cursor passes over and a click doesn't run, then what still works (Open ‹link›, Open in
+    Calendar). Any other disabled menu item (a change on its way, a done repeating task's Reopen, a
+    select's unavailable choice) is drawn in `ink3` at .6, and the right-click menu leaves out its
+    key hint. Board audit: no board draws it.

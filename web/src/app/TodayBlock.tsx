@@ -26,7 +26,7 @@ import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
 import {useRingColour} from './calendar/Chip.tsx';
-import {DetailContent} from './calendar/detail/DetailContent.tsx';
+import {DetailContent, readOnlyReason} from './calendar/detail/DetailContent.tsx';
 import type {DetailActions} from './calendar/detail/DetailContent.tsx';
 import './calendar/detail/detail.css';
 import {rectIn} from './calendar/geometry.ts';
@@ -154,10 +154,13 @@ export function TodayBlock() {
   // A right-click (DESIGN.md #248): the card's actions at the pointer, in place of the card, so an open one goes.
   const lineMenu = (item: ItemOut) => (event: MouseEvent<HTMLElement>) => {
     const offers = actionsFor(item);
-    const opened = openContextMenu(event, event.currentTarget, [
-      {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: item.read_only, run: () => navigate(itemRoute(item, true))},
+    const open = {id: 'open', label: 'Open in Calendar', icon: 'calendar_month', run: () => navigate(itemRoute(item))} satisfies MenuAction;
+    // A read-only event leaves out what it can't do, saying why (D447).
+    const reason = {id: 'read-only', label: readOnlyReason(calendars?.find(calendar => calendar.id === item.calendar_id)), icon: 'lock', note: true, run: () => {}} satisfies MenuAction;
+    const opened = openContextMenu(event, event.currentTarget, item.read_only ? [reason, open] : [
+      {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', run: () => navigate(itemRoute(item, true))},
       ...(item.kind === 'task' && !item.done ? [{id: 'complete', label: 'Complete', icon: 'task_alt', run: () => complete(item)} satisfies MenuAction] : []),
-      {id: 'open', label: 'Open in Calendar', icon: 'calendar_month', run: () => navigate(itemRoute(item))},
+      open,
       ...(offers.remove ? [{id: 'delete', group: 'delete', label: 'Delete', icon: 'delete', danger: true, run: () => remove(item)} satisfies MenuAction] : []),
     ]);
     if (opened) setOpenKey(null);

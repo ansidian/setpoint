@@ -55,7 +55,6 @@
 /* Delete stands apart: 9 px further, after a 1 × 14 px `hair` divider (#169). */
 .fd .card-acts .ibtn.danger { position: relative; margin-left: 9px; }
 .fd .card-acts .ibtn.danger::before { content: ""; position: absolute; left: -6px; top: 6px; width: 1px; height: 14px; background: var(--hair); }
-.fd .card-acts .btn.ghost[aria-disabled="true"]:hover { background: var(--sub2); }
 
 /* Colour (F6): the calendar's own, then the swatches an event can take. */
 .fd-swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }

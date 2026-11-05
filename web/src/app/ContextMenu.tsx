@@ -5,7 +5,9 @@
 // kept on screen (logic/contextMenu.ts). Its cursor starts on the first item; ↑ ↓ move it, Enter
 // runs it, an item's key runs that item, and Esc, a press elsewhere, a scroll or the window
 // resizing close it. An item with a panel (Colour) shows the panel in its place, at the same spot,
-// and one with items (Add to rule) shows them there, as a list of its own with the same keys.
+// and one with items (Add to rule) shows them there, as a list of its own with the same keys. A
+// disabled item is drawn in a fainter ink without its key hint, and a note (a read-only event's
+// reason, D447) is a quiet line the cursor passes over.
 //
 // The browser keeps its own menu on a link or field inside the thing, on selected text, inside an
 // email's body (its frame never reaches here), and with ⌥ held. A right-click that closes an open
@@ -30,6 +32,8 @@ export interface MenuAction {
   // Destructive: `alert` under the pointer (#169).
   danger?: boolean;
   disabled?: boolean;
+  // A quiet line saying something, not an action: never picked, the cursor passing over it (D447).
+  note?: boolean;
   // Items of different groups have a hairline between them.
   group?: string;
   // Picked, it shows this in its place, at the same spot, rather than running (Colour's swatches).
@@ -137,7 +141,8 @@ function Menu({open}: {open: Open}) {
   const [panel, setPanel] = useState<MenuAction | null>(null);
   const [inner, setInner] = useState<MenuAction[] | null>(null);
   const actions = inner ?? open.actions;
-  const firstEnabled = (list: MenuAction[]) => Math.max(0, list.findIndex(action => !action.disabled));
+  const off = (action: MenuAction) => action.disabled || action.note;
+  const firstEnabled = (list: MenuAction[]) => Math.max(0, list.findIndex(action => !off(action)));
   const [cursor, setCursor] = useState(() => firstEnabled(actions));
   // What had focus, given back when the menu closes by its own keys or a pick.
   const [was] = useState(() => document.activeElement as HTMLElement | null);
@@ -178,7 +183,7 @@ function Menu({open}: {open: Open}) {
     else (document.activeElement as HTMLElement | null)?.blur?.();
   };
   const run = (action: MenuAction | undefined) => {
-    if (!action || action.disabled) return;
+    if (!action || off(action)) return;
     if (action.panel) {
       setPanel(action);
       return;
@@ -195,7 +200,7 @@ function Menu({open}: {open: Open}) {
   const step = (delta: 1 | -1) => {
     for (let at = cursor + delta, tries = 0; tries < actions.length; at += delta, tries++) {
       const index = (at + actions.length) % actions.length;
-      if (!actions[index]!.disabled) return setCursor(index);
+      if (!off(actions[index]!)) return setCursor(index);
     }
   };
 
@@ -231,21 +236,21 @@ function Menu({open}: {open: Open}) {
       }}>
       {panel ? panel.panel!(close) : actions.map((action, index) => (
         <MenuRow key={action.id} action={action} divided={index > 0 && action.group !== actions[index - 1]!.group} current={index === cursor}
-          onPoint={() => !action.disabled && index !== cursor && setCursor(index)} onRun={() => run(action)} />
+          onPoint={() => !off(action) && index !== cursor && setCursor(index)} onRun={() => run(action)} />
       ))}
     </div>
   );
 }
 
 function MenuRow({action, divided, current, onPoint, onRun}: {action: MenuAction; divided: boolean; current: boolean; onPoint: () => void; onRun: () => void}) {
-  const classes = ['menu-i', current && 'cur', action.danger && 'danger'].filter(Boolean).join(' ');
+  const classes = ['menu-i', current && !action.note && 'cur', action.danger && 'danger', action.note && 'note'].filter(Boolean).join(' ');
   return (
     <>
       {divided && <div className="menu-sep" role="separator" />}
-      <button type="button" role="menuitem" className={classes} tabIndex={-1} disabled={action.disabled} onPointerMove={onPoint} onClick={onRun}>
+      <button type="button" role="menuitem" className={classes} tabIndex={-1} disabled={action.disabled || action.note} onPointerMove={onPoint} onClick={onRun}>
         <Icon name={action.icon} size={16} alfred={action.icon === 'auto_awesome'} />
         <span className="ell">{action.label}</span>
-        {action.hint && <span className="kbd">{action.hint}</span>}
+        {action.hint && !action.disabled && !action.note && <span className="kbd">{action.hint}</span>}
       </button>
     </>
   );

@@ -2,8 +2,8 @@
 // event whose place has no link but which has its own (Google's source.url) gets a line of its own,
 // `link` and the host with the whole link as its tip, and Open taking it to a new tab. A place that is
 // a link keeps SV-77's line and its one Open, and a task or an event with no link has none. `O` and the
-// card on the seed's Career fair stay in detail.spec.ts. SV-191: a read-only event's Edit says why,
-// from its calendar.
+// card on the seed's Career fair stay in detail.spec.ts. D447 (amending SV-191's #306): a read-only
+// event says so on its calendar's line, with why as its tip, and leaves out what it can't do.
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {SEED_TIME_ZONE} from '@setpoint/shared';
 import {expect, test} from 'vitest';
@@ -12,6 +12,7 @@ import {render} from 'vitest-browser-react';
 import '../../src/app/calendar/detail/detail.css';
 import {DetailContent} from '../../src/app/calendar/detail/DetailContent.tsx';
 import {ICONS} from '../../src/ui/glyphs.ts';
+import {colour} from './colour.ts';
 
 const CALENDAR: CalendarOut = {id: 2, provider: 'google', account_id: 1, name: 'Jobs', colour: 'good', position: 1, visible: true, writable: true, command: null};
 const URL_OF_FAIR = 'https://www.careers.example.edu/fair/fall-2026/schedule?track=engineering&day=1';
@@ -77,13 +78,36 @@ test('a link the server wouldn\'t send (javascript:) is never drawn as one', asy
   expect(document.querySelector('a.fd-open')).toBeNull();
 });
 
-test('SV-191: a read-only event\'s Edit says why: its calendar is read-only, else it\'s one of Google\'s own kinds', async () => {
-  const edit = () => page.getByRole('button', {name: /^Edit/});
-  const screen = await card(event({read_only: true}), {...CALENDAR, name: 'Holidays in United States', writable: false});
-  await expect.element(edit()).toHaveAttribute('aria-disabled', 'true');
-  await expect.element(edit()).toHaveAttribute('data-tip', 'This calendar is read-only');
+test('D447: a read-only event says so on its calendar\'s line, the reason as its tip, and leaves out Edit and the actions, the row going with nothing left', async () => {
+  const holidays = {...CALENDAR, name: 'Holidays in United States', writable: false};
+  const screen = await card(event({read_only: true}), holidays);
+  const line = page.getByText('Read-only · Holidays in United States');
+  await expect.element(line).toHaveAttribute('data-tip', 'This calendar is read-only');
+  expect(document.querySelector('.fact.cal .icon path')!.getAttribute('d')).toBe(ICONS.lock);
+  // The glyph keeps the calendar's colour, as any calendar line's.
+  expect(getComputedStyle(document.querySelector('.fact.cal .icon')!).color).toBe(colour('var(--good)'));
+  expect(document.querySelector('.card-acts')).toBeNull();
   await screen.unmount();
+  // One of Google's own kinds, on a calendar the user can write: Google's reason.
   await card(event({read_only: true}));
-  await expect.element(edit()).toHaveAttribute('aria-disabled', 'true');
-  await expect.element(edit()).toHaveAttribute('data-tip', 'Google doesn\'t let this kind of event change');
+  await expect.element(page.getByText('Read-only · Jobs')).toHaveAttribute('data-tip', 'Google doesn\'t let this kind of event change');
+  expect(document.querySelector('.card-acts')).toBeNull();
+});
+
+test('D447: off Calendar, a read-only event\'s card keeps Open in Calendar and nothing it can\'t do; a writable one keeps its calendar line and Edit', async () => {
+  const screen = await render(
+    <div className="fd" role="dialog" aria-label="Veterans Day" style={{position: 'relative'}}>
+      <div className="card float"><div className="fd-body"><div className="fd-layer in">
+        <DetailContent target={{item: event({read_only: true}), date: '2026-10-15', calendar: {...CALENDAR, writable: false}}} timeZone={SEED_TIME_ZONE}
+          actions={{complete: () => {}, open: () => {}, remove: () => {}}} onClose={() => {}} onEdit={() => {}} />
+      </div></div></div>
+    </div>,
+  );
+  await expect.element(page.getByRole('button', {name: 'Open in Calendar'})).toBeVisible();
+  expect([...document.querySelectorAll('.card-acts button')].map(button => button.getAttribute('aria-label'))).toEqual(['Open in Calendar']);
+  await screen.unmount();
+  await card(event({}));
+  await expect.element(page.getByRole('button', {name: /^Edit/})).toBeVisible();
+  expect(document.querySelector('.fact.cal .icon path')!.getAttribute('d')).toBe(ICONS.calendar_today);
+  expect(page.getByText(/Read-only/).query()).toBeNull();
 });

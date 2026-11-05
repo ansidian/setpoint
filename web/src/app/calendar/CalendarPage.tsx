@@ -55,7 +55,7 @@ import './calendar.css';
 import type {ChipLook} from './Chip.tsx';
 import {DayPane, HealthLines} from './DayPane.tsx';
 import {LoadFailed, useLoadFailed} from '../states/Loading.tsx';
-import {ColourPanel} from './detail/DetailContent.tsx';
+import {ColourPanel, readOnlyReason} from './detail/DetailContent.tsx';
 import type {DetailActions, DetailTarget} from './detail/FloatingDetail.tsx';
 import {Editor} from './Editor.tsx';
 import {ImportPane} from './ImportPane.tsx';
@@ -811,13 +811,16 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     // The event's link (SV-77's in its place, else SV-179's own URL), as the card's Open.
     const link = openLink(item);
     const calendar = calendarsById.get(item.calendar_id);
+    const openIt = link ? [{id: 'open-link', label: `Open ${link.host}`, icon: 'open_in_new', hint: 'O', run: () => window.open(link.url, '_blank', 'noopener')} satisfies MenuAction] : [];
+    // A read-only event leaves out what it can't do, saying why, and keeps its link (D447).
+    if (item.read_only) return [{id: 'read-only', label: readOnlyReason(calendar), icon: 'lock', note: true, run: () => {}}, ...openIt];
     return [
       ...(item.kind === 'task' ? [{id: 'complete', label: item.done ? 'Reopen' : 'Complete', icon: item.done ? 'undo' : 'task_alt', disabled: fixed || (item.done && item.recurring), run: () => complete(item)} satisfies MenuAction] : []),
       // Edit opens the editor at once, the item's day selected, with no card to hand it over (#248).
       {id: 'edit', label: 'Edit', icon: 'edit', hint: 'E', disabled: fixed, run: () => openEditor({kind: item.kind, date, item}, false, addressOf({page: 'calendar', date, item: null, at: null}))},
-      ...(link ? [{id: 'open-link', label: `Open ${link.host}`, icon: 'open_in_new', hint: 'O', run: () => window.open(link.url, '_blank', 'noopener')} satisfies MenuAction] : []),
-      {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', disabled: item.read_only, run: () => actions.clone!(item)},
-      {id: 'copy', group: 'copy', label: 'Copy', icon: 'content_copy', hint: '⌘C', disabled: item.read_only, run: () => copy([item])},
+      ...openIt,
+      {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', run: () => actions.clone!(item)},
+      {id: 'copy', group: 'copy', label: 'Copy', icon: 'content_copy', hint: '⌘C', run: () => copy([item])},
       ...(item.kind === 'event' ? [{id: 'colour', group: 'copy', label: 'Colour', icon: 'contrast', disabled: fixed,
         run: () => {}, panel: close => <ColourPanel item={item} calendar={calendar} onPick={colour => {
           close();

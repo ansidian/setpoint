@@ -312,29 +312,28 @@ const TWO_EVENTS = `${['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Example Even
   'BEGIN:VEVENT', 'UID:two@events.example.com', 'DTSTAMP:20261001T120000Z', 'DTSTART:20261021T160000Z', 'DTEND:20261021T170000Z', 'SUMMARY:Review', 'END:VEVENT',
   'END:VCALENDAR'].join('\r\n')}\r\n`;
 
-test('SV-191: the seed\'s Veterans Day, on a holiday calendar the user can only read: its menu and card change nothing, E does nothing, and neither the editor nor Into offers the calendar', async () => {
+test('SV-191, D447: the seed\'s Veterans Day, on a holiday calendar the user can only read: its menu and card say so and offer nothing that changes it, E does nothing, and neither the editor nor Into offers the calendar', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-11-11`);
     const holiday = chip(page, '2026-11-11', 'Veterans Day');
     await holiday.waitFor();
-    // The right-click menu: every action there, each off.
+    // The right-click menu: only the reason, as a note (contextMenu.test.tsx has how one is drawn).
     await holiday.click({button: 'right'});
     const menu = page.locator('.ctx-menu');
     await menu.waitFor();
-    assert.deepEqual(await menu.locator('.menu-i').evaluateAll(items => items.map(item => [item.textContent, (item as HTMLButtonElement).disabled])),
-      [['EditE', true], ['Clone', true], ['Copy⌘C', true], ['Colour', true], ['DeleteDel', true]]);
+    assert.deepEqual(await menu.locator('.menu-i').evaluateAll(items => items.map(item => [item.textContent, item.classList.contains('note')])),
+      [['This calendar is read-only', true]]);
     await page.keyboard.press('Escape');
     await menu.waitFor({state: 'detached'});
 
-    // The card: Edit off, saying the calendar is read-only, and its other controls off.
+    // The card: its calendar's line says it's read-only and why, with no Edit or actions (detail.test.tsx has the rest).
     await holiday.click();
     const dialog = page.getByRole('dialog', {name: 'Veterans Day'});
     await dialog.waitFor();
-    const edit = dialog.getByRole('button', {name: /^Edit/});
-    assert.deepEqual([await edit.getAttribute('aria-disabled'), await edit.getAttribute('data-tip')], ['true', 'This calendar is read-only']);
-    for (const name of ['Clone', 'Copy', 'Colour', 'Delete']) assert.equal(await dialog.getByRole('button', {name, exact: true}).getAttribute('aria-disabled'), 'true', name);
+    assert.equal(await dialog.getByText('Read-only · Holidays in United States').getAttribute('data-tip'), 'This calendar is read-only');
+    assert.equal(await dialog.locator('.card-acts').count(), 0);
     await page.keyboard.press('e');
     // Nothing happens to wait for: E leaves the event alone.
     await page.waitForTimeout(250);
