@@ -528,7 +528,7 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
 
 ### The floating detail
 
-- **Card:** 280 px wide (decision 46), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
+- **Card:** 360 px wide (#308, wider than decision 46's 280), `card`, radius 18, `edgeOn` inset, popover shadow, a drag grip
   at the top. Content (board 12a): colour dot and title, date and time, place and address (a link
   as its host with Open, #245), Time to
   Leave (as the right pane's, #112), attendees, a recurring event's repeat ("Weekly on Mon, Wed,
@@ -1607,6 +1607,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     ranking"; the app reads "Headlines, summaries and how much each matters".
 42. **No Missed strip or Catch up** (#298): board 25 draws the strip above All's list and board 28
     the Missed list by day. Neither is in the app; All opens with the recap, which no board draws.
+43. **The floating detail is 360 px wide** (#308): board 12a draws it at 280 with its title on one
+    line. The app's card is 80 px wider and its title wraps, up to 3 lines.
 
 ## Not designed yet
 
@@ -3851,3 +3853,9 @@ it changes what's on screen.
     Calendar). Any other disabled menu item (a change on its way, a done repeating task's Reopen, a
     select's unavailable choice) is drawn in `ink3` at .6, and the right-click menu leaves out its
     key hint. Board audit: no board draws it.
+308. **The floating detail shows a long title whole** (Andy, 2026-11-05; darma SV-197, amending
+    the card's 280 px and #307's calendar line). The card is 360 px wide, and its title wraps, up to
+    3 lines, past which it's cut with an ellipsis, the whole title still its tip. The dot, the
+    spinner and Close sit on its first line. The wider card keeps most calendar lines, such as
+    "Read-only · Holidays in United States", on one line. The Today block's card and the phone's
+    detail share it. Board audit: board 12a draws 280 px and one line (Overrides, 43).

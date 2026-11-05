@@ -294,7 +294,8 @@ export const layout = {
   // width is each row's right padding, so nothing sits further out than anything else (SV-141).
   listRowMax: 1480,
   rightPane: 400,
-  floatingDetail: 280,
+  // 360, wider than board 12a's 280, so a long title wraps to fewer lines (#308, override 43).
+  floatingDetail: 360,
   monthRow: 176,
   weekdayRow: 30,
   dayHead: 22,

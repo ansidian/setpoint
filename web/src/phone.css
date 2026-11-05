@@ -209,7 +209,8 @@
   @keyframes ph-rise { from { transform: translateY(24px); opacity: 0; } }
   /* 12 px above the tab bar, whatever its inset. */
   .fd.ph-detail { position: fixed; left: 12px; right: 12px; top: auto; bottom: calc(66px + max(6px, env(safe-area-inset-bottom))); width: auto; z-index: 6; will-change: auto; animation: ph-rise var(--dur-medium) var(--ease); }
-  .ph-detail .card-h { min-height: 48px; padding-top: 6px; }
+  /* Its first line where it sat when the header centred one line in 48 px (SV-197 tops it for a wrapped title). */
+  .ph-detail .card-h { min-height: 48px; padding-top: 14px; }
   .ph-detail .card-acts { display: none; }
 
   /* ---------- Settings: on the desktop ---------- */

@@ -111,3 +111,42 @@ test('D447: off Calendar, a read-only event\'s card keeps Open in Calendar and n
   expect(document.querySelector('.fact.cal .icon path')!.getAttribute('d')).toBe(ICONS.calendar_today);
   expect(page.getByText(/Read-only/).query()).toBeNull();
 });
+
+// SV-197 (#308): the title wraps, up to 3 lines, on the 360 px card, the dot and Close on its first line.
+const LONG = 'Interview with the hiring committee for Associate Software Engineer at Contoso, round two, with the team leads and a short tour of the office afterwards';
+const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+const lines = () => Math.round((box('.fd-title').height - 4) / 22);
+
+test('SV-197: a title wraps rather than being cut, and stops at 3 lines with an ellipsis, the whole title its tip', async () => {
+  const screen = await card(event({title: 'Daylight Saving Time ends in the United States today'}));
+  const title = page.getByText('Daylight Saving Time ends in the United States today');
+  await expect.element(title).toBeVisible();
+  expect(lines()).toBe(2);
+  const whole = document.querySelector<HTMLElement>('.fd-title')!;
+  expect(whole.scrollHeight).toBeLessThanOrEqual(whole.clientHeight);
+  await screen.unmount();
+  await card(event({title: LONG}));
+  await expect.element(page.getByText(LONG)).toHaveAttribute('data-tip', LONG);
+  expect(lines()).toBe(3);
+  const cut = document.querySelector<HTMLElement>('.fd-title')!;
+  expect(cut.scrollHeight).toBeGreaterThan(cut.clientHeight);
+});
+
+test('SV-197: the dot and Close sit on the title\'s first line, wrapped or not', async () => {
+  for (const title of ['Career fair', LONG]) {
+    const screen = await card(event({title}));
+    await expect.element(page.getByText(title)).toBeVisible();
+    const first = box('.fd-title').top + 2 + 11;
+    const middle = (rect: DOMRect) => rect.top + rect.height / 2;
+    expect(Math.abs(middle(box('.fd-mark .dot')) - first)).toBeLessThanOrEqual(1);
+    expect(Math.abs(middle(box('.card-h [aria-label="Close"]')) - first)).toBeLessThanOrEqual(1);
+    await screen.unmount();
+  }
+});
+
+test('SV-197: on the 360 px card a read-only holiday\'s calendar line fits on one line', async () => {
+  await card(event({read_only: true}), {...CALENDAR, name: 'Holidays in United States', writable: false});
+  const line = page.getByText('Read-only · Holidays in United States');
+  await expect.element(line).toBeVisible();
+  expect(box('.fact.cal > span').height).toBeLessThanOrEqual(box('.fact.cal .icon').height + 4);
+});
