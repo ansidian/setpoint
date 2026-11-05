@@ -1,11 +1,11 @@
 // `npm test`: lint, typecheck and Vitest, stopping at the first that fails. A whole run that passes
-// is recorded for the content it ran on (passes.ts), unless the files changed meanwhile, so
+// is recorded for the content it read (passes.ts), unless the files changed meanwhile, so
 // release:check doesn't run it again. `npm test -- <args>` passes them to Vitest and isn't recorded.
 // It takes no lock: beside a browser run both still passed, each slower (SV-144), and a check before
 // a commit shouldn't wait out a browser run.
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-import {record, treeOf} from './passes.ts';
+import {record, treeOf, unchanged} from './passes.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const args = process.argv.slice(2);
@@ -20,6 +20,6 @@ for (const [command, ...rest] of [LINT, ['npm', 'run', 'typecheck'], ['vitest', 
   if (status !== 0) process.exit(status ?? 1);
 }
 if (!args.length) {
-  if (treeOf() === tree) record(tree, {check: 'unit'});
+  if (unchanged(tree, treeOf(), 'unit')) record(tree, 'unit');
   else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
 }

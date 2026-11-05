@@ -17,7 +17,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {colour, evtint, lightColour} from '../../src/tokens.ts';
-import {auditKey, record, treeOf} from '../passes.ts';
+import {record, treeOf, unchanged} from '../passes.ts';
 import {closeBrowser, compareImages, GOLDENS, launchBrowser, ROOT} from './harness.ts';
 
 export interface Patch {
@@ -818,9 +818,9 @@ export async function audit(): Promise<string> {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   try {
-    const key = auditKey(treeOf());
+    const tree = treeOf();
     console.log(`Wrote ${path.relative(ROOT, await audit())}`);
-    if (auditKey(treeOf()) === key) record(key, {check: 'audit'});
+    if (unchanged(tree, treeOf(), 'audit')) record(tree, 'audit');
   } finally {
     await closeBrowser();
   }

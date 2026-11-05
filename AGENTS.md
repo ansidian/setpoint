@@ -69,9 +69,13 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   the same under stress (`npm run test:browser:stress`: a CPU slowed 4×, /api answering late, one
   at a time and last-asked first, and the web fonts late, D81, so a check that reads before what it
   reads has come fails every time), the page screenshots (`npm run test:pages`) and the board
-  audit, each only where it hasn't already passed on HEAD's exact content. Every passing run records
-  itself by the working tree's content, so the runs before a commit count, spec file by spec file,
-  and the audit runs when the screenshots or boards have changed. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
+  audit, each only where it hasn't already passed on what it reads in HEAD. Every passing run records
+  itself by what it reads (web/tests/passes.ts › INPUTS, SV-193), so the runs before a commit count:
+  npm test by everything but the docs, boards, goldens and Docker files; the browser checks by the
+  app, the harness and the lockfile, and each spec file by its own content; the page screenshots by
+  the app, the goldens and their spec files; the image by the Dockerfile, `.dockerignore`, the code
+  and the lockfile; the audit by the goldens and boards. So a docs-only commit leaves everything
+  passed, and a goldens-only one only the screenshots and the audit to run. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
   about 11 minutes, against its own budget of 12 (the normal run's is 5, SV-187).
 - When Andy says a release is coming, the session that pushes its commit runs
   `npm run release:check` in the background straight after, so the release finds it done. Each of

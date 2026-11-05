@@ -6,7 +6,7 @@
 // failed runs again with them (SV-144), up to RETRACED checks, the run failing whatever that finds:
 // its traces are under test-results/browser/traces/ (harness.ts), emptied at the start of each run,
 // and a check that passes the second time says so. A run that passes
-// records its spec files for the content it ran on (passes.ts), unless the files changed meanwhile
+// records its spec files for the content they read (passes.ts), unless the files changed meanwhile
 // or it was capturing goldens, so release:check doesn't run them again. With SETPOINT_PAGES
 // (`npm run test:pages`, `npm run goldens`) it runs only the checks that take the release's page
 // screenshots (pages.ts), and those compare them. `-- settings --only "board 17"` runs only the
@@ -17,7 +17,7 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {record, specName, treeOf} from '../passes.ts';
+import {record, specName, treeOf, unchanged} from '../passes.ts';
 import {bundleServer} from './bundle.ts';
 import {acquire, clock, handDown, release} from './lock.ts';
 import {COMPARING, PAGES} from './pages.ts';
@@ -143,7 +143,9 @@ async function main(): Promise<number> {
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
     if (Date.now() - started >= LIMIT) return 1;
     if (code === 0 && tree && !named) {
-      if (treeOf() === tree) record(tree, COMPARING ? {check: 'pages'} : {check: process.env.SETPOINT_BROWSER_STRESS === '1' ? 'stress' : 'browser', specs: files.map(specName)});
+      const check = COMPARING ? 'pages' : STRESS ? 'stress' : 'browser';
+      const ran = COMPARING ? [] : files.map(specName);
+      if (unchanged(tree, treeOf(), check, ran)) record(tree, check, COMPARING ? undefined : ran);
       else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
     }
     const failed = code === 0 ? [] : failures();
