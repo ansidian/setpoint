@@ -12,17 +12,34 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, AllOut, CalendarOut, ItemsOut, TodoistProjectOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
+import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
+import {TYPING_MS} from '../../src/app/search/state.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
 
-async function load(setpoint: Setpoint): Promise<Page> {
+// The pages whose clock the check has stopped (load's `clock: 'stopped'`): their typing pause runs only
+// when the check runs it, so typeWords runs it.
+const stoppedClocks = new WeakSet<Page>();
+
+/**
+ * The Inbox, its rows in. `clock` installs the page's own clock first: `running` runs on with real
+ * time, so a check can jump it past the suggestion's pause (`fastForward`) to prove nothing came of
+ * it; `stopped` stops it once the page is in, so the field's pauses (TYPING_MS, SUGGESTION_PAUSE_MS)
+ * run only as the check runs them (`runFor`), however the machine is doing, and "not yet" holds.
+ */
+async function load(setpoint: Setpoint, {clock}: {clock?: 'running' | 'stopped'} = {}): Promise<Page> {
   const page = await setpoint.page('target');
+  if (clock) await page.clock.install();
   await page.goto(`${setpoint.base}/inbox`);
   await page.locator('.list .row').first().waitFor();
+  if (clock === 'stopped') {
+    await pauseClock(page);
+    stoppedClocks.add(page);
+  }
   return page;
 }
 
@@ -82,25 +99,18 @@ function searchesOf(page: Page): SearchRequest[] {
 
 /**
  * Puts words in the field at once, and waits for their results to be on screen. Keys typed one by one
- * can sit a pause apart on a busy machine, and a pause is what asks for a suggestion.
+ * can sit a pause apart on a busy machine, and a pause is what asks for a suggestion. On a stopped
+ * clock it runs the typing pause, so the search goes, and no further: the suggestion's is the
+ * check's to run. Then every request is answered (`idle`), unless `held`: a route of the check's
+ * holds a request, which `idle` would wait for, so it waits for the search's own answer only.
  */
-async function typeWords(page: Page, setpoint: Setpoint, text: string) {
+async function typeWords(page: Page, setpoint: Setpoint, text: string, {held = false}: {held?: boolean} = {}) {
   const answered = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search' && (JSON.parse(response.request().postData()!) as SearchRequest).text.endsWith(text));
   await field(page).fill(text);
-  await answered;
-  await setpoint.idle();
+  if (stoppedClocks.has(page)) await page.clock.runFor(TYPING_MS);
+  await drawn(page, await answered);
+  if (!held) await setpoint.idle();
 }
-
-/** Types in the page itself, each key well inside the pause, whatever the machine is doing to this process. */
-const typeBriskly = (page: Page, text: string) => page.evaluate(async words => {
-  const input = document.querySelector<HTMLInputElement>('.search input')!;
-  const value = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-  for (let length = 1; length <= words.length; length += 1) {
-    value.call(input, words.slice(0, length));
-    input.dispatchEvent(new Event('input', {bubbles: true}));
-    await new Promise(resolve => setTimeout(resolve, 40));
-  }
-}, text);
 
 const field = (page: Page) => page.locator('.search input');
 const suggestion = (page: Page) => page.locator('.suggest');
@@ -222,12 +232,19 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
 test('a suggestion comes only on a pause: none while typing and no reading of a word on its way, and text too short to mean anything asks nothing', async () => {
   const {setpoint, fake, stop} = await withAlfred();
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'stopped'});
     const asked = suggestionsOf(page);
     await page.keyboard.press('/');
-    // Nothing is asked until the keys stop.
-    await typeBriskly(page, 'renewal');
-    assert.equal(await suggestion(page).count(), 0);
+    // Key by key, with no time passing between them on the page's clock, however far apart they come here.
+    await page.keyboard.type('renewal');
+    // Nothing is asked until the keys stop for the whole pause: a moment short of it, the words' search
+    // has gone and come, and no suggestion.
+    const searched = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search');
+    await page.clock.runFor(SUGGESTION_PAUSE_MS - 1);
+    await drawn(page, await searched);
+    await setpoint.idle();
+    assert.deepEqual([await suggestion(page).count(), asked], [0, []]);
+    await page.clock.runFor(1);
     await suggestion(page).waitFor();
     assert.deepEqual(asked.map(search => search.text), ['renewal', 'renewal']);
     assert.deepEqual(asked.map(search => search.model), [false, true]);
@@ -237,8 +254,7 @@ test('a suggestion comes only on a pause: none while typing and no reading of a 
     await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
     asked.length = 0;
     await typeWords(page, setpoint, 'no');
-    // A pause for a "nothing happened" check: longer than the suggestion's own.
-    await page.waitForTimeout(900);
+    await page.clock.runFor(SUGGESTION_PAUSE_MS);
     await setpoint.idle();
     assert.deepEqual(asked, []);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -250,14 +266,17 @@ test('a suggestion comes only on a pause: none while typing and no reading of a 
 test('a suggestion belongs to its text: an answer for older text is dropped, and the first keystroke takes one away; going back asks the server, not the model', async () => {
   const {setpoint, fake, stop} = await withAlfred();
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'stopped'});
     const release = await holdSuggestions(page, 'renewal');
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'renewal');
-    await page.waitForRequest(request => new URL(request.url()).pathname === '/api/search/suggestion' && (request.postDataJSON() as SuggestionRequest).model);
+    const reading = page.waitForRequest(request => new URL(request.url()).pathname === '/api/search/suggestion' && (request.postDataJSON() as SuggestionRequest).model);
+    await page.clock.runFor(SUGGESTION_PAUSE_MS);
+    await reading;
     // Another search while it's held: the answer has nowhere to land.
-    await field(page).fill('rent');
+    await typeWords(page, setpoint, 'rent', {held: true});
     await page.locator('.ask', {hasText: 'rent'}).waitFor();
+    await page.clock.runFor(SUGGESTION_PAUSE_MS);
     const rent = 'Only Parkside Apartments· 2 emailsTab';
     await suggested(page, rent);
     release();
@@ -266,12 +285,13 @@ test('a suggestion belongs to its text: an answer for older text is dropped, and
     await setpoint.idle();
     assert.equal(await suggestion(page).textContent(), rent);
     assert.equal(await field(page).inputValue(), 'rent');
-    // The first keystroke takes it away, before any answer.
+    // The first keystroke takes it away, before any answer; and going back takes the pause again.
     await page.keyboard.type('s');
     assert.equal(await suggestion(page).count(), 0);
     await page.keyboard.press('Backspace');
     assert.equal(await suggestion(page).count(), 0);
     // Back on the same words: it's held on the server, so no second reading.
+    await page.clock.runFor(SUGGESTION_PAUSE_MS);
     await suggested(page, rent);
     assert.deepEqual(fake.read.filter(search => search === 'rent'), ['rent']);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -283,12 +303,14 @@ test('a suggestion belongs to its text: an answer for older text is dropped, and
 test('nothing moves as a suggestion comes and goes: its place is the results line, and each row stays where it was', async () => {
   const {setpoint, stop} = await withAlfred();
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'stopped'});
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'renewal');
     const rows = () => rested(() => page.locator('.ask, .search-list .bar, .arow.result').evaluateAll(all => all.map(row => [row.className.split(' ')[0], Math.round(row.getBoundingClientRect().top), Math.round(row.getBoundingClientRect().height)])));
+    // Before the pause has run, so before any suggestion.
     const before = await rows();
     assert.ok(before.length > 3, `${before.length} rows`);
+    await page.clock.runFor(SUGGESTION_PAUSE_MS);
     const line = await suggested(page, 'Only Parkside Apartments· 2 emailsTab');
     assert.deepEqual(await rows(), before, 'as it comes');
     // It keeps inside the line it sits at the end of.
@@ -299,8 +321,11 @@ test('nothing moves as a suggestion comes and goes: its place is the results lin
     assert.ok(fits, 'inside its line');
     await page.keyboard.type('x');
     await line.waitFor({state: 'detached'});
+    // Back on the words, searched again, the next suggestion's pause not run.
+    const searched = page.waitForResponse(response => new URL(response.url()).pathname === '/api/search');
     await page.keyboard.press('Backspace');
-    await page.locator('.ask', {hasText: 'renewal'}).waitFor();
+    await page.clock.runFor(TYPING_MS);
+    await drawn(page, await searched);
     await setpoint.idle();
     assert.equal(await suggestion(page).count(), 0);
     assert.deepEqual(await rows(), before, 'as it goes');
@@ -326,7 +351,7 @@ test('beside an open email the line stays one line: its own words give way and t
     });
     await page.keyboard.press('/');
     // No email has all these words, so the results line is at its longest.
-    await typeWords(page, setpoint, 'northwind rejection march');
+    await typeWords(page, setpoint, 'northwind rejection march', {held: true});
     await page.locator('.arow.result').first().click();
     await page.locator('.rd-subj').waitFor();
     const rows = () => rested(() => page.locator('.search-list .bar, .arow.result').evaluateAll(all => all.map(row => [Math.round(row.getBoundingClientRect().top), Math.round(row.getBoundingClientRect().height)])));
@@ -414,12 +439,15 @@ test('a date is a word as it\'s typed and a suggestion on a pause, with no model
 });
 
 test('a date comes at once and a reading joins it; several filters read as one line', async () => {
-  const {setpoint, stop} = await withAlfred({readings: {'parkside renewal september': {organisations: ['Parkside Apartments'], keywords: 'renewal', delayMs: 500}}});
+  const {setpoint, stop} = await withAlfred({readings: {'parkside renewal september': {organisations: ['Parkside Apartments'], keywords: 'renewal'}}});
   try {
     const page = await load(setpoint);
+    const release = await holdSuggestions(page, 'parkside renewal september');
     await page.keyboard.press('/');
-    await typeWords(page, setpoint, 'parkside renewal september');
+    await typeWords(page, setpoint, 'parkside renewal september', {held: true});
+    // The date while the reading is held, and then the reading with it.
     await suggested(page, 'Only Sep 2026· 1 emailTab');
+    release();
     await suggested(page, 'Only Parkside Apartments · Sep 2026· 1 emailTab');
     await page.keyboard.press('Tab');
     await until('both chips', () => chips(page), shown => shown.join(' | ') === 'OrgParkside Apartments | DateSep 2026');
@@ -440,7 +468,7 @@ test('a date comes at once and a reading joins it; several filters read as one l
 test('×: the filter goes, its word is plain text again, it\'s logged, and the suggestion doesn\'t come back for those words, here or typing away and back', async () => {
   const {setpoint, fake, stop} = await withAlfred();
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'running'});
     const searches = searchesOf(page);
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'northwind rejection march');
@@ -465,8 +493,8 @@ test('×: the filter goes, its word is plain text again, it\'s logged, and the s
     await until('what stays kept', async () => searches.at(-1)!, last => last.read === 'kept' && last.chips.length === 0);
     await page.locator('.ask', {hasText: 'northwind rejection march'}).waitFor();
     const noneComes = async () => {
-      // A pause for a "nothing happened" check: longer than the suggestion's own.
-      await page.waitForTimeout(900);
+      // The suggestion's pause run out on the page's clock, whatever real time has done.
+      await page.clock.fastForward(SUGGESTION_PAUSE_MS);
       await setpoint.idle();
       assert.deepEqual([await chips(page), await suggestion(page).count()], [[], 0]);
     };
@@ -533,8 +561,7 @@ test('the "more" line: what the chips hid, under the fold and apart from it, a s
     const page = await load(setpoint);
     const searches = searchesOf(page);
     await page.keyboard.press('/');
-    await page.keyboard.type('renewal');
-    await page.locator('.arow.result').first().waitFor();
+    await typeWords(page, setpoint, 'renewal');
     assert.equal(await page.locator('.left-out').count(), 0, 'no line for words alone');
     await suggestion(page).click();
     await until('the chip', () => chips(page), shown => shown.join() === 'OrgParkside Apartments');
@@ -594,8 +621,9 @@ test('the "more" line: what the chips hid, under the fold and apart from it, a s
 });
 
 test('a reading too slow or failed is no suggestion and nothing else: no line, no change, the words\' results; a slow one is held for the next pause', async () => {
+  // The model's reading of renewal is held past the server's wait for it (READING_WAIT_MS), and let go after.
   const {setpoint, fake, stop} = await withAlfred({readings: {
-    renewal: {organisations: ['Parkside Apartments'], keywords: 'renewal', delayMs: 2600},
+    renewal: {organisations: ['Parkside Apartments'], keywords: 'renewal', held: true},
     rent: {fails: true},
   }});
   try {
@@ -608,18 +636,19 @@ test('a reading too slow or failed is no suggestion and nothing else: no line, n
     await typeWords(page, setpoint, 'renewal');
     const before = await titles(page);
     await until('the slow one given up', async () => finished.length, count => count === 2, 10_000);
+    await setpoint.idle();
     assert.deepEqual([await suggestion(page).count(), await chips(page), await field(page).inputValue(), await titles(page), await page.locator('.search-list .failing').count()], [0, [], 'renewal', before, 0]);
     assert.equal(await page.locator('.search.pending').count(), 0);
     // The answer that came too late is there for the next pause on those words, and costs no call.
+    fake.release();
     await page.keyboard.type('s');
     await page.keyboard.press('Backspace');
     await suggested(page, 'Only Parkside Apartments· 2 emailsTab');
     assert.deepEqual(fake.read.filter(search => search === 'renewal'), ['renewal']);
-    // A failed one, with no line about it.
-    await field(page).fill('rent');
-    await until('the failed one', async () => fake.read, read => read.at(-1) === 'rent');
-    await page.locator('.ask', {hasText: 'rent'}).waitFor();
+    // A failed one, with no line about it: the words' results stay as they were drawn.
+    await typeWords(page, setpoint, 'rent', {held: true});
     const failing = await titles(page);
+    await until('the failed one', async () => fake.read, read => read.at(-1) === 'rent');
     await setpoint.idle();
     assert.deepEqual([await suggestion(page).count(), await chips(page), await titles(page), await page.locator('.search-list .failing').count()], [0, [], failing, 0]);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -653,7 +682,10 @@ test('chips go with their search: `/` or ⌘F and a new word, Backspace, Esc and
     const page = await load(setpoint);
     const searches = searchesOf(page);
     const take = async (text: string, shown: string) => {
-      await page.keyboard.type(text);
+      // Its first key replaces what's selected, chips too, and the rest come at once: keys one by one
+      // can sit a pause apart, and a suggestion would come for a word on its way.
+      await page.keyboard.type(text[0]!);
+      await typeWords(page, setpoint, text);
       await suggestion(page).waitFor();
       await page.keyboard.press('Tab');
       await until(`the chips of ${text}`, () => chips(page), now => now.join(' | ') === shown);
@@ -701,7 +733,7 @@ test('chips go with their search: `/` or ⌘F and a new word, Backspace, Esc and
 test('words added under a suggestion\'s chips stay words, and ask for nothing new', async () => {
   const {setpoint, fake, stop} = await withAlfred();
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'running'});
     const searches = searchesOf(page);
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'renewal');
@@ -711,8 +743,8 @@ test('words added under a suggestion\'s chips stay words, and ask for nothing ne
     await page.keyboard.press('End');
     await page.keyboard.type(' terms');
     await until('the chip keeps filtering, and what\'s typed stays a word', async () => searches.at(-1)!, last => last.read === 'kept' && last.text === 'renewal terms' && last.typed === 'renewal terms');
-    // A pause for a "nothing happened" check: longer than the suggestion's own.
-    await page.waitForTimeout(900);
+    // The suggestion's pause run out on the page's clock, whatever real time has done.
+    await page.clock.fastForward(SUGGESTION_PAUSE_MS);
     await setpoint.idle();
     assert.deepEqual([await chips(page), await suggestion(page).count(), fake.read], [['OrgParkside Apartments'], 0, ['renewal']]);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -731,7 +763,7 @@ test('under a suggestion a later page keeps its chips, and the fold works as it 
     await page.route(url => url.pathname === '/api/search/suggestion', route => route.fulfill({json: {reads: false, suggestion: {id: 1, chips: [chip], text: 'ledger audit', typed: 'ledger audit', undated: 'ledger audit', offers: [chip], total: 120, hides: 0, words: 120}}}));
     await page.route(url => url.pathname === '/api/search/suggestion-log', route => route.fulfill({status: 204}));
     await page.keyboard.press('/');
-    await page.keyboard.type('ledger audit');
+    await typeWords(page, setpoint, 'ledger audit');
     await suggestion(page).click();
     await until('the chip', () => chips(page), shown => shown.join() === 'OrgFourth Coffee');
     const rows = page.locator('.arow.result');
@@ -827,7 +859,8 @@ test('a fold that starts open pages in with no click, page 2 and on, and closing
   try {
     const page = await loadTall(setpoint);
     await page.keyboard.press('/');
-    await page.keyboard.type('vault inventory');
+    // At once: keys one by one can sit the typing pause apart, and a search half typed draws a fold of its own.
+    await typeWords(page, setpoint, 'vault inventory');
     await page.keyboard.press('Enter');
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions');
@@ -871,7 +904,8 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
       if (request.url().endsWith('/api/search')) searches.push(JSON.parse(request.postData()!) as {offset?: number});
     });
     await page.keyboard.press('/');
-    await page.keyboard.type('ledger audit');
+    // At once: keys one by one can sit the typing pause apart, and a search half typed draws a fold of its own.
+    await typeWords(page, setpoint, 'ledger audit');
     await page.keyboard.press('Enter');
     const rows = page.locator('.arow.result');
     const fold = page.locator('.search-list .mentions');
@@ -911,6 +945,58 @@ test('search\'s fold across pages: what\'s above it pages in, nothing under it i
   }
 });
 
+test('SV-142: once a newer search has left, the list\'s end coming in reach asks no page of the answer still showing, so none lands under the newer rows', async () => {
+  const setpoint = await startSetpoint({fixtures: ['ledger-audit']});
+  try {
+    const page = await load(setpoint);
+    const searches = searchesOf(page);
+    await page.keyboard.press('/');
+    // 50 of the 60 rows above the fold, the list's end out of reach at this height: no next page yet.
+    await typeWords(page, setpoint, 'ledger audit');
+    await page.locator('.arow.result').nth(49).waitFor();
+    assert.deepEqual(searches.filter(search => search.offset), []);
+    // A newer search, held on its way, and any later page held until the newer rows are drawn, where
+    // one asked for the old answer would land under them.
+    let answer = () => {};
+    const newer = new Promise<void>(resolve => {
+      answer = resolve;
+    });
+    let drawnNewer = () => {};
+    const pages = new Promise<void>(resolve => {
+      drawnNewer = resolve;
+    });
+    let sent = () => {};
+    const left = new Promise<void>(resolve => {
+      sent = resolve;
+    });
+    await page.route(url => url.pathname === '/api/search', async route => {
+      const asked = route.request().postDataJSON() as SearchRequest;
+      if (asked.offset) await pages;
+      else if (asked.text === 'renewal') {
+        sent();
+        await newer;
+      }
+      await route.fallback().catch(() => {});
+    });
+    await field(page).fill('renewal');
+    await left;
+    // The old answer still shows while the newer is on its way, and now its end is in reach.
+    await page.setViewportSize(TALL);
+    // A pause for a "nothing happened" check: a page of the old answer would be asked as its end came in reach.
+    await page.waitForTimeout(300);
+    answer();
+    await until('the newer search\'s rows', () => titles(page), shown => shown.length > 0 && !shown.some(title => /^(Ledger audit|Quarter notes)/.test(title)));
+    drawnNewer();
+    await setpoint.idle();
+    const rows = await titles(page);
+    assert.ok(rows.length === 4 && !rows.some(title => /^(Ledger audit|Quarter notes)/.test(title)), `rows: ${rows.join(' | ')}`);
+    assert.deepEqual(searches.filter(search => search.offset).map(({text, offset}) => [text, offset]), []);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a click on a chip, the search glyph or the Esc hint keeps every chip and goes to the words; the pointer over the field lights no ×', async () => {
   const {setpoint, stop} = await withAlfred();
   try {
@@ -942,7 +1028,7 @@ test('a click on a chip, the search glyph or the Esc hint keeps every chip and g
 test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip, or the mail with a word kept as typed; the model is given only the rest; a quote stays whole (SV-31)', async () => {
   const {setpoint, fake, stop} = await withAlfred({readings: {...SEED_READINGS, renewal: {keywords: 'renewal'}}});
   try {
-    const page = await load(setpoint);
+    const page = await load(setpoint, {clock: 'running'});
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'application !rejection');
     // In force as it's typed, in the field's own words.
@@ -977,6 +1063,9 @@ test('"!" leaves out what a word names, as it\'s typed and on Enter: a Not chip,
     await page.keyboard.press('Enter');
     await until('the phrase', () => titles(page), shown => shown.join() === 'Lease renewal terms,October rent received');
     assert.deepEqual([await chips(page), await field(page).inputValue()], [[], '"lease renewal"']);
+    // The suggestion's pause run out on the page's clock, whatever real time has done: still nothing read.
+    await page.clock.fastForward(SUGGESTION_PAUSE_MS);
+    await setpoint.idle();
     assert.ok(!fake.read.some(search => search.includes('lease')), `read: ${fake.read.join()}`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -1124,14 +1213,14 @@ test('Alfred\'s sources and the results: a long account label and an age with it
     await setpoint.api('PATCH', `/accounts/${jobs.id}`, {label: 'Job applications (2026)'});
     const page = await load(setpoint);
     await page.keyboard.press('/');
-    await page.keyboard.type('northwind rejection');
-    await page.locator('.arow.result').first().waitFor();
+    // At once, so the rows read are these words' and not a part-typed search's.
+    await typeWords(page, setpoint, 'northwind rejection');
     // Ask Alfred is the list's first row, above the results line and the results (board 06), so it
     // doesn't wait at the foot of a long list.
     const order = await page.locator('.search-list').evaluate(list => [...list.children].map(child => child.className.split(' ')[0]));
     assert.deepEqual(order.slice(0, 3), ['ask', 'bar', 'arow'], `Ask Alfred leads: ${order.join(', ')}`);
     // The results: an age with its year on one line, inside the row.
-    const results = await rowEnds(page, '.arow.result', '.r1');
+    const results = await rested(() => rowEnds(page, '.arow.result', '.r1'));
     assert.ok(results.some(row => row.age === 'Dec 20, 2025'), JSON.stringify(results));
     for (const row of results) {
       assert.equal(row.ageLines, 1, `${row.age} on one line`);
@@ -1159,7 +1248,8 @@ test('Alfred\'s sources and the results: a long account label and an age with it
 });
 
 test('Alfred: the card says what Alfred is doing as it works, the steps it took above it (search-04); a long list shows its first five sources and Show all; the answer keeps a reading measure', async () => {
-  const fake = await fakeAlfred(listAlfred, {delayMs: 1500});
+  // Each of Alfred's turns is held until the check has read what the card says meanwhile.
+  const fake = await fakeAlfred(listAlfred, {held: true});
   const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
     await fake.close();
     throw error;
@@ -1168,18 +1258,20 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await load(setpoint);
     await page.keyboard.press('/');
-    await page.keyboard.type('northwind');
-    await page.locator('.arow.result').first().waitFor();
+    await typeWords(page, setpoint, 'northwind');
     await page.keyboard.press('Meta+Enter');
     const waiting = page.locator('.answer .waiting');
     await until('Alfred\'s first line', () => waiting.textContent(), text => text === 'Looking through your mail…');
-    await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…', 6000);
-    await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')), 6000);
+    fake.release();
+    await until('the search it runs', () => waiting.textContent(), text => text === 'Searching “the”…');
+    fake.release();
+    await until('the email it reads', () => waiting.textContent(), text => Boolean(text?.startsWith('Reading ') && text.endsWith('’s email…')));
     // Its trail (search-04): the search it ran stays above; two bars hold the answer's place.
     const trail = page.locator('.answer .trail .done-step');
     await until('the search it ran', () => trail.allTextContents(), lines => lines.join() === 'Searched “the”');
     await until('the answer\'s place', () => page.locator('.answer [data-skeleton="answer"] .sk-bar').count(), count => count === 2);
-    await page.locator('.answer .ans').waitFor({timeout: 10_000});
+    fake.release();
+    await page.locator('.answer .ans').waitFor();
     // The trail folds away.
     await page.locator('.answer .trail').waitFor({state: 'detached'});
     assert.equal(await page.locator('.answer [data-skeleton]').count(), 0);
@@ -1242,13 +1334,8 @@ test('Alfred: Ask about this email opens the card in the reader, scoped to it; w
 });
 
 test('Alfred about one email: its first line reads "Reading this email…", and a follow-up typed while it answers stays in the field, unsent', async () => {
-  const fake = await fakeAlfred(leaseAlfred, {delayMs: 1500});
-  const setpoint = await startSetpoint({env: {SETPOINT_DEV_AI_URL: fake.url}}).catch(async (error: unknown) => {
-    await fake.close();
-    throw error;
-  });
+  const {setpoint, stop} = await withAlfred();
   try {
-    await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await load(setpoint);
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
@@ -1259,19 +1346,29 @@ test('Alfred about one email: its first line reads "Reading this email…", and 
     page.on('request', request => {
       if (request.url().endsWith('/api/alfred/ask')) asks += 1;
     });
+    // The question is held on its way until the follow-up has been typed and Entered.
+    let answer = () => {};
+    const held = new Promise<void>(resolve => {
+      answer = resolve;
+    });
+    await page.route(url => url.pathname === '/api/alfred/ask', async route => {
+      await held;
+      await route.fallback().catch(() => {});
+    });
     await page.keyboard.type('When does my lease renewal need to be signed?');
     await page.keyboard.press('Enter');
     await until('Alfred\'s first line', () => page.locator('.pane .answer .waiting').allTextContents(), lines => lines.join() === 'Reading this email…');
     // A follow-up typed meanwhile stays in the field, unsent, until the answer is in.
     await page.keyboard.type('what\'s the new rent?');
     await page.keyboard.press('Enter');
+    answer();
     await page.locator('.pane .answer .ans', {hasText: 'By Oct 31, 2026'}).waitFor();
+    await setpoint.idle();
     assert.equal(asks, 1);
     assert.equal(await field.locator('input').inputValue(), 'what\'s the new rent?');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
-    await setpoint.stop();
-    await fake.close();
+    await stop();
   }
 });
 
@@ -1364,8 +1461,18 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     assert.equal(await card.locator('input[aria-label="Date"]').inputValue(), 'Fri, Dec 11');
     assert.equal(await card.locator('.conflict').count(), 0);
     assert.equal(await card.locator('.srcm').count(), 2);
+    // The create held on its way, so the card is read while it waits.
+    let create = () => {};
+    const held = new Promise<void>(resolve => {
+      create = resolve;
+    });
+    await page.route(url => url.pathname === '/api/items', async route => {
+      if (route.request().method() === 'POST') await held;
+      await route.fallback();
+    });
     await card.locator('button', {hasText: 'Create'}).click();
     await page.locator('.pane .prop.pending').waitFor();
+    create();
     // The card closing is the answer: a create says nothing (DESIGN #247).
     await card.waitFor({state: 'detached'});
     await setpoint.idle();

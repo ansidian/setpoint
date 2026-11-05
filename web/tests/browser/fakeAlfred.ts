@@ -18,13 +18,16 @@ export interface AlfredTurn {
 export type Call = {name: string; input: Record<string, unknown>};
 type Block = {type: string; text?: string; content?: string};
 
-/** How the fake reads a search: the tool's input, `keywords` the whole search unless it says, a late answer, or none. */
+/**
+ * How the fake reads a search: the tool's input, `keywords` the whole search unless it says, an answer
+ * `held` until the check lets it go (`release`), or none.
+ */
 export interface FakeReading {
   organisations?: string[];
   types?: string[];
   is_date?: boolean;
   keywords?: string;
-  delayMs?: number;
+  held?: boolean;
   fails?: boolean;
 }
 
@@ -41,10 +44,24 @@ export const SEED_READINGS: Record<string, FakeReading> = {
   'application': {organisations: ['Northwind Talent'], keywords: 'application'},
 };
 
-export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 0, readings = SEED_READINGS}: {delayMs?: number; readings?: Record<string, FakeReading>} = {}) {
+/**
+ * The fake, answering Alfred's turns with `answer`. With `held`, each of Alfred's turns waits until the
+ * check lets it go, as does a reading marked `held`, so a check reads the card while Alfred works, or
+ * the field while a reading comes, for as long as it needs rather than inside a window of time.
+ * `release()` lets one go: the one held longest, or, with none held yet, the next to come.
+ */
+export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {held = false, readings = SEED_READINGS}: {held?: boolean; readings?: Record<string, FakeReading>} = {}) {
   let ids = 0;
   // Every search the model was asked to read, in turn.
   const read: string[] = [];
+  // The answers held, each going when it's let go, and how many were let go before they came.
+  const holding: (() => void)[] = [];
+  let letGo = 0;
+  const release = () => {
+    const next = holding.shift();
+    if (next) next();
+    else letGo += 1;
+  };
   const server = http.createServer((request, response) => {
     let raw = '';
     request.on('data', chunk => (raw += chunk));
@@ -56,28 +73,33 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
       const body = JSON.parse(raw) as {model: string; tools?: {name: string}[]; messages: {role: string; content: string | Block[]}[]};
       const blocks = (content: string | Block[]) => (typeof content === 'string' ? [{type: 'text', text: content}] : content);
       const overloaded = () => send(529, {type: 'error', error: {type: 'overloaded_error', message: 'Overloaded'}});
-      const called = (call: Call, wait: number) => {
+      const called = (call: Call, hold: boolean) => {
         ids += 1;
-        // A slow model, so a check can watch the card while Alfred works, or the field while a reading comes.
-        setTimeout(() => send(200, {
-          id: `msg_${ids}`, type: 'message', role: 'assistant', model: body.model, stop_reason: 'tool_use', stop_sequence: null,
-          content: [{type: 'tool_use', id: `toolu_${ids}`, name: call.name, input: call.input}],
+        const id = ids;
+        const go = () => send(200, {
+          id: `msg_${id}`, type: 'message', role: 'assistant', model: body.model, stop_reason: 'tool_use', stop_sequence: null,
+          content: [{type: 'tool_use', id: `toolu_${id}`, name: call.name, input: call.input}],
           usage: {input_tokens: 900, output_tokens: 120, cache_read_input_tokens: 0, cache_creation_input_tokens: 0},
-        }), wait);
+        });
+        if (!hold) go();
+        else if (letGo > 0) {
+          letGo -= 1;
+          go();
+        } else holding.push(go);
       };
       if (body.tools?.some(tool => tool.name === 'submit_reading')) {
         const search = /^Search: (.*)$/m.exec(blocks(body.messages[0]!.content).map(block => block.text).join(''))?.[1] ?? '';
         read.push(search);
-        const {delayMs: wait = 0, fails = false, ...reading} = readings[search] ?? {};
+        const {held: hold = false, fails = false, ...reading} = readings[search] ?? {};
         if (fails) return overloaded();
-        return called({name: 'submit_reading', input: {organisations: [], types: [], is_date: true, keywords: search, ...reading}}, wait);
+        return called({name: 'submit_reading', input: {organisations: [], types: [], is_date: true, keywords: search, ...reading}}, hold);
       }
       if (!body.tools?.some(tool => tool.name === 'answer')) return overloaded();
       const users = body.messages.filter(message => message.role === 'user');
       const question = blocks(users.at(-1)!.content).filter(block => block.type === 'text').map(block => block.text).join('')
         || [...users].reverse().map(message => blocks(message.content).filter(block => block.type === 'text').map(block => block.text).join('')).find(Boolean) || '';
       const results = body.messages.flatMap(message => blocks(message.content).filter(block => block.type === 'tool_result').map(block => JSON.parse(String(block.content)) as Record<string, unknown>));
-      called(answer({question, results}), delayMs);
+      called(answer({question, results}), held);
     });
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -85,7 +107,7 @@ export async function fakeAlfred(answer: (turn: AlfredTurn) => Call, {delayMs = 
   // running: the socket alone doesn't hold the process open.
   server.unref();
   const {port} = server.address() as AddressInfo;
-  return {url: `http://127.0.0.1:${port}`, read, close: () => new Promise<void>(resolve => {
+  return {url: `http://127.0.0.1:${port}`, read, release, close: () => new Promise<void>(resolve => {
     server.close(() => resolve());
     server.closeAllConnections();
   })};
