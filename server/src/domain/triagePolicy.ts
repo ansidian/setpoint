@@ -63,7 +63,10 @@ const PROTECTED_PATTERNS: [ProtectedReason, RegExp][] = [
   ['account_deleted', /\baccount (?:was |has been |is |will be )?(?:deleted|closed|scheduled for deletion)\b|\bdelet(?:ed|ion of) your account\b/i],
   ['account_locked', /\baccount (?:was |has been |is |is temporarily |has been temporarily )?(?:locked|suspended|disabled|deactivated|restricted|frozen)\b/i],
   ['critical_alert', /\bcritical (?:security )?alert\b/i],
-  ['unfamiliar_sign_in', /\b(?:suspicious|unrecogni[sz]ed|unusual|unfamiliar) (?:sign-?in|log-?in|login|activity|sign-?in attempt|device|location)\b|\bsomeone (?:may )?(?:has |have )?(?:tried to )?(?:sign(?:ed)? in|log(?:ged)? in) to your account\b/i],
+  // "Activity" only on the user's account or as something the sender found: bare "suspicious
+  // activity" is footer and advice copy ("report suspected suspicious activity", "protection
+  // against suspicious activity"), on statements, scam tips and job confirmations alike.
+  ['unfamiliar_sign_in', /\b(?:suspicious|unrecogni[sz]ed|unusual|unfamiliar) (?:sign-?in|log-?in|login|sign-?in attempt|device|location)\b|\b(?:suspicious|unusual|unrecogni[sz]ed) activity (?:on|in|with|from) (?:your|the) account\b|\bwe(?:'ve| have)? (?:detected|noticed|spotted|seen) (?:some )?(?:suspicious|unusual) activity\b|\bsomeone (?:may )?(?:has |have )?(?:tried to )?(?:sign(?:ed)? in|log(?:ged)? in) to your account\b/i],
   ['money_leaving', /\bunauthori[sz]ed (?:charge|transaction|payment|transfer|withdrawal)\b|\b(?:withdrawal|transfer|wire) of [$€£][\d,.]+ (?:was |has been )?(?:made |sent |initiated )?(?:from|out of) your\b/i],
 ];
 

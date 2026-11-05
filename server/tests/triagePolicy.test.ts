@@ -34,6 +34,13 @@ describe('protectedFromText: the protected class in plain words', () => {
     ['Critical security alert', 'Sign-in attempt was blocked.', 'critical_alert'],
     ['Suspicious sign-in prevented', '', 'unfamiliar_sign_in'],
     ['Unusual sign-in activity', 'We detected something unusual.', 'unfamiliar_sign_in'],
+    ['Account notice', 'There was suspicious activity on your account.', 'unfamiliar_sign_in'],
+    ['Security notice', 'We\'ve detected unusual activity. Was this you?', 'unfamiliar_sign_in'],
+    // "Suspicious activity" as footer or advice copy isn't an alert.
+    ['Thank You For Your Interest in Northwind!', 'You have successfully submitted an application. If you were not expecting this message you can report suspected suspicious activity to Greenhouse.', null],
+    ['Your banking statement is available', 'Call us right away if you notice suspicious activity.', null],
+    ['Increase your account security', 'We use tools to help safeguard your money, including protection against suspicious activity.', null],
+    ['Security incident', 'Rotate your keys and review logs for those services for unusual activity.', null],
     ['Fraud alert', 'An unauthorized charge of $812.00 was made on your card.', 'money_leaving'],
     ['Transfer notice', 'A transfer of $2,500.00 was sent from your checking account.', 'money_leaving'],
     // Routine security mail stays out (BRIEF.md › Security mail: cheap to check, not protected).
