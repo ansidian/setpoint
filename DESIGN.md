@@ -3873,4 +3873,5 @@ it changes what's on screen.
     same. Today's rows show ages, earlier days clock times, and a live code shows Copy and its
     countdown wherever it is (Claude's calls, as small gaps). New's band, its foot and the visit's
     held places go. Unread mail older than the pages loaded shows as the list reaches it. Board
-    audit: override 33 describes the list; its figures are taken at release.
+    audit (override 33): 01 6.18% → 4.66%, 22a 4.45% → 4.61%, 21a 10.24% → 10.44%, 17 at 0.97%
+    (its Inbox behind Settings); the rest as they were.
