@@ -12,7 +12,8 @@
 // screenshots (pages.ts), and those compare them. `-- settings --only "board 17"` runs only the
 // checks whose names start that way, and isn't recorded. A file's checks run side by side, as many as
 // SLOTS shared out over the files run (SV-102): one file uses every slot, a whole run one each.
-// Each check boots its server from a bundle made here (bundle.ts), but under stress from the source.
+// Each check boots its server from a bundle made here (bundle.ts), but the page screenshots from the
+// source, so a release has run the entry point production runs.
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,12 +26,9 @@ import {COMPARING, PAGES} from './pages.ts';
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const HERE = fileURLToPath(new URL('./', import.meta.url));
 const minutes = (name: string, fallback: number) => Number(process.env[name] ?? fallback) * 60_000;
-const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
-// Stress takes about 11 alone, and more beside an `npm test`, which takes no lock.
-const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', STRESS ? 25 : 15);
-// A full run alone, with some room; past it, the run says so (it doesn't fail). Stress has its own:
-// it took 10m24s to 10m59s in November 2026, about 3.5 times the normal run's 3 (SV-187).
-const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', STRESS ? 12 : 5);
+const LIMIT = minutes('SETPOINT_BROWSER_LIMIT_MIN', 15);
+// A full run alone, with some room; past it, the run says so (it doesn't fail).
+const BUDGET = minutes('SETPOINT_BROWSER_BUDGET_MIN', 5);
 // Checks at once on this machine (the files a whole run runs side by side): 10 and 12 took about
 // 2m20s, against 8's 2m34s and 6's 3m04s, at a higher peak (SV-146).
 const SLOTS = 8;
@@ -103,7 +101,7 @@ async function traceAgain(failed: Failed[]) {
   await checks(failed.map(check => `--test-name-pattern=^${escape(check.name)}$`), [...new Set(failed.map(check => check.file))]);
   const again = new Set(failures().map(check => check.name));
   for (const {name} of failed) {
-    if (!again.has(name)) console.log(`Passed the second time, so it left no trace: ${name}. Stress keeps one the first time (npm run test:browser:stress).`);
+    if (!again.has(name)) console.log(`Passed the second time, so it left no trace: ${name}. It races: take out what it depends on (AGENTS.md › Tests own behaviour); SETPOINT_BROWSER_TRACE=1 keeps a trace the first time.`);
   }
 }
 
@@ -134,7 +132,7 @@ async function main(): Promise<number> {
   try {
     const built = await run('npm', ['run', 'build']);
     if (built !== 0) return built;
-    if (!STRESS) process.env.SETPOINT_BROWSER_BUNDLE = await bundleServer(ROOT);
+    if (!COMPARING) process.env.SETPOINT_BROWSER_BUNDLE = await bundleServer(ROOT);
     const building = Date.now() - started;
     const code = await checks(only, files);
     const took = Date.now() - started;
@@ -143,13 +141,13 @@ async function main(): Promise<number> {
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
     if (Date.now() - started >= LIMIT) return 1;
     if (code === 0 && tree && !named) {
-      const check = COMPARING ? 'pages' : STRESS ? 'stress' : 'browser';
+      const check = COMPARING ? 'pages' : 'browser';
       const ran = COMPARING ? [] : files.map(specName);
       if (unchanged(tree, treeOf(), check, ran)) record(tree, check, COMPARING ? undefined : ran);
       else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
     }
     const failed = code === 0 ? [] : failures();
-    if (failed.length && !COMPARING && !STRESS && !process.env.SETPOINT_BROWSER_TRACE) await traceAgain(failed);
+    if (failed.length && !COMPARING && !process.env.SETPOINT_BROWSER_TRACE) await traceAgain(failed);
     return code;
   } finally {
     clearTimeout(timer);

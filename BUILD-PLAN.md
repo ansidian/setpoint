@@ -89,10 +89,9 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
   production build with the seed. The checks state behaviour, relations and state-dependent values;
   nine whole-page screenshots (`web/tests/browser/pages.ts`, D281, in place of D69's region goldens)
   are compared only at release, and the board audit (`npm run audit:boards`) sets them beside their
-  boards then. Before a release the checks also run under stress (`npm run test:browser:stress`: a
-  CPU slowed 4×, /api late and out of order, the fonts late; D81), so a check that reads too early
-  fails every time rather than now and then; a spec file that is new or largely rewritten runs once
-  under stress before its commit. A failed check keeps a trace
+  boards then. A check is deterministic on its own: it waits for what it reads, holds a server
+  answer or the page's clock to read a state between, and never reads by timing, so it passes or
+  fails the same on a busy machine (SV-195, in place of D81's stress run). A failed check keeps a trace
   (SV-75), and a one-shot read of a style or box rests first (`rested`; the lint asks). A single
   value is stated in a check only where a golden can't hold it: a state-, theme- or cascade-dependent
   colour, a relation, or a value that has moved by accident before (D269).
@@ -103,8 +102,9 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
 - `npm test`: lint, typecheck and Vitest.
 - `npm run test:browser`: build plus Playwright.
 - Both pass before every commit that touches what they cover, and the orchestrator states what ran.
-- Before a release, `npm run release:check`: the same under stress and the board audit too, each
-  only where it hasn't already passed on HEAD's exact content (D274).
+- Before a release, `npm run release:check`: the same plus the image build, the page screenshots
+  and the board audit, each only where it hasn't already passed on what it reads (D274, SV-193). It
+  runs ahead after each push to master (SV-194).
 
 ## Slices
 

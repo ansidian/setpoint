@@ -11,7 +11,6 @@
 // overflow: hidden box (an ellipsis is meant), nothing interactive is covered at its centre, no image
 // is broken, every font loaded, no request failed and nothing went to the console. Then axe, per
 // theme at the target width and on the phone, by rule and element. Each failure names the element, page, theme and width.
-// Stress skips it all: a page at rest has no answer to race.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -19,7 +18,7 @@ import {after} from 'node:test';
 import AxeBuilder from '@axe-core/playwright';
 import type {AllOut, InboxOut, JobsPageOut, NewsSectionOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, rested, SIZES, startSetpoint, STRESS, test, until} from './harness.ts';
+import {cleanUp, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 import {SETTINGS_PAGES} from '../../src/logic/route.ts';
 
@@ -258,7 +257,7 @@ async function show(page: Page, theme: typeof THEMES[number]) {
 }
 
 /** Night at `width`, at rest, swept; what it found, each line naming where. */
-async function sweepAt(page: Page, route: Route, width: number, heard: () => string[]): Promise<string[]> {
+async function sweepAt(page: Page, setpoint: Setpoint, route: Route, width: number, heard: () => string[]): Promise<string[]> {
   if (page.viewportSize()!.width !== width) {
     await page.setViewportSize({width, height: page.viewportSize()!.height});
     if (route.open) await route.open(page);
@@ -267,6 +266,8 @@ async function sweepAt(page: Page, route: Route, width: number, heard: () => str
   const where = `${route.name}, ${NAMES.dark}, ${width} wide`;
   // Every face asked for, as the harness's goto does: one the page doesn't use yet is "unloaded" until then.
   await page.evaluate(() => Promise.all([...document.fonts].map(face => face.load().catch(() => {}))));
+  // What the page asked for answered and drawn, so a late answer can't move it after the read, and one that failed is heard.
+  await setpoint.idle();
   return [...await rested(() => page.evaluate(sweepPage)), ...heard()].map(problem => `${where}: ${problem}`);
 }
 
@@ -275,8 +276,10 @@ const CONTRAST_FLOOR = 4.5;
 const DIM_ON_PURPOSE = '.mini > .o';
 
 /** axe's violations in `theme`, as rule and element. */
-async function axe(page: Page, route: Route, theme: typeof THEMES[number]): Promise<string[]> {
+async function axe(page: Page, setpoint: Setpoint, route: Route, theme: typeof THEMES[number]): Promise<string[]> {
   await show(page, theme);
+  // What the page asked for answered and drawn, so a late answer can't change it under axe.
+  await setpoint.idle();
   const results = await rested(() => new AxeBuilder({page}).analyze());
   const found: string[] = [];
   for (const violation of results.violations) {
@@ -296,7 +299,7 @@ async function axe(page: Page, route: Route, theme: typeof THEMES[number]): Prom
 }
 
 // axe in both themes comes before each route's layout reads, so those hear what Light asked for.
-test('the main pages keep to their boxes in Night at their widths, and axe finds nothing in Night or Light', {skip: STRESS}, async () => {
+test('the main pages keep to their boxes in Night at their widths, and axe finds nothing in Night or Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: SIZES.target.width, height: HEIGHT});
@@ -305,8 +308,8 @@ test('the main pages keep to their boxes in Night at their widths, and axe finds
     for (const route of await routes(setpoint)) {
       await page.setViewportSize({width: SIZES.target.width, height: HEIGHT});
       await visit(page, setpoint.base, route);
-      for (const theme of THEMES) found.push(...await axe(page, route, theme));
-      for (const width of route.widths ?? WIDTHS) found.push(...await sweepAt(page, route, width, heard));
+      for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
+      for (const width of route.widths ?? WIDTHS) found.push(...await sweepAt(page, setpoint, route, width, heard));
     }
     assert.deepEqual(found, []);
   } finally {
@@ -314,7 +317,7 @@ test('the main pages keep to their boxes in Night at their widths, and axe finds
   }
 });
 
-test('the phone\'s Inbox keeps to its boxes in Night, and axe finds nothing in Night or Light', {skip: STRESS}, async () => {
+test('the phone\'s Inbox keeps to its boxes in Night, and axe finds nothing in Night or Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('iphone');
@@ -322,8 +325,8 @@ test('the phone\'s Inbox keeps to its boxes in Night, and axe finds nothing in N
     const route = {name: 'the phone\'s Inbox', path: '/inbox', shows: '.list .row'};
     await visit(page, setpoint.base, route);
     const found: string[] = [];
-    for (const theme of THEMES) found.push(...await axe(page, route, theme));
-    found.push(...await sweepAt(page, route, SIZES.iphone.width, heard));
+    for (const theme of THEMES) found.push(...await axe(page, setpoint, route, theme));
+    found.push(...await sweepAt(page, setpoint, route, SIZES.iphone.width, heard));
     assert.deepEqual(found, []);
   } finally {
     await setpoint.stop();

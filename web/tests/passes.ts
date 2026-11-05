@@ -22,7 +22,7 @@ import {PAGES} from './browser/pages.ts';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const KEEP_MS = 30 * 24 * 60 * 60_000;
 
-export type Check = 'unit' | 'image' | 'browser' | 'stress' | 'pages' | 'audit';
+export type Check = 'unit' | 'image' | 'browser' | 'pages' | 'audit';
 
 /** What a check reads: every file under `include` (a path, or '' for the whole tree), less `exclude`. */
 interface Inputs {
@@ -45,7 +45,7 @@ const PAGE_SPECS = new Set(PAGES.map(shot => `web/tests/browser/${shot.spec}.spe
 // The app and what a browser run builds, boots and drives it with, less the spec files themselves.
 const APP = ['package.json', 'package-lock.json', 'tsconfig.base.json', 'shared', 'server', 'web', 'design-export/styles', 'design-export/glyphs'];
 
-export const INPUTS: Record<Exclude<Check, 'stress'>, Inputs> = {
+export const INPUTS: Record<Check, Inputs> = {
   // Lint and typecheck read every source file, so it's the whole tree less what they skip.
   unit: {include: [''], exclude: [prose, boards, goldens, named('Dockerfile', '.dockerignore')]},
   // OPERATIONS.md's build reads what the Dockerfile copies; the goldens come along in web/ but
@@ -110,13 +110,13 @@ function filesOf(tree: string, paths: string[]): Map<string, string> {
 
 /** Whether `check` reads `file`, a path from the top of the repository. A browser run reads each spec file it runs too. */
 export function reads(check: Check, file: string): boolean {
-  const {include, exclude} = INPUTS[check === 'stress' ? 'browser' : check];
+  const {include, exclude} = INPUTS[check];
   return include.some(top => top === '' || file === top || file.startsWith(`${top}/`)) && !exclude.some(skip => skip(file));
 }
 
 /** The files `check` reads in `tree`, as path to mode and blob id. */
 export function inputsOf(tree: string, check: Check): Map<string, string> {
-  return new Map([...filesOf(tree, INPUTS[check === 'stress' ? 'browser' : check].include)].filter(([file]) => reads(check, file)));
+  return new Map([...filesOf(tree, INPUTS[check].include)].filter(([file]) => reads(check, file)));
 }
 
 /** The key `check`'s passes are recorded under in `tree`: its kind and a hash of what it reads. */
@@ -158,7 +158,7 @@ export function envOf(): string {
 }
 
 /**
- * Records a pass of `check` on `tree`, and drops records past KEEP_MS. A browser or stress pass
+ * Records a pass of `check` on `tree`, and drops records past KEEP_MS. A browser pass
  * names the spec files it ran.
  */
 export function record(tree: string, check: Check, specs?: string[]) {

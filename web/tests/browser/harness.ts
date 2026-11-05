@@ -2,13 +2,13 @@
 // Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
 // server on a free port serving the production build (web/dist) with the seed's clock, claimed in
 // its template so the browser starts signed in. Under run.ts the server is a bundle of the source
-// (bundle.ts), which is a third of the boot; stress runs the source. Spec files run side by side (eight at
+// (bundle.ts), which is a third of the boot; the page screenshots run the source. Spec files run side by side (eight at
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
 // A check that fails, or that its timeout cancels, runs again with a trace of its pages (run.ts,
 // SV-144), kept under test-results/browser/traces/, saying where in the run's output, to open with
-// `npx playwright-core show-trace <file>` (SV-75). A stress run keeps its own, lighter, the first time.
+// `npx playwright-core show-trace <file>` (SV-75).
 // `rested` takes a one-shot read of a computed style or box once nothing on the check's pages is
 // moving (the lint asks).
 import {spawn, spawnSync} from 'node:child_process';
@@ -44,22 +44,6 @@ export type SizeName = keyof typeof SIZES;
 
 export const PASSWORD = 'browser checks only';
 
-/**
- * `npm run test:browser:stress` (SV-40): every page runs on a CPU slowed 4×, the web fonts arrive
- * 2 s late, and /api answers slowly and out of order: requests sent together (a page's first data,
- * the refetches after a change) are held until no more come for 25 ms, then sent one at a time, the
- * last asked first, each 150 ms after the one before is in and drawn. So a check that waits for one
- * resource and then reads another (the Inbox's rows, then the counts in the title), reads the
- * server before the browser's change has reached it, or reads text widths before the fonts are in,
- * fails every time rather than only when the machine is busy. The normal run is unchanged.
- */
-export const STRESS = process.env.SETPOINT_BROWSER_STRESS === '1';
-const STRESS_CPU_RATE = 4;
-const STRESS_QUIET_MS = 25;
-const STRESS_API_GAP_MS = 150;
-const STRESS_STEP_LIMIT_MS = 2000;
-const STRESS_FONT_DELAY_MS = 2000;
-const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 let browser: Promise<Browser> | null = null;
 
@@ -91,9 +75,8 @@ export async function closeBrowser() {
 // kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE says what a context
 // records, a failed or timed-out check's being kept: 1 the whole trace, `light` its DOM at each step
 // without the screencast, 0 nothing. Whole traces were a third of a run's CPU, and light ones a fifth,
-// so nothing is the default, with what failed run again whole (run.ts); stress hunts what fails only
-// some of the time, which might not fail again, so it keeps light ones (SV-144).
-const TRACE = process.env.SETPOINT_BROWSER_TRACE ?? (STRESS ? 'light' : '0');
+// so nothing is the default, with what failed run again whole (run.ts, SV-144).
+const TRACE = process.env.SETPOINT_BROWSER_TRACE ?? '0';
 // Where a failed check is noted, for run.ts.
 const FAILED = process.env.SETPOINT_BROWSER_FAILED;
 interface Check {
@@ -432,40 +415,6 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
       if (TRACE !== '0') await context.tracing.start({screenshots: TRACE !== 'light', snapshots: true});
       checks.getStore()?.contexts.add(context);
       if (cookie) await context.addCookies([{name: cookie.name, value: cookie.value, url: base}]);
-      if (STRESS) {
-        // A check's own page.route takes precedence, so what it holds or fails isn't delayed too.
-        let burst: (() => Promise<void>)[] = [];
-        let quiet: NodeJS.Timeout | undefined;
-        const release = async () => {
-          const sending = burst.reverse();
-          burst = [];
-          for (const send of sending) {
-            await pause(STRESS_API_GAP_MS);
-            await send();
-          }
-        };
-        await context.route(url => url.pathname.startsWith('/api/'), route => new Promise<void>(done => {
-          burst.push(async () => {
-            await route.continue().catch(() => {});
-            done();
-            // The next answer waits until this one is in and drawn, however slow the CPU; the live
-            // stream never finishes, so only its headers are waited for. A request its page left
-            // (a reload) never answers, so the wait gives up after a while.
-            const drawn = async () => {
-              const response = await route.request().response();
-              if (!route.request().url().includes('/api/events')) await response?.finished();
-              await route.request().frame().page().evaluate(() => new Promise(next => requestAnimationFrame(() => requestAnimationFrame(next))));
-            };
-            await Promise.race([drawn().catch(() => {}), pause(STRESS_STEP_LIMIT_MS)]);
-          });
-          clearTimeout(quiet);
-          quiet = setTimeout(() => void release(), STRESS_QUIET_MS);
-        }));
-        await context.route('**/*.woff2', async route => {
-          await pause(STRESS_FONT_DELAY_MS);
-          await route.continue();
-        });
-      }
       const page = await context.newPage();
       checks.getStore()?.pages.add(page);
       page.on('pageerror', error => pageErrors.push(String(error)));
@@ -492,7 +441,6 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         await ready(page, loading);
         return response;
       };
-      if (STRESS) await (await context.newCDPSession(page)).send('Emulation.setCPUThrottlingRate', {rate: STRESS_CPU_RATE});
       return page;
     },
     stop,

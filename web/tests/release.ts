@@ -1,13 +1,13 @@
 // `npm run release:check` (SV-83, D274): the release checks, each run only where it hasn't already
-// passed on what it reads in HEAD (passes.ts, SV-193): npm test, the image build (SV-188), each
-// browser spec file, the same under stress, the page screenshots (pages.ts, D281) and the board
-// audit. It says what it skipped and why, and ends by saying whether HEAD is ready to release.
+// passed on what it reads in HEAD (passes.ts, SV-193): npm test, the page screenshots (pages.ts,
+// D281), the image build (SV-188), each browser spec file and the board audit, in that order. There's no stress
+// run (SV-195): a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
 // What's left to run waits for the browser lock (lock.ts) and holds it to the end, so it never runs
 // beside another session's browser run, and a release:check started while another runs on the same
 // content (ahead.ts, after a push) waits for it and then finds everything passed. With nothing left,
 // it takes no lock and answers at once.
 //
-// `-- pages image` runs only the steps named (unit, image, browser, stress, pages, audit): a slice
+// `-- pages image` runs only the steps named (unit, image, browser, pages, audit): a slice
 // that touches the screen runs those before it lands. `--keep-going` runs every step even after one
 // fails, for the check ahead, so a release finds every step that can pass already passed; otherwise
 // it stops at the first that fails.
@@ -19,7 +19,9 @@ import {head, missing, passesOf, record, specsOf} from './passes.ts';
 import {acquire, clock, handDown, release} from './browser/lock.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const STEPS = ['unit', 'image', 'browser', 'stress', 'pages', 'audit'] as const;
+// The cheap steps likeliest to fail come first, so a golden to re-capture or an image that won't
+// build stops a release in a couple of minutes, before the browser checks run once.
+const STEPS = ['unit', 'pages', 'image', 'browser', 'audit'] as const;
 type Step = (typeof STEPS)[number];
 
 const args = process.argv.slice(2);
@@ -52,7 +54,7 @@ function when(passes: Pass[]): string {
 const list = (names: string[]) => (names.length > 6 ? `${names.slice(0, 6).join(', ')} and ${names.length - 6} more` : names.join(', '));
 
 const TITLES: Record<Step, string> = {
-  unit: 'npm test', image: 'Image build', browser: 'Browser checks', stress: 'Stress run', pages: 'Page screenshots', audit: 'Board audit',
+  unit: 'npm test', image: 'Image build', browser: 'Browser checks', pages: 'Page screenshots', audit: 'Board audit',
 };
 
 /** A step's state on HEAD: passed (the line saying so), or what's left and how to run it. */
@@ -75,14 +77,14 @@ function buildImage(): number {
 function state(step: Step): State {
   const check: Check = step;
   const passes = passesOf(tree, check);
-  if (step === 'browser' || step === 'stress') {
+  if (step === 'browser') {
     const left = missing(specs, passes);
     const done = all.filter(spec => !left.includes(spec));
     if (!left.length) return {passed: `every spec file passed on what it reads (latest ${when(passes)})`};
     const whole = left.length === all.length;
     return {
       running: `${whole ? 'every spec file' : list(left)}.${done.length ? ` ${list(done)} already passed on what they read (${when(passes)}), skipped.` : ''}`,
-      run: npm('run', step === 'browser' ? 'test:browser' : 'test:browser:stress', ...(whole ? [] : ['--', ...left])),
+      run: npm('run', 'test:browser', ...(whole ? [] : ['--', ...left])),
       recorded: () => !missing(specs, passesOf(tree, check)).length,
       passing: `passed, ${left.length} spec file${left.length === 1 ? '' : 's'} run${done.length ? ` and ${done.length} skipped as already passed` : ''}`,
     };

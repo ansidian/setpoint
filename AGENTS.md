@@ -44,39 +44,37 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   release:check). A file's checks run side by side, sharing the run's eight slots, so one file is
   about as quick as its slowest few checks (SV-102); a check therefore keeps nothing in module
   state that another check reads. One browser run at a time on this machine: a run waits for
-  another session's, saying whose, and stops at 15 minutes (25 under stress). It ends with its time and slowest
+  another session's, saying whose, and stops at 15 minutes. It ends with its time and slowest
   checks; past its budget, look there before adding checks. A direct
   `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
   and each of them waits while a checkout from before the lock has a browser open. A run's server
   is a bundle made after the web build (`web/tests/browser/bundle.ts`, SV-145), a third of the boot
-  and half the memory, and its native packages stay out of it; a stress run, a direct `node --test`
-  and the board audit run the source, so a release has run the entry point production runs. A new
+  and half the memory, and its native packages stay out of it; the page screenshots, a direct
+  `node --test` and the board audit run the source, so a release has run the entry point production
+  runs. A new
   native package goes in the bundle's `external`.
 - Checks run without traces, a third of a run's CPU, so a check that fails or times out runs again
   with one (up to ten checks), kept under `test-results/browser/traces/`, and the run says where:
   `npx playwright-core show-trace <file>` replays every action, with the screen and the DOM at each
   step, before guessing at what was mid-flight (SV-75, SV-144). One that passes the second time says
-  so and leaves none, and the run has still failed. A stress run keeps a lighter trace the first
-  time, its DOM at each step without the screencast. `SETPOINT_BROWSER_TRACE` (1, `light` or 0) sets
-  what any run records.
-- Stress, the page screenshots and the board audit run at release, not per change (D281). A spec
-  file that is new or largely rewritten runs once under stress before its commit
-  (`npm run test:browser:stress -- mail`), so a check that reads before what it reads has come is
-  caught there rather than at the release.
-- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the image build as
-  a deploy builds it (`git archive HEAD | docker build`, exporting nothing, so Docker must be running,
-  SV-188), the browser checks,
-  the same under stress (`npm run test:browser:stress`: a CPU slowed 4×, /api answering late, one
-  at a time and last-asked first, and the web fonts late, D81, so a check that reads before what it
-  reads has come fails every time), the page screenshots (`npm run test:pages`) and the board
-  audit, each only where it hasn't already passed on what it reads in HEAD. Every passing run records
+  so and leaves none, and the run has still failed: it races, and is fixed by taking out what it
+  depends on (Tests own behaviour). `SETPOINT_BROWSER_TRACE` (1, `light` for the DOM at each step
+  without the screencast, or 0) sets what any run records the first time.
+- There is no stress run (SV-195, superseding D81, D281's stress part and D445): every check is
+  deterministic on its own, so a run on a busy machine passes or fails as one on an idle one. The
+  page screenshots and the board audit run at release, not per change (D281), and before a slice
+  that changes the screen lands (below).
+- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the page screenshots
+  (`npm run test:pages`), the image build as a deploy builds it (`git archive HEAD | docker build`,
+  exporting nothing, so Docker must be running, SV-188), the browser checks and the board audit,
+  each only where it hasn't already passed on what it reads in HEAD. Every passing run records
   itself by what it reads (web/tests/passes.ts › INPUTS, SV-193), so the runs before a commit count:
   npm test by everything but the docs, boards, goldens and Docker files; the browser checks by the
   app, the harness and the lockfile, and each spec file by its own content; the page screenshots by
   the app, the goldens and their spec files; the image by the Dockerfile, `.dockerignore`, the code
   and the lockfile; the audit by the goldens and boards. So a docs-only commit leaves everything
-  passed, and a goldens-only one only the screenshots and the audit to run. It says what it skipped and ends with whether HEAD is ready. A full stress run takes
-  about 11 minutes, against its own budget of 12 (the normal run's is 5, SV-187).
+  passed, and a goldens-only one only the screenshots and the audit to run. It says what it
+  skipped and ends with whether HEAD is ready; with everything passed it answers in seconds.
 - Checks run ahead, at landing (SV-194). After each push to `master` on this Mac, a
   reference-transaction hook (`npm run ahead -- install` puts it in) starts the check ahead
   (web/tests/ahead.ts): `release:check --keep-going` on origin/master in its own worktree,
@@ -87,9 +85,15 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   release to find it. `release:check` waits for the browser lock and holds it for as long as it runs
   anything (none when everything has passed), so the check ahead never runs beside another
   browser run, and an interactive run waits for it, saying whose.
-- A slice that changes the screen runs `npm run release:check -- pages image` on its commit before
-  it lands (any of `unit image browser stress pages audit` runs just those), so a golden that
-  changed or an image that won't build is found while the slice is open, not at the release.
+- Goldens at landing: a slice whose change alters what a page screenshot shows (a seed change, a
+  header button, a new row in a page the goldens hold) runs `npm run release:check -- pages image`
+  on its commit before it lands (any of `unit pages image browser audit` runs just those). A golden
+  that changed goes to Andy beside its diff and is re-captured (`npm run goldens`) in that slice, so
+  a release never finds one after its long checks. Goldens key only the screenshots and the audit,
+  so committing them leaves npm test's and the browser checks' passes standing.
+- `release:check` runs the cheap steps likeliest to fail first: npm test, the page screenshots, the
+  image build, then the browser checks and the audit, so a changed golden stops it in a couple of
+  minutes.
 - `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
   how to sign in: the quickest way to see a change or reproduce a report by hand.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
@@ -136,8 +140,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   shrinks to the journey and says where the rest went. Widgets with module state (the toast) are
   reset in the test; nothing in `web/src/` is mocked.
 - The visual net is two things. Per change, the layout sweep (`web/tests/browser/sweep.spec.ts`,
-  SV-99, runs with every `npm run test:browser`, about 40 s; stress skips it, as a page at rest has
-  no answer to race) visits the main pages in Night at 1677, 1100 and 820 wide and on the phone,
+  SV-99, runs with every `npm run test:browser`, about 40 s) visits the main pages in Night at 1677, 1100 and 820 wide and on the phone,
   with Settings at 1677 and 820, and Jobs's menus, the history pass and Jobs off at 1677. At rest it
   fails on anything that scrolls sideways,
   text an `overflow: hidden` box cuts (an ellipsis is meant), an interactive element covered at its
@@ -159,6 +162,11 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   holding the server's answer, not by a short limit (the lint asks, SV-49).
   A "nothing happened" pause is followed by `setpoint.idle()`, so a wrong change still on its way
   is answered and drawn before the check reads, rather than landing after it (SV-49).
+  A window the app times (the toast's Undo, a minute on the clock, the offline grace, a pause
+  before a suggestion, the dev provider's confirm) is held for the check, never raced on real time:
+  `holdToast`, the page's own clock (`page.clock`, stopped with `pauseClock` and moved with
+  `runFor`), a held server answer, or `SETPOINT_DEV_PROVIDER_HOLD`; a response the check waited for
+  is read after `drawn`, since a wait for it ends on its headers (SV-195).
   A one-shot read of a computed style or box (`getComputedStyle`, `getBoundingClientRect`,
   `boundingBox`) goes through `rested`, which waits until nothing on the check's pages is moving:
   an element mid-entrance or mid-slide measures as it passes, not where it rests. A helper that
