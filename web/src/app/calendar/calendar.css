@@ -18,7 +18,8 @@
 @keyframes today-pulse { 40% { transform: scale(1.18); } }
 .cal-step { display: inline-flex; align-items: center; gap: 2px; flex: none; }
 .ibtn.sm { width: 26px; height: 26px; }
-.hd .btn .kbd { background: color-mix(in srgb, var(--onInk) 12%, transparent); color: var(--onInk); }
+/* A key hint on the header's solid button (New): onInk over ink. A quiet or ghost one keeps the usual hint. */
+.hd .btn:not(.quiet, .ghost) .kbd { background: color-mix(in srgb, var(--onInk) 12%, transparent); color: var(--onInk); }
 
 /* ---------- The month ---------- */
 .cal-month { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
