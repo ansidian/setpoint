@@ -6,11 +6,14 @@
 // under the 1.25 wide-screen zoom (D23). The dev provider confirms after 600 ms and refuses moving
 // Dinner with Sam to Saturday with Google's 409 (board 19b, by rule).
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
@@ -40,17 +43,18 @@ async function openCalendar(page: Page, base: string) {
   await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
 }
 
-/** Presses a chip and carries it to another day's cell, `held` true to stop before letting go. */
 /**
  * Runs the page's clock (a check that installs one) past the Undo of a delete, as 6 s waited out are
- * the most a check here spends. The timer starts as the delete takes its items off the grid, whatever
- * toast is showing by then, so this goes by the chips.
+ * the most a check here spends, then sees its items off the grid. The delete's timer starts with its
+ * toast, so this goes from that; the clock may be stopped (pauseClock), the chips' fold being on it too.
  */
 async function passUndo(page: Page, ...deleted: [date: string, title: string][]) {
+  await page.locator('.toast:not(.leaving)', {hasText: /Deleted /}).waitFor();
+  await page.clock.runFor(UNDO_MS);
   for (const [date, title] of deleted) await chip(page, date, title).waitFor({state: 'detached'});
-  await page.clock.fastForward(UNDO_MS);
 }
 
+/** Presses a chip and carries it to another day's cell, `held` true to stop before letting go. */
 async function drag(page: Page, from: Locator, to: string, {held = false} = {}) {
   const box = (await rested(() => from.boundingBox()))!;
   const target = (await rested(() => page.locator(`.cell[data-date="${to}"]`).boundingBox()))!;
@@ -138,14 +142,20 @@ test('a drop asks which occurrences: This and following splits Gym, All events m
 });
 
 test('an event and a task move at once, waiting with a spinner until the provider confirms', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
+  // The dev provider holds every change while this file is there, so the pending move is the
+  // check's to read, not the provider's 600 ms.
+  const holdDir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-hold-'));
+  const hold = path.join(holdDir, 'hold');
+  fs.writeFileSync(hold, '');
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: hold}});
   try {
     const page = await setpoint.page('target');
     await openCalendar(page, setpoint.base);
     await drag(page, chip(page, '2026-10-07', 'Dentist'), '2026-10-08');
     // No prompt for a single event: pending where it landed, then confirmed.
-    // The spinner shows only after a second (DESIGN.md #54), and the dev provider confirms sooner.
+    // The spinner shows only after a second (DESIGN.md #54): it's there, not yet seen.
     await page.locator('.cell[data-date="2026-10-08"] .ev.pending .spin').waitFor({state: 'attached'});
+    fs.rmSync(hold);
     await page.locator('.cell[data-date="2026-10-08"] .ev:not(.pending)', {hasText: 'Dentist'}).waitFor();
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
     assert.deepEqual((await titles(setpoint, '2026-10-08')).filter(title => title.startsWith('Dentist')), ['Dentist 2:30 PM']);
@@ -166,6 +176,7 @@ test('an event and a task move at once, waiting with a spinner until the provide
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+    fs.rmSync(holdDir, {recursive: true, force: true});
   }
 });
 
@@ -345,6 +356,8 @@ test('a delete and a completion show at once, before the server has them', async
     const page = await setpoint.page('target');
     await page.clock.install();
     await openCalendar(page, setpoint.base);
+    // Stopped, so the delete's Undo, and the delete held behind it, last as long as the check says.
+    await pauseClock(page);
     let release = () => {};
     const held = new Promise<void>(resolve => {
       release = resolve;
@@ -360,6 +373,9 @@ test('a delete and a completion show at once, before the server has them', async
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Delete');
+    await page.locator('.toast:not(.leaving)', {hasText: 'Deleted Dinner with Sam'}).waitFor();
+    // A moment short of the Undo's end: off the grid, its fold run.
+    await page.clock.runFor(UNDO_MS - 1);
     await until('Dinner leaves the grid', () => chip(page, '2026-10-09', 'Dinner with Sam').count(), count => count === 0);
     // Whatever the browser has sent has landed, and the server has no delete: a delete it has lists
     // the item, pending, until the provider confirms.
@@ -374,9 +390,12 @@ test('a delete and a completion show at once, before the server has them', async
     assert.equal((await items(setpoint, '2026-10-07')).find(item => item.title === 'Pay rent')!.done, false, 'the server doesn\'t have it yet');
 
     release();
-    await page.clock.fastForward(UNDO_MS);
+    await page.clock.runFor(1);
+    // The rest runs on real time again, the refetches with it.
+    await page.clock.resume();
     await until('the delete lands', async () => (await titles(setpoint, '2026-10-09')).filter(title => title.startsWith('Dinner with Sam')), list => list.length === 0, AFTER_UNDO);
     await until('the completion lands', async () => (await items(setpoint, '2026-10-07')).find(item => item.title === 'Pay rent')!, task => task.done && !task.command);
+    await setpoint.idle();
     assert.equal(await chip(page, '2026-10-09', 'Dinner with Sam').count(), 0, 'and Dinner stays gone');
     await page.unroute(/\/api\/items\/\d+\/complete$/);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -391,6 +410,8 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     const page = await setpoint.page('target');
     await page.clock.install();
     await openCalendar(page, setpoint.base);
+    // Stopped, so the Undo's 6 s are the check's to move on.
+    await pauseClock(page);
     const dentists = async () => (await items(setpoint, '2026-10-07')).filter(item => item.title === 'Dentist');
 
     // Backspace on Dentist: off the grid, the toast says so, and the address leaves the item.
@@ -398,7 +419,8 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     await page.locator('.fd').waitFor();
     await page.keyboard.press('Backspace');
     await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
-    // It folds away first (polish audit calflows-11).
+    // It folds away first (polish audit calflows-11); a moment short of the Undo's end, it's still offered.
+    await page.clock.runFor(UNDO_MS - 1);
     await until('off the grid', () => chip(page, '2026-10-07', 'Dentist').count(), count => count === 0);
     assert.doesNotMatch(new URL(page.url()).pathname, /\/item\//);
     // Undo brings it back, and the server never hears of it.
@@ -420,10 +442,12 @@ test('UX #1: Delete or Backspace says what it deleted and offers Undo, which kee
     // Left alone, it's sent once the toast has gone.
     await chip(page, '2026-10-07', 'Dentist').click();
     await page.keyboard.press('Delete');
-    assert.equal((await dentists()).length, 1, 'held while Undo is offered');
     await page.locator('.toast', {hasText: 'Deleted Dentist'}).waitFor();
+    await setpoint.idle();
+    assert.equal((await dentists()).length, 1, 'held while Undo is offered');
     await passUndo(page, ['2026-10-07', 'Dentist']);
     await until('the delete is sent', dentists, list => list.length === 0, AFTER_UNDO);
+    await setpoint.idle();
     assert.equal(await chip(page, '2026-10-07', 'Dentist').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

@@ -5,8 +5,8 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
-import type {Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import type {Page, Response} from 'playwright-core';
+import {cleanUp, drawn, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -33,9 +33,12 @@ async function dragFrom(page: Page, from: {x: number; y: number}, to: {x: number
 }
 
 test('Week from Month, kept in the address and remembered; the week of Oct 4 laid out as board 16', async () => {
-  const setpoint = await startSetpoint();
+  // The server's clock holds at the seed's 9:12 AM and the page's stops there while the now-line's
+  // minute is read, so neither a slow start nor a busy machine moves it.
+  const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).waitFor();
     await page.keyboard.press('w');
@@ -45,6 +48,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     // is by eye (D416).
     await page.goto(`${setpoint.base}/calendar?view=week`);
     await block(page, '2026-10-07', 'Dentist').waitFor();
+    await pauseClock(page);
     assert.equal(await page.locator('.hd-title').textContent(), 'Oct 4 – 10, 2026');
     assert.equal(await page.title(), 'Oct 4 – 10, 2026 · Calendar');
     assert.deepEqual(await page.locator('.wk-dhead .dw').allTextContents(), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
@@ -58,6 +62,7 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     assert.equal(await page.locator('.wk-now').count(), 1);
     assert.equal(await page.locator('.wk-cols > .wk-nowx').count(), 1, 'now across the week');
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');
+    await page.clock.resume();
     // Tasks sit in the all-day row; the mini-month marks the week.
     await page.locator('.wk-all .tk', {hasText: 'Pay rent'}).waitFor();
     assert.deepEqual(await page.locator('.mini .wk').allTextContents(), ['4', '5', '6', '7', '8', '9', '10'], 'one band for the week (polish audit calpanes-05)');
@@ -128,22 +133,22 @@ test('a new block shows once while its create\'s answer is on its way, though th
       return route.fulfill({response});
     });
     // What the week's loads have said of it: pending, then confirmed.
-    const listed: string[] = [];
+    const listed: {said: string; response: Response}[] = [];
     page.on('response', async response => {
       if (response.request().method() !== 'GET' || !response.url().includes('/api/items?')) return;
       const lunch = ((await response.json().catch(() => null)) as ItemsOut | null)?.items.find(item => item.title === 'Lunch with Jo');
-      if (lunch) listed.push(lunch.command ? 'pending' : 'confirmed');
+      if (lunch) listed.push({said: lunch.command ? 'pending' : 'confirmed', response});
     });
     await dragFrom(page, await slot(page, '2026-10-08', 12 * 60 + 5), await slot(page, '2026-10-08', 13 * 60 + 25));
     await page.locator('.editor').waitFor();
     await page.keyboard.type('Lunch with Jo');
     await page.keyboard.press('Meta+Enter');
     await block(page, '2026-10-08', 'Lunch with Jo').waitFor();
-    await until('the browser has the server\'s list with it', async () => listed.length, count => count > 0);
-    await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+    const [first] = await until('the browser has the server\'s list with it', async () => listed, said => said.length > 0);
+    await drawn(page, first!.response);
     assert.equal(await block(page, '2026-10-08', 'Lunch with Jo').count(), 1, 'drawn once before the answer');
-    await until('the browser has it confirmed', async () => listed, said => said.includes('confirmed'));
-    await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+    const confirmed = await until('the browser has it confirmed', async () => listed.find(one => one.said === 'confirmed'), found => found !== undefined);
+    await drawn(page, confirmed!.response);
     assert.equal(await block(page, '2026-10-08', 'Lunch with Jo').count(), 1, 'and once it\'s confirmed');
     release();
     await until('the provider confirms it', () => block(page, '2026-10-08', 'Lunch with Jo').getAttribute('class'), classes => !classes!.split(' ').includes('pending'));

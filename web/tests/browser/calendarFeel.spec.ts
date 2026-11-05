@@ -3,11 +3,12 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Locator, Page} from 'playwright-core';
+import {UNDO_MS} from '../../src/app/toast.ts';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {minuteTop} from '../../src/logic/week.ts';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -171,6 +172,8 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     const dentist = page.locator('.rpane .ag-item', {hasText: 'Dentist'});
     const gym = page.locator('.rpane .ag-item', {hasText: 'Gym'});
     await dentist.waitFor();
+    // Stopped within 9:12 AM, so the minutes read below are the check's, not the machine's.
+    await pauseClock(page);
 
     // 9:12 AM: Dentist is next, lifted: its colour at 9%, its time `ink`, "in 5h" in its colour.
     assert.equal(await dentist.getAttribute('class'), 'ag-item next');
@@ -271,8 +274,8 @@ test('ticking a task off keeps its project beside the spinner in the pane, and i
     await row.getByRole('button', {name: 'Complete Pay rent'}).click();
     await row.getByRole('button', {name: 'Reopen Pay rent'}).waitFor();
     assert.deepEqual([await row.locator('.spin').count(), await row.locator('.project').textContent()], [1, 'Home']);
-    // Todoist's answer is read at the server: on the screen it comes through the refetches, which
-    // stress holds for as long as the machine is busy (SV-185). Reopen is manipulation.spec's S1.
+    // Todoist's answer is read at the server: on the screen it comes through the refetches, whose
+    // timing the check doesn't depend on (SV-185). Reopen is manipulation.spec's S1.
     release();
     await until('Todoist has Pay rent', () => task('Pay rent'), item => item.done && !item.command);
 
@@ -437,8 +440,11 @@ test('a deleted chip leaves its day, the ones under it taking its place, and ⌘
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.ev').first().waitFor();
+    // Stopped, so the delete's 6 s Undo lasts until the check moves the clock.
+    await pauseClock(page);
     // A chip folding away is `.removing` until it's gone: the day is read without it.
     const day = page.locator('.cell[data-date="2026-10-15"] .ev:not(.removing)');
     const fair = day.filter({hasText: 'Career fair'});
@@ -456,6 +462,8 @@ test('a deleted chip leaves its day, the ones under it taking its place, and ⌘
     await page.keyboard.press('Meta+z');
     await fair.waitFor();
     await until('the lecture back under it', order, chips => chips.filter(chip => chip !== 'other').join() === 'fair,lecture');
+    // Past where its Undo would have ended: the delete it took back is never sent.
+    await page.clock.runFor(UNDO_MS);
     await setpoint.idle();
     const listed = await setpoint.api<{items: {title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
     assert.equal(listed.items.filter(item => item.title === 'Career fair').length, 1, 'nothing was deleted');

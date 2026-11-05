@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -75,6 +75,8 @@ test('shell-06, motion-04: the Today event leads with its calendar\'s bar and wa
     await page.goto(`${setpoint.base}/inbox`);
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.count(), count => count === 4);
+    // Stopped within 9:12 AM, so the minutes read below are the check's, not the machine's.
+    await pauseClock(page);
     const dentist = lines.filter({hasText: 'Dentist'});
     const rent = lines.filter({hasText: 'Pay rent'});
     const left = (line: typeof dentist, selector: string) => line.locator(selector).evaluate(element => Math.round(element.getBoundingClientRect().left));

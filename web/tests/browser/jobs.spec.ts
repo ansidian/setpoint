@@ -23,7 +23,7 @@ import {after} from 'node:test';
 import type {ApplicationOut, JobsNavOut, JobsPageOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, matchGolden, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -382,7 +382,8 @@ test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Past
     assert.equal(await pane.getByRole('button', {name: 'Look it up'}).count(), 0);
     await page.keyboard.press('Escape');
     await until('the area gone', () => area.count(), count => count === 0);
-    assert.equal(await pane.count(), 1);
+    // The pane, not one closing (it stays drawn, leaving, for its fade).
+    assert.equal(await page.locator('.jb-pane:not(.leaving)').count(), 1);
 
     // Too little is refused in place, the words kept.
     await pasteButton.click();
@@ -509,6 +510,8 @@ test('Paste the posting while it\'s looked up (SV-170): the lookup stops, Esc le
     await pane.getByRole('textbox', {name: 'Location'}).fill('Austin, TX');
     await page.keyboard.press('Enter');
     await until('the toast', () => toast(page).textContent(), value => value === 'Location setUndo');
+    // The pointer rests on it, so its Undo waits while the check reads the server.
+    await holdToast(page);
     assert.equal(await pane.locator('.jb-facts').textContent(), 'Austin, TX');
     await until('saved', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.posting?.location === 'Austin, TX');
     await undo(page);
@@ -648,7 +651,7 @@ test('SV-141: two lines hold a long note whole; past two it ends in an ellipsis 
     assert.equal(await row(page, northwind).locator('.step').getAttribute('data-tip'), note, 'the whole note on hover');
 
     const steps = await rows(page).evaluateAll((all, id) => all.findIndex(each => (each as HTMLElement).dataset.application === String(id)), northwind);
-    await rows(page).first().hover();
+    await point(rows(page).first());
     for (let press = 0; press < steps; press += 1) await page.keyboard.press('j');
     await until('the cursor on its row', () => page.locator('.jb-tr.cur').getAttribute('data-application'), id => id === String(northwind));
   } finally {
@@ -753,6 +756,7 @@ test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, the item f
     await until('Lucerne folded away', () => need(page, 'Lucerne').count(), count => count === 0);
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 2');
     await until('the toast', () => toast(page).textContent(), text => text === 'JD saved for Lucerne PublishingUndo');
+    await holdToast(page);
     await until('the sidebar\'s count', () => page.locator('aside.sb .nav.jobs .cnt').textContent(), text => text === '2');
     // A pick is the posting: its lookup reads it (here, a dev run with no web, it stays looking).
     assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${lucerne}`)).jd.state, 'looking');
@@ -855,6 +859,7 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
     assert.deepEqual(await itemEmail(page).locator('.rd-tools button:visible').evaluateAll(all => all.map(one => one.textContent || one.getAttribute('aria-label'))), ['Open in Inbox', 'Previous email', 'Next email']);
     assert.equal(await itemEmail(page).locator('.rd-acts, .jb-chip, .jb-badge').count(), 0);
     // Reading it changes nothing in mail: it stays unread, here and in the Inbox's counts (D313).
+    await setpoint.idle();
     assert.equal((await setpoint.api<MessageOut>('GET', `/mail/messages/${update!.message_id!}`)).unread, true);
     assert.equal(await unreadInbox(setpoint), unread);
     assert.equal(new URL(page.url()).pathname, '/jobs');
@@ -862,6 +867,7 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
     await page.keyboard.press('Escape');
     await until('the email closed', () => itemEmail(page).count(), count => count === 0);
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
+    await setpoint.idle();
     assert.equal(await navCount(setpoint), 3);
     await item.getByRole('button', {name: 'Assign to…'}).waitFor();
     assert.match(await item.getAttribute('class') ?? '', /\bcur\b/, 'the cursor stays on the item');
@@ -913,7 +919,8 @@ test('D401: with the email open Assign to… works beside it: Esc takes the menu
     await menu.waitFor();
     await page.keyboard.press('Escape');
     await until('the menu closed', () => menu.count(), count => count === 0);
-    assert.equal(await itemEmail(page).count(), 1, 'Esc takes the menu first');
+    // The email, not one closing (it stays drawn, leaving and inert, for its fade).
+    assert.equal(await page.locator('.jb-pane[aria-label="Email"]:not(.leaving)').count(), 1, 'Esc takes the menu first');
 
     // J / K step through the emails, past the JD, which has none, and the cursor goes along.
     const previous = itemEmail(page).getByRole('button', {name: 'Previous email'});
@@ -982,6 +989,7 @@ test('D401: From history\'s subject opens its email too, J / K staying among Fro
     assert.deepEqual(await rested(() => itemEmail(page).boundingBox()), {x: layout.rail, y: layout.header, width: 1024 - layout.rail, height: 768 - layout.header});
     await itemEmail(page).getByRole('button', {name: 'Back'}).click();
     await until('Back closes it', () => itemEmail(page).count(), count => count === 0);
+    await setpoint.idle();
     assert.equal(await navCount(setpoint), 3);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -1010,6 +1018,7 @@ test('D402: an application in Assign to… opens its first email beside the menu
     assert.equal(await look('Claims').getAttribute('class'), 'ibtn sm on');
     assert.equal(await item.getAttribute('class').then(names => names?.includes('reading')), true, 'the item being assigned stays marked');
     assert.equal(await subject.getAttribute('aria-pressed'), 'false', 'but it isn\'t its own email');
+    await setpoint.idle();
     assert.equal(await unreadInbox(setpoint), unread);
     assert.equal(new URL(page.url()).pathname, '/jobs');
 
@@ -1021,7 +1030,7 @@ test('D402: an application in Assign to… opens its first email beside the menu
     // Esc takes the menu first though the focus went to the pane, then the email.
     await page.keyboard.press('Escape');
     await until('the menu closed', () => menu.count(), count => count === 0);
-    assert.equal(await itemEmail(page).count(), 1);
+    assert.equal(await page.locator('.jb-pane[aria-label="Email"]:not(.leaving)').count(), 1);
 
     // → reads the item under the cursor; one with no email says so and the pane stays.
     await item.getByRole('button', {name: 'Assign to…'}).click();
@@ -1057,10 +1066,12 @@ test('an answer refused leaves the item for good: the fold it had coming doesn\'
     await page.goto(`${setpoint.base}/jobs`);
     const item = need(page, 'Wide World');
     await page.route('**/api/jobs/needs-you/*/not-a-job', route => route.fulfill({status: 500, json: {error: {code: 'server', message: 'No'}}}));
+    // The page's clock is the check's from here, so the fold's timers run when it says.
+    await page.clock.install();
     await item.getByRole('button', {name: 'Not about a job'}).click();
     await until('the refusal', () => toast(page).textContent(), text => Boolean(text?.startsWith('Couldn\'t set it aside')));
-    // Nothing happened: past the 360 ms and the 180 ms fold it had coming.
-    await page.waitForTimeout(700);
+    // Nothing happened: past the 360 ms and the 180 ms fold it had coming, on the page's clock.
+    await page.clock.runFor(600);
     await setpoint.idle();
     assert.equal(await item.getByRole('button', {name: 'Not about a job'}).count(), 1);
     assert.equal(await page.locator('.jb-band .gh').textContent(), 'Needs you 3');
@@ -1083,6 +1094,7 @@ test('Track this (34c, decision 69): the application lands at its email\'s date,
     await pane.locator('.jb-src.looking').waitFor();
     assert.equal(await pane.locator('.jb-ev .tag').textContent(), 'First seen');
     await until('the toast', () => toast(page).textContent(), text => text === 'Tracking Wide World ImportersUndo');
+    await holdToast(page);
     // It landed at the top, at its date, settling from sub2; the numbers move with it (All 63, In process 4, this week 4).
     await until('its row at the top', () => companies(page), all => all[0] === 'Wide World Importers' && all[1] === 'Fabrikam');
     await until('the filter\'s counts', () => page.locator('.hd .jb-status button').allTextContents(), counts => counts.join() === 'All63,Applied31,In process4,Offer1,Rejected25,Withdrawn2');
@@ -1157,7 +1169,7 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
     await page.keyboard.type('Claims Platform Engineer');
     await page.keyboard.press('Escape');
     await until('back as it was', () => pane.locator('.rd-subj').textContent(), text => text === 'Software Engineer II, Claims');
-    assert.equal(await pane.count(), 1, 'Esc went no further than the field');
+    assert.equal(await page.locator('.jb-pane:not(.leaving)').count(), 1, 'Esc went no further than the field');
 
     await pane.locator('.jb-title .jb-tbtn').click();
     await field.fill('Claims Platform Engineer');
@@ -1165,6 +1177,7 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
     await until('the new title', () => pane.locator('.rd-subj').textContent(), text => text === 'Claims Platform Engineer');
     await until('its row too', () => row(page, claims).locator('.ro').textContent(), text => text === 'Claims Platform Engineer');
     await until('the toast', () => toast(page).textContent(), text => text === 'Title changedUndo');
+    await holdToast(page);
     await setpoint.idle();
     assert.deepEqual((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${claims}`)).hand_set.map(each => each.field), ['title']);
     await undo(page);
@@ -1211,6 +1224,7 @@ test('Set status (#267): the chip\'s menu, a pick changing it and marking the ro
     await until('no mark', () => row(page, litware).locator('.st .by').count(), count => count === 0);
     assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${litware}`)).step, 'Case study due Oct 12');
     await chip.click();
+    await menu.waitFor();
     assert.equal(await page.getByRole('menuitem', {name: 'Let emails decide'}).count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -1243,8 +1257,10 @@ test('Merge with… (35b): More\'s submenu, its field focused, the company\'s ot
     await merge.getByRole('menuitem', {name: /^Software Engineer II \(Java\)/}).click();
     await until('the other row gone', () => row(page, java).count(), count => count === 0);
     await until('the toast', () => toast(page).textContent(), text => text === 'MergedUndo');
+    await holdToast(page);
     await until('its emails here', () => pane.locator('.jb-ev').count(), count => count === 3);
-    assert.equal(await row(page, claims).locator('.ap').textContent(), 'Sep 28');
+    // Its row from the table's own refetch, which the detail's doesn't wait for.
+    await until('its row\'s applied date, the earlier', () => row(page, claims).locator('.ap').textContent(), text => text === 'Sep 28');
     await undo(page);
     await until('the other row back', () => row(page, java).count(), count => count === 1);
     await until('its emails back', () => pane.locator('.jb-ev').count(), count => count === 2);
@@ -1274,6 +1290,7 @@ test('an event\'s ··· (35a): Move to… the company\'s other application fold
     await move.getByRole('menuitem', {name: /\(Java\)/}).click();
     await until('it folded out', () => account.count(), count => count === 0);
     await until('the toast', () => toast(page).textContent(), text => text === 'Moved to Software Engineer II (Java)Undo');
+    await holdToast(page);
     assert.deepEqual((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${java}`)).timeline.map(event => event.subject), ['Thank you for applying', 'Your candidate account is ready']);
     await undo(page);
     await until('it came back', () => account.count(), count => count === 1);

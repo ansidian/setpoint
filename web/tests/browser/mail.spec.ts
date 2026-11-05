@@ -13,7 +13,7 @@ import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDom
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -73,6 +73,8 @@ test('Done on the open email opens the next, which reads it; the pill drops for 
     // Done on Northwind opens Contoso Insurance's code, the row after it in New, and reads it.
     await page.keyboard.press('h');
     await page.locator('.rd-subj', {hasText: 'Your code is'}).waitFor();
+    // The pointer rests on its toast, so its Undo waits while the check reads the server.
+    await holdToast(page);
     await until('the pill drops again', () => pill(page), text => text === '1');
     assert.equal(await page.locator('.list .row.open', {hasText: 'Contoso Insurance'}).count(), 1);
     // Northwind's row folds out of New (DESIGN.md › Decided while building #13) and settles in its
@@ -157,6 +159,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     // The next row in Security (Access granted) opens.
     await page.locator('.rd-subj', {hasText: 'Claude was granted access'}).waitFor();
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
+    await holdToast(page);
     await until('trashed at the provider', () => inAll(setpoint, signIn), present => !present, 5000);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
@@ -179,16 +182,24 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
       await held;
       await route.continue();
     });
+    // The page's clock stops here, so the toast's 6 seconds are the check's, not the machine's.
+    await pauseClock(page);
     await page.keyboard.press('e');
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
     assert.equal(await page.locator('.pane').count(), 0, 'Trash from the row opens nothing');
-    await until('Consolidated Messenger leaves', () => page.locator('.row[data-tip="Out for delivery"]').count(), count => count === 0);
+    // Its row, not the one folding away (it has no key).
+    const upsRow = page.locator('.row[data-key][data-tip="Out for delivery"]');
+    await until('Consolidated Messenger leaves', () => upsRow.count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), true, `the server doesn't have it yet (Consolidated Messenger is ${ups}; sent ${JSON.stringify(sent)}, held ${JSON.stringify(heldAt)})`);
     release();
     await until('trashed at the provider', () => inAll(setpoint, ups), present => !present, 5000);
-    assert.equal(await page.locator('.row[data-tip="Out for delivery"]').count(), 0, 'and it stays gone');
-    await page.clock.fastForward(UNDO_MS);
-    await until('the toast goes after 6 seconds', () => page.locator('.toast').count(), count => count === 0);
+    await setpoint.idle();
+    assert.equal(await upsRow.count(), 0, 'and it stays gone');
+    const toast = page.locator('.toast:not(.leaving)', {hasText: 'Moved to Trash'});
+    await page.clock.runFor(UNDO_MS - 1);
+    assert.equal(await toast.count(), 1, 'Undo is still offered just short of 6 seconds');
+    await page.clock.runFor(1);
+    await until('the toast goes at 6 seconds', () => toast.count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -224,6 +235,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
     // Two trips through the dev provider (600 ms each), the Trash's and the Undo's, and the wait between.
     await until('back from the trash at the provider', row, found => answers.includes('ok') && found !== undefined && !found.command, 10_000);
     assert.ok(answers.at(-1) === 'ok' && answers.slice(0, -1).every(code => code === 'command_pending'), `Undo goes once the Trash is in: ${answers.join(', ')}`);
+    await setpoint.idle();
     assert.equal(await page.locator('.toast').count(), 0, 'no failure shows');
     await page.unroute('**/api/mail/messages/*/trash');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -343,9 +355,8 @@ test('SV-80: P then P again before the pin is answered: one pin change at a time
     gates[0]!.resolve();
     await until('the unpin follows the pin', async () => seen, list => list.length === 3);
     assert.deepEqual(seen, ['send true', 'answer true', 'send false']);
-    await reloaded;
-    // The answer is in; the next frame has drawn what the cache made of it.
-    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    // The answer is in, read whole and drawn as the cache made it.
+    await drawn(page, await reloaded);
     assert.equal(await shelf(), 1, 'not back on the shelf while the unpin is on its way');
     assert.equal(await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).count(), 0, 'the reader still says Pin');
     gates[1]!.resolve();
@@ -433,6 +444,8 @@ test('the reader\'s tools come from the email\'s row before the email has loaded
     assert.deepEqual(await tools(), [['TrashE', null], ['UnpinP', 'true'], ['Open in GmailO', null]]);
     release();
     await page.locator('.rd-subj', {hasText: 'Lease renewal terms'}).waitFor();
+    // The email itself has loaded: its body, not the skeleton.
+    await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
     assert.deepEqual(await tools(), [['TrashE', null], ['UnpinP', 'true'], ['Open in GmailO', null]]);
 
     held = hold();
@@ -441,6 +454,7 @@ test('the reader\'s tools come from the email\'s row before the email has loaded
     assert.deepEqual(await tools(), [['TrashE', null], ['PinP', 'false']]);
     release();
     await page.locator('.rd-subj', {hasText: 'Your iCloud storage is almost full'}).waitFor();
+    await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
     assert.deepEqual(await tools(), [['TrashE', null], ['PinP', 'false']]);
     await page.unroute(/\/api\/mail\/messages\/\d+(\/open)?$/);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -499,6 +513,7 @@ test('Mark all as read says how many it read, with Undo; ⌘K\'s runs the same (
     await page.keyboard.type('mark all');
     await page.keyboard.press('Enter');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
+    await holdToast(page);
     await until('the server read them', () => counts(setpoint).then(value => [value.attention, value.unread].join()), value => value === '3,5', 5000);
     // Undo marks those 14 unread again, and they come back to the list.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
@@ -521,6 +536,7 @@ test('Mark all as read\'s Undo brings the 14 back at once, before the server\'s 
     const page = await load(setpoint);
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
+    await holdToast(page);
     await until('the server read them', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
     await until('New folds away', () => page.locator('.list .gh.new').count(), count => count === 0);
 
@@ -565,9 +581,8 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     // The page took the seed's moment from the server before this, so the code expires no later
     // than 12 seconds from here (and the app's 15 s clock first ticks later than that).
     const loaded = await page.evaluate(() => Date.now());
-    // The page's clock runs on until the pause reaches it, and a pause can't go back, so it pauses a
-    // little ahead of the time read: past what one round trip can take, well inside the 12 seconds.
-    await page.clock.pauseAt(loaded + 2000);
+    // Stopped at about the time read, however long that read took.
+    await pauseClock(page);
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
     // New's code row; Contoso Insurance's other email is in a day.
     const row = page.locator('.list .row', {has: page.locator('.code-line')});
@@ -859,6 +874,8 @@ test('the facts card and protected line on security mail, and no Add to calendar
     // Others propose.
     await rowOf(page, 'Pick a 30-minute slot').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    // The email itself has loaded, not only its row's subject.
+    await page.locator('.rd-body:not(:has(.sk-body))').waitFor();
     assert.deepEqual(await page.locator('.rd-acts .btn').allTextContents(), ['Add to calendar', 'Add as task', 'Ask about this email']);
     assert.equal(await page.locator('.facts').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -962,6 +979,7 @@ test('the pattern prompt sits at the end of New\'s Attention; No answers it and 
     assert.match(order[at + 1]!, /^lh:FYI/);
     await prompt.locator('button', {hasText: 'No'}).click();
     await until('it goes', () => prompt.count(), count => count === 0);
+    await until('the answer sent', async () => answers, sent => sent.length === 1);
     assert.deepEqual(answers, [{answer: 'no'}]);
     // No keeps it quiet for good, on the server too, once the browser's answer lands.
     await until('the server has the answer', () => setpoint.api<unknown[]>('GET', '/mail/prompts'), prompts => prompts.length === 0);
@@ -1305,7 +1323,7 @@ test('after Mark all as read, a load answered before the provider confirms leave
     // A load while the provider is held: focus refreshes the Inbox.
     const loaded = page.waitForResponse(response => response.request().method() === 'GET' && /\/api\/mail\/inbox$/.test(response.url()));
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await loaded;
+    await drawn(page, await loaded);
     const markAllPending = (commands: {kind: string; state: string}[]) => commands.some(command => command.kind === 'mark_all_read' && command.state === 'pending');
     assert.ok(markAllPending(await setpoint.api('GET', '/commands')), 'the provider was still confirming when the load answered');
 
@@ -1370,9 +1388,11 @@ test('UX #16 and #17: Mark all as read\'s footer goes once nothing is left to ma
     await footer.waitFor();
     await page.keyboard.press('Shift+I');
     await page.locator('.toast', {hasText: 'Marked 14 as read'}).waitFor();
+    await holdToast(page);
     await until('the server read them', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
     // Attention's and Security's unread are left, which Mark all as read doesn't touch: no footer.
     await until('the footer goes', () => footer.count(), count => count === 0);
+    assert.equal(await page.locator('.toast:not(.leaving)', {hasText: 'Marked 14 as read'}).count(), 1, 'the toast is still up');
     await page.keyboard.press('Meta+z');
     await until('unread again', () => counts(setpoint).then(value => value.unread), value => value === 19, 15000);
     // ⌘Z takes the toast away as its Undo does: it fades out over 120 ms, then goes.

@@ -10,10 +10,14 @@ import {after} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
+
+// live.ts's OFFLINE_GRACE_MS: the stream down this long before the pill shows (live.ts reads
+// `window` as it loads, so it isn't imported here).
+const OFFLINE_GRACE_MS = 2000;
 
 /** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
 const leadGlyph = (line: Locator) => line.evaluate(element => {
@@ -157,12 +161,19 @@ test('offline on News: the pill, the page dimmed but readable, J still moving th
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
+    await page.clock.install();
     await page.goto(`${setpoint.base}/news`);
     await row(page, 'Brush fire near the 210').waitFor();
+    // Stopped within 9:12 AM while the stream drops, so the pill's minute is the check's.
+    await pauseClock(page);
     await page.context().setOffline(true);
+    // The drop is seen at once; the pill comes past its grace, on the page's clock.
+    await page.locator('.main.down').waitFor();
+    await page.clock.runFor(OFFLINE_GRACE_MS);
     const pill = page.locator('.offline-pill');
     await pill.waitFor();
     assert.equal(await pill.textContent(), 'Offline, as of 9:12 AM, retryingRetry now');
+    await page.clock.resume();
     const content = page.locator('.main.offline > .content');
     await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
     assert.equal(await rested(() => content.evaluate(element => getComputedStyle(element).pointerEvents)), 'auto');
@@ -172,8 +183,10 @@ test('offline on News: the pill, the page dimmed but readable, J still moving th
     await page.locator('.nw-list .cur').waitFor();
     await page.context().setOffline(false);
     await pill.waitFor({state: 'detached'});
+    const cursor = page.locator('.nw-list .cur');
+    const was = await cursor.getAttribute('data-key');
     await page.keyboard.press('j');
-    await until('the cursor moved on', () => page.locator('.nw-list .cur').count(), count => count === 1);
+    await until('the cursor moved on', () => cursor.getAttribute('data-key'), key => key !== null && key !== was);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -18,7 +18,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -123,6 +123,7 @@ test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time
     assert.equal(await row(page, 'Welcome mixer').locator('.imp-row').getAttribute('aria-pressed'), 'false');
     await row(page, 'Welcome mixer').getByText('Wed, Sep 30 · 6:00 – 8:00 PM · past').waitFor();
     await pane.getByText('Left out: 1 event cancelled · categories on 5 events').waitFor();
+    await setpoint.idle();
     assert.deepEqual(await lines(setpoint, '2026-10-15'), ['Career fair 10:00 AM – 2:00 PM', 'CS 101 lecture 6:00 PM – 7:15 PM']);
     // Into Jobs, which already holds the Career fair: it will be updated, not made twice.
     await pane.getByRole('button', {name: 'Calendar'}).click();
@@ -135,9 +136,12 @@ test('SV-181: a schedule dropped on the grid is reviewed, imported one at a time
     await pane.getByRole('status').filter({hasText: '1 event wasn\'t imported'}).waitFor();
     await page.locator('.toast', {hasText: 'Imported 3 events to Jobs'}).waitFor();
     // The review is the one place to retry it while it's open: the grid's failed card waits.
+    await setpoint.idle();
     assert.equal(await page.locator('.failed-card').count(), 0);
     await row(page, 'Poster session').getByRole('button', {name: 'Retry'}).click();
     await page.locator('.toast', {hasText: 'Imported 4 events to Jobs'}).waitFor({timeout: 10_000});
+    // The pointer rests on it, so its Undo waits while the check reads the server.
+    await holdToast(page);
     await pane.waitFor({state: 'detached'});
 
     await until('the import on Oct 15', () => day(setpoint, '2026-10-15'), items => items.every(item => item.state === null) && items.length === 4);
@@ -279,8 +283,10 @@ test('SV-190: at 820 wide the pill centres beside the open review, and the revie
     const invite = [ics('invite.ics', INVITE)];
     // Over the review, a file is refused and nothing lights.
     assert.deepEqual(await enter(pane, invite), {effect: 'none', taken: true});
-    await leave(pane, invite);
+    // Read while the file is still over it, once what the enter changed is drawn.
+    await setpoint.idle();
     assert.equal(await page.locator('[data-file-drop]').count(), 0);
+    await leave(pane, invite);
 
     const grid = page.locator('.cal-month');
     await enter(grid, invite);

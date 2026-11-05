@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, matchGolden, pauseClock, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -24,7 +24,8 @@ const chips = (page: Page, date: string) => page.locator(`.cell[data-date="${dat
 
 test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist', async () => {
   // Time to Leave comes from live routes; the time-to-leave fixture (D3) holds the board's estimate.
-  const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
+  // The server's clock holds at the seed's 9:12 AM, so a slow start can't move the now-line's minute.
+  const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
@@ -269,6 +270,8 @@ test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and t
     await page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'}).click();
     const fact = page.locator('.fd .fact.leave');
     await fact.waitFor();
+    // Stopped within 9:12 AM, so the minutes read below are the check's, not the machine's.
+    await pauseClock(page);
     const colours = async () => [
       await rested(() => leave.evaluate(element => getComputedStyle(element).color)),
       await rested(() => leave.locator('.icon').evaluate(element => getComputedStyle(element).color)),
@@ -327,6 +330,8 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     assert.equal(await hiddenMark.count(), 0);
     const toast = page.locator('.toast');
     await until('the toast', () => toast.textContent(), line => line?.startsWith('Showed 5 calendars') ?? false);
+    // The pointer rests on it, so its Undo waits while the check reads the server.
+    await holdToast(page);
     await until('kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.every(calendar => calendar.visible));
     await toast.getByRole('button', {name: 'Undo'}).click();
     await until('Undo hides them again', () => empty.textContent(), line => line === '4 hidden · Show all');
@@ -339,7 +344,8 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
 });
 
 test('selecting a day updates the right pane; an item turns solid; Esc lets it go', async () => {
-  const setpoint = await startSetpoint();
+  // The server's clock holds at the seed's 9:12 AM, so a slow start can't move the minute read.
+  const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
@@ -384,7 +390,7 @@ test('selecting a day updates the right pane; an item turns solid; Esc lets it g
     await until('Tue, Oct 20', () => text(page, '.rp-date'), title => title === 'Tue, Oct 20');
     assert.equal(await page.locator('.mini .vis').textContent(), '20');
     await page.locator('.mini-head').getByRole('button', {name: 'Next month'}).click();
-    assert.equal(await text(page, '.mini-head .name'), 'November 2026');
+    await until('the mini-month on November', () => text(page, '.mini-head .name'), name => name === 'November 2026');
     assert.equal(await text(page, '.hd-title'), 'October 2026');
     await page.locator('.mini button[aria-label="2026-11-18"]').click();
     await until('Wed, Nov 18 in view', () => text(page, '.hd-title'), title => title === 'November 2026');
