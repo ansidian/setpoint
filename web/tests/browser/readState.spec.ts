@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, describe, point, readSecurity, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, drawn, point, readSecurity, SIZES, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint, SizeName} from './harness.ts';
 
 after(cleanUp);
@@ -126,8 +126,11 @@ for (const size of sizes) {
           await until('Business drops to 6', () => sidebar(page, 'Business'), shown => shown?.unread === '18' && shown.account === '6' && shown.pill === '3');
         }
         // Read mail leaves New, but not while the user is in the Inbox (2026-10-09, #243): not from
-        // under the reader, nor once it closes.
-        await page.waitForTimeout(400);
+        // under the reader, nor once it closes. A refetch asked now has the server's read, so the
+        // list has drawn it whenever the live event's own comes.
+        const refetched = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/mail/inbox');
+        await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+        await drawn(page, await refetched);
         await setpoint.idle();
         assert.equal(await row(page, `new:${signIn}`).count(), 1);
         assert.equal(await isUnread(page, `new:${signIn}`), false);
@@ -284,6 +287,8 @@ test('mail read and Done elsewhere keeps its rows in New until the user leaves; 
     await page.locator('.list .gh.day').first().waitFor();
     // The answers this browser had may show first; places settle once the fresh ones are in.
     await until('the shelf leads', () => page.locator('.list .gh:not(.day)').allTextContents(), bands => bands.join() === 'Pinned 1');
+    // The fresh answers in and drawn, not just the ones this browser had.
+    await setpoint.idle();
     assert.equal(await page.locator('.empty-line').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -306,9 +311,8 @@ test('SV-150: a change on its way keeps its count: counts asked meanwhile, from 
     const askMeanwhile = async () => {
       const answered = page.waitForResponse(/\/api\/mail\/counts$/);
       await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-      await answered;
-      // The answer is in; the next frame has drawn what the cache made of it.
-      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+      // The answer read whole and drawn, what the cache made of it on the page.
+      await drawn(page, await answered);
     };
     // Done: the server still says 3 in Attention.
     await point(row(page, `attention:${exams}`));

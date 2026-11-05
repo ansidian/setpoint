@@ -82,7 +82,7 @@ test('board 12b: a click on Dinner with Sam shows it in the same card, below it'
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
     assert.ok(await before!.evaluate(element => element.isConnected), 'the same card, never closed');
     // Weeks start on Sunday (SV-29): Friday has only Saturday to its right, too narrow, so it's below.
-    assert.equal(await card(page).getAttribute('data-side'), 'below');
+    await until('below it', () => card(page).getAttribute('data-side'), side => side === 'below');
     await until('Dinner with Sam\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(),
       facts => facts.join() === 'Blue Door2118 Sunset Blvd,Leave by 6:35 PM · 21 min,Sam Lee,1 hour before,Personal');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -347,6 +347,7 @@ test('SV-191: the seed\'s Veterans Day, on a holiday calendar the user can only 
     await page.locator('.ev').first().waitFor();
     await page.keyboard.press('c');
     await page.locator('.editor').getByRole('button', {name: 'Calendar'}).click();
+    await page.locator('.editor').getByRole('menuitemradio').first().waitFor();
     assert.deepEqual(await page.locator('.editor').getByRole('menuitemradio').allTextContents(), ['Personal', 'Classes', 'Jobs']);
 
     // So does the import's Into.
@@ -357,6 +358,7 @@ test('SV-191: the seed\'s Veterans Day, on a holiday calendar the user can only 
     await (await chooser).setFiles({name: 'two.ics', mimeType: 'text/calendar', buffer: Buffer.from(TWO_EVENTS)});
     const pane = page.getByRole('region', {name: 'Import events'});
     await pane.getByRole('button', {name: 'Calendar'}).click();
+    await page.getByRole('menuitemradio').first().waitFor();
     assert.deepEqual(await page.getByRole('menuitemradio').allTextContents(), ['Personal', 'Classes', 'Jobs']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

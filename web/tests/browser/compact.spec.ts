@@ -76,7 +76,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the story`);
       await page.locator('section.pane .rd-back').click();
       await until('Back closes the story', () => page.locator('section.pane').count(), count => count === 0);
-      assert.equal(await sideways(page), 0);
+      assert.equal(await rested(() => sideways(page)), 0);
       // ⌘K fits too.
       await page.keyboard.press('Meta+k');
       const palette = (await rested(() => page.locator('.palette').boundingBox()))!;
@@ -135,7 +135,7 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
       await page.locator('section.cal-week').waitFor();
       await page.keyboard.press('m');
       await page.locator('section.cal-month').waitFor();
-      assert.equal(await sideways(page), 0);
+      assert.equal(await rested(() => sideways(page)), 0);
       await page.close();
     }
     assert.deepEqual(setpoint.pageErrors, []);

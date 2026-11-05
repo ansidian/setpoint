@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page, Route} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -64,9 +64,11 @@ test('the Inbox waits for both its answers: with the days\' held, its skeleton s
   try {
     const page = await setpoint.page('target');
     const release = await hold(page, /^\/api\/mail\/all/);
+    const groups = page.waitForResponse(response => new URL(response.url()).pathname === '/api/mail/inbox');
     await visit(page, `${setpoint.base}/inbox`);
     await shown(page, 'all');
-    await until('the Inbox\'s groups in', () => page.evaluate(() => performance.getEntriesByType('resource').some(entry => /\/api\/mail\/inbox$/.test(entry.name))), loaded => loaded);
+    // The Inbox's groups in and drawn.
+    await drawn(page, await groups);
     assert.equal(await page.locator('.list .row, .list .gh').count(), 0);
     await release();
     await page.locator('.list .gh.new').waitFor();
@@ -101,6 +103,8 @@ test('Settings loading: each page draws its groups\' skeleton rows, never a defa
     await main.locator('.set-row', {hasText: 'Recovery'}).or(main.locator('.set-row', {hasText: 'left'})).first().waitFor();
     await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
     await main.locator('.set-row', {hasText: 'Connected'}).waitFor();
+    // Connected is the sources' alone; the page's other answers (nothing is held now) are in and drawn too.
+    await setpoint.idle();
     assert.equal(await page.locator('.settings [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -335,6 +339,8 @@ test('Setpoint starting shows its mark and clears what browsers used to keep; th
     assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
     await release();
     await page.locator('aside.sb .acct').first().waitFor();
+    // The accounts are in; Today's items too (nothing is held now).
+    await setpoint.idle();
     assert.equal(await page.locator('aside.sb [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

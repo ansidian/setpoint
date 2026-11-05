@@ -64,6 +64,8 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     await pane(page).waitFor();
     assert.equal(await pane(page).locator('.rd-subj').textContent(), '1 email selected');
     assert.equal(await reader(page).count(), 0, 'nothing opened');
+    // Whatever the click sent answered before the server is read.
+    await setpoint.idle();
     assert.equal((await message(setpoint, first!.id)).unread, first!.unread, 'nothing read');
     assert.ok(!new URL(page.url()).searchParams.has('open') && !page.url().includes('/open/'), 'the address opens nothing');
 
@@ -107,6 +109,7 @@ test('the first ⌘-click takes the open email, its reader giving way; a plain c
     await pane(page).waitFor();
     assert.deepEqual(await listed(page), [first!.id, second!.id]);
     await reader(page).waitFor({state: 'detached'});
+    await setpoint.idle();
     assert.equal((await message(setpoint, second!.id)).unread, second!.unread, 'the one ⌘-clicked isn\'t read');
 
     // A plain click opens that email, and the selection ends.
@@ -197,6 +200,7 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     await page.locator('.toast', {hasText: 'Marked 2 Done'}).waitFor();
     await pane(page).waitFor({state: 'detached'});
     for (const one of attention) await until(`${one.id} Done`, () => message(setpoint, one.id), found => found.done);
+    await setpoint.idle();
     assert.equal((await message(setpoint, plain.id)).done, false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

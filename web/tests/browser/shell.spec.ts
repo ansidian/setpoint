@@ -178,7 +178,8 @@ test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab ti
     await page.locator('.acct', {hasText: 'Jobs'}).click();
     await until('only Jobs mail', () => page.locator('.list .ac .label, .list .r1 .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
     assert.equal(new URL(page.url()).search, '?account=4');
-    // The counts stay every account's.
+    // The counts stay every account's, once what the filter asked is answered and drawn.
+    await setpoint.idle();
     assert.equal(await page.locator('.nav:has-text("Inbox") .cnt').textContent(), '19');
     await page.keyboard.press('2');
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
@@ -236,6 +237,8 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await page.locator('.editor[aria-label="Edit task"]').waitFor();
     assert.equal(await page.locator('.editor').getByLabel('Title', {exact: true}).inputValue(), 'Renew car registration');
     assert.match(new URL(page.url()).pathname, /^\/calendar\/item\/\d+$/);
+    // Whatever E sent answered before the server is read.
+    await setpoint.idle();
     const counts = await setpoint.api<MailCountsOut>('GET', '/mail/counts');
     assert.equal(counts.attention, 3);
     assert.deepEqual(setpoint.pageErrors, []);

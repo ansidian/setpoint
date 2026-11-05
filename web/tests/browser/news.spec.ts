@@ -416,10 +416,13 @@ test('While you were away (#298): All opens with the recap, each section\'s bigg
     await until('the tornado seen', () => stateOf(setpoint, tornadoId), state => state === 'seen');
     await until('it dims', () => look(tornado), seen => seen[2] === '400');
     assert.deepEqual(await rested(() => look(tornado)), ['rgba(0, 0, 0, 0)', await rested(() => colourOf(page, 'var(--ink2)')), '400']);
-    // Being on screen doesn't see the others: they stay unseen.
+    // Being on screen doesn't see the others: they stay unseen, once the rows in view with a dot have been.
+    await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, fixed.recap[0]!), 'new');
 
     // A bigger story leaves the page unseen: fixed once on screen, the recap takes nothing in, here or on the server.
+    // What the open asked is answered first, so the answer waited for is the change's.
+    await setpoint.idle();
     const asked = page.waitForResponse(response => response.url().endsWith('/api/news') && response.request().method() === 'GET');
     await newsChange(setpoint, `UPDATE news_stories SET score = 99, expired_at = '2026-10-07T15:00:00.000Z', expired_unseen = 1
       WHERE headline = 'Water main break floods an intersection; repairs through Thursday';`);

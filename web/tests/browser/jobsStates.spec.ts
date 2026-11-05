@@ -132,7 +132,8 @@ test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sid
     const empty = page.locator('.jb-empty');
     await empty.waitFor();
     assert.equal(new URL(page.url()).pathname, '/jobs');
-    // The header is "Jobs" alone: no numbers, no search.
+    // The header is "Jobs" alone: no numbers, no search, once what Jobs asked is answered and drawn.
+    await setpoint.idle();
     assert.equal(await page.locator('.hd').textContent(), 'Jobs');
     assert.equal(await page.locator('.hd .jb-status, .hd .jb-week, .hd .search').count(), 0);
     assert.equal(await empty.textContent(), 'Jobs is off·Turn on');

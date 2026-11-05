@@ -155,6 +155,9 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     // No ⌘K and no Settings modal on the phone.
     await page.keyboard.press('Meta+k');
     await page.keyboard.press('Meta+,');
+    // Nothing happens to wait for: neither opens.
+    await page.waitForTimeout(300);
+    await setpoint.idle();
     assert.equal(await page.locator('.palette, .settings').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -210,6 +213,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await page.locator('.rd-subj').waitFor({state: 'detached'});
     await page.locator('.list .row.unread[data-tip^="Interview availability"]').waitFor();
     await until('the pill drops', () => counts(setpoint), value => value.attention === 2);
+    await setpoint.idle();
     assert.equal((await counts(setpoint)).unread, 18);
 
     // Trash on Contoso University, then Undo brings it back into the reader.
@@ -278,6 +282,8 @@ test('the account filter, and plain search with no chips and no Alfred', async (
       if (path === '/api/search') reads.push((request.postDataJSON() as {read?: string}).read ?? 'words');
       if (path === '/api/search/suggestion') reads.push('suggestion');
     });
+    // The page's clock is the check's, so the suggestion's 700 ms pause (mailSearch.ts) has run out when it says.
+    await page.clock.install();
     await page.locator('.search input').tap();
     await page.keyboard.type('northwind interview ');
     await page.locator('.search-list .result').first().waitFor();
@@ -285,8 +291,9 @@ test('the account filter, and plain search with no chips and no Alfred', async (
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     assert.equal(await page.locator('.hd .apill, .hd .ph-count').count(), 0);
     await page.keyboard.press('Enter');
-    // Nothing happens to wait for: Enter makes no chips on the phone, and no pause asks for a suggestion.
-    await page.waitForTimeout(900);
+    // Nothing happens to wait for: Enter makes no chips on the phone, and no pause asks for a
+    // suggestion, its 700 ms run out on the page's clock.
+    await page.clock.runFor(701);
     await setpoint.idle();
     assert.equal(await page.locator('.search .qchip').count(), 0, 'no chips');
     assert.ok(reads.length > 0 && reads.every(read => read === 'words'), `its searches ask for no reading: ${reads.join()}`);

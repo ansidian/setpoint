@@ -10,7 +10,7 @@ import {after} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -63,6 +63,8 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
+    // The page's clock is the check's, so the 2 s grace runs when the check says, not on a busy machine's time.
+    await page.clock.install();
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     // Northwind's email read once already, so this browser has it when the network goes.
@@ -72,25 +74,24 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.locator('.pane').waitFor({state: 'detached'});
     await page.keyboard.press('k');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
-    // When the network went, and when the pill came, on the page's own clock.
-    await page.evaluate(() => {
-      const times = {offline: 0, pill: 0};
-      (window as unknown as {times: typeof times}).times = times;
-      addEventListener('offline', () => (times.offline = performance.now()));
-      new MutationObserver(() => {
-        if (!times.pill && document.querySelector('.main > .offline-pill')) times.pill = performance.now();
-      }).observe(document.body, {childList: true, subtree: true});
-    });
+    // When the network went (the app's own listener, added first, has run by then).
+    await page.evaluate(() => addEventListener('offline', () => ((window as unknown as {wentOffline: boolean}).wentOffline = true)));
     const writes: string[] = [];
     page.on('request', request => request.method() !== 'GET' && request.url().includes('/api/') && writes.push(`${request.method()} ${new URL(request.url()).pathname}`));
+    await pauseClock(page);
     await network(page, false);
-    await until('the page knows it\'s offline', () => page.evaluate(() => (window as unknown as {times: {offline: number}}).times.offline), at => at > 0);
+    await until('the page knows it\'s offline', () => page.evaluate(() => (window as unknown as {wentOffline?: boolean}).wentOffline === true), offline => offline);
     // H (Done) on the cursor row, at once, long before the pill: it reaches nothing, and nothing is sent or kept for later.
     await page.keyboard.press('h');
     const pill = page.locator('.offline-pill');
+    // The grace not yet over: no pill.
+    await page.clock.runFor(1999);
+    await setpoint.idle();
+    assert.equal(await pill.count(), 0, 'no pill inside the 2 s grace');
+    // Its last millisecond: the pill.
+    await page.clock.runFor(1);
     await pill.waitFor();
-    const times = await page.evaluate(() => (window as unknown as {times: {offline: number; pill: number}}).times);
-    assert.ok(times.pill - times.offline >= 1950, `the pill waited out the 2 s grace (${Math.round(times.pill - times.offline)} ms)`);
+    await page.clock.resume();
     assert.equal(await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).count(), 1, 'the row stays');
     assert.deepEqual(writes, [], 'nothing was sent');
     await page.locator('.main.offline').waitFor();
@@ -170,9 +171,10 @@ test('Setpoint unreachable at launch: the mark and the offline pill, not the sig
     // pill, rather than swapping it for the sign-in card.
     me = 'gateway';
     await page.route(/\/api\/events/, route => route.fulfill({status: 502, contentType: 'text/html', body: '<html><body>Bad Gateway</body></html>'}));
-    const checked = page.waitForResponse(response => response.url().endsWith('/api/me'));
     await page.context().setOffline(true);
     await page.locator('.main > .offline-pill').waitFor();
+    // The ask after the network is back, not one from while it was gone.
+    const checked = page.waitForResponse(response => response.url().endsWith('/api/me'));
     await page.context().setOffline(false);
     await checked;
     await setpoint.idle();
@@ -299,17 +301,27 @@ test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), ne
   try {
     const page = await setpoint.page('target');
     await recordArrivals(page, '.main > .offline-pill');
+    // The page's clock is the check's: the blip and the grace are as long as the check says, however slow the stream is to come back.
+    await page.clock.install();
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
+    await page.evaluate(() => addEventListener('offline', () => ((window as unknown as {wentOffline: boolean}).wentOffline = true)));
+    await pauseClock(page);
     await network(page, false);
+    await until('the page knows it\'s offline', () => page.evaluate(() => (window as unknown as {wentOffline?: boolean}).wentOffline === true), offline => offline);
     // The blip: the network gone for half a second.
-    await page.waitForTimeout(500);
+    await page.clock.runFor(500);
+    // The stream back (its ready) refetches what's on screen: the first ask since the network went.
+    const back = page.waitForRequest(request => new URL(request.url()).pathname.startsWith('/api/mail/'));
     await network(page, true);
-    // Nothing happens to wait for: past the grace, no pill comes and nothing dims.
-    await page.waitForTimeout(2500);
+    await back;
+    await setpoint.idle();
+    // Past the grace, no pill comes and nothing dims.
+    await page.clock.runFor(2500);
     await setpoint.idle();
     assert.deepEqual(await arrivals(page), []);
     assert.equal(await page.locator('.main.offline').count(), 0);
+    await page.clock.resume();
     // And changes work again: J to New's first row, Google's.
     await page.keyboard.press('j');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();

@@ -298,6 +298,8 @@ test('live reordering: dragging Business down past Personal makes room as it pas
     await until('the rows make room', labels, order => order.slice(0, 3).join() === [second, first, third].join());
     assert.equal(await rows.nth(0).getAttribute('class').then(names => names!.includes('dragging')), true, `${first} is the one dragged`);
     const saved = () => setpoint.api<AccountOut[]>('GET', '/accounts').then(list => list.sort((a, b) => a.position - b.position).map(account => account.label));
+    // Whatever the drag has sent answered before the server is read.
+    await setpoint.idle();
     assert.deepEqual((await saved()).slice(0, 2), [first, second], 'nothing is saved mid-drag');
     await page.mouse.up();
     await until('the order saved', saved, order => order.slice(0, 3).join() === [second, first, third].join());

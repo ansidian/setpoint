@@ -57,6 +57,8 @@ test('37a, 37b: the Northwind email\'s JD chip under the sender\'s line, and its
     await until('Jobs with Northwind open', () => pathOf(page), at => at === `/jobs/${application}`);
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-title', {hasText: 'Software Engineer I'}).waitFor();
+    // Jobs's answers all in and drawn, so a later one can't move it after the read.
+    await setpoint.idle();
     assert.equal(await page.locator('.jb-pane .rd-scroll').evaluate(scroller => scroller.scrollTop), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -79,7 +81,9 @@ test('37b, #271: Full posting arrives in Jobs scrolled to the full posting, unfo
     assert.equal(await page.locator('.jb-pane .jb-src').count(), 0);
     const detail = await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${application}`);
     assert.match((await posting.locator('.jb-full').textContent())!, new RegExp(`^${detail.posting!.full_text.split('\n')[0]!.replace(/^#+\s*/, '')}`));
-    // Scrolled to: the posting's head at the top of the pane, under the tools.
+    // Scrolled to: the posting's head at the top of the pane, under the tools, once Jobs's answers
+    // are all in and drawn, so a later one can't move it after the read.
+    await setpoint.idle();
     const [head, scroller] = await rested(() => Promise.all([posting.locator('.jb-fullhead').boundingBox(), page.locator('.jb-pane .rd-scroll').boundingBox()]));
     assert.ok(Math.abs(head!.y - scroller!.y) <= 1, `the posting's head at the pane's top: ${head!.y} beside ${scroller!.y}`);
     await page.keyboard.press('Escape');

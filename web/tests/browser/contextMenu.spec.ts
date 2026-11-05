@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -49,6 +49,8 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     const at = (await rested(() => menu(page).boundingBox()))!;
     assert.ok(Math.abs(at.x - (box.x + 420)) <= 1 && Math.abs(at.y - (box.y + 12)) <= 1, `the menu at ${at.x}, ${at.y}`);
     assert.match((await row.getAttribute('class'))!, /\bcur\b/, 'the cursor moved to the row');
+    // Whatever the right-click set off answered and drawn before what it shouldn't have done is read.
+    await setpoint.idle();
     assert.match((await row.getAttribute('class'))!, /\bunread\b/, 'still unread');
     assert.equal(await page.locator('.pane').count(), 0, 'nothing opened');
 
@@ -84,8 +86,11 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     await rightClick(row);
     await item(page, 'Mark read').click();
     await page.locator('.toast', {hasText: 'Marked as read'}).waitFor();
+    // Its Undo kept while the server is read.
+    await holdToast(page);
     await until('read', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.unread);
     await until('its class', () => row.getAttribute('class'), classes => !/\bunread\b/.test(classes!));
+    await setpoint.idle();
     assert.ok(await row.isVisible(), 'it stays where it is, in New');
     const after = await until('the counts', () => counts(setpoint), counts => counts.unread === before.unread - 1);
     assert.equal(after.attention, before.attention, 'the pill doesn\'t move');
@@ -188,6 +193,7 @@ test('the sidebar and the Today block: Mark all as read on Inbox, an item\'s car
     await menu(page).waitFor({state: 'detached'});
     await rightClick(page.locator('.today-row', {hasText: 'Pay rent'}));
     assert.deepEqual(await items(page), ['EditE', 'Complete', 'Open in Calendar', 'Delete']);
+    await setpoint.idle();
     assert.equal(await page.locator('.fd.today-card').count(), 0, 'no card');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -209,6 +215,7 @@ test('a calendar item\'s right-click selects it without the card; Colour, Copy a
     await rightClick(dentist);
     assert.deepEqual(await items(page), ['EditE', 'Clone', 'Copy⌘C', 'Colour', 'DeleteDel']);
     await until('selected', () => dentist.getAttribute('class'), classes => /\bsel\b/.test(classes!));
+    await setpoint.idle();
     assert.equal(await page.locator('.fd').count(), 0, 'no floating detail');
 
     // Colour's swatches take the menu's place, and a pick colours it.
@@ -260,6 +267,7 @@ test('a story\'s right-click: Open, Open at its outlet, Copy link, the cursor th
     assert.match(offered[1]!, /^Open at .+O$/);
     assert.equal(offered[2], 'Copy link');
     assert.match((await row.getAttribute('class'))!, /\bcur\b/);
+    await setpoint.idle();
     assert.equal(await page.locator('.pane').count(), 0, 'nothing opened');
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
     await item(page, 'Copy link').click();

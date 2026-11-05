@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
 import type {AddressInfo} from 'node:net';
+import os from 'node:os';
 import path from 'node:path';
 import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
@@ -40,6 +41,23 @@ async function openAt(page: Page, base: string, settingsPage: string) {
 }
 
 const settled = <T,>(what: string, read: () => Promise<T>, check: (value: T) => boolean) => until(what, read, check, 5000);
+
+/**
+ * A file the dev provider waits on while it's there (SETPOINT_DEV_PROVIDER_HOLD), so a change stays
+ * pending, its spinner up, for as long as the check reads it rather than the provider's 600 ms.
+ * Starts held.
+ */
+function providerHold() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-hold-'));
+  const file = path.join(dir, 'hold');
+  fs.writeFileSync(file, '');
+  return {
+    file,
+    hold: () => fs.writeFileSync(file, ''),
+    release: () => fs.rmSync(file, {force: true}),
+    remove: () => fs.rmSync(dir, {recursive: true, force: true}),
+  };
+}
 
 test('board 17: Settings › Accounts, Business needing sign-in and Personal stale', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect', 'stale-personal', 'checked', 'precision', 'ntfy'], clock: 'frozen'});
@@ -674,7 +692,8 @@ test('Calendar, Todoist and Appearance: a calendar hidden, Home set with its coo
 });
 
 test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at .5 with its spinner, then shows on the calendar; one Google refuses stays with its words until Try again or Change back', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
+  const provider = providerHold();
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: provider.file}});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'calendar');
@@ -690,6 +709,7 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     await page.locator('.settings .swatches .sw[aria-label="violet"]').click();
     await personal.locator('.spin').waitFor({state: 'attached'});
     assert.equal(await personal.getAttribute('class'), 'set-row one cal-row pending');
+    provider.release();
     await settled('Personal is violet at Google', calendars, list => list.some(calendar => calendar.name === 'Personal' && calendar.colour === 'violet' && calendar.command === null));
     await personal.locator('.spin').waitFor({state: 'detached'});
     const violet = 'oklch(0.8 0.11 300)';
@@ -702,8 +722,10 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     await refusal.waitFor();
     assert.equal(await rested(() => personal.locator('.sw').evaluate(sw => getComputedStyle(sw).getPropertyValue('--c').trim())), 'oklch(0.86 0.16 92)', 'the colour picked stays in place');
     // Try again: pending once more, then refused again.
+    provider.hold();
     await personal.getByRole('button', {name: 'Try again'}).click();
     await personal.locator('.spin').waitFor({state: 'attached'});
+    provider.release();
     await refusal.waitFor();
     // Change back: violet again, nothing waiting.
     await personal.getByRole('button', {name: 'Change back'}).click();
@@ -719,11 +741,13 @@ test('SV-20: a calendar\'s colour, picked from the swatches, waits for Google at
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+    provider.remove();
   }
 });
 
 test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for Todoist at .5 with its spinner, then rings its tasks; one Todoist refuses stays with its words until Try again or Change back', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
+  const provider = providerHold();
+  const setpoint = await startSetpoint({clock: 'frozen', env: {SETPOINT_DEV_PROVIDER_HOLD: provider.file}});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'todoist');
@@ -739,6 +763,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     await page.getByRole('button', {name: 'Teal', exact: true}).click();
     await home.locator('.spin').waitFor({state: 'attached'});
     assert.equal(await home.getAttribute('class'), 'set-row one cal-row pending');
+    provider.release();
     await settled('Home is teal at Todoist', projects, list => list.some(project => project.name === 'Home' && project.colour === 'teal' && project.command === null));
     await home.locator('.spin').waitFor({state: 'detached'});
     assert.equal(await rested(() => colourOf(home)), '#148fad');
@@ -749,8 +774,10 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     const refusal = home.locator('.s.failed', {hasText: 'Couldn\'t change its colour, Todoist, Insufficient permissions (403 Forbidden)'});
     await refusal.waitFor();
     assert.equal(await rested(() => colourOf(home)), '#8f7a69', 'the colour picked stays in place');
+    provider.hold();
     await home.getByRole('button', {name: 'Try again'}).click();
     await home.locator('.spin').waitFor({state: 'attached'});
+    provider.release();
     await refusal.waitFor();
     await home.getByRole('button', {name: 'Change back'}).click();
     await settled('back to teal', projects, list => list.some(project => project.name === 'Home' && project.colour === 'teal' && project.command === null));
@@ -771,6 +798,7 @@ test('SV-25: a Todoist project\'s colour, picked from Todoist\'s 20, waits for T
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
+    provider.remove();
   }
 });
 
@@ -923,6 +951,10 @@ test('Security: a load that reaches the server just after a change there ended t
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'security');
     await page.locator('.settings .set-row', {hasText: '8 left'}).waitFor();
+    // Settings' prefetch of every page's answers, 250 ms after it opens, answered first, so the load
+    // held below is Mail's own and not the prefetch's.
+    await until('the prefetch of the domains answered', () => page.evaluate(() => performance.getEntriesByType('resource').some(entry => entry.name.endsWith('/api/mail/trusted-domains'))), answered => answered);
+    await setpoint.idle();
     // Mail's trusted domains' load is held until Make new codes has ended every session, then reaches the server
     // under the one the browser had when it asked, which refuses it, as a slow connection can have it.
     const oldSession = `${setpoint.cookie!.name}=${setpoint.cookie!.value}`;

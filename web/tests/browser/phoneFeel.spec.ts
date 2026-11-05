@@ -9,7 +9,7 @@ import type {InboxOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -89,11 +89,14 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
         await held;
         await route.continue();
       });
+      const accounts = page.waitForResponse(response => new URL(response.url()).pathname === '/api/accounts');
       const going = page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id})}`);
       await page.locator('.pane .ph-acts').waitFor();
       await page.locator('.list .row').first().waitFor();
+      // The email's row and its account known, the bar holds what it will show.
+      await drawn(page, await accounts);
       const before = (await rested(() => actionBar(page))).map(action => action.label);
-      assert.ok(before.length === 0 || JSON.stringify(before) === JSON.stringify(labels), `before the email: ${JSON.stringify(before)}`);
+      assert.deepEqual(before, labels, 'before the email');
       release();
       await going;
       await page.locator('.rd-subj', {hasText: subject}).waitFor();
