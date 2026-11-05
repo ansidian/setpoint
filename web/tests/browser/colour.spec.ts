@@ -243,6 +243,13 @@ test('today is the now-line\'s alert disc in the month, the week\'s heads and th
       await page.locator('.wk-dhead .dn.today').waitFor();
       assert.deepEqual(await rested(() => disc(page.locator('.wk-dhead .dn.today'))), alert, `${theme}: the week`);
       await page.keyboard.press('m');
+      // Paged back to September, today lies outside the shown month, and its number keeps the disc's
+      // own ink rather than the outside days' ink3, which the disc swallowed.
+      await page.locator('.cell[data-date="2026-10-07"]:not(.out)').waitFor();
+      await page.keyboard.press('p');
+      const outside = page.locator('.cell.out[data-date="2026-10-07"] .dn.today');
+      await outside.waitFor();
+      assert.deepEqual(await rested(() => disc(outside)), alert, `${theme}: outside the month`);
     }
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

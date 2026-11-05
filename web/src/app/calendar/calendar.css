@@ -40,7 +40,8 @@
 .cell { transition: background-color var(--dur-medium) var(--ease); }
 .cell.weekend { background: var(--dayOff); }
 .cell.out { background: var(--dayOut); }
-.cell.out .dn { color: var(--ink3); }
+/* Today keeps its disc's own ink outside the month too. */
+.cell.out .dn:not(.today) { color: var(--ink3); }
 .cell.sel { background: var(--sub); }
 /* The selected day's number takes a `sub3` disc, as the mini-month's and the pane's heading carry it (polish audit calpanes-06). */
 .cell.sel .dn:not(.today) { background: var(--sub3); color: var(--ink); font-weight: 500; }
@@ -69,8 +70,9 @@
 .dn { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 22px; height: 22px; display: inline-grid; place-items: center; border-radius: 999px; }
 /* Today is a disc in the now-line's `alert` (#165), in the month, the week's heads and the mini-month. */
 .dn.today { background: var(--alert); color: var(--onAlert); font-weight: 600; }
-.dn.month { width: auto; padding: 0 6px; color: var(--ink); font-weight: 500; }
-.cell.out .dn.month { color: var(--ink2); }
+.dn.month { width: auto; padding: 0 6px; font-weight: 500; }
+.dn.month:not(.today) { color: var(--ink); }
+.cell.out .dn.month:not(.today) { color: var(--ink2); }
 .wx { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
 .wx .temps { font-size: 11.5px; color: var(--ink3); white-space: nowrap; }
 /* The high leads the low (#174). */
