@@ -14,7 +14,7 @@ import {
   LANES, LIVE_EVENT_TYPES, MATCH_FIELDS, MESSAGE_TYPES, NEWS_HAZARDS, NEWS_SECTIONS, NEWS_SORT_CAUSES, PROPOSAL_FIELDS, RECURRING_SCOPES, REMOTE_CONTENT_REASONS,
   SEARCH_CHIP_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, STORY_STATES, STREAM_EVENTS, SYNC_MODES, TODOIST_COLOUR_NAMES, TRANSPARENCIES, WEATHER_CONDITIONS, ACCOUNT_PROVIDERS,
 } from '@setpoint/shared';
-import type {ApiError, HighlightOut, IcsReadOut, MeOut, SearchOut, SectionHealthOut} from '@setpoint/shared';
+import type {ApiError, HighlightOut, IcsReadOut, MeOut, NewsPageOut, RecapDoneOut, SearchOut, SectionHealthOut} from '@setpoint/shared';
 import {describe, expect, onTestFinished, test} from 'vitest';
 import type {AppOptions} from '../src/api/app.ts';
 import {confirmCommand, failCommand} from '../src/commands/index.ts';
@@ -296,7 +296,7 @@ async function recordAll() {
 
   // SV-104: News. All, with the recap and the Missed strip it feeds the app (D424), a hazard's lead (Local's Red Flag Warning) and Tech's block
   // holding Upcoming (the Apple event); a section with more than its block shows, and Tech's with Upcoming.
-  await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news');
+  const page = await app.record('news', 'NewsPageOut', 'GET', '/api/news', '/api/news') as NewsPageOut;
   await app.record('news-section', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/local');
   await app.record('news-section-upcoming', 'NewsSectionOut', 'GET', '/api/news/sections/:section', '/api/news/sections/tech');
   // A new story, and the brush fire: seen Mon at 10:40 PM and given facts since, so it has new_since.
@@ -316,6 +316,12 @@ async function recordAll() {
   await app.record('news-image', 'image bytes', 'GET', '/api/news/images/:id', '/api/news/images/2', undefined, ['cache-control', 'content-security-policy', 'x-content-type-options']);
   // Upcoming's Add to calendar: the event it would create, nothing created yet.
   await app.record('news-proposal', 'NewsProposalOut', 'POST', '/api/news/events/:id/proposal', '/api/news/events/1/proposal');
+  // While you were away (SV-163, #298), for the app's own recap: News on screen with the recap's stories
+  // shown, which fixes it; Done puts it away, with what Undo puts back; Undo sends that back, so the
+  // recap is as it was for what follows.
+  await app.record('news-here', '(no body)', 'POST', '/api/news/here', '/api/news/here', {recap: page.recap!.stories.map(story => story.id)});
+  const done = await app.record('news-recap-done', 'RecapDoneOut', 'POST', '/api/news/recap/done', '/api/news/recap/done') as RecapDoneOut;
+  await app.record('news-recap-undo', '(no body)', 'POST', '/api/news/recap/undo', '/api/news/recap/undo', done.undo);
   // Last, as it changes their dots: the new story and the updated one seen.
   await app.record('news-seen', 'NewsSeenOut', 'POST', '/api/news/seen', '/api/news/seen', {story_ids: [18, 1]});
 

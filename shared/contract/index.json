@@ -1299,6 +1299,65 @@
       ]
     },
     {
+      "name": "news-here",
+      "type": "(no body)",
+      "method": "POST",
+      "route": "/api/news/here",
+      "path": "/api/news/here",
+      "request": {
+        "recap": [
+          49,
+          54,
+          52,
+          56,
+          48,
+          50,
+          47,
+          51
+        ]
+      },
+      "status": 204,
+      "content_type": null,
+      "file": null
+    },
+    {
+      "name": "news-recap-done",
+      "type": "RecapDoneOut",
+      "method": "POST",
+      "route": "/api/news/recap/done",
+      "path": "/api/news/recap/done",
+      "status": 200,
+      "content_type": "application/json",
+      "file": "responses/news-recap-done.json",
+      "unseen": [
+        "undo.put_away_at: always null"
+      ]
+    },
+    {
+      "name": "news-recap-undo",
+      "type": "(no body)",
+      "method": "POST",
+      "route": "/api/news/recap/undo",
+      "path": "/api/news/recap/undo",
+      "request": {
+        "put_away_at": null,
+        "shown_at": "2026-10-07T16:12:00.000Z",
+        "story_ids": [
+          49,
+          54,
+          52,
+          56,
+          48,
+          50,
+          47,
+          51
+        ]
+      },
+      "status": 204,
+      "content_type": null,
+      "file": null
+    },
+    {
       "name": "news-seen",
       "type": "NewsSeenOut",
       "method": "POST",
