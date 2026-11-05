@@ -7,7 +7,7 @@
 // A reference-transaction hook starts it whenever origin/master moves on this Mac: a push to master
 // from any checkout, or a fetch that brings one. One runs at a time; a push while it runs is checked
 // once it's done. `npm run ahead` runs it now, `-- install` puts the hook in, `-- status` says how the
-// last one went and where its log is.
+// last one went and where its log is (setpoint-ahead.log in the repository's git directory).
 import {execFileSync, spawn, spawnSync} from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -23,7 +23,7 @@ const git = (args: string[], cwd = ROOT) => execFileSync('git', args, {cwd, enco
 const COMMON = git(['rev-parse', '--path-format=absolute', '--git-common-dir']);
 const MAIN = path.dirname(COMMON);
 const WORKTREE = path.join(MAIN, '.claude', 'worktrees', 'check-ahead');
-const LOG = path.join(WORKTREE, 'test-results', 'ahead.log');
+const LOG = path.join(COMMON, 'setpoint-ahead.log');
 const STATE = path.join(COMMON, 'setpoint-ahead.json');
 const LOCK = path.join(COMMON, 'setpoint-ahead.lock');
 const BRANCH = 'refs/remotes/origin/master';
@@ -70,7 +70,11 @@ function lock(): number | null {
     try {
       fs.writeFileSync(LOCK, String(process.pid), {flag: 'wx'});
       process.on('exit', () => {
-        if (fs.readFileSync(LOCK, 'utf8') === String(process.pid)) fs.rmSync(LOCK, {force: true});
+        try {
+          if (fs.readFileSync(LOCK, 'utf8') === String(process.pid)) fs.rmSync(LOCK, {force: true});
+        } catch {
+          // Already gone.
+        }
       });
       return null;
     } catch (error) {
@@ -111,14 +115,13 @@ function checkAhead() {
     const rev = git(['rev-parse', BRANCH]);
     const last = readState();
     if (last?.rev === rev && last.state !== 'running') return;
-    fs.mkdirSync(path.dirname(LOG), {recursive: true});
     fs.writeFileSync(LOG, `Check ahead of ${rev}, ${new Date().toISOString()}\n`);
     writeState({rev, state: 'running', at: new Date().toISOString(), log: LOG});
     let ok = false;
     try {
       checkOut(rev);
       const out = fs.openSync(LOG, 'a');
-      ok = spawnSync('node', ['web/tests/release.ts', '--keep-going'], {cwd: WORKTREE, stdio: ['ignore', out, out]}).status === 0;
+      ok = spawnSync(process.execPath, ['web/tests/release.ts', '--keep-going'], {cwd: WORKTREE, stdio: ['ignore', out, out]}).status === 0;
     } catch (error) {
       fs.appendFileSync(LOG, `\n${(error as Error).message}\n`);
     }
