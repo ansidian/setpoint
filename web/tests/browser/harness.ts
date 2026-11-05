@@ -22,7 +22,7 @@ import {describe as nodeDescribe, test as nodeTest} from 'node:test';
 import type {TestContext, TestOptions} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
-import type {Browser, BrowserContext, Locator, Page, Request} from 'playwright-core';
+import type {Browser, BrowserContext, Locator, Page, Request, Response} from 'playwright-core';
 import {holdForRun} from './lock.ts';
 import {COMPARING, PAGES} from './pages.ts';
 
@@ -513,9 +513,66 @@ async function ready(page: Page, loading: Set<Request>) {
 /** Resolves once `page` has no /api request in flight across two drawn frames. */
 async function answered(page: Page, loading: Set<Request>, what = 'the page\'s requests answered') {
   await until(what, async () => {
-    if (!loading.size) await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+    if (!loading.size) await drawnTwice(page);
     return [...loading].map(request => new URL(request.url()).pathname);
   }, pending => pending.length === 0, 15_000);
+}
+
+/**
+ * Two frames drawn. Under a clock the check has installed (page.clock) requestAnimationFrame fires
+ * only as the clock runs, which a paused one doesn't, so there it's two turns of the page's own task
+ * queue instead, which React's renders are scheduled on (a MessageChannel, which the clock leaves alone).
+ */
+async function drawnTwice(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    if (!('__pwClock' in window)) return new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn)));
+    const turn = () => new Promise(next => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = next;
+      channel.port2.postMessage(null);
+    });
+    return turn().then(turn);
+  });
+}
+
+/**
+ * A response the check waited for (`waitForResponse`, `page.on('response')`) read whole and drawn:
+ * those resolve on its headers, before the app has its body, so a read straight after can find the
+ * page as it was (SV-195).
+ */
+export async function drawn(page: Page, response: Response): Promise<void> {
+  await response.finished();
+  await drawnTwice(page);
+}
+
+/**
+ * Stops the page's clock, installed by the check (page.clock.install), at about now, so what it
+ * reads by the minute ("in 10m", the now-line's time) or a window such as the toast's Undo doesn't
+ * run on with real time on a busy machine (SV-195). The check then moves it on itself (`runFor`,
+ * `fastForward`). pauseAt stops the clock and then runs it on to the time given; a time real time
+ * has already passed is refused, and is asked again from the stopped clock's own now.
+ */
+export async function pauseClock(page: Page): Promise<void> {
+  for (let tries = 0; ; tries++) {
+    try {
+      await page.clock.pauseAt(await page.evaluate(() => Date.now()) + 250);
+      return;
+    } catch (error) {
+      if (tries === 2 || !String(error).includes('past')) throw error;
+    }
+  }
+}
+
+/**
+ * Rests the pointer on the toast, as a person reading it would, so its time (and its Undo) waits
+ * while the check reads the server before pressing Undo: its 6 s run on real time otherwise, which
+ * a busy machine can use up (SV-195). Answers the toast.
+ */
+export async function holdToast(page: Page): Promise<Locator> {
+  const toast = page.locator('.toast:not(.leaving)');
+  await toast.hover();
+  await until('the toast held', () => toast.getAttribute('class'), classes => Boolean(classes?.split(' ').includes('held')));
+  return toast;
 }
 
 /** Waits until `check` holds, polling; throws with what it last saw. */
@@ -550,10 +607,7 @@ async function still(page: Page): Promise<void> {
   await until('nothing moving', () => page.evaluate(() => document.getAnimations()
     .filter(animation => animation.playState === 'running' && (animation.effect?.getComputedTiming().endTime as number) < 2000)
     .map(animation => (animation as CSSAnimation).animationName ?? animation.constructor.name)), moving => moving.length === 0);
-  // Two frames drawn since. Under a clock a check has installed (page.clock) requestAnimationFrame
-  // fires only as the check runs the clock, so its frames are the check's to wait for.
-  if (await page.evaluate(() => '__pwClock' in window)) return;
-  await page.evaluate(() => new Promise(drawn => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+  await drawnTwice(page);
 }
 
 /**
