@@ -43,8 +43,8 @@ button.check-now:hover { background: var(--sub); color: var(--ink); }
    and its writes too (client.ts). The dim comes and goes over 180 ms. */
 .main > .content { transition: opacity var(--dur-medium) var(--ease), filter var(--dur-medium) var(--ease); }
 .main.offline > .content { opacity: .62; filter: grayscale(.5); }
-.main.down :is(.rd-tools .tool, .rd-acts .btn, .check, .listfoot .lnk, .unpin, .copy, .check-now, .hbar .act) { pointer-events: none; }
-.main.offline :is(.rd-tools .tool, .rd-acts .btn, .check, .listfoot .lnk, .unpin, .copy, .check-now, .hbar .act) { opacity: .4; }
+.main.down :is(.rd-tools .tool, .rd-acts .btn, .check, .hd .mark-all, .unpin, .copy, .check-now, .hbar .act) { pointer-events: none; }
+.main.offline :is(.rd-tools .tool, .rd-acts .btn, .check, .hd .mark-all, .unpin, .copy, .check-now, .hbar .act) { opacity: .4; }
 
 /* Setpoint unreachable at launch (DESIGN.md › Health and states): the mark at 36 px where the sign-in
    card's top sits (#71), dimmed, and the pill 22 px under it. */

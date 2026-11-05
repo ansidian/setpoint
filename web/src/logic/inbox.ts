@@ -1,6 +1,6 @@
 // The Inbox's rules (DESIGN.md › The list; BRIEF.md › The Inbox). The server sends the groups in
-// order with their rows and counts (src/domain/inbox.ts there); the list (logic/all.ts) draws New and
-// Attention from them. This holds what's common: each row's line, the rows a visit keeps, how the
+// order with their rows and counts (src/domain/inbox.ts there); the list (logic/all.ts) draws
+// Attention and the shelf from them. This holds what's common: each row's line, Undo's held rows, how the
 // keyboard cursor moves, and the counts' at-once changes (DESIGN.md › Interaction rules).
 import {INBOX_GROUPS} from '@setpoint/shared';
 import type {InboxGroup, InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut, MessageType} from '@setpoint/shared';
@@ -23,9 +23,8 @@ export const GROUP_GLYPHS: Record<InboxGroup, IconName> = {
 };
 
 /**
- * An email that left the server's list during this visit to the Inbox, where it was. Opening an FYI
- * email reads it, and read mail leaves the Inbox's groups; it keeps its place in New until the user
- * leaves the Inbox (Calendar, another account), so the list doesn't change under them (2026-10-09).
+ * An email Undo put back (Done, Trash) before the server's list has it again, and where it was, so it
+ * shows there at once (D449: nothing else holds a row any more).
  */
 export interface HeldRow {
   group: InboxGroup;
@@ -33,7 +32,7 @@ export interface HeldRow {
   row: MessageRowOut;
 }
 
-/** The server's groups with the visit's held rows back in their places, in the order they left. */
+/** The server's groups with Undo's held rows back in their places, in the order they came back. */
 export const withHeld = (groups: InboxGroupOut[], held: HeldRow[]): InboxGroupOut[] => held.reduce(withOneHeld, groups);
 
 function withOneHeld(groups: InboxGroupOut[], held: HeldRow): InboxGroupOut[] {
@@ -54,22 +53,13 @@ function withOneHeld(groups: InboxGroupOut[], held: HeldRow): InboxGroupOut[] {
 }
 
 /**
- * The held rows once the server's list changes from what was shown: each row that left it is held
- * where it was, read, unless it was taken out here (Done, Trash, Mark all as read); one back in the
- * list, or taken out, is let go. The Pinned shelf neither holds a row nor counts as its place, so
- * pinning a held email and unpinning it leaves it where it was (SV-24).
+ * Undo's held rows once the server's list changes: one the list has again is let go. The Pinned shelf
+ * doesn't count as its place. Returns `held` itself when none is.
  */
-export function keepShown(shown: InboxGroupOut[], groups: InboxGroupOut[], held: HeldRow[], takenOut: ReadonlySet<number>): HeldRow[] {
-  const present = new Set(groups.filter(group => group.group !== 'pinned').flatMap(group => group.rows.map(row => row.id)));
-  const next = held.filter(one => !present.has(one.row.id) && !takenOut.has(one.row.id));
-  const kept = new Set(next.map(one => rowKey(one.group, one.row.id)));
-  for (const group of shown.filter(one => one.group !== 'pinned')) {
-    group.rows.forEach((row, index) => {
-      if (present.has(row.id) || takenOut.has(row.id) || kept.has(rowKey(group.group, row.id))) return;
-      next.push({group: group.group, index, row: {...row, unread: false}});
-    });
-  }
-  return next;
+export function letGo(held: HeldRow[], groups: InboxGroupOut[]): HeldRow[] {
+  const listed = new Set(groups.filter(group => group.group !== 'pinned').flatMap(group => group.rows.map(row => row.id)));
+  const next = held.filter(one => !listed.has(one.row.id));
+  return next.length === held.length ? held : next;
 }
 
 /** The Inbox without the emails Trash is taking out, before the server's list leaves them out too; a group they leave empty goes. */
@@ -291,11 +281,12 @@ export const markAllReads = (row: MessageRowOut, account: number | null = null):
   row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row) && (account === null || row.account_id === account);
 
 /**
- * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice. Its toast
- * counts them, and Undo marks them unread again.
+ * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice: the Inbox's
+ * groups', and the days' `shown` (D449: they keep read FYI mail, and Undo's unread is there first).
+ * Its toast counts them, and Undo marks them unread again.
  */
-export const markAllReadIds = (groups: InboxGroupOut[]): number[] =>
-  [...new Set(groups.flatMap(group => group.rows.filter(row => markAllReads(row)).map(row => row.id)))];
+export const markAllReadIds = (groups: InboxGroupOut[], shown: MessageRowOut[] = []): number[] =>
+  [...new Set([...groups.flatMap(group => group.rows), ...shown].filter(row => markAllReads(row)).map(row => row.id))];
 
 /** Mark unread (⌘K): its dot comes back where it shows, and it counts as unread again. */
 export function inboxAfterUnread(inbox: InboxOut, id: number): InboxOut {

@@ -20,30 +20,30 @@ const colourOf = (page: Page, colour: string) => page.evaluate(value => {
   return computed;
 }, colour);
 
-test('SV-69, #243: Done moves an email out of New into its day, quiet with a Done tag; New\'s Attention counts what\'s left; the reader says Done; Undo puts it back', async () => {
+test('SV-69, D449: Done moves an email out of Attention into its day, quiet with a Done tag; Attention counts what\'s left; the reader says Done; Undo puts it back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    const lane = page.locator('.list.all .lh.att').first();
-    await until('New\'s Attention lane', () => lane.textContent(), text => text === 'Attention 2');
-    const fresh = page.locator('.list.all .row[data-key="new:5"]');
+    const band = page.locator('.list.all .gh.att');
+    await until('Attention', () => band.textContent(), text => text === 'Attention 3');
+    const waiting = page.locator('.list.all .row[data-key="attention:5"]');
     const inDay = page.locator('.list.all .row[data-key="all:5"]');
-    await fresh.click();
+    await waiting.click();
     await page.locator('.rd-tools .tool.done').waitFor();
     await page.keyboard.press('h');
 
-    // It folds out of New and into today, where its text settles in `ink3` beside a Done tag. The
-    // reader moves on to the next.
+    // It folds out of Attention and into today, where its text settles in `ink3` beside a Done tag.
+    // The reader moves on to the next.
     await inDay.waitFor();
     assert.ok((await inDay.getAttribute('class'))!.split(' ').includes('done'));
     assert.equal(await inDay.locator('.tag').textContent(), 'Done');
     const ink3 = await rested(() => colourOf(page, '--ink3'));
     await until('Northwind quiet', () => inDay.locator('.from').evaluate(element => getComputedStyle(element).color), colour => colour === ink3);
-    await until('it leaves New', () => fresh.count(), count => count === 0);
-    assert.equal(await lane.textContent(), 'Attention 1');
+    await until('it leaves Attention', () => waiting.count(), count => count === 0);
+    assert.equal(await band.textContent(), 'Attention 2');
     // Today's Attention lane, all of it Done, has no count.
-    assert.equal(await page.locator('.list.all .lh.att').nth(1).textContent(), 'Attention');
+    assert.equal(await page.locator('.list.all .lh.att').first().textContent(), 'Attention');
     await until('the next email open', () => page.locator('.rd-subj').textContent(), text => !/Interview availability/.test(text ?? ''));
 
     // Back on it, the reader says it's Done where the button was.
@@ -53,12 +53,12 @@ test('SV-69, #243: Done moves an email out of New into its day, quiet with a Don
     assert.equal(await page.locator('.rd-tools .tool.done').count(), 0);
     assert.equal(await rested(() => status.locator('.icon').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, '--good')));
 
-    // Undo puts it back as it was: in New, no tag, Attention 2, and Done offered again.
+    // Undo puts it back as it was: in Attention, no tag, Attention 3, and Done offered again.
     await page.locator('.toast button', {hasText: 'Undo'}).click();
-    await fresh.waitFor();
+    await waiting.waitFor();
     await until('it leaves its day', () => inDay.count(), count => count === 0);
-    assert.equal(await fresh.locator('.tag').count(), 0);
-    await until('Attention 2 again', () => lane.textContent(), text => text === 'Attention 2');
+    assert.equal(await waiting.locator('.tag').count(), 0);
+    await until('Attention 3 again', () => band.textContent(), text => text === 'Attention 3');
     await page.locator('.rd-tools .tool.done').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -131,21 +131,21 @@ test('shell-08: the accounts fold away on Calendar and come back on the Inbox', 
 test('inbox-09: a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf', async () => {
   const setpoint = await startSetpoint();
   try {
-    // A short window, so the shelf starts below New, out of sight, with nothing scrolled.
-    const page = await setpoint.page({width: 1677, height: 560});
+    // A short window, so the shelf starts below Attention's three rows, out of sight, with nothing scrolled.
+    const page = await setpoint.page({width: 1677, height: 220});
     await page.goto(`${setpoint.base}/inbox`);
-    // P on Consolidated Messenger near New's top: the toast says Pinned, with Undo; the row leaves
-    // New for the shelf (#243).
-    const pay = page.locator('.row:not(.shelf)', {hasText: 'Consolidated Messenger'});
-    await point(pay);
+    // P on Contoso University, the last in Attention: the toast says Pinned, with Undo; the row leaves
+    // Attention for the shelf (D105, D449).
+    const exams = page.locator('.row:not(.shelf)[data-tip^="Final exam schedule"]');
+    await point(exams);
     await page.keyboard.press('p');
     const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
     await toast.waitFor();
-    await page.locator('.row.shelf', {hasText: 'Consolidated Messenger'}).waitFor();
-    await until('it left New', () => pay.count(), count => count === 0);
-    // Undo unpins it, back in New, and the toast goes.
+    await page.locator('.row.shelf[data-tip^="Final exam schedule"]').waitFor();
+    await until('it left Attention', () => exams.count(), count => count === 0);
+    // Undo unpins it, back in Attention, and the toast goes.
     await toast.getByRole('button', {name: 'Undo'}).click();
-    await until('back in New', () => pay.count(), count => count === 1);
+    await until('back in Attention', () => exams.count(), count => count === 1);
     await until('the toast gone', () => page.locator('.toast').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -164,9 +164,9 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const tools = page.locator('.pane > .rd-tools');
     await tools.evaluate(element => element.setAttribute('data-first', ''));
-    // J and K step to the next email and back, and a click opens one. The tools stay.
+    // J and K step to the next email (Attention's Contoso University) and back, and a click opens one. The tools stay.
     await page.keyboard.press('j');
-    await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
+    await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await page.keyboard.press('k');
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.locator('.list .row', {has: page.locator('.code-line')}).click();
@@ -204,7 +204,7 @@ test('reader-10: a newsletter whose images give only their width keeps its shape
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    // In New's Noise, folded until opened.
+    // In Today's Noise, folded until opened.
     await page.locator('.list .nfold.collapsed').first().click();
     await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();

@@ -218,9 +218,9 @@ test('search: typing makes no chip and asks no model; a pause offers a reading, 
     await page.keyboard.press('Escape');
     await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
     assert.equal(await page.locator('.qchip').count(), 0);
-    await page.locator('.list .gh.new').waitFor();
+    await page.locator('.list .gh.day').first().waitFor();
     // ⌘F focuses the field too.
-    await page.locator('.list .gh.new').click();
+    await page.locator('.list .gh.day').first().click();
     await page.keyboard.press('Meta+f');
     assert.equal(await focused(page), 'Search mail');
     assert.deepEqual(setpoint.pageErrors, []);

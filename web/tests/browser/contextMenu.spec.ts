@@ -82,7 +82,7 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     const id = Number(await row.getAttribute('data-id'));
     const before = await counts(setpoint);
 
-    // Mark read: read where it is, New keeping it, the attention pill as it was; Undo or ⌘Z takes it back.
+    // Mark read: read where it is, Attention keeping it, the attention pill as it was; Undo or ⌘Z takes it back.
     await rightClick(row);
     await item(page, 'Mark read').click();
     await page.locator('.toast', {hasText: 'Marked as read'}).waitFor();
@@ -91,7 +91,7 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     await until('read', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => !message.unread);
     await until('its class', () => row.getAttribute('class'), classes => !/\bunread\b/.test(classes!));
     await setpoint.idle();
-    assert.ok(await row.isVisible(), 'it stays where it is, in New');
+    assert.ok(await row.isVisible(), 'it stays where it is, in Attention');
     const after = await until('the counts', () => counts(setpoint), counts => counts.unread === before.unread - 1);
     assert.equal(after.attention, before.attention, 'the pill doesn\'t move');
     await page.keyboard.press('Meta+z');
@@ -110,9 +110,9 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     await setpoint.idle();
     assert.equal(await menu(page).count(), 0);
 
-    // A right-click while the menu is open only closes it.
+    // A right-click while the menu is open only closes it: on Google's row, above Northwind's, clear of the menu.
     await rightClick(row);
-    await page.locator('.list .row', {hasText: '482'}).first().click({button: 'right'});
+    await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).first().click({button: 'right'});
     await menu(page).waitFor({state: 'detached'});
     // Nothing should open: a pause for it to have done so.
     await page.waitForTimeout(150);

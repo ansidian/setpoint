@@ -70,7 +70,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
         return;
       }
       if (isTyping(event) || event.defaultPrevented) return;
-      // 1 goes to the Inbox from another page; on it, U goes to New (D264).
+      // 1 goes to the Inbox from another page; on it, U goes to the next unread email (D449).
       if (plainKey(event, '1') && currentRoute().page !== 'inbox') {
         event.preventDefault();
         navigate(toInbox());

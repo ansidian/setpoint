@@ -275,7 +275,7 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
   }
 });
 
-test('live updates: an email read elsewhere loses its dot and leaves the counts without a reload, and the Inbox with the visit', async () => {
+test('live updates: an email read elsewhere loses its dot and leaves the counts without a reload, staying in its day', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -287,13 +287,13 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     await setpoint.api('POST', `/mail/messages/${signIn.id}/read`, {unread: false});
     await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .cnt').textContent(), text => text === '18');
     assert.equal((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread, 18);
-    // New keeps it in its place, read, until the user leaves the Inbox (2026-10-09, #243).
-    const signInRow = page.locator('.row[data-key^="new:"]', {hasText: 'New sign-in'});
+    // It stays in its day, read, then and after leaving the Inbox (D449).
+    const signInRow = page.locator('.row[data-key^="all:"]', {hasText: 'New sign-in'});
     await until('the dot goes', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     await page.keyboard.press('2');
     await page.waitForURL(/\/calendar/);
     await page.keyboard.press('1');
-    await until('it leaves with the visit', () => signInRow.count(), count => count === 0);
+    await until('still in its day, read', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     // Done elsewhere drops the pill and the title.
     const google = inbox.groups.flatMap(group => group.rows).find(item => item.subject.startsWith('Your recovery email'))!;
     await setpoint.api('POST', `/mail/messages/${google.id}/done`, {done: true});

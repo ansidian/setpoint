@@ -53,7 +53,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
       assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('data-tip')], [true, 'Back · Esc']);
-      // J, K, Esc and Back have no width in them. J: the next email, New's code.
+      // J, K, Esc and Back have no width in them. J: the next email, Attention's Contoso University.
       if (width === 640) {
         await page.keyboard.press('j');
         await until('the next email', () => page.locator('.rd-subj').textContent(), text => Boolean(text) && !/Interview availability/.test(text!));

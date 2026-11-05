@@ -1,22 +1,23 @@
-// The Inbox, one list (SV-70, D264, D266; DESIGN.md › All; board 05): New, Attention, the Pinned
-// shelf, then every email, Noise included, newest first, under day headings with clock times. New is
-// drawn as a day is, under its own band and with ages: its rows by lane, the kind once in a left
-// column where an FYI run starts (a subheading over the run where the column has no room, #237), its
-// Noise folded to one line that opens in place (#48), the pattern prompt under its Attention, and
-// Mark all as read under it all. Attention and the shelf are bands with ages, and Unpin under the
-// pointer on the shelf. An email in any of them leaves its day meanwhile (D105). A code row above
-// the days has Copy and its countdown. Pages load as the list nears its end. What shows comes from
-// logic/all.ts; actions are the page's. A trashed row folds out and Undo folds it back in
-// (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles quiet with a Done
-// tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another module may fill.
+// The Inbox, days first (SV-199, D449; DESIGN.md › The list; board 05): Attention, the Pinned shelf,
+// then every email, Noise included, newest first, under day headings, Today first. Unread mail stays
+// in its day, drawn unread, and a heading with any says how many ("· 3 new"). Each day's rows go by
+// lane, the kind once in a left column where an FYI run starts (a subheading over the run where the
+// column has no room, #237), its Noise folded to one line that opens in place (#48). Attention and the
+// shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
+// shelf; an email in either leaves its day meanwhile (D105). Today's rows show ages, earlier days'
+// clock times. A live code has Copy and its countdown wherever it is. Pages load as the list nears its
+// end. What shows comes from logic/all.ts; actions are the page's. A trashed row folds out and Undo
+// folds it back in (app/fold.ts). A row Done takes in a day stays: it ticks in place, then settles
+// quiet with a Done tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another
+// module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, RefObject, UIEvent} from 'react';
-import {allRowLine, dayHeading, listKey, NEW, noiseKey} from '../logic/all.ts';
+import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
 import {age, clockTime, codeGroups, fullTimestamp, localDate} from '../logic/format.ts';
-import {GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
+import {codeExpired, GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {keepTextUnselected} from '../ui/keys.ts';
@@ -30,18 +31,19 @@ import {Count} from './Count.tsx';
 import {TriageNote, useHealthBars} from './states/States.tsx';
 import {AllSkeleton} from './states/Skeletons.tsx';
 
-/** A band over one of the list's parts: New, Attention or the Pinned shelf. */
-type Band = 'new' | 'attention' | 'pinned';
+/** A band over one of the list's parts above the days: Attention or the Pinned shelf. */
+type Band = 'attention' | 'pinned';
 const BANDS: Record<Band, {label: string; glyph: IconName}> = {
-  new: {label: 'New', glyph: 'mark_email_unread'}, attention: {label: 'Attention', glyph: GROUP_GLYPHS.attention}, pinned: {label: 'Pinned', glyph: GROUP_GLYPHS.pinned},
+  attention: {label: 'Attention', glyph: GROUP_GLYPHS.attention}, pinned: {label: 'Pinned', glyph: GROUP_GLYPHS.pinned},
 };
 
-// A row's `noise` is the day whose Noise it's under ("new" for New's), folded or not; an `aged` row
-// shows its age rather than its clock time, and a code's Copy (New, Attention, the shelf).
-type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: string} | {kind: 'lane'; date: string; lane: AllLane; label: string; count: number}
+// A day's `unread` is its heading's "· 3 new". A row's `noise` is the day whose Noise it's under,
+// folded or not; an `aged` row shows its age rather than its clock time (Attention, the shelf, Today).
+type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: string; unread: number}
+  | {kind: 'lane'; date: string; lane: AllLane; label: string; count: number; note: boolean}
   | {kind: 'kh'; group: InboxGroup} | {kind: 'noise'; date: string; count: number; preview: string; open: boolean}
   | {kind: 'row'; row: MessageRowOut; group: InboxGroup | null; shelf: boolean; aged: boolean; noise: string | null}
-  | {kind: 'prompt'; prompt: PatternPrompt} | {kind: 'foot'};
+  | {kind: 'prompt'; prompt: PatternPrompt};
 // Every row folds, and a Noise line opens like a drawer, its rows folding in (inbox-14).
 const RULES: FoldRules<Part> = {
   folds: () => true,
@@ -57,12 +59,9 @@ const NONE: ReadonlySet<number> = new Set();
 // A row's run, for staggering rows that fold together: its lane, its Noise, or its band.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
-export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null, markable = false,
-  onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onMarkAllRead, onCodeCopied}: {
-  // New's lanes and Noise, drawn as a day's (null when nothing's New), how many of it are unread (its
-  // band's count), and Attention's rows.
-  fresh: DayView | null;
-  freshUnread?: number;
+export function AllList({attention, days, shelf, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
+  onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
+  // Attention's rows, every Attention email not yet Done (D449).
   attention: MessageRowOut[];
   days: DayView[];
   // The Pinned shelf's rows, newest pin first.
@@ -81,9 +80,8 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
   more: boolean;
   // A search's first answer on its way: the list stays, dimmed, until it comes (#235).
   dimmed?: boolean;
-  // The pattern prompt under New's Attention, and whether Mark all as read has anything to read (UX #16).
+  // The pattern prompt under Attention.
   prompt?: PatternPrompt | null;
-  markable?: boolean;
   onPoint: (key: string) => void;
   // A click on a row, with its modifiers: ⌘ or Ctrl and ⇧ select (#249), a plain one opens.
   onOpen: (id: number, key: string, event: MouseEvent) => void;
@@ -91,7 +89,6 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
   onNearEnd: () => void;
   onUnpin: (id: number) => void;
   onAnswer?: (prompt: PatternPrompt, yes: boolean) => void;
-  onMarkAllRead?: () => void;
   // A code row's Copy, once the clipboard has it: it reads the email (#295).
   onCodeCopied?: (id: number) => void;
 }) {
@@ -101,37 +98,43 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
     if (list.scrollHeight - list.scrollTop - list.clientHeight < 600) onNearEnd();
   };
   const entries = useMemo(() => {
-    const rowEntry = (row: MessageRowOut, group: InboxGroup | null, part: 'new' | 'attention' | 'all', noise: string | null = null): Entry<Part> =>
-      ({key: listKey(part, row.id), id: row.id, item: {kind: 'row', row, group, shelf: false, aged: part !== 'all', noise}});
-    const lanes = (day: DayView, part: 'new' | 'all'): Entry<Part>[] => [
-      ...day.lanes.flatMap(lane => [
-        // Attention counts what still needs the user, as the sidebar's pill does (SV-69).
-        {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
-          count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length}} satisfies Entry<Part>,
-        ...lane.rows.flatMap(({row, kind}) => [
-          ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
-          rowEntry(row, kind, part),
+    const rowEntry = (row: MessageRowOut, group: InboxGroup | null, part: 'attention' | 'all', aged: boolean, noise: string | null = null): Entry<Part> =>
+      ({key: listKey(part, row.id), id: row.id, item: {kind: 'row', row, group, shelf: false, aged, noise}});
+    // Triage's note while it's down sits on the newest Unsorted lane, where the mail it couldn't sort is.
+    const noted = days.find(day => day.lanes.some(lane => lane.lane === 'unsorted'))?.date ?? null;
+    const lanes = (day: DayView): Entry<Part>[] => {
+      // Today's rows show ages, as Attention's and the shelf's do; an earlier day's, clock times (D449).
+      const aged = day.date === today;
+      return [
+        ...day.lanes.flatMap(lane => [
+          // Attention counts what still needs the user, as the sidebar's pill does (SV-69).
+          {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
+            count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length, note: lane.lane === 'unsorted' && day.date === noted}} satisfies Entry<Part>,
+          ...lane.rows.flatMap(({row, kind}) => [
+            ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
+            rowEntry(row, kind, 'all', aged),
+          ]),
         ]),
-        // The pattern prompt ends New's Attention (board 09).
-        ...(part === 'new' && lane.lane === 'attention' && prompt ? [{key: `prompt:${prompt.id}`, id: null, item: {kind: 'prompt', prompt}} satisfies Entry<Part>] : []),
-      ]),
-      ...(day.noise ? [
-        {key: noiseKey(day.date), id: null, item: {kind: 'noise', date: day.date, count: day.noise.count, preview: day.noise.preview, open: day.noise.open}} satisfies Entry<Part>,
-        ...day.noise.rows.map(row => rowEntry(row, null, part, day.date)),
-      ] : []),
-    ];
+        ...(day.noise ? [
+          {key: noiseKey(day.date), id: null, item: {kind: 'noise', date: day.date, count: day.noise.count, preview: day.noise.preview, open: day.noise.open}} satisfies Entry<Part>,
+          ...day.noise.rows.map(row => rowEntry(row, null, 'all', aged, day.date)),
+        ] : []),
+      ];
+    };
     const band = (name: Band, count: number): Entry<Part> => ({key: `band:${name}`, id: null, item: {kind: 'band', band: name, count}});
     return [
-      ...(fresh ? [band('new', freshUnread), ...lanes(fresh, 'new')] : []),
-      ...(fresh && markable ? [{key: 'foot', id: null, item: {kind: 'foot'}} satisfies Entry<Part>] : []),
-      ...(attention.length ? [band('attention', attention.length), ...attention.map(row => rowEntry(row, null, 'attention'))] : []),
+      ...(attention.length ? [
+        band('attention', attention.length), ...attention.map(row => rowEntry(row, null, 'attention', true)),
+        // The pattern prompt ends Attention (board 09).
+        ...(prompt ? [{key: `prompt:${prompt.id}`, id: null, item: {kind: 'prompt', prompt}} satisfies Entry<Part>] : []),
+      ] : []),
       ...(shelf.length ? [
         {...band('pinned', shelf.length), key: groupKey('pinned')},
         ...shelf.map((row): Entry<Part> => ({key: rowKey('pinned', row.id), id: row.id, item: {kind: 'row', row, group: null, shelf: true, aged: true, noise: null}})),
       ] : []),
-      ...days.flatMap((day): Entry<Part>[] => [{key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}}, ...lanes(day, 'all')]),
+      ...days.flatMap((day): Entry<Part>[] => [{key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date, unread: day.unread}}, ...lanes(day)]),
     ];
-  }, [fresh, freshUnread, attention, days, shelf, prompt, markable]);
+  }, [attention, days, shelf, prompt, today]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
   // Every row the list holds, for the slot after the subject, asked about all at once.
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
@@ -163,14 +166,20 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
         }
         if (item.kind === 'day') {
           const heading = dayHeading(item.date, today);
-          return <div key={key} ref={ref} className={['gh', 'day', first && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>{heading.label} <span className="date">{heading.date}</span></div>;
+          // A day with unread mail says how many after its date (D449).
+          return (
+            <div key={key} ref={ref} className={['gh', 'day', first && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+              {heading.label} <span className="date">{heading.date}</span>
+              {item.unread > 0 && <>{' '}<span className="fresh">· <span className="n"><Count value={item.unread} /></span> new</span></>}
+            </div>
+          );
         }
         if (item.kind === 'lane') {
           // An Attention lane whose mail is all Done drops its count rather than reading 0.
           return (
             <div key={key} ref={ref} className={['lh', item.lane === 'attention' && 'att', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
               {item.label}{item.count > 0 && <> <span className="n"><Count value={item.count} /></span></>}
-              {item.date === NEW && item.lane === 'unsorted' && <TriageNote />}
+              {item.note && <TriageNote />}
             </div>
           );
         }
@@ -194,13 +203,6 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
           );
         }
         if (item.kind === 'prompt') return <Prompt key={key} prompt={item.prompt} onAnswer={onAnswer} leaving={leaving} fold={ref} />;
-        if (item.kind === 'foot') {
-          return (
-            <div key={key} ref={ref} className={['listfoot', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
-              <button className="lnk" type="button" data-hint="shift+i" onClick={onMarkAllRead}><Icon name="mark_email_read" size={16} />Mark all as read <span className="kbd">⇧I</span></button>
-            </div>
-          );
-        }
         const {row} = item;
         const line = allRowLine(row);
         const account = accounts.get(row.account_id);
@@ -218,8 +220,8 @@ export function AllList({fresh, freshUnread = 0, attention, days, shelf, cursor,
             <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
-            {/* A live code above the days has Copy and its countdown, as the Inbox's always had. */}
-            {item.aged && row.code ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
+            {/* A live code has Copy and its countdown wherever it is (D449); once it's expired the code is inside the subject. */}
+            {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
                 <b className={line.alert ? 'alertsubj' : undefined}>
                   {line.code ? <>{line.code.before}<span className="code">{line.code.value}</span>{line.code.after}</> : line.subject}
@@ -259,7 +261,7 @@ function CodeLine({code, onCopied}: {code: {value: string; expires_at: string}; 
   );
 }
 
-/** The pattern prompt: one card line at the end of New's Attention (board 09), never for protected mail. */
+/** The pattern prompt: one card line at the end of Attention (board 09), never for protected mail. */
 function Prompt({prompt, onAnswer, leaving, fold}: {prompt: PatternPrompt; onAnswer?: (prompt: PatternPrompt, yes: boolean) => void; leaving: boolean; fold: ReturnType<typeof foldRef>}) {
   return (
     <div className={leaving ? 'prompt leaving' : 'prompt'} ref={fold} data-prompt={leaving ? undefined : prompt.id} aria-hidden={leaving || undefined}>

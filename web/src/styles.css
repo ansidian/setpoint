@@ -225,6 +225,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list { scroll-padding-top: 30px; }
 .list.all .gh.day { color: var(--ink2); }
 .list.all .gh.day .date { color: var(--ink3); }
+/* A day with unread mail says how many after its date (D449): "· 3 new" in the date's case and
+   `ink3`, the count `ink2`, as a band's. */
+.gh.day .fresh { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); white-space: pre; }
+/* The Inbox's header (D449): its new count beside the title, quiet as the phone's, and Mark all as
+   read before the search, its glyph as ⌘K's (#123). */
+.hd-count { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
+.hd .mark-all .kbd { margin-left: 4px; }
 /* Each group's glyph before its label (#119): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
 .gh.att .gi { color: var(--caution); }
@@ -311,11 +318,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .tag.caution { color: var(--caution); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--caution) 35%, transparent); background: color-mix(in oklch, var(--caution) 12%, var(--chip)); }
 /* A change waiting for its provider (DESIGN.md › Interaction rules). */
 .row.pending, .arow.pending { opacity: .5; }
-.listfoot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px var(--row-end) 14px 24px; color: var(--ink3); font-size: 12.5px; flex: none; }
-.listfoot .lnk { color: var(--ink2); display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 10px 0 8px; border-radius: 999px; }
-/* Mark all as read's glyph, as ⌘K's same command (#123), 6 px before its label. */
-.listfoot .lnk > .icon { margin-right: -2px; }
-@media (hover: hover) { .listfoot .lnk:hover { background: var(--sub); } }
 /* All caught up (board 04), a small finish (states-10, inbox-08): three rows 14 px apart, centred as
    before. The mark at 44 px, its chips settling in once (each from 6 px above, fading in over 260 ms,
    70 ms apart, then at rest); "All caught up" at 15 / 500 `ink`; Open All with its U, the two fading
@@ -631,7 +633,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The export's hover where it draws one; otherwise a `sub` fill on flat controls, rows and menu items,
    an `edgeHover` border on outlined buttons and fields, and the primary button a touch dimmer. Fills
    and borders change over 120 ms. Disabled controls don't answer, and a touch screen has no hover. */
-.btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .listfoot .lnk, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input, .seg > *, .retry, .hbar .act {
+.btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input, .seg > *, .retry, .hbar .act {
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 /* A segment's fill hands over to the thumb and back at once (polish audit grids-09). */
@@ -720,12 +722,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    things (rows, nav, menu items) never scale, they only take the step. A key with a visible button
    presses it too (`data-echo`, ui/keys.ts › echoKey). A disabled control doesn't answer. After every
    hover rule, so a press wins over the hover under it. */
-:is(.btn, .rd-tools .tool, .seg > *, .unpin, .listfoot .lnk, .imgbar .lnk, .dl, .retry, .hbar .act):not(:disabled, [aria-disabled="true"]):is(:active, [data-echo]) { transform: scale(.97); transition-duration: var(--dur-press); }
+:is(.btn, .rd-tools .tool, .seg > *, .unpin, .imgbar .lnk, .dl, .retry, .hbar .act):not(:disabled, [aria-disabled="true"]):is(:active, [data-echo]) { transform: scale(.97); transition-duration: var(--dur-press); }
 .ibtn:not(:disabled, [aria-disabled="true"]):is(:active, [data-echo]) { transform: scale(.92); background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
 .btn:not(.ghost, .out, .quiet):enabled:is(:active, [data-echo]) { background: color-mix(in oklch, var(--ink) 78%, var(--page)); }
 .btn.ghost:not(:disabled):is(:active, [data-echo]) { background: var(--sub4); }
 .btn.out:not(:disabled):is(:active, [data-echo]) { background: var(--sub2); }
-:is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .listfoot .lnk, .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
+:is(.btn.quiet:not(:disabled), .rd-tools .tool, .seg > :not(.on), .imgbar .lnk, .hbar .act):is(:active, [data-echo]) { background: var(--sub3); color: var(--ink); }
 :is(.row, .arow, .nav, .acct, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }
 /* Trash presses in its own `alert`, 20% (#169). */
 .rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }

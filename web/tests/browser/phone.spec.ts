@@ -125,9 +125,9 @@ test('the phone\'s one column: no sidebar, the tab bar, the reader over everythi
     const page = await inbox(setpoint);
     assert.equal(await page.locator('.sb').count(), 0);
     assert.deepEqual(await page.locator('.ph-tab').allTextContents(), ['Inbox', 'Agenda']);
-    // The one list, as on the desktop: New, Attention, the Pinned shelf (#243).
+    // The list, as on the desktop: Attention, the Pinned shelf, then the days, Today first (D449).
     const headers = (await page.locator('.gh').allTextContents()).map(text => text.trim().split(/\s/)[0]!.toLowerCase());
-    assert.deepEqual(headers.slice(0, 3), ['new', 'attention', 'pinned']);
+    assert.deepEqual(headers.slice(0, 3), ['attention', 'pinned', 'today']);
     // Every row keeps its account; the Pinned row's "Sep 30" stays on one line (override 11).
     for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
     const age = await box(page, '.row.shelf .age');
@@ -206,7 +206,7 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     await page.locator('.ph-acts button', {hasText: 'Mark read'}).tap();
     await until('read again', () => counts(setpoint), value => value.unread === 18);
 
-    // Done: out of New, with Undo in the toast; back to the list, with nothing else opened or
+    // Done: out of Attention, with Undo in the toast; back to the list, with nothing else opened or
     // read (UX #12).
     await page.locator('.ph-acts button', {hasText: 'Done'}).tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
@@ -232,8 +232,8 @@ test('Done, Trash with Undo, Mark unread and Mark read from the reader; Mark all
     assert.ok((await counts(setpoint)).unread_fyi > 3);
     await page.locator('.hd button[aria-label="Mark all as read"]').tap();
     await until('all but Security read', () => counts(setpoint), value => value.unread_fyi === 3 && value.unread === 4, 5000);
-    // New empties; Northwind, left unread, joins Attention (#243).
-    await until('New goes', () => page.locator('.list .gh.new').count(), count => count === 0, 5000);
+    // Every row stays where it is: Northwind, left unread, in Attention, and Security's three in their day (D449).
+    await until('the rest read', () => page.locator('.list .row.unread:not(.done)').count(), count => count === 4, 5000);
     await page.locator('.list .row.unread[data-key^="attention:"][data-tip^="Interview availability"]').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

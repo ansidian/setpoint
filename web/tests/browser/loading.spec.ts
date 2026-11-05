@@ -71,7 +71,7 @@ test('the Inbox waits for both its answers: with the days\' held, its skeleton s
     await drawn(page, await groups);
     assert.equal(await page.locator('.list .row, .list .gh').count(), 0);
     await release();
-    await page.locator('.list .gh.new').waitFor();
+    await page.locator('.list .gh.day').first().waitFor();
     // The list's skeleton is gone (the sidebar's may still wait on its own answers).
     assert.equal(await page.locator('section.list [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);

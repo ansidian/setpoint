@@ -36,11 +36,11 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('SV-141: the Inbox has one right edge: at the design target it\'s the row\'s end, and on a very wide window the ages, the accounts\' column, the fold\'s chevron, Mark all as read, the search field and a search\'s rows all stop at it, a reading pane taking the header to its end', async () => {
+test('SV-141: the Inbox has one right edge: at the design target it\'s the row\'s end, and on a very wide window the ages, the accounts\' column, the fold\'s chevron, the search field and a search\'s rows all stop at it, a reading pane taking the header to its end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
-    const ENDS = '.row .age, .nfold .chev .icon, .listfoot .lnk, .hd .search';
+    const ENDS = '.row .age, .nfold .chev .icon, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/inbox`);
     assert.deepEqual(await rights(target, ENDS), [SIZES.target.width - 16], 'the row\'s end, as ever');

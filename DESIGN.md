@@ -295,22 +295,20 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 ### The list
 
-The Inbox is **one list** (#243): **New**, **Attention**, the **Pinned** shelf, then every email by
-day. There is no Unread or All to choose between, and going to the Inbox always opens it.
+The Inbox is **days first** (#309): **Attention**, the **Pinned** shelf, then every email by day,
+Today first. Unread mail sits in its day, drawn unread, so reading an email never moves it. There is
+no Unread or All to choose between, and going to the Inbox always opens it.
 
+- **Header:** the title, then the Inbox's new count ("13 new", `ink3` 12.5, its account's when
+  filtered) while anything is unread; at the right, **Mark all as read ⇧I** (a quiet button, a
+  16 px `mark_email_read`, #123) while it has anything to read, then the search.
 - **Bands** 30 px, `panel`, `hair` above and below (none above the first), a 14 px glyph in `ink3`
-  8 px before the label, 11.5 uppercase .08em `ink3`, count in `ink2`: **New** (`mark_email_unread`,
-  its unread count), **Attention** (`flag`; the loudest: `caution` 8% into its `panel`, Light 6%,
-  label, glyph and count in `caution`, a `caution` 20% line under it, #167), **Pinned** (`keep`),
-  then each day's heading ("TODAY Wed, Oct 7"). A part with nothing in it doesn't show.
-- **New** is every email that was unread when this visit to the Inbox first saw it, and it keeps
-  them, read or not, until the user leaves the Inbox, so J and K never move the list (#243). It's
-  drawn as a day is (see [The days](#the-days)), with ages rather than clock times: its Attention,
-  Unsorted (with triage's note while triage is down) and FYI lanes, the kind once where an FYI run
-  starts, its Noise folded to one line, the pattern prompt under its Attention, and **Mark all as
-  read ⇧I** under it all, after a 16 px `mark_email_read` (#123), while it has anything to read.
-- **Attention** holds every read Attention email not yet Done, with ages, until it's Done or
-  Trashed; unread Attention mail is in New first and comes here on the next visit (#243).
+  8 px before the label, 11.5 uppercase .08em `ink3`, count in `ink2`: **Attention** (`flag`; the
+  loudest: `caution` 8% into its `panel`, Light 6%, label, glyph and count in `caution`, a `caution`
+  20% line under it, #167), **Pinned** (`keep`), then each day's heading ("TODAY Wed, Oct 7 · 11
+  new"). A part with nothing in it doesn't show.
+- **Attention** holds every Attention email not yet Done, unread or read, with ages, until it's Done
+  or Trashed, and the pattern prompt under its last row (#309).
 - **Pinned** rows sit on their shelf, with ages, and Unpin takes the age's place under the pointer
   (board 10); a pinned email's line is its subject and summary.
 - **Row** 38 px, padding 0 16 0 12: the kind column (100, as [The days](#the-days) say), the unread
@@ -323,23 +321,26 @@ day. There is no Unread or All to choose between, and going to the Inbox always 
   account never does, the kind becomes a subheading (#237), and the sender narrows to a quarter of
   the row (#240).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
-  MacBook Pro · Los Angeles"); protected mail keeps its subject in `alert` 500. A **code** row in
-  New, Attention or on the shelf shows the code (Geist Mono, two groups of three), a **Copy** button
-  and "Expires in 11 min" in `ink3`; it leaves the Inbox 15 minutes after arrival (Settings › Mail
-  sets this). A copy the browser refuses says "Couldn't copy it" ([Decided while
-  building](#decided-while-building) #109). In a day the code is inside the subject.
+  MacBook Pro · Los Angeles"); protected mail keeps its subject in `alert` 500. A **code** row,
+  wherever it is, shows the code (Geist Mono, two groups of three), a **Copy** button and "Expires in
+  11 min" in `ink3` until it expires, 15 minutes after arrival (Settings › Mail sets this); then the
+  code is inside the subject (#309). A copy the browser refuses says "Couldn't copy it" ([Decided
+  while building](#decided-while-building) #109).
 - **Loading:** until the list's first answers, its skeleton (#225): a day under its heading, and
   three more rows at the foot while the next page loads.
 
 ### The days
 
 Every email, Noise included, newest first, under day headings ("TODAY Wed, Oct 7", "YESTERDAY Tue,
-Oct 6", "MON Oct 5"), with **clock times**, not ages (decision 39), except what New, Attention and
-the shelf show, which leaves its day meanwhile (#101, #243). Each day groups its rows by lane, and
+Oct 6", "MON Oct 5"), except what Attention and the shelf show, which leaves its day meanwhile
+(#101, #309). A heading with unread mail in it ends "· 3 new" (12, `ink3`, the count `ink2`), Done
+mail left out (#241). Today's rows show ages, as Attention's and the shelf's do; earlier days show
+**clock times** (decision 39, #309). Unread rows keep their place, drawn unread. Each day groups its rows by lane, and
 the kind shows once, in a left column, where an FYI run starts, after its group's glyph at 13 px
 (#119); with the reading pane open and on the phone, where the column has no room, it's a
 subheading over its run instead (#237); each day's Noise folds to one line ([Decided while
-building](#decided-while-building) #48). Done mail stays in its day, quiet, with a ✓ Done tag (#241).
+building](#decided-while-building) #48). Triage's note, while triage is down, is on the newest
+Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
 
 ### The reader
 
@@ -1416,7 +1417,7 @@ comes in from above and fades out (#221).
 ## Phone
 
 Below 640 px, the same pages laid out in one column (board 21, 390 × 844): the Inbox's one list
-(New, Attention, Pinned, the days, #243), its rows with the account label; the reader full width with
+(Attention, Pinned, the days, #309), its rows with the account label; the reader full width with
 Back; a read-only agenda for today and the next 7 days, empty days collapsed. Actions: Done (on
 Attention mail, #93), Trash,
 Mark read, Mark unread, Mark all as read. Plain search: words stay words, Return only hands over to the
@@ -1468,7 +1469,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
   six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
-  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to New, #243) ⇧I ⇧U ⌘Enter;
+  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter;
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
   `J` `K` Enter `O` `N` Esc. Key hints read "Esc",
   "⌘K", "⇧I". They work with an HTML email clicked into, too, but not in a field of its own (#294).
@@ -1571,12 +1572,12 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 32. **Alfred's mark is `auto_awesome` in its gradient** (#173): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
 
-**The one list** (darma SV-70, D264, D266; [Decided while building](#decided-while-building) #243).
+**The one list** (darma SV-70, D264, D266, SV-199, D449; [Decided while building](#decided-while-building) #243, #309).
 
-33. **The Inbox is one list:** boards 01–04, 09, 10, 17, 19a, 19b, 20, 21a and 22a draw Unread's
-    groups (and 04 All caught up, 05 All by itself); the app draws New as a day, Attention, the
-    Pinned shelf, then the days, so the audit compares them as they are and expects the list to
-    differ.
+33. **The Inbox is days first:** boards 01–04, 09, 10, 17, 19a, 19b, 20, 21a and 22a draw Unread's
+    groups (and 04 All caught up, 05 All by itself); the app draws Attention, the Pinned shelf, then
+    the days, Today first, unread mail in its day, so the audit compares them as they are and
+    expects the list to differ.
 
 **Jobs** (design round 4, boards 32–40, 32b, 34c and the states strip; darma SV-118).
 
@@ -3127,13 +3128,13 @@ it changes what's on screen.
     email's body or with ⌥ held, the browser keeps its own menu; a right-click that closes a popover
     opens nothing; the phone has none. It moves the cursor to the row and never opens it, so it
     never reads an email.
-    - **An email's row** (New, Attention, Pinned, the days, search, Alfred's sources): Open ↵, Done
+    - **An email's row** (Attention, Pinned, the days, search, Alfred's sources): Open ↵, Done
       H (Attention not yet Done), Trash E, Pin or Unpin P, Mark read on an unread row (no key; as
-      Mark all as read for one email: it stays where it is in New for the visit, the attention
+      Mark all as read for one email: it stays where it is, the attention
       pill doesn't move, Undo and ⌘Z) or Mark unread ⇧U on a read one, Open in Gmail O, Add to
       calendar, Add as task, Ask about this email (on every row; each opens the email, whose
-      reading pane holds its card), Add to rule (#296), Copy sender address, and Copy code on a code row. **New**'s
-      band: Mark all as read ⇧I. Nothing changes an email's lane or kind (brief decision 28).
+      reading pane holds its card), Add to rule (#296), Copy sender address, and Copy code on a code row.
+      Nothing changes an email's lane or kind (brief decision 28).
     - **The reader:** an attachment, Preview and Download; the sender, Copy address; the code
       card, Copy.
     - **The sidebar:** Inbox, Mark all as read; an account, Mark all as read for it, and Reconnect
@@ -3859,3 +3860,17 @@ it changes what's on screen.
     spinner and Close sit on its first line. The wider card keeps most calendar lines, such as
     "Read-only · Holidays in United States", on one line. The Today block's card and the phone's
     detail share it. Board audit: board 12a draws 280 px and one line (Overrides, 43).
+309. **The Inbox is days first** (amending #243 and decision 39; Andy, 2026-11-05; darma SV-199,
+    D449). At a glance today wasn't where it should be: on a typical morning every email of today
+    was in New, so the list had no TODAY at all, and its first day was YESTERDAY under Attention
+    and Pinned. Now the list is Attention, the Pinned shelf, then the days, Today first, and unread
+    is a state of a row rather than a place: an unread email sits in its day, drawn unread, and
+    reading one never moves it, so nothing waits for the visit to end. Attention holds every
+    Attention email not yet Done, unread or read, the pattern prompt under it. A day heading with
+    unread mail in it ends "· 3 new", Done mail left out. The header carries the Inbox's new count
+    ("13 new") and Mark all as read ⇧I, which reads in place. `U` takes the cursor to the next
+    unread email below it, from the top again past the last, and ⌘K's Go to next unread does the
+    same. Today's rows show ages, earlier days clock times, and a live code shows Copy and its
+    countdown wherever it is (Claude's calls, as small gaps). New's band, its foot and the visit's
+    held places go. Unread mail older than the pages loaded shows as the list reaches it. Board
+    audit: override 33 describes the list; its figures are taken at release.

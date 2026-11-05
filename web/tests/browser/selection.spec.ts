@@ -40,7 +40,7 @@ async function rightClick(target: Locator) {
 }
 
 /**
- * Four emails next to each other in a day, none of them in New or Attention: three for a selection,
+ * Four emails next to each other in a day, none of them in Attention or on the shelf: three for a selection,
  * and the day's next one after them.
  */
 async function fourInADay(page: Page, setpoint: Setpoint): Promise<MessageRowOut[]> {

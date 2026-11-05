@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, inSight, keepShown, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, inSight, letGo, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -53,42 +53,25 @@ const stops: Stop[] = [
 // Each lane's glyph, one per group and no two alike (#119): its header and All's kind column draw it.
 test('no two groups share a glyph', () => expect(new Set(Object.values(GROUP_GLYPHS)).size).toBe(Object.keys(GROUP_GLYPHS).length));
 
-describe('the Inbox keeps what it showed until the user leaves it', () => {
+describe('Undo\'s rows show at once, until the server\'s list has them again', () => {
   const ids = (list: InboxGroupOut[], name: string) => list.find(item => item.group === name)?.rows.map(item => [item.id, item.unread]);
   const security = (rows: MessageRowOut[]) => groups.map(item => (item.group === 'security' ? group('security', rows) : item));
+  const signInHeld = {group: 'security' as const, index: 1, row: signIn};
 
-  test('an email read here, then another, both keep their places', () => {
-    const first = keepShown(groups, security([code]), [], new Set());
-    expect(first).toEqual([{group: 'security', index: 1, row: {...signIn, unread: false}}]);
-    const shown = withHeld(security([code]), first);
-    const second = keepShown(shown, security([]).filter(item => item.group !== 'security'), first, new Set());
-    expect(ids(withHeld(security([]).filter(item => item.group !== 'security'), second), 'security')).toEqual([[1, false], [3, false]]);
+  test('a held email shows where it was', () => {
+    expect(ids(withHeld(security([code]), [signInHeld]), 'security')).toEqual([[1, true], [3, true]]);
   });
-  test('one read elsewhere stays too; its group with it', () => {
-    const after = groups.filter(item => item.group !== 'career');
-    const held = keepShown(groups, after, [], new Set());
-    expect(held.map(one => [one.group, one.row.id, one.row.unread])).toEqual([['career', 12, false]]);
+  test('one the list has again is let go', () => {
+    expect(letGo([signInHeld], groups)).toEqual([]);
   });
-  test('Done, Trash or Mark all as read here take it out', () => {
-    expect(keepShown(groups, security([code]), [], new Set([3]))).toEqual([]);
-    expect(keepShown(withHeld(security([code]), [{group: 'security', index: 1, row: signIn}]), security([code]), [{group: 'security', index: 1, row: signIn}], new Set([3]))).toEqual([]);
+  test('one the list still lacks stays, and nothing changing keeps the same list', () => {
+    const held = [signInHeld];
+    expect(letGo(held, security([code]))).toBe(held);
   });
-  test('a held email back in the list is let go', () => {
-    expect(keepShown(security([code]), groups, [{group: 'security', index: 1, row: signIn}], new Set())).toEqual([]);
-  });
-  test('unpinning leaves it in its lane: nothing held', () => {
-    const pinned = groups[0]!.rows[0]!;
-    const after = groups.filter(item => item.group !== 'pinned').map(item => (item.group === 'career' ? group('career', [fabrikam, pinned]) : item));
-    expect(keepShown(groups, after, [], new Set())).toEqual([]);
-  });
-  test('pinning a held email and unpinning it keeps its place in its group (SV-24)', () => {
-    const read = groups.filter(item => item.group !== 'career');
-    const held = keepShown(groups, read, [], new Set());
-    const shelf = read.map(item => (item.group === 'pinned' ? group('pinned', [{...fabrikam, unread: false, pinned: true}, parkside]) : item));
-    const pinned = keepShown(withHeld(read, held), shelf, held, new Set());
-    expect(pinned.map(one => [one.group, one.row.id])).toEqual([['career', 12]]);
-    const unpinned = keepShown(withHeld(shelf, pinned), read, pinned, new Set());
-    expect(unpinned.map(one => [one.group, one.row.id])).toEqual([['career', 12]]);
+  test('the Pinned shelf isn\'t its place: held until its group has it', () => {
+    const pinned = {...signIn, pinned: true};
+    const shelf = security([code]).map(item => (item.group === 'pinned' ? group('pinned', [...item.rows, pinned]) : item));
+    expect(letGo([signInHeld], shelf)).toEqual([signInHeld]);
   });
   test('Trash takes an email out at once, its group too when it was the only one', () => {
     const after = withoutEmails(groups, new Set([3, 12]));
@@ -267,6 +250,15 @@ test.each([
   ['nothing unread', [group('pinned', [parkside]), group('attention', [exams])], []],
 ])('markAllReadIds: %s', (_name, list, expected) => {
   expect(markAllReadIds(list)).toEqual(expected);
+});
+
+// The days keep read FYI mail, so Undo's unread shows there before the Inbox's groups have it (D449).
+test.each([
+  ['a day\'s unread FYI email the groups no longer hold', [group('attention', [google])], [ups, signIn, {...exams, unread: false}], [ups.id]],
+  ['one in both, once', [group('deliveries', [ups])], [ups], [ups.id]],
+  ['the days\' Attention and Security stay unread', [], [google, signIn], []],
+])('markAllReadIds with the days\' rows: %s', (_name, list, shown, expected) => {
+  expect(markAllReadIds(list, shown)).toEqual(expected);
 });
 
 // All's rows take it at once too, so a Security row in its day keeps its dot (#243).

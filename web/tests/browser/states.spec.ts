@@ -96,7 +96,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     assert.deepEqual(writes, [], 'nothing was sent');
     await page.locator('.main.offline').waitFor();
     // What changes something is held back: Mark all as read at .4, taking no pointer.
-    assert.deepEqual(await page.locator('.listfoot .lnk').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
+    assert.deepEqual(await page.locator('.hd .mark-all').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
     // Reading goes on: J moves the cursor, Enter opens an email this browser has.
     await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
@@ -322,7 +322,7 @@ test('a blip offline, under the 2 s grace (a laptop waking, a Wi-Fi handoff), ne
     assert.deepEqual(await arrivals(page), []);
     assert.equal(await page.locator('.main.offline').count(), 0);
     await page.clock.resume();
-    // And changes work again: J to New's first row, Google's.
+    // And changes work again: J to Attention's first row, Google's.
     await page.keyboard.press('j');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
     await page.keyboard.press('h');

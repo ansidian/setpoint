@@ -312,11 +312,11 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await rested(() => style(band, 'backgroundColor')), await rested(() => colourOf(page, `color-mix(in srgb, var(--caution) ${theme === 'light' ? 6 : 8}%, var(--panel))`)));
       assert.equal(await rested(() => style(band, 'color')), caution, 'its label');
       const dot = (row: Locator) => row.locator('.ud').evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::before').boxShadow]);
-      assert.equal(await rested(() => style(page.locator('.list .lh.att').first(), 'color')), caution, 'New\'s Attention lane');
+      assert.equal(await rested(() => style(band.locator('.n'), 'color')), caution, 'its count');
       assert.deepEqual(await rested(() => dot(page.locator('.list .row.unread[data-tip^="Interview availability"]'))), [caution, 'none'], 'an unread Attention row');
       assert.deepEqual(await rested(() => dot(page.locator('.list .row:not(.unread)[data-tip^="Final exam schedule"]'))), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
 
-      // Noise's rows, New's Noise opened: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
+      // Noise's rows, Today's Noise opened: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
       await page.locator('.list .nfold').first().click();
       await page.mouse.move(700, 28);
       const noise = page.locator('.row.noise.unread', {hasText: 'Tailspin Toys'});

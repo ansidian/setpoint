@@ -104,8 +104,8 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
     assert.equal(await page.locator('.palette input').getAttribute('placeholder'), 'Type a command…');
     await page.keyboard.type('new');
     // N5: Settings › News is found by its name too.
-    // The Inbox's Go to New too, its key U (#243).
-    assert.deepEqual(await items(page), ['News3', 'Go to NewU', 'New eventC', 'New taskD', 'Settings › News']);
+    // The Inbox's Go to next unread too, by its keyword, its key U (D449).
+    assert.deepEqual(await items(page), ['News3', 'Go to next unreadU', 'New eventC', 'New taskD', 'Settings › News']);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
