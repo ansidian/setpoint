@@ -206,7 +206,7 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const lines = page.locator('.sb .today-row');
     await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
-    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
 
     // The card opens over the open email, which stays behind it; where it sits and its motion (which
     // reduce motion doesn't change, DESIGN.md › Principles) are by eye (D416, D417).
@@ -262,13 +262,13 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     const tasks = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-09')).items.filter(item => item.kind === 'task');
     await until('the completion lands', tasks, list => list.every(task => !task.command));
     assert.deepEqual((await tasks()).map(task => [task.title, task.done]).sort(), [['CS 101 lab report', false], ['Pay rent', true], ['Renew car registration', false]]);
-    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Renew car registrationTomorrow']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Renew car registrationTomorrow']);
 
     // Undo brings it back where it was.
     await page.mouse.move(800, 600);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
-    assert.deepEqual(await lines.allTextContents(), ['2:30 PMDentistin 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

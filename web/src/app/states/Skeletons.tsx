@@ -80,7 +80,7 @@ export function TodaySkeleton({lines}: {lines: number}) {
     <Sk kind="today" className="sk-today">
       {Array.from({length: lines}, (_, index) => (
         <div className="sk-line" key={index}>
-          {index === 0 ? <><Bar w={44} h={8} /><Bar w={62} h={8} style={{marginLeft: 14}} /></> : <><span className="sk-ring" /><Bar w={at([96, 70, 84], index)} h={8} /></>}
+          {index === 0 ? <span className="sk-ev"><Bar w={110} h={8} /><Bar w={84} h={7} /></span> :<><span className="sk-ring" /><Bar w={at([96, 70, 84], index)} h={8} /></>}
         </div>
       ))}
     </Sk>

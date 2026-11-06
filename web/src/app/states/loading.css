@@ -52,6 +52,9 @@
 .sk-acct { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; }
 .sk-acct .sk-dot { background: var(--skel-on-sub); }
 .sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
+/* The event's two lines (SV-210), as tall as .today-row.ev; its bars line up with the tasks' titles. */
+.sk-line:first-child { height: auto; padding-top: 7px; padding-bottom: 7px; }
+.sk-ev { display: flex; flex-direction: column; justify-content: space-around; gap: 1px; height: calc(13px * 1.35 + 1px + 12px * 1.35); padding-left: 27px; }
 .sk-ring { width: 13px; height: 13px; flex: none; border-radius: 999px; border: 1.5px solid var(--skel-on-sub); margin: 0 3px 0 1px; }
 
 /* ---------- Settings: .set-group, .set-row (settings.css) ---------- */

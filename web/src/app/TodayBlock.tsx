@@ -170,19 +170,21 @@ export function TodayBlock() {
     <div className="sb-sec today">
       <div className="sb-label">Today</div>
       {today.event && (
-        <a className={lineClass(today.event.item)} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)} onContextMenu={lineMenu(today.event.item)}
+        <a className={`${lineClass(today.event.item)} next`} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)} onContextMenu={lineMenu(today.event.item)}
           aria-haspopup="dialog" aria-expanded={openKey === today.event.key}>
           {/* Its calendar's bar (or its own colour's), as calendar chips and the agenda draw it, where tasks have rings (shell-06). */}
           <span className="evbar" style={dotStyle(today.event.item.colour ?? calendars?.find(calendar => calendar.id === today.event!.item.calendar_id)?.colour ?? undefined)}><i /></span>
-          <span className="t num">{today.event.time}</span>
-          <span className="ell title">{today.event.title}</span>
-          <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span>
+          {/* Two lines (SV-210): the title on the whole width, then its time and how soon, neither wrapping. */}
+          <span className="lines">
+            <span className="ell title" data-tip={today.event.title}>{today.event.title}</span>
+            <span className="when"><span className="t num">{today.event.time}</span> · <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span></span>
+          </span>
         </a>
       )}
       {folded.map(({key, item: {item, title, label, done}, fold}) => {
         // A line folding away keeps its look, without its key or the pointer.
         const leaving = fold === 'out';
-        const classes = [lineClass(item), done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
+        const classes = [lineClass(item), 'task', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
         return (
           <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
             href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
@@ -194,8 +196,11 @@ export function TodayBlock() {
               }}>
               {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
             </button>
-            <span className="ell title" data-tip={title}>{title}</span>
-            {label && <span className="in">{label}</span>}
+            {/* As the event's (SV-210): the title wraps to two lines, its date beneath. */}
+            <span className="lines">
+              <span className="ell title" data-tip={title}>{title}</span>
+              {label && <span className="when">{label}</span>}
+            </span>
           </a>
         );
       })}

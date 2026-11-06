@@ -336,9 +336,14 @@ test('Setpoint starting shows its mark and clears what browsers used to keep; th
     const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
     await releaseMe();
     await shown(page, 'accounts');
-    assert.equal(await (await shown(page, 'today')).locator('.sk-line').count(), 3);
+    const today = await shown(page, 'today');
+    assert.equal(await today.locator('.sk-line').count(), 3);
+    const height = (element: Element) => Math.round(element.getBoundingClientRect().height);
+    const skeleton = await rested(() => today.locator('.sk-line').first().evaluate(height));
     await release();
     await page.locator('aside.sb .acct').first().waitFor();
+    // The event's two lines (SV-210) come in where the skeleton's first stood, as tall.
+    assert.equal(await rested(() => page.locator('aside.sb .today-row.next').evaluate(height)), skeleton);
     // The accounts are in; Today's items too (nothing is held now).
     await setpoint.idle();
     assert.equal(await page.locator('aside.sb [data-skeleton]').count(), 0);

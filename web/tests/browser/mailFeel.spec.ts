@@ -85,7 +85,27 @@ test('shell-06, motion-04: the Today event leads with its calendar\'s bar and wa
     const bar = dentist.locator('.evbar > i');
     assert.equal(await rested(() => bar.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => colourOf(page, '--cool')));
     assert.equal(await rested(() => left(dentist, '.evbar')), await rested(() => left(rent, '.check')));
-    assert.equal(await rested(() => left(dentist, '.t')), await rested(() => left(rent, '.title')));
+    assert.equal(await rested(() => left(dentist, '.title')), await rested(() => left(rent, '.title')));
+
+    // SV-210: the title over its time and "in 5h" (or a task's date), which share one line; the
+    // event's bar runs down both lines, and the line has room above and below its text for its fill.
+    const box = (line: typeof dentist) => line.evaluate(element => {
+      const rect = (target: Element) => ({top: target.getBoundingClientRect().top, bottom: target.getBoundingClientRect().bottom});
+      const part = (selector: string) => rect(element.querySelector(selector)!);
+      return {line: rect(element), title: part('.title'), when: rect(element.querySelector('.when') ?? element.querySelector('.title')!), mark: part('.evbar > i, .check .ring')};
+    });
+    const renew = lines.filter({hasText: 'Renew car registration'});
+    for (const line of [dentist, renew]) {
+      const {line: row, title, when, mark} = await rested(() => box(line));
+      assert.ok(when.top >= title.bottom, 'the time or date sits beneath the title');
+      assert.ok(row.top < title.top && row.bottom > when.bottom, 'room above and below the text');
+      if (line === dentist) assert.ok(mark.top < title.bottom && mark.bottom > when.top, 'the bar runs down both lines');
+    }
+    const [at, soon] = await Promise.all(['.t', '.in'].map(selector => rested(() => dentist.locator(selector).evaluate(element => element.getBoundingClientRect().top))));
+    assert.equal(at, soon, 'the time and "in 5h" share a line');
+    // A task with no date keeps its one line.
+    const one = await rested(() => box(rent));
+    assert.ok(one.mark.top >= one.title.top && one.mark.bottom <= one.title.bottom, 'the ring sits on the title\'s line');
 
     // At 9:12 AM "in 5h" is ink3; at 2:20 PM "in 10m" is caution 500; at 2:31 PM "now" is alert 500.
     const time = dentist.locator('.in');

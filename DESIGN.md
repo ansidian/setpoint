@@ -275,10 +275,12 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 
 ### The Today block (mail pages)
 
-28 px rows: the next event ("2:30 PM  Dentist", time in `ink`, 58 px wide, "in 5h" right in `ink3`,
-`caution` from 15 minutes before and `alert` once under way), led by its calendar's 3 × 14 bar where
-tasks have their rings (#199), then each open task due today and tomorrow by name, today's first, behind its ring in its project's
-colour, with "Tomorrow" right in `ink3` on tomorrow's. More than three tasks show the first two and
+Each line's title wraps to two lines (an ellipsis only past that) over its time or date in `ink3`
+(#318): the next event ("Dentist" over "2:30 PM · in 5h", the "in" part `caution` from 15 minutes
+before and `alert` once under way), led by its calendar's bar running down both lines where tasks
+have their rings (#199), then each open task due today and tomorrow by name, today's first, behind
+its ring in its project's colour on the title's first line, with "Tomorrow" beneath on tomorrow's. A
+line with two parts has 7 px above and below its text; a task with no date is one 28 px line. More than three tasks show the first two and
 "3 more due tomorrow" (`ink3`), which shows the rest. Confirmed data only; nothing shows for an empty
 line.
 
@@ -3971,3 +3973,13 @@ it changes what's on screen.
     inside a form or dialog; Event | Task and Code expiry sit in forms and don't take it. News's
     open-story rule is unchanged. Jobs's table and News's list fade in quickly (120 ms) as the filter
     or view changes. The phone layout is unchanged (D275).
+318. **The Today lines put the title over its time or date** (amending #199; Andy, 2026-11-06;
+    darma SV-210, D459). The event's line was 28 px with its time boxed at 58 px, so "12:30 PM" and
+    "in 2h" wrapped, the title got about 76 px, cutting most short, and the wrapped text spilled out of
+    the hover fill. Now every Today line's title takes the whole width in `ink`, wrapping to two
+    lines with an ellipsis only past that, over "12:30 PM · in 2h" (or a task's "Tomorrow") in
+    `ink3`, which never wraps; the event's bar runs down both lines and a task's ring sits on the
+    title's first line. A line with two parts has 7 px above and below its text, so the hover, `on`
+    and pressed fills sit clear of it; a task with no date stays one 28 px line. Radius 10 and the
+    10 px side padding are unchanged; the skeleton's first line is as tall as the event's. The phone
+    layout is unchanged (D275).

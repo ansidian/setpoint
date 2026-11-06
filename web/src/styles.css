@@ -112,9 +112,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .sb-foot { margin-top: auto; }
 .today-row { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border-radius: 10px; color: var(--ink2); flex: none; }
 @media (hover: hover) { .today-row:hover { background: var(--sub); } }
-.today-row .t { color: var(--ink); width: 58px; flex: none; }
 .today-row .title { color: var(--ink); }
-.today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; }
+.today-row .in { margin-left: auto; color: var(--ink3); font-size: 12px; white-space: nowrap; flex: none; }
 /* #78: a task line by name, its ring completing it; "3 more due tomorrow" opening the rest; a line's
    card open, the line `sub2` as a selected row is. */
 .today-row.on { background: var(--sub2); }
@@ -140,6 +139,20 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    `alert`, the now-line's, once under way (shell-06). */
 .today-row .evbar { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; flex: none; }
 .today-row .evbar > i { width: 3px; height: 14px; border-radius: 2px; background: var(--c); }
+/* SV-210: the event's and tasks' lines put the title, wrapping to two lines, over its time or date in
+   ink3 ("12:30 PM · in 2h", "Tomorrow"), with room above and below so a fill sits clear of the text. A
+   task with no date stays 28 px; the event's bar runs the height of its lines, a task's ring sits on
+   the title's first line. */
+.today-row.next, .today-row.task { height: auto; min-height: 28px; align-items: flex-start; padding-top: 5px; padding-bottom: 5px; }
+.today-row.next, .today-row.task:has(.when) { padding-top: 7px; padding-bottom: 7px; }
+.today-row.next { align-items: stretch; }
+.today-row.next .evbar { height: auto; place-items: stretch center; padding: 2px 0; }
+.today-row.next .evbar > i { height: auto; }
+.today-row.task .check { height: 1.35em; }
+.today-row .lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.today-row .lines > .title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.today-row .when { color: var(--ink3); font-size: 12px; white-space: nowrap; }
+.today-row .when .in { margin-left: 0; }
 .today-row .in.soon { color: var(--caution); font-weight: 500; }
 .today-row .in.now { color: var(--alert); font-weight: 500; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
