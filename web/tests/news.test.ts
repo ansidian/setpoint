@@ -2,15 +2,16 @@
 // (Wed, Oct 7, 2026, 9:12 AM Pacific; the user last looked Mon at 10:40 PM), the held order and what the
 // pill counts, the recap held for the visit and where it shows (#298), seen timing, the cursor, and
 // Upcoming's line; N5's states, Settings › News and Settings › AI's News group.
-import type {RecapOut, StoryRowOut} from '@setpoint/shared';
+import type {NewsPageOut, NewsSection, RecapOut, StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, foldFacts, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moveStory, neighbourStory, nextSeen,
+  articleNote, dueSeen, factsSince, foldFacts, keepsStory, stepView, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moveStory, neighbourStory, nextSeen,
   outletLine, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, sameLayout, sight, stamp, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
 import type {HeldRecap, Layout} from '../src/logic/news.ts';
+import type {NewsView} from '../src/logic/route.ts';
 import {news} from '../src/tokens.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -465,5 +466,29 @@ describe('Settings › AI\'s News group (30b)', () => {
     expect(cappedLine({capped: true, summaries_model: 'claude-haiku-5-5'}, '2026-10-01T07:00:00.000Z', zone, label)).toBe('Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
     expect(cappedLine({capped: true, summaries_model: 'claude-haiku-5-5'}, '2026-12-01T08:00:00.000Z', zone, label)).toBe('Cap reached, summaries use Claude Haiku 5.5 until Jan 1');
     expect(cappedLine({capped: false, summaries_model: 'claude-sonnet-5-5'}, '2026-10-01T07:00:00.000Z', zone, label)).toBeNull();
+  });
+});
+
+describe('Tab and Shift-Tab (SV-207, D454)', () => {
+  test.each<[NewsView, 1 | -1, NewsView]>([
+    ['all', 1, 'local'],
+    ['local', 1, 'tech'],
+    ['ai', 1, 'general'],
+    ['general', 1, 'all'],
+    ['local', -1, 'all'],
+    ['all', -1, 'general'],
+  ])('from %s by %i: %s', (view, delta, next) => {
+    expect(stepView(view, delta)).toBe(next);
+  });
+
+  const page = {blocks: [{section: 'ai', stories: [{id: 7}]}]} as unknown as NewsPageOut;
+  test.each<[string, NewsView, NewsSection[], NewsPageOut | null, boolean]>([
+    ['a section the story is in keeps it', 'general', ['ai', 'general'], page, true],
+    ['a section it isn\'t in closes it', 'tech', ['ai', 'general'], page, false],
+    ['All keeps it when a block shows it', 'all', ['ai'], page, true],
+    ['All closes it when no block does', 'all', ['local'], {blocks: []} as unknown as NewsPageOut, false],
+    ['All not yet answered closes it', 'all', ['ai'], null, false],
+  ])('%s', (_, next, sections, answer, kept) => {
+    expect(keepsStory(next, sections, 7, answer)).toBe(kept);
   });
 });

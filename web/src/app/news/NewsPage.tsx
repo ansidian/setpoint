@@ -22,9 +22,10 @@
 // the list with the stories found, as mail's search replaces its list (#8): the header reads Search,
 // the segmented control goes, and Esc clears it.
 //
-// Keys: `J` / `K` move the cursor (with a story open, they open the next and previous one); Enter
-// opens; `O` opens the original article; `N` takes the new stories; Esc goes from an article back to
-// its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
+// Keys: `J` / `K` move the cursor (with a story open, they open the next and previous one), on into
+// a section's Also reported; Enter opens (an Also reported row, its article); `O` opens the original
+// article; `N` takes the new stories; Tab and Shift-Tab step All | Local | Tech | AI | General
+// (SV-207, D454); Esc goes from an article back to its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
 import type {
   AlsoReportedOut, ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
@@ -36,7 +37,7 @@ import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
+  ALSO_SHELF, dueSeen, emptySectionLine, isAlsoKey, keepsStory, stepView, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
   pageLayout, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
   visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -96,6 +97,9 @@ function listing(view: NewsView, answer: Answer): Listing {
 const SEARCH_SHELF = 'search';
 /** The recap's rows, as their own shelf for the cursor's keys. */
 const RECAP_SHELF = 'recap';
+
+/** A row by its key: a story's, or Also reported's, which isn't a story row (so never seen). */
+const rowSelector = (key: string) => (isAlsoKey(key) ? `.nw-list [data-also="${key}"]` : `.nw-list [data-key="${key}"]`);
 
 const pathOf = (view: NewsView) => (view === 'all' ? NEWS_PATH : sectionPath(view));
 
@@ -197,14 +201,24 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const folding = useHold(recapShown, motion.medium);
   const recap = drawn ? folding : {shown: null, closing: false};
 
-  const keys = useMemo(() => [
+  // A section's Also reported, as the latest answer has it (D452).
+  const also = useMemo(() => (searching || view === 'all' ? [] : latest?.alsoReported ?? []), [searching, view, latest]);
+  // The story rows J and K move through, and after them Also reported's, which open their article, never the pane (SV-207).
+  const storyKeys = useMemo(() => [
     ...(recapShown?.ids.map(id => storyKey(RECAP_SHELF, id)) ?? []),
     ...shown.flatMap(shelf => shelf.ids.filter(id => rows.has(id)).map(id => storyKey(shelf.key, id))),
   ], [recapShown, shown, rows]);
+  const keys = useMemo(() => [...storyKeys, ...also.map(one => storyKey(ALSO_SHELF, one.story_id))], [storyKeys, also]);
   const [cursor, setCursor] = useState<string | null>(null);
   const open = route.story;
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const shownOpenKey = open === null ? null : openKey !== null && keyStory(openKey) === open && keys.includes(openKey) ? openKey : keys.find(key => keyStory(key) === open) ?? null;
+  const shownOpenKey = open === null ? null : openKey !== null && keyStory(openKey) === open && storyKeys.includes(openKey) ? openKey : storyKeys.find(key => keyStory(key) === open) ?? null;
+  // The view Tab moved to with the pane closed: the cursor goes to its first story once it's drawn.
+  const [firstIn, setFirstIn] = useState<NewsView | null>(null);
+  if (firstIn !== null && firstIn === view && latest) {
+    setFirstIn(null);
+    if (storyKeys.length) setCursor(storyKeys[0]!);
+  }
 
   // The opened story as it stood before it was seen, for its pane's "New since you looked" when the
   // visit hadn't met it (a link).
@@ -258,22 +272,37 @@ export function NewsPage({route}: {route: NewsRoute}) {
   }
   /** A story by its id: at its row when the list shows it, else in the pane alone (Upcoming's, SV-50). */
   function openStoryOf(id: number) {
-    const key = keys.find(one => keyStory(one) === id);
+    const key = storyKeys.find(one => keyStory(one) === id);
     if (key) openAt(key);
     else go({story: id, article: null});
   }
   function step(delta: 1 | -1) {
-    const next = neighbourStory(keys, shownOpenKey, delta);
+    const next = neighbourStory(storyKeys, shownOpenKey, delta);
     if (next) {
       openAt(next);
-      requestAnimationFrame(() => document.querySelector(`.nw-list [data-key="${next}"]`)?.scrollIntoView({block: 'nearest'}));
+      requestAnimationFrame(() => document.querySelector(rowSelector(next))?.scrollIntoView({block: 'nearest'}));
     }
   }
-  /** `O`: the open article's own page, else the open story's leading outlet's. */
+  /** `O`: the open article's own page, else the open story's leading outlet's, else the Also reported row under the cursor's. */
   function openOriginal() {
     const url = route.article ? getCached<ArticleOut>(articlePath(route.article))?.url
-      : story?.id === open ? story.lead.url : open ? rows.get(open)?.lead.url : null;
+      : story?.id === open ? story.lead.url : open ? rows.get(open)?.lead.url : alsoUrl(cursor);
     if (url) window.open(url, '_blank', 'noopener');
+  }
+  /** The article an Also reported row under the cursor opens. */
+  function alsoUrl(key: string | null) {
+    return isAlsoKey(key) ? also.find(one => one.story_id === keyStory(key!))?.url ?? null : null;
+  }
+  /**
+   * Tab and Shift-Tab (SV-207, D454): the next or previous view. The open story stays open where that
+   * view lists it; otherwise the pane closes and the cursor goes to the view's first story.
+   */
+  function stepSection(delta: 1 | -1) {
+    const next = stepView(view, delta);
+    const row = open === null ? undefined : rows.get(open) ?? (story?.id === open ? story : undefined);
+    const keep = open !== null && row !== undefined && keepsStory(next, row.sections, open, getCached<NewsPageOut>(NEWS_PATH) ?? null);
+    if (!keep) setFirstIn(next);
+    navigate({page: 'news', view: next, story: keep ? open : null, article: keep ? route.article : null});
   }
 
   useSeen(list, shown, rows);
@@ -293,15 +322,19 @@ export function NewsPage({route}: {route: NewsRoute}) {
         if (open !== null) return step(delta);
         const key = moveStory(keys, cursor, delta);
         setCursor(key);
-        if (key) requestAnimationFrame(() => document.querySelector(`.nw-list [data-key="${key}"]`)?.scrollIntoView({block: 'nearest'}));
+        if (key) requestAnimationFrame(() => document.querySelector(rowSelector(key))?.scrollIntoView({block: 'nearest'}));
       });
       if (plainKey(event, 'j')) move(1);
       else if (plainKey(event, 'k')) move(-1);
-      else if (plainKey(event, 'Enter') && cursor !== null && keys.includes(cursor)) run(() => openAt(cursor));
+      else if (plainKey(event, 'Enter') && cursor !== null && keys.includes(cursor)) run(() => (isAlsoKey(cursor) ? openOriginal() : openAt(cursor)));
       else if (plainKey(event, 'n') && pill) run(takeNew);
-      else if (plainKey(event, 'o') && open !== null) {
+      else if (plainKey(event, 'o') && (open !== null || alsoUrl(cursor) !== null)) {
         echoKey('o');
         run(openOriginal);
+      }
+      // Tab and Shift-Tab step the views, wherever focus is, but in a field (above) or an open popover or menu (D454).
+      else if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey && !searching && !document.querySelector('.pop')) {
+        run(() => stepSection(event.shiftKey ? -1 : 1));
       }
       else if (plainKey(event, 'Escape')) {
         if (route.article !== null) run(() => go({article: null}));
@@ -335,7 +368,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
       <header className="hd ends">
         <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
         {!searching && (
-          <span className="seg" ref={segThumb}>
+          <span className="seg" ref={segThumb} data-tip="Tab · ⇧Tab">
             <button type="button" className={segOn('all')} onClick={() => switchTo('all')}>All</button>
             {NEWS_SECTIONS.map(section => <button key={section} type="button" className={segOn(section)} onClick={() => switchTo(section)}>{SECTION_LABELS[section]}</button>)}
           </span>
@@ -419,8 +452,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
               // A section's own line and its empty line (N5).
               const own = NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
-              // A section's list ends with Also reported, as the latest answer has it, outside the held order (D452).
-              const also = view === 'all' ? [] : latest?.alsoReported ?? [];
               const empty = own && latest ? emptySectionLine(own, shelfRows.length + also.length, shelf.more, firstRun, now, zone) : null;
               // A block whose stories all show in other blocks (#96) has nothing of its own to show, so it goes (D451).
               if (section && !shelfRows.length && !empty && !line && !upcoming.length) return null;
@@ -434,7 +465,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={null} {...rowProps} />
                   ))}
-                  {also.length > 0 && <AlsoReported stories={also} now={now} zone={zone} />}
+                  {/* A section's list ends with Also reported, outside the held order (D452). */}
+                  {also.length > 0 && <AlsoReported stories={also} cursor={cursor} now={now} zone={zone} onPoint={rowProps.onPoint} />}
                 </Fragment>
               );
             })}
@@ -444,7 +476,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
         </section>
         {open !== null && (
           <StoryPane storyId={open} articleId={route.article} row={rows.get(open)} lookedAt={looked} now={now} timeZone={zone}
-            canStep={{previous: neighbourStory(keys, shownOpenKey, -1) !== null, next: neighbourStory(keys, shownOpenKey, 1) !== null}}
+            canStep={{previous: neighbourStory(storyKeys, shownOpenKey, -1) !== null, next: neighbourStory(storyKeys, shownOpenKey, 1) !== null}}
             onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close} />
         )}
       </div>
@@ -457,12 +489,14 @@ export function NewsPage({route}: {route: NewsRoute}) {
  * label after the section's stories. One line each, the headline, outlet and age, with no summary,
  * thumbnail or dot; a row opens the outlet's article, and nothing here is seen.
  */
-function AlsoReported({stories, now, zone}: {stories: AlsoReportedOut[]; now: number; zone: string}) {
+function AlsoReported({stories, cursor, now, zone, onPoint}: {stories: AlsoReportedOut[]; cursor: string | null; now: number; zone: string; onPoint: (key: string) => void}) {
   return (
     <div className="nw-also" role="group" aria-label="Also reported">
       <div className="nw-also-hd">Also reported</div>
-      {stories.map(story => (
-        <a key={story.story_id} className="nw-raw" href={story.url} target="_blank" rel="noopener noreferrer">
+      {stories.map(story => {
+        const key = storyKey(ALSO_SHELF, story.story_id);
+        return (
+        <a key={story.story_id} className={cursor === key ? 'nw-raw cur' : 'nw-raw'} data-also={key} href={story.url} target="_blank" rel="noopener noreferrer" onMouseMove={() => onPoint(key)}>
           <span className="hl">{story.headline}</span>
           <span className="nw-meta">
             <span className="outlet">{story.outlet_short}</span><span>·</span>
@@ -470,7 +504,8 @@ function AlsoReported({stories, now, zone}: {stories: AlsoReportedOut[]; now: nu
           </span>
           <Icon name="open_in_new" size={16} />
         </a>
-      ))}
+        );
+      })}
     </div>
   );
 }

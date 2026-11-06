@@ -13,6 +13,7 @@ import type {
   AiOut, AiUsageOut, NewsAdapterKey, NewsAiOut, NewsSourceOut, NewsPageOut, NewsSection, NewsSectionOut, NewsSourceHealthOut, NewsSourcesOut, NewsStatusOut,
   RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
+import {NEWS_SECTIONS} from '@setpoint/shared';
 import {news} from '../tokens.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {age, clockTime, daysBetween, localDate} from './format.ts';
@@ -323,6 +324,28 @@ export const unseen = (row: Pick<StoryRowOut, 'state'>) => row.state !== 'seen';
 /** A row's key on screen: its shelf and story, as a story can sit in two of All's blocks. */
 export const storyKey = (shelf: string, id: number) => `${shelf}:${id}`;
 export const keyStory = (key: string) => Number(key.slice(key.lastIndexOf(':') + 1));
+
+/** Also reported's rows, as their own shelf for J and K (D452); never story rows. */
+export const ALSO_SHELF = 'also';
+export const isAlsoKey = (key: string | null) => key !== null && key.startsWith(`${ALSO_SHELF}:`);
+
+/** The segmented control's order, which Tab and Shift-Tab step through (SV-207, D454). */
+export const NEWS_VIEWS: readonly NewsView[] = ['all', ...NEWS_SECTIONS];
+
+/** Tab and Shift-Tab: the next or previous view, wrapping from General to All and back (Andy, 2026-11-05). */
+export function stepView(view: NewsView, delta: 1 | -1): NewsView {
+  return NEWS_VIEWS[(NEWS_VIEWS.indexOf(view) + delta + NEWS_VIEWS.length) % NEWS_VIEWS.length]!;
+}
+
+/**
+ * Whether the open story stays open as Tab moves to `next`: when that view lists it, a section by the
+ * story's sections, All by its blocks as last answered (null when All hasn't been). Otherwise the pane
+ * closes and the cursor goes to the view's first story.
+ */
+export function keepsStory(next: NewsView, sections: readonly NewsSection[], storyId: number, page: NewsPageOut | null): boolean {
+  if (next !== 'all') return sections.includes(next);
+  return page?.blocks.some(block => block.stories.some(story => story.id === storyId)) ?? false;
+}
 
 /** J and K: the next or previous row, the first when none is under the cursor. */
 export function moveStory(keys: readonly string[], current: string | null, delta: 1 | -1): string | null {

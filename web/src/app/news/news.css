@@ -49,6 +49,8 @@
 .nw-also { display: flex; flex-direction: column; flex: none; }
 /* Its headlines line up with the stories' above, past the dot's gutter. */
 .nw-also .nw-raw { padding-left: 36px; }
+/* The keyboard's cursor on one, as on a story row (SV-207). */
+.nw-also .nw-raw.cur { background: var(--sub2); color: var(--ink); }
 .nw-also-hd { display: flex; align-items: center; height: 32px; padding: 0 var(--row-end) 0 24px; color: var(--ink3); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--hair); }
 
 /* The new / updated dot. */

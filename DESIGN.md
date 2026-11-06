@@ -863,8 +863,13 @@ than kept as a list to clear. No board draws it.
 
 ### Keys and behaviour
 
-- **Keys:** `3` News; `J` / `K` move; Enter opens the story; `O` opens the original article; `N`
+- **Keys:** `3` News; `J` / `K` move, on past a section's stories into its Also reported; Enter opens
+  the story (an Also reported row, its article in a new tab); `O` opens the original article; `N`
   takes the new stories; Esc goes from an article back to its story, then closes the pane.
+- **Tab / Shift-Tab** step All | Local | Tech | AI | General, wrapping from General to All, whatever has
+  focus, except in a text field (Search news) or an open popover or menu, where Tab is the
+  browser's. An open story stays open when the next view lists it; otherwise the pane closes and the
+  cursor goes to the view's first story. The segmented control's tooltip says "Tab · ⇧Tab" (#314).
 - **Seen:** a row fully on screen for about a second, or opened. A dot is for what All or a section
   shows; a story that never made All's front page isn't owed, and nothing asks the user to clear it
   (#312). No "mark all seen" (D87).
@@ -3923,3 +3928,9 @@ it changes what's on screen.
     age. The row opening the article in a new tab, as Unsorted's headlines do, rather than in the
     pane, is Claude's call (a small gap); Andy okayed the list as shown on the real snapshot. No
     board draws it.
+314. **Tab and Shift-Tab step News's views** (Andy, 2026-11-05; darma SV-207, D454). With small
+    stories only in their sections (#313), Andy wanted to move between All and the sections without
+    leaving the row or the reader. Claude suggested `H` / `L`; Andy chose Tab, knowing it gives up
+    News's focus order (Search news, Add to calendar, the pane's links), since he never Tabs through
+    the app. It wraps from General to All and back (Andy), and keeps an open story only where the
+    next view lists it (Claude's call, as a small gap). `J` / `K` reach Also reported's rows too.

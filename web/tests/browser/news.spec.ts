@@ -2,7 +2,7 @@
 // News): All's blocks with the recap, Upcoming and the pill; the story pane, its Sources, an article
 // (26a) and one that can't be read here (26b); a section (27) with Also reported (D452); While you were away (#298) with Done
 // and Undo; seen; the held order with the pill; Add to calendar; the keys; and board 31, board 25 in
-// Light (N5). A change to News arrives as ingest's will: the
+// Light (N5); Tab and Shift-Tab between the views (SV-207). A change to News arrives as ingest's will: the
 // server's database changes, then a `news` live event names stories (here, seeing one already seen
 // sends it, as nothing else in the server writes News yet).
 import assert from 'node:assert/strict';
@@ -604,6 +604,69 @@ test('keys: 3 opens News; J and K move; Enter opens; J opens the next with one o
     // 1 and 2 still leave for the Inbox and Calendar.
     await page.keyboard.press('2');
     await page.waitForURL(/\/calendar/);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-207: Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping, after a click too; the open story stays where the next view lists it; J reaches Also reported, whose Enter opens its article; Tab in Search news is the browser\'s', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    await putRecapAway(setpoint);
+    const chips = await storyId(setpoint, 'A federal rule on AI chip exports takes effect');
+    const fire = await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres');
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210').waitFor();
+    await page.evaluate(() => {
+      (window as unknown as {opened: string[]}).opened = [];
+      window.open = (url?: string | URL) => {
+        (window as unknown as {opened: string[]}).opened.push(String(url));
+        return null;
+      };
+    });
+    // After a click on a button (All, focused now), Shift-Tab wraps round to General, Tab back to All, then on to Local, its first story under the cursor.
+    await page.locator('.hd .seg button', {hasText: 'All'}).click();
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForURL(/\/news\/general$/);
+    await page.keyboard.press('Tab');
+    await page.waitForURL(/\/news$/);
+    await page.keyboard.press('Tab');
+    await page.waitForURL(/\/news\/local$/);
+    await until('the cursor on Local\'s first story', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Brush fire near the 210') ?? false);
+
+    // J goes on past the stories into Also reported; Enter there opens the article, not the pane.
+    for (let press = 0; press < 25; press += 1) await page.keyboard.press('j');
+    await until('the cursor on Also reported\'s last row', () => page.locator('.nw-also .cur .hl').textContent(), text => text === 'Street sweeping resumes on the usual routes after the holiday');
+    await page.keyboard.press('Enter');
+    await until('ABC7\'s article opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
+    assert.match((await page.evaluate(() => (window as unknown as {opened: string[]}).opened))[0]!, /^https:\/\/abc7\.example\//);
+    assert.equal(await page.locator('section.pane').count(), 0);
+
+    // A story Tech doesn't list: the pane closes, the cursor on Tech's first story.
+    await page.goto(`${setpoint.base}/news/local/story/${fire}`);
+    await page.locator('.pane .rd-subj', {hasText: 'Brush fire near the 210'}).waitFor();
+    await page.keyboard.press('Tab');
+    await page.waitForURL(/\/news\/tech$/);
+    await until('the cursor on Tech\'s first story', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Pixel Watch 5') ?? false);
+    assert.equal(await page.locator('section.pane').count(), 0);
+
+    // One General lists too: the pane stays on it, there and back.
+    await page.goto(`${setpoint.base}/news/ai/story/${chips}`);
+    await page.locator('.pane .rd-subj', {hasText: 'A federal rule on AI chip exports'}).waitFor();
+    await page.keyboard.press('Tab');
+    await page.waitForURL(new RegExp(`/news/general/story/${chips}$`));
+    await page.keyboard.press('Shift+Tab');
+    await page.waitForURL(new RegExp(`/news/ai/story/${chips}$`));
+
+    // In Search news, Tab is the browser's: focus leaves the field and the view stays.
+    await page.keyboard.press('Escape');
+    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    await page.getByRole('textbox', {name: 'Search news'}).focus();
+    await page.keyboard.press('Tab');
+    await until('focus left the field', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label !== 'Search news');
+    assert.match(page.url(), /\/news\/ai$/);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
