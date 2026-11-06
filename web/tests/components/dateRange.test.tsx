@@ -14,12 +14,12 @@ import {colour} from './colour.ts';
 const TODAY = '2026-10-09';
 
 /** The field as the editor holds it for an event: its first day and its last. */
-function Days({from: first, to: last}: {from: string; to: string}) {
+function Days({from: first, to: last}: {from: string | null; to: string}) {
   const [days, setDays] = useState({from: first, to: last});
   return (
     <div className="editor">
-      <DateField className="date" label="Date" value={days.from} today={TODAY}
-        shown={days.from === days.to ? dayTitle(days.from) : `${dayTitle(days.from)} – ${dayTitle(days.to)}`}
+      <DateField className="date" label="Date" value={days.from} today={TODAY} placeholder="Pick a day"
+        shown={days.from === null ? '' : days.from === days.to ? dayTitle(days.from) : `${dayTitle(days.from)} – ${dayTitle(days.to)}`}
         read={text => parseDay(text, TODAY)} onValue={date => setDays({from: date, to: date})}
         range={{to: days.to, read: text => parseDays(text, TODAY), onRange: (from, to) => setDays({from, to})}} />
     </div>
@@ -85,4 +85,16 @@ test('from the keys: ↓ moves the cursor a week, Enter picks the first day, Esc
   await expect.element(field).toHaveValue('Tue, Oct 20');
   await userEvent.keyboard('{Escape}');
   await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('an empty field (an email that gave no day, SV-24) picks a first day and then a last, as a set one does', async () => {
+  await render(<Days from={null} to={TODAY} />);
+  await field.click();
+  await expect.element(sheet('first')).toBeVisible();
+  await day('2026-10-13').click();
+  await expect.element(sheet('last')).toBeVisible();
+  await expect.element(field).toHaveValue('Tue, Oct 13');
+  await day('2026-10-16').click();
+  await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+  await expect.element(field).toHaveValue('Tue, Oct 13 – Fri, Oct 16');
 });

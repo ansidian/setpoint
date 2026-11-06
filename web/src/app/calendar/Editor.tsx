@@ -1059,7 +1059,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
               value={draft.undated ? null : draft.date} placeholder={kind === 'event' ? 'Pick a day' : 'No date'}
               shown={draft.undated ? '' : lastDay === draft.date ? dayTitle(draft.date) : `${dayTitle(draft.date)} – ${dayTitle(lastDay)}`}
               today={today} read={text => parseDay(text, today)} onValue={date => change({date, undated: false}, ['date'])}
-              range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change(spanTo(from, to, draft.start, draft.end), ['date'])} : undefined}
+              range={kind === 'event' ? {to: lastDay, read: text => parseDays(text, today), onRange: (from, to) => change({...spanTo(from, to, draft.start, draft.end), undated: false}, ['date'])} : undefined}
               // SV-74: a new task can go to Todoist with no date, its time going with it; a day picked brings one back.
               onClear={kind === 'task' && !editing ? () => {
                 change({undated: true, start: null}, ['date', 'time']);

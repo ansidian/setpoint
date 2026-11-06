@@ -210,8 +210,9 @@ export function DateField({className, label, value, shown, placeholder, today, r
   const [open, setOpen] = useState<{month: string; cursor: string; phase: 'start' | 'end'; hover: string | null} | null>(null);
   const at = (cursor: string) => ({month: monthOf(cursor), cursor, phase: 'start' as const, hover: null});
   const pick = (date: string) => {
-    if (range && value !== null && open) {
-      const next = rangePick(open.phase, value, date);
+    // An empty day (an email that gave none, SV-24) starts a range as a set one does (Andy, 2026-11-05).
+    if (range && open) {
+      const next = rangePick(open.phase, value ?? date, date);
       range.onRange(next.from, next.to);
       if (!next.done) {
         setOpen({...open, cursor: date, phase: 'end'});
