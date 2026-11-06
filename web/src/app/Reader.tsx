@@ -37,6 +37,7 @@ import {MailFrame} from './MailFrame.tsx';
 import {useCommands} from './palette/commands.ts';
 import {usePhone} from './Phone.tsx';
 import {setReadingPaneWidth, useReadingPaneWidth} from './readingPane.ts';
+import {zoomOf} from './calendar/geometry.ts';
 import {ReaderSlot} from './slots.tsx';
 import {AnswerCard} from './search/AnswerCard.tsx';
 import {ProposalCard} from './search/ProposalCard.tsx';
@@ -507,11 +508,12 @@ function Body({message, marks, arrived}: {message: MessageOut; marks: string[]; 
 
 /**
  * The pane's left edge, dragged (or ← → when focused) to make it wider or narrower, and double-clicked
- * to put it back to 680 (News's story pane shares it). A grip follows the pointer's height along it
- * (reader-09).
+ * to put it back to 680 (News's story pane shares it). Its grip sits fixed at the edge's middle (SV-201):
+ * one that followed the pointer ran ahead of it under the wide screen's zoom. The pointer moves in the
+ * window's pixels and the pane's width is the page's, so the drag divides by the zoom.
  */
 export function PaneEdge({width}: {width: number}) {
-  const drag = useRef<{x: number; width: number} | null>(null);
+  const drag = useRef<{x: number; width: number; zoom: number} | null>(null);
   const [dragging, setDragging] = useState(false);
   const end = () => {
     drag.current = null;
@@ -524,13 +526,11 @@ export function PaneEdge({width}: {width: number}) {
         if (event.button !== 0) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = {x: event.clientX, width};
+        drag.current = {x: event.clientX, width, zoom: zoomOf(event.currentTarget)};
         setDragging(true);
       }}
       onPointerMove={event => {
-        const edge = event.currentTarget;
-        edge.style.setProperty('--grip-y', `${Math.round(event.clientY - edge.getBoundingClientRect().top)}px`);
-        if (drag.current) setReadingPaneWidth(drag.current.width + drag.current.x - event.clientX);
+        if (drag.current) setReadingPaneWidth(drag.current.width + Math.round((drag.current.x - event.clientX) / drag.current.zoom));
       }}
       onPointerUp={end}
       onPointerCancel={end}
@@ -540,7 +540,7 @@ export function PaneEdge({width}: {width: number}) {
         event.preventDefault();
         setReadingPaneWidth(width + (event.key === 'ArrowLeft' ? READING_PANE.step : -READING_PANE.step));
       }}>
-      <span className="grip"><Icon name="drag_indicator" size={14} /></span>
+      <span className="grip"><i /><i /><i /></span>
     </div>
   );
 }

@@ -1273,6 +1273,40 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
   }
 });
 
+test('under the wide screen\'s zoom, the pane\'s edge drags with the pointer and its grip shows at its middle, wherever the pointer is on it (SV-201)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    // From 2200 px the page is drawn at 1.25 (styles.css), so the pointer's pixels are 1.25 of the page's.
+    await page.setViewportSize({width: 2400, height: 1300});
+    const pane = page.locator('.pane');
+    await page.locator('.row', {hasText: 'New sign-in'}).click();
+    await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
+    const edge = page.locator('.pane-edge');
+    const grip = edge.locator('.grip');
+    const before = (await rested(() => pane.boundingBox()))!;
+    assert.equal(Math.round(before.width), 850, '680 at 1.25');
+
+    // With the pointer near the edge's top, the grip is at its middle, not at the pointer. It swells in
+    // about its own centre, so its middle is the same whether or not its entrance has finished: this reads
+    // no animation (its look is judged by eye).
+    const box = (await rested(() => edge.boundingBox()))!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 120);
+    const at = (await rested(() => grip.boundingBox()))!;
+    assert.ok(Math.abs(at.y + at.height / 2 - (box.y + box.height / 2)) < 1, `the grip's middle ${at.y + at.height / 2}, the edge's ${box.y + box.height / 2}`);
+
+    // 125 of the pointer's pixels are 100 of the page's: the edge stays under the pointer.
+    await page.mouse.down();
+    for (let step = 1; step <= 5; step += 1) await page.mouse.move(box.x + box.width / 2 - 125 * step / 5, box.y + 120);
+    await page.mouse.up();
+    const after = (await rested(() => pane.boundingBox()))!;
+    assert.equal(Math.round(after.width), 975, '780 at 1.25');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('S8 (SV-25, D54): a Pin or Mark all as read the server refuses says so in the toast, in its words', async () => {
   const setpoint = await startSetpoint();
   try {

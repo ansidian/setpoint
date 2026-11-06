@@ -2831,7 +2831,7 @@ it changes what's on screen.
     and a grip (14 × 28, radius 999, `cardOn` with an `edgeOn` ring, a 14 px `drag_indicator` in
     `ink2`) fades in over 120 ms at the pointer's height; dragging, the line is `ink3` and the grip
     stays; a double-click puts the pane back to 680. News's story pane shares it (Andy, 2026-10-11,
-    polish audit reader-09).
+    polish audit reader-09). The line and grip are now #311's.
 211. **Hidden images keep the email's shape:** a hidden image that gives its width but no height
     holds a quarter of its width, 56 to 160 px (a small one stays square), so a mailing service's
     newsletter keeps its pictures' places rather than collapsing to a band; one with no size and no
@@ -3885,3 +3885,11 @@ it changes what's on screen.
     naming the real subject belonged to the whole row, so it centred under the row's middle, far
     from where the eye was; it now belongs to the summary's words and centres under them, shown
     only with the pointer on them (Claude's call, as a small gap).
+311. **The pane's edge grip is fixed at its middle, and it's what animates in** (amending #210;
+    Andy, 2026-11-05; darma SV-201, from a clip Andy gave as the design). A grip at the pointer's
+    height ran ahead of the pointer under the wide screen's zoom, and so did the drag. At rest the
+    edge is only the border. Under the pointer, after 80 ms, a 2 px `accent` line covers the border,
+    and a pill at the edge's middle (10 × 30, radius 999, `cardOn` with a 1.5 px `accent` ring and
+    three 3 px `accent` dots) fades up from nothing over 120 ms and swells from .7 to full size over
+    180 ms; dragging or focused, they stay. The drag follows the pointer 1:1 at any zoom. `accent`
+    in place of the clip's violet (Claude's call, as a small gap).
