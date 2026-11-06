@@ -69,11 +69,11 @@ test('paging lands on the month it went to, N N N chaining on to January; Month 
 const thumb = (seg: Locator) => seg.evaluate(element => {
   const on = element.querySelector<HTMLElement>(':scope > .on')!;
   const style = getComputedStyle(element, '::before');
-  return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
+  return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), shown: style.visibility, on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
 });
 
-// The thumb's slide from one segment to the next is by eye (D416): each page as it loads.
-test('a segmented control\'s thumb waits under the segment that\'s on, which hands it the fill: Month, and Week', async () => {
+// The thumb's slide from one segment to the next is by eye (D416), and ui/Segmented's component test's: each page as it loads.
+test('a segmented control\'s thumb waits under the segment that\'s on, as its one fill: Month, and Week', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -85,7 +85,37 @@ test('a segmented control\'s thumb waits under the segment that\'s on, which han
     await page.goto(`${setpoint.base}/calendar?view=week`);
     await page.locator('.cal-week').waitFor();
     const week = await rested(() => thumb(seg));
-    assert.deepEqual([week.x, week.width, week.onFill], [...week.on, await rested(() => colour(page, '--sub3'))], 'under Week, its fill');
+    assert.deepEqual([week.x, week.width, week.shown, week.onFill], [...week.on, 'visible', 'rgba(0, 0, 0, 0)'], 'under Week, the segment drawing no fill of its own');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-211: Tab and Shift-Tab step Month | Week from anywhere, wrapping; in the editor Tab is its own', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.cal-month').waitFor();
+    assert.equal(await page.locator('.hd .seg').getAttribute('data-tip'), 'Tab · ⇧Tab');
+    await page.keyboard.press('Tab');
+    await page.locator('.cal-week').waitFor();
+    await page.keyboard.press('Tab');
+    await page.locator('.cal-month').waitFor();
+    await page.keyboard.press('Shift+Tab');
+    await page.locator('.cal-week').waitFor();
+    await page.keyboard.press('Shift+Tab');
+    await page.locator('.cal-month').waitFor();
+
+    // A new event: Tab moves on from the line to the editor's next field, and the grid stays Month.
+    await page.keyboard.press('c');
+    const line = page.getByRole('textbox', {name: 'Describe the event'});
+    await until('the line focused', () => line.evaluate(element => element === document.activeElement), focused => focused);
+    await page.keyboard.press('Tab');
+    await until('focus moved on in the editor', () => page.evaluate(() => [document.activeElement?.closest('.editor') !== null, document.activeElement?.getAttribute('aria-label')]),
+      ([inEditor, label]) => inEditor === true && label !== 'Describe the event');
+    assert.equal(await page.locator('.hd .seg .on').textContent(), 'Month');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

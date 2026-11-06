@@ -12,7 +12,7 @@ import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRule
 import {localDate} from '../../logic/format.ts';
 import {expiryLabel, laneTag, matchesThisMonth, moved, ruleWords, senderMatch, splitRules} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {segThumb} from '../../ui/seg.ts';
+import {Segmented} from '../../ui/Segmented.tsx';
 import {useNow} from '../clock.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
@@ -79,13 +79,9 @@ export function MailPage() {
         {!settings ? <SkeletonRows count={1} /> : <div className="set-group">
           <div className="set-row">
             <div className="lines grow"><span className="t">Code expiry</span><span className="s">Verification codes leave the Inbox after</span></div>
-            <span className="seg" ref={segThumb} role="radiogroup" aria-label="Code expiry">
-              {CODE_EXPIRY_PRESETS.map(minutes => (
-                <button key={minutes} type="button" role="radio" aria-checked={settings.mail.code_expiry_minutes === minutes}
-                  className={settings.mail.code_expiry_minutes === minutes ? 'on' : undefined}
-                  onClick={() => void save.attempt(() => patchSettings({mail: {code_expiry_minutes: minutes}}))}>{expiryLabel(minutes)}</button>
-              ))}
-            </span>
+            <Segmented role="radio" label="Code expiry" value={settings.mail.code_expiry_minutes}
+              segments={CODE_EXPIRY_PRESETS.map(minutes => ({value: minutes, label: expiryLabel(minutes)}))}
+              onChange={minutes => void save.attempt(() => patchSettings({mail: {code_expiry_minutes: minutes}}))} />
           </div>
         </div>}
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />

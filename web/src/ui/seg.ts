@@ -1,35 +1,38 @@
-// The segmented control's thumb (DESIGN.md › Decided while building #179; polish audit grids-09):
-// when another segment turns on, a `sub3` pill slides from the last one to it over 180 ms rather
-// than the fill jumping. At rest the `on` segment draws its own fill, so it sits on its exact box. A
-// ref for any `.seg` (Month | Week, Event | Task…).
-import {motion} from '../tokens.ts';
+// The segmented control's thumb (DESIGN.md › Decided while building #179, #317): a `sub3` pill under
+// the `on` segment, always drawn and always moving on its transition, so when another segment turns
+// on it travels there, position and width together, settling with a slight spring. What isn't a
+// segment turning on (the first placement, a resize, the fonts arriving, a count's width changing)
+// places it at once. Segmented.tsx is its one user.
 
-/** Keeps `--thumb-x` and `--thumb-w` on the `.seg` at its `on` segment, `data-sliding` while the thumb moves between two. */
+/** Keeps `--thumb-x` and `--thumb-w` on the `.seg` at its `on` segment, `data-thumb` while one is on. */
 export function segThumb(seg: HTMLElement | null) {
   if (!seg) return;
   let on: HTMLElement | null = null;
-  let timer = 0;
-  const rest = () => {
-    window.clearTimeout(timer);
-    seg.removeAttribute('data-sliding');
-  };
+  let x = '';
+  let w = '';
   const place = () => {
     const now = seg.querySelector<HTMLElement>(':scope > .on');
-    if (now) {
-      seg.style.setProperty('--thumb-x', `${now.offsetLeft}px`);
-      seg.style.setProperty('--thumb-w', `${now.offsetWidth}px`);
+    if (!now) {
+      seg.removeAttribute('data-thumb');
+      on = null;
+      return;
     }
-    // Another segment on: the thumb, still where the last one was, slides over.
-    if (now && on && now !== on) {
-      seg.dataset.sliding = '';
-      window.clearTimeout(timer);
-      // Its transitionend, else a moment past it.
-      timer = window.setTimeout(rest, motion.medium + 100);
-    }
+    const nextX = `${now.offsetLeft}px`;
+    const nextW = `${now.offsetWidth}px`;
+    const turned = on !== null && now !== on;
     on = now;
-  };
-  const arrived = (event: TransitionEvent) => {
-    if (event.target === seg && event.pseudoElement === '::before' && event.propertyName === 'transform') rest();
+    if (nextX === x && nextW === w && seg.hasAttribute('data-thumb')) return;
+    x = nextX;
+    w = nextW;
+    // Anything but a segment turning on goes at once: just this change loses its transition.
+    if (!turned) seg.dataset.still = '';
+    seg.dataset.thumb = '';
+    seg.style.setProperty('--thumb-x', x);
+    seg.style.setProperty('--thumb-w', w);
+    if (!turned) {
+      void getComputedStyle(seg, '::before').transform;
+      delete seg.dataset.still;
+    }
   };
   place();
   // A segment turned on, or one's words or the fonts changing its width.
@@ -37,11 +40,8 @@ export function segThumb(seg: HTMLElement | null) {
   turned.observe(seg, {subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class']});
   const resized = new ResizeObserver(place);
   resized.observe(seg);
-  seg.addEventListener('transitionend', arrived);
   return () => {
-    rest();
     turned.disconnect();
     resized.disconnect();
-    seg.removeEventListener('transitionend', arrived);
   };
 }

@@ -332,11 +332,6 @@ export const isAlsoKey = (key: string | null) => key !== null && key.startsWith(
 /** The segmented control's order, which Tab and Shift-Tab step through (SV-207, D454). */
 export const NEWS_VIEWS: readonly NewsView[] = ['all', ...NEWS_SECTIONS];
 
-/** Tab and Shift-Tab: the next or previous view, wrapping from General to All and back (Andy, 2026-11-05). */
-export function stepView(view: NewsView, delta: 1 | -1): NewsView {
-  return NEWS_VIEWS[(NEWS_VIEWS.indexOf(view) + delta + NEWS_VIEWS.length) % NEWS_VIEWS.length]!;
-}
-
 /**
  * Whether the open story stays open as Tab moves to `next`: when that view lists it, a section by the
  * story's sections, All by its blocks as last answered (null when All hasn't been). Otherwise the pane

@@ -334,7 +334,7 @@ test('search (36a, 36b): humongous gives both applications, kubernetes Woodgrove
   }
 });
 
-test('the status filter: In process shows its three, and All all 62', async () => {
+test('the status filter: In process shows its three, and All all 62; Tab and Shift-Tab step it, wrapping', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -347,6 +347,14 @@ test('the status filter: In process shows its three, and All all 62', async () =
     await until('Withdrawn alone', () => rows(page).count(), count => count === 2);
     await page.locator('.jb-status button', {hasText: 'All'}).click();
     await until('every application', () => rows(page).count(), count => count === 62);
+    // SV-211: Tab and Shift-Tab step the filter from anywhere on the page, wrapping.
+    assert.equal(await page.locator('.jb-status').getAttribute('data-tip'), 'Tab · ⇧Tab');
+    await page.keyboard.press('Shift+Tab');
+    await until('Withdrawn, wrapped round to', () => page.locator('.jb-status button.on').textContent(), text => text === 'Withdrawn2');
+    await until('Withdrawn alone', () => rows(page).count(), count => count === 2);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await until('on round to Applied', () => page.locator('.jb-status button.on').textContent(), text => text === 'Applied31');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

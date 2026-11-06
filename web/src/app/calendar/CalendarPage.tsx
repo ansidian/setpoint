@@ -38,7 +38,7 @@ import {tabTitle} from '../../logic/title.ts';
 import {movedLine, resizedLine, visibleItems, weekMonth, weekStart, weekTitle} from '../../logic/week.ts';
 import {glide, layout, motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {segThumb} from '../../ui/seg.ts';
+import {Segmented} from '../../ui/Segmented.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useNow} from '../clock.ts';
 import {openContextMenu} from '../ContextMenu.tsx';
@@ -1007,10 +1007,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         </span>
         {/* Search hides Month | Week (D48); the grid still pages. */}
         {!searching && (
-          <span className="seg" ref={segThumb} style={{marginLeft: 8}}>
-            <button type="button" className={mode === 'month' ? 'on' : undefined} aria-pressed={mode === 'month'} data-tip="Month · M" onClick={() => switchMode('month')}>Month</button>
-            <button type="button" className={mode === 'week' ? 'on' : undefined} aria-pressed={mode === 'week'} data-tip="Week · W" onClick={() => switchMode('week')}>Week</button>
-          </span>
+          <Segmented style={{marginLeft: 8}} value={mode} onChange={switchMode} onTab={switchMode}
+            segments={[{value: 'month', label: 'Month', tip: 'Month · M'}, {value: 'week', label: 'Week', tip: 'Week · W'}]} />
         )}
         <span className="grow" />
         {!searching && (

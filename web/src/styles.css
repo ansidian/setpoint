@@ -168,18 +168,17 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 var(--row-end) 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
 /* Each page's title is its heading one (axe's page-has-heading-one, SV-99), drawn as before. */
 .hd-title { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
-.seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; }
-.seg > * { height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; }
-.seg > .on { background: var(--sub3); color: var(--ink); }
-/* Another segment on: a `sub3` thumb slides from the last one to it over 180 ms, standing in for the
-   fill, which moves to and from it at once (polish audit grids-09; ui/seg.ts places it). */
-.seg { position: relative; }
-.seg > * { position: relative; }
+.seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; position: relative; }
+.seg > * { position: relative; height: 24px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: var(--ink2); font-size: 12.5px; }
+.seg > .on { color: var(--ink); }
+/* The `on` segment's fill is a `sub3` thumb under it, always drawn and always on its transition, so
+   when another segment turns on it travels there, position and width together, on a slight spring
+   (#317; ui/seg.ts places it, at once for anything else). Under reduced motion it jumps. */
 .seg::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: var(--thumb-w, 0px); transform: translateX(var(--thumb-x, 0px)); border-radius: 8px; background: var(--sub3);
-  visibility: hidden; }
-/* It moves only while it slides; at rest it follows the segment's size at once (the fonts arriving). */
-.seg[data-sliding]::before { visibility: visible; transition: transform var(--dur-medium) var(--ease), width var(--dur-medium) var(--ease); }
-.seg[data-sliding] > .on { background: transparent; }
+  transition: transform var(--thumb-dur) var(--thumb-spring), width var(--thumb-dur) var(--thumb-spring); }
+.seg:not([data-thumb])::before { visibility: hidden; }
+.seg[data-still]::before { transition: none; }
+@media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
 .search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
 /* A focused field wakes: `edgeFocus`, stronger than hover's border, on `cardOn` (white in Light) (#172). */
 .search:focus-within { border-color: var(--edgeFocus); background: var(--cardOn); color: var(--ink); }
@@ -638,8 +637,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .btn, .ibtn, .nav, .acct, .today-row, .row, .arow, .gh, .nfold, .rd-tools .tool, .imgbar .lnk, .unpin, .attach, .dl, .search, .input, .seg > *, .retry, .hbar .act {
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
-/* A segment's fill hands over to the thumb and back at once (polish audit grids-09). */
-.seg > .on, .seg[data-sliding] > * { transition-property: color, box-shadow, border-color, transform; }
+/* A segment's labels hand over with the thumb (#317): the one it leaves lets go of `ink` at once,
+   the one it lands on takes it as the thumb arrives, and the one turned on drops its hover at once. */
+.seg > * { transition: background-color var(--dur-fast) var(--ease), color var(--thumb-ink) linear, transform var(--dur-fast) var(--ease); }
+.seg > .on { transition: color var(--thumb-ink) linear var(--thumb-ink-delay), transform var(--dur-fast) var(--ease); }
 @media (hover: hover) {
   .btn:not(.ghost, .out, .quiet):enabled:hover { background: color-mix(in srgb, var(--ink) 86%, var(--page)); }
   .btn.out:enabled:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); }

@@ -33,7 +33,7 @@ import {lineOffsets, rowReminders, taskTimeMinutes, withLine} from '../../logic/
 import {projectChoice, projectMenu, rankMatches} from '../../logic/search.ts';
 import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {segThumb} from '../../ui/seg.ts';
+import {Segmented} from '../../ui/Segmented.tsx';
 import {placeMenu, useMenuRef} from '../../ui/popover.ts';
 import {colourVar, useAccounts} from '../accounts.ts';
 import {LineReference} from './LineReference.tsx';
@@ -1035,10 +1035,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
             )}
           </span>
         ) : (
-          <span className="seg" ref={segThumb} role="tablist" aria-label="Item type">
-            <span className={kind === 'event' ? 'on' : ''} role="tab" aria-selected={kind === 'event'} onClick={() => switchKind('event')}>Event</span>
-            <span className={kind === 'task' ? 'on' : ''} role="tab" aria-selected={kind === 'task'} onClick={() => switchKind('task')}>Task</span>
-          </span>
+          <Segmented role="tab" label="Item type" value={kind} onChange={switchKind}
+            segments={[{value: 'event', label: 'Event'}, {value: 'task', label: 'Task'}]} />
         )}
         <button type="button" className="ibtn" aria-label="Close editor" data-tip="Close · Esc" onClick={onClose}><Icon name="close" /></button>
       </div>}

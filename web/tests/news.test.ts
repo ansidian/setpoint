@@ -6,7 +6,7 @@ import type {NewsPageOut, NewsSection, RecapOut, StoryRowOut} from '@setpoint/sh
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, foldFacts, keepsStory, stepView, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moveStory, neighbourStory, nextSeen,
+  articleNote, dueSeen, factsSince, foldFacts, keepsStory, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moveStory, neighbourStory, nextSeen,
   outletLine, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, sameLayout, sight, stamp, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
@@ -470,17 +470,6 @@ describe('Settings › AI\'s News group (30b)', () => {
 });
 
 describe('Tab and Shift-Tab (SV-207, D454)', () => {
-  test.each<[NewsView, 1 | -1, NewsView]>([
-    ['all', 1, 'local'],
-    ['local', 1, 'tech'],
-    ['ai', 1, 'general'],
-    ['general', 1, 'all'],
-    ['local', -1, 'all'],
-    ['all', -1, 'general'],
-  ])('from %s by %i: %s', (view, delta, next) => {
-    expect(stepView(view, delta)).toBe(next);
-  });
-
   const page = {blocks: [{section: 'ai', stories: [{id: 7}]}]} as unknown as NewsPageOut;
   test.each<[string, NewsView, NewsSection[], NewsPageOut | null, boolean]>([
     ['a section the story is in keeps it', 'general', ['ai', 'general'], page, true],

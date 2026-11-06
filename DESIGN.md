@@ -42,8 +42,8 @@ cutover. This file owns what's on screen and how it behaves.
   Every common action has a key and opens without delay.
 - **No focus rings, no accessibility work.** As in darma and mantel: no focus rings or browser
   outlines anywhere, modals and popovers included; the keyboard cursor is a fill (`sub2`). Keyboard
-  navigation, focus handling and restoration stay. Night and Light only; no reduced-motion,
-  reduced-transparency or contrast overrides.
+  navigation, focus handling and restoration stay. Night and Light only; no reduced-transparency or
+  contrast overrides, and one reduced-motion one: a segmented control's thumb jumps (#317).
 - **Minimal supporting text.** Only what helps Andy decide or recover.
 
 ## Vocabulary
@@ -163,7 +163,7 @@ account labels 13; summaries in Attention 13.5; group headers 12; search's rows 
 mantel's timings: **120 ms** hover and fills, **180 ms** popovers and panes, **260 ms** modals, all
 `cubic-bezier(.2,0,0,1)`. The floating detail has its own motion ([The glide](#the-glide)). A lifted
 calendar chip tilts −1.5° and scales 1.04. A theme switch has no motion of its own: what has a colour
-transition takes it, the rest lands at once (#291). A segmented control's fill slides to the segment turned on over 180 ms (#179). A
+transition takes it, the rest lands at once (#291). A segmented control's thumb travels to the segment turned on, about 125 ms on a slight spring (#317). A
 press goes in over **80 ms** and lets go over 120 ms (#150). The stories `N` brings onto News's list
 settle in from `sub2` over 900 ms (#131): the longer motions are kept for arrivals, as are a
 calendar change's landing (420 ms, #192) and an editor field another's change moved (600 ms, #187).
@@ -612,7 +612,8 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
 
 - **Header:** "Oct 4 – 10, 2026" (min 128 px; "Sep 27 – Oct 3, 2026" across months, "Dec 27,
   2026 – Jan 2, 2027" across years), ‹ Today › paging a week, Month | Week. Tab "Oct 4 – 10, 2026 ·
-  Calendar". `M` and `W` switch; Week opens on the selected day's week, Month on its month, Week zooming in from
+  Calendar". `M` and `W` switch, and Tab / Shift-Tab step Month | Week, wrapping, but in a field, a
+  popover or the editor (#317); Week opens on the selected day's week, Month on its month, Week zooming in from
   that week's row in Month and Month settling back out around it, over 180 ms (#179). The view
   rides in the address (`?view=week`) and the last one used is remembered, so Calendar, `2` and links
   open in it.
@@ -871,6 +872,7 @@ than kept as a list to clear. No board draws it.
   focus, except in a text field (Search news) or an open popover or menu, where Tab is the
   browser's. An open story stays open when the next view lists it; otherwise the pane closes and the
   cursor goes to the view's first story. The segmented control's tooltip says "Tab · ⇧Tab" (#314).
+  The list fades in quickly as the view changes (#317).
 - **Seen:** a row fully on screen for about a second, or opened. A dot is for what All or a section
   shows; a story that never made All's front page isn't owed, and nothing asks the user to clear it
   (#312). No "mark all seen" (D87).
@@ -1344,7 +1346,8 @@ Offer). A theme switch has no motion of its own (#291).
 
 - **Keys:** `4` Jobs; `J` / `K` move, through Needs you's items and then the table's rows; Enter
   opens the application, or an item's email; ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
-  it; `/` searches Jobs; `O` opens the posting's link. Esc goes from the title's field, a menu, the
+  it; `/` searches Jobs; `O` opens the posting's link; Tab / Shift-Tab step the status filter,
+  wrapping from Withdrawn to All, as News's views (#317), the table fading in quickly. Esc goes from the title's field, a menu, the
   full posting or (in a narrow window) the detail back a step, then closes the pane; in search, it
   clears the query, then leaves search.
 - **Passive** (D313): Jobs sends no notifications, adds nothing to mail's, and never touches the
@@ -1485,8 +1488,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter;
-  Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Enter, Esc; News (after 2.0) `3`,
-  `J` `K` Enter `O` `N` Esc. Key hints read "Esc",
+  Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Tab ⇧Tab, Enter, Esc; News (after 2.0) `3`,
+  `J` `K` Enter `O` `N` Tab ⇧Tab Esc; Jobs Tab ⇧Tab. Key hints read "Esc",
   "⌘K", "⇧I". They work with an HTML email clicked into, too, but not in a field of its own (#294).
 - **Changes** go through one command layer: pending (.5 opacity) until the provider confirms, failed
   in place with the provider's message otherwise. Nothing quietly reverts. A calendar item deleted
@@ -2656,7 +2659,8 @@ it changes what's on screen.
     so Week reads as Month zoomed in on your week. A segmented control (Month | Week, Unread | All,
     Event | Task, News's sections, Code expiry) no longer jumps its fill: when another segment turns
     on, a `sub3` thumb slides from the last one to it over 180 ms, then hands it back its own fill
-    (Andy, 2026-10-11, polish audit grids-09).
+    (Andy, 2026-10-11, polish audit grids-09). Amended by #317: the thumb is always the `on`
+    segment's fill and travels on a spring.
 180. **A day answers the pointer, and + makes an event on it** (amending Week view's "a click never
     creates on its own" only by adding a control: a click on a day still only selects it): a month day
     under the pointer lays `sub` at 55% over its weekend or outside tint, fading over 120 ms (not on
@@ -3950,3 +3954,20 @@ it changes what's on screen.
     day (`FREQ=DAILY;UNTIL=20261115`), as a span of days with a time repeats each day (#256). For
     one day it's just that day; beside a span of days of its own it stays words. One event across
     days is "for 48h" or "fri 9am to sun 9am". The iPhone app gets the same through the compose bundle.
+317. **One segmented control, whose thumb travels with it** (amending #179 and #314; Andy,
+    2026-11-06; darma SV-211, D458). Andy set News's control beside a smart-home app's tab bar: Setpoint's
+    felt "off and cheap instead of a fluid animation that moves with the control". Measured, only the
+    thumb's width moved; its position jumped, because its transition was switched on in the same
+    change that moved it. Every segmented control (Month | Week, Event | Task, News's views, Jobs's
+    status filter, Code expiry) is now one component (`ui/Segmented.tsx`), and its `sub3` thumb is
+    always drawn and always on its transition: it travels to the segment turned on, place and width
+    together, about 125 ms on a damped spring settling 1.5% past (380 ms in all, `tokens.ts` ›
+    `thumb`), the `on` segment drawing no fill of its own, so there's no hand-over seam. The label it
+    leaves lets go of `ink` at once; the one it lands on takes it as the thumb arrives. Placing it on
+    the first draw, a resize, the fonts or a count changing its width is at once. Under reduced motion
+    it jumps, the one reduced-motion override (Andy took it, amending the principle). Tab and
+    Shift-Tab with wrapping, News's since #314, are the component's, turned on for News, Calendar and
+    Jobs, but not in a text field, with a popover, menu, Settings, the palette or the editor open, or
+    inside a form or dialog; Event | Task and Code expiry sit in forms and don't take it. News's
+    open-story rule is unchanged. Jobs's table and News's list fade in quickly (120 ms) as the filter
+    or view changes. The phone layout is unchanged (D275).

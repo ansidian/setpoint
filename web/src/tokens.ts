@@ -178,6 +178,18 @@ export const radius = {pill: 999, modal: 26, popover: 18, card: 14, bar: 12, row
 export const motion = {fast: 120, medium: 180, slow: 260, press: 80, ease: 'cubic-bezier(.2,0,0,1)', liftTilt: -1.5, liftScale: 1.04} as const;
 
 /**
+ * A segmented control's thumb (#317): a damped spring (ratio .8) over `ms`, 95% of the way there by
+ * about 125 ms and 1.5% past it before it settles. The label it lands on takes `ink` over `inkMs`
+ * after `inkDelayMs`, as the thumb arrives; the one it leaves lets go at once.
+ */
+export const thumb = {
+  ms: 380,
+  spring: 'linear(0, 0.07 4%, 0.223 8%, 0.399 12%, 0.565 16%, 0.705 20%, 0.813 24%, 0.893 28%, 0.947 32%, 0.992 38%, 1.012 45%, 1.014 55%, 1.004 70%, 1 85%, 1)',
+  inkMs: 90,
+  inkDelayMs: 60,
+} as const;
+
+/**
  * Loading (DESIGN.md › Motion, Decided while building #225): a skeleton's bars are `sub2` on the
  * page and `sub3` inside a `sub` group (Settings, cards); a skeleton appears only after `delayMs`,
  * so a fast answer never flashes one, fades in over motion.medium, then breathes, every bar in
@@ -340,6 +352,10 @@ export function cssVariables(): Record<string, string> {
   vars['--dur-medium'] = `${motion.medium}ms`;
   vars['--dur-slow'] = `${motion.slow}ms`;
   vars['--dur-press'] = `${motion.press}ms`;
+  vars['--thumb-dur'] = `${thumb.ms}ms`;
+  vars['--thumb-spring'] = thumb.spring;
+  vars['--thumb-ink'] = `${thumb.inkMs}ms`;
+  vars['--thumb-ink-delay'] = `${thumb.inkDelayMs}ms`;
   vars['--news-landed'] = `${news.landedMs}ms`;
   vars['--skel'] = `var(--${skeleton.fill})`;
   vars['--skel-on-sub'] = `var(--${skeleton.fillOnSub})`;

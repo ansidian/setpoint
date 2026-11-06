@@ -37,7 +37,7 @@ import {getCached, useResource, useResources} from '../../api/client.ts';
 import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  ALSO_SHELF, dueSeen, emptySectionLine, isAlsoKey, keepsStory, stepView, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
+  ALSO_SHELF, dueSeen, emptySectionLine, isAlsoKey, keepsStory, NEWS_VIEWS, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
   pageLayout, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
   visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -47,7 +47,7 @@ import type {NewsView, Route} from '../../logic/route.ts';
 import {tabTitle} from '../../logic/title.ts';
 import {motion, news as newsTiming} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {segThumb} from '../../ui/seg.ts';
+import {Segmented, useListFade} from '../../ui/Segmented.tsx';
 import {echoKey, isTyping, plainKey} from '../../ui/keys.ts';
 import {useMenuRef} from '../../ui/popover.ts';
 import {useNow} from '../clock.ts';
@@ -102,6 +102,8 @@ const RECAP_SHELF = 'recap';
 const rowSelector = (key: string) => (isAlsoKey(key) ? `.nw-list [data-also="${key}"]` : `.nw-list [data-key="${key}"]`);
 
 const pathOf = (view: NewsView) => (view === 'all' ? NEWS_PATH : sectionPath(view));
+/** All | Local | Tech | AI | General, which Tab and Shift-Tab step through. */
+const VIEW_SEGMENTS = NEWS_VIEWS.map(view => ({value: view, label: view === 'all' ? 'All' : SECTION_LABELS[view]}));
 
 /**
  * The order held for this visit to a list. What the cache held when the visit began is drawn as it
@@ -294,11 +296,11 @@ export function NewsPage({route}: {route: NewsRoute}) {
     return isAlsoKey(key) ? also.find(one => one.story_id === keyStory(key!))?.url ?? null : null;
   }
   /**
-   * Tab and Shift-Tab (SV-207, D454): the next or previous view. The open story stays open where that
-   * view lists it; otherwise the pane closes and the cursor goes to the view's first story.
+   * Tab and Shift-Tab (SV-207, D454; the segmented control steps, wrapping, #317): the next or previous
+   * view. The open story stays open where that view lists it; otherwise the pane closes and the cursor
+   * goes to the view's first story.
    */
-  function stepSection(delta: 1 | -1) {
-    const next = stepView(view, delta);
+  function stepSection(next: NewsView) {
     const row = open === null ? undefined : rows.get(open) ?? (story?.id === open ? story : undefined);
     const keep = open !== null && row !== undefined && keepsStory(next, row.sections, open, getCached<NewsPageOut>(NEWS_PATH) ?? null);
     if (!keep) setFirstIn(next);
@@ -306,6 +308,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   }
 
   useSeen(list, shown, rows);
+  useListFade(list, view);
   // The user on News, with the recap's stories once it's on screen: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn, open !== null) ? recapShown?.ids ?? null : null);
 
@@ -332,10 +335,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
         echoKey('o');
         run(openOriginal);
       }
-      // Tab and Shift-Tab step the views, wherever focus is, but in a field (above) or an open popover or menu (D454).
-      else if (event.key === 'Tab' && !event.metaKey && !event.ctrlKey && !event.altKey && !searching && !document.querySelector('.pop')) {
-        run(() => stepSection(event.shiftKey ? -1 : 1));
-      }
       else if (plainKey(event, 'Escape')) {
         if (route.article !== null) run(() => go({article: null}));
         else if (open !== null) run(close);
@@ -359,7 +358,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
     search.clear();
     navigate({page: 'news', view: next, story: null, article: null});
   };
-  const segOn = (section: NewsView) => (view === section ? 'on' : undefined);
   const rowProps = {rows, cursor, openKey: shownOpenKey, arrived, now, zone, onPoint: (key: string) => key !== cursor && setCursor(key), onOpen: openAt};
   const firstShelf = !showHeadlines && !recap.shown;
 
@@ -368,10 +366,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
       <header className="hd ends">
         <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
         {!searching && (
-          <span className="seg" ref={segThumb} data-tip="Tab · ⇧Tab">
-            <button type="button" className={segOn('all')} onClick={() => switchTo('all')}>All</button>
-            {NEWS_SECTIONS.map(section => <button key={section} type="button" className={segOn(section)} onClick={() => switchTo(section)}>{SECTION_LABELS[section]}</button>)}
-          </span>
+          <Segmented value={view} onChange={switchTo} onTab={stepSection} segments={VIEW_SEGMENTS} />
         )}
         <span className="grow" />
         <SearchField search={search} label="Search news" onEnter={first => setCursor(storyKey(SEARCH_SHELF, first.id))} />

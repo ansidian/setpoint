@@ -68,6 +68,7 @@ import {JobsLines, JobsOff} from './States.tsx';
 import {HeaderRow, rowKey, Rows, takenAway, useRoleFit} from './Table.tsx';
 import {DEFAULT_SORT, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
+import {useListFade} from '../../ui/Segmented.tsx';
 import './jobs.css';
 
 type JobsRoute = Extract<Route, {page: 'jobs'}>;
@@ -118,6 +119,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const field = useRef<HTMLInputElement>(null);
   // Where the table stood when search began, to come back to (36a: "at their scroll").
   const scroller = useRef<HTMLDivElement>(null);
+  useListFade(scroller, filter);
   const tableScroll = useRef(0);
   const enterSearch = () => {
     if (!searching) tableScroll.current = scroller.current?.scrollTop ?? 0;
