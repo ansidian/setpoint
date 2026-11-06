@@ -32,8 +32,8 @@ async function storyId(setpoint: Setpoint, headline: string): Promise<number> {
 const stateOf = async (setpoint: Setpoint, id: number) => (await setpoint.api<StoryOut>('GET', `/news/stories/${id}`)).state;
 
 /**
- * All without its recap, as it is once Done or an hour away has put it away: for the checks about the
- * blocks under it, whose rows it would push down.
+ * All without its recap, as it is once an hour away has put it away: for the checks about the blocks
+ * under it, whose rows it would push down. The route stays for the iPhone app (D451).
  */
 const putRecapAway = (setpoint: Setpoint) => setpoint.api('POST', '/news/recap/done');
 
@@ -131,14 +131,16 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
-    // The recap first, then the blocks in their fixed order, each with its "N more".
-    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['While you were awaysince Mon 10:40 PMDone', 'Local', 'Tech', 'AI', 'General']);
+    // The recap first, with no Done, then the blocks in their fixed order (D451).
+    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['While you were awaysince Mon 10:40 PM', 'Local', 'Tech', 'AI', 'General']);
+    assert.equal(await page.locator('.nw-recap button').count(), 0);
     // Each section's glyph before its name, and the recap's `history`, 14 px in ink3, the name in ink2 (#120).
     const ink3 = await colourOf(page, 'var(--ink3)');
     assert.deepEqual(await rested(() => glyphs(page.locator('.nw-sec > .icon'))),
       [['history', '14', ink3], ['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
     assert.equal(await rested(() => page.locator('.nw-sec').nth(1).evaluate(header => getComputedStyle(header).color)), await rested(() => colourOf(page, 'var(--ink2)')));
-    assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '7 more in Tech', '4 more in AI', '9 more in General']);
+    // Each block ends after its stories, with no "N more in ‹section›" (D451).
+    assert.equal(await page.getByText(/ more in /).count(), 0);
     assert.equal(await page.locator('.nw-recap [data-story]').count(), 8);
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
     // The meta: the lead's on one line, a row's on two.
@@ -217,11 +219,11 @@ test('board 31: board 25 in Light', async () => {
   }
 });
 
-test('SV-141: News has one right edge: at the design target it\'s the row\'s end, and on a very wide window the thumbnails, Upcoming, the recap\'s Done and the search field all stop at it, a story\'s pane taking the header to its end', async () => {
+test('SV-141: News has one right edge: at the design target it\'s the row\'s end, and on a very wide window the thumbnails, Upcoming and the search field all stop at it, a story\'s pane taking the header to its end', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
-    const ENDS = '.nw-row img, .nw-up .btn, .nw-recap .btn, .hd .search';
+    const ENDS = '.nw-row img, .nw-up .btn, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/news`);
     assert.deepEqual(await rights(target, ENDS), [SIZES.target.width - 16], 'the row\'s end, as ever');
@@ -234,6 +236,26 @@ test('SV-141: News has one right edge: at the design target it\'s the row\'s end
     await wide.locator('.nw-row').first().click();
     await wide.locator('.pane').waitFor();
     assert.deepEqual(await rights(wide, '.hd .search'), [width - 20], 'beside the pane the header runs to its end');
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('D451: a block whose stories all show in other blocks isn\'t drawn in All; the section\'s own list still holds them', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    // Every Tech story's main section made AI (the seed's stand-ins have no reading, so it's their first), and Tech's Upcoming gone.
+    await newsChange(setpoint, `
+      UPDATE news_story_sections SET position = position + 1 WHERE story_id IN (SELECT story_id FROM news_story_sections WHERE section = 'tech');
+      INSERT OR REPLACE INTO news_story_sections (story_id, section, position) SELECT story_id, 'ai', 0 FROM news_story_sections WHERE section = 'tech';
+      DELETE FROM news_events;`);
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    await row(page, 'Brush fire near the 210').waitFor();
+    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['While you were awaysince Mon 10:40 PM', 'Local', 'AI', 'General']);
+    await page.locator('.hd .seg button', {hasText: 'Tech'}).click();
+    await until('Tech\'s own list', () => page.locator('.nw-list [data-story]').count(), count => count > 0);
+    assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
@@ -358,7 +380,7 @@ test('New since you looked shows the newest four facts, then "6 more"; a click o
   }
 });
 
-test('a section (27): "12 more in Local" opens Local\'s full list, biggest first, the first as a lead; the stories behind it stay new until it shows them', async () => {
+test('a section (27): the header\'s Local opens Local\'s full list, biggest first, the first as a lead; a story All doesn\'t show is seen once Local shows it', async () => {
   const setpoint = await startSetpoint();
   try {
     const water = await storyId(setpoint, 'Water main break floods an intersection; repairs through Thursday');
@@ -366,8 +388,8 @@ test('a section (27): "12 more in Local" opens Local\'s full list, biggest first
     await page.goto(`${setpoint.base}/news`);
     await row(page, 'Brush fire near the 210').waitFor();
     await seenSettled(page, setpoint);
-    assert.equal(await stateOf(setpoint, water), 'new', 'behind "12 more", it stays new');
-    await page.locator('.nw-more', {hasText: '12 more in Local'}).click();
+    assert.equal(await stateOf(setpoint, water), 'new', 'not on All\'s front page, it isn\'t seen there');
+    await page.locator('.hd .seg button', {hasText: 'Local'}).click();
     await page.waitForURL(/\/news\/local$/);
     await until('Local\'s whole list', () => page.locator('.nw-list [data-story]').count(), count => count === 17);
     assert.equal(await page.locator('.hd .seg .on').textContent(), 'Local');
@@ -392,7 +414,7 @@ test('While you were away (#298): All opens with the recap, each section\'s bigg
     const recap = page.locator('.nw-recap');
     await recap.waitFor();
     const fixed = (await shown).request().postDataJSON() as {recap: number[]};
-    assert.equal(await recap.locator('.nw-sec').textContent(), 'While you were awaysince Mon 10:40 PMDone');
+    assert.equal(await recap.locator('.nw-sec').textContent(), 'While you were awaysince Mon 10:40 PM');
     const headlines = () => recap.locator('[data-story] .hl').evaluateAll(all => all.map(element => element.textContent!.split(' ').slice(0, 2).join(' ')));
     const before = await headlines();
     assert.deepEqual(before, [
@@ -439,7 +461,7 @@ test('While you were away (#298): All opens with the recap, each section\'s bigg
   }
 });
 
-test('Done folds the recap away and says "Recap put away · Undo", its stories still unseen; Undo brings it back; put away, a reload has none', async () => {
+test('the recap has no Done (D451): only the server puts it away, after an hour away, its stories still unseen; put away, the next visit has none', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -448,25 +470,15 @@ test('Done folds the recap away and says "Recap put away · Undo", its stories s
     const recap = page.locator('.nw-recap');
     await recap.waitFor();
     await shown;
+    assert.equal(await recap.locator('button').count(), 0, 'nothing on the web puts it away');
     const ids = (await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id);
-    await recap.getByRole('button', {name: 'Done'}).click();
-    const toast = page.locator('.toast:not(.leaving)');
-    await until('the toast', () => toast.textContent(), text => text === 'Recap put awayUndo');
-    await recap.waitFor({state: 'detached'});
-    assert.equal(await page.locator('.nw-sec').first().textContent(), 'Local', 'Local is All\'s first block again');
-    assert.equal((await setpoint.api<NewsPageOut>('GET', '/news')).recap, null);
-    assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen (D426)');
-
-    await toast.getByRole('button', {name: 'Undo'}).click();
-    await until('the recap back', () => recap.locator('[data-story]').count(), count => count === 8);
-    assert.deepEqual((await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id), ids);
-
-    await recap.getByRole('button', {name: 'Done'}).click();
-    await recap.waitFor({state: 'detached'});
-    await setpoint.idle();
+    // As the server does an hour after it has shown with the user away (server/tests/news.test.ts has the hour).
+    await putRecapAway(setpoint);
     await page.reload();
     await row(page, 'Brush fire near the 210').waitFor();
     assert.equal(await page.locator('.nw-recap').count(), 0);
+    assert.equal(await page.locator('.nw-sec').first().textContent(), 'Local', 'Local is All\'s first block again');
+    assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen (D426)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -537,7 +549,7 @@ test('the order holds: a change updates rows on screen in place, the rest waits 
     // Opening the page always shows the latest order.
     const latest = await setpoint.api<NewsPageOut>('GET', '/news');
     await page.reload();
-    await until('the latest order on opening', () => order(), ids => ids.slice(0, 5).join() === latest.blocks[0]!.stories.map(story => String(story.id)).join());
+    await until('the latest order on opening', () => order(), ids => ids.slice(0, latest.blocks[0]!.stories.length).join() === latest.blocks[0]!.stories.map(story => String(story.id)).join());
     assert.equal(await page.locator('.nw-pill').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

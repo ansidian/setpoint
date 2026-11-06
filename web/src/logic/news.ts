@@ -66,9 +66,6 @@ export function rowMeta(row: StoryRowOut, now: number, timeZone: string, section
   };
 }
 
-/** "12 more in Local"; "2 in Tech" when its block shows none of them (news-13), so it doesn't read as more than nothing. */
-export const moreLine = (count: number, section: NewsSection, none = false) => `${count} ${none ? '' : 'more '}in ${SECTION_LABELS[section]}`;
-
 /** The recap's header, on the right: "since Fri 6:10 PM", a stamp as the pane's meta words one; none when the user never looked. */
 export const recapSince = (since: string | null, now: number, timeZone: string) => (since ? `since ${stamp(since, now, timeZone)}` : null);
 
@@ -113,7 +110,7 @@ export function upcomingWhen(upcoming: Pick<UpcomingOut, 'starts_at' | 'all_day'
 
 // ---- The held order (D87) ----
 
-/** One list on screen: an All block (with its "N more") or a section's list. */
+/** One list on screen: an All block or a section's list. */
 export interface Shelf {
   key: string;
   ids: number[];
@@ -394,8 +391,7 @@ export const STORY_HOURS = 48;
  * "Nothing new in Tech since Mon", from then; anything that came and left unseen before is the recap's.
  * During the first run it's still being sorted: "Nothing sorted in AI yet". A section with stories
  * shows them, seen or not: the dots aren't a to-do list (D87). An empty block in All whose section
- * has `more` (its stories shown in other blocks, #96) isn't an empty section: its "2 more in Tech"
- * stands alone.
+ * has `more` (its stories shown in other blocks, #96) isn't an empty section: it isn't drawn (D451).
  */
 export function emptySectionLine(section: NewsSection, stories: number, more: number, firstRun: boolean, now: number, timeZone: string): string | null {
   if (stories > 0 || more > 0) return null;

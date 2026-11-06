@@ -66,15 +66,15 @@ export function keepsImage(stage: 'page' | 'archive' | 'purge', image: {articleI
 
 /** A block shows at least this many stories, when it has them, … */
 export const BLOCK_MIN = 3;
-/** … and at most this many (DESIGN.md › The list: "top 3–5 stories, biggest first"). */
-export const BLOCK_MAX = 5;
+/** … and at most this many (DESIGN.md › The list: "top 3–7 stories, biggest first"; D451). */
+export const BLOCK_MAX = 7;
 /** Past the first three, a block goes on only while a story scores at least this (scores run 0–100). */
 export const BLOCK_BAR = 70;
 
 /**
- * How many of a section's stories, biggest first, All's block shows: the top three, then up to two
- * more that clear the bar, so a big day shows more and a quiet one stays short. N3's ranking may
- * retune the bar; the rest is "N more in Local".
+ * How many of a section's stories, biggest first, All's block shows: the top three, then up to four
+ * more that clear the bar, so a big day shows more and a quiet one stays short. The rest are only in
+ * the section's own list, which All doesn't link to (D451).
  */
 export function blockSize(scores: readonly number[]): number {
   let size = Math.min(scores.length, BLOCK_MIN);

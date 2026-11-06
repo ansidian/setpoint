@@ -88,13 +88,12 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     await row(page, 'Anthropic releases Claude Haiku 5.5').waitFor();
     assert.equal(await page.locator('.nw-line').count(), 1, 'only the stale section has a line');
 
-    // Tech: one line in `ink3`, no rows, no Upcoming, no "N more".
+    // Tech: one line in `ink3`, no rows, no Upcoming.
     const tech = page.locator('.nw-sec', {hasText: 'Tech'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await tech.textContent(), 'Nothing new in Tech since Mon');
     assert.equal(await rested(() => tech.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--ink3)')));
     assert.deepEqual(await rested(() => leadGlyph(tech)), [ICONS.newspaper, '16', await rested(() => colourOf(page, 'var(--ink3)')), 8], 'it leads with newspaper (#124)');
     assert.equal(await page.locator('.nw-up').count(), 0);
-    assert.deepEqual(await page.locator('.nw-more').allTextContents(), ['12 more in Local', '4 more in AI', '9 more in General']);
 
     // Show headlines: the raw headlines with their links, newest first, at the top of the list.
     await unsorted.getByRole('button', {name: 'Show headlines'}).click();

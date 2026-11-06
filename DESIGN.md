@@ -699,8 +699,10 @@ navigation.
   in `ink3` (Local `location_on`, Tech `computer`, AI `auto_awesome`, General `public`; #120).
   - In All, the blocks come in a fixed order: Local, Tech, AI, General. A story in more than one
     section shows once, in its main section's block (#96).
-  - Each block shows its **top 3–5 stories, biggest first**, then "12 more in Local". That's a 36 px
-    link in `ink2` 12.5 with a chevron, and it opens the section.
+  - Each block shows its **top 3–7 stories, biggest first**: the first three, then those that score
+    70 or more, so a big day shows more and a quiet one stays short. The block ends there, with no
+    count and no link: All is the front page, and a section's whole list is reached from the
+    header's All | Local | Tech | AI | General (#312).
 - **Lead story** (each block's first; also the first of a section's list and of each Missed day):
   - Layout: a grid of 12 | 232 | text, 14 apart, padding 14 16 14 12, `hair` below.
   - Image: 232 × 130 px, radius 12.
@@ -752,8 +754,8 @@ navigation.
   - It drops 8 px into place as it fades in over 180 ms; under the pointer its ring turns `edgeHover`
     and its arrow `ink` (#131).
 - **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon", only
-  when its own list is empty too. A block whose stories all show in other blocks (#96) has just its
-  "2 more in Tech" link (#116).
+  when its own list is empty too. A block whose stories all show in other blocks (#96) isn't drawn
+  in All, unless it has an Upcoming row or its section's stale or failing line (#312).
 
 ### The story pane
 
@@ -801,8 +803,8 @@ navigation.
 The recap (#298): what left the page before the user saw it, offered once at the top of All rather
 than kept as a list to clear. No board draws it.
 - **Header:** a section header (32 px, `history` in `ink3`), "While you were away", then on the
-  right "since Fri 6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one) and
-  a ghost small **Done**.
+  right "since Fri 6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one).
+  No Done (#312).
 - **Rows:** each section's biggest stories that left the page unseen since the last recap was put
   away, up to 2 per section (8 at most, D429), grouped in the blocks' order (Local, Tech, AI,
   General) and biggest first within each. Story rows only, no lead. Each row names its section in the meta.
@@ -813,9 +815,9 @@ than kept as a list to clear. No board draws it.
   block and isn't in the recap.
 - **Put away:** once it has been on screen and the user has then been away from News for about an
   hour; a shorter trip to another page, or opening News into a section or from a story link before
-  it has shown, keeps it. **Done** puts it away at once: it folds away (180 ms) and says "Recap put
-  away · Undo". Either way its stories stay unseen and in search's archive (D91), and the next
-  recap holds only what left after.
+  it has shown, keeps it, and nothing else puts it away (#312): it folds away (180 ms) when an answer
+  no longer has it. Its stories stay unseen and in search's archive (D91), and the next recap holds
+  only what left after.
 - Only on All: not in a section's list, in search, or during the first run.
 
 ### States
@@ -857,8 +859,9 @@ than kept as a list to clear. No board draws it.
 
 - **Keys:** `3` News; `J` / `K` move; Enter opens the story; `O` opens the original article; `N`
   takes the new stories; Esc goes from an article back to its story, then closes the pane.
-- **Seen:** a row fully on screen for about a second, or opened. Stories behind "N more" stay new
-  until their section shows them. No "mark all seen" (D87).
+- **Seen:** a row fully on screen for about a second, or opened. A dot is for what All or a section
+  shows; a story that never made All's front page isn't owed, and nothing asks the user to clear it
+  (#312). No "mark all seen" (D87).
 - **The order holds** while the page is open. A story on screen updates its dot, sources and
   summary in place; everything else waits for the pill.
 - **Thumbnails** are Setpoint's copies and expire with their story. Never an AI-generated image.
@@ -1610,6 +1613,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     the Missed list by day. Neither is in the app; All opens with the recap, which no board draws.
 43. **The floating detail is 360 px wide** (#308): board 12a draws it at 280 with its title on one
     line. The app's card is 80 px wider and its title wraps, up to 3 lines.
+44. **No "N more in ‹section›" in All** (#312): boards 25, 26a, 26b, 29a, 29b and 31 end blocks with
+    "12 more in Local" and the like. The app's blocks end after their stories; the audit patches
+    the link out of 25 and 31, the boards it sets beside the app.
 
 ## Not designed yet
 
@@ -3893,3 +3899,14 @@ it changes what's on screen.
     three 3 px `accent` dots) fades up from nothing over 120 ms and swells from .7 to full size over
     180 ms; dragging or focused, they stay. The drag follows the pointer 1:1 at any zoom. `accent`
     in place of the clip's violet (Claude's call, as a small gap).
+312. **All is the front page only** (amending #298 and #116; Andy, 2026-11-05; darma
+    SV-204, D451). Andy reads All's front page and skips the rest, and Done and "N more" both asked
+    for more than that: Done was a chore, and "N more in ‹section›" took him out of All into a list
+    that read as a backlog, as Missed had. So While you were away has no Done and no "Recap put away
+    · Undo" toast: it goes only after an hour away once it has shown. The server keeps its Done and
+    Undo routes for the iPhone app (SV-200). All's blocks end after their stories, with no count or
+    link, and hold 3 to 7 (7 rather than 5; the 70 bar still keeps a quiet day at 3). Stories that
+    never made the front page aren't owed: no dot asks to clear them. Settled while building: a
+    block whose stories all show in other blocks, which had only its "2 in Tech" link (#116), isn't
+    drawn (Claude's call, as a small gap). Board audit: boards 25 and 31 still draw "N more"
+    (override 44).

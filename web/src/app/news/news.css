@@ -151,9 +151,6 @@
   .nw-row .sm { display: none; }
 }
 
-.nw-more { height: 36px; display: flex; align-items: center; gap: 4px; padding: 0 16px 0 24px; color: var(--ink2); font-size: 12.5px; flex: none; width: 100%; text-align: left; }
-.nw-more:hover { color: var(--ink); background: var(--sub); }
-.nw-more .icon { color: var(--ink3); }
 
 /* The story pane. A story's or an article's content eases in as it's opened or stepped to (news-05, #232). */
 .st-swap { display: flex; flex-direction: column; flex: none; animation: st-in var(--dur-medium) var(--ease); }
@@ -220,6 +217,6 @@
 
 /* Every control answers the pointer over 120 ms, as the mail list's rows do (DESIGN.md › Decided
    while building #12, #151); rows are controls, so the arrow, never the text cursor. */
-.nw-row, .nw-lead, .nw-up, .nw-up-story, .nw-raw, .nw-more, .src-row { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
+.nw-row, .nw-lead, .nw-up, .nw-up-story, .nw-raw, .src-row { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .nw-row, .nw-lead, .nw-up { cursor: default; }
 

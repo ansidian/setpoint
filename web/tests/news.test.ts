@@ -6,7 +6,7 @@ import type {RecapOut, StoryRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  articleNote, dueSeen, factsSince, foldFacts, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moreLine, moveStory, neighbourStory, nextSeen,
+  articleNote, dueSeen, factsSince, foldFacts, foldLine, holdRecap, initials, landed, lookedAt, openedInVisit, shownState, visitDots, moveStory, neighbourStory, nextSeen,
   outletLine, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, sameLayout, sight, stamp, storiesOnScreen, storyKey, storyMeta, upcomingWhen, waiting, waitingSince,
   capMeter, cappedLine, dollars, emptySectionLine, everyLine, feedFailing, firstRunLine, firstRunShare, hazardGlyph, newsSourceState, sectionLine, sourcesHeader, sourceTile, unsortedLine,
 } from '../src/logic/news.ts';
@@ -75,10 +75,7 @@ describe('meta copy', () => {
     expect(recapSince(since, now, zone)).toBe(expected);
   });
 
-  test('"more" and the pane\'s meta', () => {
-    expect(moreLine(12, 'local')).toBe('12 more in Local');
-    // A block showing none of its section's stories (news-13): not "more" than nothing.
-    expect(moreLine(2, 'tech', true)).toBe('2 in Tech');
+  test('the pane\'s meta', () => {
     expect(storyMeta({outlets: 5, first_reported_at: '2026-10-05T13:12:00.000Z', last_new_fact_at: '2026-10-07T15:40:00.000Z'}, now, zone))
       .toEqual(['5 outlets', 'first reported Mon 6:12 AM', 'updated 8:40 AM']);
     expect(storyMeta({outlets: 1, first_reported_at: '2026-10-07T13:12:00.000Z', last_new_fact_at: '2026-10-07T13:12:00.000Z'}, now, zone))
@@ -377,12 +374,12 @@ describe('the first run\'s line (29b), a section\'s line, and a section with not
   // The rule (DESIGN.md › The list, States): a story stays 48 hours after its last new fact, so a
   // section with none has had nothing new for 48 hours; the first run is still sorting it. In All, a
   // block can be empty while its section isn't: its stories show in other blocks, as their main
-  // section's (#96), and "2 more in Tech" opens them, so nothing new isn't true (the polish audit's
-  // extra-08).
+  // section's (#96), so nothing new isn't true (the polish audit's extra-08); the block isn't drawn
+  // (D451).
   test.each([
     ['stories, seen or not: they show', 'tech', 3, 0, false, null],
     ['none (the board): nothing new for 48 hours, since Mon', 'tech', 0, 0, false, 'Nothing new in Tech since Mon'],
-    ['none in All\'s block, its 2 shown in other blocks: no line over "2 more in Tech"', 'tech', 0, 2, false, null],
+    ['none in All\'s block, its 2 shown in other blocks: no line', 'tech', 0, 2, false, null],
     ['none during the first run (29b)', 'ai', 0, 0, true, 'Nothing sorted in AI yet'],
     ['none in All\'s block during the first run, 1 in another block', 'ai', 0, 1, true, null],
     ['stories during the first run: they show', 'local', 5, 0, true, null],

@@ -12,8 +12,8 @@
 // All opens with While you were away (#298), the recap of what left the page unseen: chosen from the
 // visit's first answer and held for it, outside the order the pill counts, its rows without dots and
 // never seen by being on screen, only by opening. The page tells the server when the user is on News,
-// and the recap's stories once it's on screen (useHere below), so an hour away puts it away; Done
-// puts it away at once, folding it, with Undo.
+// and the recap's stories once it's on screen (useHere below), so an hour away puts it away, and
+// nothing else on the web does (D451).
 //
 // N5 adds the states (DESIGN.md › States; boards 29a, 29b): the Unsorted line while sorting is down,
 // with Show headlines listing what waits, and the first run's line, both above the list from
@@ -33,10 +33,10 @@ import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'r
 import type {CSSProperties, MouseEvent as ReactMouseEvent, RefObject} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {getCached, useResource, useResources} from '../../api/client.ts';
-import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, putRecapAway, sectionPath, STATUS_PATH, storyPath, undoRecap, UNSORTED_PATH} from '../../api/news.ts';
+import {articlePath, markSeen, NEWS_PATH, noteHere, openStory, sectionPath, STATUS_PATH, storyPath, UNSORTED_PATH} from '../../api/news.ts';
 import {age, fullTimestamp} from '../../logic/format.ts';
 import {
-  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moreLine, moveStory, neighbourStory, nextSeen, outletLine,
+  dueSeen, emptySectionLine, firstRunLine, firstRunShare, hazardGlyph, HERE_EVERY_MS, holdRecap, keyStory, landed, moveStory, neighbourStory, nextSeen, outletLine,
   pageLayout, pillParts, recapDrawn, recapOnScreen, recapSince, rowMeta, lookedAt, openedInVisit, rowsById, SECTION_GLYPHS, SECTION_LABELS, sectionLine, shownState,
   visitDots, sectionLayout, sight, storiesOnScreen, storyKey, unseen, unsortedLine, upcomingWhen, waiting, waitingSince,
 } from '../../logic/news.ts';
@@ -56,7 +56,7 @@ import {navigate} from '../router.ts';
 import {SettingsLink} from '../search/AnswerCard.tsx';
 import {NoResults, SearchField} from '../search/Search.tsx';
 import {useNewsSearch} from '../search/state.ts';
-import {showToast, toastFailure} from '../toast.ts';
+import {toastFailure} from '../toast.ts';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import {NewsSkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
@@ -136,7 +136,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
   let recapNow = recapHold;
   if (view === 'all' && latest && data !== recapNow.stale && latest.recap !== recapNow.from) recapNow = {...recapNow, from: latest.recap, held: holdRecap(recapNow.held, latest.recap)};
   if (recapNow !== recapHold) setRecapHold(recapNow);
-  const setHeldRecap = (next: HeldRecap | null) => setRecapHold(state => ({...state, held: next}));
 
   const layout = useMemo(() => held?.layout ?? latest?.layout ?? [], [held, latest]);
   // A row the latest answer no longer holds is loaded on its own, so its dot and sources still follow.
@@ -277,19 +276,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
   // The user on News, with the recap's stories once it's on screen: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn, open !== null) ? recapShown?.ids ?? null : null);
 
-  /** Done (D426): the recap folds away, its stories still unseen; Undo brings it back. */
-  function recapDone() {
-    const before = recapHeld;
-    setHeldRecap(null);
-    void putRecapAway().then(undo => showToast('Recap put away', {
-      label: 'Undo',
-      run: () => void undoRecap(undo).then(() => setHeldRecap(before), toastFailure('Couldn\'t undo it')),
-    }, 'gone'), error => {
-      setHeldRecap(before);
-      toastFailure('Couldn\'t put it away')(error);
-    });
-  }
-
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
   useLayoutEffect(() => {
@@ -414,7 +400,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   <div className={showHeadlines ? 'nw-sec' : 'nw-sec first'}>
                     <Icon name="history" size={14} />While you were away<span className="grow" />
                     {recapSince(recap.shown.since, now, zone) && <span className="day num">{recapSince(recap.shown.since, now, zone)}</span>}
-                    <button className="btn ghost sm" type="button" onClick={recapDone}>Done</button>
                   </div>
                   {recap.shown.ids.flatMap(id => rows.get(id) ?? []).map(row => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={false} recap rowKey={storyKey(RECAP_SHELF, row.id)} section={recap.shown!.named[row.id] ?? row.sections[0]!} {...rowProps} />
@@ -431,6 +416,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
               const own = NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
               const empty = own && latest ? emptySectionLine(own, shelfRows.length, shelf.more, firstRun, now, zone) : null;
+              // A block whose stories all show in other blocks (#96) has nothing of its own to show, so it goes (D451).
+              if (section && !shelfRows.length && !empty && !line && !upcoming.length) return null;
               return (
                 <Fragment key={shelf.key}>
                   {section && <div className={header}><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</div>}
@@ -441,9 +428,6 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={null} {...rowProps} />
                   ))}
-                  {section && shelf.more > 0 && (
-                    <button className="nw-more" type="button" onClick={() => switchTo(section)}>{moreLine(shelf.more, section, shelfRows.length === 0)}<Icon name="chevron_right" size={16} /></button>
-                  )}
                 </Fragment>
               );
             })}
