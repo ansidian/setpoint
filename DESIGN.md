@@ -3996,6 +3996,7 @@ it changes what's on screen.
     tomorrow" when an event is among them). No label when nothing's on tomorrow, and none for Today
     when only tomorrow has lines. All-day events stay out of both, as before. Dropping tomorrow's
     items was rejected: it loses the heads-up. The skeleton is unchanged; the phone layout is
+    unchanged (D275).
 320. **A middle zoom step for a MacBook** (amending Principles; Andy, 2026-11-06; darma SV-214,
     D461). At a MacBook Pro's default size (14": 1512, 16": 1728) the 13 px text read a little small,
     while a 4K at "looks like 2560" got darma's 1.25. From 1440 px wide the whole UI is now zoomed
