@@ -278,11 +278,13 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 Each line's title wraps to two lines (an ellipsis only past that) over its time or date in `ink3`
 (#318): the next event ("Dentist" over "2:30 PM · in 5h", the "in" part `caution` from 15 minutes
 before and `alert` once under way), led by its calendar's bar running down both lines where tasks
-have their rings (#199), then each open task due today and tomorrow by name, today's first, behind
-its ring in its project's colour on the title's first line, with "Tomorrow" beneath on tomorrow's. A
-line with two parts has 7 px above and below its text; a task with no date is one 28 px line. More than three tasks show the first two and
-"3 more due tomorrow" (`ink3`), which shows the rest. Confirmed data only; nothing shows for an empty
-line.
+have their rings (#199), then each open task due today by name, behind its ring in its project's
+colour on the title's first line. Under a second label, **Tomorrow** (#319), tomorrow's timed events
+by their start, each over its time alone ("6:00 PM"), then its open tasks; no label when nothing's
+on. An event's line has 7 px above and below its text; a task is one 28 px line. Today's lines never
+fold; more than three of tomorrow's show the first two and "3 more due tomorrow" (`ink3`, "3 more
+tomorrow" when an event is among them), which shows the rest. Confirmed data only; nothing shows for
+an empty line.
 
 A line opens the floating detail's card (without its grip) 8 px right of the sidebar, its title
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
@@ -3983,3 +3985,14 @@ it changes what's on screen.
     and pressed fills sit clear of it; a task with no date stays one 28 px line. Radius 10 and the
     10 px side padding are unchanged; the skeleton's first line is as tall as the event's. The phone
     layout is unchanged (D275).
+319. **Tomorrow gets its own label in the Today block** (amending #78 and #318; Andy, 2026-11-06;
+    darma SV-213, D460). With two-line Today lines, "Renew car registration" over "Tomorrow" read as
+    one of today's. Now a second `sb-label`, "Tomorrow", follows Today's lines (10 px more above it),
+    listing tomorrow's timed events by their start, each over its time alone with no "in", which
+    are new to the block, then tomorrow's open tasks in Today's order. The per-line "Tomorrow" goes,
+    so a tomorrow task is one 28 px line again. The fold moves under the label: Today never folds,
+    and past three of tomorrow's lines the first two show with "N more due tomorrow" ("N more
+    tomorrow" when an event is among them). No label when nothing's on tomorrow, and none for Today
+    when only tomorrow has lines. All-day events stay out of both, as before. Dropping tomorrow's
+    items was rejected: it loses the heads-up. The skeleton is unchanged; the phone layout is
+    unchanged (D275).

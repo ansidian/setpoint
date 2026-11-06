@@ -197,7 +197,7 @@ test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab ti
   }
 });
 
-test('#78: the Today block names its tasks, and a line opens its card over the open email; E edits it on Calendar, not Trash', async () => {
+test('#78: the Today block names its tasks, tomorrow\'s under their own label (D460), and a line opens its card over the open email; E edits it on Calendar, not Trash', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -205,8 +205,11 @@ test('#78: the Today block names its tasks, and a line opens its card over the o
     await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const lines = page.locator('.sb .today-row');
-    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
+    // D460: tomorrow's event and task sit under a label of their own.
+    assert.deepEqual(await page.locator('.sb .today .sb-label').allTextContents(), ['Today', 'Tomorrow']);
+    assert.equal(await page.locator('.sb .today > *').evaluateAll(children => children.findIndex(child => child.textContent === 'Tomorrow')), 4);
 
     // The card opens over the open email, which stays behind it; where it sits and its motion (which
     // reduce motion doesn't change, DESIGN.md › Principles) are by eye (D416, D417).
@@ -253,7 +256,7 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     const lines = page.locator('.sb .today-row');
-    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 4);
+    await until('the Today block', () => lines.allTextContents(), texts => texts.length === 5);
     await lines.filter({hasText: 'Pay rent'}).getByRole('button', {name: 'Complete Pay rent'}).dblclick();
     await lines.filter({hasText: 'Pay rent'}).waitFor({state: 'detached'});
     await page.locator('.toast', {hasText: 'Completed Pay rent'}).waitFor();
@@ -262,13 +265,13 @@ test('a double-click on a Today task\'s ring completes only it, and Undo brings 
     const tasks = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-10-07&to=2026-10-09')).items.filter(item => item.kind === 'task');
     await until('the completion lands', tasks, list => list.every(task => !task.command));
     assert.deepEqual((await tasks()).map(task => [task.title, task.done]).sort(), [['CS 101 lab report', false], ['Pay rent', true], ['Renew car registration', false]]);
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Renew car registrationTomorrow']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'CS 101 lecture6:00 PM', 'Renew car registration']);
 
     // Undo brings it back where it was.
     await page.mouse.move(800, 600);
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await lines.filter({hasText: 'Pay rent'}).waitFor();
-    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'Renew car registrationTomorrow']);
+    assert.deepEqual(await lines.allTextContents(), ['Dentist2:30 PM · in 5h', 'CS 101 lab report', 'Pay rent', 'CS 101 lecture6:00 PM', 'Renew car registration']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

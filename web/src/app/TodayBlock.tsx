@@ -1,6 +1,7 @@
 // The sidebar's Today block on mail pages (DESIGN.md › The Today block, Decided while building #78):
-// "2:30 PM  Dentist  in 5h", then the open tasks due today and tomorrow by name ("Tomorrow" at the
-// right of tomorrow's), the first two and "3 more due tomorrow" when there are more than three.
+// "2:30 PM  Dentist  in 5h", then the open tasks due today by name; under a Tomorrow label of its own
+// (D460, none when nothing's on), tomorrow's events at their time ("9:00 AM") and its open tasks, the
+// first two and "3 more due tomorrow" when there are more than three. Today's lines never fold.
 // A line opens the floating detail's card beside the sidebar instead of leaving the page: Edit (E)
 // goes to Calendar's editor, a task completes there or from its ring, an item that isn't a repeating
 // event deletes, and Open in Calendar shows it there. Esc, the close button or a click elsewhere
@@ -11,7 +12,7 @@
 // it back.
 import type {CalendarOut, ItemOut, ItemsOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {CSSProperties, MouseEvent} from 'react';
+import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
@@ -20,8 +21,8 @@ import type {Entry, FoldRules} from '../logic/fold.ts';
 import {localDate} from '../logic/format.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
-import {DONE_MOMENT_MS, shownTasks, todayBlock, todayRange} from '../logic/today.ts';
-import type {TodayTask} from '../logic/today.ts';
+import {DONE_MOMENT_MS, shownTomorrow, todayBlock, todayRange} from '../logic/today.ts';
+import type {TodayTask, TomorrowEvent} from '../logic/today.ts';
 import {Icon, TaskGlyph} from '../ui/Icon.tsx';
 import {isTyping, plainKey} from '../ui/keys.ts';
 import {dotStyle} from './accounts.ts';
@@ -50,6 +51,9 @@ interface TaskLine extends TodayTask {
   done: boolean;
 }
 
+/** A line under the Tomorrow label: one of its events, or a task. */
+type TomorrowLine = {event: TomorrowEvent} | {task: TaskLine};
+
 // Every line that goes folds out, and one that comes back (Undo, a refused change) folds in.
 const FOLDS: FoldRules<TaskLine> = {folds: () => true, arrives: () => true};
 
@@ -77,10 +81,19 @@ export function TodayBlock() {
     for (const {line, at} of [...ticked.values()].sort((a, b) => a.at - b.at)) listed.splice(Math.min(at, listed.length), 0, {...line, done: true});
     return listed;
   }, [today, ticked]);
-  const {shown, more} = useMemo(() => shownTasks(tasks, all), [tasks, all]);
+  // Tomorrow's lines fold to two and "N more" (D460): its events first, then its tasks, as Today's.
+  const {shown: tomorrowShown, more} = useMemo(() => shownTomorrow<TomorrowLine>([
+    ...today.tomorrowEvents.map(event => ({event})),
+    ...tasks.filter(task => task.tomorrow).map(task => ({task})),
+  ], all, line => 'event' in line), [today, tasks, all]);
+  const tomorrowEvents = tomorrowShown.flatMap(line => ('event' in line ? [line.event] : []));
+  const shown = useMemo(() => [
+    ...tasks.filter(task => !task.tomorrow),
+    ...tomorrowShown.flatMap(line => ('task' in line ? [line.task] : [])),
+  ], [tasks, tomorrowShown]);
   const entries = useMemo(() => shown.map((line): Entry<TaskLine> => ({key: line.item.key, id: line.item.id, item: line})), [shown]);
   const folded = useFold(entries, FOLDS);
-  const lines = [...(today.event ? [today.event.item] : []), ...today.tasks.map(task => task.item)];
+  const lines = [...(today.event ? [today.event.item] : []), ...today.tomorrowEvents.map(event => event.item), ...today.tasks.map(task => task.item)];
   const opened = lines.find(item => item.key === openKey) ?? null;
 
   if (!data) {
@@ -91,7 +104,9 @@ export function TodayBlock() {
       </div>
     );
   }
-  if (!today.event && !folded.length) return null;
+  if (!today.event && !folded.length && !tomorrowEvents.length) return null;
+  const todayLines = folded.filter(line => !line.item.tomorrow);
+  const tomorrowTasks = folded.filter(line => line.item.tomorrow);
 
   // The card goes with its item.
   const hide = (item: ItemOut) => {
@@ -166,44 +181,54 @@ export function TodayBlock() {
     if (opened) setOpenKey(null);
   };
 
+  // An event's line leads with its calendar's bar (or its own colour's), as calendar chips and the
+  // agenda draw it, where tasks have rings (shell-06); its title on the whole width, then when, neither
+  // wrapping (SV-210).
+  // Today's is the next event (`next`); tomorrow's aren't.
+  const eventLine = (item: ItemOut, key: string, title: string, when: ReactNode, next = false) => (
+    <a key={key} className={`${lineClass(item)} event${next ? ' next' : ''}`} data-key={key} href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={lineMenu(item)}
+      aria-haspopup="dialog" aria-expanded={openKey === key}>
+      <span className="evbar" style={dotStyle(item.colour ?? calendars?.find(calendar => calendar.id === item.calendar_id)?.colour ?? undefined)}><i /></span>
+      <span className="lines">
+        <span className="ell title" data-tip={title}>{title}</span>
+        <span className="when">{when}</span>
+      </span>
+    </a>
+  );
+
+  const taskLine = ({key, item: {item, title, done}, fold}: (typeof folded)[number]) => {
+    // A line folding away keeps its look, without its key or the pointer.
+    const leaving = fold === 'out';
+    const classes = [lineClass(item), 'task', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
+    return (
+      <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
+        href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
+        <button className="check" type="button" aria-label={`Complete ${title}`} data-tip="Complete"
+          onClick={event => {
+            event.preventDefault();
+            event.stopPropagation();
+            complete(item);
+          }}>
+          {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
+        </button>
+        {/* The title wraps to two lines, as the event's (SV-210); the label says its day (D460). */}
+        <span className="lines">
+          <span className="ell title" data-tip={title}>{title}</span>
+        </span>
+      </a>
+    );
+  };
+
   return (
     <div className="sb-sec today">
-      <div className="sb-label">Today</div>
-      {today.event && (
-        <a className={`${lineClass(today.event.item)} next`} data-key={today.event.key} href={routePath(itemRoute(today.event.item))} onClick={toggle(today.event.item)} onContextMenu={lineMenu(today.event.item)}
-          aria-haspopup="dialog" aria-expanded={openKey === today.event.key}>
-          {/* Its calendar's bar (or its own colour's), as calendar chips and the agenda draw it, where tasks have rings (shell-06). */}
-          <span className="evbar" style={dotStyle(today.event.item.colour ?? calendars?.find(calendar => calendar.id === today.event!.item.calendar_id)?.colour ?? undefined)}><i /></span>
-          {/* Two lines (SV-210): the title on the whole width, then its time and how soon, neither wrapping. */}
-          <span className="lines">
-            <span className="ell title" data-tip={today.event.title}>{today.event.title}</span>
-            <span className="when"><span className="t num">{today.event.time}</span> · <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span></span>
-          </span>
-        </a>
-      )}
-      {folded.map(({key, item: {item, title, label, done}, fold}) => {
-        // A line folding away keeps its look, without its key or the pointer.
-        const leaving = fold === 'out';
-        const classes = [lineClass(item), 'task', done && 'completing', leaving && 'leaving'].filter(Boolean).join(' ');
-        return (
-          <a key={key} ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={classes} data-key={leaving ? undefined : item.key}
-            href={routePath(itemRoute(item))} onClick={toggle(item)} onContextMenu={leaving ? undefined : lineMenu(item)} aria-haspopup="dialog" aria-expanded={openKey === item.key} aria-hidden={leaving || undefined}>
-            <button className="check" type="button" aria-label={`Complete ${title}`} data-tip="Complete"
-              onClick={event => {
-                event.preventDefault();
-                event.stopPropagation();
-                complete(item);
-              }}>
-              {done ? <TaskGlyph done size={13} /> : <span className="ring" style={ring(item.project)}><Icon name="check" size={11} /></span>}
-            </button>
-            {/* As the event's (SV-210): the title wraps to two lines, its date beneath. */}
-            <span className="lines">
-              <span className="ell title" data-tip={title}>{title}</span>
-              {label && <span className="when">{label}</span>}
-            </span>
-          </a>
-        );
-      })}
+      {(today.event || todayLines.length > 0) && <div className="sb-label">Today</div>}
+      {today.event && eventLine(today.event.item, today.event.key, today.event.title, <>
+        <span className="t num">{today.event.time}</span> · <span className={today.event.urgency ? `in num ${today.event.urgency}` : 'in num'}>{today.event.in}</span>
+      </>, true)}
+      {todayLines.map(taskLine)}
+      {(tomorrowEvents.length > 0 || tomorrowTasks.length > 0) && <div className="sb-label tomorrow">Tomorrow</div>}
+      {tomorrowEvents.map(event => eventLine(event.item, event.key, event.title, <span className="t num">{event.time}</span>))}
+      {tomorrowTasks.map(taskLine)}
       {more && (
         <button className="today-row today-more" type="button" onClick={() => setAll(true)}>
           <span className="ring-space" />
