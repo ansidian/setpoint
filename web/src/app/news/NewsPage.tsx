@@ -26,7 +26,7 @@
 // opens; `O` opens the original article; `N` takes the new stories; Esc goes from an article back to
 // its story, then closes the pane, then clears a search. `1`, `2` and `3` are the shell's (App.tsx).
 import type {
-  ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
+  AlsoReportedOut, ArticleOut, NewsPageOut, NewsSectionOut, NewsStatusOut, NewsUnsortedOut, RecapOut, SectionHealthOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS} from '@setpoint/shared';
 import {Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
@@ -74,6 +74,8 @@ interface Listing {
   // Each section's line, stale or failing (N5), by its shelf.
   health: ReadonlyMap<string, SectionHealthOut | null>;
   recap: RecapOut | null;
+  // A section's stories left unwritten under the write gate (D452); none in All.
+  alsoReported: AlsoReportedOut[];
 }
 
 function listing(view: NewsView, answer: Answer): Listing {
@@ -82,10 +84,12 @@ function listing(view: NewsView, answer: Answer): Listing {
     return {
       layout: pageLayout(page), rows: rowsById([...page.blocks.flatMap(block => block.stories), ...page.recap?.stories ?? []]),
       upcoming: page.blocks.flatMap(block => block.upcoming), health: new Map(page.blocks.map(block => [block.section, block.health])), recap: page.recap,
+      alsoReported: [],
     };
   }
   const list = answer as NewsSectionOut;
-  return {layout: sectionLayout(list), rows: rowsById(list.stories), upcoming: list.upcoming, health: new Map([[list.section, list.health]]), recap: null};
+  return {layout: sectionLayout(list), rows: rowsById(list.stories), upcoming: list.upcoming, health: new Map([[list.section, list.health]]), recap: null,
+    alsoReported: list.also_reported};
 }
 
 /** Search's results as one shelf, newest first. */
@@ -415,7 +419,9 @@ export function NewsPage({route}: {route: NewsRoute}) {
               // A section's own line and its empty line (N5).
               const own = NEWS_SECTIONS.find(one => one === shelf.key) ?? null;
               const line = own ? sectionLine(own, latest?.health.get(own) ?? null, now, zone) : null;
-              const empty = own && latest ? emptySectionLine(own, shelfRows.length, shelf.more, firstRun, now, zone) : null;
+              // A section's list ends with Also reported, as the latest answer has it, outside the held order (D452).
+              const also = view === 'all' ? [] : latest?.alsoReported ?? [];
+              const empty = own && latest ? emptySectionLine(own, shelfRows.length + also.length, shelf.more, firstRun, now, zone) : null;
               // A block whose stories all show in other blocks (#96) has nothing of its own to show, so it goes (D451).
               if (section && !shelfRows.length && !empty && !line && !upcoming.length) return null;
               return (
@@ -428,6 +434,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
                   {shelfRows.map((row, at) => (
                     <StoryRow key={row.id} row={{...row, state: shownState(row, dots)}} lead={at === 0} rowKey={storyKey(shelf.key, row.id)} section={null} {...rowProps} />
                   ))}
+                  {also.length > 0 && <AlsoReported stories={also} now={now} zone={zone} />}
                 </Fragment>
               );
             })}
@@ -442,6 +449,29 @@ export function NewsPage({route}: {route: NewsRoute}) {
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Also reported (D452): what Haiku rated under the write gate, so was never written, under a quiet
+ * label after the section's stories. One line each, the headline, outlet and age, with no summary,
+ * thumbnail or dot; a row opens the outlet's article, and nothing here is seen.
+ */
+function AlsoReported({stories, now, zone}: {stories: AlsoReportedOut[]; now: number; zone: string}) {
+  return (
+    <div className="nw-also" role="group" aria-label="Also reported">
+      <div className="nw-also-hd">Also reported</div>
+      {stories.map(story => (
+        <a key={story.story_id} className="nw-raw" href={story.url} target="_blank" rel="noopener noreferrer">
+          <span className="hl">{story.headline}</span>
+          <span className="nw-meta">
+            <span className="outlet">{story.outlet_short}</span><span>·</span>
+            <span data-tip={fullTimestamp(story.published_at, zone)}>{age(story.published_at, now, zone)}</span>
+          </span>
+          <Icon name="open_in_new" size={16} />
+        </a>
+      ))}
+    </div>
   );
 }
 

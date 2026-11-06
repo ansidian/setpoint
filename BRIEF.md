@@ -390,6 +390,9 @@ Campaigns, polls, reactions, hearings, and bills being "debated" until they pass
   "KTLA +4". Identical wire copy (AP text republished by ABC and PBS) counts as **one** outlet.
 - **The headline is written by the model**, plain and neutral, not taken from whichever outlet
   wrote the most clickable one. One line of summary sits under it.
+- **Only stories that may matter are written** (D452). A story whose articles Haiku rates under 40
+  isn't written until one lifts it there: it keeps its first outlet's headline and link and shows
+  only under its section's **Also reported**, never in All or the recap. Search still finds it.
 - **One summary, written from all the sources.** It's rewritten only when an article brings
   headline news: new facts that change what the headline or one line say (D427). "Suspect arrested"
   rewrites it; a quote or some background joins the story's facts and shows as new, and waits for the
@@ -420,7 +423,8 @@ Campaigns, polls, reactions, hearings, and bills being "debated" until they pass
 - **All** shows one block per section in a fixed order (Local, Tech, AI, General), each with its
   **top 3–5 stories, biggest first**, then "12 more in Local", which opens that section. The order
   is fixed so the page reads the same every day.
-- **A section** (the segmented control, or "N more") is that section's full list, biggest first.
+- **A section** (the segmented control) is that section's full list, biggest first, then Also
+  reported: its unwritten stories as one-line headlines with their outlet and age (D452).
 - **A row:** the new or updated dot, the headline, the one-line summary, then the leading outlet
   with how many more cover it and the age ("KTLA +4 · 1h"), and a **thumbnail**. **Each block's
   top story gets a larger 16:9 image**, and the rest a small one at the row's end, so the page
@@ -536,6 +540,12 @@ SV-165), since it sent each story again every hour, so each story is judged as i
 write was sent every fact and every article's notes, so a long story's rewrites ran up to 60k tokens
 each. A story is now written from its window, its current headline and summary carrying its past,
 and rewritten only on headline news (D427).
+
+**The write gate** (D452, SV-205): a story isn't written while its importance, the highest of its
+articles' Haiku readings, is under **40**. A replay of prod (2026-11-06) found 7–9% of written
+stories ever reached All's front page, and a gate at 40 skips about 43% of writes while missing
+about one front-page story in 50. The skipped ones are mostly small single-source stories, the
+cheapest writes, so it's likely about $12–15 a month; it's re-measured after release.
 
 ### When things break
 

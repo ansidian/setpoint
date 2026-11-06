@@ -3,7 +3,7 @@
 // are Zod schemas as well as types, so tests and the seed check the shapes the page draws from.
 //
 //   GET  /api/news                         NewsPageOut (All: the blocks in their fixed order, the recap)
-//   GET  /api/news/sections/:section       NewsSectionOut (that section's full list, biggest first)
+//   GET  /api/news/sections/:section       NewsSectionOut (that section's full list, biggest first, then Also reported)
 //   GET  /api/news/stories/:id             StoryOut (the story pane), without marking it seen
 //   GET  /api/news/articles/:id            ArticleOut (a source opened in the pane); a metered article is 404
 //   GET  /api/news/missed                  MissedOut (the iPhone app's Catch up: the recap's stories by day)
@@ -174,11 +174,27 @@ export const newsPageSchema = z.strictObject({
 export type NewsPageOut = z.infer<typeof newsPageSchema>;
 
 /** A section's full list (the segmented control, or "N more"), biggest first. */
+/**
+ * Also reported (D452): a story in a section that was never written, as Haiku rated it under the
+ * write gate, as its lead article's headline, outlet and age, linking to that article.
+ */
+export const alsoReportedSchema = z.strictObject({
+  story_id: id,
+  headline: z.string(),
+  outlet: z.string(),
+  outlet_short: z.string(),
+  published_at: instant,
+  url: z.url(),
+});
+export type AlsoReportedOut = z.infer<typeof alsoReportedSchema>;
+
 export const newsSectionOutSchema = z.strictObject({
   section: newsSectionSchema,
+  // Its written stories; those under the write gate are only in `also_reported`, biggest first.
   stories: z.array(storyRowSchema),
   upcoming: z.array(upcomingSchema),
   health: sectionHealthSchema.nullable(),
+  also_reported: z.array(alsoReportedSchema),
 });
 export type NewsSectionOut = z.infer<typeof newsSectionOutSchema>;
 

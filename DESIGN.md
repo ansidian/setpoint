@@ -753,8 +753,14 @@ navigation.
     settle in from `sub2` over 900 ms.
   - It drops 8 px into place as it fades in over 180 ms; under the pointer its ring turns `edgeHover`
     and its arrow `ink` (#131).
+- **Also reported** (a section's list only, after its stories, #313): what Haiku rated under the
+  write gate, so was never written. A quiet 32 px label, "ALSO REPORTED" (11.5 uppercase .08em
+  `ink3`, `hair` below, no fill or glyph), then one 36 px line per story: the headline in `ink2`,
+  one line with an ellipsis, starting where the stories' headlines start; the outlet and age as
+  meta; an `open_in_new` glyph. No summary, thumbnail or dot, never seen, never in All or the
+  recap; biggest first. A row opens the outlet's article in a new tab, as Unsorted's headlines do.
 - **A section with nothing new:** one 44 px line in `ink3`, "Nothing new in Tech since Mon", only
-  when its own list is empty too. A block whose stories all show in other blocks (#96) isn't drawn
+  when its own list and Also reported are empty too. A block whose stories all show in other blocks (#96) isn't drawn
   in All, unless it has an Upcoming row or its section's stale or failing line (#312).
 
 ### The story pane
@@ -3910,3 +3916,10 @@ it changes what's on screen.
     block whose stories all show in other blocks, which had only its "2 in Tech" link (#116), isn't
     drawn (Claude's call, as a small gap). Board audit: boards 25 and 31 still draw "N more"
     (override 44).
+313. **Stories rated low aren't written; a section lists them under Also reported** (Andy,
+    2026-11-05; darma SV-205, D452). A prod replay showed 7–9% of written stories ever reached
+    All's front page, so a story whose articles Haiku rates under 40 isn't written by Sonnet until
+    one lifts it to 40, and shows only at the foot of its section's list, as headline, outlet and
+    age. The row opening the article in a new tab, as Unsorted's headlines do, rather than in the
+    pane, is Claude's call (a small gap); Andy okayed the list as shown on the real snapshot. No
+    board draws it.

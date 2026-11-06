@@ -1,0 +1,1 @@
+ALTER TABLE `news_stories` ADD `below_gate` integer DEFAULT false NOT NULL;

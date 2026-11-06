@@ -1005,6 +1005,9 @@ export const newsStories = sqliteTable('news_stories', {
   // N3: the headline and summary are due to be written (a new story, or new facts), and when they were.
   needsWriting: integer('needs_writing', {mode: 'boolean'}).notNull().default(false),
   writtenAt: text('written_at'),
+  // SV-205: rated under the write gate and never written (D452), so it shows only under its section's
+  // Also reported, never in All, the recap or a section's own rows.
+  belowGate: integer('below_gate', {mode: 'boolean'}).notNull().default(false),
   // N3: made by the first run's fill of the last 48 hours: it never goes to the recap.
   backfill: integer('backfill', {mode: 'boolean'}).notNull().default(false),
 }, table => [

@@ -5,7 +5,7 @@
 // and the recap's stories follow src/domain/news.ts. N3 adds the bar (a story under it never shows:
 // not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
-  ArticleOut, MissedOut, NewsBlockOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
+  AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
   RecapOut, RecapStoryOut, SectionHealthOut, StoryFactOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS, NEWS_SOURCE_ICONS} from '@setpoint/shared';
@@ -19,7 +19,7 @@ import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {activeNewsSources} from '../news/sources.ts';
 import {recapState} from '../news/recap.ts';
-import {liveCondition, newsSourceHealth, overBar, recapCondition} from '../news/store.ts';
+import {liveCondition, newsSourceHealth, overBar, recapCondition, writtenCondition} from '../news/store.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
 
@@ -97,11 +97,14 @@ export function storyRows(store: Store, storyIds: readonly number[]): StoryRowOu
   return storyIds.flatMap(id => rows.get(id) ?? []);
 }
 
-/** A section's stories on the page, biggest first: by score, then the newest fact. */
-function sectionStoryIds(store: Store, section: NewsSection, now: string): {id: number; score: number}[] {
+/**
+ * A section's stories on the page, biggest first: by score, then the newest fact. Its written ones,
+ * or with `held` those waiting unwritten under the write gate, for Also reported (D452).
+ */
+function sectionStoryIds(store: Store, section: NewsSection, now: string, held = false): {id: number; score: number}[] {
   return store.db.select({id: t.newsStories.id, score: t.newsStories.score}).from(t.newsStories)
     .innerJoin(t.newsStorySections, eq(t.newsStorySections.storyId, t.newsStories.id))
-    .where(and(eq(t.newsStorySections.section, section), liveCondition(now), overBar()))
+    .where(and(eq(t.newsStorySections.section, section), liveCondition(now), overBar(), held ? eq(t.newsStories.belowGate, true) : writtenCondition()))
     .orderBy(desc(t.newsStories.score), desc(t.newsStories.lastNewFactAt), desc(t.newsStories.id)).all();
 }
 
@@ -154,7 +157,7 @@ export function newsRecap(store: Store): RecapOut | null {
 function rankedRecap(store: Store): RecapOut & {ids: number[]} | null {
   const state = recapState(store);
   const ids = store.db.select({id: t.newsStories.id}).from(t.newsStories)
-    .where(state.storyIds ? and(inArray(t.newsStories.id, state.storyIds), overBar()) : recapCondition(state.putAwayAt))
+    .where(state.storyIds ? and(inArray(t.newsStories.id, state.storyIds), overBar(), writtenCondition()) : recapCondition(state.putAwayAt))
     .orderBy(desc(t.newsStories.score), desc(t.newsStories.lastNewFactAt), desc(t.newsStories.id)).all().map(row => row.id);
   const {rows, main} = loadRows(store, ids);
   const stories = recapStories(ids.flatMap((id): RecapStoryOut[] => {
@@ -185,12 +188,16 @@ export function newsPage(store: Store): NewsPageOut {
   return {blocks, missed: recap && {count: recap.stories.length, since: recap.since}, recap};
 }
 
-/** A section's full list, biggest first. */
+/** A section's full list, biggest first, then Also reported: its stories left unwritten under the write gate, each as its lead article (D452). */
 export function newsSection(store: Store, section: NewsSection): NewsSectionOut {
   const now = isoNow(store);
+  const held = storyRows(store, sectionStoryIds(store, section, now, true).map(story => story.id));
   return {
     section, stories: storyRows(store, sectionStoryIds(store, section, now).map(story => story.id)), upcoming: upcoming(store, section, now),
     health: sectionLines(store, now).get(section) ?? null,
+    also_reported: held.map((row): AlsoReportedOut => ({
+      story_id: row.id, headline: row.headline, outlet: row.lead.outlet, outlet_short: row.lead.outlet_short, published_at: row.lead.published_at, url: row.lead.url,
+    })),
   };
 }
 

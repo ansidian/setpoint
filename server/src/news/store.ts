@@ -182,12 +182,15 @@ export function expireNews(store: Store, imagesDir: string | null): ExpiryOutcom
  * unseen and haven't been seen since.
  */
 export const recapCondition = (putAwayAt: string | null) => and(
-  eq(t.newsStories.expiredUnseen, true), isNotNull(t.newsStories.expiredAt), overBar(),
+  eq(t.newsStories.expiredUnseen, true), isNotNull(t.newsStories.expiredAt), overBar(), writtenCondition(),
   putAwayAt === null ? isNull(t.newsStories.seenAt) : gt(t.newsStories.expiredAt, putAwayAt),
 );
 
 /** On the page: not yet expired, and not past the 48 hours even if the expiry hasn't run yet. */
 export const liveCondition = (now: string) => and(isNull(t.newsStories.expiredAt), gt(t.newsStories.lastNewFactAt, new Date(Date.parse(now) - STORY_TTL_MS).toISOString()));
+
+/** Written, or never held back: a story under the write gate shows only under Also reported (D452). */
+export const writtenCondition = () => eq(t.newsStories.belowGate, false);
 
 /** Shown: a story under the bar never shows (N3, D86), on the page, in the recap or in search. */
 export const overBar = () => gte(t.newsStories.score, STORY_BAR);

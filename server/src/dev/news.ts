@@ -119,6 +119,8 @@ interface SampleStory {
   articles: [SampleArticle, ...(SampleArticle | string)[]];
   // Left the page before the user saw it: archived, in the recap.
   missed?: true;
+  // Rated under the write gate, so never written: only its section's Also reported shows it (D452).
+  held?: true;
   upcoming?: {name: string; startsAt: string};
 }
 
@@ -342,6 +344,17 @@ export const SAMPLE_STORIES: SampleStory[] = [
     score: 64, ...gone('20:45'), articles: [{outlet: 'ABC News', at: at('tue', '06:55'), image: 25}, 'CBS News', 'AP News', 'NBC News']},
   {sections: ['general'], headline: 'Automaker recalls 1.2 million pickups over a brake defect', oneLine: 'Dealers will replace a brake line for free',
     score: 62, ...gone('21:30'), articles: [{outlet: 'NBC News', at: at('tue', '07:15')}, 'Reuters', 'USA Today']},
+  // ---- Under the write gate: Also reported only, headline and outlet (D452). Last, so the stories
+  // above keep their ids (the iPhone contract's fixtures name some). ----
+  {sections: ['local'], headline: 'Central library hosts a fall book sale this weekend', held: true,
+    score: 37, first: at('tue', '12:40'), facts: [[at('tue', '12:40'), 'A book sale runs Saturday and Sunday']],
+    articles: [{outlet: 'LAist', at: at('tue', '12:40')}]},
+  {sections: ['local'], headline: 'Street sweeping resumes on the usual routes after the holiday', held: true,
+    score: 36, first: at('tue', '07:15'), facts: [[at('tue', '07:15'), 'Street sweeping resumes Monday']],
+    articles: [{outlet: 'ABC7', at: at('tue', '07:15')}]},
+  {sections: ['tech'], headline: 'Logitech refreshes its MX Keys keyboard with a new finish', held: true,
+    score: 36, first: at('tue', '15:30'), facts: [[at('tue', '15:30'), 'A new finish for MX Keys']],
+    articles: [{outlet: 'The Verge', at: at('tue', '15:30')}]},
 ];
 
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
@@ -407,7 +420,9 @@ export function seedNews(store: Store, imagesDir: string | null) {
       }
       const expiredAt = story.missed ? expiresAt(lastNewFact) : null;
       const storyId = store.db.insert(t.newsStories).values({
-        headline: story.headline, oneLine: story.oneLine ?? null, summary: story.summary ?? (story.oneLine ? `${story.headline}. ${story.oneLine}.` : `${story.headline}.`),
+        headline: story.headline, oneLine: story.oneLine ?? null,
+        summary: story.held ? null : story.summary ?? (story.oneLine ? `${story.headline}. ${story.oneLine}.` : `${story.headline}.`),
+        belowGate: story.held ?? false, importance: story.held ? 30 : 0,
         score: story.score, leadArticleId: articleIds[0]!, imageArticleId: imageArticle?.id ?? null,
         firstReportedAt: story.first, lastNewFactAt: lastNewFact, seenAt: story.seen ? NEWS_LAST_LOOKED : null,
         expiredAt, expiredUnseen: story.missed ?? false, createdAt: story.first,

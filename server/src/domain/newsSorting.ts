@@ -454,6 +454,16 @@ export function rankOrder<S extends {id: number; score: number; lastNewFactAt: s
 
 // ---- Models and cost (D90) ----
 
+/**
+ * A story isn't written (no model call) while it never has been and its importance, the highest of its
+ * articles' Haiku readings, is under this (D452): it shows only under its section's Also reported. An
+ * article that lifts it to the gate gets it written as a new story is. Rewrites are unchanged (D427).
+ */
+export const WRITE_GATE = 40;
+
+/** Whether a story waits unwritten under the gate. */
+export const belowWriteGate = (story: {writtenAt: string | null; importance: number}) => story.writtenAt === null && story.importance < WRITE_GATE;
+
 export const NEWS_MODELS = {articles: 'claude-haiku-5-5', stories: 'claude-sonnet-5-5'} as const;
 
 /** Which model writes stories and judges their importance: Sonnet, until this month's News spend reaches the cap; then Haiku for the rest of the month. */

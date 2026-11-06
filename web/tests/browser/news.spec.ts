@@ -1,6 +1,6 @@
 // News (N4; DESIGN.md › News, boards 25–27) against the seed's sample (BRIEF.md › Sample data ›
 // News): All's blocks with the recap, Upcoming and the pill; the story pane, its Sources, an article
-// (26a) and one that can't be read here (26b); a section (27); While you were away (#298) with Done
+// (26a) and one that can't be read here (26b); a section (27) with Also reported (D452); While you were away (#298) with Done
 // and Undo; seen; the held order with the pill; Add to calendar; the keys; and board 31, board 25 in
 // Light (N5). A change to News arrives as ingest's will: the
 // server's database changes, then a `news` live event names stories (here, seeing one already seen
@@ -399,6 +399,17 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
     // Shown now, Water main is seen after its second on screen.
     await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
     await seenSettled(page, setpoint);
+    // Also reported ends the list (D452): the stories never written, headline, outlet and age, each a
+    // link to its outlet's article; none is a story row, so none has a dot or is seen.
+    const also = page.locator('.nw-also');
+    assert.equal(await also.locator('.nw-also-hd').textContent(), 'Also reported');
+    assert.deepEqual(await also.locator('a .hl').allTextContents(), ['Central library hosts a fall book sale this weekend', 'Street sweeping resumes on the usual routes after the holiday']);
+    assert.deepEqual(await also.locator('a').evaluateAll(links => links.map(link => [link.getAttribute('target'), link.querySelector('.outlet')!.textContent])), [['_blank', 'LAist'], ['_blank', 'ABC7']]);
+    assert.equal(await also.locator('[data-story], .nd').count(), 0);
+    assert.ok(await page.evaluate(() => {
+      const stories = [...document.querySelectorAll('.nw-list [data-story]')];
+      return Boolean(stories.at(-1)!.compareDocumentPosition(document.querySelector('.nw-also')!) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }), 'after the section\'s stories');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

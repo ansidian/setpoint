@@ -7,7 +7,7 @@
 // order follows the importance each story is judged as it's written (D421), and the hour re-scores
 // without asking a model. Then the cost and the cap, Unsorted while the AI is down or has no key,
 // the first run and the recap, search and Add to calendar.
-import {newsPageSchema, newsSearchSchema, newsStatusSchema, newsUnsortedSchema, recapSchema, SEED_NOW, storySchema} from '@setpoint/shared';
+import {newsPageSchema, newsSearchSchema, newsSectionOutSchema, newsStatusSchema, newsUnsortedSchema, recapSchema, SEED_NOW, storySchema} from '@setpoint/shared';
 import type {NewsSection} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, onTestFinished, test, vi} from 'vitest';
@@ -162,7 +162,15 @@ const FLOOD_NEWS: Recorded = {source: 'fox11', headline: 'Fabrikam Falls creek c
   facts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'], join: 'fabrikam falls', newFacts: ['The creek crested before dawn', 'Two of the eight closed roads reopened'],
   changesHeadline: true};
 
-const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD, FLOOD_NEWS].map(article => [article.headline, article]));
+// A street fair Haiku rates under the write gate (D452), then another outlet's copy of the same wire
+// text that it rates over it.
+const FAIR_TEXT = 'Main Street will close downtown from Friday night through Sunday for the annual fall street fair, city officials said Wednesday. Buses will detour along Second Avenue, and parking garages on the street will stay open with entrances from the side streets.';
+const FAIR: Recorded = {source: 'abc7', headline: 'Fall street fair closes Main Street downtown this weekend', published: 1, text: FAIR_TEXT, subject: 'local', sections: ['local'],
+  facts: ['Main Street closes downtown for the fall street fair from Friday night to Sunday'], importance: 38};
+const FAIR_LIFTED: Recorded = {source: 'nbcla', headline: 'Street fair shuts Main Street; buses detour all weekend', published: 1.5, text: FAIR_TEXT, subject: 'local', sections: ['local'],
+  facts: ['Buses detour along Second Avenue'], importance: 45};
+
+const RECORDED = new Map([...FIRST, ...SECOND, ...THIRD, ...FLOOD, FLOOD_NEWS, FAIR, FAIR_LIFTED].map(article => [article.headline, article]));
 
 // Sonnet's stories, by what their notes say (first match wins), with how much each matters: mostly
 // under Haiku's reading of an article, as on prod.
@@ -178,6 +186,7 @@ const STORIES: [RegExp, (input: string) => {headline: string; one_line: string; 
   [/pixel/i, () => ({headline: 'Pixel Watch 5 goes on sale with two-day battery life', one_line: 'From $349; preorders ship Friday', summary: 'The Pixel Watch 5 is on sale from $349.', importance: 50})],
   [/haiku/i, () => ({headline: 'Anthropic releases Claude Haiku 5.5', one_line: 'Faster and cheaper, in the API and Claude apps today', summary: 'Anthropic released Claude Haiku 5.5.', importance: 70})],
   [/library/i, () => ({headline: 'A library branch extends its weekend hours', one_line: 'Open Sundays from this week', summary: 'A branch library added Sunday hours.', importance: 20})],
+  [/street fair/i, () => ({headline: 'Main Street closes downtown for the weekend\'s street fair', one_line: 'Buses detour along Second Avenue', summary: 'Main Street closes for the fall street fair.', importance: 45})],
   [/ramp/i, () => ({headline: 'Overnight freeway ramp closures begin tonight', one_line: 'Through Friday', summary: 'Ramp closures begin tonight.', importance: 50})],
   [/fabrikam falls/i, () => ({headline: 'Flash flood closes 8 roads around Fabrikam Falls', one_line: 'Crews expect the creek to crest before dawn', summary: 'A flash flood closed eight roads around Fabrikam Falls overnight.', importance: 60})],
 ];
@@ -315,8 +324,9 @@ describe('a recorded set of articles groups and ranks as expected', () => {
       headline: 'Water main break floods an intersection in Example Park', one_line: null, summary: null,
       lead: {outlet: 'LAist', more: 0}, sources: [{outlet: 'LAist', discovery: true}],
     });
-    // A story under the bar never shows.
+    // A story under the bar never shows; rated under the write gate, it's never written either (D452).
     const library = s.storyOf('Library branch extends weekend hours')!;
+    expect(s.story(library)).toMatchObject({writtenAt: null, belowGate: true, needsWriting: false, headline: 'Library branch extends weekend hours'});
     expect(s.story(library).score).toBeLessThan(35);
 
     expect(headlines(w, 'local')).toEqual(['Brush fire near the 210 burns 150 acres', 'Water main break floods an intersection in Example Park']);
@@ -339,8 +349,8 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     });
     expect(s.story(fire).imageArticleId).toBe(ktla);
     const writes = () => s.calls('submit_news_story').map(request => STORIES.find(([pattern]) => pattern.test(request.input))![0].source);
-    // Seven stories written; the metered and Google News ones weren't.
-    expect(writes()).toHaveLength(7);
+    // Six stories written; the metered, Google News and library ones weren't.
+    expect(writes()).toHaveLength(6);
 
     // The user sees the fire and the shooting; half an hour on, both develop.
     w.advance(30 * MINUTE);
@@ -359,7 +369,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(storyDetail(w.store, shooting)).toMatchObject({headline: 'Four killed in a warehouse shooting in Ohio; suspect in custody', state: 'updated', outlets: 3});
     // Wire copy once: ABC and PBS's AP text, and NPR's own.
     expect(s.story(shooting).outlets).toBe(2);
-    expect(writes().slice(7).sort()).toEqual(['brush fire|foothill fire', 'warehouse']);
+    expect(writes().slice(6).sort()).toEqual(['brush fire|foothill fire', 'warehouse']);
 
     // A fifth outlet repeating the first four rewrites nothing and moves no fact.
     w.advance(10 * MINUTE);
@@ -371,7 +381,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     // Nor does it lift the judgement made when the story grew, though Haiku read the repeat higher.
     expect(s.story(fire).importance).toBe(75);
     expect(storyDetail(w.store, fire).lead.more).toBe(4);
-    expect(writes().slice(9)).toEqual(['ramp']);
+    expect(writes().slice(8)).toEqual(['ramp']);
 
     // The hour is up: every story is scored again by the formula, and no model is asked (D421).
     const asked = s.fake.requests.length;
@@ -386,7 +396,7 @@ describe('a recorded set of articles groups and ranks as expected', () => {
 
     // Every call is in the ledger under News's own rows.
     const ledger = (purpose: string) => w.store.db.select().from(t.aiUsage).where(eq(t.aiUsage.purpose, purpose as 'news_articles')).all();
-    expect([ledger('news_articles').length, ledger('news_grouping').length, ledger('news_stories').length, ledger('news_ranking').length]).toEqual([23, 7, 10, 0]);
+    expect([ledger('news_articles').length, ledger('news_grouping').length, ledger('news_stories').length, ledger('news_ranking').length]).toEqual([23, 7, 9, 0]);
     expect(ledger('news_articles').every(row => row.model === 'claude-haiku-5-5' && row.costMicros > 0)).toBe(true);
     expect(ledger('news_stories').every(row => row.model === 'claude-sonnet-5-5')).toBe(true);
     expect(s.calls('submit_news_article').every(request => request.model === 'claude-haiku-5-5' && request.body.tool_choice.type === 'tool')).toBe(true);
@@ -421,6 +431,59 @@ describe('a recorded set of articles groups and ranks as expected', () => {
     expect(recapSchema.parse(newsRecap(w.store)).stories.map(story => story.id)).toEqual([ramp]);
     // Expired stories are still found.
     expect(newsSearch(w.store, {q: 'warehouse', limit: 50}).stories.map(story => story.expired_at !== null)).toEqual([true]);
+  });
+});
+
+describe('the write gate (D452)', () => {
+  test('a story Haiku rates under 40 isn\'t written and shows only under its section\'s Also reported, never in All or the recap', async () => {
+    const s = await sortWorld();
+    const {w} = s;
+    // Past the first run, whose stories never go to the recap.
+    s.deliver([FLOOD[0]!]);
+    await s.drain();
+    w.advance(HOUR);
+    s.deliver([FAIR, THIRD[1]!]);
+    await s.drain();
+    const fair = s.storyOf(FAIR.headline)!;
+    const ramp = s.storyOf(THIRD[1]!.headline)!;
+    expect(s.calls('submit_news_story').some(request => /street fair/i.test(request.input))).toBe(false);
+    expect(s.story(fair)).toMatchObject({writtenAt: null, belowGate: true, needsWriting: false, headline: FAIR.headline, oneLine: null, summary: null});
+    // Over the bar, on Haiku's reading, but only Also reported shows it.
+    expect(s.story(fair).score).toBeGreaterThanOrEqual(35);
+    const local = newsSectionOutSchema.parse(newsSection(w.store, 'local'));
+    expect(local.stories.map(story => story.id)).not.toContain(fair);
+    expect(local.stories.map(story => story.id)).toContain(ramp);
+    expect(local.also_reported).toEqual([{
+      story_id: fair, headline: FAIR.headline, outlet: 'ABC7', outlet_short: 'ABC7', published_at: at(1), url: s.article(FAIR.headline).url,
+    }]);
+    expect(blocks(w).local!.stories.map(story => story.id)).toEqual([s.storyOf(FLOOD[0]!.headline), ramp]);
+    // Search still finds it by its headline.
+    expect(newsSearch(w.store, {q: 'street fair', limit: 50}).stories.map(story => story.id)).toEqual([fair]);
+
+    // Both leave the page unseen: the recap holds only the written one.
+    w.advance(49 * HOUR);
+    expireNews(w.store, null);
+    expect(recapSchema.parse(newsRecap(w.store)).stories.map(story => story.id)).toEqual([ramp]);
+  });
+
+  test('an article that lifts it to 40 gets it written as a new story is, and it moves up into the section\'s stories', async () => {
+    const s = await sortWorld();
+    const {w} = s;
+    s.deliver([FAIR]);
+    await s.drain();
+    const fair = s.storyOf(FAIR.headline)!;
+    expect(s.story(fair).belowGate).toBe(true);
+
+    // Another outlet's copy of the same wire text joins it by rule, read at 45.
+    w.advance(30 * MINUTE);
+    s.deliver([FAIR_LIFTED]);
+    await s.drain();
+    expect(s.storyOf(FAIR_LIFTED.headline)).toBe(fair);
+    expect(s.calls('submit_news_story').filter(request => /street fair/i.test(request.input))).toHaveLength(1);
+    expect(s.story(fair)).toMatchObject({belowGate: false, needsWriting: false, writtenAt: isoNow(w.store), headline: 'Main Street closes downtown for the weekend\'s street fair', importance: 45});
+    const local = newsSectionOutSchema.parse(newsSection(w.store, 'local'));
+    expect(local.stories.map(story => story.id)).toEqual([fair]);
+    expect(local.also_reported).toEqual([]);
   });
 });
 

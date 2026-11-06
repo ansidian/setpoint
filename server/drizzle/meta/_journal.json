@@ -218,6 +218,13 @@
       "when": 1793834856073,
       "tag": "0030_calendar_access_role",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1793936976016,
+      "tag": "0031_news_below_gate",
+      "breakpoints": true
     }
   ]
 }

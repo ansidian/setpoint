@@ -14,6 +14,8 @@
 //    the lead article, the best image and how much the story matters, which becomes its importance
 //    (D421). Facts that only add detail join the timeline and show as new, and wait for the next
 //    rewrite; a fifth outlet repeating the first four rewrites nothing and moves no judgement. A
+//    new story whose articles Haiku rates under the write gate (40) isn't written until one lifts it
+//    there, and meanwhile shows only under its section's Also reported (D452). A
 //    story covered only by a metered paper is never written (it never shows); one only Google News
 //    found shows its headline and link, unwritten, and keeps the importance Haiku read in its
 //    articles.
@@ -30,7 +32,7 @@ import {and, asc, eq, gt, inArray, isNotNull, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {STORY_TTL_MS} from '../domain/news.ts';
 import {
-  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
+  applyGrouping, belowWriteGate, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, nearestKm, outletCount, revisionFacts, ruleMatch,
   significantWords, sourceRule, storyScore, storyWords, wireKey, writerWindow,
 } from '../domain/newsSorting.ts';
 import type {ArticleNotes, KeynoteClaim, MatchableStory} from '../domain/newsSorting.ts';
@@ -160,13 +162,16 @@ function joinStory(store: Store, live: LiveStory, article: ArticleRow, notes: Ar
     store.db.insert(t.newsStoryArticles).values({storyId, articleId: article.id, linkedAt: now}).run();
     const added = notes.sections.filter(section => !live.sections.includes(section));
     added.forEach((section, index) => store.db.insert(t.newsStorySections).values({storyId, section, position: live.sections.length + index}).run());
+    const importance = live.story.rankedAt === null ? Math.max(live.story.importance, notes.importance) : live.story.importance;
     const values: Partial<StoryRow> = {
       outlets: outletCount([...live.articles, article]),
       // Once the story's writer has judged it, an article moves its importance only through the
       // rewrite its new facts bring (D421).
-      importance: live.story.rankedAt === null ? Math.max(live.story.importance, notes.importance) : live.story.importance,
+      importance,
       firstReportedAt: article.publishedAt < live.story.firstReportedAt ? article.publishedAt : live.story.firstReportedAt,
     };
+    // A story waiting under the write gate is written once an article lifts it to the gate (D452).
+    if (belowWriteGate(live.story) && !belowWriteGate({...live.story, importance})) values.needsWriting = true;
     if (facts.length) {
       const at = factTime(article.publishedAt, article.fetchedAt, live.story.seenAt);
       for (const text of facts) store.db.insert(t.newsFacts).values({storyId, at, text, articleId: article.id}).run();
@@ -256,8 +261,10 @@ export async function writeStory(ctx: SortContext, storyId: number) {
   // A metered paper is never shown or read (D89): a story it alone covers never shows, so isn't written.
   const listed = articles.filter(article => !article.metered).sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.id - b.id);
   if (!listed.length) return done({});
+  // Rated under the write gate and never written: it waits, unwritten, under Also reported (D452).
+  if (belowWriteGate(story)) return done({belowGate: true});
   // Only Google News found it: its headline and link, with no text (BRIEF.md › Sources).
-  if (listed.every(article => article.discovery)) return done({headline: listed[0]!.headline, oneLine: null, summary: null, leadArticleId: listed[0]!.id, writtenAt: isoNow(store)});
+  if (listed.every(article => article.discovery)) return done({headline: listed[0]!.headline, oneLine: null, summary: null, leadArticleId: listed[0]!.id, writtenAt: isoNow(store), belowGate: false});
   const sections = store.db.select().from(t.newsStorySections).where(eq(t.newsStorySections.storyId, storyId)).orderBy(asc(t.newsStorySections.position)).all().map(row => row.section);
   const facts = store.db.select({at: t.newsFacts.at, text: t.newsFacts.text}).from(t.newsFacts).where(eq(t.newsFacts.storyId, storyId)).orderBy(asc(t.newsFacts.at), asc(t.newsFacts.id)).all();
   const thumbs = hasThumb(store, listed.map(article => article.id));
@@ -276,7 +283,7 @@ export async function writeStory(ctx: SortContext, storyId: number) {
   const image = [written.imageArticleId, story.imageArticleId, lead, ...listed.map(article => article.id)].find(id => id !== null && thumbs.has(id)) ?? null;
   const now = isoNow(store);
   const judged = written.importance === null ? {} : {importance: written.importance, rankedAt: now};
-  return done({headline: written.headline, oneLine: written.oneLine, summary: written.summary, leadArticleId: lead, imageArticleId: image, writtenAt: now, ...judged});
+  return done({headline: written.headline, oneLine: written.oneLine, summary: written.summary, leadArticleId: lead, imageArticleId: image, writtenAt: now, belowGate: false, ...judged});
 }
 
 // ---- 4. Scores and Upcoming ----

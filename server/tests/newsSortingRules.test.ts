@@ -6,7 +6,7 @@
 import type {NewsSection} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  applyGrouping, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, matchesAll, monthStart, NEWS_MODELS, outletCount,
+  applyGrouping, belowWriteGate, candidates, confirmKeynote, eventMark, factTime, freshFacts, incidentKey, judgeArticle, matchesAll, monthStart, NEWS_MODELS, outletCount,
   rankOrder, revisionFacts, ruleMatch, SAME_EVENT_MS, sameEvent, searchWords, significantWords, sourceRule, STORY_BAR, STORY_FACTS_SHOWN, STORY_SOURCES_SHOWN,
   storyScore, storyWords, summaryModel, wireKey, writerWindow,
 } from '../src/domain/newsSorting.ts';
@@ -482,5 +482,15 @@ describe('search\'s matching (D91)', () => {
     ['nothing searched finds nothing', '  ', 'Anything', false],
   ])('%s', (_, query, text, found) => {
     expect(matchesAll(searchWords(query), text)).toBe(found);
+  });
+});
+
+describe('the write gate (D452)', () => {
+  test.each<[string, {writtenAt: string | null; importance: number}, boolean]>([
+    ['never written, read under 40: it waits', {writtenAt: null, importance: 39}, true],
+    ['never written, read at 40: it\'s written', {writtenAt: null, importance: 40}, false],
+    ['written once, judged low since: rewrites go on (D427)', {writtenAt: '2026-10-07T12:00:00.000Z', importance: 20}, false],
+  ])('%s', (_, story, held) => {
+    expect(belowWriteGate(story)).toBe(held);
   });
 });

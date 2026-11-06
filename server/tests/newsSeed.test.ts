@@ -52,7 +52,7 @@ describe('npm run seed', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setpoint-news-seed-'));
     onTestFinished(() => fs.rmSync(dir, {recursive: true, force: true}));
     const file = path.join(dir, 'setpoint.sqlite');
-    expect(seedFile(file).stories).toBe(60);
+    expect(seedFile(file).stories).toBe(63);
     const {sqlite, db} = openDatabase(file);
     onTestFinished(() => {
       sqlite.close();
@@ -65,6 +65,6 @@ describe('npm run seed', () => {
     expect(first.bytes.subarray(1, 4).toString('latin1')).toBe('PNG');
     expect(first.bytes.length).toBe(images[0]!.sizeBytes);
     // Seeding afresh starts the images over too.
-    expect(seedFile(file, {reset: true}).stories).toBe(60);
+    expect(seedFile(file, {reset: true}).stories).toBe(63);
   });
 });
