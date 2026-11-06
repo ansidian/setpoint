@@ -65,7 +65,7 @@ const subscribe = (listener: () => void) => {
 
 export const closeContextMenu = () => state && set(null);
 
-// The page's zoom from 2200 px (styles.css): the pointer is in the window's pixels, the menu's place in the page's.
+// The page's zoom (styles.css: 1.075 from 1440 px, 1.25 from 2200): the pointer is in the window's pixels, the menu's place in the page's.
 const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
 
 /** Whether a right-click on `owner` is Setpoint's: not with ⌥, not on a link or field inside it, not on selected text. */

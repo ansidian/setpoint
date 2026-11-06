@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut, MessageOut, RuleOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, holdToast, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -243,7 +243,7 @@ test('a calendar item\'s right-click selects it without the card; Colour, Copy a
     const column = page.locator('.wk-col[data-date="2026-10-17"]');
     await page.locator('.wk-col[data-date="2026-10-14"] .wb', {hasText: 'Dentist'}).waitFor();
     const hours = (await rested(() => column.boundingBox()))!;
-    await rightClick(column, {x: hours.width / 2, y: 11 * 44 + 6});
+    await rightClick(column, {x: hours.width / 2, y: (11 * 44 + 6) * ZOOM});
     await item(page, 'New event here').click();
     await page.locator('.editor').waitFor();
     await until('the draft at 11', () => page.locator('.wk-col[data-date="2026-10-17"] .wb.ghost').textContent(), text => /11:00 AM – 12:00 PM/.test(text ?? ''));

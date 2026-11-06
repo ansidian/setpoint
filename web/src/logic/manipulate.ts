@@ -51,8 +51,8 @@ export const EDGE_SCROLL = {bandPx: 48, maxStepPx: 18} as const;
 /**
  * How far the month grid scrolls each frame while a drag is held near its top or bottom edge (F6b):
  * up near the top, down near the bottom, faster the nearer the edge (and at full speed past it), and
- * not at all elsewhere. Measured in the month section's CSS pixels (geometry.ts), so the 1.25 zoom
- * from 2200 px changes nothing.
+ * not at all elsewhere. Measured in the month section's CSS pixels (geometry.ts), so the page zoom
+ * (1.075 from 1440 px, 1.25 from 2200) changes nothing.
  */
 export function edgeScroll(pointer: number, top: number, bottom: number): number {
   const {bandPx, maxStepPx} = EDGE_SCROLL;

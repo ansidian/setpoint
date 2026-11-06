@@ -19,7 +19,7 @@ import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, rested, ROOT, startSetpoint, test, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, nearPx, rested, ROOT, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -28,7 +28,7 @@ const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
   range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round((range.getBoundingClientRect().left - icon.getBoundingClientRect().right) / ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1))];
 });
 
 /** The Inbox under Settings, loaded, then Settings at `page` (from its address, as a link would). */
@@ -94,7 +94,7 @@ test('each source\'s state leads with its glyph (the polish audit\'s settings-01
       return first.classList.contains('okdot')
         ? ['dot', getComputedStyle(first).width, getComputedStyle(first).backgroundColor]
         : [first.querySelector('path')!.getAttribute('d'), first.getAttribute('width'), getComputedStyle(first).color];
-    });
+    }).then(([glyph, size, fill]) => [glyph, glyph === 'dot' ? nearPx(size!) : size, fill]);
     const [good, ink2, ink3, caution] = [await rested(() => computed(page, 'background', 'var(--good)')), await rested(() => computed(page, 'color', 'var(--ink2)')), await rested(() => computed(page, 'color', 'var(--ink3)')), await rested(() => computed(page, 'color', 'var(--caution)'))];
     const account = (label: string) => page.locator('.settings [data-account]', {hasText: label});
     await state(account('Personal')).getByText('Checks stopped, as of 9:14 PM').waitFor();

@@ -38,7 +38,8 @@ cutover. This file owns what's on screen and how it behaves.
 - **Fail visibly.** Unsorted mail stays in view; a failed change stays in place with the provider's
   words; a stale source says "as of".
 - **Desktop first, Linear-fast.** Design target **1677 × 1050** (the MacBook in Arc with its sidebar
-  open), holding at 1728 × 1117; from 2200 px wide the whole UI is zoomed 1.25× (darma's rule).
+  open), holding at 1728 × 1117; from 1440 px wide the whole UI is zoomed 1.075× (13 px text reads
+  ~14 on a MacBook, SV-214), from 2200 px 1.25× (darma's rule).
   Every common action has a key and opens without delay.
 - **No focus rings, no accessibility work.** As in darma and mantel: no focus rings or browser
   outlines anywhere, modals and popovers included; the keyboard cursor is a fill (`sub2`). Keyboard
@@ -3983,3 +3984,12 @@ it changes what's on screen.
     and pressed fills sit clear of it; a task with no date stays one 28 px line. Radius 10 and the
     10 px side padding are unchanged; the skeleton's first line is as tall as the event's. The phone
     layout is unchanged (D275).
+319. **A middle zoom step for a MacBook** (amending Principles; Andy, 2026-11-06; darma SV-214,
+    D461). At a MacBook Pro's default size (14": 1512, 16": 1728) the 13 px text read a little small,
+    while a 4K at "looks like 2560" got darma's 1.25. From 1440 px wide the whole UI is now zoomed
+    1.075× (text ~14 px); from 2200 it is 1.25× as before (`tokens.ts` › `viewport.zoom`). It's a
+    zoom rather than a font size because rows are pixel-sized and text alone would crowd their
+    fills. Below 1440 (an Air, a split window) stays at 1, so the compact tier isn't reached sooner.
+    A 16" lays out like 1607 px, a 14" like 1406, and the 1677 design target like 1560. Pointers,
+    menus, tips and drags already divide by whatever zoom the page has. The phone layout is
+    unchanged (D275).

@@ -13,7 +13,7 @@ import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 const GAP = 8;
@@ -91,7 +91,7 @@ test('boards 15 and 15b: Gym dragged from Wednesday to Thursday, then the drop a
     assert.equal(await prompt.getAttribute('data-side'), 'left');
     const dropped = (await rested(() => page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox()))!;
     const box = (await rested(() => prompt.boundingBox()))!;
-    assert.equal(Math.round(dropped.x - (box.x + box.width)), GAP);
+    assert.equal(Math.round((dropped.x - (box.x + box.width)) / ZOOM), GAP);
 
     await page.keyboard.press('Enter');
     await prompt.waitFor({state: 'detached'});
@@ -193,7 +193,7 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     await page.locator('.cell[data-date="2026-10-07"] .tk.pending .spin').waitFor();
     assert.equal(await card.getAttribute('data-side'), 'below');
     const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
-    assert.equal(Math.round((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)), GAP);
+    assert.equal(Math.round(((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)) / ZOOM), GAP);
 
     // Try again: pending once more at once, before the server has it (held here at its door), then
     // the provider refuses again, in place (SV-42).

@@ -10,7 +10,7 @@ import {after} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pagePx, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -24,7 +24,7 @@ const leadGlyph = (line: Locator) => line.evaluate(element => {
   const icon = element.querySelector('.icon')!;
   const range = document.createRange();
   range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round(range.getBoundingClientRect().left - icon.getBoundingClientRect().right)];
+  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round((range.getBoundingClientRect().left - icon.getBoundingClientRect().right) / ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1))];
 });
 
 /** A state line's leading glyph: its bundled path, size and colour (the polish audit's states-04). */
@@ -207,7 +207,7 @@ test('Search news: the stories found replace the list, the archive too; one open
     assert.equal(await page.locator('.hd .seg').count(), 0);
     // It widens over 180 ms (search-14).
     await until('the field 520 wide', () => page.locator('.hd .search').evaluate(field => [field.getBoundingClientRect().width, field.querySelector('.kbd')?.textContent]),
-      seen => seen[0] === 520 && seen[1] === 'Esc');
+      seen => pagePx(seen[0] as number) === 520 && seen[1] === 'Esc');
     assert.equal(await results.locator('.bar.muted').textContent(), '1 result·newest first');
     assert.equal(await page.locator('.nw-recap, .nw-sec, .nw-pill').count(), 0, 'the list, its recap and headers, are replaced');
     const found = results.locator('[data-story]');

@@ -8,7 +8,7 @@ import {monthTopRow} from '../../src/logic/calendar.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {minuteTop} from '../../src/logic/week.ts';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -26,7 +26,8 @@ async function colour(page: Page, value: string): Promise<string> {
   }, value);
 }
 const top = (month: string) => monthTopRow(month) * ROW;
-const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => element.scrollTop);
+// Rounded: at a fractional zoom the scroller lands on the nearest device pixel.
+const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => Math.round(element.scrollTop));
 const style = (target: Locator, property: string, pseudo?: string) => target.evaluate((element, [name, after]) => getComputedStyle(element, after ?? null).getPropertyValue(name!).trim(), [property, pseudo] as const);
 
 // The glide's path between months is by eye, and where it sets out from is glideStart's table in
@@ -69,7 +70,7 @@ test('paging lands on the month it went to, N N N chaining on to January; Month 
 const thumb = (seg: Locator) => seg.evaluate(element => {
   const on = element.querySelector<HTMLElement>(':scope > .on')!;
   const style = getComputedStyle(element, '::before');
-  return {x: new DOMMatrix(style.transform).e, width: parseFloat(style.width), shown: style.visibility, on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
+  return {x: Math.round(new DOMMatrix(style.transform).e), width: Math.round(parseFloat(style.width)), shown: style.visibility, on: [on.offsetLeft, on.offsetWidth] as [number, number], onFill: getComputedStyle(on).backgroundColor};
 });
 
 // The thumb's slide from one segment to the next is by eye (D416), and ui/Segmented's component test's: each page as it loads.
@@ -160,11 +161,11 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     // The empty hours: the 15-minute step under the pointer, as a 30-minute slot with + and its time.
     const column = page.locator('.wk-col[data-date="2026-10-14"]');
     const box = (await rested(() => column.boundingBox()))!;
-    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 40));
+    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 40) * ZOOM);
     const slot = column.locator('.wk-hover');
     await until('10:30 AM under the pointer', () => slot.textContent(), text => text === '10:30 AM');
     // A step further down it moves there.
-    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 50));
+    await page.mouse.move(box.x + 60, box.y + minuteTop(10 * 60 + 50) * ZOOM);
     await until('10:45 AM', () => slot.textContent(), text => text === '10:45 AM');
     // Over a block, or off the hours, it goes.
     const gym = page.locator('.wb', {hasText: 'Gym'}).first();
@@ -172,7 +173,7 @@ test('a day answers the pointer with `sub` at 55% over its tints and offers + to
     await until('gone over Gym', () => page.locator('.wk-hover').evaluateAll(slots => slots.map(one => one.className)), classes => classes.every(name => name.includes('gone')));
     // Reaching Gym may have scrolled the hours.
     const again = (await column.boundingBox())!;
-    await page.mouse.move(again.x + 60, again.y + minuteTop(11 * 60 + 10));
+    await page.mouse.move(again.x + 60, again.y + minuteTop(11 * 60 + 10) * ZOOM);
     await until('back on empty hours', () => page.locator('.wk-hover:not(.gone)').textContent(), text => text === '11:00 AM');
     await page.mouse.move(800, 28);
     await until('gone off the hours', () => page.locator('.wk-hover:not(.gone)').count(), count => count === 0);
@@ -214,7 +215,7 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     assert.equal(await rested(() => style(left, 'color')), await rested(() => colourIn(dentist, 'oklch(from var(--c) min(l, var(--tintL)) c h)')));
     // Its bar lines up with the others': the content keeps the rows' 20 px inset.
     const [dentistBar, gymBar] = [(await dentist.locator('.cbar').boundingBox())!, (await gym.locator('.cbar').boundingBox())!];
-    assert.equal(dentistBar.x, gymBar.x);
+    assert.ok(Math.abs(dentistBar.x - gymBar.x) < 0.5, `Dentist's bar at ${dentistBar.x}, Gym's at ${gymBar.x}`);
 
     // Gym is over: grey, not faded.
     assert.deepEqual([await style(gym, 'opacity'), await style(gym.locator('.title'), 'color'), await style(gym.locator('.when'), 'color')], ['1', await colour(page, '--ink3'), await colour(page, '--ink3')]);
@@ -224,9 +225,11 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
     const dot = await rested(() => line.evaluate(element => {
       const box = element.getBoundingClientRect();
       const style = getComputedStyle(element, '::before');
-      return box.left + parseFloat(style.left) + parseFloat(style.width) / 2;
+      // Its offsets are in the page's pixels, the box in the window's.
+      const zoom = (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1;
+      return box.left + (parseFloat(style.left) + parseFloat(style.width) / 2) * zoom;
     }));
-    assert.equal(dot, gymBar.x + gymBar.width / 2, 'the dot sits on the bars');
+    assert.ok(Math.abs(dot - (gymBar.x + gymBar.width / 2)) < 0.5, `the dot sits on the bars: ${dot}, the bars' middle ${gymBar.x + gymBar.width / 2}`);
 
     // 2:45 PM: Dentist is under way, "45m left".
     await page.clock.fastForward((5 * 60 + 33) * 60_000);
@@ -522,9 +525,9 @@ test('a drag lands where it shows it will: the chip lifts at its own width, the 
     await page.mouse.move(target.x + target.width / 2, target.y + target.height - 30, {steps: 5});
     const lift = page.locator('.ev.lift');
     await lift.waitFor();
-    // It lifts at its own width, not the press's .97 of it, however long it was held (subpixel layout,
-    // so to within 0.5 px).
-    const lifted = await lift.evaluate(element => parseFloat(element.style.width));
+    // It lifts at its own width, not the press's .97 of it, however long it was held (its width in the
+    // page's pixels, the box in the window's; subpixel layout, so to within 0.5 px).
+    const lifted = await lift.evaluate(element => parseFloat(element.style.width)) * ZOOM;
     assert.ok(Math.abs(lifted - box.width) < 0.5, `the lifted chip is ${lifted} px wide, Dentist ${box.width}`);
     await until('Thursday is the target', () => thursday.getAttribute('class'), classes => !!classes?.split(' ').includes('drop'));
     const colourOf = (css: string) => thursday.evaluate((element, value) => {

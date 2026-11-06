@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, holdToast, matchGolden, pauseClock, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, matchGolden, pauseClock, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -91,9 +91,9 @@ test(`the grid at ${SIZES.target.width} × ${SIZES.target.height}: rows 176, sev
     await page.locator('.ev').first().waitFor();
     const box = async (selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
     const cell = await box('.cell[data-date="2026-10-07"]');
-    // 147 at the design target (1677 − 248 − 400 over seven days).
-    assert.ok(Math.abs(cell.width - (SIZES.target.width - 248 - 400) / 7) < 1, `a column is ${cell.width} px`);
-    assert.equal(cell.height, 176);
+    // The page's width less the sidebar's 248 and the pane's 400 over seven days, in the page's pixels (zoomed).
+    assert.ok(Math.abs(cell.width / ZOOM - (SIZES.target.width / ZOOM - 248 - 400) / 7) < 1, `a column is ${cell.width / ZOOM} px`);
+    assert.ok(Math.abs(cell.height / ZOOM - 176) < 0.5, `a row is ${cell.height / ZOOM} px`);
     const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
     assert.deepEqual(scroll, [0, 0]);
     // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.

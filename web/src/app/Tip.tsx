@@ -16,7 +16,7 @@ import {tip} from '../tokens.ts';
 
 const ID = 'tip';
 
-// The page's zoom from 2200 px (styles.css): rects are in the window's pixels, the tip's place in the page's.
+// The page's zoom (styles.css: 1.075 from 1440 px, 1.25 from 2200): rects are in the window's pixels, the tip's place in the page's.
 const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
 
 /** Whether some of `element`'s words are cut: a box in it that hides what overflows it, narrower than they are. */

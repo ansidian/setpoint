@@ -344,7 +344,7 @@ test('the first backfill: search says what it has indexed so far', async () => {
     const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'});
     await line.waitFor();
     // Its progress runs along its foot, 62% of the line (the polish audit's states-15, search-12).
-    const foot = await rested(() => line.evaluate(element => ({width: element.getBoundingClientRect().width, fill: parseFloat(getComputedStyle(element, '::after').width)})));
+    const foot = await rested(() => line.evaluate(element => ({width: element.getBoundingClientRect().width, fill: parseFloat(getComputedStyle(element, '::after').width) * ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1)})));
     assert.ok(Math.abs(foot.fill - foot.width * 0.62) < 1, `62% of the line (${foot.fill} of ${foot.width})`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

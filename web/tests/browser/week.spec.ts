@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut} from '@setpoint/shared';
 import type {Page, Response} from 'playwright-core';
-import {cleanUp, drawn, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, pagePx, pauseClock, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -21,7 +21,7 @@ async function openWeek(page: Page, base: string) {
 /** The centre of a minute in a day's column, in page pixels. */
 async function slot(page: Page, date: string, minutes: number) {
   const column = (await rested(() => page.locator(`.wk-col[data-date="${date}"]`).boundingBox()))!;
-  return {x: column.x + column.width / 2, y: column.y + (minutes / 60) * 44};
+  return {x: column.x + column.width / 2, y: column.y + (minutes / 60) * 44 * ZOOM};
 }
 
 async function dragFrom(page: Page, from: {x: number; y: number}, to: {x: number; y: number}) {
@@ -54,11 +54,12 @@ test('Week from Month, kept in the address and remembered; the week of Oct 4 lai
     assert.deepEqual(await page.locator('.wk-dhead .dw').allTextContents(), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
     assert.equal(await page.locator('.wk-dhead[data-date="2026-10-07"] .dn.today').count(), 1);
     assert.equal(await page.locator('.wk-col.wk-sel').getAttribute('data-date'), '2026-10-07');
-    // Board 16's measures: an hour is 44 px, a one-hour block 42 px, 139 px a day at the design target.
+    // Board 16's measures, in the page's pixels: an hour is 44 px, a one-hour block 42 px, and a day a
+    // seventh of what the sidebar, the pane and the hours' gutter leave (704 px; 139 a day unzoomed).
     const dentist = (await rested(() => block(page, '2026-10-07', 'Dentist').boundingBox()))!;
-    assert.equal(Math.round(dentist.height), 42);
+    assert.equal(pagePx(dentist.height), 42);
     const column = (await rested(() => page.locator('.wk-col[data-date="2026-10-07"]').boundingBox()))!;
-    assert.ok(Math.abs(column.width - 139) <= 2, `a day is ${column.width} px`);
+    assert.ok(Math.abs(column.width / ZOOM - (SIZES.target.width / ZOOM - 704) / 7) <= 2, `a day is ${column.width / ZOOM} px`);
     assert.equal(await page.locator('.wk-now').count(), 1);
     assert.equal(await page.locator('.wk-cols > .wk-nowx').count(), 1, 'now across the week');
     assert.equal(await page.locator('.wk-gut.now').textContent(), '9:12 AM');

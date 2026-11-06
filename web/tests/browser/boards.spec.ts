@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -43,7 +43,7 @@ test('SV-141: the Inbox has one right edge: at the design target it\'s the row\'
     const ENDS = '.row .age, .nfold .chev .icon, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/inbox`);
-    assert.deepEqual(await rights(target, ENDS), [SIZES.target.width - 16], 'the row\'s end, as ever');
+    assert.deepEqual(await rights(target, ENDS), [Math.round(SIZES.target.width - 16 * ZOOM)], 'the row\'s end, as ever');
     const width = 2655;
     const wide = await setpoint.page({width, height: 1400});
     await wide.goto(`${setpoint.base}/inbox`);

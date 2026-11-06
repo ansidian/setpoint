@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import {inflateSync} from 'node:zlib';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, nearPx, pagePx, point, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -360,7 +360,7 @@ for (const theme of ['night', 'light'] as const) {
       const del = page.locator('.fd .card-acts .ibtn.danger');
       await del.waitFor();
       assert.equal(await rested(() => style(del, 'marginLeft')), '9px');
-      assert.deepEqual(await rested(() => del.evaluate(button => [getComputedStyle(button, '::before').width, getComputedStyle(button, '::before').height])), ['1px', '14px'], 'its divider');
+      assert.deepEqual(await rested(() => del.evaluate(button => [getComputedStyle(button, '::before').width, getComputedStyle(button, '::before').height])).then(sizes => sizes.map(nearPx)), ['1px', '14px'], 'its divider');
       assert.equal(await rested(() => style(del, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'Delete at rest');
       await del.hover();
       await until('Delete turns alert', () => style(del, 'color'), colour => colour === alert);
@@ -404,7 +404,7 @@ test('the reader\'s actions step back (ink2 labels, ink3 icons, ink under the po
       assert.deepEqual(await rested(() => card.evaluate(element => {
         const [outer, inner] = [element.getBoundingClientRect(), element.querySelector('iframe')!.getBoundingClientRect()];
         return [outer.width, inner.top - outer.top, inner.left - outer.left, outer.right - inner.right, outer.bottom - inner.bottom];
-      })), [623, 16, 11.5, 11.5, 16], `${theme}: the room around the email`);
+      })).then(sizes => sizes.map(size => pagePx(size))), [623, 16, 11.5, 11.5, 16], `${theme}: the room around the email`);
       const ask = page.locator('.rd-acts .btn.out', {hasText: 'Ask about this email'});
       await page.mouse.move(1, 1);
       assert.equal(await rested(() => style(ask, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), `${theme}: an action's label`);
@@ -527,9 +527,9 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await rested(() => style(check, 'color')), shown, 'the check in the ring\'s colour');
       // Centred on the whole ring, stroke included: the same room on every side.
       const [outer, inner] = [await ring.boundingBox(), await check.boundingBox()];
-      assert.deepEqual([inner!.width, inner!.height], [11, 11]);
-      assert.equal(inner!.x - outer!.x, outer!.x + outer!.width - (inner!.x + inner!.width), 'as much room left as right');
-      assert.equal(inner!.y - outer!.y, outer!.y + outer!.height - (inner!.y + inner!.height), 'as much above as below');
+      assert.deepEqual([pagePx(inner!.width), pagePx(inner!.height)], [11, 11]);
+      assert.ok(Math.abs((inner!.x - outer!.x) - (outer!.x + outer!.width - (inner!.x + inner!.width))) < 0.5, 'as much room left as right');
+      assert.ok(Math.abs((inner!.y - outer!.y) - (outer!.y + outer!.height - (inner!.y + inner!.height))) < 0.5, 'as much above as below');
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();
@@ -549,7 +549,7 @@ for (const theme of ['night', 'light'] as const) {
       const off = page.getByRole('switch', {name: 'setpoint-mail'});
       await until('the switches work', () => on.isDisabled(), disabled => !disabled);
       await page.mouse.move(1, 1);
-      const knob = (target: Locator) => target.evaluate(element => [getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::after').width]);
+      const knob = (target: Locator) => target.evaluate(element => [getComputedStyle(element, '::after').backgroundColor, getComputedStyle(element, '::after').width]).then(([fill, width]) => [fill, nearPx(width!)]);
       const track = await rested(() => backgroundOf(page, 'var(--switchOn)'));
       await until('on: the good track', () => style(on, 'backgroundColor'), fill => fill === track);
       assert.deepEqual(await rested(() => knob(on)), [await rested(() => colourOf(page, theme === 'light' ? '#ffffff' : 'var(--ink)')), '16px']);
