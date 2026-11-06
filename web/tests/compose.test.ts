@@ -521,9 +521,6 @@ describe('SV-111: a length after "for" (D291, D292), events only', () => {
     ['hours and bare minutes', 'Meeting 2pm for 1h30', h(14), h(15, 30), 90, '2pm for 1h30'],
     ['hr and minute', 'Meeting 2pm for 1 hr 1 minute', h(14), h(15, 1), 61, '2pm for 1 hr 1 minute'],
     ['past midnight', 'Party 11pm for 2 hours', h(23), h(25), 120, '11pm for 2 hours'],
-    ['days', 'Trip fri 9am for 2 days', h(9), h(9) + 2 * 1440, 2880, 'fri 9am for 2 days'],
-    ['a week', 'Retreat sat 9am for 1 week', h(9), h(9) + 7 * 1440, 7 * 1440, 'sat 9am for 1 week'],
-    ['d', 'Trip 9am for 1d', h(9), h(9) + 1440, 1440, '9am for 1d'],
     ['before the time', 'Shift for 90 minutes 3pm', h(15), h(16, 30), 90, 'for 90 minutes 3pm'],
     ['no time: the default start is the reader\'s', 'Lunch fri for 1h', null, null, 60, 'fri for 1h'],
   ])('%s: %s', (_, text, start, end, length, when) => {
@@ -854,6 +851,28 @@ describe('SV-113: when a repeat ends (D294), only after one', () => {
   });
 });
 
+describe('SV-208: a length in whole days with a time is that time each day over them', () => {
+  // Andy, 2026-11-05: "Gym 7am for 3 weeks" is 7 AM every day for three weeks, as a span of days with
+  // a time repeats each day (SV-111); hours still make one long event ("for 48h").
+  const MON = '2026-10-26';
+  const on = (text: string) => parseTitle(text, MON, CALENDARS);
+  test.each<[string, string, number, number | null, string | null, string]>([
+    ['Gym 7am for 3 weeks', MON, h(7), null, 'RRULE:FREQ=DAILY;UNTIL=20261115', '7am for 3 weeks'],
+    ['Gym 7-8am for 3 weeks', MON, h(7), h(8), 'RRULE:FREQ=DAILY;UNTIL=20261115', '7-8am for 3 weeks'],
+    ['Trip fri 9am for 2 days', '2026-10-30', h(9), null, 'RRULE:FREQ=DAILY;UNTIL=20261031', 'fri 9am for 2 days'],
+    ['Retreat sat 9am for 1 week', '2026-10-31', h(9), null, 'RRULE:FREQ=DAILY;UNTIL=20261106', 'sat 9am for 1 week'],
+    ['Standup for 2 weeks 9am', MON, h(9), null, 'RRULE:FREQ=DAILY;UNTIL=20261108', 'for 2 weeks 9am'],
+    ['Trip 9am for 1d: one day is just that day', MON, h(9), null, null, '9am for 1d'],
+  ])('%s', (text, date, start, end, recurrence, when) => {
+    const line = text.split(':')[0]!;
+    expect(on(line)).toMatchObject({date, start, end, recurrence, length: null, days: null});
+    expect(on(line).marks.map(mark => line.slice(mark.start, mark.end))).toEqual([when]);
+  });
+  test('beside a span of days of its own it stays words', () => {
+    expect(on('Trip oct 27-29 9am for 2 days')).toMatchObject({recurrence: 'RRULE:FREQ=DAILY;UNTIL=20261029', title: 'Trip for 2 days'});
+  });
+});
+
 describe('SV-113: a length in days with no time is all day over them (D298)', () => {
   const MON = '2026-10-26';
   const on = (text: string) => parseTitle(text, MON, CALENDARS);
@@ -872,7 +891,7 @@ describe('SV-113: a length in days with no time is all day over them (D298)', ()
     // Hours, part days and a time typed keep SV-111's timed length.
     ['Trip fri for 1.5 days', null, null, 2160],
     ['Trip fri for 1 day 3h', null, null, 1620],
-    ['Trip fri 9am for 2 days', h(9), h(9) + 2880, 2880],
+    ['Trip fri 9am for 48h', h(9), h(9) + 2880, 2880],
     ['Lunch fri for 2h', null, null, 120],
   ])('%s stays timed', (text, start, end, length) => expect(on(text)).toMatchObject({start, end, length, days: null}));
 });

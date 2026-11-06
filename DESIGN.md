@@ -3345,8 +3345,8 @@ it changes what's on screen.
     week", the coming Friday (next week's at the weekend); "end of month", "eom" and "end of next
     month", the month's last day. An event's weekend with no time is all day Saturday–Sunday, with
     a time Saturday at it; a task's is due Saturday. A length in whole days or weeks with no time is
-    all day over them ("Trip fri for 3 days" is Fri–Sun, D298); "for 1.5 days" or with a time stays
-    timed (#256). After a repeat, and only then (before one, they stay words): "until <day>", any
+    all day over them ("Trip fri for 3 days" is Fri–Sun, D298), and with a time that time each day
+    over them (#316); "for 1.5 days" or hours stay timed (#256). After a repeat, and only then (before one, they stay words): "until <day>", any
     of the days above, ends it on that day (`UNTIL=20261215`); "6 times" or "for 6 times" after
     that many (`COUNT=6`); "for 2 weeks" (days, weeks, months, years) lasts that long from the first
     occurrence, its last day the one before the first plus 2 weeks, so "Gym every day for 2 weeks"
@@ -3941,3 +3941,10 @@ it changes what's on screen.
     the email's day, time, place, calendar and project are what it falls back to; every field the
     editor has (repeat, the reminders row, labels). The conflict line stays, worked out again for the
     day and time as they change. The timeline preview, batch drafts and More options aren't on the card.
+316. **A length in whole days or weeks with a time is that time each day** (amending #256 and #259;
+    Andy, 2026-11-05; darma SV-208, D456). "for 3 weeks" says how long, not how often: with no time
+    it stays all day over the days (D298), and with a time, a range included ("Gym 7am for 3
+    weeks", "Gym 7-8am for 3 weeks"), it's that time each day, a daily repeat ending on its last
+    day (`FREQ=DAILY;UNTIL=20261115`), as a span of days with a time repeats each day (#256). For
+    one day it's just that day; beside a span of days of its own it stays words. One event across
+    days is "for 48h" or "fri 9am to sun 9am". The iPhone app gets the same through the compose bundle.

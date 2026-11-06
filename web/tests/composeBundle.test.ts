@@ -101,7 +101,7 @@ const CASE_LIST: Case[] = [
   // An event's length after "for" (SV-111, D291, D292): digits, decimals and compounds; with no time,
   // `length` alone; the first of a length or an end wins; bare lengths, number words and "wk" stay.
   ...['Run fri 7am for 15 min', 'Call 2pm for 1.5h', 'Meeting 2pm for 1 hour 20mins', 'Meeting 2pm for 1h30', 'Meeting 2pm for 1 hr 1 minute',
-    'Party 11pm for 2 hours', 'Trip fri 9am for 2 days', 'Retreat sat 9am for 1 week', 'Trip 9am for 1d', 'Shift for 90 minutes 3pm', 'Lunch fri for 1h',
+    'Party 11pm for 2 hours', 'Trip fri 9am for 2 days', 'Gym 7am for 3 weeks', 'Gym 7-8am for 3 weeks', 'Retreat sat 9am for 1 week', 'Trip 9am for 1d', 'Shift for 90 minutes 3pm', 'Lunch fri for 1h',
     '30 min run', 'Run for one hour', 'Run for 1 wk', 'Run for 2 dogs', 'Run for 0 min', 'Call 2-3pm for 2h', 'Call 2pm no end for 1h',
     'Call for 1h 2-3pm', 'Call for 1h 2pm no end'].map(text => line(text)),
   line('Study fri 3pm for 1h', 'task'),

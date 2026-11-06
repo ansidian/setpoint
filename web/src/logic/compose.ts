@@ -221,15 +221,16 @@ interface State {
   reminders: {start: number; reads: ({minutes: number} | {date: string | null; time: number})[]}[];
   // A weekend read as the day: an event's is all day Saturday–Sunday with no time (SV-113).
   weekend: boolean;
-  // A length's units were only days and weeks, so with no time it's all day over them (D298).
-  wholeDays: boolean;
+  // A length only in whole days and weeks, where its phrase starts: with no time it's all day over
+  // them (D298), with one that time each day over them (Andy, 2026-11-05; SV-208).
+  span: {at: number; days: number} | null;
   // When the repeat ends (SV-113), where its phrase starts: a last day, a count, or a length from
   // the first occurrence.
   ending: {start: number; until?: string; count?: number; length?: {value: number; unit: 'd' | 'w' | 'm' | 'y'}} | null;
 }
 
 const fresh = (event: boolean, remind: ReminderBase | null = null): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null,
-  weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null, remind, reminders: [], weekend: false, wholeDays: false, ending: null});
+  weeklyNeedsDay: false, repeatDays: [], event, length: null, last: null, remind, reminders: [], weekend: false, span: null, ending: null});
 
 interface Matcher {
   kind: MarkKind;
@@ -318,12 +319,17 @@ const UNIT_MINUTES: Record<string, number> = {m: 1, h: 60, d: 1440, w: 10080};
 
 const LENGTH: Matcher = {
   kind: 'when', pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`), apply: (m, s) => {
-    // A task's line keeps it as words, and the first of a length or an end wins (D292).
-    if (!s.event || s.length !== null || s.end !== null) return false;
+    // A task's line keeps it as words, and the first of a length or an end wins (D292); whole days
+    // are how many days it runs, so a time's end leaves them be.
+    if (!s.event || s.length !== null || s.span !== null) return false;
     const minutes = minutesIn(m[1]!);
     if (minutes === null || minutes < 1) return false;
+    if (minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1]!)) {
+      s.span = {at: m.index, days: minutes / 1440};
+      return true;
+    }
+    if (s.end !== null) return false;
     s.length = minutes;
-    s.wholeDays = minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1]!);
     return true;
   },
 };
@@ -739,13 +745,21 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     } else state.recurrence += `;COUNT=${count}`;
   }
   // A span with no time is all day over its days; with one time or a length, that each day until its
-  // last, the repeat typed or a daily one (SV-111, D292). A length in whole days with no time is all
-  // day over them (D298), and an event's weekend with neither is Saturday–Sunday (D294).
+  // last, the repeat typed or a daily one (SV-111, D292). A length in whole days is the same: with no
+  // time all day over them (D298), with one that time each day, a daily repeat ending on its last day
+  // (SV-208); beside a span of days of its own it stays words. An event's weekend with neither is
+  // Saturday–Sunday (D294).
   let days: number | null = null;
+  if (state.span && (state.last || state.recurrence)) endWords.add(state.span.at);
+  else if (state.span && state.start === null) days = state.span.days;
+  else if (state.span) {
+    state.date ??= first;
+    // One day at a time is just that day.
+    if (state.span.days > 1) state.recurrence = `RRULE:FREQ=DAILY;UNTIL=${compact(addDays(state.date, state.span.days - 1))}`;
+  }
   if (state.last && state.start === null && state.length === null) days = daysBetween(state.date!, state.last) + 1;
   else if (state.last) state.recurrence = `${state.recurrence ?? 'RRULE:FREQ=DAILY'};UNTIL=${compact(state.last)}`;
-  else if (state.event && state.start === null && state.length !== null && state.wholeDays) [days, state.length] = [state.length / 1440, null];
-  else if (state.event && state.start === null && state.length === null && state.weekend) days = 2;
+  else if (state.event && state.start === null && state.length === null && !state.span && state.weekend) days = 2;
   if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
   // A reminder phrase the item can't take stays words (SV-112).
   const {reminders, words: remindWords} = resolveReminders(state, days);

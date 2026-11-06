@@ -3159,13 +3159,89 @@
         ],
         "date": "2026-10-09",
         "start": 540,
-        "end": 3420,
+        "end": null,
         "place": null,
         "calendar": null,
-        "recurrence": null,
+        "recurrence": "RRULE:FREQ=DAILY;UNTIL=20261010",
         "project": null,
         "days": null,
-        "length": 2880,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Gym 7am for 3 weeks",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Gym",
+        "marks": [
+          {
+            "start": 4,
+            "end": 19,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": 420,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=DAILY;UNTIL=20261027",
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
+        "text": "Gym 7-8am for 3 weeks",
+        "kind": "event",
+        "today": "2026-10-07",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Gym",
+        "marks": [
+          {
+            "start": 4,
+            "end": 21,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-07",
+        "start": 420,
+        "end": 480,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=DAILY;UNTIL=20261027",
+        "project": null,
+        "days": null,
+        "length": null,
         "reminders": null
       }
     },
@@ -3197,13 +3273,13 @@
         ],
         "date": "2026-10-10",
         "start": 540,
-        "end": 10620,
+        "end": null,
         "place": null,
         "calendar": null,
-        "recurrence": null,
+        "recurrence": "RRULE:FREQ=DAILY;UNTIL=20261016",
         "project": null,
         "days": null,
-        "length": 10080,
+        "length": null,
         "reminders": null
       }
     },
@@ -3233,15 +3309,15 @@
             "kind": "when"
           }
         ],
-        "date": null,
+        "date": "2026-10-07",
         "start": 540,
-        "end": 1980,
+        "end": null,
         "place": null,
         "calendar": null,
         "recurrence": null,
         "project": null,
         "days": null,
-        "length": 1440,
+        "length": null,
         "reminders": null
       }
     },

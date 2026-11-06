@@ -177,7 +177,7 @@ var SetpointCompose = (function(exports) {
 		remind,
 		reminders: [],
 		weekend: false,
-		wholeDays: false,
+		span: null,
 		ending: null
 	});
 	var sticky = (source) => new RegExp(source, "iy");
@@ -300,11 +300,18 @@ var SetpointCompose = (function(exports) {
 		kind: "when",
 		pattern: sticky(`for\\s+(${NUMBER}\\s*${UNIT}(?:\\s*${NUMBER}\\s*${UNIT})*(?:\\d{1,2})?)${END}`),
 		apply: (m, s) => {
-			if (!s.event || s.length !== null || s.end !== null) return false;
+			if (!s.event || s.length !== null || s.span !== null) return false;
 			const minutes = minutesIn(m[1]);
 			if (minutes === null || minutes < 1) return false;
+			if (minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1])) {
+				s.span = {
+					at: m.index,
+					days: minutes / 1440
+				};
+				return true;
+			}
+			if (s.end !== null) return false;
 			s.length = minutes;
-			s.wholeDays = minutes % 1440 === 0 && /^(?:\s*\d+\s*(?:days?|d|weeks?)(?![a-z]))+$/i.test(m[1]);
 			return true;
 		}
 	};
@@ -762,10 +769,15 @@ var SetpointCompose = (function(exports) {
 			} else state.recurrence += `;COUNT=${count}`;
 		}
 		let days = null;
+		if (state.span && (state.last || state.recurrence)) endWords.add(state.span.at);
+		else if (state.span && state.start === null) days = state.span.days;
+		else if (state.span) {
+			state.date ?? (state.date = first);
+			if (state.span.days > 1) state.recurrence = `RRULE:FREQ=DAILY;UNTIL=${compact(addDays(state.date, state.span.days - 1))}`;
+		}
 		if (state.last && state.start === null && state.length === null) days = daysBetween(state.date, state.last) + 1;
 		else if (state.last) state.recurrence = `${state.recurrence ?? "RRULE:FREQ=DAILY"};UNTIL=${compact(state.last)}`;
-		else if (state.event && state.start === null && state.length !== null && state.wholeDays) [days, state.length] = [state.length / 1440, null];
-		else if (state.event && state.start === null && state.length === null && state.weekend) days = 2;
+		else if (state.event && state.start === null && state.length === null && !state.span && state.weekend) days = 2;
 		if (state.length !== null && state.start !== null && state.end === null) state.end = state.start + state.length;
 		const { reminders, words: remindWords } = resolveReminders(state, days);
 		marks = marks.filter((mark) => (mark.kind !== "reminder" || !remindWords.has(mark.start)) && !endWords.has(mark.start));
