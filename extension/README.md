@@ -51,7 +51,7 @@ Against `npm run try` (port 7450, the seed's applications), the address is `http
 and the token comes from the repository's root:
 
 ```bash
-SETPOINT_DATA_DIR="$PWD/data/try" npm run cli -- jobs-token
+SETPOINT_DATA_DIR="$PWD/data/dev" npm run cli -- jobs-token
 ```
 
 The CLI runs in `server/`, so the data directory goes in whole. The seed's companies are invented, so

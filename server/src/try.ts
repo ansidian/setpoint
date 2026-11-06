@@ -1,25 +1,26 @@
-// A Setpoint to try things in, in one step: builds the web app into data/try/web (not web/dist,
-// which may be stale, and which a browser run in this checkout may be serving), seeds data/try
-// with BRIEF.md's sample the first time, starts the dev server on its own port and claims it with
-// a test password, then prints how to sign in (SV-39) and a link that pairs the iPhone app with it
-// (SV-84).
+// The one dev Setpoint, in one step (launch.json's setpoint-dev): builds the web app into
+// data/dev/web (not web/dist, which may be stale, and which a browser run in this checkout may be
+// serving), seeds data/dev with BRIEF.md's sample the first time, makes its owner with the password
+// "dev" (SV-206), starts the dev server on its own port, then prints how to sign in (SV-39) and a
+// link that pairs the iPhone app with it (SV-84). Sessions share it and may change its data.
 //
-//   npm run try                     http://localhost:7450, data/try
-//   npm run try -- --reset          seeds data/try afresh
+//   npm run try                     http://localhost:7450, data/dev
+//   npm run try -- --reset          seeds data/dev afresh
 //   npm run try -- --no-build       skips the build (the last one, as it is)
 //   SETPOINT_PORT=7451 npm run try
 //
 // Its data is the sample's, nothing real, but for News, which is data/news-snapshot/'s real news when
-// the checkout has one (src/dev/newsSnapshot.ts). TRY_PASSWORD is a test value for this local copy only.
+// the checkout has one (src/dev/newsSnapshot.ts). DEV_PASSWORD is a test value for this local copy only.
 import {spawn, spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {cliLine} from './dev/cliLine.ts';
+import {ensureDevOwner} from './dev/devOwner.ts';
 import {newsSnapshotIn} from './dev/newsSnapshot.ts';
 import {seedFile} from './dev/seedFile.ts';
 
-export const TRY_PASSWORD = 'setpoint try';
+export const DEV_PASSWORD = 'dev';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SERVER = fileURLToPath(new URL('../', import.meta.url));
@@ -29,7 +30,7 @@ if (unknown.length) {
   console.error(`Unknown argument: ${unknown.join(' ')}. Usage: npm run try [-- --reset] [--no-build]`);
   process.exit(2);
 }
-const dataDir = path.join(ROOT, 'data', 'try');
+const dataDir = path.join(ROOT, 'data', 'dev');
 const port = Number(process.env.SETPOINT_PORT ?? 7450);
 const base = `http://localhost:${port}`;
 const webDir = path.join(dataDir, 'web');
@@ -45,6 +46,7 @@ if (args.includes('--reset') || !fs.existsSync(file)) {
   const {emails, items} = seedFile(file, {reset: true, newsSnapshot: newsSnapshotIn(path.join(ROOT, 'data'))});
   console.log(`Seeded ${emails} emails and ${items} calendar items into ${path.relative(ROOT, file)}.`);
 }
+await ensureDevOwner(file, DEV_PASSWORD);
 
 const server = spawn('npm', ['run', 'dev'], {cwd: SERVER, env, stdio: ['inherit', 'pipe', 'inherit']});
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => server.kill(signal));
@@ -55,30 +57,15 @@ server.stdout.on('data', (chunk: Buffer) => {
   process.stdout.write(chunk);
   if (!ready && chunk.toString().includes('Setpoint listening')) {
     ready = true;
-    claim().then(announce, (error: Error) => console.error(`Couldn't claim it: ${error.message}`));
+    announce();
   }
 });
-
-/** Claims a fresh copy with the test password; a claimed one is left as it is. */
-async function claim() {
-  const status = await fetch(`${base}/api/auth/status`).then(response => response.json() as Promise<{claimed: boolean}>);
-  if (status.claimed) return;
-  const issued = spawnSync(process.execPath, ['src/cli.ts', 'setup-token'], {cwd: SERVER, env, encoding: 'utf8'});
-  const token = issued.stdout.trim().split('\n').at(-1)?.trim();
-  if (issued.status !== 0 || !token) throw new Error(issued.stderr || 'no setup token');
-  const response = await fetch(`${base}/api/auth/claim`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', Origin: base},
-    body: JSON.stringify({setup_token: token, password: TRY_PASSWORD}),
-  });
-  if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
-}
 
 function announce() {
   console.log(`
 Setpoint is at ${base}, with the sample's data (its clock is the seed's, ${path.relative(ROOT, dataDir)}).
-Sign in with the password "${TRY_PASSWORD}". From a page's console (an agent's browser pane):
-  await fetch('/api/auth/sign-in', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: '${TRY_PASSWORD}'})}); location.reload();
+Sign in with the password "${DEV_PASSWORD}". From a page's console (an agent's browser pane):
+  await fetch('/api/auth/sign-in', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({password: '${DEV_PASSWORD}'})}); location.reload();
 ${pairingLink()}`);
 }
 

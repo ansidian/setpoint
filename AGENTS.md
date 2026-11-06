@@ -94,8 +94,12 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 - `release:check` runs the cheap steps likeliest to fail first: npm test, the page screenshots, the
   image build, then the browser checks and the audit, so a changed golden stops it in a couple of
   minutes.
-- `npm run try` builds, seeds `data/try/`, starts Setpoint on port 7450 and claims it, then prints
-  how to sign in: the quickest way to see a change or reproduce a report by hand.
+- `npm run try` is the one dev Setpoint (`setpoint-dev` in `.claude/launch.json`, its only entry):
+  it builds, seeds `data/dev/` the first time (`-- --reset` reseeds), starts on port 7450 on the
+  seed's clock with the password `dev`, then prints how to sign in: the quickest way to see a change
+  or reproduce a report by hand. Sessions share it and may change its data, which is throwaway but
+  should stay representative of prod. Don't add launch.json entries or `data/` copies of your own;
+  a check that needs a copy apart runs it from your scratchpad and leaves nothing behind (SV-206).
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
   `SETPOINT_DATA_DIR` moves it). Its fixed now is `SEED_NOW` in `@setpoint/shared`.
 - With `data/news-snapshot/` there (real news taken once from prod, `server/src/dev/exportNews.ts`),

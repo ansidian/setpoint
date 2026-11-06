@@ -1,6 +1,6 @@
-// The CLI line `npm run try` prints (SV-173): pasted into a shell, it reaches try's own copy, though
+// The CLI line `npm run try` prints (SV-173): pasted into a shell, it reaches the dev copy, though
 // `npm run cli` runs in server/ (npm runs a workspace's script there), where a relative data dir
-// would open a new server/data/try.
+// would open a new server/data/dev.
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,7 +11,7 @@ const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SERVER = path.join(ROOT, 'server');
 
 test.each([
-  ['try\'s own', path.join(ROOT, 'data', 'try')],
+  ['the dev copy', path.join(ROOT, 'data', 'dev')],
   ['one with a space and a quote', path.join(ROOT, 'data', 'it\'s a try')],
 ])('the line\'s data dir, from server/, is the copy\'s: %s', (_, dataDir) => {
   const line = cliLine(dataDir, 7450, 'pair-link');
