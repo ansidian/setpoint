@@ -754,9 +754,30 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
     if (next.place !== one.place) edited.push('place');
     return edited.length ? {...next, fromEmail: next.fromEmail.filter(field => !edited.includes(field))} : next;
   };
-  const typeLine = (text: string) => setDrafts(list => list.map(one => (one.id === draft.id ? reread(one, text) : one)));
+  // Each draft's phrases made words since it was last typed into, as its line and words were before
+  // each: ⌘Z in the line takes them back, newest first, and then it's the line's own undo again.
+  const madePlain = useRef(new Map<number, {text: string; plain: Span[]}[]>());
+  const typeLine = (text: string) => {
+    madePlain.current.delete(draft.id);
+    setDrafts(list => list.map(one => (one.id === draft.id ? reread(one, text) : one)));
+  };
   // D290: a lit phrase clicked, or ⌥⌫ with the caret inside it, is title words again, and what it set goes.
-  const makePlain = (mark: Mark) => setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: [...one.plain, {start: mark.start, end: mark.end}]}, one.text) : one)));
+  const makePlain = (mark: Mark) => {
+    madePlain.current.set(draft.id, [...madePlain.current.get(draft.id) ?? [], {text: draft.text, plain: draft.plain}]);
+    setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: [...one.plain, {start: mark.start, end: mark.end}]}, one.text) : one)));
+  };
+  /** The last phrase made words taken back, if the line is still as it was then; false if none. */
+  const unmakePlain = () => {
+    const steps = madePlain.current.get(draft.id) ?? [];
+    const last = steps.at(-1);
+    if (!last || last.text !== draft.text) {
+      madePlain.current.delete(draft.id);
+      return false;
+    }
+    madePlain.current.set(draft.id, steps.slice(0, -1));
+    setDrafts(list => list.map(one => (one.id === draft.id ? reread({...one, plain: last.plain}, one.text) : one)));
+    return true;
+  };
   // The marks are drawn behind the line's input, so the pointer finds one by where its letters are.
   const markAt = (x: number, y: number): Mark | null => {
     for (const shown of lineMarks.current?.querySelectorAll<HTMLElement>('[data-start]') ?? []) {
@@ -901,6 +922,8 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
         event.preventDefault();
         makePlain(inside);
       }
+    } else if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z' && event.target === line.current) {
+      if (unmakePlain()) event.preventDefault();
     } else if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();

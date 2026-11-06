@@ -1490,6 +1490,41 @@ test('D290: a click on a lit phrase, or ⌥⌫ inside it, makes it title words, 
   }
 });
 
+test('⌘Z in the line takes back a phrase made words, newest first, and once typed past it is the line\'s own undo', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openCalendar(page, setpoint.base);
+    await page.keyboard.press('c');
+    const line = page.getByLabel('Describe the event');
+    const start = page.getByLabel('Start', {exact: true});
+    const lit = page.locator('.nl [data-start]');
+    await line.pressSequentially('Lunch fri 1pm');
+    await page.locator('.nl .tok-d', {hasText: 'fri 1pm'}).waitFor();
+    await line.press('ArrowLeft');
+    await line.press('Alt+Backspace');
+    await lit.first().waitFor({state: 'detached'});
+    assert.equal(await start.inputValue(), '9:00 AM');
+    // Taken back: lit again, its time back, the line as it was.
+    await page.keyboard.press('Meta+z');
+    await page.locator('.nl .tok-d', {hasText: 'fri 1pm'}).waitFor();
+    assert.deepEqual([await line.inputValue(), await start.inputValue()], ['Lunch fri 1pm', '1:00 PM']);
+    // Made words again and typed past, ⌘Z undoes the typing and the phrase stays words.
+    await line.press('Alt+Backspace');
+    await lit.first().waitFor({state: 'detached'});
+    await line.press('End');
+    await line.pressSequentially(' x');
+    await until('the line typed', () => line.inputValue(), value => value === 'Lunch fri 1pm x');
+    await page.keyboard.press('Meta+z');
+    await until('the typing undone', () => line.inputValue(), value => value !== 'Lunch fri 1pm x');
+    assert.deepEqual([await lit.count(), await start.inputValue()], [0, '9:00 AM']);
+    await page.locator('.editor').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('D290: E on an edit with phrases typed selects only its title words, so typing renames it and the phrases stay', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {

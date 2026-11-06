@@ -3316,7 +3316,9 @@ it changes what's on screen.
     12 clicked, is titled with it and stays on its day); it stays words while the line goes on,
     until it's typed into again, as the iPhone's tap does. Over a lit phrase the focused line's
     tooltip says "Click to keep as words" and the phrase deepens. ⌥⌫ at a phrase's edge deletes a
-    word, as ever. An email's proposal puts its title in the line as words only, none of them read,
+    word, as ever. ⌘Z (Ctrl-Z) in the line takes back phrases made words, newest first, each lit
+    again with what it set, until the line is typed into; then, and once none are left, it's the
+    line's own undo (the user, 2026-11-05, darma SV-209). An email's proposal puts its title in the line as words only, none of them read,
     and its "From the email" mark sits at the line's trailing edge, the text stopping before it. E
     selects the line's title words only, its first run of them, so typing renames the item and keeps
     "fri 7pm @Blue Door"; with no title words, the caret goes to the line's start. Board audit:
