@@ -1439,6 +1439,12 @@ test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the e
     assert.equal(await card.locator('input[aria-label="Place"]').inputValue(), 'Contoso University · Room 214');
     assert.equal(await card.locator('.conflict').textContent(), 'Free that evening');
     assert.equal(await card.locator('.srcm').count(), 3);
+    // The ? keeps to the line inside the card's padding: on its middle with the email's mark, and
+    // inside its edge.
+    const boxes = await card.evaluate(element => ['.nl', '.nl > .srcm', '.lr-q'].map(selector => element.querySelector(selector)!.getBoundingClientRect()).map(box => ({middle: Math.round(box.top + box.height / 2), right: box.right})));
+    const [field, mark, question] = boxes as [{middle: number; right: number}, {middle: number; right: number}, {middle: number; right: number}];
+    assert.deepEqual([mark.middle, question.middle], [field.middle, field.middle], 'the mark and the ? on the line\'s middle');
+    assert.ok(question.right < field.right && question.right > mark.right, 'the ? inside the line, after the mark');
     assert.equal(await page.locator('.rd-acts .btn.ghost').textContent(), 'Add to calendar');
     // A press outside the reminder menu closes it; the card stays (SV-24).
     await card.locator('button[aria-label="Add reminder"]').click();
