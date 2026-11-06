@@ -291,7 +291,7 @@ test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and t
 
     // 2:45 PM: Dentist is under way, and Leave by is gone from both.
     await page.clock.fastForward(35 * 60_000);
-    await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
+    await until('the now-line at 2:45 PM, riding Dentist', () => page.locator('.nowride .t').textContent(), time => time === '2:45 PM');
     await until('Leave by gone from the pane', () => leave.count(), count => count === 0);
     await until('and from the card', () => fact.count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);

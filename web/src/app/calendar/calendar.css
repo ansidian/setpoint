@@ -202,13 +202,23 @@
 .ag-item.next.sel { background: color-mix(in oklch, var(--c) 16%, transparent); }
 .ag-item.next .when { color: var(--ink); }
 .ag-item.next .in { color: oklch(from var(--c) min(l, var(--tintL)) c h); font-weight: 500; font-size: 12.5px; }
-.ag-item.ongoing .cbar { background: linear-gradient(var(--c) 0 var(--done), color-mix(in oklch, var(--c) 30%, transparent) var(--done) 100%); }
+.ag-item.ongoing .cbar { background: linear-gradient(var(--c) 0 calc(var(--gone) * 100%), color-mix(in oklch, var(--c) 30%, transparent) calc(var(--gone) * 100%) 100%); }
 /* The now-line, in `alert` with the time, drawn as the week's (polish audit calpanes-04): 1.5 px with
    an 8 px dot centred on the events' colour bars. */
 .nowline { display: flex; align-items: center; gap: 12px; padding: 6px 20px; }
 .nowline .t { width: 64px; color: var(--alert); font-size: 12px; font-weight: 500; }
 .nowline .line { height: 1.5px; flex: 1; background: var(--alert); position: relative; }
 .nowline .line::before { content: ''; position: absolute; left: -2.5px; top: -3.25px; width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
+/* An event under way carries the now-line (#321). It is always the lifted next one, so its content sits
+   12 px in and 8 px down. The dot rides the bar at the time gone, the time takes the start time's
+   column (held inside the row), and the line goes on to the content edge at 35%, under the text. */
+.ag-item.ongoing { position: relative; }
+.ag-item.ongoing > .when { opacity: 0; }
+.ag-item.ongoing > .grow, .ag-item.ongoing > .spin, .ag-item.ongoing > .in, .ag-item.ongoing > .repeat { position: relative; z-index: 1; }
+.nowride { position: absolute; inset: 8px 12px; pointer-events: none; }
+.nowride .t { position: absolute; left: 0; width: 64px; top: clamp(0px, calc(100% * var(--gone) - 8px), calc(100% - 16px)); line-height: 16px; color: var(--alert); font-size: 12px; font-weight: 500; }
+.nowride .dot { position: absolute; left: calc(64px + 12px - 2.5px); top: calc(100% * var(--gone) - 4px); width: 8px; height: 8px; border-radius: 999px; background: var(--alert); }
+.nowride .rule { position: absolute; left: calc(64px + 12px + 3px); right: 0; top: calc(100% * var(--gone) - .75px); height: 1.5px; background: color-mix(in oklch, var(--alert) 35%, transparent); }
 .ag-empty { padding: 18px 20px 8px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
 /* An empty day leads with its glyph (event_available, or visibility_off when calendars hide its items), 8 px before the words (#124). */
 .ag-empty > .icon { margin-right: 2px; }

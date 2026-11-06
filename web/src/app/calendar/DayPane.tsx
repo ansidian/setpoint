@@ -2,7 +2,7 @@
 // ("Sunny · 78° / 61°") or else what it holds ("6 events · 2 tasks"), its events (time, colour bar,
 // title, "7:00 – 8:00 AM · Personal", the place on its own line, #125, the recurring glyph, the next lifted with "in 5h" or "45m left" under way (calpanes-01), "Leave by 2:05 PM
 // · 18 min", in `caution` once it's time to go and gone once the event starts, SV-56), the now-line
-// in `alert` today, and its tasks with their projects; the footer's keys. F6 adds the line under an
+// in `alert` today, riding the event under way (#321), and its tasks with their projects; the footer's keys. F6 adds the line under an
 // event that starts during another ("Overlaps Study group until 8:30 PM", board 12b), "Moving to Thu,
 // Oct 8" while a drop waits on its scope (board 15b), completing a task from its ring, and a change
 // waiting for its provider (a spinner, board 19b). SV-20 adds the calendar's sources' stale and
@@ -186,19 +186,23 @@ function AgendaRow({event, index, nowAt, nowLine, colour, selected, now, timeZon
   const {item} = event;
   const leave = leaveLine(item, timeZone, now);
   const line = movingTo ? `${timeRange(item, timeZone)} · Moving to ${dayTitle(movingTo)}` : event.line;
-  // The next event is lifted out of the list, and one under way fills its bar as it goes (polish audit calpanes-01).
+  // The next event is lifted out of the list, and one under way fills its bar as it goes (polish audit
+  // calpanes-01) and carries the now-line (#321).
   const classes = ['ag-item', event.past && 'past', event.next && 'next', event.ongoing && 'ongoing', selected.has(item.key) && 'sel', item.command?.state === 'pending' && 'pending', fade].filter(Boolean).join(' ');
   return (
     <>
-      {nowAt === index && nowLine}
+      {nowAt === index && !event.ongoing && nowLine}
       <a className={classes} href="#" data-key={item.key}
-        style={{'--c': colourVar(colour ?? 'cool'), ...(event.progress === null ? {} : {'--done': `${Math.round(event.progress * 1000) / 10}%`})} as CSSProperties}
+        style={{'--c': colourVar(colour ?? 'cool'), ...(event.progress === null ? {} : {'--gone': Math.round(event.progress * 1000) / 1000})} as CSSProperties}
         onClick={click => {
           click.preventDefault();
           onSelectItem(item);
         }}>
         <span className="when num">{event.when}</span>
         <span className="cbar" />
+        {/* Under way, the now-line rides the bar at the time gone and goes on across the row at 35% (#321).
+            Drawn only: the row still reads its start time. */}
+        {event.ongoing && <span className="nowride" aria-hidden="true"><span className="t num">{clockTime(now, timeZone)}</span><span className="dot" /><span className="rule" /></span>}
         <span className="grow">
           <span className="title">{item.title}</span>
           <span className="ink3 num line">{line}</span>

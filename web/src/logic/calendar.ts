@@ -328,7 +328,7 @@ export interface Agenda {
   events: AgendaEvent[];
   tasks: ItemOut[];
   // Where the now-line goes among the events (before events[index]): after what has ended, so an
-  // event under way sits under it; null on other days.
+  // event under way is the one at it, and carries it in its row (#321); null on other days.
   nowAt: number | null;
 }
 
@@ -342,7 +342,7 @@ export function agendaPlace(item: Pick<ItemOut, 'place' | 'address'>): AgendaPla
 
 /**
  * The selected day's agenda (DESIGN.md › Right pane): its events with their times and lines, the
- * now-line after what has ended (today only), so one under way sits under it, the next event today
+ * now-line after what has ended (today only), so one under way carries it (#321), the next event today
  * lifted with "in 5h" or, under way, "45m left" (polish audit calpanes-01), then its tasks.
  */
 export function agenda(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, now: number, timeZone: string): Agenda {

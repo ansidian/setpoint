@@ -233,9 +233,26 @@ test('the pane lifts the next event on a tint of its colour with "in 5h" in it; 
 
     // 2:45 PM: Dentist is under way, "45m left".
     await page.clock.fastForward((5 * 60 + 33) * 60_000);
-    await until('the now-line at 2:45 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:45 PM');
+    // 2:45 PM: Dentist (2:30 – 3:30) is a quarter gone, and its row carries the now-line (#321).
+    await until('the now-line at 2:45 PM, riding Dentist', () => dentist.locator('.nowride .t').textContent(), time => time === '2:45 PM');
     await until('Dentist under way', () => dentist.getAttribute('class'), classes => classes === 'ag-item next ongoing');
     assert.equal(await left.textContent(), '45m left');
+    assert.equal(await page.locator('.rpane .nowline').count(), 0, 'no now-line between the rows');
+    const [bar, row, ride, time, rule, end] = await rested(async () => [
+      (await dentist.locator('.cbar').boundingBox())!,
+      (await dentist.boundingBox())!,
+      (await dentist.locator('.nowride .dot').boundingBox())!,
+      (await dentist.locator('.nowride .t').boundingBox())!,
+      (await dentist.locator('.nowride .rule').boundingBox())!,
+      (await left.boundingBox())!,
+    ]);
+    const middle = ride.y + ride.height / 2;
+    assert.ok(Math.abs(ride.x + ride.width / 2 - (bar.x + bar.width / 2)) < 0.5, 'the dot on the bar');
+    assert.ok(Math.abs(middle - (bar.y + bar.height / 4)) < 0.5, `the dot a quarter down the bar: ${middle}, a quarter ${bar.y + bar.height / 4}`);
+    assert.ok(Math.abs(rule.y + rule.height / 2 - middle) < 0.5, 'the line level with the dot');
+    assert.ok(rule.x >= bar.x + bar.width - 0.5 && Math.abs(rule.x + rule.width - (end.x + end.width)) < 0.5, 'the line from the bar to the content\'s edge');
+    assert.ok(time.y >= row.y && time.y + time.height <= row.y + row.height, 'the time inside the row');
+    assert.equal(await rested(() => style(dentist.locator('.when'), 'opacity')), '0', 'the start time steps aside');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

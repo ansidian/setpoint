@@ -523,7 +523,7 @@ Default: the selected day (board 11): the date, its weather ("Sunny · 78° / 61
 a 3 px colour bar, title, "7:00 – 8:00 AM · Personal", always the calendar; the place on its own
 line in `ink3` 12.5 after a 16 px `location_on`, or `videocam` and the host, "zoom.us", for a link,
 #125; recurring glyph; the next one today lifted on a tint of its colour with "in 5h" in it, and
-once under way under the now-line with "45m left" and its bar filling, #183; past ones grey, #183; "Leave
+once under way carrying the now-line in its row with "45m left" and its bar filling, #183, #321; past ones grey, #183; "Leave
 by 2:05 PM · 18 min" for Time to Leave, `caution` from 15 minutes before it until the event starts,
 then gone, #112), "Overlaps Study group until 8:30 PM" under an event that starts while another is
 on (board 12b), leaving free events out (#303), the **now-line** in `alert` with the time, 1.5 px with an 8 px dot on the colour
@@ -4005,3 +4005,13 @@ it changes what's on screen.
     A 16" lays out like 1607 px, a 14" like 1406, and the 1677 design target like 1560. Pointers,
     menus, tips and drags already divide by whatever zoom the page has. The phone layout is
     unchanged (D275).
+321. **The now-line rides the event under way** (amending #183 and #184; Andy, 2026-11-06; darma
+    SV-215, D462). The now-line sat above an event under way whatever the time, so halfway through
+    it looked the same as at its start. Now that event's row carries it: the 8 px dot rides its 3 px
+    bar where the fill ends (the row's 8 px padding is the bar's start and end), the time in `alert`
+    takes the start time's column, held inside the row so it never reaches a neighbour's time, and
+    the line goes on to the content's edge at 35% `alert`, under the row's text. The start time stays
+    for assistive tech, the riding line being drawn only. Between events, and with nothing under
+    way, the now-line is as #184. Tried beside it: stopping the line at the bar (the fallback), a
+    halo cutting it out round each letter, fading it off the bar, and passing it behind boxes of the
+    card's colour, solid or at 65%. The phone layout is unchanged (D275).
