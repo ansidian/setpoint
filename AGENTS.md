@@ -5,196 +5,70 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Sources of truth
 
-- [BRIEF.md](BRIEF.md) owns scope, the data model, integrations and the cutover (decisions 1–73).
-- [DESIGN.md](DESIGN.md) owns what's on screen and how it behaves. It wins over the export in
+- [BRIEF.md](BRIEF.md) owns scope, the data model, integrations and the cutover.
+- [DESIGN.md](DESIGN.md) owns what's on screen and how it behaves. It wins over
   [design-export/](design-export/README.md); its Overrides list every known case.
 - [BUILD-PLAN.md](BUILD-PLAN.md) owns the slices, their order and their Done-when lists.
+- [web/tests/README.md](web/tests/README.md) explains how the test runs and release checks work.
 - Precedence: Andy's rules here, then DESIGN.md, then the export, then the brief's visual notes.
   Where the docs leave something unclear, ask Andy, one question at a time.
 
 ## Working
 
-- v1 is read-only. Its code comes over only through the harvest gate (BUILD-PLAN.md › Rules for
-  every slice): read the module and its tests, explain every branch in the slice's issue, decide
-  keep / adapt / rewrite, port it with its tests, and the orchestrator reviews before it lands.
-- Tracking is darma project **SV**: one issue per slice. Decisions go in as darma decisions and,
+- v1 is read-only; its code comes over only through the harvest gate (BUILD-PLAN.md › Rules for
+  every slice).
+- Tracking is darma project **SV**, one issue per slice. Decisions go in as darma decisions and,
   when they change the screen, in DESIGN.md › Decided while building, with Andy's agreement.
-- Commit one logical change at a time with a single-line `feat:`, `fix:` or `chore:` message.
-  Never add an agent co-author.
-- Pushing `master` needs no go-ahead (D119): push once a change's checks pass and its diff has been
-  looked over for private details (Public repository, below). Never push tags; `pre-public` stays
-  local.
-- Anything else outward-facing needs Andy's go-ahead first: deploying (only a pushed commit),
-  creating a remote, provider consoles (redirect URIs, Pub/Sub, the Todoist webhook), mantel or
-  Home Assistant.
+- One logical change per commit, a single-line `feat:`, `fix:` or `chore:` message, no agent
+  co-author.
+- Push `master` once a change's checks pass and its diff is clear of private details (D119). Never
+  push tags; `pre-public` stays local.
+- Anything else outward-facing needs Andy's go-ahead: deploying (only a pushed commit), creating a
+  remote, provider consoles, mantel or Home Assistant.
 
-## Verification
+## Checks
 
-- `npm test` (lint, typecheck, Vitest, its component tests in Chromium too) passes before every
-  commit, and `npm run test:browser` (build and Playwright) for the spec files covering what the
-  change touches; a change to the harness or the shared styles runs them all. Say what ran.
-- Browser runs share one lock (web/tests/browser/lock.ts), so each waits for another's, in any
-  session, saying whose, for up to 45 minutes: run them in the background when another session may
-  be testing. `npm test` takes no lock and passes beside a browser run, each slower (SV-144). Vitest
-  runs as many workers as a Mac has performance cores (vitest.config.ts), since one on an efficiency
-  core can pass a time limit with the Mac idle.
-- `npm run test:browser -- mail search` runs only those spec files, and
-  `npm run test:browser -- mail --only "S8"` only the checks whose names start that way: iterate on
-  the one check, then run its files before the commit (a run with `--only` isn't recorded for
-  release:check). A file's checks run side by side, sharing the run's eight slots, so one file is
-  about as quick as its slowest few checks (SV-102); a check therefore keeps nothing in module
-  state that another check reads. One browser run at a time on this machine: a run waits for
-  another session's, saying whose, and stops at 15 minutes. It ends with its time and slowest
-  checks; past its budget, look there before adding checks. A direct
-  `node --test` of the specs and the board audit wait for the same lock (web/tests/browser/lock.ts),
-  and each of them waits while a checkout from before the lock has a browser open. A run's server
-  is a bundle made after the web build (`web/tests/browser/bundle.ts`, SV-145), a third of the boot
-  and half the memory, and its native packages stay out of it; the page screenshots, a direct
-  `node --test` and the board audit run the source, so a release has run the entry point production
-  runs. A new
-  native package goes in the bundle's `external`.
-- Checks run without traces, a third of a run's CPU, so a check that fails or times out runs again
-  with one (up to ten checks), kept under `test-results/browser/traces/`, and the run says where:
-  `npx playwright-core show-trace <file>` replays every action, with the screen and the DOM at each
-  step, before guessing at what was mid-flight (SV-75, SV-144). One that passes the second time says
-  so and leaves none, and the run has still failed: it races, and is fixed by taking out what it
-  depends on (Tests own behaviour). `SETPOINT_BROWSER_TRACE` (1, `light` for the DOM at each step
-  without the screencast, or 0) sets what any run records the first time.
-- There is no stress run (SV-195, superseding D81, D281's stress part and D445): every check is
-  deterministic on its own, so a run on a busy machine passes or fails as one on an idle one. The
-  page screenshots and the board audit run at release, not per change (D281), and before a slice
-  that changes the screen lands (below).
-- Before a release: `npm run release:check` (SV-83, D274). It runs `npm test`, the page screenshots
-  (`npm run test:pages`), the image build as a deploy builds it (`git archive HEAD | docker build`,
-  exporting nothing, so Docker must be running, SV-188), the browser checks and the board audit,
-  each only where it hasn't already passed on what it reads in HEAD. Every passing run records
-  itself by what it reads (web/tests/passes.ts › INPUTS, SV-193), so the runs before a commit count:
-  npm test by everything but the docs, boards, goldens and Docker files; the browser checks by the
-  app, the harness and the lockfile, and each spec file by its own content; the page screenshots by
-  the app, the goldens and their spec files; the image by the Dockerfile, `.dockerignore`, the code
-  and the lockfile; the audit by the goldens and boards. So a docs-only commit leaves everything
-  passed, and a goldens-only one only the screenshots and the audit to run. It says what it
-  skipped and ends with whether HEAD is ready; with everything passed it answers in seconds.
-- Checks run ahead, at landing (SV-194). After each push to `master` on this Mac, a
-  reference-transaction hook (`npm run ahead -- install` puts it in) starts the check ahead
-  (web/tests/ahead.ts): `release:check --keep-going` on origin/master in its own worktree,
-  `.claude/worktrees/check-ahead`, in the background, one at a time, a push meanwhile checked when
-  it's done. So a release finds its checks passed, and a `release:check` started while it runs waits
-  for it and then finds it all recorded. `npm run ahead -- status` says how the last one went and
-  where its log is; read it before a release, and fix what failed rather than waiting for the
-  release to find it. `release:check` waits for the browser lock and holds it for as long as it runs
-  anything (none when everything has passed), so the check ahead never runs beside another
-  browser run, and an interactive run waits for it, saying whose.
-- Goldens at landing: a slice whose change alters what a page screenshot shows (a seed change, a
-  header button, a new row in a page the goldens hold) runs `npm run release:check -- pages image`
-  on its commit before it lands (any of `unit pages image browser audit` runs just those). A golden
-  that changed goes to Andy beside its diff and is re-captured (`npm run goldens`) in that slice, so
-  a release never finds one after its long checks. Goldens key only the screenshots and the audit,
-  so committing them leaves npm test's and the browser checks' passes standing.
-- `release:check` runs the cheap steps likeliest to fail first: npm test, the page screenshots, the
-  image build, then the browser checks and the audit, so a changed golden stops it in a couple of
-  minutes.
+- `npm test` passes before every commit. `npm run test:browser -- <spec names>` runs the spec files
+  covering the change (`--only "<prefix>"` to iterate on one check); a change to the harness or
+  shared styles runs them all. Say what ran.
+- One browser run at a time per machine, behind a shared lock: run them in the background when
+  another session may be testing.
+- Before a release, `npm run release:check` (Docker running); read `npm run ahead -- status` first
+  and fix what failed.
+- A slice that changes what a page screenshot shows runs `npm run release:check -- pages image`
+  before it lands. A changed golden goes to Andy beside its diff and is re-captured with
+  `npm run goldens` in that slice, never just to make a run pass.
+- A new native package goes in the browser bundle's `external` (web/tests/browser/bundle.ts).
+
+## Dev server
+
 - `npm run try` is the one dev Setpoint (`setpoint-dev` in `.claude/launch.json`, its only entry):
-  it builds, seeds `data/dev/` the first time (`-- --reset` reseeds), starts on port 7450 on the
-  seed's clock with the password `dev`, then prints how to sign in: the quickest way to see a change
-  or reproduce a report by hand. Sessions share it and may change its data, which is throwaway but
-  should stay representative of prod. Don't add launch.json entries or `data/` copies of your own;
-  a check that needs a copy apart runs it from your scratchpad and leaves nothing behind (SV-206).
-  Pairing it is a session's job, never Andy's. When the Simulator's iPhone app says Pair Again (after a
-  `--reset`, say), open the link `npm run try` prints. Pair the Chrome extension only for a check that needs
-  it, with a token from extension/README.md. Andy's own extension and phone stay on prod.
-- `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
-  `SETPOINT_DATA_DIR` moves it). Its fixed now is `SEED_NOW` in `@setpoint/shared`.
-- With `data/news-snapshot/` there (real news taken once from prod, `server/src/dev/exportNews.ts`),
-  `npm run seed` and `npm run try` load News from it, its times moved onto the seed's clock, in place
-  of the sample's. It stays out of git (Local names the area); the browser checks seed with
-  `--sample-news`, so they and the page screenshots never see it.
-- Search has a score (SV-134): `server/src/dev/scoreSearch.ts` runs the real `matchSearch` for the
-  searches in `data/search-test/test.json` and prints numbers and search text only. `--migrate`
-  scores the local snapshot (`server/src/dev/exportSearchSnapshot.ts`, the mail of prod with nothing
-  secret in it) on a scratch copy at this checkout's migrations, so unreleased code can be scored
-  before anything is deployed, and `--terms <file>` writes search terms into that copy first.
-  With no other flag it scores the words as typed, which form no chips (D392). `--reading-prompts
-  <file>` writes the model's prompts from the real code, and `--readings <file>` scores those answers
-  as accepted suggestions, brought back from wherever a key is, with no model run here, and says which
-  searches would show one and what each would hide (SV-138, SV-142). All of it stays
-  out of git, under `data/`, in the main checkout.
+  `data/dev/`, port 7450, the seed's clock, password `dev`; `-- --reset` reseeds. Sessions share it
+  and may change its data, which should stay representative of prod (D453).
+- Don't add launch.json entries or `data/` copies. A check that needs its own instance runs it from
+  your scratchpad and leaves nothing behind.
+- Pairing it is a session's job: when the Simulator's app says Pair Again, open the link
+  `npm run try` prints; pair the Chrome extension only when a check needs it (extension/README.md).
+  Andy's own extension and phone stay on prod.
 
 ## Tests own behaviour
 
-- Pure rules are tested as tables. Persistence runs against an ephemeral SQLite database, never
-  SQL text.
-- Providers are faked at the HTTP or IMAP boundary. No test, seed or dev run reaches a real
-  provider, ntfy, Home Assistant or a model.
-- No mocks of internal modules. Presentation goes to browser checks and component tests that state
-  what the screen does: what's there after an action, and a single value where it matters: a colour
-  or fill that depends on state, theme or the cascade (hover, press, focus, selected, outside the
-  month, Light beside Night, a role colour on a glyph); a relation rather than a literal (fits or
-  clips, beside or inside, equal room, a width at a breakpoint); or a value that has already moved
-  by accident, stated in the commit that fixes it. A literal that only restates the stylesheet or a
-  token (a padding, a gap, a font size, a motion duration) goes untested on purpose, and a check
-  doesn't read a state shorter than about a second, or an animation's name or duration: a real
-  change to one of those is judged by eye (D269, SV-151).
-- A widget's own behaviour goes to a component test (`web/tests/components/*.test.tsx`, SV-101):
-  React renders the one widget in a real Chromium with the app's stylesheets and tokens (Vitest's
-  browser mode, part of `npm test`, a few seconds; run alone, they take no lock, it's one headless page). It
-  finds by role, waits with `expect.element` or `expect.poll`, and takes the same single-value rule
-  as a browser check. That's a select's keys and Esc, a picker's band, the toast's timing (with
-  Vitest's clock, so its seconds pass at once): what the widget does with the props and the pointer
-  or keys it's given. A browser check keeps what needs the app around it: the server and its seed, a
-  save reaching the API, routing, one page's layout beside another, a widget's place among the
-  others, and a journey across pages. When a component test takes over a check, the browser check
-  shrinks to the journey and says where the rest went. Widgets with module state (the toast) are
-  reset in the test; nothing in `web/src/` is mocked.
-- The visual net is two things. Per change, the layout sweep (`web/tests/browser/sweep.spec.ts`,
-  SV-99, runs with every `npm run test:browser`, about 40 s) visits the main pages in Night at 1677, 1100 and 820 wide and on the phone,
-  with Settings at 1677 and 820, and Jobs's menus, the history pass and Jobs off at 1677. At rest it
-  fails on anything that scrolls sideways,
-  text an `overflow: hidden` box cuts (an ellipsis is meant), an interactive element covered at its
-  centre (a pane lying over the page is meant), a broken image, a font not loaded, a failed request
-  or a console error. Then axe runs in Night and Light at 1677 and on the phone, by rule and element,
-  at its own contrast floor of 4.5:1 (D400). A finding is fixed, with "the sweep caught it" or "axe caught
-  it" in the commit, or decided in darma and left out in the spec by name.
-- At release, ten whole-page screenshots (`web/tests/browser/pages.ts`: the Inbox, calendar, editor,
-  News, Jobs and Settings in Night, the Inbox, calendar and News in Light, the phone's Inbox) sit beside
-  the sweep (D281, SV-97 found the region goldens before them caught nothing). They're compared only
-  at release, in release:check. When one has changed on purpose, `npm run goldens` re-captures them
-  and Andy looks at each changed image beside its diff before it's committed; a session never
-  re-captures one just to make a run pass. The board audit (`npm run audit:boards`) sets them
-  beside their boards at release.
-- A browser check waits for what it reads (`until`, a waiting locator, `point` in
-  harness.ts; `goto` already waits for the page's first data and fonts). A fixed pause is only for
-  a "nothing happened" check or a hover settling before a screenshot, and says so on the line
-  before it (the lint asks, D82). So does a bound under the 5 s default: "at once" is proven by
-  holding the server's answer, not by a short limit (the lint asks, SV-49).
-  A "nothing happened" pause is followed by `setpoint.idle()`, so a wrong change still on its way
-  is answered and drawn before the check reads, rather than landing after it (SV-49).
-  A window the app times (the toast's Undo, a minute on the clock, the offline grace, a pause
-  before a suggestion, the dev provider's confirm) is held for the check, never raced on real time:
-  `holdToast`, the page's own clock (`page.clock`, stopped with `pauseClock` and moved with
-  `runFor`), a held server answer, or `SETPOINT_DEV_PROVIDER_HOLD`; a response the check waited for
-  is read after `drawn`, since a wait for it ends on its headers (SV-195).
-  A one-shot read of a computed style or box (`getComputedStyle`, `getBoundingClientRect`,
-  `boundingBox`) goes through `rested`, which waits until nothing on the check's pages is moving:
-  an element mid-entrance or mid-slide measures as it passes, not where it rests. A helper that
-  reads is a reader, and so is one that calls a reader; each use of one rests, polls (`until`), or
-  says why on the line before it, a read meant to catch motion (the lint asks, SV-75).
-- A check doesn't depend on animation or scrolling (Andy, 2026-11-02): it doesn't wait out an
-  animation or read one on its way, and doesn't scroll to put something in or out of sight, since
-  those kept making checks that race. A choice made from what's in sight or from timing goes to a
-  pure rule and its table (`inSight` for inbox-09, `phoneSlide`, `nextAsk`), and the check keeps
-  the outcome on a page as it loads, or opens the state by its address. A check that races is fixed
-  by taking the dependence out, never by adding a wait. SV-162 brought every spec into line (D417:
-  a measure that would need a motion waited out is dropped, not reshaped), and harness.ts no longer
-  exports `still` or `watch`: only `rested` and the goldens wait for a page at rest.
 - Every bug fix starts with a failing test. There is no known-failing list.
-- A fix whose browser check went red on its own, not because the design changed, says so in its
-  commit message ("the X check caught it"): git has no other record of a check catching something,
-  and the single-value rule is judged by that count (D269).
-- What the iPhone app (setpoint-ios) reads is pinned in `shared/contract/`, recorded from the seed
-  (SV-85). `npm test` fails when a response loses a key, changes a kind or a status, or an enum it
-  carries gains a value, since an installed app is older than the server; a new key passes.
-  `npm run contract:record` re-records, only once setpoint-ios handles the change.
+- Pure rules are tested as tables. Persistence runs against an ephemeral SQLite database.
+- Providers are faked at the HTTP or IMAP boundary: no test, seed or dev run reaches a real
+  provider, ntfy, Home Assistant or a model. No mocks of internal modules.
+- A widget's own behaviour goes to a component test (`web/tests/components/`); a browser check
+  keeps what needs the app around it: the server, routing, layout across pages, journeys.
+- Assert what the screen does, plus a single value only where it depends on state, theme or the
+  cascade, or is a relation (fits, beside, equal room). A literal that restates the stylesheet or a
+  token goes untested on purpose (D269).
+- Checks are deterministic: no stress run (D446), no dependence on animation, scrolling or real
+  time (D417). A timed window is held (`holdToast`, `page.clock`, a held server answer), a read
+  waits for what it reads, and a check that races is fixed by removing the dependence, never by
+  adding a wait. The lint enforces the pause and bound rules.
+- A fix whose check went red on its own says so in the commit ("the X check caught it").
+- `shared/contract/` pins what the iPhone app reads. Re-record (`npm run contract:record`) only
+  once setpoint-ios handles the change.
 
 ## Boundaries (the lint enforces them)
 
@@ -204,8 +78,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Public repository
 
-This folder is the public `ansidian/setpoint` repository (since 2026-10-11, SV-9), so every
-commit on `master` is public once pushed. Never commit private domains, addresses, account
-addresses or tailnet names; host details live in the private ops workspace. Code calls its owner
-"the user", not Andy (D115). Sample data is invented (example domains and Microsoft's fictional
-companies), and secrets, `.env` files and `data/` stay out of git.
+This folder is the public `ansidian/setpoint` repository, so every commit on `master` is public
+once pushed. Never commit private domains, addresses, account addresses or tailnet names; host
+details live in the private ops workspace. Code calls its owner "the user", not Andy (D115).
+Sample data is invented, and secrets, `.env` files and `data/` stay out of git.
