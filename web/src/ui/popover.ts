@@ -20,12 +20,17 @@ function room(element: HTMLElement): {top: number; bottom: number; right: number
   return {top, bottom, right};
 }
 
+// Menus already placed. An inline ref runs again on every draw, and placing again replays the
+// entrance, so a menu open while its page draws (the editor's line on a hover) flickered (SV-209).
+const placed = new WeakSet<HTMLElement>();
+
 /**
  * A menu's ref: on opening, it's marked `data-up` when it fits better above its anchor (its parent),
  * and `data-right` when it would run past the right, to line up with the anchor's right edge.
  */
 export function placeMenu(menu: HTMLElement | null) {
-  if (!menu?.parentElement) return;
+  if (!menu?.parentElement || placed.has(menu)) return;
+  placed.add(menu);
   // Measured as it will rest, not as its entrance starts it (smaller and higher); the entrance then
   // starts from the side it opens to.
   menu.style.animation = 'none';

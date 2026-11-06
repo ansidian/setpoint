@@ -2,6 +2,8 @@
 // reference under it, every example with what it reads; Esc closes it and not the editor, focus
 // going back to the ?; a press outside closes it. That the examples read so is lineReference.test.ts;
 // the ? on the line, beside the email's mark, is editor.spec.ts.
+import {useState} from 'react';
+import {flushSync} from 'react-dom';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
@@ -20,6 +22,20 @@ function Line() {
         <LineReference />
       </div>
       <button type="button">Elsewhere</button>
+    </form>
+  );
+}
+
+// The editor draws again as the pointer crosses a lit phrase (its hover, SV-209); here, on call.
+let redraw = () => {};
+function Redrawing() {
+  const [, setTimes] = useState(0);
+  redraw = () => flushSync(() => setTimes(times => times + 1));
+  return (
+    <form className="editor">
+      <div className="ed-line">
+        <LineReference />
+      </div>
     </form>
   );
 }
@@ -78,4 +94,17 @@ test('the kept phrase is marked in its example, under the note that says how', a
   const kept = LINE_REFERENCE.flatMap(section => section.rows).filter(row => row.plain).map(row => row.plain);
   expect([...document.querySelectorAll('.lr-kept')].map(span => span.textContent)).toEqual(kept);
   await expect.element(page.getByText('Click a lit phrase, or press ⌥⌫ inside it, and it stays words.')).toBeVisible();
+});
+
+test('the editor drawing again while it is open leaves its entrance alone, not played again (SV-209)', async () => {
+  await render(<Redrawing />);
+  await question.click();
+  await expect.element(card).toBeVisible();
+  const element = card.element();
+  // Played to its end, as it is once a reader moves on to the line.
+  for (const entrance of element.getAnimations()) entrance.finish();
+  expect(element.getAnimations()).toEqual([]);
+  redraw();
+  redraw();
+  expect(element.getAnimations()).toEqual([]);
 });
