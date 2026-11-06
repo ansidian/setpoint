@@ -98,3 +98,19 @@ test('an empty field (an email that gave no day, SV-24) picks a first day and th
   await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(field).toHaveValue('Tue, Oct 13 – Fri, Oct 16');
 });
+
+test('today is a day like the others (Andy, 2026-11-05): an end of the band takes its pill, its ring drawn over it, and alone the pointer\'s `sub2`', async () => {
+  await render(<Days from={TODAY} to="2026-10-11" />);
+  await field.click();
+  const today = () => document.querySelector<HTMLElement>(`.datepop .mini > [aria-label="${TODAY}"]`)!;
+  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(cool(50));
+  expect(getComputedStyle(today()).backgroundImage).toContain('radial-gradient');
+  await userEvent.hover(day(TODAY));
+  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(cool(60));
+  await userEvent.keyboard('{Escape}');
+  await field.fill('oct 13 - oct 14');
+  await userEvent.keyboard('{Enter}');
+  await field.click();
+  await userEvent.hover(day(TODAY));
+  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(colour('var(--sub2)'));
+});

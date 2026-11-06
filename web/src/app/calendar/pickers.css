@@ -21,3 +21,18 @@
 .datepop .mini > .t, .datepop .mini > .t:hover { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--alert); }
 .datepop .mini > .val, .datepop .mini > .val:hover, .datepop .mini > .in.rs.re { width: var(--miniDay); justify-self: center; background: color-mix(in oklch, var(--accent) 50%, transparent); color: var(--ink); font-weight: 600; }
 .datepop .mini > .val.t, .datepop .mini > .in.rs.re.t { box-shadow: inset 0 0 0 1.5px var(--alert); }
+/* Today is a day like the others under the pointer and in a range (Andy, 2026-11-05): alone it takes
+   the pointer's `sub2`; in an event's band it takes the band, its first and last day's pill and their
+   hovers, with its `alert` ring drawn as a circle over them, as the sidebar's week band draws today. */
+.datepop .mini > .t:not(.in, .val):hover { background: var(--sub2); }
+.datepop .mini > .in.t {
+  --band: color-mix(in oklch, var(--accent) 28%, transparent);
+  border-radius: 0; box-shadow: none;
+  background-color: var(--band);
+  background-image: radial-gradient(circle, transparent 0 calc(var(--miniDay) / 2 - 2px), var(--alert) calc(var(--miniDay) / 2 - 1.5px) calc(var(--miniDay) / 2 - .5px), transparent calc(var(--miniDay) / 2));
+}
+.datepop .mini > .in.t:hover { --band: color-mix(in oklch, var(--accent) 38%, transparent); }
+.datepop .mini > .in.t.rs, .datepop .mini > .in.t.re { --band: color-mix(in oklch, var(--accent) 50%, transparent); }
+.datepop .mini > .in.t.rs:hover, .datepop .mini > .in.t.re:hover { --band: color-mix(in oklch, var(--accent) 60%, transparent); }
+.datepop .mini > .in.t:nth-child(7n + 1), .datepop .mini > .in.t.rs { border-top-left-radius: 999px; border-bottom-left-radius: 999px; }
+.datepop .mini > .in.t:nth-child(7n), .datepop .mini > .in.t.re { border-top-right-radius: 999px; border-bottom-right-radius: 999px; }
