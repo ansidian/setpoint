@@ -205,7 +205,7 @@ const chip = (page: Page, date: string, title: string) => page.locator(`.cal-mon
 const next = (date: string) => new Date(Date.parse(`${date}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const titlesOn = async (setpoint: Setpoint, date: string) => (await setpoint.api<ItemsOut>('GET', `/items?from=${date}&to=${next(date)}`)).items.map(one => one.title);
 
-test('a calendar item\'s right-click selects it without the card; Colour, Copy and Paste here; a week slot\'s New event here', async () => {
+test('a calendar item\'s right-click selects it without the card; its colours in the menu, Copy and Paste here; a week slot\'s New event here', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -213,14 +213,13 @@ test('a calendar item\'s right-click selects it without the card; Colour, Copy a
     const dentist = chip(page, '2026-10-07', 'Dentist');
     await dentist.waitFor();
     await rightClick(dentist);
-    assert.deepEqual(await items(page), ['EditE', 'Clone', 'Copy⌘C', 'Colour', 'DeleteDel']);
+    assert.deepEqual(await items(page), ['EditE', 'Clone', 'Copy⌘C', 'DeleteDel']);
     await until('selected', () => dentist.getAttribute('class'), classes => /\bsel\b/.test(classes!));
     await setpoint.idle();
     assert.equal(await page.locator('.fd').count(), 0, 'no floating detail');
 
-    // Colour's swatches take the menu's place, and a pick colours it.
-    await item(page, 'Colour').click();
-    await menu(page).locator('.fd-swatches').getByRole('radio', {name: 'good'}).click();
+    // Its colours are in the menu itself (#325), and one click colours it.
+    await menu(page).locator('.menu-inline .fd-swatches').getByRole('radio', {name: 'good'}).click();
     await page.locator('.toast', {hasText: 'Changed the colour of Dentist'}).waitFor();
     await menu(page).waitFor({state: 'detached'});
 

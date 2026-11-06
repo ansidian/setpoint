@@ -832,8 +832,9 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       ...openIt,
       {id: 'clone', group: 'copy', label: 'Clone', icon: 'control_point_duplicate', run: () => actions.clone!(item)},
       {id: 'copy', group: 'copy', label: 'Copy', icon: 'content_copy', hint: '⌘C', run: () => copy([item])},
-      ...(item.kind === 'event' ? [{id: 'colour', group: 'copy', label: 'Colour', icon: 'contrast', disabled: fixed,
-        run: () => {}, panel: close => <ColourPanel item={item} calendar={calendar} onPick={colour => {
+      // Its colours right in the menu, one click (#325).
+      ...(item.kind === 'event' ? [{id: 'colour', group: 'colour', label: 'Colour', icon: 'contrast',
+        run: () => {}, inline: close => <ColourPanel item={item} calendar={calendar} disabled={fixed} onPick={colour => {
           close();
           if (colour !== item.colour) recolour(item, colour);
         }} />} satisfies MenuAction] : []),
@@ -847,8 +848,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     const colourable = writable.length === list.length && list.every(item => item.kind === 'event' && !item.recurring);
     return [
       {id: 'copy', label: `Copy ${list.length} items`, icon: 'content_copy', hint: '⌘C', run: () => copy(list)},
-      ...(colourable ? [{id: 'colour', label: 'Colour', icon: 'contrast', run: () => {},
-        panel: close => <ColourPanel item={null} calendar={undefined} onPick={colour => {
+      ...(colourable ? [{id: 'colour', group: 'colour', label: 'Colour', icon: 'contrast', run: () => {},
+        inline: close => <ColourPanel item={null} calendar={undefined} onPick={colour => {
           close();
           list.forEach(item => item.colour !== colour && recolour(item, colour));
         }} />} satisfies MenuAction] : []),

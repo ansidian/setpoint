@@ -4,7 +4,7 @@
 // ⌘K, its keys) with their key hints, plus Copy items. It's the reader's More menu (`.pop.menu`),
 // kept on screen (logic/contextMenu.ts). Its cursor starts on the first item; ↑ ↓ move it, Enter
 // runs it, an item's key runs that item, and Esc, a press elsewhere, a scroll or the window
-// resizing close it. An item with a panel (Colour) shows the panel in its place, at the same spot,
+// resizing close it. An event's colours are swatches in the menu itself (#325). An item with a panel shows it in its place, at the same spot,
 // and one with items (Add to rule) shows them there, as a list of its own with the same keys. A
 // disabled item is drawn in a fainter ink without its key hint, and a note (a read-only event's
 // reason, D447) is a quiet line the cursor passes over.
@@ -36,8 +36,10 @@ export interface MenuAction {
   note?: boolean;
   // Items of different groups have a hairline between them.
   group?: string;
-  // Picked, it shows this in its place, at the same spot, rather than running (Colour's swatches).
+  // Picked, it shows this in its place, at the same spot, rather than running.
   panel?: (close: () => void) => ReactNode;
+  // Drawn in the menu as it is, not a row to pick (an event's colour swatches, #325); the cursor passes over it.
+  inline?: (close: () => void) => ReactNode;
   // Picked, these take the menu's place, at the same spot, rather than it running (Add to rule's rules).
   items?: MenuAction[];
 }
@@ -141,7 +143,7 @@ function Menu({open}: {open: Open}) {
   const [panel, setPanel] = useState<MenuAction | null>(null);
   const [inner, setInner] = useState<MenuAction[] | null>(null);
   const actions = inner ?? open.actions;
-  const off = (action: MenuAction) => action.disabled || action.note;
+  const off = (action: MenuAction) => action.disabled || action.note || !!action.inline;
   const firstEnabled = (list: MenuAction[]) => Math.max(0, list.findIndex(action => !off(action)));
   const [cursor, setCursor] = useState(() => firstEnabled(actions));
   // What had focus, given back when the menu closes by its own keys or a pick.
@@ -234,7 +236,12 @@ function Menu({open}: {open: Open}) {
           }
         }
       }}>
-      {panel ? panel.panel!(close) : actions.map((action, index) => (
+      {panel ? panel.panel!(close) : actions.map((action, index) => action.inline ? (
+        <div key={action.id} className="menu-inline" role="none">
+          {index > 0 && action.group !== actions[index - 1]!.group && <div className="menu-sep" role="separator" />}
+          {action.inline(close)}
+        </div>
+      ) : (
         <MenuRow key={action.id} action={action} divided={index > 0 && action.group !== actions[index - 1]!.group} current={index === cursor}
           onPoint={() => !off(action) && index !== cursor && setCursor(index)} onRun={() => run(action)} />
       ))}

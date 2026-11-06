@@ -4039,3 +4039,17 @@ it changes what's on screen.
     one of its items, Esc closes the editor and leaves the popover open. The card for one of its
     items goes beside the popover, right then left, level with the item; where neither side has
     room, the closer one slid in over the popover's edge, never over its list.
+325. **An event's colours are in its right-click menu itself** (amending #248; Andy, 2026-11-06;
+    darma SV-216). Colour was a row that swapped the menu for its swatches, two clicks to recolour.
+    The menu now draws the ten (the calendar's own ring, then the nine) as one row of 16 px
+    swatches 6 px apart between Copy and Delete, hairlines either side, lined up with the rows'
+    icons; the menu widens to fit them (about 238 px). One click recolours and closes the menu, as
+    the panel's did; the selection's menu does the same for its events. The ↑ ↓ cursor passes over
+    the row, so the keyboard recolours from the floating detail. A pending event's
+    swatches are faint and do nothing. A task's menu is unchanged.
+326. **A swatch under the pointer grows and takes its own colour's ring** (amending #12; Andy,
+    2026-11-06; darma SV-216). The hover ring was `edgeHover`, about as faint as the picked ring was
+    plain, so the two read alike. Under the pointer a swatch now scales to 1.2 (Settings' calendar
+    swatches grow 1.25, #12) and its 3.5 px ring is its own colour at 50%, over 120 ms; the picked
+    one keeps its full ring and its size. The same in the right-click menu and the floating
+    detail; a disabled swatch doesn't react, and reduced motion keeps the ring without the growth.
