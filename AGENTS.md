@@ -46,6 +46,12 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   `data/dev/`, port 7450 (Vite, hot reloading; its API on 7451), the seed's clock, password `dev`;
   `-- --reset` reseeds, `-- --build` serves the built app instead. Sessions share it
   and may change its data, which should stay representative of prod (D453).
+- In a worktree, `npm ci` first, then `npm run try` in the background: it serves that worktree's web
+  app on the next free port from 7460, on setpoint-dev's API and data, and prints the URL. Open that
+  URL in the browser pane, not the `setpoint-dev` entry, which is the main checkout's page. A sign-in
+  on any of these ports covers the rest. The API is the main checkout's code, so a slice that
+  changes the server runs `npm run try -- --own`: its own Setpoint on a temporary copy of `data/dev`,
+  removed when it stops (SV-212).
 - Don't add launch.json entries or `data/` copies. A check that needs its own instance runs it from
   your scratchpad and leaves nothing behind.
 - Pairing it is a session's job: when the Simulator's app says Pair Again, open the link
