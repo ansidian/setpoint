@@ -43,7 +43,8 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 ## Dev server
 
 - `npm run try` is the one dev Setpoint (`setpoint-dev` in `.claude/launch.json`, its only entry):
-  `data/dev/`, port 7450, the seed's clock, password `dev`; `-- --reset` reseeds. Sessions share it
+  `data/dev/`, port 7450 (Vite, hot reloading; its API on 7451), the seed's clock, password `dev`;
+  `-- --reset` reseeds, `-- --build` serves the built app instead. Sessions share it
   and may change its data, which should stay representative of prod (D453).
 - Don't add launch.json entries or `data/` copies. A check that needs its own instance runs it from
   your scratchpad and leaves nothing behind.
