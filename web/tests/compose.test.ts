@@ -804,6 +804,9 @@ describe('SV-113: when a repeat ends (D294), only after one', () => {
     ['Rent monthly for 3 months', '2026-10-26', 'RRULE:FREQ=MONTHLY;UNTIL=20270125', 'monthly for 3 months'],
     ['Gym every fri 7am for 2 weeks', '2026-10-30', 'RRULE:FREQ=WEEKLY;BYDAY=FR;UNTIL=20261112', 'every fri 7am for 2 weeks'],
     ['Rent monthly nov 30 for 3 months', '2026-11-30', 'RRULE:FREQ=MONTHLY;UNTIL=20270227', 'monthly nov 30 for 3 months'],
+    // And years (Andy, 2026-11-05: "every tuesday for 2 years" stayed words).
+    ['Class every tuesday for 2 years', '2026-10-27', 'RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20281026', 'every tuesday for 2 years'],
+    ['Checkup yearly for 1 year', '2026-10-26', 'RRULE:FREQ=YEARLY;UNTIL=20271025', 'yearly for 1 year'],
   ])('%s', (text, date, recurrence, when) => {
     const parsed = on(text);
     expect(parsed).toMatchObject({date, recurrence, length: null, days: null});

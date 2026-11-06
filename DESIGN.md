@@ -3348,7 +3348,7 @@ it changes what's on screen.
     all day over them ("Trip fri for 3 days" is Fri–Sun, D298); "for 1.5 days" or with a time stays
     timed (#256). After a repeat, and only then (before one, they stay words): "until <day>", any
     of the days above, ends it on that day (`UNTIL=20261215`); "6 times" or "for 6 times" after
-    that many (`COUNT=6`); "for 2 weeks" (days, weeks, months) lasts that long from the first
+    that many (`COUNT=6`); "for 2 weeks" (days, weeks, months, years) lasts that long from the first
     occurrence, its last day the one before the first plus 2 weeks, so "Gym every day for 2 weeks"
     is 14 mornings at the default start, not one event two weeks long (D301). Repeat says the end:
     "Weekly on Monday, until Tue, Dec 15", "Daily, 6 times", "…, once". A second end, or a last day

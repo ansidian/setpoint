@@ -10982,6 +10982,44 @@
     {
       "fn": "parseTitle",
       "input": {
+        "text": "Class every tuesday for 2 years",
+        "kind": "event",
+        "today": "2026-10-26",
+        "calendars": [
+          "Personal",
+          "Classes",
+          "Jobs"
+        ],
+        "projects": [
+          "Inbox",
+          "School",
+          "Home"
+        ]
+      },
+      "output": {
+        "title": "Class",
+        "marks": [
+          {
+            "start": 6,
+            "end": 31,
+            "kind": "when"
+          }
+        ],
+        "date": "2026-10-27",
+        "start": null,
+        "end": null,
+        "place": null,
+        "calendar": null,
+        "recurrence": "RRULE:FREQ=WEEKLY;BYDAY=TU;UNTIL=20281026",
+        "project": null,
+        "days": null,
+        "length": null,
+        "reminders": null
+      }
+    },
+    {
+      "fn": "parseTitle",
+      "input": {
         "text": "Gym every fri 7am for 2 weeks",
         "kind": "event",
         "today": "2026-10-26",

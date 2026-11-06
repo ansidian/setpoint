@@ -392,7 +392,7 @@ var SetpointCompose = (function(exports) {
 		},
 		{
 			kind: "when",
-			pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?)${END}`),
+			pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?|years?)${END}`),
 			apply: (m, s) => {
 				const value = Number(m[1]);
 				if (value < 1) return false;
@@ -754,7 +754,7 @@ var SetpointCompose = (function(exports) {
 			const { start, until, count, length } = state.ending;
 			if (length) {
 				state.date ?? (state.date = first);
-				const after = length.unit === "m" ? addMonths(state.date, length.value) : addDays(state.date, length.value * (length.unit === "w" ? 7 : 1));
+				const after = length.unit === "m" || length.unit === "y" ? addMonths(state.date, length.value * (length.unit === "y" ? 12 : 1)) : addDays(state.date, length.value * (length.unit === "w" ? 7 : 1));
 				state.recurrence += `;UNTIL=${compact(addDays(after, -1))}`;
 			} else if (until !== void 0) {
 				if (until < (state.date ?? first)) endWords.add(start);

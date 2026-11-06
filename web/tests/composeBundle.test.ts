@@ -216,7 +216,7 @@ const CASE_LIST: Case[] = [
   // When a repeat ends: until a day, a count (an event's), for a while from the first; without a repeat, words.
   ...['Standup every mon until dec 15', 'Standup every mon 9am until dec 15', 'Gym daily until fri', 'Gym every day until end of month',
     'Gym every day until next week', 'Class every tue and thu until 12/10', 'Gym every day 6 times', 'Gym every day for 6 times',
-    'Gym every day for 2 weeks', 'Gym every mon for 4 weeks', 'Rent monthly for 3 months', 'Gym every fri 7am for 2 weeks', 'Gym every day 7am for 1h',
+    'Gym every day for 2 weeks', 'Gym every mon for 4 weeks', 'Rent monthly for 3 months', 'Class every tuesday for 2 years', 'Gym every fri 7am for 2 weeks', 'Gym every day 7am for 1h',
     'Party until dec 15', 'Stretch 6 times', 'Trip for 2 months', 'Gym until dec 15 every mon', 'Gym every fri until thu', 'Gym every day 3 times until fri'].map(text => lineOn(text, '2026-10-26')),
   ...['Water plants every mon until dec 15', 'Vitamins every day for 2 weeks', 'Vitamins every day 6 times'].map(text => lineOn(text, '2026-10-26', 'task')),
   line('Gym daily for 2 weeks', 'event', {edit: {before: 'Gym', day: '2026-10-14'}}),

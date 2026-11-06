@@ -41,7 +41,7 @@
 //   every 2 weeks; every other mon; every mon, wed and fri; every weekday / weekend; first mon of
 //   every month. After one, when it ends (SV-113, D294): "until <day>", any day above, as UNTIL; "6
 //   times" or "for 6 times" as COUNT (an event's only: Todoist documents no count); "for 2 weeks"
-//   (days, weeks, months) as UNTIL the day before the first occurrence plus that, the first then the
+//   (days, weeks, months, years) as UNTIL the day before the first occurrence plus that, the first then the
 //   item's day. Without a repeat before them they stay words, and "for 2 days" is a length.
 // - "@Blue Door": a place, up to the next time, day, repeat or calendar (two letters at least), or
 //   just its picked text once a Places suggestion was picked for it, a link up to the next space,
@@ -225,7 +225,7 @@ interface State {
   wholeDays: boolean;
   // When the repeat ends (SV-113), where its phrase starts: a last day, a count, or a length from
   // the first occurrence.
-  ending: {start: number; until?: string; count?: number; length?: {value: number; unit: 'd' | 'w' | 'm'}} | null;
+  ending: {start: number; until?: string; count?: number; length?: {value: number; unit: 'd' | 'w' | 'm' | 'y'}} | null;
 }
 
 const fresh = (event: boolean, remind: ReminderBase | null = null): State => ({date: null, start: null, end: null, place: null, calendar: null, recurrence: null, project: null,
@@ -412,10 +412,10 @@ const ENDINGS: Matcher[] = [
   // Todoist documents no count, so a task's stays words.
   {kind: 'when', pattern: sticky(`(?:for\\s+)?(\\d{1,3})\\s+times?${END}`),
     apply: (m, s) => (!s.event || Number(m[1]) < 1 ? 'words' : ending(s, m.index, {count: Number(m[1])}))},
-  {kind: 'when', pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?)${END}`), apply: (m, s) => {
+  {kind: 'when', pattern: sticky(`for\\s+(\\d{1,3})\\s*(days?|d|weeks?|months?|years?)${END}`), apply: (m, s) => {
     const value = Number(m[1]);
     if (value < 1) return false;
-    return ending(s, m.index, {length: {value, unit: m[2]![0]!.toLowerCase() as 'd' | 'w' | 'm'}}, true);
+    return ending(s, m.index, {length: {value, unit: m[2]![0]!.toLowerCase() as 'd' | 'w' | 'm' | 'y'}}, true);
   }},
 ];
 
@@ -731,7 +731,7 @@ export function parseTitle(text: string, today: string, calendars: string[] = []
     const {start, until, count, length} = state.ending;
     if (length) {
       state.date ??= first;
-      const after = length.unit === 'm' ? addMonths(state.date, length.value) : addDays(state.date, length.value * (length.unit === 'w' ? 7 : 1));
+      const after = length.unit === 'm' || length.unit === 'y' ? addMonths(state.date, length.value * (length.unit === 'y' ? 12 : 1)) : addDays(state.date, length.value * (length.unit === 'w' ? 7 : 1));
       state.recurrence += `;UNTIL=${compact(addDays(after, -1))}`;
     } else if (until !== undefined) {
       if (until < (state.date ?? first)) endWords.add(start);
