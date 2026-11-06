@@ -490,7 +490,8 @@ test('UX #6: a move, a completion, a clone, a paste and a colour each say what t
     await undo('Cloned Dentist');
     await until('the clone gone', () => named('2026-10-07', 'Dentist'), list => list.length === 1, 10_000);
 
-    // A paste.
+    // A paste. Clicked while its card is open, the chip would put the card away (#323), so it starts from none.
+    await page.keyboard.press('Escape');
     await chip(page, '2026-10-07', 'Dentist').click();
     await page.locator('.fd').getByRole('button', {name: 'Copy'}).click();
     await page.locator('.cell[data-date="2026-10-13"]').click({position: {x: 70, y: 150}});

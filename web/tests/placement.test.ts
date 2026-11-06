@@ -4,7 +4,7 @@
 // the boards' own counts ("right 5, left 3, above 4 and it doesn't fit, below 6") are the table.
 import {describe, expect, test} from 'vitest';
 import type {Rect} from '../src/logic/calendar.ts';
-import {candidates, clampInto, placeBeside} from '../src/logic/placement.ts';
+import {besidePopover, besideRow, candidates, clampInto, placeBeside} from '../src/logic/placement.ts';
 import type {Side} from '../src/logic/placement.ts';
 
 // The month section at 1677 × 1050: 1029 wide, 994 high, the grid under the 30 px weekday row.
@@ -105,5 +105,32 @@ describe('a dragged card is dropped inside the grid, up to its edges', () => {
 
   test('beside an item it keeps 8 px from the edges as it slides', () => {
     expect(clampInto({left: -40, top: 0}, CARD(252), GRID)).toEqual({left: 8, top: 38});
+  });
+});
+
+// A right-pane row's card (#322): 8 px left of the row, over the grid, its top level with the row's.
+describe('beside a right-pane row', () => {
+  const DETAIL = {width: 360, height: 200};
+  const row = (top: number): Rect => ({left: 1029, top, width: 300, height: 56});
+  test.each([
+    ['level with the row', 300, {left: 661, top: 300}],
+    ['slid up off the grid\'s foot', 900, {left: 661, top: 786}],
+    ['slid down off its head', 10, {left: 661, top: 38}],
+  ])('%s', (_name, top, at) => {
+    expect(besideRow(row(top), DETAIL, GRID)).toMatchObject({side: 'left', ...at, fits: true});
+  });
+});
+
+// An item in the open "+N" popover (#324): beside the popover, right then left, level with the item.
+describe('beside the "+N" popover', () => {
+  const DETAIL = {width: 360, height: 200};
+  const popover = (left: number): Rect => ({left, top: 400, width: 280, height: 300});
+  const chip = (left: number): Rect => ({left: left + 6, top: 500, width: 268, height: 20});
+  test.each([
+    ['right when there\'s room', 300, GRID, {side: 'right', left: 588, top: 410, fits: true}],
+    ['left when the right has none', 700, GRID, {side: 'left', left: 332, top: 410, fits: true}],
+    ['short on both, the closer side slid in over its edge', 300, {...GRID, width: 900}, {side: 'right', left: 532, top: 410, fits: false}],
+  ])('%s', (_name, left, bounds, at) => {
+    expect(besidePopover(chip(left), popover(left), DETAIL, bounds)).toMatchObject(at);
   });
 });

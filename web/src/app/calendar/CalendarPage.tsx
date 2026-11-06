@@ -218,6 +218,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // Editors are numbered from the one brought back, so a new one never shares its key.
   const editorSeq = useRef(keptEditor?.seq ?? 0);
   const [selection, setSelection] = useState<string[]>([]);
+  // The item last clicked in the right pane, whose floating detail sits beside its row (#322).
+  const [pickedInPane, setPickedInPane] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [sendingNow, setSending] = useState<Map<string, ItemOut>>(new Map());
   // New items drawn the moment they're asked for, until the server's own are in (withCreating).
@@ -315,8 +317,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // or not; Edit hands it to the pane's editor, and the card goes there.
   const handedKey = editor?.item?.key ?? null;
   const detailTarget = useMemo<DetailTarget | null>(() => (selectedItem && selectedItem.key !== handedKey && !ask && !selection.length && selectedItem.command?.state !== 'failed'
-    ? {item: selectedItem, date: selectedDay, calendar: calendarsById.get(selectedItem.calendar_id)}
-    : null), [selectedItem, handedKey, ask, selection.length, selectedDay, calendarsById]);
+    ? {item: selectedItem, date: selectedDay, calendar: calendarsById.get(selectedItem.calendar_id), pane: pickedInPane === selectedItem.key}
+    : null), [selectedItem, handedKey, ask, selection.length, selectedDay, calendarsById, pickedInPane]);
 
   useEffect(() => setSelectedDay(paneDay), [paneDay]);
   const title = mode === 'week' ? weekTitle(week) : monthName(`${shown}-01`);
@@ -382,10 +384,17 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     selectDay(date);
   }, [selectDay]);
 
-  const selectItem = useCallback((item: ItemOut, date: string, rect: Rect | null, additive = false) => {
+  const selectItem = useCallback((item: ItemOut, date: string, rect: Rect | null, additive = false, pane = false) => {
     // A draft or a drop waiting on its scope isn't an item yet.
     if (item.id < 0) return;
-    setPopover(null);
+    // A click on the item whose floating detail is open puts the card away, the item still selected
+    // (as ⌘ alone does, #17); the next click opens it again (#323). The "+N" popover stays open while
+    // its items are picked (#324): what closes it is a click elsewhere (DayPopover), Esc or a change of view.
+    if (!additive && detailTarget?.item.key === item.key) {
+      setSelection([item.key]);
+      return;
+    }
+    setPickedInPane(pane ? item.key : null);
     setAsk(null);
     if (additive) {
       const next = selectWith(selection.length ? selection : selectedKey ? [selectedKey] : [], item.key, true);
@@ -399,7 +408,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     rememberDay(item.key, date);
     setAnchor(rect ? {key: item.key, rect} : null);
     navigate({page: 'calendar', date: null, item: item.id, at: item.occurrence_start});
-  }, [selection, selectedKey]);
+  }, [selection, selectedKey, detailTarget]);
 
   // Paging glides the month (polish audit grids-04): pressed again mid-glide, it goes on from the
   // month it's gliding to, not the one passing by.
@@ -430,7 +439,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     else scrollToMonth(monthOf(selectedDay));
     navigate({...route, view: next});
   };
-  const openEditor = (open: EditorOpen, handed = false, at = addressOf(route)) => {
+  const openEditor = (open: EditorOpen, handed = false, at = addressOf(route), keepPopover = false) => {
     // A draft with something in it leaves only by Create, Save, Cancel or Esc: New, C, D and E say so
     // and leave it be (SV-29, replacing D56's second draft).
     if (editor && editorDirty) {
@@ -438,7 +447,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       (document.querySelector<HTMLElement>('.editor .nl-input') ?? document.querySelector<HTMLElement>('.editor'))?.focus();
       return;
     }
-    setPopover(null);
+    // Editing an item from the "+N" popover is still using it; a new event or task is done with it (#324).
+    if (!keepPopover) setPopover(null);
     setAsk(null);
     setDayPane(false);
     editorSeq.current += 1;
@@ -456,7 +466,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   };
   // A range dragged on the week: a new event there, its line still to write.
   const createAt = (date: string, slot: Slot) => openEditor({kind: 'event', date, slot});
-  const editItem = (item: ItemOut, handed = false) => openEditor({kind: item.kind, date: selectedDay, item}, handed);
+  const editItem = (item: ItemOut, handed = false) => openEditor({kind: item.kind, date: selectedDay, item}, handed, addressOf(route), true);
   const closeEditor = () => {
     setEditor(null);
     setEditorDirty(false);
@@ -522,13 +532,14 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // An item's own drag isn't a file's.
   const dragsFile = (event: ReactDragEvent) => [...event.dataTransfer.types].includes('Files');
   /**
-   * Esc closes the topmost thing: the "+N" popover, the floating detail, a multi-selection (⌘ or Ctrl
+   * Esc closes the topmost thing: the floating detail, the "+N" popover under it (#324), a multi-selection (⌘ or Ctrl
    * alone turns the detail's item into one), then the editor (its draft goes), then the selection,
-   * then a failed card. Also the editor's own Esc.
+   * then a failed card. Also the editor's own Esc, which closes the editor before a "+N" popover
+   * left open beside it (#324).
    */
   const escape = (): boolean => {
-    if (popover) setPopover(null);
-    else if (detailTarget) selectDay(selectedDay);
+    if (detailTarget) selectDay(selectedDay);
+    else if (popover) setPopover(null);
     else if (selection.length) setSelection([]);
     else if (editor) closeEditor();
     else if (review) closeReview();
@@ -564,8 +575,8 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     return () => window.clearTimeout(timer);
   }, [searching, searched, search.active]);
   /** A result: its day comes into view, it's selected, and the floating detail opens or glides to it. */
-  const selectResult = (result: CalendarSearchResultOut) => {
-    selectItem(result.item, result.date, null);
+  const selectResult = (result: CalendarSearchResultOut, pane = false) => {
+    selectItem(result.item, result.date, null, false, pane);
     requestAnimationFrame(() => document.querySelector(`.cal-search [data-key="${CSS.escape(result.item.key)}"]`)?.scrollIntoView({block: 'nearest'}));
   };
   const stepResult = (delta: 1 | -1) => {
@@ -878,7 +889,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       }
       const date = element.closest<HTMLElement>('[data-date]')?.dataset.date ?? dayOf(item, zone) ?? selectedDay;
       if (!openContextMenu(event, element, itemMenu(item, date))) return;
-      setPopover(null);
+      if (!element.closest('.daypop, .rpane')) setPopover(null);
       setAsk(null);
       rememberDay(item.key, date);
       navigate({page: 'calendar', date, item: null, at: null});
@@ -910,6 +921,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
       if (!searching && (find || (plainKey(event, '/') && !isTyping(event) && !event.defaultPrevented))) {
         event.preventDefault();
         setDayPane(false);
+        setPopover(null);
         setSearching(true);
         return;
       }
@@ -936,9 +948,12 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
         newItem('event');
       }
       else if (plainKey(event, 'd')) newItem('task');
-      else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && !selection.length) {
+      // E edits the selected item, its card open or put away by a second click or ⌘ (#323).
+      else if (plainKey(event, 'e') && selectedItem && selectedItem.key !== handedKey && !selectedItem.read_only && (!selection.length || (selection.length === 1 && selection[0] === selectedItem.key))) {
         echoKey('e');
-        editItem(selectedItem, true);
+        // Handed to the editor, it's no longer held apart from its card, so Esc gives it back to one.
+        if (selection.length) setSelection([]);
+        editItem(selectedItem, !!detailTarget);
       }
       else if (plainKey(event, 'o') && detailTarget && openLink(detailTarget.item)) {
         // SV-77, SV-179: the open card's link, as its Open does.
@@ -1025,6 +1040,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
           ? <SearchField search={{...search, active: true}} label="Search calendar" arrowDown autoFocus onEnter={selectResult} onEscape={escape} />
           : <button className="ibtn" aria-label="Search calendar" data-tip="Search · /" onClick={() => {
             setDayPane(false);
+            setPopover(null);
             setSearching(true);
           }}><Icon name="search" /></button>}
         <button className="btn cal-new" data-hint="c" data-tip="New event · C" onClick={() => newItem('event')}><Icon name="add" size={17} /><span className="cal-new-label">New</span><span className="kbd">C</span></button>
@@ -1078,15 +1094,15 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
               closeEditor();
               remove([item]);
             }}
-            onClose={closeEditor} onEscape={escape} onDirty={setEditorDirty} onKeep={keepDrafts} place={editor.place} />
+            onClose={closeEditor} onEscape={() => (detailTarget || !popover ? escape() : closeEditor())} onDirty={setEditorDirty} onKeep={keepDrafts} place={editor.place} />
         ) : review ? (
           <ImportPane review={review} calendars={googleCalendars} fallback={googleCalendars.find(one => one.visible)?.id ?? googleCalendars[0]?.id ?? null} timeZone={zone} />
         ) : searching ? (
-          <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={selectResult} />
+          <SearchPane search={search} calendars={calendarsById} selected={selected} today={today} timeZone={zone} onSelect={result => selectResult(result, true)} />
         ) : compact && !dayPane ? null : (
           <DayPane date={selectedDay} today={today} loading={!dayMonth || !calendars} items={paneItems}
             failed={dayFailed ? <LoadFailed what="this day" loads={[dayMonthLoad, calendarsLoad]} /> : null} hidden={paneHidden} forecast={dayWeather?.find(day => day.date === selectedDay)} calendars={calendars}
-            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null)} onNew={newItem} onComplete={task => complete(task)}
+            selected={selected} now={now} timeZone={zone} movingTo={movingTo} onSelectItem={item => selectItem(item, selectedDay, null, false, true)} onNew={newItem} onComplete={task => complete(task)}
             onShowAll={() => showHidden(calendars ?? [])} />
         )}
       </div>

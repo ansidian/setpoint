@@ -47,7 +47,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
   }
 });
 
-test('board 11b: a busy Saturday folds into "+3", and its popover closes with Esc', async () => {
+test('board 11b, #324: a busy Saturday folds into "+3"; its popover stays open while its items are used and closes when you\'re done with it', async () => {
   const setpoint = await startSetpoint({fixtures: ['busy-saturday']});
   try {
     const page = await setpoint.page('target');
@@ -72,11 +72,42 @@ test('board 11b: a busy Saturday folds into "+3", and its popover closes with Es
     await popover.waitFor();
     await page.locator('.hd-title').click();
     await until('a click elsewhere closes it', () => popover.count(), count => count === 0);
+    // Its items, their card and the pane keep it open (#324).
     await more.click();
     await popover.locator('.ev', {hasText: 'Movie night'}).click();
-    await until('the popover gives way to the selection', () => popover.count(), count => count === 0);
+    await page.getByRole('dialog', {name: 'Movie night'}).waitFor();
     assert.match(new URL(page.url()).pathname, /^\/calendar\/item\/\d+$/);
     assert.equal(await text(page, '.ag-item.sel .title'), 'Movie night');
+    await page.getByRole('dialog', {name: 'Movie night'}).locator('.fd-body').click({position: {x: 4, y: 4}});
+    await popover.locator('.ev', {hasText: 'Haircut'}).click();
+    await page.getByRole('dialog', {name: 'Haircut'}).waitFor();
+    await page.locator('.ag-item', {hasText: 'Lunch with Jo'}).click();
+    await page.getByRole('dialog', {name: 'Lunch with Jo'}).waitFor();
+    await setpoint.idle();
+    assert.equal(await popover.count(), 1, 'still open');
+    // E on one of its items keeps it; Esc closes the card first, then the popover.
+    await page.keyboard.press('e');
+    await page.locator('.editor').waitFor();
+    await setpoint.idle();
+    assert.equal(await popover.count(), 1, 'still open beside the editor');
+    await page.keyboard.press('Escape');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    await popover.locator('.ev', {hasText: 'Haircut'}).click();
+    await page.getByRole('dialog', {name: 'Haircut'}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', {name: 'Haircut'}).waitFor({state: 'detached'});
+    assert.equal(await popover.count(), 1, 'the card went first');
+    await page.keyboard.press('Escape');
+    await until('then the popover', () => popover.count(), count => count === 0);
+    // A click on another day closes it, and so does C.
+    await more.click();
+    await popover.waitFor();
+    await page.locator('.cell[data-date="2026-10-14"]').click({position: {x: 70, y: 150}});
+    await until('another day closes it', () => popover.count(), count => count === 0);
+    await more.click();
+    await popover.waitFor();
+    await page.keyboard.press('c');
+    await until('C closes it', () => popover.count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

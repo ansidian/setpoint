@@ -185,9 +185,26 @@ test('an item picked from the agenda opens its card, and so does a link to it on
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar/2026-10-09`);
-    await page.locator('.ag-item', {hasText: 'Study group'}).first().click();
+    // Beside its row in the pane, level with it (#322), not by its chip.
+    const row = page.locator('.ag-item', {hasText: 'Study group'}).first();
+    await row.click();
     await page.getByRole('dialog', {name: 'Study group'}).waitFor();
-    assert.equal(await card(page).getAttribute('data-side'), 'above', 'above it on Friday (SV-29: weeks start on Sunday)');
+    assert.equal(await card(page).getAttribute('data-side'), 'left');
+    const [at, beside] = [(await rested(() => card(page).locator('.card').boundingBox()))!, (await rested(() => row.boundingBox()))!];
+    assert.ok(Math.abs(at.y - beside.y) < 1 && at.x + at.width <= beside.x, `level with the row and left of it: ${JSON.stringify([at, beside])}`);
+    // A second click puts it away, the item still selected; the next opens it again (#323).
+    await row.click();
+    await page.getByRole('dialog', {name: 'Study group'}).waitFor({state: 'detached'});
+    assert.equal(await page.locator('.ag-item.sel', {hasText: 'Study group'}).count(), 1, 'still selected');
+    // E still edits it, and Esc gives it back to its card.
+    await page.keyboard.press('e');
+    await page.locator('.editor').waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', {name: 'Study group'}).waitFor();
+    await row.click();
+    await page.getByRole('dialog', {name: 'Study group'}).waitFor({state: 'detached'});
+    await row.click();
+    await page.getByRole('dialog', {name: 'Study group'}).waitFor();
     const items = await setpoint.api<{items: {id: number; title: string}[]}>('GET', '/items?from=2026-10-15&to=2026-10-16');
     const fair = items.items.find(item => item.title === 'Career fair')!;
     await page.goto(`${setpoint.base}/calendar/item/${fair.id}`);

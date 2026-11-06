@@ -1,5 +1,5 @@
-// The floating detail (DESIGN.md › The floating detail; boards 12a, 12b, 12c and 12d): a 280 px card
-// beside the selected item, placed on the side covering the fewest other items, that glides to the
+// The floating detail (DESIGN.md › The floating detail; boards 12a, 12b, 12c and 12d): a 360 px card
+// beside the selected item (or the right-pane row it was clicked on, #322), placed on the side covering the fewest other items, that glides to the
 // next item clicked, can be dragged from anywhere but its buttons and text and left anywhere in the
 // grid, and hands the item to the right pane's editor with Edit or E. It lives in the month section, as F4's overlays do.
 // motion.ts runs the motion; this renders the card and tells it what's selected.
@@ -50,10 +50,14 @@ export function FloatingDetail({target, exit, section, scroller, timeZone, actio
     if (!element || !host) return;
     const onScroll = () => engine.onScroll();
     element.addEventListener('scroll', onScroll, {passive: true});
+    // The right pane's own scroll, for a card beside one of its rows (#322).
+    const onPaneScroll = (event: Event) => (event.target as Element | null)?.closest?.('.rpane') && engine.onPaneScroll();
+    document.addEventListener('scroll', onPaneScroll, {capture: true, passive: true});
     const observer = new ResizeObserver(() => engine.onResize());
     observer.observe(host);
     return () => {
       element.removeEventListener('scroll', onScroll);
+      document.removeEventListener('scroll', onPaneScroll, {capture: true});
       observer.disconnect();
       engine.dispose();
     };

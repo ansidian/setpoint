@@ -1,6 +1,7 @@
 // The "+N" popover (board 11b): the day's every item, hanging from its "+N" over the cells below so
 // the cell stays readable, inside the grid. Every item can be selected, and dragged out onto another
-// day (F6b; the popover closes as it lifts); Esc, the close button or a click elsewhere closes it. It
+// day (F6b; the popover closes as it lifts). It stays open while what's in it is used (#324) and
+// closes on Esc, its close button, a click elsewhere, C, D, New or a change of view. It
 // grows from its "+N" over 180 ms and closes at once (DESIGN.md › Motion).
 import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
@@ -40,10 +41,17 @@ export function DayPopover({date, items, section, selected, calendars, now, time
     setPlace({left, top, up, from: {x: Math.min(size.width, Math.max(0, at.left + at.width / 2 - left)), y: up ? size.height : 0}});
   }, [date, items.length, section]);
 
+  // The day fits again (an item completed, deleted or moved off): there's no "+N" left to hang from.
+  useEffect(() => {
+    if (section.current && !section.current.querySelector(`[data-more="${date}"]`)) onClose();
+  });
+
   useEffect(() => {
     const onDown = (event: PointerEvent) => {
       const target = event.target as Element | null;
-      if (card.current?.contains(target) || target?.closest(`[data-more="${date}"]`)) return;
+      // Using what's in it doesn't close it (#324): its items, their floating detail and menus, and the
+      // right pane, which shows the same day.
+      if (card.current?.contains(target) || target?.closest(`[data-more="${date}"], .fd, .ctx-menu, .rpane`)) return;
       onClose();
     };
     document.addEventListener('pointerdown', onDown);
@@ -51,7 +59,7 @@ export function DayPopover({date, items, section, selected, calendars, now, time
   }, [date, onClose]);
 
   return (
-    <div className="pop daypop" role="dialog" aria-label={dayTitle(date)} ref={card} data-up={place?.up ? '' : undefined}
+    <div className="pop daypop" role="dialog" aria-label={dayTitle(date)} ref={card} data-date={date} data-up={place?.up ? '' : undefined}
       style={place ? {left: place.left, top: place.top, '--from-x': `${place.from.x}px`, '--from-y': `${place.from.y}px`} as CSSProperties : {left: 0, top: 0, visibility: 'hidden'}}>
       <div className="daypop-head">
         <span className="grow">{dayTitle(date)}</span>

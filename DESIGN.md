@@ -496,7 +496,7 @@ offered for protected mail.
   the count lined up with the chips' titles, `sub` and `ink2` under the pointer), then up to three
   6 px dots 3 px apart for the first items it folds: an event's filled in its colour, a task's a
   1.5 px ring in its project's (#153). Its popover lists the day's every item (board 11b) and closes
-  with Esc.
+  when you're done with it, Esc among the ways (#324).
 - Infinite vertical scroll through months.
 - **Paging:** ← → or `P` `N` a month and `T` today glide the grid there over 260 ms; a month more
   than 10 rows away is first jumped to 5 rows short, on the side it comes from, and glided from
@@ -546,7 +546,8 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
   `alert` under the pointer, a task's Complete `good` (#169).
 - **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
   fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
-  item, including the recurring-drop prompt.
+  item, including the recurring-drop prompt. Clicked in the right pane, it sits beside that row
+  instead (#322); a second click on its item puts it away (#323).
 - **Drag:** the card lifts from its grip (shadow deepens), follows the pointer 1:1, and stays where
   it's dropped. The next click on an item glides it **from where it was left** to its new anchor
   (board 12d).
@@ -4016,3 +4017,25 @@ it changes what's on screen.
     way, the now-line is as #184. Tried beside it: stopping the line at the bar (the fallback), a
     halo cutting it out round each letter, fading it off the bar, and passing it behind boxes of the
     card's colour, solid or at 65%. The phone layout is unchanged (D275).
+322. **The floating detail sits where its item was clicked** (amending The floating detail ›
+    Placement; Andy, 2026-11-06; darma SV-216). A click on a right-pane row (the day's agenda or a
+    search result) opened the card beside the item's chip on the grid, away from the click. Now it
+    sits 8 px left of that row, over the grid, its top level with the row's and slid inside the grid
+    along that edge, and stays level with the row as the pane scrolls. A click on the grid places it
+    as before, and the keyboard (search's ↑ ↓, links) keeps the grid's placement. The chip still
+    turns solid, and the same card glides between a row and a chip. The phone layout is unchanged
+    (D275).
+323. **A second click puts the floating detail away** (Andy, 2026-11-06; darma SV-216). A click on
+    the item whose card is open, on the grid, in the "+N" popover or in the right pane, closes the
+    card and keeps the item selected, as ⌘ alone does (#17), so E and Delete still act on it; the
+    next click opens it again. A press that becomes a drag isn't a click.
+324. **The "+N" popover closes when you're done with it** (amending Month › Overflow; Andy,
+    2026-11-06; darma SV-216). Picking one of its items closed it, and so did a click on that item's
+    floating detail. It now stays open while what's in it is used: its items, their floating detail
+    and context menus, the right pane (the same day), E on one of its items, and completing or
+    deleting one. It closes on Esc, its ×, a click on another day or empty grid, C, D or New, paging,
+    T, Month | Week, opening search and a chip dragged out of it, and by itself once the day fits
+    without "+N". Esc closes the floating detail first, then the popover; in the editor opened from
+    one of its items, Esc closes the editor and leaves the popover open. The card for one of its
+    items goes beside the popover, right then left, level with the item; where neither side has
+    room, the closer one slid in over the popover's edge, never over its list.

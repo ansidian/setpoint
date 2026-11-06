@@ -8,16 +8,20 @@ import type {CalendarOut, ItemOut} from '@setpoint/shared';
 import type {Rect} from '../../../logic/calendar.ts';
 import {contentSlideFrom, glidePosition, glideSegment, glideVelocity} from '../../../logic/glide.ts';
 import type {GlideSegment} from '../../../logic/glide.ts';
-import {clampInto, placeBeside} from '../../../logic/placement.ts';
-import type {Point, Side, Size} from '../../../logic/placement.ts';
+import {besidePopover, besideRow, clampInto, placeBeside} from '../../../logic/placement.ts';
+import type {Placement, Point, Side, Size} from '../../../logic/placement.ts';
 import {glide, layout, motion} from '../../../tokens.ts';
 import {CAL_ITEMS, findItem, heightOf, pointIn, rectIn} from '../geometry.ts';
 
-/** What the card shows: an item, the day it was picked on, and its calendar. */
+/**
+ * What the card shows: an item, the day it was picked on, and its calendar; `pane` when it was
+ * clicked in the right pane, where the card then sits beside that row (#322).
+ */
 export interface DetailTarget {
   item: ItemOut;
   date: string;
   calendar: CalendarOut | undefined;
+  pane?: boolean;
 }
 
 /** How the card leaves when nothing is selected: Esc or the grid (close), or Edit (to the pane). */
@@ -37,6 +41,15 @@ export interface Snapshot {
   layers: Layer[];
   side: Side | null;
   lifted: boolean;
+}
+
+/** What placing the card reads: its anchor, what not to cover, the grid, and where the anchor is drawn. */
+interface Where {
+  anchor: Rect;
+  others: Rect[];
+  bounds: Rect;
+  pane: boolean;
+  popover: Rect | null;
 }
 
 const keyOf = (target: DetailTarget) => `${target.item.key}|${target.date}`;
@@ -104,19 +117,38 @@ export class DetailMotion {
   // ---------- Geometry, read from the grid ----------
 
   private anchorOf(target: DetailTarget): HTMLElement | null {
-    // The chip on the day it was picked; an item folded into "+N" anchors on its "+N".
-    return this.section ? findItem(this.section, target.date, target.item.key, true) : null;
+    const section = this.section;
+    if (!section) return null;
+    const item = `[data-key="${CSS.escape(target.item.key)}"]`;
+    // Its row in the right pane when picked there (#322); its chip in the day's open "+N" popover;
+    // else the chip on the day it was picked, an item folded into "+N" anchoring on its "+N".
+    return (target.pane ? document.querySelector<HTMLElement>(`.rpane ${item}`) : null)
+      ?? section.querySelector<HTMLElement>(`.daypop[data-date="${target.date}"] ${item}`)
+      ?? findItem(section, target.date, target.item.key, true);
   }
 
-  private geometry(target: DetailTarget): {anchor: Rect; others: Rect[]; bounds: Rect} | null {
+  // Whether the card is beside a right-pane row, which the grid's scroll doesn't move.
+  private onPane = false;
+
+  private geometry(target: DetailTarget): Where | null {
     const section = this.section;
     const scroller = this.scroller;
     const element = this.anchorOf(target);
     if (!section || !scroller || !element) return null;
     this.scrollTop = scroller.scrollTop;
     this.bounds = rectIn(scroller, section);
-    const others = [...section.querySelectorAll(CAL_ITEMS)].filter(other => other !== element).map(other => rectIn(other, section));
-    return {anchor: rectIn(element, section), others, bounds: this.bounds};
+    // The open "+N" popover counts as one thing not to cover, its own chips with it.
+    const popover = section.querySelector('.daypop');
+    const others = [...section.querySelectorAll(CAL_ITEMS), ...(popover ? [popover] : [])].filter(other => other !== element).map(other => rectIn(other, section));
+    const inPopover = element.closest('.daypop');
+    return {anchor: rectIn(element, section), others, bounds: this.bounds, pane: !!element.closest('.rpane'), popover: inPopover ? rectIn(inPopover, section) : null};
+  }
+
+  private place(where: Where): Placement {
+    this.onPane = where.pane;
+    if (where.pane) return besideRow(where.anchor, this.size, where.bounds);
+    if (where.popover) return besidePopover(where.anchor, where.popover, this.size, where.bounds);
+    return placeBeside(where.anchor, this.size, where.bounds, where.others);
   }
 
   /** The card's height with `layer`'s content: the grip plus the content as it lays out. */
@@ -211,7 +243,7 @@ export class DetailMotion {
     if (!where || !this.card) return;
     this.pending = null;
     this.size = {width: this.card.offsetWidth, height: this.heightWith(incoming)};
-    const place = placeBeside(where.anchor, this.size, where.bounds, where.others);
+    const place = this.place(where);
     this.publish({side: place.side});
     if (pending === 'open') this.open(place, where.anchor);
     else this.glideTo(place, incoming);
@@ -315,7 +347,7 @@ export class DetailMotion {
     const where = target && this.anchored ? this.geometry(target) : null;
     if (where && this.card && !this.flipped) {
       this.size = {width: this.card.offsetWidth, height: this.heightWith(this.layerElement('in'))};
-      const place = placeBeside(where.anchor, this.size, where.bounds, where.others);
+      const place = this.place(where);
       if (Math.abs(place.left - this.pos.left) > 0.5 || Math.abs(place.top - this.pos.top) > 0.5) {
         this.flipped = true;
         this.publish({side: place.side});
@@ -384,7 +416,7 @@ export class DetailMotion {
     if (!scroller) return;
     const delta = scroller.scrollTop - this.scrollTop;
     this.scrollTop = scroller.scrollTop;
-    if (!visible(this.snapshot.phase) || !this.anchored || this.drag || !delta) return;
+    if (!visible(this.snapshot.phase) || !this.anchored || this.onPane || this.drag || !delta) return;
     this.pos = {left: this.pos.left, top: this.pos.top - delta};
     if (this.segment) {
       const {from, to} = this.segment;
@@ -399,7 +431,8 @@ export class DetailMotion {
     const outer = this.outer;
     if (!target || !outer || !this.section || !this.scroller) return;
     const element = this.anchorOf(target);
-    const inView = !!element && overlaps(rectIn(element, this.section), rectIn(this.scroller, this.section));
+    const view = element?.closest<HTMLElement>('.rpane') ?? this.scroller;
+    const inView = !!element && overlaps(rectIn(element, this.section), rectIn(view, this.section));
     outer.style.visibility = inView || !this.anchored ? '' : 'hidden';
   }
 
@@ -410,8 +443,13 @@ export class DetailMotion {
     const where = this.geometry(target);
     if (!where || !this.card) return;
     this.size = {width: this.card.offsetWidth, height: this.card.offsetHeight};
-    this.pos = this.anchored ? placeBeside(where.anchor, this.size, where.bounds, where.others) : clampInto(this.pos, this.size, where.bounds, 0);
+    this.pos = this.anchored ? this.place(where) : clampInto(this.pos, this.size, where.bounds, 0);
     this.apply();
+  }
+
+  /** The right pane scrolled: a card beside one of its rows keeps level with it. */
+  onPaneScroll() {
+    if (this.onPane && this.anchored && !this.drag && this.snapshot.phase === 'rest') this.onResize();
   }
 
   // ---------- Drag, from the grip ----------

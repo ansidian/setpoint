@@ -81,6 +81,29 @@ export function candidates(anchor: Rect, size: Size, bounds: Rect, others: Rect[
 }
 
 /**
+ * Where the floating detail goes for an item in the open "+N" popover (#324): beside the popover,
+ * right then left, level with the item, so the list stays readable. Where neither side has room,
+ * the one short of it least, slid inside the grid over the popover's edge.
+ */
+export function besidePopover(chip: Rect, popover: Rect, size: Size, bounds: Rect, gap: number = placement.gapPx): Placement {
+  const slice = {left: popover.left, width: popover.width, top: chip.top, height: chip.height};
+  const [right, left] = (['right', 'left'] as const).map(side => ({side, ...onSide(side, slice, size, bounds, gap)}));
+  const best = right!.overflow === 0 || right!.overflow <= left!.overflow ? right! : left!;
+  const inside = clampInto(best.box, size, bounds);
+  return {side: best.side, left: Math.round(inside.left), top: Math.round(inside.top), covers: 0, fits: best.overflow === 0};
+}
+
+/**
+ * Where the floating detail goes for a right-pane row (#322): 8 px left of the row, over the grid,
+ * its top level with the row's, slid inside the grid along that edge.
+ */
+export function besideRow(anchor: Rect, size: Size, bounds: Rect, gap: number = placement.gapPx): Placement {
+  const at = clampInto({left: anchor.left - gap - size.width, top: anchor.top}, size, bounds);
+  const box = {left: Math.round(at.left), top: Math.round(at.top)};
+  return {side: 'left', ...box, covers: 0, fits: box.left + size.width <= anchor.left - gap + 0.5};
+}
+
+/**
  * Where an overlay anchored to `anchor` goes: of the sides it fits on inside `bounds`, the one
  * covering the fewest of `others` (the anchor itself left out), the earlier side in
  * right, left, above, below winning a tie. If it fits on no side, the side it overflows least,
