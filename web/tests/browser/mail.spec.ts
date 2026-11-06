@@ -13,7 +13,7 @@ import type {AccountOut, AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDom
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, holdToast, pagePx, pauseClock, point, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -837,7 +837,10 @@ test('with the email clicked into, its keys still reach Setpoint, and its text s
     await stitchedNotice(page);
     const frame = page.frameLocator('iframe.mailframe');
     const intoEmail = async () => {
-      await frame.getByText('Your statement is ready', {exact: true}).click({clickCount: 3});
+      // By the pointer at its box: under the page's zoom, Playwright's own hit check inside the frame
+      // misses (it maps the point without the zoom), while the browser's lands on it.
+      const heading = (await rested(() => frame.getByText('Your statement is ready', {exact: true}).boundingBox()))!;
+      await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2, {clickCount: 3});
       await until('the email has the keys', () => page.evaluate(() => document.activeElement?.className), name => name === 'mailframe');
     };
     const selected = () => frame.locator('body').evaluate(() => getSelection()!.toString().trim());
@@ -908,7 +911,7 @@ test('an attachment opens its preview over the reading pane; Esc closes the prev
     assert.equal(await card.locator('.size').textContent(), 'PDF · 184 KB');
     // At least 280 wide, wider to show the whole name; 44 tall.
     const box = (await card.boundingBox())!;
-    assert.ok(box.width >= 280 && box.height === 44, `the card is ${box.width} × ${box.height}`);
+    assert.ok(pagePx(box.width) >= 280 && pagePx(box.height) === 44, `the card is ${pagePx(box.width)} × ${pagePx(box.height)}`);
     assert.equal(await card.locator('.name').evaluate(name => name.scrollWidth <= name.clientWidth), true, 'the whole name shows');
     await card.click();
     await page.locator('.attach-preview iframe.preview-pdf').waitFor();
@@ -1220,17 +1223,18 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
   try {
     const page = await load(setpoint);
     const pane = page.locator('.pane');
-    const paneWidth = async () => Math.round((await rested(() => pane.boundingBox()))!.width);
+    const paneWidth = async () => Math.round((await rested(() => pane.boundingBox()))!.width / ZOOM);
     await page.locator('.row', {hasText: 'New sign-in'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     assert.equal(await paneWidth(), 680);
 
+    // dx in the page's pixels; the pointer moves in the window's.
     const drag = async (dx: number) => {
       const edge = (await rested(() => page.locator('.pane-edge').boundingBox()))!;
       const at = {x: edge.x + edge.width / 2, y: edge.y + 200};
       await page.mouse.move(at.x, at.y);
       await page.mouse.down();
-      for (let step = 1; step <= 5; step += 1) await page.mouse.move(at.x + dx * step / 5, at.y);
+      for (let step = 1; step <= 5; step += 1) await page.mouse.move(at.x + dx * ZOOM * step / 5, at.y);
       await page.mouse.up();
     };
     await drag(-120);
@@ -1257,7 +1261,7 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
     const hints = () => tools.locator('.tool .kbd').evaluateAll(kbds => kbds.map(kbd => kbd.checkVisibility()));
     assert.deepEqual((await tools.locator('.tool').allInnerTexts()).map(text => text.trim()), ['Done', 'Trash', 'Pin', 'Open in Gmail']);
     assert.deepEqual(await hints(), [false, false, false, false]);
-    const right = (await rested(() => pane.boundingBox()))!.x + 480;
+    const right = (await rested(() => pane.boundingBox()))!.x + 480 * ZOOM;
     for (const name of ['Previous email', 'Next email', 'More']) {
       const button = (await rested(() => tools.getByRole('button', {name, exact: true}).boundingBox()))!;
       assert.ok(button.x + button.width <= right, `${name} ends at ${button.x + button.width}, inside the pane's ${right}`);

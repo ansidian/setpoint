@@ -132,7 +132,8 @@ test('a selected row\'s right-click offers the selection\'s actions; E trashes e
     const [next, ...picked] = (await fourInADay(page, setpoint)).reverse();
     picked.reverse();
     const ids = picked.map(one => one.id);
-    for (const id of ids) await row(page, id).click({modifiers: ['ControlOrMeta']});
+    // By the sender: with the selection open beside it, a row's middle can be its code's Copy.
+    for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('three selected', () => listed(page), shown => shown.length === 3);
 
     // On a selected row: the selection's, nothing that's one email's only.
@@ -179,7 +180,8 @@ test('Mark read, Pin and Done act on the whole selection: Pin keeps it, Done cou
     const plain = rows.find(one => one.lane !== 'attention')!;
     assert.equal(attention.length, 2, 'two unread Attention emails');
     const ids = [...attention.map(one => one.id), plain.id];
-    for (const id of ids) await row(page, id).click({modifiers: ['ControlOrMeta']});
+    // By the sender: with the selection open beside it, a row's middle can be its code's Copy.
+    for (const id of ids) await row(page, id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('three selected', () => listed(page), listedIds => listedIds.length === 3);
     const tools = () => pane(page).locator('.rd-tools .tool').allTextContents();
     assert.deepEqual(await tools(), ['Done 2H', 'TrashE', 'PinP', 'Mark read', 'ClearEsc']);

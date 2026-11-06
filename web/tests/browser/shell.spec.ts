@@ -6,11 +6,15 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {ItemsOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, describe, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, describe, pagePx, PASSWORD, rested, SIZES, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
-const box = async (page: Page, selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
+// In the page's pixels, as the stylesheet sizes them.
+const box = async (page: Page, selector: string) => {
+  const rect = (await rested(() => page.locator(selector).first().boundingBox()))!;
+  return {x: pagePx(rect.x), y: pagePx(rect.y), width: pagePx(rect.width), height: pagePx(rect.height)};
+};
 
 test('the sign-in card claims Setpoint with the setup token, then signs in with the password', async () => {
   const setpoint = await startSetpoint({claim: false});
@@ -148,11 +152,11 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       assert.equal((await box(page, '.sb')).width, 248);
       assert.equal((await box(page, '.hd')).height, 56);
       assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
-      assert.equal((await box(page, '.list')).width, SIZES.target.width - 248);
+      assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248);
       await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
       await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
       assert.equal((await box(page, '.pane')).width, 680);
-      assert.equal((await box(page, '.list')).width, SIZES.target.width - 248 - 680);
+      assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248 - 680);
       // Every row keeps its account while the pane is open (decision 41).
       for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);

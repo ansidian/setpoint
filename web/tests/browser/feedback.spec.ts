@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
-import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, nearPx, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -205,7 +205,7 @@ test('a colour picker rings the current colour in itself and swells the one unde
     // The account's options set its icons off with a hairline.
     await page.getByRole('button', {name: 'Business options'}).click();
     const icons = page.getByRole('group', {name: 'Icon'});
-    assert.deepEqual(await rested(() => icons.evaluate(element => [getComputedStyle(element).borderTopWidth, getComputedStyle(element).borderTopColor])), ['1px', await rested(() => computed(page, 'var(--hair)'))]);
+    assert.deepEqual(await rested(() => icons.evaluate(element => [getComputedStyle(element).borderTopWidth, getComputedStyle(element).borderTopColor]).then(([width, colour]) => [nearPx(width!), colour])), ['1px', await rested(() => computed(page, 'var(--hair)'))]);
     await page.keyboard.press('Escape');
 
     // Appearance: the chosen theme is filled `sub2`, its tile inverted, its check `good`.

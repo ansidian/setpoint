@@ -616,7 +616,7 @@ test('SV-56: a line longer than the field shows its typed end and marks, with th
     const scrolled = await line.evaluate(input => (input as HTMLInputElement).scrollLeft);
     assert.ok(scrolled > 0, `the input scrolled ${scrolled} px`);
     const shift = () => marks.locator('.nl-text').evaluate(element => new DOMMatrix(getComputedStyle(element).transform).m41);
-    assert.equal(await rested(() => shift()), -scrolled, 'the marks moved with the text');
+    assert.ok(Math.abs(await rested(() => shift()) + scrolled) < 0.01, 'the marks moved with the text');
     const clipped = () => marks.evaluate(element => [element.hasAttribute('data-clip-left'), element.hasAttribute('data-clip-right')]);
     assert.deepEqual(await clipped(), [true, false]);
     // Home: the start shows again, and the end is cut.

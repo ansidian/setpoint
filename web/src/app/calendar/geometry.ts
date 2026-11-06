@@ -1,6 +1,6 @@
 // Where the calendar's overlays (the "+N" popover, the floating detail) measure things: in the month
 // section's own CSS pixels, the space their left, top and translate are set in. On a wide screen
-// styles.css zooms the root (1.25 from 2200 px), and the page's boxes and pointer positions come in
+// styles.css zooms the root (1.075 from 1440 px, 1.25 from 2200), and the page's boxes and pointer positions come in
 // zoomed pixels, so each is taken relative to the section and divided by its zoom.
 import type {Rect} from '../../logic/calendar.ts';
 

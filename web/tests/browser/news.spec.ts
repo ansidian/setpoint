@@ -12,7 +12,7 @@ import {after} from 'node:test';
 import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, SIZES, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, matchGolden, nearPx, pagePx, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -151,8 +151,8 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     // The single values: the lead's image and the dots. With nothing open the list
     // is 1,429 px wide, and its leads grow: 320 × 180 (#127).
     const lead = row(page, 'Brush fire near the 210');
-    const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]);
-    const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2).join(' '));
+    const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]).then(([width, height, ...rest]) => [pagePx(width as number), pagePx(height as number), ...rest]);
+    const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2)).then(columns => columns.map(nearPx).join(' '));
     assert.deepEqual(await rested(() => leadImage()), [320, 180, 'cover', '12px']);
     assert.equal(await rested(() => leadColumns()), '12px 320px');
     const redFlag = row(page, 'Red Flag Warning');
@@ -226,7 +226,7 @@ test('SV-141: News has one right edge: at the design target it\'s the row\'s end
     const ENDS = '.nw-row img, .nw-up .btn, .hd .search';
     const target = await setpoint.page('target');
     await target.goto(`${setpoint.base}/news`);
-    assert.deepEqual(await rights(target, ENDS), [SIZES.target.width - 16], 'the row\'s end, as ever');
+    assert.deepEqual(await rights(target, ENDS), [Math.round(SIZES.target.width - 16 * ZOOM)], 'the row\'s end, as ever');
     const width = 2655;
     const wide = await setpoint.page({width, height: 1400});
     await wide.goto(`${setpoint.base}/news`);
@@ -270,7 +270,7 @@ test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph i
     await redFlag.waitFor();
     const caution = await rested(() => colourOf(page, 'var(--caution)'));
     const tile = redFlag.locator('.nw-hz');
-    assert.deepEqual(await rested(() => tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor])),
+    assert.deepEqual(await rested(() => tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor]).then(([width, height, ...rest]) => [pagePx(width as number), pagePx(height as number), ...rest])),
       [72, 48, '8px', await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--caution) 10%, transparent)'))]);
     assert.deepEqual(await rested(() => glyphs(tile.locator('.icon'))), [['thunderstorm', '22', caution]]);
     // The tile sits in the thumbnail's column, level with a photo's.

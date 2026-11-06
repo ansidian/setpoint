@@ -23,7 +23,7 @@ import {after} from 'node:test';
 import type {ApplicationOut, JobsNavOut, JobsPageOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, holdToast, matchGolden, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, matchGolden, pagePx, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -181,7 +181,7 @@ test('an application opens where the reading pane sits: Platform drops and JD is
     await page.locator('.jb-pane .jb-want').waitFor();
     assert.equal(new URL(page.url()).pathname, `/jobs/${northwind}`);
     assert.equal(await page.title(), 'Software Engineer I · Northwind Talent');
-    assert.equal((await rested(() => page.locator('.jb-pane').boundingBox()))!.width, layout.readingPane);
+    assert.equal(pagePx((await rested(() => page.locator('.jb-pane').boundingBox()))!.width), layout.readingPane);
     assert.match(await row(page, northwind).getAttribute('class') ?? '', /\bopen\b/);
     // Beside the detail, Platform drops and JD is its glyph alone, its words in the tooltip.
     assert.equal(await page.locator('.jb-th .h.c-plat').isVisible(), false);
@@ -859,7 +859,7 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
     await itemEmail(page).locator('.rd-body .mailtext, .rd-body iframe').waitFor();
     // Where the detail sits and as wide, with the band beside it and Assign to… reachable.
     const [pane, band] = await rested(() => Promise.all([itemEmail(page).boundingBox(), page.locator('.jb-band').boundingBox()]));
-    assert.equal(pane!.width, layout.readingPane);
+    assert.equal(pagePx(pane!.width), layout.readingPane);
     assert.ok(band!.x + band!.width <= pane!.x, 'the band beside the pane');
     assert.match(await item.getAttribute('class') ?? '', /\breading\b/);
     assert.equal(await item.locator('button.what').getAttribute('aria-pressed'), 'true');

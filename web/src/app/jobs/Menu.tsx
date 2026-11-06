@@ -57,7 +57,7 @@ export interface MenuSpec {
 /** Where a menu opens: under a button from one of its bottom corners, or at the pointer. */
 export type MenuAnchor = {element: HTMLElement; corner: 'left' | 'right'} | {point: {x: number; y: number}};
 
-// The page's zoom from 2200 px (styles.css): rects are in the window's pixels, places in the page's.
+// The page's zoom (styles.css: 1.075 from 1440 px, 1.25 from 2200): rects are in the window's pixels, places in the page's.
 const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
 const GAP = 4;
 const EDGE = 8;

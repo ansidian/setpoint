@@ -25,6 +25,7 @@ import {chromium} from 'playwright-core';
 import type {Browser, BrowserContext, Locator, Page, Request, Response} from 'playwright-core';
 import {holdForRun} from './lock.ts';
 import {COMPARING, PAGES} from './pages.ts';
+import {viewport} from '../../src/tokens.ts';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const WEB_DIST = path.join(ROOT, 'web', 'dist');
@@ -41,6 +42,15 @@ export const SIZES = {
   iphone: {width: 390, height: 844},
 } as const;
 export type SizeName = keyof typeof SIZES;
+
+/** The page's zoom in a window `width` wide (styles.css's steps, tokens.ts › viewport.zoom): window pixels over the page's. */
+export const zoomAt = (width: number): number => viewport.zoom.reduce<number>((zoom, step) => width >= step.from ? step.zoom : zoom, 1);
+/** The zoom at the design target, where most checks run. */
+export const ZOOM = zoomAt(SIZES.target.width);
+/** A length in the page's pixels to the nearest half: at a fractional zoom the browser snaps boxes and computed lengths to the device's pixels. */
+export const pagePx = (windowPx: number, zoom = ZOOM): number => Math.round(windowPx / zoom * 2) / 2;
+/** A computed length ('1px') to the nearest half pixel, as its stylesheet wrote it. */
+export const nearPx = (value: string): string => `${Math.round(parseFloat(value) * 2) / 2}px`;
 
 export const PASSWORD = 'browser checks only';
 

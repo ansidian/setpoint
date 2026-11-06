@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pagePx, pauseClock, point, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 
 after(cleanUp);
 
@@ -191,7 +191,8 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     await page.keyboard.press('k');
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    await page.locator('.list .row', {has: page.locator('.code-line')}).click();
+    // By its sender: the row's middle can be its code's Copy.
+    await page.locator('.list .row', {has: page.locator('.code-line')}).locator('.from').click();
     await page.locator('.rd-subj', {hasText: 'Your code is 482913'}).waitFor();
     assert.equal(await page.locator('.pane > .rd-tools[data-first]').count(), 1, 'the tools never swap');
 
@@ -209,12 +210,12 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     const edge = page.locator('.pane-edge');
     await page.mouse.move(pane.x, pane.y + 300);
     await page.mouse.down();
-    await page.mouse.move(pane.x - 100, pane.y + 300, {steps: 4});
+    await page.mouse.move(pane.x - 100 * ZOOM, pane.y + 300, {steps: 4});
     assert.equal(await edge.evaluate(element => element.classList.contains('dragging')), true);
     await page.mouse.up();
-    await until('wider', async () => Math.round((await page.locator('.pane').boundingBox())!.width), width => width === 780);
+    await until('wider', async () => pagePx((await page.locator('.pane').boundingBox())!.width), width => width === 780);
     await edge.dblclick();
-    await until('back to 680', async () => Math.round((await page.locator('.pane').boundingBox())!.width), width => width === 680);
+    await until('back to 680', async () => pagePx((await page.locator('.pane').boundingBox())!.width), width => width === 680);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -327,10 +327,10 @@ export const layout = {
 
 /**
  * The design target, the phone layout's breakpoint, the compact tier's (the rail, panes over what
- * they'd squeeze), and darma's wide-screen zoom. CSS media queries spell them out; Phone.tsx's hooks
- * read them from here.
+ * they'd squeeze), and the page's zoom steps (1.075 from 1440 px for a MacBook, darma's 1.25 from
+ * 2200). CSS media queries spell them out; Phone.tsx's hooks read the breakpoints from here.
  */
-export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, wideFrom: 2200, wideZoom: 1.25} as const;
+export const viewport = {target: {width: 1677, height: 1050}, phoneBelow: 640, compactBelow: 1100, zoom: [{from: 1440, zoom: 1.075}, {from: 2200, zoom: 1.25}]} as const;
 
 const accountVariables = () => Object.fromEntries(Object.entries(accountColour).map(([name, token]) => [`--a-${name}`, `var(--${token})`]));
 const calendarVariables = () => Object.fromEntries(Object.entries(calendarColour).map(([name, token]) => [`--c-${name}`, `var(--${token})`]));
