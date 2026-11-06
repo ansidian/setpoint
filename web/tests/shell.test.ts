@@ -8,7 +8,7 @@ import {offlineRefuses, pathsForEvent} from '../src/logic/live.ts';
 import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
-import {shownTasks, todayBlock, todayRange} from '../src/logic/today.ts';
+import {shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
 import {toastMs, toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -33,13 +33,14 @@ const lecture = event('CS 101 lecture', '2026-10-09T01:00:00.000Z', '2026-10-09T
 const seedItems = [task('CS 101 lab report', '2026-10-07'), task('Pay rent', '2026-10-07'), gym, dentist, task('Renew car registration', '2026-10-08'), lecture];
 
 describe('the Today block', () => {
-  const lines = (today: ReturnType<typeof todayBlock>) => today.tasks.map(line => [line.title, line.label]);
+  const lines = (today: ReturnType<typeof todayBlock>) => today.tasks.map(line => [line.title, line.tomorrow]);
 
-  test('the seed\'s morning: 2:30 PM Dentist in 5h, then its three tasks by name, tomorrow\'s marked', () => {
+  test('the seed\'s morning: 2:30 PM Dentist in 5h and today\'s two tasks; tomorrow, the lecture at its time and one task', () => {
     const today = todayBlock(seedItems, now, zone);
     expect(today.event && [today.event.time, today.event.title, today.event.in, today.event.item.id]).toEqual(['2:30 PM', 'Dentist', 'in 5h', dentist.id]);
-    expect(lines(today)).toEqual([['CS 101 lab report', null], ['Pay rent', null], ['Renew car registration', 'Tomorrow']]);
+    expect(lines(today)).toEqual([['CS 101 lab report', false], ['Pay rent', false], ['Renew car registration', true]]);
     expect(today.tasks.map(line => line.item.id)).toEqual([seedItems[0]!.id, seedItems[1]!.id, seedItems[4]!.id]);
+    expect(today.tomorrowEvents.map(line => [line.time, line.title, line.item.id])).toEqual([['6:00 PM', 'CS 101 lecture', lecture.id]]);
     expect([today.today, today.tomorrow]).toEqual(['2026-10-07', '2026-10-08']);
   });
 
@@ -68,7 +69,7 @@ describe('the Today block', () => {
 
   test.each([
     ['none due: no task lines', [], []],
-    ['done tasks don\'t count', [task('Pay rent', '2026-10-07', {done: true}), task('Renew', '2026-10-08')], [['Renew', 'Tomorrow']]],
+    ['done tasks don\'t count', [task('Pay rent', '2026-10-07', {done: true}), task('Renew', '2026-10-08')], [['Renew', true]]],
     ['a task being completed isn\'t confirmed open', [task('Pay rent', '2026-10-07', {command: {state: 'pending'} as ItemOut['command']})], []],
     ['overdue and later tasks aren\'t today\'s', [task('Late', '2026-10-06'), task('Later', '2026-10-09')], []],
     ['today\'s come first, then tomorrow\'s, each day\'s timed ones by their time', [
@@ -76,27 +77,32 @@ describe('the Today block', () => {
       task('Evening', '2026-10-07', {all_day: false, due_at: '2026-10-08T01:00:00.000Z'}),
       task('Any time', '2026-10-07'),
       task('Morning', '2026-10-07', {all_day: false, due_at: '2026-10-07T16:00:00.000Z'}),
-    ], [['Any time', null], ['Morning', null], ['Evening', null], ['Tomorrow', 'Tomorrow']]],
+    ], [['Any time', false], ['Morning', false], ['Evening', false], ['Tomorrow', true]]],
   ])('%s', (_name, items, expected) => {
     expect(lines(todayBlock(items, now, zone))).toEqual(expected);
   });
 
-  test.each([
-    ['three fit', 3, false, 3, null],
-    ['more than three: two, then a line for the rest', 5, false, 2, '3 more due tomorrow'],
-    ['opened, every one', 5, true, 5, null],
-  ])('%s', (_name, count, open, shown, more) => {
-    const items = [task('Pay rent', '2026-10-07'), ...Array.from({length: count - 1}, (_, index) => task(`Task ${index + 1}`, '2026-10-08'))];
-    const today = todayBlock(items, now, zone);
-    const cut = shownTasks(today.tasks, open);
-    expect([cut.shown.length, cut.more]).toEqual([shown, more]);
+  // D460: tomorrow's timed events by their start; all-day and pending ones, and today's, aren't listed.
+  test('tomorrow\'s events', () => {
+    const items = [
+      event('Late', '2026-10-09T03:00:00.000Z', '2026-10-09T04:00:00.000Z'),
+      lecture,
+      event('Holiday', '2026-10-08T07:00:00.000Z', '2026-10-09T07:00:00.000Z', {all_day: true}),
+      event('Draft', '2026-10-08T18:00:00.000Z', '2026-10-08T19:00:00.000Z', {command: {state: 'pending'} as ItemOut['command']}),
+      dentist,
+    ];
+    expect(todayBlock(items, now, zone).tomorrowEvents.map(line => [line.time, line.title])).toEqual([['6:00 PM', 'CS 101 lecture'], ['8:00 PM', 'Late']]);
   });
 
+  // D460: only tomorrow's lines fold; the rest's line says "due" unless an event is among them.
   test.each([
-    ['all today\'s', ['2026-10-07', '2026-10-07', '2026-10-07', '2026-10-07'], '2 more due today'],
-    ['today\'s and tomorrow\'s', ['2026-10-07', '2026-10-07', '2026-10-07', '2026-10-08'], '2 more due today and tomorrow'],
-  ])('the rest\'s line names their days: %s', (_name, days, more) => {
-    expect(shownTasks(todayBlock(days.map((day, index) => task(`Task ${index}`, day)), now, zone).tasks, false).more).toBe(more);
+    ['three fit', ['task', 'task', 'task'], false, 3, null],
+    ['more than three: two, then a line for the rest', ['task', 'task', 'task', 'task', 'task'], false, 2, '3 more due tomorrow'],
+    ['an event among the rest', ['event', 'event', 'event', 'task'], false, 2, '2 more tomorrow'],
+    ['opened, every one', ['task', 'task', 'task', 'task', 'task'], true, 5, null],
+  ])('tomorrow\'s fold, %s', (_name, kinds, open, shown, more) => {
+    const cut = shownTomorrow(kinds, open, kind => kind === 'event');
+    expect([cut.shown.length, cut.more]).toEqual([shown, more]);
   });
 
   test('loads today and tomorrow', () => {

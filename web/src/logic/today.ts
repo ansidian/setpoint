@@ -1,7 +1,7 @@
 // The sidebar's Today block on mail pages (DESIGN.md › The Today block; BRIEF.md › The sidebar's
-// Today block): the next event ("2:30 PM  Dentist  in 5h"), then the open tasks due today and
-// tomorrow by name, tomorrow's marked "Tomorrow" (DESIGN.md › Decided while building #78). Confirmed
-// data only, and nothing for an empty line.
+// Today block): the next event ("2:30 PM  Dentist  in 5h") and the open tasks due today by name;
+// then, under its own Tomorrow label, tomorrow's events by their time and its open tasks (DESIGN.md ›
+// Decided while building #78, D460). Confirmed data only, and nothing for an empty line.
 import type {ItemOut} from '@setpoint/shared';
 import {addDays, clockTime, localDate, startsIn} from './format.ts';
 
@@ -29,19 +29,29 @@ export function urgency(startsAt: string, now: number): TodayEvent['urgency'] {
 export interface TodayTask {
   item: ItemOut;
   title: string;
-  // "Tomorrow" on tomorrow's, at the right where the event has "in 5h"; nothing on today's.
-  label: string | null;
+  // Which label it's under: Today's, or Tomorrow's (D460).
+  tomorrow: boolean;
+}
+
+/** One of tomorrow's timed events: its time only ("9:00 AM"), the label saying the day. */
+export interface TomorrowEvent {
+  item: ItemOut;
+  key: string;
+  title: string;
+  time: string;
 }
 
 export interface Today {
   event: TodayEvent | null;
   // Today's first, then tomorrow's; none when nothing's due.
   tasks: TodayTask[];
+  // Tomorrow's timed events by their start, under the Tomorrow label before its tasks.
+  tomorrowEvents: TomorrowEvent[];
   today: string;
   tomorrow: string;
 }
 
-/** How many task lines show before the rest fold into one line. */
+/** How many of tomorrow's lines show before the rest fold into one line. */
 export const TODAY_TASKS = 3;
 
 /**
@@ -57,8 +67,9 @@ export function todayRange(now: number, timeZone: string): {from: string; to: st
 }
 
 /**
- * The next timed event today that hasn't ended (one under way says "now"); open tasks due today and
- * tomorrow, each day's untimed ones first, then the timed by their time. Items still waiting for
+ * The next timed event today that hasn't ended (one under way says "now"); tomorrow's timed events by
+ * their start; open tasks due today and tomorrow, each day's untimed ones first, then the timed by
+ * their time. Items still waiting for
  * their provider (pending) aren't confirmed, so they don't count.
  */
 export function todayBlock(items: ItemOut[], now: number, timeZone: string): Today {
@@ -72,25 +83,29 @@ export function todayBlock(items: ItemOut[], now: number, timeZone: string): Tod
   const due = (day: string) => confirmed
     .filter(item => item.kind === 'task' && !item.done && item.due_date === day)
     .sort((a, b) => (a.due_at ? Date.parse(a.due_at) : 0) - (b.due_at ? Date.parse(b.due_at) : 0));
+  const tomorrowEvents = confirmed
+    .filter(item => item.kind === 'event' && !item.all_day && item.starts_at && localDate(item.starts_at, timeZone) === tomorrow)
+    .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!));
   return {
     event: next ? {item: next, id: next.id, key: next.key, title: next.title, time: clockTime(next.starts_at!, timeZone), in: startsIn(next.starts_at!, now), urgency: urgency(next.starts_at!, now), occurrence_start: next.occurrence_start} : null,
     tasks: [
-      ...due(today).map(item => ({item, title: item.title, label: null})),
-      ...due(tomorrow).map(item => ({item, title: item.title, label: 'Tomorrow'})),
+      ...due(today).map(item => ({item, title: item.title, tomorrow: false})),
+      ...due(tomorrow).map(item => ({item, title: item.title, tomorrow: true})),
     ],
+    tomorrowEvents: tomorrowEvents.map(item => ({item, key: item.key, title: item.title, time: clockTime(item.starts_at!, timeZone)})),
     today,
     tomorrow,
   };
 }
 
 /**
- * The task lines to show: every one when they fit or the block's been opened; otherwise the first
- * two and "3 more due tomorrow" for the rest, which opens them all.
+ * Tomorrow's lines to show (Today's never fold): every one when they fit or the block's been opened;
+ * otherwise the first two and "3 more due tomorrow" for the rest ("3 more tomorrow" when an event is
+ * among them), which opens them all.
  */
-export function shownTasks<T extends TodayTask>(tasks: T[], open: boolean): {shown: T[]; more: string | null} {
-  if (open || tasks.length <= TODAY_TASKS) return {shown: tasks, more: null};
-  const shown = tasks.slice(0, TODAY_TASKS - 1);
-  const rest = tasks.slice(TODAY_TASKS - 1);
-  const days = new Set(rest.map(task => (task.label ? 'tomorrow' : 'today')));
-  return {shown, more: `${rest.length} more due ${[...days].join(' and ')}`};
+export function shownTomorrow<T>(lines: T[], open: boolean, isEvent: (line: T) => boolean): {shown: T[]; more: string | null} {
+  if (open || lines.length <= TODAY_TASKS) return {shown: lines, more: null};
+  const shown = lines.slice(0, TODAY_TASKS - 1);
+  const rest = lines.slice(TODAY_TASKS - 1);
+  return {shown, more: `${rest.length} more ${rest.some(isEvent) ? '' : 'due '}tomorrow`};
 }
