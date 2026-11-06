@@ -100,6 +100,9 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   or reproduce a report by hand. Sessions share it and may change its data, which is throwaway but
   should stay representative of prod. Don't add launch.json entries or `data/` copies of your own;
   a check that needs a copy apart runs it from your scratchpad and leaves nothing behind (SV-206).
+  Pairing it is a session's job, never Andy's. When the Simulator's iPhone app says Pair Again (after a
+  `--reset`, say), open the link `npm run try` prints. Pair the Chrome extension only for a check that needs
+  it, with a token from extension/README.md. Andy's own extension and phone stay on prod.
 - `npm run seed` loads BRIEF.md's sample into `data/dev/` (`-- --reset` starts over;
   `SETPOINT_DATA_DIR` moves it). Its fixed now is `SEED_NOW` in `@setpoint/shared`.
 - With `data/news-snapshot/` there (real news taken once from prod, `server/src/dev/exportNews.ts`),
