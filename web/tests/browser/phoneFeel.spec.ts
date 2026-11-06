@@ -59,7 +59,7 @@ test('the reader\'s actions share the bar evenly, Done leads in `good`, and none
     const page = await inbox(setpoint);
     const colours = {ink: await rested(() => tokenColour(page, 'ink')), ink2: await rested(() => tokenColour(page, 'ink2')), good: await rested(() => tokenColour(page, 'good'))};
     // Attention mail: four, a quarter each of the bar's 374 px; Done's label `ink` 500 and its check `good`, the rest `ink2` under `ink` icons.
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     const four = await rested(() => actionBar(page));
     assert.deepEqual(four.map(action => action.label), ['Done', 'Trash', 'Mark unread', 'Open in Gmail']);
@@ -114,7 +114,7 @@ test('Mark unread on the phone puts the unread dot before the subject; Mark read
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.equal(await page.locator('.rd-subj .rd-unread').count(), 0);
     // The first draw doesn't pop.
@@ -139,13 +139,13 @@ test('the reader comes over the list and goes back to it, Done too, each named f
   try {
     const page = await inbox(setpoint);
     assert.deepEqual(await rested(() => styles(page, '.content > .list', ['view-transition-name'])), ['ph-list']);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').tap();
     await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
     assert.deepEqual(await rested(() => styles(page, '.pane', ['view-transition-name'])), ['ph-reader']);
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
     // Done goes back to the list, where its row folds away.
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').tap();
     await page.locator('.ph-acts .ph-done').tap();
     await page.locator('.toast', {hasText: 'Marked Done'}).waitFor();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
@@ -160,7 +160,7 @@ test('phone search: a clear button where the hint was, no Mark all as read meanw
   try {
     const page = await inbox(setpoint);
     const markAll = page.locator('.hd button[aria-label="Mark all as read"]');
-    await page.locator('.list .row[data-tip^="Interview availability"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Interview availability"])').tap();
     assert.equal(await page.locator('.ph-back').textContent(), 'Inbox');
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
@@ -243,7 +243,7 @@ test('the phone reaches the screen\'s edges by its insets, and Safari\'s bars ta
     // In a browser tab there's no inset: 6 px under the labels, the bars 54 and 58 px.
     const bars = async () => [await styles(page, '.app', ['padding-top']), await styles(page, '.ph-tabs', ['min-height', 'padding-bottom', 'height'])];
     assert.deepEqual(await rested(() => bars()), [['0px'], ['54px', '6px', '54px']]);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').tap();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').tap();
     await page.locator('.rd-subj').waitFor();
     assert.deepEqual(await rested(() => styles(page, '.ph-acts', ['min-height', 'padding-bottom', 'height'])), ['58px', '6px', '58px']);
     // As a Home Screen app on an iPhone: 47 px for the status bar, 34 for the home indicator.

@@ -45,7 +45,7 @@ async function load(setpoint: Setpoint, path = '/inbox'): Promise<Page> {
 }
 
 /** An email's row in the list, by its text or its tooltip's (a subject a summary took the place of), not one folding away. */
-const rowOf = (page: Page, text: string) => page.locator('.list .row[data-key]', {hasText: text}).or(page.locator(`.list .row[data-key][data-tip*="${text}"]`));
+const rowOf = (page: Page, text: string) => page.locator('.list .row[data-key]', {hasText: text}).or(page.locator(`.list .row[data-key]:has(b[data-tip*="${text}"])`));
 
 /** Opens the first Noise line, Today's, folded until then (#48, D449). */
 const openNoise = (page: Page) => page.locator('.list .nfold.collapsed').first().click();
@@ -174,7 +174,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.keyboard.press('Escape');
     await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
     const ups = await idOf(setpoint, 'Out for delivery');
-    await point(page.locator('.row[data-tip="Out for delivery"]'));
+    await point(page.locator('.row:has(b[data-tip="Out for delivery"])'));
     // The row leaves at once, before the server has the Trash (held here at its door).
     let release = () => {};
     const held = new Promise<void>(resolve => {
@@ -192,7 +192,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
     assert.equal(await page.locator('.pane').count(), 0, 'Trash from the row opens nothing');
     // Its row, not the one folding away (it has no key).
-    const upsRow = page.locator('.row[data-key][data-tip="Out for delivery"]');
+    const upsRow = page.locator('.row[data-key]:has(b[data-tip="Out for delivery"])');
     await until('Consolidated Messenger leaves', () => upsRow.count(), count => count === 0);
     assert.equal(await inAll(setpoint, ups), true, `the server doesn't have it yet (Consolidated Messenger is ${ups}; sent ${JSON.stringify(sent)}, held ${JSON.stringify(heldAt)})`);
     release();
@@ -216,7 +216,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
   try {
     const page = await load(setpoint);
     const ups = await idOf(setpoint, 'Out for delivery');
-    await point(page.locator('.row[data-tip="Out for delivery"]'));
+    await point(page.locator('.row:has(b[data-tip="Out for delivery"])'));
     let release = () => {};
     const held = new Promise<void>(resolve => {
       release = resolve;
@@ -233,7 +233,7 @@ test('Undo right after Trash, before the server has the Trash, waits for it: the
     await page.keyboard.press('e');
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     // Back as a row of the list: the one folding away keeps its title but has no key.
-    await page.locator('.row[data-key][data-tip="Out for delivery"]').waitFor();
+    await page.locator('.row[data-key]:has(b[data-tip="Out for delivery"])').waitFor();
     release();
     const row = async () => (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.flatMap(day => day.rows).find(one => one.id === ups);
     // Two trips through the dev provider (600 ms each), the Trash's and the Undo's, and the wait between.
@@ -253,17 +253,17 @@ test('Pin and Unpin: the reader\'s P, and Unpin on the shelf under the pointer',
   try {
     const page = await load(setpoint);
     const shelf = () => page.locator('.row.shelf').allTextContents();
-    // A row's summary takes its subject's place, which moves to the tooltip; the platform stays
+    // A row's summary takes its subject's place, which moves to the summary's tooltip (SV-203); the platform stays
     // after it (SV-25), Attention's too since the Inbox is one list (#243).
     const parkside = page.locator('.row.shelf', {hasText: 'Parkside Apartments'});
     assert.equal(await parkside.locator('.subj').textContent(), 'Renewal offer for the lease ending Nov 30 · sign by Oct 31');
-    assert.equal(await parkside.getAttribute('data-tip'), 'Lease renewal terms');
+    assert.equal(await parkside.locator('.subj b').getAttribute('data-tip'), 'Lease renewal terms');
     const fabrikam = page.locator('.row', {hasText: 'Fabrikam'});
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
-    assert.equal(await fabrikam.getAttribute('data-tip'), 'Application received');
+    assert.equal(await fabrikam.locator('.subj b').getAttribute('data-tip'), 'Application received');
     const northwind = rowOf(page, 'Pick a 30-minute slot');
-    assert.deepEqual([await northwind.locator('.subj').textContent(), await northwind.getAttribute('data-tip')], ['Pick a 30-minute slot this week · via Greenhouse', 'Interview availability for Software Engineer I']);
-    assert.equal(await page.locator('.row', {hasText: 'New sign-in'}).getAttribute('data-tip'), null, 'a security row keeps its fact');
+    assert.deepEqual([await northwind.locator('.subj').textContent(), await northwind.locator('.subj b').getAttribute('data-tip')], ['Pick a 30-minute slot this week · via Greenhouse', 'Interview availability for Software Engineer I']);
+    assert.equal(await page.locator('.row', {hasText: 'New sign-in'}).locator('.subj b').getAttribute('data-tip'), null, 'a security row keeps its fact');
     await northwind.click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('p');
@@ -1014,14 +1014,14 @@ test('days first: Attention, the shelf, then the days, Today first, each saying 
     assert.deepEqual((await page.locator('.list.all .lh').allTextContents()).slice(0, 2), ['FYI 8', 'FYI 4']);
     assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').textContent(), 'Security');
     assert.equal(await page.locator('.list.all .row', {hasText: 'New sign-in'}).first().locator('.kd').textContent(), '');
-    // The summary takes the subject's place; the subject is the row's tooltip.
+    // The summary takes the subject's place; the subject is its tooltip (SV-203).
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
-    assert.equal(await fabrikam.getAttribute('data-tip'), 'Application received');
+    assert.equal(await fabrikam.locator('.subj b').getAttribute('data-tip'), 'Application received');
     // Above the days and in Today, ages; in earlier days, clock times. The pinned lease is on the shelf only.
     assert.equal(await fabrikam.locator('.age').textContent(), '7h');
-    assert.match((await page.locator('.list.all .row[data-tip="Lab 5 posted"] .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
-    assert.deepEqual(await page.locator('.list.all .row[data-tip="Lease renewal terms"]').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
+    assert.match((await page.locator('.list.all .row:has(b[data-tip="Lab 5 posted"]) .age').textContent())!, /^\d{1,2}:\d\d [AP]M$/);
+    assert.deepEqual(await page.locator('.list.all .row:has(b[data-tip="Lease renewal terms"])').evaluateAll(rows => rows.map(row => [row.classList.contains('shelf'), row.querySelector('.age')!.textContent])),
       [[true, 'Sep 30']]);
     // Today's Noise is one line; J and K stop on it after Attention's 3, the shelf's 1 and Today's 8,
     // and Enter opens it in place.
@@ -1045,7 +1045,7 @@ test('days first: Attention, the shelf, then the days, Today first, each saying 
     assert.equal(await coffee.first().locator('.ac').isVisible(), true);
     // Trash takes the row out, and ⌘Z brings it back; the folds are by eye (D416).
     await page.keyboard.press('Escape');
-    const lease = page.locator('.list.all .row[data-tip="Lease renewal terms"]');
+    const lease = page.locator('.list.all .row:has(b[data-tip="Lease renewal terms"])');
     await point(lease);
     await page.keyboard.press('e');
     await until('it goes', () => lease.count(), count => count === 0);
@@ -1190,7 +1190,7 @@ test('U takes the cursor to the next unread email, from the top again past the l
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .gh.day').first().waitFor();
     // From Yesterday's read Lab 5, past Yesterday's folded Noise, to Monday's unread Southridge Video.
-    const lab = page.locator('.list .row[data-tip="Lab 5 posted"]');
+    const lab = page.locator('.list .row:has(b[data-tip="Lab 5 posted"])');
     await point(lab);
     await page.keyboard.press('u');
     await page.locator('.list .row.cur', {hasText: 'Southridge Video'}).waitFor();

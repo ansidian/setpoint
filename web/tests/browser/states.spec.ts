@@ -68,7 +68,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     // Northwind's email read once already, so this browser has it when the network goes.
-    await page.locator('.list .row[data-tip^="Interview availability"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
     await page.locator('.pane').waitFor({state: 'detached'});
@@ -100,7 +100,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     // Reading goes on: J moves the cursor, Enter opens an email this browser has.
     await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
-    await page.locator('.list .row.cur[data-tip^="Interview availability"]').waitFor();
+    await page.locator('.list .row.cur:has(b[data-tip^="Interview availability"])').waitFor();
     await page.keyboard.press('Enter');
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');

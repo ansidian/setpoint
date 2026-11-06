@@ -109,10 +109,10 @@ test('the ink ladder and the panel: Night ink3 #8b8d92 and panel #0b0c0e; Light 
     assert.equal(await rested(() => style(page.locator('aside.sb'), 'backgroundColor')), 'rgb(11, 12, 14)', 'Night panel: the sidebar');
 
     await inbox(page, setpoint.base, 'light');
-    const read = page.locator('.list .row:not(.unread)[data-tip^="Final exam schedule"]');
+    const read = page.locator('.list .row:not(.unread):has(b[data-tip^="Final exam schedule"])');
     assert.equal(await rested(() => style(read.locator('.from'), 'color')), 'rgb(75, 77, 82)', 'Light ink2: a read sender');
     // Done from the cursor: the toast floats on white above the page's header.
-    await point(page.locator('.list .row[data-tip^="Interview availability"]'));
+    await point(page.locator('.list .row:has(b[data-tip^="Interview availability"])'));
     await page.keyboard.press('h');
     const toast = page.locator('.toast');
     await toast.waitFor();
@@ -195,8 +195,8 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(accent, await rested(() => colourOf(page, theme === 'light' ? 'oklch(0.54 0.12 235)' : 'oklch(0.8 0.11 235)')));
       assert.equal(await rested(() => style(page.locator('.nav.on .icon'), 'color')), accent, 'Inbox, the current page');
 
-      const northwind = page.locator('.list .row[data-tip^="Interview availability"]');
-      const exams = page.locator('.list .row[data-tip^="Final exam schedule"]');
+      const northwind = page.locator('.list .row:has(b[data-tip^="Interview availability"])');
+      const exams = page.locator('.list .row:has(b[data-tip^="Final exam schedule"])');
       await northwind.click();
       await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
       // The pointer rests on another row while reading: it's the cursor, Northwind still the open one.
@@ -313,8 +313,8 @@ for (const theme of ['night', 'light'] as const) {
       assert.equal(await rested(() => style(band, 'color')), caution, 'its label');
       const dot = (row: Locator) => row.locator('.ud').evaluate(element => [getComputedStyle(element, '::before').backgroundColor, getComputedStyle(element, '::before').boxShadow]);
       assert.equal(await rested(() => style(band.locator('.n'), 'color')), caution, 'its count');
-      assert.deepEqual(await rested(() => dot(page.locator('.list .row.unread[data-tip^="Interview availability"]'))), [caution, 'none'], 'an unread Attention row');
-      assert.deepEqual(await rested(() => dot(page.locator('.list .row:not(.unread)[data-tip^="Final exam schedule"]'))), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
+      assert.deepEqual(await rested(() => dot(page.locator('.list .row.unread:has(b[data-tip^="Interview availability"])'))), [caution, 'none'], 'an unread Attention row');
+      assert.deepEqual(await rested(() => dot(page.locator('.list .row:not(.unread):has(b[data-tip^="Final exam schedule"])'))), ['rgba(0, 0, 0, 0)', `${caution} 0px 0px 0px 1.5px inset`], 'read, not Done: a ring');
 
       // Noise's rows, Today's Noise opened: ink2 at 400, an ink3 dot; a row elsewhere keeps ink at 500.
       await page.locator('.list .nfold').first().click();
@@ -339,7 +339,7 @@ for (const theme of ['night', 'light'] as const) {
       await inbox(page, setpoint.base, theme);
       const alert = await rested(() => colourOf(page, 'var(--alert)'));
       const good = await rested(() => colourOf(page, 'var(--good)'));
-      await page.locator('.list .row[data-tip^="Interview availability"]').click();
+      await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
       const trash = page.locator('.rd-tools .tool.trash');
       await trash.waitFor();
       assert.equal(await rested(() => style(trash, 'color')), await rested(() => colourOf(page, 'var(--ink2)')), 'Trash at rest');
@@ -463,7 +463,7 @@ test('Alfred has one mark: auto_awesome in the cool-to-violet ink on Ask Alfred,
       const stops = await rested(() => page.locator('linearGradient#alfred-ink stop').evaluateAll(all => all.map(stop => getComputedStyle(stop).stopColor)));
       assert.deepEqual(stops, [await rested(() => colourOf(page, 'var(--cool)')), await rested(() => colourOf(page, 'var(--violet)'))], `${theme}: cool to violet`);
       const inked = (icon: Locator) => icon.locator('path').evaluate(path => getComputedStyle(path).fill);
-      await page.locator('.list .row[data-tip^="Interview availability"]').click();
+      await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
       const ask = page.locator('.rd-acts .btn', {hasText: 'Ask about this email'});
       assert.equal(await rested(() => inked(ask.locator('.icon'))), 'url("#alfred-ink")', 'the reader\'s Ask about this email');
       await page.keyboard.press('Meta+k');

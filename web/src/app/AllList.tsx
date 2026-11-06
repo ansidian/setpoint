@@ -215,7 +215,7 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
           onUnpin(row.id);
         };
         return (
-          <div key={key} ref={ref} className={classes} data-tip={line.title ?? undefined} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
+          <div key={key} ref={ref} className={classes} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
             <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
@@ -223,7 +223,8 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
             {/* A live code has Copy and its countdown wherever it is (D449); once it's expired the code is inside the subject. */}
             {row.code && !codeExpired(row, now) ? <CodeLine code={row.code} onCopied={() => onCodeCopied?.(row.id)} /> : (
               <span className="subj">
-                <b className={line.alert ? 'alertsubj' : undefined}>
+                {/* The subject a summary stands in for, under the words it replaces rather than the whole row's middle (SV-203). */}
+                <b className={line.alert ? 'alertsubj' : undefined} data-tip={line.title ?? undefined}>
                   {line.code ? <>{line.code.before}<span className="code">{line.code.value}</span>{line.code.after}</> : line.subject}
                 </b>
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}

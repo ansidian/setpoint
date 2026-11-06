@@ -16,7 +16,7 @@ const current = (page: Page) => page.locator('.palette .item.cur').textContent()
 async function openNorthwind(page: Page, base: string) {
   await page.goto(`${base}/inbox`);
   await page.locator('.today-row').first().waitFor();
-  await page.locator('.list .row[data-tip^="Interview availability"]').click();
+  await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
   await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
 }
 
@@ -78,7 +78,7 @@ test('the open email\'s commands: Done, Add to calendar and Mark unread, and Esc
     await until('unread again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.unread);
 
     // Done, with the cursor moved down and back.
-    await page.locator('.list .row[data-tip^="Interview availability"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Meta+k');
     await page.keyboard.press('ArrowDown');

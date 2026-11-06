@@ -3880,3 +3880,8 @@ it changes what's on screen.
     held places go. Unread mail older than the pages loaded shows as the list reaches it. Board
     audit (override 33): 01 6.18% → 4.66%, 22a 4.45% → 4.61%, 21a 10.24% → 10.44%, 17 at 0.97%
     (its Inbox behind Settings); the rest as they were.
+310. **A row's real subject shows under the words standing in for it** (amending #299; Andy,
+    2026-11-05; darma SV-203). Where a row shows its summary in the subject's place, the tooltip
+    naming the real subject belonged to the whole row, so it centred under the row's middle, far
+    from where the eye was; it now belongs to the summary's words and centres under them, shown
+    only with the pointer on them (Claude's call, as a small gap).

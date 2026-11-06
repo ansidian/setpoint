@@ -28,7 +28,7 @@ test('a proposal\'s Cancel takes its card away at once, and the copy it leaves g
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts .btn', {hasText: 'Add to calendar'}).click();
     const proposal = page.getByRole('form', {name: 'Proposal: add to calendar'});
     await proposal.waitFor();
@@ -101,7 +101,7 @@ test('a failure\'s toast: a refused copy is one, and so is a pin Gmail refuses, 
     await page.locator('.toast.failed', {hasText: 'Couldn\'t copy it'}).locator('.tone').waitFor();
 
     await page.route(/\/api\/mail\/messages\/\d+\/pin$/, route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
-    await point(page.locator('.list .row[data-tip^="Interview availability"]'));
+    await point(page.locator('.list .row:has(b[data-tip^="Interview availability"])'));
     await page.keyboard.press('p');
     await page.locator('.toast.failed', {hasText: 'Couldn\'t pin it, Gmail didn\'t answer in time.'}).locator('.tone').waitFor();
     assert.deepEqual(setpoint.pageErrors, []);

@@ -17,7 +17,7 @@ test('board 22a: the Inbox in Light (System, with the browser preferring light),
     await page.emulateMedia({colorScheme: 'light'});
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.today-row').first().waitFor();
-    await page.locator('.list .row[data-tip^="Interview availability"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
     assert.equal(await theme(page), 'light');

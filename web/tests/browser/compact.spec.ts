@@ -47,7 +47,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.equal(await sideways(page), 0);
 
       // An email covers the list, under the header: Back leads its tools.
-      await page.locator('.list .row[data-tip^="Interview availability"]').click();
+      await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
       assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
@@ -61,10 +61,10 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
         await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
         await page.keyboard.press('Escape');
         await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
-        await page.locator('.list .row[data-tip^="Interview availability"]').click();
+        await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
         await backButton.click();
         await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
-        assert.ok(await page.locator('.list .row[data-tip^="Interview availability"]').isVisible());
+        assert.ok(await page.locator('.list .row:has(b[data-tip^="Interview availability"])').isVisible());
       }
 
       // News: its header whole, a story over the list with Back.
@@ -91,7 +91,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
     await wide.locator('.list .row').first().waitFor();
     assert.equal((await rested(() => wide.locator('aside.sb').boundingBox()))!.width, layout.sidebar);
     assert.ok(await wide.locator('.sb .acct').first().isVisible());
-    await wide.locator('.list .row[data-tip^="Interview availability"]').click();
+    await wide.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane').boundingBox()))!];
     assert.equal(pane.x, list.x + list.width, 'beside the list');

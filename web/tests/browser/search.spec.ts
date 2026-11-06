@@ -1376,7 +1376,7 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     const place = card.locator('input[aria-label="Place"]');
@@ -1412,7 +1412,7 @@ test('SV-180: a free event that evening leaves the proposal card\'s conflict lin
   const setpoint = await startSetpoint({fixtures: ['free-review']});
   try {
     const page = await load(setpoint);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();
@@ -1427,7 +1427,7 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     // The card itself, not the copy that folds away in its place once it closes (app/fold.ts).
     const card = page.locator('.pane .prop:not([aria-hidden])');
@@ -1523,7 +1523,7 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
     await page.locator('.pane .prop input[aria-label="Title"]').waitFor();
     assert.equal(await menu.count(), 0);
     // On other mail the buttons stay under the head, and More, holding nothing, doesn't show (SV-24).
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).waitFor();
     assert.equal(await page.locator('.rd-tools [aria-label="More"]').count(), 0);
     // The sign-in's proposal, left open, doesn't stop this email's (SV-24).
@@ -1694,7 +1694,7 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    await page.locator('.list .row[data-tip^="Final exam schedule"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();

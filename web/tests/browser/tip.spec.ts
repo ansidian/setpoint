@@ -57,3 +57,22 @@ test('the reader\'s sender and "to you" show their addresses in the tooltip, und
     await setpoint.stop();
   }
 });
+
+test('a row whose summary stands in for its subject shows the subject under those words, not the row\'s middle, at the wide screen\'s zoom too (SV-203)', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.setViewportSize({width: 2400, height: 1300});
+    await page.goto(`${setpoint.base}/inbox`);
+    // The summary's words in the row, found by the subject the row stands for.
+    const words = page.locator('.list .row:is([data-tip="Lease renewal terms"], :has(b[data-tip="Lease renewal terms"])) .subj b').first();
+    await words.hover();
+    await tip(page).filter({hasText: 'Lease renewal terms'}).waitFor();
+    const [named, shown] = await rested(async () => [(await words.boundingBox())!, (await tip(page).boundingBox())!]);
+    assert.ok(shown.y >= named.y + named.height, 'under the words');
+    assert.ok(Math.abs(shown.x + shown.width / 2 - (named.x + named.width / 2)) < 1, `centred on them: ${shown.x + shown.width / 2} against ${named.x + named.width / 2}`);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

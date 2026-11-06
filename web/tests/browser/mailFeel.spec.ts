@@ -136,12 +136,12 @@ test('inbox-09: a pin out of the shelf\'s sight says so, with Undo, and lands on
     await page.goto(`${setpoint.base}/inbox`);
     // P on Contoso University, the last in Attention: the toast says Pinned, with Undo; the row leaves
     // Attention for the shelf (D105, D449).
-    const exams = page.locator('.row:not(.shelf)[data-tip^="Final exam schedule"]');
+    const exams = page.locator('.row:not(.shelf):has(b[data-tip^="Final exam schedule"])');
     await point(exams);
     await page.keyboard.press('p');
     const toast = page.locator('.toast.pinned', {hasText: 'Pinned'});
     await toast.waitFor();
-    await page.locator('.row.shelf[data-tip^="Final exam schedule"]').waitFor();
+    await page.locator('.row.shelf:has(b[data-tip^="Final exam schedule"])').waitFor();
     await until('it left Attention', () => exams.count(), count => count === 0);
     // Undo unpins it, back in Attention, and the toast goes.
     await toast.getByRole('button', {name: 'Undo'}).click();
@@ -160,7 +160,7 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
 
-    await page.locator('.list .row[data-tip="Interview availability for Software Engineer I"]').click();
+    await page.locator('.list .row:has(b[data-tip="Interview availability for Software Engineer I"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
     const tools = page.locator('.pane > .rd-tools');
     await tools.evaluate(element => element.setAttribute('data-first', ''));

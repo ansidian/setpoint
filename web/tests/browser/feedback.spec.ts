@@ -116,7 +116,7 @@ test('press: a key does its button\'s work; a disabled one doesn\'t give', async
     assert.equal((await held(previous)).split(' | ')[0], 'none', 'a disabled button doesn\'t give');
     await page.mouse.move(700, 28);
     await page.mouse.up();
-    await page.locator('.list .row[data-tip^="Interview availability"]').click();
+    await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
 
     // P presses Pin, as its click would: the press, under a second, is by eye (D416); Pin's state follows.
@@ -226,7 +226,7 @@ test('press on the phone: a tapped row fills `sub2` at once and nothing stays li
   try {
     const page = await setpoint.page('iphone');
     await page.goto(`${setpoint.base}/inbox`);
-    const row = page.locator('.list .row[data-tip^="Interview availability"]');
+    const row = page.locator('.list .row:has(b[data-tip^="Interview availability"])');
     await row.waitFor();
     assert.equal(await rested(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('-webkit-tap-highlight-color'))), 'rgba(0, 0, 0, 0)');
     await pressed(page, row, ['none', await rested(() => computed(page, 'var(--sub2)')), '0s']);

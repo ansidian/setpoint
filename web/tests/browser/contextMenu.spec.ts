@@ -18,7 +18,7 @@ const menu = (page: Page) => page.locator('.ctx-menu');
 const items = (page: Page) => menu(page).locator('.menu-i').allTextContents();
 const item = (page: Page, label: string) => menu(page).locator('.menu-i', {hasText: label});
 const counts = (setpoint: Setpoint) => setpoint.api<MailCountsOut>('GET', '/mail/counts');
-const northwind = (page: Page) => page.locator('.list .row[data-tip^="Interview availability"]').first();
+const northwind = (page: Page) => page.locator('.list .row:has(b[data-tip^="Interview availability"])').first();
 
 /** Right-clicks `target` at `position` within it, and waits for the menu to open and take the keys. */
 async function rightClick(target: Locator, position?: {x: number; y: number}) {
