@@ -2,15 +2,14 @@
 // Proposal) as tables: highlighted runs, reasons, the results line, what Alfred is asked, what the
 // reader highlights, and how a proposal's time reads; SV-23's calendar results: Upcoming then Past,
 // the row's day, and its line with a series' rule.
-import type {AnswerOut, ItemOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchResultOut} from '@setpoint/shared';
+import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, proposalAt, proposalDay, proposalWhen, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
-import type {ProposalWhen, Run} from '../src/logic/search.ts';
+import type {Run} from '../src/logic/search.ts';
 
-const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
 const marked = (text: string, runs: Run[]) => segments(text, runs).map(part => (part.mark ? `[${part.text}]` : part.text)).join('');
 
@@ -368,37 +367,6 @@ describe('the Answer card\'s lines', () => {
     [['a', 'b', 'c'], 'Searched “a”, “b” and “c”'],
   ])('what it searched: %j', (searched, line) => {
     expect(searchedLine(searched)).toBe(line);
-  });
-});
-
-const exam: ProposalItemOut = {
-  kind: 'event', calendar_id: 2, title: 'CS 101 final exam', all_day: false, starts_at: '2026-12-10T03:00:00.000Z', ends_at: '2026-12-10T05:00:00.000Z',
-  start_date: null, end_date: null, due_date: null, due_at: null, time_zone: 'America/Los_Angeles', place: 'Contoso University · Room 214', project: null,
-};
-
-describe('proposalWhen: the card\'s day and times as its fields hold them (board 08)', () => {
-  test.each<[string, ProposalItemOut, ProposalWhen]>([
-    ['a timed event', exam, {date: '2026-12-09', start: 19 * 60, end: 21 * 60}],
-    ['all day', {...exam, all_day: true, starts_at: null, ends_at: null, start_date: '2026-10-31', end_date: '2026-11-01'}, {date: '2026-10-31', start: null, end: null}],
-    ['a task on its day, with its time', {...exam, kind: 'task', starts_at: null, ends_at: null, due_date: '2026-12-09', due_at: '2026-12-10T03:00:00.000Z'}, {date: '2026-12-09', start: 19 * 60, end: null}],
-    ['no date: blank, to pick (SV-24)', {...exam, starts_at: null, ends_at: null}, {date: null, start: null, end: null}],
-  ])('%s', (_name, item, when) => {
-    expect(proposalWhen(item, zone)).toEqual(when);
-  });
-  test.each([
-    ['this year', '2026-12-09', 'Wed, Dec 9'],
-    ['another year shows it', '2027-01-12', 'Tue, Jan 12, 2027'],
-  ])('its day, %s', (_name, date, shown) => expect(proposalDay(date, now, zone)).toBe(shown));
-});
-
-describe('proposalAt: the item at the day and times left in the card (SV-24)', () => {
-  test.each<[string, ProposalItemOut, ProposalWhen & {date: string}, Partial<ProposalItemOut>]>([
-    ['a timed event moved', exam, {date: '2026-12-11', start: 9 * 60, end: 10 * 60 + 30}, {all_day: false, starts_at: '2026-12-11T17:00:00.000Z', ends_at: '2026-12-11T18:30:00.000Z', start_date: null, end_date: null}],
-    ['a dateless event given a day: all day', {...exam, starts_at: null, ends_at: null}, {date: '2026-10-20', start: null, end: null}, {all_day: true, starts_at: null, ends_at: null, start_date: '2026-10-20', end_date: '2026-10-21'}],
-    ['a three-day all-day event keeps its length', {...exam, all_day: true, starts_at: null, ends_at: null, start_date: '2026-10-30', end_date: '2026-11-02'}, {date: '2026-11-06', start: null, end: null}, {start_date: '2026-11-06', end_date: '2026-11-09'}],
-    ['a task given a time', {...exam, kind: 'task', starts_at: null, ends_at: null, due_date: null}, {date: '2026-10-20', start: 8 * 60, end: null}, {due_date: '2026-10-20', due_at: '2026-10-20T15:00:00.000Z'}],
-  ])('%s', (_name, item, when, expected) => {
-    expect(proposalAt(item, when, zone)).toMatchObject(expected);
   });
 });
 

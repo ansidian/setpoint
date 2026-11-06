@@ -1,9 +1,8 @@
 // Search, Alfred and proposals (shared/src/api/search.ts has the routes). None of these is cached:
 // a search, an answer and a proposal belong to the screen that asked for them. Create is the one
 // change here, a command: pending until its provider confirms it, failed with the provider's words.
-import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, CommandOut, ItemKind, ProposalItemOut, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSuggestOut} from '@setpoint/shared';
+import type {AnswerOut, AskStepOut, CalendarSearchChip, CalendarSearchOut, ItemKind, ProposalOut, SearchChip, SearchOut, SearchRead, SearchSuggestOut} from '@setpoint/shared';
 import {getJson, sendJson} from './client.ts';
-import {untilSettled} from './items.ts';
 
 export const SETTINGS_PATH = '/settings';
 
@@ -54,12 +53,3 @@ export const alfredStep = (ask: string) => getJson<AskStepOut>(`/alfred/asks/${a
 /** Add to calendar / Add as task: the item pre-filled from the email, created by nothing. */
 export const proposeFromMessage = (messageId: number, kind: ItemKind) => sendJson<ProposalOut>('POST', '/proposals/from-message', {message_id: messageId, kind});
 
-/**
- * Create: POST /api/items, then the command until its provider settles it. Resolves with the
- * command as it last stood (still pending if the provider takes over a minute).
- */
-export async function createItem(item: ProposalItemOut & {reminders?: number[]; create_project?: boolean}, onPending: (command: CommandOut) => void): Promise<CommandOut> {
-  const command = await sendJson<CommandOut>('POST', '/items', item);
-  onPending(command);
-  return untilSettled(command);
-}

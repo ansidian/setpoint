@@ -124,6 +124,12 @@ export const createItems = (inputs: ItemCreateInput[]) => change(async () => {
   return commands;
 });
 
+/**
+ * SV-208: an email's proposal created from its card, which waits there, at .5, until the provider
+ * settles it, a failure staying in the card with the provider's words.
+ */
+export const createSettled = (input: ItemCreateInput) => change(async () => untilSettled(await sendJson<CommandOut>('POST', '/items', input)));
+
 /** A move, resize or edit; Undo right after waits for the change before it to reach the provider. */
 export const updateItem = (id: number, input: {changes: ItemChanges; scope?: RecurringScope; occurrence_start?: string | null}) =>
   change(() => afterPending(() => sendJson<CommandOut>('PATCH', `/items/${id}`, input)));

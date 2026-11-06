@@ -1332,7 +1332,7 @@ test('the editor\'s keys after a pick from one of its menus: ⌘Enter saves, Esc
   }
 });
 
-test('/calendar/new: the proposal card\'s More options opens the editor pre-filled from the email', async () => {
+test('/calendar/new?message=: the editor opens pre-filled from the email\'s proposal', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const all = await setpoint.api<{days: {rows: {id: number; subject: string}[]}[]}>('GET', '/mail/all?limit=100');

@@ -454,12 +454,13 @@ half strength until the answer is in (#108).
 ### Proposal
 
 **Add to calendar** and **Add as task** open a proposal card at the top of the reading pane (board
-08): the fields pre-filled from the email, each marked "from the email", the conflict line ("Free
-that evening" or "Overlaps …", leaving free events out, #303), **Create**, and **More options**, which opens the full editor in
-Calendar. Nothing is created until Andy creates it. The day and times take typing as the editor's
-do, blank ("Pick a day") when the email gave none; once they change, the mark and the conflict line
-go. A task's card has no Place, and its Project suggests Todoist's projects as Andy types, making a
-new one only when he picks **New project** ([Decided while building](#decided-while-building) #26).
+08), which is Calendar's [editor](#editor) in a card ([Decided while building](#decided-while-building) #315):
+the email's title in the line as words only, its line reading what's typed after it, the fields
+pre-filled from the email, each marked "from the email" until it changes, the conflict line ("Free
+that evening" or "Overlaps …", leaving free events out, #303) worked out again as the day and time
+change, and **Create**. Nothing is created until Andy creates it. The day is blank ("Pick a day")
+when the email gave none, and Create says so. A task's card has no Place, and its Project suggests
+Todoist's projects as Andy types, making a new one only when he picks **New project** (#26).
 
 ### Pattern prompt
 
@@ -1832,7 +1833,7 @@ it changes what's on screen.
     editing a task offers only Todoist's projects. A repeat typed in a task's line ("every mon") is
     the task's repeat, in Todoist's words as the Repeat menu says them (Andy, 2026-10-09; darma SV-25
     D54).
-44. **More options carries the proposal card's fields as left:** the editor opens on the card's
+44. **More options carries the proposal card's fields as left** (superseded by #315: the card is the editor): the editor opens on the card's
     title, day and times, place, calendar, reminder and project (a New project still tagged New);
     the fields Andy changed lose the "from the email" mark (Andy, 2026-10-09; darma SV-25 D54).
 45. **The editor and the proposal card share a date and a time picker:** both fields still take
@@ -3934,3 +3935,9 @@ it changes what's on screen.
     News's focus order (Search news, Add to calendar, the pane's links), since he never Tabs through
     the app. It wraps from General to All and back (Andy), and keeps an open story only where the
     next view lists it (Claude's call, as a small gap). `J` / `K` reach Also reported's rows too.
+315. **The proposal card is Calendar's editor** (amending #44; Andy, 2026-11-05; darma SV-208, D455).
+    Add to calendar and Add as task, in the reader and in Alfred's answers, show the editor in the
+    card's frame: the line reads what's typed (the email's title in it as words only, D290), and
+    the email's day, time, place, calendar and project are what it falls back to; every field the
+    editor has (repeat, the reminders row, labels). The conflict line stays, worked out again for the
+    day and time as they change. The timeline preview, batch drafts and More options aren't on the card.

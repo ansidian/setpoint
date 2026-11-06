@@ -169,7 +169,7 @@
    way (C, D, New), it slides in the same 12 px over a pane's 180 ms (styles.css › Overlays arrive). */
 @keyframes ed-in { from { opacity: 0; transform: translateX(var(--detail-editor-slide)); } }
 .editor.handed { animation: ed-in var(--detail-edit) var(--ease); }
-.editor:not(.handed) { animation: pane-in var(--dur-medium) var(--ease); }
+.editor:not(.handed, .card) { animation: pane-in var(--dur-medium) var(--ease); }
 /* The scope chooser takes the footer's place, so it rises from there. */
 .editor .scope-pop { animation-name: pop-in-up; transform-origin: bottom left; }
 
@@ -191,3 +191,16 @@
 @media (hover: hover) {
   .editor .field:not(.focus, :focus-within):hover { box-shadow: inset 0 0 0 1px var(--edgeHover); }
 }
+
+/* SV-208: the editor as an email's proposal card (search.css's `.prop` frame, board 08): the card's
+   head, its body in the card's padding with no scroll of its own, the conflict line in the date row
+   in place of the timeline, and a footer with no rule over it. */
+.editor.card { display: block; animation: card-in var(--dur-medium) var(--ease); }
+.answer .card-b > .editor.card { animation: turn-in var(--dur-medium) var(--ease); }
+.editor.card .ed-scroll { overflow: visible; padding-bottom: 0; }
+.editor.card .ed-line { padding: 12px 16px 0; }
+.editor.card .eg { padding: 12px 16px 0; }
+.editor.card .conflict { padding: 0; display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; min-width: 0; color: var(--ink3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.editor.card .conflict.free .icon { color: var(--good); }
+.editor.card > .failed-line { padding: 12px 16px 0 46px; }
+.editor.card .ed-foot { border-top: 0; padding: 14px 16px 16px 46px; }

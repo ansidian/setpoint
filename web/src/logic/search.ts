@@ -1,10 +1,10 @@
 // Search, Alfred's Answer card and the proposal card's rules (DESIGN.md › Search, Alfred's Answer
 // card, Proposal; SV-23's calendar search): what the field asks, the results line, each reason's parts, the highlighted runs,
 // what the reader highlights, and how a proposal's time reads.
-import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, ProposalItemOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
+import type {AnswerOut, AskStep, CalendarMatchReasonOut, CalendarSearchResultOut, HighlightOut, MatchReasonOut, SearchChip, SearchOut, SearchResultOut, SearchSuggestionOut, SourceProvider} from '@setpoint/shared';
 import {timeRange} from './calendar.ts';
 import {describeRule, describeTaskRepeat} from './compose.ts';
-import {addDays, clockTime, instantAt, localDate, minutesOf} from './format.ts';
+import {clockTime} from './format.ts';
 import {placeName} from './place.ts';
 import type {IconName} from '../ui/glyphs.ts';
 
@@ -321,44 +321,6 @@ export function shownSources<T>(sources: readonly T[], all: boolean): {shown: T[
   return all ? {shown: [...sources], more: 'Show fewer'} : {shown: sources.slice(0, SOURCES_SHOWN), more: `Show all ${sources.length}`};
 }
 
-// An event the email gave a start and no end lasts an hour, as the editor's do.
-const DEFAULT_LENGTH = 60;
-
-const onDay = (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {...options, timeZone: 'UTC'});
-
-/** A proposal's day as its field shows it: "Wed, Dec 9"; another year's "Wed, Dec 9, 2027". */
-export function proposalDay(date: string, now: number, timeZone: string): string {
-  const options: Intl.DateTimeFormatOptions = {weekday: 'short', month: 'short', day: 'numeric'};
-  return onDay(date, date.startsWith(localDate(now, timeZone).slice(0, 4)) ? options : {...options, year: 'numeric'});
-}
-
-/** A proposal's day and times as its fields hold them: minutes after the day's midnight, null for all day or no time; no day when the email gave none. */
-export interface ProposalWhen {
-  date: string | null;
-  start: number | null;
-  end: number | null;
-}
-
-export function proposalWhen(item: ProposalItemOut, timeZone: string): ProposalWhen {
-  const zone = item.time_zone ?? timeZone;
-  if (item.kind === 'task') return {date: item.due_date, start: item.due_at ? minutesOf(item.due_at, zone) : null, end: null};
-  if (item.all_day || !item.starts_at) return {date: item.all_day ? item.start_date : null, start: null, end: null};
-  const start = minutesOf(item.starts_at, zone);
-  const length = item.ends_at ? Math.round((Date.parse(item.ends_at) - Date.parse(item.starts_at)) / 60_000) : DEFAULT_LENGTH;
-  return {date: localDate(item.starts_at, zone), start, end: start + length};
-}
-
-/** The proposal's item on the day and at the times the user left in its fields (SV-24); an all-day event keeps its length in days. */
-export function proposalAt(item: ProposalItemOut, when: ProposalWhen & {date: string}, timeZone: string): ProposalItemOut {
-  const zone = item.time_zone ?? timeZone;
-  if (item.kind === 'task') return {...item, due_date: when.date, due_at: when.start === null ? null : instantAt(when.date, when.start, zone)};
-  if (when.start === null) {
-    const days = item.all_day && item.start_date && item.end_date ? Math.max(1, Math.round((Date.parse(item.end_date) - Date.parse(item.start_date)) / 86_400_000)) : 1;
-    return {...item, all_day: true, starts_at: null, ends_at: null, start_date: when.date, end_date: addDays(when.date, days)};
-  }
-  return {...item, all_day: false, starts_at: instantAt(when.date, when.start, zone), ends_at: instantAt(when.date, when.end ?? when.start + DEFAULT_LENGTH, zone), start_date: null, end_date: null};
-}
-
 /**
  * The names holding what's typed, any case, best first (SV-56): those starting with it, then those
  * with a word starting with it, then the rest, each in list order; all of them for nothing typed.
@@ -407,9 +369,6 @@ export function projectChoice(text: string, projects: {name: string}[], create: 
   if (found) return {project: found.name, create_project: false};
   return create ? {project: name, create_project: true} : {problem: `No project named “${name}”, pick one or create it`};
 }
-
-/** The reminder choices on the proposal card, in minutes before; Settings' default is chosen first. */
-export const REMINDER_CHOICES = [0, 10, 30, 60, 1440] as const;
 
 const PROVIDER_NAMES: Record<SourceProvider, string> = {gmail: 'Gmail', icloud: 'iCloud', google_calendar: 'Google Calendar', todoist: 'Todoist', weather: 'Weather'};
 

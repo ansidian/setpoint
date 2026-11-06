@@ -5,7 +5,7 @@
 // removed, what the chips left out, a reading slow, failed or overtaken, no results, Esc back to the
 // Inbox; Alfred's Answer card from ⌘Enter with a follow-up, and from the reader (Ask about this
 // email), against a fake Anthropic on 127.0.0.1, and its error in the server's words with no key;
-// the proposal card's Create through the command layer, More options, and the More menu on Security
+// the proposal card (Calendar's editor, SV-208) and its Create through the command layer, and the More menu on Security
 // mail. SV-23: calendar search, from the header's button, `/` or ⌘F, with its results in the right
 // pane; a click, Enter, ↓ and J / K selecting results on the grid; E to the editor and back; Esc.
 import assert from 'node:assert/strict';
@@ -1381,9 +1381,6 @@ test('SV-71: the proposal card\'s Place, emptied, offers the places events have 
     const card = page.locator('.pane .prop:not([aria-hidden])');
     const place = card.locator('input[aria-label="Place"]');
     await place.waitFor();
-    // The field keeps its column's width, as Title's.
-    const width = (field: typeof place) => field.locator('xpath=..').evaluate(label => Math.round(label.getBoundingClientRect().width));
-    assert.equal(await rested(() => width(place)), await rested(() => width(card.locator('input[aria-label="Title"]'))));
     // Its own place from the email offers nothing; emptied, the recent places show.
     await place.focus();
     const places = card.getByRole('listbox', {name: 'Places'});
@@ -1423,7 +1420,7 @@ test('SV-180: a free event that evening leaves the proposal card\'s conflict lin
   }
 });
 
-test('the proposal card: Add to calendar pre-fills from the email, Create waits for Google Calendar, More options opens the editor', async () => {
+test('the proposal card: Add to calendar pre-fills Calendar\'s editor from the email, Create waits for Google Calendar; Add as task reads its line (SV-208)', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -1432,34 +1429,38 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     // The card itself, not the copy that folds away in its place once it closes (app/fold.ts).
     const card = page.locator('.pane .prop:not([aria-hidden])');
     await card.waitFor();
-    assert.equal(await card.locator('input[aria-label="Title"]').inputValue(), 'CS 101 final exam');
+    // The email's title is the line's, its words read as words only (D290).
+    assert.equal(await card.locator('.nl-input').inputValue(), 'CS 101 final exam');
+    assert.equal(await card.locator('.nl [data-start]').count(), 0, 'nothing in the title lit');
     assert.deepEqual(await card.locator('.prow .field input').evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value)), ['Wed, Dec 9', '7:00 PM', '9:00 PM']);
     // The reminder follows Settings' default, which the card loads when it opens.
-    await until('the calendar and reminder picks', () => card.locator('.prow .field.pick').allTextContents(), picks => picks.join() === 'Classes,10 min before');
+    await until('the calendar and reminder', async () => [await card.getByRole('button', {name: 'Calendar'}).textContent(), ...await card.locator('.prow.reminders .qchip').allTextContents()],
+      picks => picks.join() === 'Classes,10 min before');
     assert.equal(await card.locator('input[aria-label="Place"]').inputValue(), 'Contoso University · Room 214');
     assert.equal(await card.locator('.conflict').textContent(), 'Free that evening');
     assert.equal(await card.locator('.srcm').count(), 3);
     assert.equal(await page.locator('.rd-acts .btn.ghost').textContent(), 'Add to calendar');
     // A press outside the reminder menu closes it; the card stays (SV-24).
-    await card.locator('button[aria-label="Reminder"]').click();
+    await card.locator('button[aria-label="Add reminder"]').click();
     await card.locator('.pop.menu').waitFor();
     await card.locator('.card-h').click();
     await card.locator('.pop.menu').waitFor({state: 'detached'});
     assert.equal(await card.count(), 1);
     // Esc cancels; nothing was created.
-    await card.locator('input[aria-label="Title"]').press('Escape');
+    await card.locator('.nl-input').press('Escape');
     assert.equal(await card.count(), 0);
     assert.equal(await page.locator('.rd-subj').count(), 1, 'the reader stays');
     const exams = async () => (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.filter(item => item.title === 'CS 101 final exam');
     assert.equal((await exams()).length, 0);
     // Create: pending (.5) until Google Calendar confirms, then the card goes and the toast says where.
-    // The day takes typing (SV-24): moved to Friday, the email's mark and conflict line go.
+    // The day takes typing (SV-24): moved to Friday, the email's mark goes, and the conflict line is
+    // Friday's (SV-208).
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
     await card.waitFor();
     await card.locator('input[aria-label="Date"]').fill('dec 11');
     await card.locator('input[aria-label="Date"]').press('Enter');
     assert.equal(await card.locator('input[aria-label="Date"]').inputValue(), 'Fri, Dec 11');
-    assert.equal(await card.locator('.conflict').count(), 0);
+    await until('Friday\'s conflict line', () => card.locator('.conflict').textContent(), line => line === 'Free that evening');
     assert.equal(await card.locator('.srcm').count(), 2);
     // The create held on its way, so the card is read while it waits.
     let create = () => {};
@@ -1480,24 +1481,23 @@ test('the proposal card: Add to calendar pre-fills from the email, Create waits 
     const [created] = await exams();
     const classes = (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;
     assert.deepEqual([created?.calendar_id, created?.starts_at, created?.ends_at, created?.place], [classes.id, '2026-12-12T03:00:00.000Z', '2026-12-12T05:00:00.000Z', 'Contoso University · Room 214']);
-    // More options: the editor in Calendar, pre-filled from this email.
+    // Add as task: the line reads what's typed after the email's title, as the editor's does (SV-208).
     await page.locator('.rd-acts button', {hasText: 'Add as task'}).click();
     await card.waitFor();
     assert.equal(await card.locator('input[aria-label="Project"]').inputValue(), 'School');
-    // S4: the card's fields as left go with it; those changed lose the email's mark.
-    await card.locator('input[aria-label="Title"]').fill('Study for the final');
-    await card.locator('input[aria-label="Date"]').fill('dec 8');
-    await card.locator('input[aria-label="Date"]').press('Enter');
-    await card.locator('input[aria-label="Project"]').fill('Finals');
-    await card.locator('.pop.menu .menu-i', {hasText: 'New project “Finals”'}).click();
-    await card.locator('button', {hasText: 'More options'}).click();
-    const exam = await idOf(setpoint, 'Final exam schedule');
-    await until('the editor\'s address', async () => page.url(), url => url.endsWith(`/calendar/new?kind=task&message=${exam}`));
-    const editor = page.locator('.editor');
-    await until('the card\'s title in the editor\'s line', () => editor.getByLabel('Describe the task').inputValue(), value => value === 'Study for the final');
-    assert.deepEqual([await editor.getByLabel('Due date', {exact: true}).inputValue(), await editor.getByLabel('Project', {exact: true}).inputValue()], ['Tue, Dec 8', 'Finals']);
-    await editor.locator('.field .tag', {hasText: 'New'}).waitFor();
-    assert.equal(await editor.locator('.nl .srcm').count(), 0);
+    const line = card.getByLabel('Describe the task');
+    await line.fill('Study for the final dec 8');
+    await until('the line\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Tue, Dec 8');
+    assert.deepEqual(await card.locator('.nl [data-start]').allTextContents(), ['dec 8']);
+    assert.equal(await card.locator('.srcm').count(), 0, 'the title and day changed lose their marks');
+    // A phrase taken out puts the email's day back.
+    await line.fill('Study for the final');
+    await until('the email\'s day', () => card.locator('input[aria-label="Due date"]').inputValue(), day => day === 'Wed, Dec 9');
+    await line.fill('Study for the final dec 8');
+    await card.locator('button', {hasText: 'Create'}).click();
+    await card.waitFor({state: 'detached'});
+    const study = (await setpoint.api<ItemsOut>('GET', '/items?from=2026-12-01&to=2027-01-01')).items.find(item => item.title === 'Study for the final');
+    assert.deepEqual([study?.kind, study?.due_date, study?.project], ['task', '2026-12-08', 'School']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1520,7 +1520,7 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
     assert.equal(await page.locator('.rd-subj').count(), 1);
     await page.locator('.rd-tools [aria-label="More"]').click();
     await menu.locator('button', {hasText: 'Add to calendar'}).click();
-    await page.locator('.pane .prop input[aria-label="Title"]').waitFor();
+    await page.locator('.pane .prop .nl-input').waitFor();
     assert.equal(await menu.count(), 0);
     // On other mail the buttons stay under the head, and More, holding nothing, doesn't show (SV-24).
     await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
@@ -1528,7 +1528,7 @@ test('Security mail: Add to calendar and Add as task are in the More menu, which
     assert.equal(await page.locator('.rd-tools [aria-label="More"]').count(), 0);
     // The sign-in's proposal, left open, doesn't stop this email's (SV-24).
     await page.locator('.rd-acts button', {hasText: 'Add to calendar'}).click();
-    await until('this email\'s proposal', () => page.locator('.pane .prop input[aria-label="Title"]').inputValue(), title => title === 'CS 101 final exam');
+    await until('this email\'s proposal', () => page.locator('.pane .prop .nl-input').inputValue(), title => title === 'CS 101 final exam');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
