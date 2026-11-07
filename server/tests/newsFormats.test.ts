@@ -197,6 +197,15 @@ describe('page reads', () => {
     ]);
   });
 
+  test('a list whose utility classes name the page\'s furniture keeps its posts; a nav class still goes', () => {
+    const posts = '<article><a href="/news/breeze-3"><h2>Introducing Breeze 3</h2></a></article><article><a href="/news/fall-report"><h2>Our fall report</h2></a></article>';
+    // A utility class with a variable's value ("scroll-m-(--nav-height)") or a variant isn't the element's name.
+    for (const classes of ['group/posts block scroll-m-(--nav-height)', 'top-[var(--menu-offset)]', 'lg:pt-(--navbar-height)']) {
+      expect(listedPosts(`<main><section class="${classes}">${posts}</section></main>`, `${BASE}/news`).map(post => post.headline), classes).toEqual(['Introducing Breeze 3', 'Our fall report']);
+    }
+    expect(listedPosts(`<main><div class="site-nav">${posts}</div></main>`, `${BASE}/news`)).toEqual([]);
+  });
+
   test('a page that lists nothing, or another site\'s links, has no posts', () => {
     expect(listedPosts('<html><body><div id="app"></div></body></html>', `${BASE}/news`)).toEqual([]);
     expect(listedPosts('<a href="https://elsewhere.example.org/news/a-post">A post elsewhere</a>', `${BASE}/news`)).toEqual([]);

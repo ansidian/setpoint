@@ -42,7 +42,11 @@ const NOISE_TEXT = /^(advertisement|sponsored|sign up|subscribe|read more|relate
 // after it: the ask itself, not a story about giving or a station's funding (the polish audit's extra-10).
 const APPEAL = /\b(?:please become a (?:\w+ )?member|become a (?:\w+ )?member today|increase your (?:existing )?membership|100% (?:community|listener|reader|member)[- ](?:funded|supported))\b/i;
 
-const words = (element: Element) => `${attr(element, 'class') ?? ''} ${attr(element, 'id') ?? ''}`.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+// A utility class with a value or a variant ("scroll-m-(--nav-height)", "lg:pt-4") isn't the
+// element's name, so its words don't count: Mistral's post list once read as navigation (SV-224).
+const isUtility = (token: string) => /[()[\]:/]/.test(token);
+const words = (element: Element) => [...(attr(element, 'class') ?? '').split(/\s+/).filter(token => !isUtility(token)), attr(element, 'id') ?? '']
+  .join(' ').toLowerCase().split(/[^a-z]+/).filter(Boolean);
 const LONG_PARAGRAPH = 200;
 
 /** Whether an element is the page's furniture rather than its content. */
