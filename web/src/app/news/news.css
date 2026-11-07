@@ -13,7 +13,7 @@
   .nw-pill:hover { box-shadow: inset 0 0 0 1px var(--edgeHover), var(--shadow-pill); }
   .nw-pill:hover > .icon { color: var(--ink); }
 }
-.nw-pill .upd { color: var(--accent); }
+.nw-pill .upd { color: color-mix(in oklch, var(--accent) var(--textTint), var(--ink)); }
 
 .nw-sec { height: 32px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
 /* Each section's glyph before its name (#120), the recap's `history`: ink3, its optical edge on the list's 24 px line. */
@@ -132,7 +132,7 @@
 
 .nw-meta { display: flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .nw-meta .outlet { color: var(--ink2); }
-.nw-meta .upd { color: var(--accent); }
+.nw-meta .upd { color: color-mix(in oklch, var(--accent) var(--textTint), var(--ink)); }
 
 /* Upcoming, under Tech's header. */
 .nw-up { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); flex: none; color: var(--ink2); }

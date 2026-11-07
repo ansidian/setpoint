@@ -194,7 +194,7 @@
 .sd.ghost { width: 8px; height: 8px; border: 1.2px dashed var(--sunGlyph); }
 .sl.applied { color: var(--ink2); }
 .sl.proc { color: var(--inProcess); font-weight: 500; }
-.sl.offer { color: var(--good); font-weight: 500; }
+.sl.offer { color: color-mix(in oklch, var(--good) var(--textTint), var(--ink)); font-weight: 500; }
 .sl.rej, .sl.wd, .sl.ghost { color: var(--ink3); }
 
 /* ---------- The detail (680, where the reading pane sits) ---------- */
@@ -531,8 +531,7 @@
 .jd-none { display: inline-flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12.5px; flex: none; }
 /* In the pane every status takes its dot's colour (D470): Rejected `alert`, Ghosted the ghost
    ring's `sunGlyph`, the rest as the table's labels (Withdrawn stays `ink3`, as its ring). The sweep caught
-   Light's Offer at 4.38:1, so Offer and Ghosted lean toward `ink` there. */
+   Light's Offer at 4.38:1, so Offer and Ghosted lean toward `ink` there (`--textTint`). */
 .jd-change > .sl.rej { color: var(--alert); font-weight: 500; }
-/* Offer and Ghosted keep `--moveInk` of their colour (all of it in Night, 85% in Light, the rest `ink`) to read at 4.5:1 on `panel`. */
-.jd-change > .sl.offer { color: color-mix(in oklch, var(--good) var(--moveInk), var(--ink)); }
-.jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--moveInk), var(--ink)); font-weight: 500; }
+/* Ghosted leans toward `ink` in Light (`--textTint`) to read at 4.5:1 on `panel`, as Offer does everywhere. */
+.jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--textTint), var(--ink)); font-weight: 500; }

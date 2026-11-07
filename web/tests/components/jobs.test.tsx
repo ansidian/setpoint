@@ -39,6 +39,7 @@ import {moveDay, movementFoot, moveSide} from '../../src/app/jobs/words.ts';
 import {appliedStanding, foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine, recedes} from '../../src/app/jobs/words.ts';
 import {appliedStanding as chipStanding, closes as chipCloses} from '../../../extension/src/words.ts';
 import {colour} from './colour.ts';
+import {contrastOf, still} from './contrast.ts';
 import {applyTheme} from '../../src/tokens.ts';
 
 const ZONE = 'America/Los_Angeles';
@@ -996,5 +997,19 @@ test('SV-220: every status a row can name reads at 4.5:1 on the list\'s panel, i
     }
   } finally {
     applyTheme(document.documentElement, 'night');
+  }
+});
+
+test('SV-220: the table\'s Offer reads at 4.5:1 on an open row, in Night and in Light', async () => {
+  const moving = still();
+  await render(<div style={{background: 'var(--page)'}}><div style={{background: 'var(--sub3)'}}><span className="st"><span className="sl offer" data-text>Offer</span></span></div></div>);
+  try {
+    for (const theme of ['night', 'light'] as const) {
+      applyTheme(document.documentElement, theme);
+      expect(contrastOf(document.querySelector<HTMLElement>('[data-text]')!), theme).toBeGreaterThanOrEqual(4.5);
+    }
+  } finally {
+    applyTheme(document.documentElement, 'night');
+    moving();
   }
 });

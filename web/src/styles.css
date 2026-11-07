@@ -94,7 +94,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* While an account filters the Inbox, Inbox reads as its parent: ink, no fill (#166). */
 .nav.parent, .nav.parent > .icon { color: var(--ink); }
 .acct .cnt { color: var(--ink3); font-size: 12px; margin-left: auto; }
-.acct .reconnect { color: var(--caution); margin-left: auto; }
+.acct .reconnect { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); margin-left: auto; }
 .acct .reconnect + .cnt { margin-left: 0; }
 .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: var(--c, var(--ink3)); }
 .dot.sm { width: 7px; height: 7px; }
@@ -157,8 +157,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row .lines > .title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .today-row .when { color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .today-row .when .in { margin-left: 0; }
-.today-row .in.soon { color: var(--caution); font-weight: 500; }
-.today-row .in.now { color: var(--alert); font-weight: 500; }
+.today-row .in.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-weight: 500; }
+.today-row .in.now { color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); font-weight: 500; }
 .today-more { width: 100%; text-align: left; color: var(--ink3); background: none; }
 .today-more .ring-space { width: 17px; flex: none; }
 /* The floating detail's card beside the sidebar (detail.css draws it). */
@@ -427,9 +427,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .code-line .copy .icon { color: var(--ink2); }
 /* Copied confirms in `good` for its 1.5 s (inbox-11): a 14% `good` fill, words and glyph `good`, under
    the pointer too; in its last minute the countdown reads in seconds, in `caution`. */
-.btn.ghost.copy.copied, .btn.ghost.copy.copied:enabled:hover { background: color-mix(in oklch, var(--good) 14%, transparent); color: var(--good); }
+.btn.ghost.copy.copied, .btn.ghost.copy.copied:enabled:hover { background: color-mix(in oklch, var(--good) 14%, transparent); color: color-mix(in oklch, var(--good) var(--washTint), var(--ink)); }
 :is(.code-line, .code-card) .copy.copied .icon { color: var(--good); }
-.row .code-line .sum.soon, .code-card .expiry.soon { color: var(--caution); }
+.row .code-line .sum.soon, .code-card .expiry.soon { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); }
 /* All (board 05, #48): the Pinned shelf (D105), day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
 .gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
@@ -492,7 +492,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    fix. The card's foot reaches down to the chip, so the pointer crosses into it without it closing. */
 .pane-facts { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 24px; }
 .pane-trouble { position: relative; display: inline-flex; }
-.pt-chip { height: 24px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; color: var(--alert); font-size: 12px; font-weight: 500;
+.pt-chip { height: 24px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; color: color-mix(in oklch, var(--alert) var(--textTint), var(--ink)); font-size: 12px; font-weight: 500;
   background: color-mix(in srgb, var(--alert) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert) 24%, transparent); }
 .pt-chip[aria-expanded="true"] { background: color-mix(in srgb, var(--alert) 16%, transparent); }
 .pt-card { position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; white-space: nowrap; transform-origin: bottom center; animation-name: pop-in-up; }
@@ -524,7 +524,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .md-need { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 500;
   color: var(--caution); background: color-mix(in srgb, var(--caution) var(--attTint), var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caution) 24%, transparent); }
 .md-need .md-overdue { font-weight: 600; }
-.md-need.caught { color: var(--good); background: color-mix(in srgb, var(--good) 9%, var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 24%, transparent); }
+.md-need.caught { color: color-mix(in oklch, var(--good) var(--textTint), var(--ink)); background: color-mix(in srgb, var(--good) 9%, var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 24%, transparent); }
 .md-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 420px); margin: 0; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; }
 .md-tile { display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; padding: 16px 8px 14px; }
 .md-tile + .md-tile { border-left: 1px solid var(--hair); }

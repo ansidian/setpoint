@@ -4153,7 +4153,7 @@ it changes what's on screen.
     first, the last eight. A row is the table's status dot for where it went; the company in `ink`
     13.5 / 500, then "Applied → Rejected" at 12.5, each status in its dot's colour (Applied `ink2`,
     In process `inProcess`, Offer `good`, Rejected `alert` 500, Withdrawn `ink3`, Ghosted `sunGlyph`
-    500; in Light, Offer and Ghosted keep 85% of their colour, the rest `ink`, to reach 4.5:1), the
+    500; in Light, Offer and Ghosted lean toward `ink`, #337), the
     arrow `ink3`; a status set by hand adds the table's `edit` glyph ("Set by you"); the day on the
     right in `ink3` 12 ("Today", "Yesterday", "Fri" within the week, then "Oct 28"); and the role
     under them in `ink3` 12. Only status changes count: an email that sets a status the application
@@ -4166,3 +4166,12 @@ it changes what's on screen.
     Settings › Jobs's order, and the month of its earliest email), no numbers (D314), over the keys:
     J K Move, Enter Open, / Search. The AI down folds into the foot (#335), with Settings › AI when
     that's the fix; the line over the table stays. With no applications: "Nothing has moved yet".
+337. **Small coloured text leans toward `ink` in Light** (Andy, 2026-11-06; darma SV-220). Light's
+    green, blue, orange, red and yellow sit near 4.5:1 on its page and fall under it on a hovered,
+    cursor or open row and on their own washes, which the sweep never sees. So in Light, text in
+    those colours keeps 80% of its colour, the rest `ink` (`--textTint`): Jobs's Offer, in the table
+    and the pane, and the pane's Ghosted; News's "Updated"; a code's countdown as it runs out; "All
+    caught up"; the trouble chip; and the sidebar's Reconnect, "in 5 min" and "now". "Copied", green
+    on its green wash, keeps 70% (`--washTint`). Night keeps all of each colour. Dots, icons and
+    washes keep theirs: as non-text they need 3:1, and every coloured icon passes. Each is checked in
+    its worst state in Night and Light at 4.5:1.
