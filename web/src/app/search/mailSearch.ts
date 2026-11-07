@@ -63,7 +63,7 @@ interface LeftRows extends LeftOut<SearchResultOut> {
 const atField = (at: FieldAt | null, chips: SearchChip[], text: string) => at !== null && at.chips === chips && at.text.trim() === text.trim();
 
 /** Mail's search under the header. A `plain` one (the phone's) leaves the words as typed, never chips. */
-export function useSearch(account: number | null, plain = false): Search {
+export function useSearch(plain = false): Search {
   const [chips, setChips] = useState<SearchChip[]>([]);
   const [text, setTextState] = useState('');
   const [out, setOut] = useState<SearchOut | null>(null);
@@ -121,7 +121,7 @@ export function useSearch(account: number | null, plain = false): Search {
   }
 
   const wordsOf = (nextChips: SearchChip[], nextText: string, kept: boolean): SearchQuery =>
-    (kept ? {text: nextText, chips: nextChips, account, read: 'kept', typed: keptTyped.current} : {text: nextText, chips: [], account});
+    (kept ? {text: nextText, chips: nextChips, read: 'kept', typed: keptTyped.current} : {text: nextText, chips: []});
 
   function run(nextChips: SearchChip[], nextText: string, kept = nextChips.length > 0): Promise<SearchOut | null> {
     window.clearTimeout(timer.current);
@@ -164,12 +164,11 @@ export function useSearch(account: number | null, plain = false): Search {
   function suggest(at: FieldAt) {
     const asking = new AbortController();
     suggesting.current = asking;
-    const query = {...at, account};
     // A slow or failed one, or no key, is no suggestion and says nothing.
-    searchSuggestion(query, false, asking.signal).then(async first => {
+    searchSuggestion(at, false, asking.signal).then(async first => {
       await offer(first.suggestion, at, asking);
       if (!first.reads || asking.signal.aborted) return;
-      await offer((await searchSuggestion(query, true, asking.signal)).suggestion, at, asking);
+      await offer((await searchSuggestion(at, true, asking.signal)).suggestion, at, asking);
     }).catch(() => {});
   }
 
@@ -220,7 +219,7 @@ export function useSearch(account: number | null, plain = false): Search {
     if (!out?.reading || leftPaging.current === offset) return;
     leftPaging.current = offset;
     const merge = (change: (now: LeftRows) => LeftRows) => setLeft(now => (now?.answering === answering ? change(now) : now));
-    searchMail({text: out.text, chips: out.chips, account, read: 'left_out', typed: out.reading.typed, page: {search_id: out.search_id, offset}}).then(page => {
+    searchMail({text: out.text, chips: out.chips, read: 'left_out', typed: out.reading.typed, page: {search_id: out.search_id, offset}}).then(page => {
       leftPaging.current = null;
       merge(now => ({...now, rows: [...now.rows, ...page.results], next: page.next_offset}));
     }, () => {
@@ -301,7 +300,7 @@ export function useSearch(account: number | null, plain = false): Search {
       if (!out || out.next_offset === null || paging.current === out.next_offset || listedBy.current !== id) return;
       paging.current = out.next_offset;
       const kept = out.reading ? {read: 'kept' as const, typed: out.reading.typed} : {};
-      searchMail({text: out.text, chips: out.chips, account, ...kept, page: {search_id: out.search_id, offset: out.next_offset}}).then(page => {
+      searchMail({text: out.text, chips: out.chips, ...kept, page: {search_id: out.search_id, offset: out.next_offset}}).then(page => {
         if (id !== latest.current) return;
         setOut(page);
         setResults(now => [...now, ...page.results]);

@@ -23,8 +23,8 @@
 // an email read in Unread stays there, drawn read, until the user leaves the view. Mark all as read
 // follows the view, and Attention has none. An empty view says so, with Show All.
 //
-// On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts, the
-// account filter and Mark all as read, with a plain search field under it (no chips, no Alfred).
+// On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts and Mark
+// all as read (the account filter went with D476), with a plain search field under it (no chips, no Alfred).
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import type {MouseEvent as ReactMouseEvent} from 'react';
@@ -32,7 +32,7 @@ import {flushSync} from 'react-dom';
 import {serverNow, timeZone} from '../api/auth.ts';
 import {getCached, getJson, prefetch, refreshIfShown, useResource, useResources} from '../api/client.ts';
 import {
-  allPath, answerPrompt, changeEach, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
+  allPath, answerPrompt, changeEach, COUNTS_PATH, INBOX_PATH, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {attentionRows, dayStops, heldUnread, nextUnread, sameHold, unreadNotDone, viewList} from '../logic/all.ts';
@@ -134,7 +134,6 @@ function slide(direction: 'in' | 'back' | null, update: () => void) {
  * again (Done, Trash).
  */
 interface Kept {
-  visit: string;
   groups: InboxGroupOut[] | null;
   held: HeldRow[];
 }
@@ -145,13 +144,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const now = useNow(codeMoment);
   const zone = timeZone();
   const {list: accountList, byId: accounts} = useAccounts();
-  const filteredTo = route.account ? accounts.get(route.account)?.label ?? null : null;
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
   const compact = useCompact();
   // The phone has the one list (D275).
   const view: InboxView = phone ? 'all' : route.view ?? 'all';
-  const inboxLoad = {path: inboxPath(route.account), ...useResource<InboxOut>(inboxPath(route.account))};
+  const inboxLoad = {path: INBOX_PATH, ...useResource<InboxOut>(INBOX_PATH)};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
   const {data: openMessageData} = useResource<MessageOut>(route.open ? messagePath(route.open) : null);
@@ -159,7 +157,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // Undo, or a refused Trash, lets one back.
   const [trashing, setTrashing] = useState<ReadonlySet<number>>(new Set());
   const untrashing = (id: number) => setTrashing(ids => new Set([...ids].filter(one => one !== id)));
-  const search = useSearch(route.account, phone);
+  const search = useSearch(phone);
   const alfred = useAlfred();
   const searching = search.active || alfred.open;
   // A search's first answer on its way: the list stays, dimmed, then gives way to the results'
@@ -169,9 +167,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   // All's pages: the first, then one more each time the list nears its end.
   const [befores, setBefores] = useState<string[]>([]);
-  const allPaths = [allPath(route.account), ...befores.map(before => allPath(route.account, before))];
+  const allPaths = [allPath(), ...befores.map(before => allPath(before))];
   const allPages = useResources<AllOut>(allPaths);
-  const {error: allError} = useResource<AllOut>(allPath(route.account));
+  const {error: allError} = useResource<AllOut>(allPath());
   const allRows = useMemo(() => allPages.flatMap(page => page?.days.flatMap(day => day.rows) ?? []).filter(row => !trashing.has(row.id)), [allPages, trashing]);
   // The days whose Noise the user opened here; each starts folded.
   const [noiseOpen, setNoiseOpen] = useState<ReadonlySet<string>>(new Set());
@@ -190,13 +188,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   // A code's row leaves at its expiry, before the server's next answer says so.
   const groups = useMemo(() => (inbox ? withoutExpiredCodes(withoutEmails(inbox.groups, trashing), now) : null), [inbox, trashing, now]);
-  // This visit to the Inbox (its account). Nothing holds a row in place any more (D449): the list is
-  // the server's, with each action's change shown at once, and Undo's rows until the server's list
-  // has them again.
-  const visit = String(route.account ?? '');
-  const begin = (): Kept => ({visit, groups: null, held: []});
-  const [kept, setKept] = useState<Kept>(begin);
-  let current = kept.visit === visit ? kept : begin();
+  // Nothing holds a row in place any more (D449): the list is the server's, with each action's
+  // change shown at once, and Undo's rows until the server's list has them again.
+  const [kept, setKept] = useState<Kept>({groups: null, held: []});
+  let current = kept;
   if (groups !== current.groups) current = {...current, groups, held: groups ? letGo(current.held, groups) : current.held};
   if (current !== kept) setKept(current);
   const ready = groups !== null && allPages[0] !== undefined;
@@ -208,11 +203,11 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const takeOut = (ids: number[]) => setKept(state => ({...state, held: state.held.filter(one => !ids.includes(one.row.id))}));
   const inboxGroups = useMemo(() => withHeld(groups ?? [], held), [groups, held]);
   // Unread's rows for this visit to it (SV-221): one read here stays, drawn read, until the view changes.
-  const holding = view === 'unread' && ready ? `${visit}` : null;
-  const [unreadHold, setUnreadHold] = useState<{holding: string | null; rows: ReadonlyMap<number, MessageRowOut>}>({holding: null, rows: new Map()});
+  const holding = view === 'unread' && ready;
+  const [unreadHold, setUnreadHold] = useState<{holding: boolean; rows: ReadonlyMap<number, MessageRowOut>}>({holding: false, rows: new Map()});
   const latestRows = useMemo(() => new Map([...allRows, ...inboxGroups.flatMap(group => group.rows)].map(row => [row.id, row])), [allRows, inboxGroups]);
   const was = unreadHold.holding === holding ? unreadHold.rows : new Map<number, MessageRowOut>();
-  const next = holding === null ? was : heldUnread(was, inboxGroups.flatMap(group => group.rows), latestRows, trashing);
+  const next = !holding ? was : heldUnread(was, inboxGroups.flatMap(group => group.rows), latestRows, trashing);
   // The same map while its rows stay the same, so the list isn't worked out again for nothing.
   const unreadRows = unreadHold.holding === holding && sameHold(next, unreadHold.rows) ? unreadHold.rows : next;
   if (unreadRows !== unreadHold.rows || unreadHold.holding !== holding) setUnreadHold({holding, rows: unreadRows});
@@ -225,9 +220,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The emails U can go to: the unread ones the list shows, not Done.
   const unreadShown = useMemo(() => new Set([...attention, ...shelf, ...dayViews.flatMap(day => day.lanes.flatMap(lane => lane.rows.map(({row}) => row)))].filter(unreadNotDone).map(row => row.id)),
     [attention, shelf, dayViews]);
-  // Unread's badge: this Inbox's unread mail, every account's or the one it's filtered to; Attention's
-  // count, what's in it not Done.
-  const unreadHere = route.account ? counts?.accounts.find(one => one.account_id === route.account)?.unread ?? 0 : counts?.unread ?? 0;
+  // Unread's badge: every unread email; Attention's count, what's in it not Done.
+  const unreadHere = counts?.unread ?? 0;
   const attentionHere = useMemo(() => attentionRows(inboxGroups, false).length, [inboxGroups]);
   // FYI's or Noise's Mark all as read: that view's unread mail, as Mark all as read reads it (SV-221).
   const viewReadIds = useMemo(() => (view === 'fyi' || view === 'noise'
@@ -252,11 +246,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const setCursor = (key: string | null) => setTrack(current => ({...current, cursor: key}));
   // The emails ⌘ or Ctrl-click and ⇧-click selected this visit (#249): those still in the list, in its
   // order. None on the phone.
-  const [selecting, setSelecting] = useState<Selection & {visit: string}>({...NO_SELECTION, visit});
-  const selection = selecting.visit === visit ? selecting : NO_SELECTION;
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const selected = useMemo(() => (phone ? [] : inListOrder(selection.ids, stops)), [phone, selection.ids, stops]);
-  const select = (next: Selection) => setSelecting({...next, visit});
-  const clearSelection = () => setSelecting({...NO_SELECTION, visit});
+  const select = setSelection;
+  const clearSelection = () => setSelection(NO_SELECTION);
 
   const open = route.open;
   // The way the user last stepped to an email (reader-03).
@@ -273,9 +266,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const nextChange = inbox?.next_change_at ?? null;
   useEffect(() => {
     if (!nextChange) return;
-    const timer = window.setTimeout(() => refreshIfShown(inboxPath(route.account)), Math.max(0, Date.parse(nextChange) - serverNow()) + 500);
+    const timer = window.setTimeout(() => refreshIfShown(INBOX_PATH), Math.max(0, Date.parse(nextChange) - serverNow()) + 500);
     return () => window.clearTimeout(timer);
-  }, [nextChange, route.account]);
+  }, [nextChange]);
 
   const go = (changes: Partial<InboxRoute>) => navigate({...route, ...changes});
 
@@ -369,7 +362,6 @@ export function InboxPage({route}: {route: InboxRoute}) {
     const wasOpen = open !== null && ids.includes(open) ? open : null;
     // Their rows beat before they fold: ticked off, or thrown away (inbox-05).
     for (const id of ids) beats.set(id, beat);
-    const from = visit;
     const places = withHeld(groups ?? [], held).flatMap(group => group.rows.flatMap((row, index) => (ids.includes(row.id) ? [{group: group.group, index, row}] : [])));
     if (wasOpen !== null) {
       // The phone goes back to the list, where the toast is: the next email isn't in view there, so
@@ -398,7 +390,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         const refused = refusals(took, outcomes);
         if (refused.length) toastFailure(undoFailed(refused.length))(refused[0]!.error);
       }));
-      setKept(state => (state.visit === from ? {...state, held: [...state.held, ...places]} : state));
+      setKept(state => ({...state, held: [...state.held, ...places]}));
       if (wasOpen !== null) reopen(wasOpen);
     };
     undos.push(back);
@@ -555,7 +547,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         return;
       }
       const ids = markAllReadIds(withHeld(groups ?? [], held), allRows);
-      void markAllRead(route.account).catch(toastFailure('Couldn\'t mark all as read'));
+      void markAllRead().catch(toastFailure('Couldn\'t mark all as read'));
       if (!ids.length) return;
       // Undo, from the toast or ⌘Z as Done's and Trash's are (UX #17), marks those same emails unread,
       // at once, before the server's list has them (SV-37).
@@ -647,9 +639,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
   ]}));
 
   // Until the list's first answers: its skeleton, or why they didn't come (DESIGN.md #225, #228).
-  const allLoad = {path: allPath(route.account), data: allPages[0], error: allError};
+  const allLoad = {path: allPath(), data: allPages[0], error: allError};
   const listFailed = useLoadFailed([inboxLoad, allLoad]);
-  const listArrived = useArrival(ready, visit);
+  const listArrived = useArrival(ready);
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
   const selectedSet = useMemo(() => new Set(selected), [selected]);
@@ -699,8 +691,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
     <>
       <header className="hd">
         {phone && <Mark />}
-        {/* A filtered Inbox names its account, so the filter isn't only the sidebar's (UX #15); the phone's account button already does. */}
-        <h1 className="hd-title">{searching ? 'Search' : filteredTo && !phone ? `Inbox · ${filteredTo}` : 'Inbox'}</h1>
+        <h1 className="hd-title">{searching ? 'Search' : 'Inbox'}</h1>
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
         {/* The views, Unread's with the red unread badge and Attention's with its count (SV-221, D471). */}
@@ -720,13 +711,6 @@ export function InboxPage({route}: {route: InboxRoute}) {
         )}
         {phone && (
           <>
-            <label className="btn ghost sm ph-account">
-              {route.account ? accounts.get(route.account)?.label : 'All accounts'}<Icon name="expand_more" size={16} />
-              <select aria-label="Account" value={route.account ?? ''} onChange={event => go({account: event.target.value ? Number(event.target.value) : null, open: null})}>
-                <option value="">All accounts</option>
-                {accountList.map(account => <option key={account.id} value={account.id}>{account.label}</option>)}
-              </select>
-            </label>
             {/* Not while searching: it would read the hidden Inbox's mail, not the results (#141). */}
             {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
           </>
@@ -734,8 +718,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         <EmptyPaneButton pane={pane} />
         <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
-      {/* Filtered to one account, the rows drop the account they'd all repeat (inbox-12). */}
-      <div className={route.account && !phone ? 'content filtered' : 'content'} style={accountWidth} onContextMenu={onContextMenu}>
+      <div className="content" style={accountWidth} onContextMenu={onContextMenu}>
         {firstWait && waitedLong ? (
           <section className="list" aria-label="Search results"><SearchSkeleton immediate /></section>
         ) : searching && !firstWait ? (
@@ -743,10 +726,9 @@ export function InboxPage({route}: {route: InboxRoute}) {
             card={alfred.open ? <AnswerCard alfred={alfred} scoped={false} openId={open} accounts={accounts} now={now} timeZone={zone} onOpen={id => openEmail(id)} /> : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onAsk={askAlfred} />
         ) : (
-          // Another account's list starts afresh: its rows don't fold. Until both answers are in, its
-          // skeleton, or why they didn't come (#225, #228); rows not shown before don't fold in then.
-          // A view starts afresh too, at its top (SV-221).
-          <AllList key={`${visit}:${view}`} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
+          // Until both answers are in, its skeleton, or why they didn't come (#225, #228); rows not
+          // shown before don't fold in then. A view starts afresh, at its top (SV-221).
+          <AllList key={view} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
             empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
               ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}

@@ -94,7 +94,7 @@ export function App({arrive = false}: {arrive?: boolean}) {
     <div className={arrive ? 'app boot-after' : 'app'}>
       {!phone && <Sidebar route={route} />}
       <main className={['main', offline && 'offline', down && 'down'].filter(Boolean).join(' ')}>
-        {route.page === 'inbox' ? <InboxPage key={route.account ?? 'all'} route={route} />
+        {route.page === 'inbox' ? <InboxPage route={route} />
           : route.page === 'calendar' ? (phone ? <Agenda route={route} /> : <CalendarPage route={route} />)
             : route.page === 'news' ? (phone ? null : <NewsPage route={route} />)
               : route.page === 'jobs' ? (phone ? null : <JobsPage route={route} />)

@@ -139,7 +139,7 @@ test('controls show the arrow, links and rows included; a hovered task isn\'t se
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     // The arrow on controls, links included, and on rows.
-    assert.deepEqual([await cursor(page.locator('a.nav')), await cursor(page.locator('.acct')), await cursor(page.locator('.row')), await cursor(page.locator('.nfold'))], ['default', 'default', 'default', 'default']);
+    assert.deepEqual([await cursor(page.locator('a.nav')), await cursor(page.locator('.row')), await cursor(page.locator('.nfold'))], ['default', 'default', 'default']);
 
     await page.goto(`${setpoint.base}/news`);
     const story = page.locator('.nw-row').first();

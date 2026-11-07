@@ -179,19 +179,19 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
   });
 });
 
-test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab title follows', async () => {
+test('the account filter\'s old address is the plain Inbox; 1 and 2 go to Inbox and Calendar; the tab title follows', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
+    // No account filter (D476): ?account=4 lands on every account's Inbox, its address the Inbox's,
+    // with no account rows under Inbox in the sidebar.
+    await page.goto(`${setpoint.base}/inbox?account=4`);
     await page.locator('.list .row').first().waitFor();
+    assert.equal(new URL(page.url()).search, '');
+    assert.equal(await page.locator('.hd-title').textContent(), 'Inbox');
+    assert.ok(new Set(await page.locator('.list .ac .label, .list .r1 .label').allTextContents()).size > 1, 'every account\'s mail');
+    assert.equal(await page.locator('.sb .nav.on').textContent(), 'Inbox19');
     assert.equal(await page.title(), '(19) Inbox');
-    await page.locator('.acct', {hasText: 'Jobs'}).click();
-    await until('only Jobs mail', () => page.locator('.list .ac .label, .list .r1 .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
-    assert.equal(new URL(page.url()).search, '?account=4');
-    // The counts stay every account's, once what the filter asked is answered and drawn.
-    await setpoint.idle();
-    assert.equal(await page.locator('.nav:has-text("Inbox") .ubadge').textContent(), '19');
     await page.keyboard.press('2');
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
     assert.equal(await page.title(), 'October 2026 · Calendar');

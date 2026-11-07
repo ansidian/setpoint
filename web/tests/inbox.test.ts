@@ -97,18 +97,14 @@ describe('Pin, Mark all as read and Mark unread show at once', () => {
     const none = {...inbox, groups: groups.filter(item => item.group !== 'pinned')};
     expect(inboxAfterPin(none, ups.id, true).groups[0]).toMatchObject({group: 'pinned', count: 1, unread: 1});
   });
-  test.each([
-    ['every account\'s Inbox', null, [[30, 27]]],
-    ['its own account\'s', 4, [[30, 27]]],
-    ['not another account\'s', 2, [[27]]],
-  ])('Pin from All, on an email the Inbox doesn\'t hold, reaches the shelf of %s', (_name, account, shelf) => {
+  test('Pin from All, on an email the Inbox doesn\'t hold, reaches the shelf', () => {
     const old = row({id: 30, account_id: 4, organisation: 'Woodgrove Bank', unread: false, lane: 'fyi', kind: 'money'});
-    const after = inboxAfterPin({...inbox, account_id: account}, old.id, true, old);
-    expect(after.groups.filter(item => item.group === 'pinned').map(item => item.rows.map(one => one.id))).toEqual(shelf);
+    const after = inboxAfterPin(inbox, old.id, true, old);
+    expect(after.groups.filter(item => item.group === 'pinned').map(item => item.rows.map(one => one.id))).toEqual([[30, 27]]);
     expect(after.groups.filter(item => item.group !== 'pinned').some(item => item.rows.some(one => one.id === old.id))).toBe(false);
   });
   test('Mark all as read: Attention and Security stay as they are, the rest reads and leaves, and the counts drop by each (UX #4)', () => {
-    const after = inboxAfterMarkAllRead(inbox, null);
+    const after = inboxAfterMarkAllRead(inbox);
     expect(shape(after)).toEqual([
       ['pinned', [[27, false, true]]], ['attention', [[2, true, false], [5, true, false], [22, false, false]]], ['security', [[1, true, false], [3, true, false]]],
     ]);
@@ -116,13 +112,8 @@ describe('Pin, Mark all as read and Mark unread show at once', () => {
   });
   test('a pinned security email keeps its dot on the shelf too', () => {
     const pinnedCode = {...code, pinned: true};
-    const after = inboxAfterMarkAllRead({...inbox, groups: [group('pinned', [pinnedCode]), group('security', [pinnedCode])]}, null);
+    const after = inboxAfterMarkAllRead({...inbox, groups: [group('pinned', [pinnedCode]), group('security', [pinnedCode])]});
     expect(shape(after)).toEqual([['pinned', [[1, true, true]]], ['security', [[1, true, true]]]]);
-  });
-  test('for one account, only its mail', () => {
-    const after = inboxAfterMarkAllRead(inbox, 1);
-    expect(after.groups.flatMap(item => item.rows.map(one => one.id))).toEqual([27, 2, 5, 22, 1, 3, 6, 12, 4]);
-    expect(after.counts.unread).toBe(7);
   });
   test('Mark unread brings the dot back and counts it', () => {
     const after = inboxAfterUnread(inbox, exams.id);
@@ -263,15 +254,13 @@ test.each([
 
 // All's rows take it at once too, so a Security row in its day keeps its dot (#243).
 test.each([
-  ['an unread delivery', ups, null, true],
-  ['a Security alert stays unread (UX #4)', signIn, null, false],
-  ['unread Attention waits on Done', northwind, null, false],
-  ['Attention mail Done is read', {...northwind, done: true}, null, true],
-  ['already read', {...ups, unread: false}, null, false],
-  ['for its own account', ups, 2, true],
-  ['for another account', ups, 1, false],
-] as const)('markAllReads: %s', (_name, one, account, expected) => {
-  expect(markAllReads(one, account)).toBe(expected);
+  ['an unread delivery', ups, true],
+  ['a Security alert stays unread (UX #4)', signIn, false],
+  ['unread Attention waits on Done', northwind, false],
+  ['Attention mail Done is read', {...northwind, done: true}, true],
+  ['already read', {...ups, unread: false}, false],
+] as const)('markAllReads: %s', (_name, one, expected) => {
+  expect(markAllReads(one)).toBe(expected);
 });
 
 test.each([

@@ -1454,23 +1454,6 @@ test('UX #11: ⇧U marks the open email unread and closes the reader; ⌘K names
   }
 });
 
-test('UX #15: a filtered Inbox names its account in the header, and the sidebar\'s Inbox goes back to every account', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await load(setpoint);
-    await page.locator('.sb .acct', {hasText: 'Business'}).click();
-    await until('the header names it', () => page.locator('.hd-title').textContent(), text => text === 'Inbox · Business');
-    // Its rows drop the account they'd all repeat (inbox-12).
-    await until('the account column goes', () => page.locator('.list .row .ac').first().isVisible(), shown => !shown);
-    await page.locator('.sb .nav', {hasText: 'Inbox'}).click();
-    await until('every account', () => page.locator('.hd-title').textContent(), text => text === 'Inbox');
-    assert.equal(new URL(page.url()).pathname, '/inbox');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 test('UX #16 and #17: Mark all as read\'s header button goes once nothing is left to mark, and ⌘Z undoes it as the toast\'s Undo does', async () => {
   const setpoint = await startSetpoint();
   try {

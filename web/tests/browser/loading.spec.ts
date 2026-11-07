@@ -319,7 +319,7 @@ test('a story opens at once from its row: sections, headline and meta; its summa
   }
 });
 
-test('Setpoint starting shows its mark and clears what browsers used to keep; then the sidebar\'s accounts and Today are skeletons until they come (states-09, shell-10)', async () => {
+test('Setpoint starting shows its mark and clears what browsers used to keep; then the sidebar\'s Today is a skeleton until it comes (states-09, shell-10)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -332,19 +332,18 @@ test('Setpoint starting shows its mark and clears what browsers used to keep; th
     await page.locator('.boot.starting svg.mark').waitFor();
     assert.deepEqual(await page.evaluate(() => [localStorage.getItem('setpoint.sidebar'), localStorage.getItem('setpoint.signedIn')]), [null, null]);
 
-    // Setpoint answers: its accounts and Today wait as skeletons.
-    const release = await hold(page, /^\/api\/(accounts|items\?.*)$/);
+    // Setpoint answers: Today waits as a skeleton.
+    const release = await hold(page, /^\/api\/items\?.*$/);
     await releaseMe();
-    await shown(page, 'accounts');
     const today = await shown(page, 'today');
     assert.equal(await today.locator('.sk-line').count(), 3);
     const height = (element: Element) => Math.round(element.getBoundingClientRect().height);
     const skeleton = await rested(() => today.locator('.sk-line').first().evaluate(height));
     await release();
-    await page.locator('aside.sb .acct').first().waitFor();
+    await page.locator('aside.sb .today-row.next').waitFor();
     // The event's two lines (SV-210) come in where the skeleton's first stood, as tall.
     assert.equal(await rested(() => page.locator('aside.sb .today-row.next').evaluate(height)), skeleton);
-    // The accounts are in; Today's items too (nothing is held now).
+    // Today's items are in (nothing is held now).
     await setpoint.idle();
     assert.equal(await page.locator('aside.sb [data-skeleton]').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);

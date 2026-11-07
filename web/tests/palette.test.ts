@@ -41,7 +41,7 @@ test.each([
   ['Settings › News', 'ne', [[11, 13]]],
   ['Mark all as read', 'MA', [[0, 2]]],
   ['Night', 'dark', []],
-  ['Inbox · Jobs', '', []],
+  ['Inbox', '', []],
 ] as const)('%s matched by "%s"', (label, query, runs) => {
   expect(matchedRuns(label, query).map(run => [run.start, run.end])).toEqual(runs);
 });

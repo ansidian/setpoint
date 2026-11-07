@@ -42,10 +42,8 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.hbar.muted', {hasText: 'iCloud, as of 8:40 AM'}).waitFor();
     await page.locator('.lh', {hasText: 'Unsorted'}).locator('.gh-note', {hasText: 'Triage is down, as of 9:09 AM'}).waitFor();
     await page.locator('.today-row').first().waitFor();
-    assert.equal(await page.locator('.acct', {hasText: 'Business'}).locator('.reconnect').count(), 1, 'the sidebar marks Business');
-    // Account trouble is sync_problem wherever it shows, the bar as the sidebar (#123).
+    // Account trouble is sync_problem wherever it shows (#123).
     assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
-    assert.deepEqual(await glyph(page.locator('.acct', {hasText: 'Business'}).locator('.reconnect .icon')), [ICONS.sync_problem, '16']);
     // Each tone has one glyph (states-04): stale is `history` in `ink3`, triage down the `warning` triangle in `caution`.
     assert.deepEqual(await toneGlyph(page.locator('.hbar.muted')), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
     assert.deepEqual(await rested(() => toneGlyph(page.locator('.gh-note'))), [ICONS.warning, '16', await rested(() => colourOf(page, 'var(--caution)'))]);

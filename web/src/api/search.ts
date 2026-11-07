@@ -9,7 +9,6 @@ export const SETTINGS_PATH = '/settings';
 export interface SearchQuery {
   text: string;
   chips: SearchChip[];
-  account: number | null;
   // A suggestion's chips, kept or what they left out (D392).
   read?: SearchRead;
   // With `read`: the words as typed, which rank and which the chips' "more" number counts from.
@@ -18,15 +17,15 @@ export interface SearchQuery {
   page?: {search_id: number; offset: number};
 }
 
-export const searchMail = ({text, chips, account, read, typed, page}: SearchQuery) =>
-  sendJson<SearchOut>('POST', '/search', {text, chips, ...(account ? {account_id: account} : {}), ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
+export const searchMail = ({text, chips, read, typed, page}: SearchQuery) =>
+  sendJson<SearchOut>('POST', '/search', {text, chips, ...(read ? {read} : {}), ...(typed === undefined ? {} : {typed}), ...(page ?? {})});
 
 /**
  * A suggestion for the field's exact text (D392): the grammar's date alone without `model`, and with
  * it a reading too, the only way a search reaches a model. `signal` drops it once the text has moved on.
  */
-export const searchSuggestion = ({text, chips, account}: Pick<SearchQuery, 'text' | 'chips' | 'account'>, model: boolean, signal: AbortSignal) =>
-  sendJson<SearchSuggestOut>('POST', '/search/suggestion', {text, chips, ...(account ? {account_id: account} : {}), model}, {signal});
+export const searchSuggestion = ({text, chips}: Pick<SearchQuery, 'text' | 'chips'>, model: boolean, signal: AbortSignal) =>
+  sendJson<SearchSuggestOut>('POST', '/search/suggestion', {text, chips, model}, {signal});
 
 /** The search log: a suggestion on screen, or accepted, so suggestions can be judged. */
 export const searchSuggestionLog = (id: number, event: 'shown' | 'accepted', searchId?: number) =>

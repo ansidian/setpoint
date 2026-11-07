@@ -258,7 +258,7 @@ test('today is the now-line\'s alert disc in the month, the week\'s heads and th
 });
 
 for (const theme of ['night', 'light'] as const) {
-  test(`${theme}: the current page is a raised navOn chip that hover's flat sub never matches; an account's filter makes Inbox its parent (#166)`, async () => {
+  test(`${theme}: the current page is a raised navOn chip that hover's flat sub never matches (#166)`, async () => {
     const setpoint = await startSetpoint({clock: 'frozen'});
     try {
       const page = await setpoint.page('target');
@@ -273,16 +273,6 @@ for (const theme of ['night', 'light'] as const) {
       const sub = await rested(() => colourOf(page, 'var(--sub)'));
       await until('Calendar\'s hover', () => style(calendarNav, 'backgroundColor'), fill => fill === sub);
       assert.equal(await rested(() => style(calendarNav, 'boxShadow')), 'none');
-      // Business filters the Inbox: its row is the chip, and Inbox its parent in ink, without a fill.
-      await page.locator('.sb .acct', {hasText: 'Business'}).click();
-      const business = page.locator('.sb .acct.on', {hasText: 'Business'});
-      await business.waitFor();
-      await page.mouse.move(700, 28);
-      await until('Business raised', () => style(business, 'backgroundColor'), fill => fill === raised[0]);
-      assert.equal(await inboxNav.getAttribute('class'), 'nav parent');
-      await until('Inbox without a fill', () => style(inboxNav, 'backgroundColor'), fill => fill === 'rgba(0, 0, 0, 0)');
-      const ink = await rested(() => colourOf(page, 'var(--ink)'));
-      assert.deepEqual([await rested(() => style(inboxNav, 'color')), await rested(() => style(inboxNav.locator('.icon'), 'color'))], [ink, ink]);
       // Settings' current page is the same chip, focused as Settings opens from its address.
       await page.goto(`${setpoint.base}/settings/notifications`);
       const current = page.locator('.settings .set-nav .nav.on');
@@ -573,18 +563,18 @@ for (const theme of ['night', 'light'] as const) {
   });
 }
 
-test('the compact rail carries the roles: the current page is the navOn chip with its icon in accent, Inbox staying current while an account filters it (#166)', async () => {
+test('the compact rail carries the roles: the current page is the navOn chip with its icon in accent (#166)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page({width: 820, height: 1050});
     for (const theme of ['night', 'light'] as const) {
       await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
-      await page.goto(`${setpoint.base}/inbox?account=2`);
+      await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
       await page.mouse.move(700, 28);
       const inbox = page.locator('.sb .nav', {has: page.locator('.icon')}).first();
       assert.equal(await inbox.getAttribute('data-tip'), 'Inbox');
-      assert.equal(await inbox.getAttribute('class'), 'nav on', `${theme}: Inbox current in the rail, filtered`);
+      assert.equal(await inbox.getAttribute('class'), 'nav on', `${theme}: Inbox current in the rail`);
       await until(`${theme}: the raised chip`, () => style(inbox, 'backgroundColor'), fill => fill !== 'rgba(0, 0, 0, 0)');
       assert.equal(await rested(() => style(inbox, 'backgroundColor')), await rested(() => colourOf(page, 'var(--navOn)')));
       assert.equal(await rested(() => style(inbox.locator('> .icon'), 'color')), await rested(() => colourOf(page, 'var(--accent)')));

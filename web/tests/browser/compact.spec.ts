@@ -8,7 +8,7 @@
 // beside return, the empty one with nothing open.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {AccountOut, CalendarOut, MailCountsOut} from '@setpoint/shared';
+import type {CalendarOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -33,7 +33,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       await page.goto(`${setpoint.base}/inbox`);
       await page.locator('.list .row').first().waitFor();
       // The rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on; its rail is
-      // jobs.spec.ts's) and Settings, 40 × 40 icons named in their tooltips; no accounts and no Today.
+      // jobs.spec.ts's) and Settings, 40 × 40 icons named in their tooltips; no Today.
       const rail = (await page.locator('aside.sb').boundingBox())!;
       assert.deepEqual([rail.x, rail.width], [0, layout.rail], `${width}: the rail`);
       const items = await rested(() => page.locator('.sb .nav').evaluateAll(links => links.map(link => {
@@ -41,7 +41,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
         return [link.getAttribute('data-tip'), box.width, box.height, (link.querySelector('.grow') as HTMLElement).offsetWidth];
       })));
       assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Jobs · 3 need you', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
-      assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
+      assert.equal(await page.locator('.sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
       // The red unread badge on Inbox's icon (SV-221), the seed's 19 less what an earlier width opened.
       assert.equal(await page.locator('.sb .nav .ubadge').textContent(), String((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread));
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
@@ -91,7 +91,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
     await wide.goto(`${setpoint.base}/inbox`);
     await wide.locator('.list .row').first().waitFor();
     assert.equal((await rested(() => wide.locator('aside.sb').boundingBox()))!.width, layout.sidebar);
-    assert.ok(await wide.locator('.sb .acct').first().isVisible());
+    assert.ok(await wide.locator('.sb .sb-name').isVisible());
     // The empty pane is there with nothing open, giving way so the list keeps 420 (SV-217); no button.
     assert.equal((await rested(() => wide.locator('section.list').boundingBox()))!.width, 420);
     assert.equal(await wide.locator('section.pane.idle').count(), 1);
@@ -190,24 +190,16 @@ test('Calendar in the compact tier: the grid takes the width, the editor and sea
   }
 });
 
-test('⌘K filters the Inbox by account and shows or hides each calendar, as the rows the rail leaves out did', async () => {
+test('⌘K shows or hides each calendar, as the rows the rail leaves out did', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    const accounts = await setpoint.api<AccountOut[]>('GET', '/accounts');
-    const jobs = accounts.find(account => account.label === 'Jobs')!;
     const page = await setpoint.page({width: 820, height: HEIGHT});
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
     const run = async (typed: string, label: string) => {
       await page.keyboard.press('Meta+k');
       await page.locator('.palette input').fill(typed);
       await page.locator('.palette .item', {hasText: label}).click();
       await page.locator('.palette').waitFor({state: 'detached'});
     };
-    await run('inbox jobs', 'Inbox · Jobs');
-    await until('the Inbox filtered to Jobs', () => page.evaluate(() => window.location.search), search => search === `?account=${jobs.id}`);
-    assert.equal(await page.locator('.hd-title').textContent(), 'Inbox · Jobs');
-
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cal-month .cell').first().waitFor();
     const classes = async () => (await setpoint.api<CalendarOut[]>('GET', '/calendars')).find(calendar => calendar.name === 'Classes')!;

@@ -125,29 +125,6 @@ test('shell-06, motion-04: the Today event leads with its calendar\'s bar and wa
   }
 });
 
-test('shell-08: the accounts fold away on Calendar and come back on the Inbox', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/inbox`);
-    await page.locator('.list .row').first().waitFor();
-    const nav = (name: string) => page.locator('.sb .nav', {hasText: name});
-    const accounts = page.locator('.sb-accts');
-
-    // The accounts fold on Calendar, out of reach while folded, and come back on the Inbox.
-    await nav('Calendar').click();
-    await page.waitForURL(/\/calendar/);
-    await until('the accounts folded', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height === 0);
-    assert.equal(await accounts.evaluate(element => (element as HTMLElement).inert), true);
-    await nav('Inbox').click();
-    await page.waitForURL(/\/inbox/);
-    await until('the accounts back', () => accounts.evaluate(element => element.getBoundingClientRect().height), height => height > 100);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 // Whether the shelf is in sight is inSight's, a table in inbox.test.ts; the bands' sticking and a
 // pin with the shelf in view went with it, as both needed a scroll to set up, and scrolls race.
 test('inbox-09: a pin out of the shelf\'s sight says so, with Undo, and lands on the shelf', async () => {

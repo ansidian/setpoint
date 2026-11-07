@@ -3,7 +3,6 @@
 // Appearance with the current theme ticked. Typing finds every command, the ones that only have a
 // key too. ↑ ↓ (or the pointer) move the cursor, a `sub2` fill; Enter runs; Esc closes it, and focus
 // goes back where it was. It rises in over 180 ms and closes at once (DESIGN.md › Motion).
-import type {AccountOut} from '@setpoint/shared';
 import {useEffect, useRef, useState} from 'react';
 import type {KeyboardEvent as ReactKeyboardEvent, ReactNode} from 'react';
 import {markAllRead} from '../../api/mail.ts';
@@ -12,10 +11,10 @@ import {SETTINGS_NAV} from '../../logic/settings.ts';
 import {THEME_CHOICES, THEME_LABELS} from '../../logic/theme.ts';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {dotStyle, useAccounts} from '../accounts.ts';
+import {dotStyle} from '../accounts.ts';
 import {jobsCommands} from '../jobs/index.ts';
 import type {SettingsPage} from '../../logic/route.ts';
-import {currentRoute, navigate} from '../router.ts';
+import {navigate} from '../router.ts';
 import {openSettings} from '../settings/store.ts';
 import {askSignOut} from '../signOut.ts';
 import {setThemeChoice, useThemeChoice} from '../theme.ts';
@@ -41,12 +40,8 @@ const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'security', keywords: 'password passkeys recovery codes'},
 ];
 
-/**
- * The palette's own commands: Go to, Appearance, and the ones with a key that typing finds, with the
- * Inbox filtered to each account, which the compact tier's rail has no rows for (#140).
- */
-function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: AccountOut[]): Command[] {
-  const route = currentRoute();
+/** The palette's own commands: Go to, Appearance, and the ones with a key that typing finds. */
+function ownCommands(theme: ReturnType<typeof useThemeChoice>): Command[] {
   return [
     {id: 'inbox', section: 'goto', label: 'Inbox', icon: 'inbox', hint: '1', run: () => navigate(toInbox())},
     {id: 'calendar', section: 'goto', label: 'Calendar', icon: 'calendar_month', hint: '2', run: () => navigate({page: 'calendar', date: null, item: null, at: null})},
@@ -60,14 +55,11 @@ function ownCommands(theme: ReturnType<typeof useThemeChoice>, accounts: Account
     {id: 'new-event', section: 'more', label: 'New event', icon: 'event', hint: 'C', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'event', message: null}})},
     {id: 'new-task', section: 'more', label: 'New task', icon: 'task_alt', hint: 'D', run: () => navigate({page: 'calendar', date: null, item: null, at: null, compose: {kind: 'task', message: null}})},
     {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I',
-      run: () => void markAllRead(route.page === 'inbox' ? route.account : null).catch((error: Error) => showToast(error.message, null, 'failed'))},
+      run: () => void markAllRead().catch((error: Error) => showToast(error.message, null, 'failed'))},
     ...SETTINGS_SECTIONS.map(({page, keywords}): Command => ({
       id: `settings-${page}`, section: 'more', label: `Settings › ${SETTINGS_NAV[page].label}`, icon: SETTINGS_NAV[page].icon, keywords, run: () => openSettings(page),
     })),
     {id: 'sign-out', section: 'more', label: 'Sign out', icon: 'door_open', run: askSignOut},
-    ...accounts.map((account): Command => ({
-      id: `account-${account.id}`, section: 'more', label: `Inbox · ${account.label}`, icon: 'inbox', keywords: 'account filter', run: () => navigate(toInbox(account.id)),
-    })),
   ];
 }
 
@@ -89,12 +81,11 @@ export function Palette() {
 
 function Open({offer, onClose}: {offer: Offer; onClose: () => void}) {
   const theme = useThemeChoice();
-  const {list: accounts} = useAccounts();
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   // A page's command stands in for the palette's own of the same id (Mark all as read on the Inbox).
-  const groups = paletteList([...offer.commands, ...ownCommands(theme, accounts).filter(own => !offer.commands.some(command => command.id === own.id))], query);
+  const groups = paletteList([...offer.commands, ...ownCommands(theme).filter(own => !offer.commands.some(command => command.id === own.id))], query);
   const items = groups.flatMap(group => group.items);
   const at = Math.min(cursor, Math.max(0, items.length - 1));
 

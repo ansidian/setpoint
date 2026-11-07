@@ -46,9 +46,7 @@
 .sk-arow > .l3 { font-size: 12.5px; }
 
 /* ---------- The sidebar: .acct, .today-row (styles.css) ---------- */
-.sk-accounts, .sk-today { display: flex; flex-direction: column; gap: 2px; }
-.sk-acct { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 34px; }
-.sk-acct .sk-dot { background: var(--skel-on-sub); }
+.sk-today { display: flex; flex-direction: column; gap: 2px; }
 .sk-line { height: 28px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 10px; }
 /* The event's two lines (SV-210), as tall as .today-row.ev; its bars line up with the tasks' titles. */
 .sk-line:first-child { height: auto; padding-top: 7px; padding-bottom: 7px; }

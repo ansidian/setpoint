@@ -718,12 +718,6 @@ test('chips go with their search: `/` or ⌘F and a new word, Backspace, Esc and
     await page.keyboard.press('Escape');
     await page.locator('.hd-title', {hasText: 'Inbox'}).waitFor();
     assert.deepEqual([await chips(page), await field(page).inputValue()], [[], '']);
-    // Another account in the sidebar is that account's Inbox, and the search goes with the page it was on.
-    await page.keyboard.press('/');
-    await take('renewal', 'OrgParkside Apartments');
-    await page.locator('.sb .acct', {hasText: 'Business'}).click();
-    await page.locator('.hd-title', {hasText: 'Inbox · Business'}).waitFor();
-    assert.deepEqual([await chips(page), await field(page).inputValue()], [[], '']);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await stop();

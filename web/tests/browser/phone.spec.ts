@@ -263,17 +263,11 @@ test('SV-159: the reader\'s Copy on an email marked unread reads it again, and o
   }
 });
 
-test('the account filter, and plain search with no chips and no Alfred', async () => {
+test('no account filter (D476), and plain search with no chips and no Alfred', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await inbox(setpoint);
-    await page.locator('.ph-account select').selectOption({label: 'Jobs'});
-    await until('Jobs only', () => page.locator('.list .row .ac .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
-    // The button names the account (its select's options follow it in the text).
-    assert.ok((await page.locator('.ph-account').textContent())!.startsWith('JobsAll accounts'));
-    assert.match(new URL(page.url()).search, /^\?account=\d+$/);
-    await page.locator('.ph-account select').selectOption({label: 'All accounts'});
-    await until('every account', () => page.locator('.list .row .ac .label').allTextContents(), labels => labels.includes('Personal'));
+    assert.equal(await page.locator('.hd select').count(), 0);
 
     const reads: string[] = [];
     page.on('request', request => {

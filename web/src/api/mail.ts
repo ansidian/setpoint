@@ -7,7 +7,7 @@ import {countsAfterDone, countsAfterOpen, inboxAfterDone, inboxAfterMarkAllRead,
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, refreshIfShown, sendJson, setCached, updateCached} from './client.ts';
 
-export const inboxPath = (account: number | null) => (account ? `/mail/inbox?account_id=${account}` : '/mail/inbox');
+export const INBOX_PATH = '/mail/inbox';
 export const COUNTS_PATH = '/mail/counts';
 // How the mail day is going: the Inbox's empty pane (SV-218).
 export const DAY_PATH = '/mail/day';
@@ -16,8 +16,8 @@ export const ACCOUNTS_PATH = '/accounts';
 
 /** A page of All: `before` is the previous page's `next_before`. */
 export const ALL_PAGE = 100;
-export const allPath = (account: number | null, before: string | null = null) =>
-  `/mail/all?limit=${ALL_PAGE}${account ? `&account_id=${account}` : ''}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
+export const allPath = (before: string | null = null) =>
+  `/mail/all?limit=${ALL_PAGE}${before ? `&before=${encodeURIComponent(before)}` : ''}`;
 
 // B3's pattern prompts (logic/inbox.ts › PatternPrompt is the part of its shape the web reads).
 // Where B3 isn't there the route answers 404, and the Inbox shows no prompt.
@@ -64,7 +64,7 @@ function updateAllRows(change: (row: MessageRowOut) => MessageRowOut) {
 
 /** The sidebar's counts as the full Inbox now has them (its counts are every account's, and its rows say which changed). */
 function followInboxCounts() {
-  const all = getCached<InboxOut>(inboxPath(null));
+  const all = getCached<InboxOut>(INBOX_PATH);
   if (all) setCached(COUNTS_PATH, all.counts);
 }
 
@@ -274,10 +274,10 @@ export async function attachmentBlob(messageId: number, attachmentId: number): P
   return response.blob();
 }
 
-/** Mark all as read (⇧I): every unread email outside Attention and Security, Noise included, for one account or all. */
-export function markAllRead(account: number | null): Promise<MarkAllReadOut> {
-  for (const path of inboxPaths()) updateCached<InboxOut>(path, inbox => inboxAfterMarkAllRead(inbox, account));
+/** Mark all as read (⇧I): every unread email outside Attention and Security, Noise included. */
+export function markAllRead(): Promise<MarkAllReadOut> {
+  for (const path of inboxPaths()) updateCached<InboxOut>(path, inboxAfterMarkAllRead);
   followInboxCounts();
-  updateAllRows(row => (markAllReads(row, account) ? {...row, unread: false} : row));
-  return change(() => sendJson<MarkAllReadOut>('POST', '/mail/mark-all-read', account ? {account_id: account} : {}));
+  updateAllRows(row => (markAllReads(row) ? {...row, unread: false} : row));
+  return change(() => sendJson<MarkAllReadOut>('POST', '/mail/mark-all-read', {}));
 }

@@ -16,12 +16,11 @@ after(cleanUp);
 
 const sizes: SizeName[] = ['target', 'iphone'];
 
-/** Attention's count on its segment, the sidebar's unread badge, and one account's count; null where the sidebar isn't shown (the phone). */
-async function sidebar(page: Page, account?: string): Promise<{attention: string; unread: string; account?: string} | null> {
+/** Attention's count on its segment and the sidebar's unread badge; null where the sidebar isn't shown (the phone). */
+async function sidebar(page: Page): Promise<{attention: string; unread: string} | null> {
   if (!await page.locator('.sb').isVisible()) return null;
   const text = async (selector: string) => ((await page.locator(selector).count()) ? (await page.locator(selector).first().textContent()) ?? '' : '');
-  const accountCount = account ? await text(`.acct:has-text("${account}") .cnt`) : undefined;
-  return {attention: await text('.hd .ib-views .n'), unread: await text('.nav:has-text("Inbox") .ubadge'), ...(account ? {account: accountCount} : {})};
+  return {attention: await text('.hd .ib-views .n'), unread: await text('.nav:has-text("Inbox") .ubadge')};
 }
 
 const counts = (setpoint: Setpoint) => setpoint.api<MailCountsOut>('GET', '/mail/counts');
@@ -105,7 +104,7 @@ for (const size of sizes) {
         await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
         await until('the row turns read', () => isUnread(page, `attention:${northwind}`), unread => !unread);
         if (await page.locator('.sb').isVisible()) {
-          await until('the sidebar follows', () => sidebar(page, 'Jobs'), shown => shown?.unread === '18' && shown.account === '1' && shown.attention === '3');
+          await until('the sidebar follows', () => sidebar(page), shown => shown?.unread === '18' && shown.attention === '3');
         }
         const after = await until('the server read it', () => counts(setpoint), value => value.unread === 18);
         assert.equal(after.attention, 3);
@@ -132,7 +131,7 @@ for (const size of sizes) {
         await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
         await until('the server read it', () => counts(setpoint), value => value.unread === 18 && value.unread_fyi === 10);
         if (await page.locator('.sb').isVisible()) {
-          await until('Business drops to 6', () => sidebar(page, 'Business'), shown => shown?.unread === '18' && shown.account === '6' && shown.attention === '3');
+          await until('the sidebar follows', () => sidebar(page), shown => shown?.unread === '18' && shown.attention === '3');
         }
         // One fewer row is drawn unread; the row stays, read, under the reader, once it closes, and
         // once the server's lists have it. A refetch asked now has the server's read.

@@ -338,7 +338,7 @@ test('Accounts: colour, rename and order save; Connect Gmail says Google isn\'t 
     await business.locator('.sw').first().click();
     await page.locator('.settings .swatches .sw[aria-label="cyan"]').click();
     await settled('Business is cyan', accounts, list => list.find(account => account.label === 'Business')?.colour === 'cyan');
-    assert.equal(await rested(() => page.locator('.acct', {hasText: 'Business'}).locator('.dot').evaluate(dot => getComputedStyle(dot).getPropertyValue('--c').trim())), 'oklch(0.86 0.11 182)', 'the sidebar follows (cyan)');
+    assert.equal(await rested(() => page.locator('.list .ac', {hasText: 'Business'}).first().locator('.dot').evaluate(dot => getComputedStyle(dot).getPropertyValue('--c').trim())), 'oklch(0.86 0.11 182)', 'the Inbox\'s rows follow (cyan)');
 
     await business.getByRole('button', {name: 'Business options'}).click();
     await page.getByRole('menuitem', {name: 'Rename'}).click();

@@ -42,10 +42,13 @@ function withView(route: Route): Route {
 }
 
 // An address opened from outside (a reload, an ntfy link) that names no view opens in the last one used.
+// An Inbox address from the account filter's time (?account=2) is the plain Inbox's (D476).
 {
   const first = currentRoute();
   if (first.page === 'calendar' && !first.view && rememberedMode() === 'week') {
     window.history.replaceState(window.history.state, '', routePath({...first, view: 'week'}));
+  } else if (first.page === 'inbox' && new URLSearchParams(window.location.search).has('account')) {
+    window.history.replaceState(window.history.state, '', routePath(first));
   }
 }
 

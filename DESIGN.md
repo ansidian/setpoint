@@ -196,7 +196,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   the story pane's tools and 30 px icon buttons; 17 beside a label in a button (Add, More options,
   the reader's actions) and in facts; 16 in small buttons, menus and inline links; 14 in chips and
   tags. A card's or popover's ×, and Add, in a 26 px icon button are 16; × is 18 only in a 30 px
-  header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (sidebar, Settings › Accounts and its rows, the
+  header button (Settings', the editor's). One glyph per meaning: account trouble `sync_problem` (Settings › Accounts and its rows, the
   Inbox's bar), a failing News feed `warning`, Try again and Retry now `refresh`, Mark all as read
   `mark_email_read`, a Settings page its nav's glyph wherever it's named.
 - **Tones** (#218): `caution` and `alert` are close in hue, so a state's shape says how serious it is
@@ -238,11 +238,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   - **Inbox** (32 px nav item, radius 10, `sub` hover; current, a raised `navOn` chip with an inset
     `navOnEdge` hairline and its icon in `accent`, #166): the **unread badge** alone (18 px,
     `alert` fill, `onInk` 11.5 / 600 text; every unread email, FYI and Noise included; [Decided while
-    building](#decided-while-building) #338).
-  - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #201): colour dot
-    (8 px), label, unread count. A click filters the Inbox to that account (its row the `navOn`
-    chip, Inbox its parent in `ink` without a fill); a needs-reconnect account adds a `sync_problem`
-    glyph in `caution` before its count, keeping the count. Until they come, three skeleton rows (#234).
+    building](#decided-while-building) #338). No account rows under it: the Inbox has no account
+    filter (#341).
   - **Calendar**.
   - **The page's section** (18 px above, 11.5 uppercase label): **Today** on mail pages, the
     mini-month and **Calendars** on Calendar.
@@ -268,11 +265,9 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 ([Decided while building](#decided-while-building) #140):
 
 - **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on) and Settings as 40 × 40
-  icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166;
-  Inbox stays current while an account filters it, as the rail has no accounts). Inbox's unread badge is 16 px on its icon (2 px from its
-  top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
-  mini-month and Calendars give way; ⌘K filters the Inbox by account ("Inbox · Jobs") and shows or
-  hides each calendar.
+  icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166). Inbox's unread badge is 16 px on its icon (2 px from its
+  top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The Today block, the
+  mini-month and Calendars give way; ⌘K shows or hides each calendar.
 - **Reading pane and story pane:** an open email or story covers the list under the header, its tools
   led by Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the list, and the edge
   doesn't drag. With nothing open the pane is away; a 30 px `right_panel_open` button before search
@@ -319,8 +314,7 @@ Today first. Unread mail sits in its day, drawn unread, so reading an email neve
 no Unread or All to choose between, and going to the Inbox always opens it, in All.
 
 - **Header:** the title, then the **views**, All | Unread | Attention | FYI | Noise, in the shared
-  segmented control (#338): Unread's segment carries the red unread badge (16 px, its account's
-  when filtered), Attention's its not-Done count in `caution` 12 / 500; at the right, **Mark all as
+  segmented control (#338): Unread's segment carries the red unread badge (16 px), Attention's its not-Done count in `caution` 12 / 500; at the right, **Mark all as
   read ⇧I** (a quiet button, a 16 px `mark_email_read`, #123) while the view has anything to read,
   then the search.
 - **Bands** 30 px, `panel`, `hair` above and below (none above the first), a 14 px glyph in `ink3`
@@ -334,8 +328,7 @@ no Unread or All to choose between, and going to the Inbox always opens it, in A
   (board 10); a pinned email's line is its subject and summary.
 - **Row** 38 px, padding 0 16 0 12: the unread gutter (12), sender or organisation (a quarter of the
   row, 112 to 200, ellipsis), subject then " · " and the summary in `ink3`
-  (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, dropped
-  only while the list is filtered to one account, #207), the age or time (72, right, `ink3` 12).
+  (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, #341), the age or time (72, right, `ink3` 12).
   Rows run to the pane (#328).
   Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
   edge, and a press `sub3` at once (#164). Beside the pane the row has no other chips; the account
@@ -1434,7 +1427,7 @@ section's label stays under the title (#132).
 | **Healthy** | nothing on a page; in Settings a 7 px `good` dot before "Checked 9:11 AM" (#219) |
 | **Stale** | a muted 32 px line, `ink3` 12.5, led by `history`: "Personal, as of 9:14 PM · Check now" (#218, #220) |
 | **Failing** | the same line in `caution`, led by `warning`, with the reason and Check now (#218, #220) |
-| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#220); the account's glyph and count in the sidebar; one ntfy notification; mantel's alert chip |
+| **Needs reconnect** | a 40 px bar at the top of the Inbox (`caution` text on `caution` 9%): `sync_problem`, "Business needs sign-in · Reconnect", Reconnect going straight to Google's sign-in for one Gmail account (#220); one ntfy notification; mantel's alert chip |
 | **Offline** | a 36 px `alert` pill centred 12 px under the top: "Offline, as of 9:41 PM, retrying", then Retry now with `refresh` (#123), once the stream has been down 2 s; everything under it dimmed but still readable (scroll, J / K, open), changes disabled from the moment it drops (#222) |
 | **Starting** | the mark at 36 px where the card's top sits, after 200 ms, fading in, then breathing; what follows fades in over 180 ms (#233) |
 | **Unreachable at launch** | no sign-in card: the mark at 36 px where the card's top sits, at 50% opacity with `grayscale(.4)`, and the same pill 22 px under it, "Can't reach Setpoint, retrying", then Retry now; Setpoint asks again every 5 s and when the network returns, and the app or the card follows its answer (#118) |
@@ -1655,6 +1648,9 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     and day headings ending "· 3 new". The app draws Inbox's red unread badge alone, the views in the
     header with Unread's badge and Attention's count, and plain day headings, so the audit expects
     them to differ. The phone's boards stay as drawn (D275).
+46. **No account filter** (#341): the boards with the sidebar draw each account under Inbox with
+    its dot, label and unread count, and board 21 the phone's account button ("All accounts"). The
+    app has neither, so the audit expects them to differ.
 
 ## Not designed yet
 
@@ -4236,3 +4232,15 @@ it changes what's on screen.
     account dots are as they were, and a kind may share an account's hue, its shape and place telling
     them apart. A rule down each run's left edge was tried and dropped, as too much. Noise's colour is
     still to decide.
+341. **The Inbox has no account filter** (amending #207, #140, #201, #234 and #338; Andy, 2026-11-07;
+    darma SV-225, D476). Andy never filters the Inbox by account, so the views are the only way to
+    narrow it. The sidebar has no account rows under Inbox (their dots, labels and unread counts, the
+    needs-sign-in glyph and their right-click's Mark all as read and Reconnect go with them; the
+    Inbox's needs-sign-in bar and Settings › Accounts still say so and reconnect); ⌘K has no "Inbox
+    · Jobs"; the header never reads "Inbox · Business" and Unread's badge always counts every
+    account; every row keeps its account; Mark all as read is never for one account; and the phone's
+    account button goes, its header the mark, Inbox, its counts and Mark all as read (Claude's call,
+    as D476 removes the filter entirely). The view and account combination ("Unread · Work") goes
+    with it. An address from the filter's time (/inbox?account=2) opens the plain Inbox, keeping its
+    view and open email, and the address drops the account. On Calendar the sidebar has nothing to
+    fold, so Calendar and News stay where they are; the page's section still fades in.

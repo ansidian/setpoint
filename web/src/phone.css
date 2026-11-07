@@ -30,9 +30,6 @@
   .hd > .ph-count, .hd > .ph-range { color: var(--ink3); font-size: 12.5px; }
   .hd > .ph-range { padding-right: 8px; }
   .ph-icon { width: 40px; height: 40px; }
-  .ph-account { position: relative; height: 32px; padding: 0 8px 0 12px; }
-  .ph-account .icon { color: var(--ink3); }
-  .ph-account select { position: absolute; inset: 0; opacity: 0; font-size: 16px; }
   /* Plain search: the words as typed, no key hints, no Alfred. */
   .hd > .search, .hd > .search.active { order: 1; flex: 0 0 100%; width: auto; height: 40px; margin: 0 4px 8px -4px; padding: 0 12px; border-radius: 12px; }
   .hd > .search .kbd { display: none; }

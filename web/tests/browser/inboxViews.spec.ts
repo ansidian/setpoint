@@ -5,7 +5,7 @@
 // Show All (SV-226); and the sidebar's Inbox and 1 going back to All. The seed starts at 3 attention and 19 unread.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {AccountOut, InboxOut, MailCountsOut} from '@setpoint/shared';
+import type {InboxOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {cleanUp, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
@@ -119,18 +119,18 @@ test('Attention, FYI and Noise each show their part; Mark all as read reads only
   }
 });
 
-test('an empty view draws its own picture and says so, and Show All goes to All, the account filter kept', async () => {
+test('an empty view draws its own picture and says so, and Show All goes to All', async () => {
   const setpoint = await startSetpoint();
   try {
-    const accounts = await setpoint.api<AccountOut[]>('GET', '/accounts');
-    const icloud = accounts.find(account => account.label === 'iCloud')!;
-    const page = await load(setpoint, `/inbox?account=${icloud.id}&view=attention`);
+    const inbox = await setpoint.api<InboxOut>('GET', '/mail/inbox');
+    for (const one of inbox.groups.find(group => group.group === 'attention')!.rows) await setpoint.api('POST', `/mail/messages/${one.id}/done`, {done: true});
+    const page = await load(setpoint, '/inbox?view=attention');
     assert.equal(await page.locator('.list .view-empty .ve-head').textContent(), 'Nothing needs you');
     assert.equal(await page.locator('.list .view-empty .ve-art').count(), 1);
     assert.equal(await rows(page).count(), 0);
     await page.locator('.list .view-empty .btn', {hasText: 'Show All'}).click();
     await until('All', async () => viewOf(page), now => now === null);
-    assert.equal(new URL(page.url()).searchParams.get('account'), String(icloud.id));
+    assert.equal(new URL(page.url()).search, '');
     await rows(page).first().waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

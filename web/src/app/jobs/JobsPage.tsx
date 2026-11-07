@@ -462,14 +462,14 @@ export function JobsPage({route}: {route: JobsRoute}) {
         {open !== null && (
           <Detail id={open} row={openRow} accounts={accounts} now={now} timeZone={zone} today={today} leaving={leaving} arrived={arriving} unfolded={unfold === open}
             canStep={{previous: neighbour(-1) !== null, next: neighbour(1) !== null}} onStep={step} onClose={close} onOpen={openAt}
-            onEmail={messageId => navigate({page: 'inbox', account: null, open: messageId})} postingRef={posting}
+            onEmail={messageId => navigate({page: 'inbox', open: messageId})} postingRef={posting}
             rows={rows} corrections={correctionsFor} editing={editing?.id === open ? editing.field : null}
             onEdit={field => setEditing(field === null ? null : {id: open, field})} onSave={save} onMove={move} onNotAboutThis={takeOff} onPick={pick} />
         )}
         {email.shown !== null && open === null && (
           <ItemEmail id={email.shown.message} of={email.shown.of} travel={email.shown.travel} accounts={accounts} now={now} timeZone={zone} leaving={email.closing}
             canStep={{previous: emailBeside(-1) !== null, next: emailBeside(1) !== null}} onStep={stepEmail} onClose={() => setReading(null)}
-            onInbox={() => navigate({page: 'inbox', account: null, open: email.shown!.message})} />
+            onInbox={() => navigate({page: 'inbox', open: email.shown!.message})} />
         )}
         {pane.drawn && enabled && (
           <JobsDay settle={pane.settle} trouble={paneTrouble} timeZone={zone} today={today} onOpen={openAt}

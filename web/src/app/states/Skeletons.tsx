@@ -60,19 +60,6 @@ export function AllSkeleton({more = false, first = !more}: {more?: boolean; firs
 }
 
 // The sidebar's rows until they come: account labels, and Today's lines (shell-10).
-const ACCOUNT_LABELS = [58, 62, 40, 36, 44];
-
-/** The accounts under Inbox (.acct) before they're known: `count` rows, a dot, a label and a count. */
-export function AccountsSkeleton({count}: {count: number}) {
-  return (
-    <Sk kind="accounts" className="sk-accounts">
-      {Array.from({length: count}, (_, index) => (
-        <div className="sk-acct" key={index}><Dot size={7} /><Bar w={at(ACCOUNT_LABELS, index)} h={8} /><Bar w={10} h={8} style={{marginLeft: 'auto'}} /></div>
-      ))}
-    </Sk>
-  );
-}
-
 /** Today's lines (.today-row): the next event's time and title, then tasks behind their rings. */
 export function TodaySkeleton({lines}: {lines: number}) {
   return (

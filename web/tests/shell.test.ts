@@ -124,16 +124,15 @@ test.each([
 
 describe('routes', () => {
   test.each([
-    ['/', '', {page: 'inbox', account: null, open: null}],
-    ['/inbox', '', {page: 'inbox', account: null, open: null}],
-    ['/inbox/12', '', {page: 'inbox', account: null, open: 12}],
-    ['/inbox/12', '?account=4', {page: 'inbox', account: 4, open: 12}],
-    ['/inbox/nope', '?account=x', {page: 'inbox', account: null, open: null}],
+    ['/', '', {page: 'inbox', open: null}],
+    ['/inbox', '', {page: 'inbox', open: null}],
+    ['/inbox/12', '', {page: 'inbox', open: 12}],
+    ['/inbox/nope', '', {page: 'inbox', open: null}],
     // The Inbox's views (SV-221): All is the address without one.
-    ['/inbox', '?view=unread', {page: 'inbox', account: null, open: null, view: 'unread'}],
-    ['/inbox/12', '?account=4&view=fyi', {page: 'inbox', account: 4, open: 12, view: 'fyi'}],
-    ['/inbox', '?view=all', {page: 'inbox', account: null, open: null}],
-    ['/inbox', '?view=nope', {page: 'inbox', account: null, open: null}],
+    ['/inbox', '?view=unread', {page: 'inbox', open: null, view: 'unread'}],
+    ['/inbox/12', '?view=fyi', {page: 'inbox', open: 12, view: 'fyi'}],
+    ['/inbox', '?view=all', {page: 'inbox', open: null}],
+    ['/inbox', '?view=nope', {page: 'inbox', open: null}],
     ['/calendar', '', {page: 'calendar', date: null, item: null, at: null}],
     ['/calendar/2026-10-07', '', {page: 'calendar', date: '2026-10-07', item: null, at: null}],
     ['/calendar/item/3', '?at=2026-10-07T21%3A30%3A00.000Z', {page: 'calendar', date: null, item: 3, at: '2026-10-07T21:30:00.000Z'}],
@@ -169,7 +168,7 @@ describe('routes', () => {
     ['/jobs/from-history', '', {page: 'jobs', open: null, history: true}],
     ['/jobs', '?q=contoso%20pharmaceuticals', {page: 'jobs', open: null, q: 'contoso pharmaceuticals'}],
     ['/jobs', '?q=%20%20', {page: 'jobs', open: null}],
-    ['/somewhere', '', {page: 'inbox', account: null, open: null}],
+    ['/somewhere', '', {page: 'inbox', open: null}],
   ] as const)('%s%s', (path, search, expected) => {
     const route = parseRoute(path, search);
     expect(route).toEqual(expected);
@@ -179,10 +178,20 @@ describe('routes', () => {
 
   // All was its own view until the Inbox became one list (SV-70): its addresses still land there.
   test.each([
-    ['/inbox/all', '', {page: 'inbox', account: null, open: null}],
-    ['/inbox/all/12', '?account=4', {page: 'inbox', account: 4, open: 12}],
+    ['/inbox/all', '', {page: 'inbox', open: null}],
+    ['/inbox/all/12', '', {page: 'inbox', open: 12}],
   ] as const)('%s%s, All\'s old address, opens the Inbox', (path, search, expected) => {
     expect(parseRoute(path, search)).toEqual(expected);
+  });
+
+  // The account filter's addresses (D476) are the plain Inbox, its view and open email kept.
+  test.each([
+    ['/inbox', '?account=4', {page: 'inbox', open: null}, '/inbox'],
+    ['/inbox/12', '?account=4&view=fyi', {page: 'inbox', open: 12, view: 'fyi'}, '/inbox/12?view=fyi'],
+    ['/inbox/all/12', '?account=4', {page: 'inbox', open: 12}, '/inbox/12'],
+  ] as const)('%s%s, the account filter\'s old address, opens the plain Inbox', (path, search, expected, address) => {
+    expect(parseRoute(path, search)).toEqual(expected);
+    expect(routePath(parseRoute(path, search))).toBe(address);
   });
 
   test.each([
@@ -207,9 +216,9 @@ test.each([
 });
 
 describe('live events refresh only what they name', () => {
-  const mounted = ['/mail/inbox', '/mail/inbox?account_id=4', '/mail/counts', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects'];
+  const mounted = ['/mail/inbox', '/mail/counts', '/mail/messages/5', '/mail/messages/7', '/accounts', '/items?from=2026-10-07&to=2026-10-09', '/mail/inboxes', '/calendars', '/todoist/projects'];
   test.each([
-    ['mail: the lists, the counts and the emails named', {type: 'mail', messages: [5], accounts: [4], commands: []}, ['/mail/inbox', '/mail/inbox?account_id=4', '/mail/counts', '/mail/messages/5']],
+    ['mail: the lists, the counts and the emails named', {type: 'mail', messages: [5], accounts: [4], commands: []}, ['/mail/inbox', '/mail/counts', '/mail/messages/5']],
     ['items: the item ranges', {type: 'items', items: [2], calendars: [], commands: []}, ['/items?from=2026-10-07&to=2026-10-09']],
     ['items naming a calendar: the calendars and Todoist\'s projects too (SV-25)', {type: 'items', items: [], calendars: [4], commands: []}, ['/items?from=2026-10-07&to=2026-10-09', '/calendars', '/todoist/projects']],
     ['health: the accounts', {type: 'health', sources: [1]}, ['/accounts']],

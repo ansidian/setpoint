@@ -224,10 +224,10 @@ export function inboxAfterDone(inbox: InboxOut, id: number): InboxOut {
 /**
  * Pin puts an email on the Pinned shelf, newest pin first, and leaves it in its group too (the
  * server's rule); Unpin takes it off the shelf. Shown at once, before the server answers. An email
- * the Inbox doesn't hold (pinned from All) comes from `from`, onto the shelves of its account's Inbox.
+ * the Inbox doesn't hold (pinned from All) comes from `from`, onto the shelf.
  */
 export function inboxAfterPin(inbox: InboxOut, id: number, pinned: boolean, from: MessageRowOut | null = null): InboxOut {
-  const outside = from && (inbox.account_id === null || inbox.account_id === from.account_id) ? from : undefined;
+  const outside = from ?? undefined;
   const found = rowsOf(inbox, id).find(({group}) => group.group !== 'pinned')?.row ?? rowsOf(inbox, id)[0]?.row ?? outside;
   if (!found) return inbox;
   const flagged = (rows: MessageRowOut[]) => rows.map(row => (row.id === id ? {...row, pinned} : row));
@@ -253,12 +253,12 @@ export function inSight(places: {top: number; bottom: number}[], box: {top: numb
 const isSecurity = (row: MessageRowOut) => row.lane === 'fyi' && row.kind === 'security';
 
 /**
- * Mark all as read (for one account, or all): every unread email outside Attention and Security reads. FYI and
+ * Mark all as read: every unread email outside Attention and Security reads. FYI and
  * Noise rows leave, as read mail does; Unsorted and the Pinned shelf keep theirs, read; Attention is
  * untouched. The counts drop by each email that read.
  */
-export function inboxAfterMarkAllRead(inbox: InboxOut, account: number | null): InboxOut {
-  const reads = (row: MessageRowOut, group: InboxGroup) => row.unread && group !== 'attention' && !isSecurity(row) && (account === null || row.account_id === account);
+export function inboxAfterMarkAllRead(inbox: InboxOut): InboxOut {
+  const reads = (row: MessageRowOut, group: InboxGroup) => row.unread && group !== 'attention' && !isSecurity(row);
   const read = new Map<number, MessageRowOut>();
   const groups = inbox.groups.flatMap(group => {
     if (group.group === 'attention') return [group];
@@ -274,11 +274,11 @@ export function inboxAfterMarkAllRead(inbox: InboxOut, account: number | null): 
 }
 
 /**
- * Whether Mark all as read (for one account, or all) reads the email, as the server picks them:
- * unread, outside Attention unless Done, and outside Security (UX #4).
+ * Whether Mark all as read reads the email, as the server picks them: unread, outside Attention
+ * unless Done, and outside Security (UX #4).
  */
-export const markAllReads = (row: MessageRowOut, account: number | null = null): boolean =>
-  row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row) && (account === null || row.account_id === account);
+export const markAllReads = (row: MessageRowOut): boolean =>
+  row.unread && !(row.lane === 'attention' && !row.done) && !isSecurity(row);
 
 /**
  * The emails Mark all as read reads, each once, though the Pinned shelf shows it twice: the Inbox's

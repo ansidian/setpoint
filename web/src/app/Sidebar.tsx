@@ -1,31 +1,23 @@
 // The sidebar (DESIGN.md › Layout › Shell): the mark and Setpoint; Inbox with the red unread badge
-// (SV-221, D471), its only count; each account with its dot, label and
-// unread count, filtering the Inbox (not on Calendar, board 11); Calendar; News, with no count ever
+// (SV-221, D471), its only count, and no account rows under it (D476); Calendar; News, with no count ever
 // (D87); Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
 // Settings pinned to the bottom.
-// Counts left out at 0, as board 04 draws them.
 //
 // From 640 to 1099 px (the compact tier, #140) it's a 56 px rail: the mark, then Inbox, Calendar, News
-// and Settings as icons, each named in its tooltip, with the unread badge on Inbox. The
-// accounts and the page's section give way; ⌘K still filters by account and toggles calendars.
-import type {AccountOut, MailCountsOut} from '@setpoint/shared';
-import {useMemo} from 'react';
+// and Settings as icons, each named in its tooltip, with the unread badge on Inbox. The page's
+// section gives way; ⌘K still toggles calendars.
+import type {MailCountsOut} from '@setpoint/shared';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
-import {ACCOUNTS_PATH, COUNTS_PATH, markAllRead} from '../api/mail.ts';
+import {COUNTS_PATH, markAllRead} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
 import {CalendarSidebar} from './calendar/CalendarSidebar.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
-import type {MenuAction} from './ContextMenu.tsx';
-import {Count} from './Count.tsx';
 import {useCompact} from './Phone.tsx';
-import {AccountsSkeleton} from './states/Skeletons.tsx';
-import {reconnectFrom} from './states/States.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
 import {UnreadBadge} from './UnreadBadge.tsx';
-import {dotStyle} from './accounts.ts';
 import {JobsNavItem} from './jobs/index.ts';
 import {offered} from './palette/commands.ts';
 import {currentRoute, navigate} from './router.ts';
@@ -51,23 +43,18 @@ function Link({to, className, style, tip, onContextMenu, children}: {
 }
 
 /**
- * Mark all as read from a sidebar row's right-click (DESIGN.md #248): the Inbox page's own, with its
- * Undo, while it shows that same mail; otherwise as ⌘K's is.
+ * Mark all as read from Inbox's right-click (DESIGN.md #248): the Inbox page's own, with its Undo,
+ * while it shows; otherwise as ⌘K's is.
  */
-function markAllReadOf(account: number | null): () => void {
-  const route = currentRoute();
+function markAllReadNow(): () => void {
   const page = offered().commands.find(command => command.id === 'mark-all-read');
-  if (page && route.page === 'inbox' && route.account === account) return page.run;
-  return () => void markAllRead(account).catch(toastFailure('Couldn\'t mark all as read'));
+  if (page && currentRoute().page === 'inbox') return page.run;
+  return () => void markAllRead().catch(toastFailure('Couldn\'t mark all as read'));
 }
 
-/** The sidebar. Its accounts are three skeleton rows until their answer comes. */
+/** The sidebar. */
 export function Sidebar({route}: {route: Route}) {
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
-  const {data: loadedAccounts} = useResource<AccountOut[]>(ACCOUNTS_PATH);
-  const accounts = useMemo(() => (loadedAccounts ? [...loadedAccounts].sort((a, b) => a.position - b.position) : null), [loadedAccounts]);
-  const unreadOf = (id: number) => counts?.accounts.find(account => account.account_id === id)?.unread ?? 0;
-  const filtered = route.page === 'inbox' ? route.account : null;
   const rail = useCompact();
   // The rail names each icon in its tooltip and for a screen reader; the full sidebar shows the names.
   const named = (label: string) => (rail ? label : undefined);
@@ -78,43 +65,14 @@ export function Sidebar({route}: {route: Route}) {
         <Mark />
         {!rail && <span className="sb-name">Setpoint</span>}
       </div>
-      {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#166); the rail has no
-          accounts, so there Inbox stays the current page. */}
-      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} tip={named('Inbox')} to={toInbox()}
+      <Link className={route.page === 'inbox' ? 'nav on' : 'nav'} tip={named('Inbox')} to={toInbox()}
         onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
-          {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadOf(null)},
+          {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadNow()},
         ])}>
         <Icon name="inbox" />
         <span className="grow">Inbox</span>
         {counts && <UnreadBadge value={counts.unread} tip="Unread" />}
       </Link>
-      {/* On Calendar the accounts fold away to the page's section (board 11), over 180 ms rather than
-          in one frame, so Calendar slides up under the pointer that clicked it (shell-08). Until they
-          come, a skeleton. */}
-      {!rail && (
-        <div className={route.page === 'calendar' ? 'sb-accts folded' : 'sb-accts'} inert={route.page === 'calendar'}>
-          <div>
-            {accounts === null ? <AccountsSkeleton count={3} /> : accounts.map(account => {
-              const unread = unreadOf(account.id);
-              const on = filtered === account.id;
-              const reconnect = account.health.state === 'needs_reconnect';
-              return (
-                <Link key={account.id} className={on ? 'acct on' : 'acct'} style={dotStyle(account.colour)}
-                  to={route.page === 'inbox' ? {...route, account: on ? null : account.id, open: null} : toInbox(account.id)}
-                  onContextMenu={event => openContextMenu(event, event.currentTarget, [
-                    ...(unread > 0 ? [{id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', run: markAllReadOf(account.id)} satisfies MenuAction] : []),
-                    ...(reconnect ? [{id: 'reconnect', label: 'Reconnect', icon: 'sync_problem', run: () => reconnectFrom([account])} satisfies MenuAction] : []),
-                  ])}>
-                  <span className="dot sm" />
-                  {account.label}
-                  {reconnect && <span className="reconnect" role="img" aria-label={`${account.label} needs sign-in`} data-tip={`${account.label} needs sign-in`}><Icon name="sync_problem" size={16} /></span>}
-                  {unread > 0 && <span className="cnt num"><Count value={unread} /></span>}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
       <Link className={route.page === 'calendar' ? 'nav on' : 'nav'} tip={named('Calendar')} to={{page: 'calendar', date: null, item: null, at: null}}>
         <Icon name="calendar_month" />
         <span className="grow">Calendar</span>
