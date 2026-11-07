@@ -4202,8 +4202,20 @@ it changes what's on screen.
     read"); in All and Unread as before; in Attention it isn't there. Switching views is instant, the
     thumb sliding and the list back at its top; the open email closes. From 640 to 1099 px Mark all
     as read is its icon alone, named in its tooltip, so the header keeps everything on screen beside
-    the views (Claude's call). An empty view shows a glyph,
-    its line ("All read", "Nothing needs you", "No FYI mail", "No Noise today") and Show All, for now
-    (SV-226 draws each its illustration). The empty pane stays the mail day in every view, and the
+    the views (Claude's call). An empty view draws its own
+    picture over its line and Show All (#339). The empty pane stays the mail day in every view, and the
     phone keeps the one list and its header's counts (D275), its days losing "· 3 new" with the
     desktop's (D473).
+339. **An empty Inbox view draws its own picture** (Andy, 2026-11-06; darma SV-226, D474). Unread,
+    Attention, FYI and Noise, empty, each show a line drawing a third of the way down the list:
+    **Unread** an open envelope, its letter's check in `good`; **Attention** a flag at half-mast in
+    `caution`; **FYI** an emptied tray with a small sparkle in `cool`; **Noise** the same tray with a
+    calm wave over it, in `ink3`. The rest is `ink3`, in strokes of 1.8 px, the icons' weight, the
+    drawing 160 px and growing with the list to 260 px (with the zoom past 2200 px). The strokes draw
+    themselves in once on arrival, over about 400 ms, then stay still (none with Reduce Motion).
+    Under it: the headline at 15 / 500 `ink` ("All read", "Nothing needs you", "No FYI mail", "No
+    Noise today"); a quiet line in `ink3` saying when mail last came, from the list itself so it
+    never repeats the pane beside it ("Last new email at 2:14 PM"; Attention's "The last one came at
+    9:05 AM", its newest email, Done or not; none without one); and Show All. In a list 1200 px wide
+    the headline is 17 px and the quiet line 13 px. No mark and no glow: those are the empty pane's
+    (#331, #335).

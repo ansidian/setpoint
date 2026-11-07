@@ -49,7 +49,6 @@ import type {InboxView, Route} from '../logic/route.ts';
 import {INBOX_VIEWS} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
-import type {IconName} from '../ui/glyphs.ts';
 import {Segmented} from '../ui/Segmented.tsx';
 import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
@@ -80,18 +79,11 @@ import {useSearch} from './search/mailSearch.ts';
 import {useAlfred} from './search/state.ts';
 import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
+import {EmptyView} from './EmptyView.tsx';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
 
 const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
-
-// An empty view's glyph and line, for now (SV-226 draws each its illustration).
-const EMPTY_VIEWS: Record<Exclude<InboxView, 'all'>, {glyph: IconName; line: string}> = {
-  unread: {glyph: 'mark_email_read', line: 'All read'},
-  attention: {glyph: 'flag', line: 'Nothing needs you'},
-  fyi: {glyph: 'notifications', line: 'No FYI mail'},
-  noise: {glyph: 'campaign', line: 'No Noise today'},
-};
 
 /**
  * Whether any of the Pinned shelf shows in the list, where a pin lands; with no shelf yet, whether
@@ -756,7 +748,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
           // A view starts afresh too, at its top (SV-221).
           <AllList key={`${visit}:${view}`} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
             empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
-              ? <EmptyView view={view} onAll={() => switchView('all')} /> : null}
+              ? <EmptyView view={view} newest={(view === 'attention' ? allRows.find(row => row.lane === 'attention') : allRows[0])?.received_at ?? null} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
             loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
@@ -777,19 +769,5 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {pane.drawn && <InboxDay settle={pane.settle} />}
       </div>
     </>
-  );
-}
-
-/** An empty view, for now a glyph, a line and Show All (SV-226 draws each its illustration). */
-function EmptyView({view, onAll}: {view: Exclude<InboxView, 'all'>; onAll: () => void}) {
-  const {glyph, line} = EMPTY_VIEWS[view];
-  return (
-    <div className="empty">
-      <div className="empty-line">
-        <Icon name={glyph} size={32} />
-        <span className="t">{line}</span>
-        <button className="btn ghost sm" type="button" onClick={onAll}>Show All</button>
-      </div>
-    </div>
   );
 }

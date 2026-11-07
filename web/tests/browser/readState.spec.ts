@@ -281,7 +281,7 @@ test('mail read and Done elsewhere shows as it comes: the dots go, Attention emp
     await until('the dots go', () => page.locator('.list .row.unread:not(.done)').count(), count => count === 0, 5000);
     await until('the shelf leads', () => page.locator('.list .gh:not(.day)').allTextContents(), bands => bands.join() === 'Pinned 1', 5000);
     assert.equal(await page.locator('.ubadge').count(), 0, 'no badge counts unread mail');
-    assert.equal(await page.locator('.empty-line').count(), 0);
+    assert.equal(await page.locator('.view-empty').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
