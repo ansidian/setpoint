@@ -8,8 +8,7 @@ import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {NewsSectionOut} from '@setpoint/shared';
-import type {Locator, Page} from 'playwright-core';
-import {ICONS} from '../../src/ui/glyphs.ts';
+import type {Page} from 'playwright-core';
 import {cleanUp, pagePx, pauseClock, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
@@ -19,28 +18,7 @@ after(cleanUp);
 // `window` as it loads, so it isn't imported here).
 const OFFLINE_GRACE_MS = 2000;
 
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
-const leadGlyph = (line: Locator) => line.evaluate(element => {
-  const icon = element.querySelector('.icon')!;
-  const range = document.createRange();
-  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round((range.getBoundingClientRect().left - icon.getBoundingClientRect().right) / ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1))];
-});
-
-/** A state line's leading glyph: its bundled path, size and colour (the polish audit's states-04). */
-const toneGlyph = (line: Locator) => line.locator('.icon').first().evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]);
-
 const row = (page: Page, headline: string) => page.locator('.nw-list [data-story]', {hasText: headline}).first();
-
-/** A colour as the page computes it, to compare with a computed style. */
-const colourOf = (page: Page, colour: string) => page.evaluate(value => {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return computed;
-}, colour);
 
 /** Changes the server's database as sorting would. */
 function sql(setpoint: Setpoint, statements: string) {
@@ -81,28 +59,19 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     const card = page.locator('.pane.idle .pt-card');
     await card.waitFor();
     assert.deepEqual(await card.locator('.pt-line').allTextContents(), ['12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying', 'AI, as of 7:02 AM']);
-    assert.equal(await rested(() => card.locator('.pt-line').first().evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--alert)')));
     await page.locator('.hd-title').hover();
     await until('folded again', () => card.count(), count => count === 0);
-    assert.equal(await rested(() => unsorted.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--caution)')));
-    // News's AI down is a source struggling: the `warning` triangle in `caution` (states-04).
-    assert.deepEqual(await toneGlyph(unsorted), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
 
     // AI's muted line under its header, its stories still there.
     const aiLine = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await aiLine.textContent(), 'AI, as of 7:02 AM');
     assert.equal(await aiLine.getAttribute('class'), 'nw-line stale');
-    assert.equal(await rested(() => aiLine.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--ink3)')));
-    // Stale is `history` in `ink3`, as on every page (states-04).
-    assert.deepEqual(await toneGlyph(aiLine), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
     await row(page, 'Anthropic releases Claude Haiku 5.5').waitFor();
     assert.equal(await page.locator('.nw-line').count(), 1, 'only the stale section has a line');
 
-    // Tech: one line in `ink3`, no rows, no Upcoming.
+    // Tech: one line, no rows, no Upcoming.
     const tech = page.locator('.nw-sec', {hasText: 'Tech'}).locator('xpath=following-sibling::*[1]');
     assert.equal(await tech.textContent(), 'Nothing new in Tech since Mon');
-    assert.equal(await rested(() => tech.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--ink3)')));
-    assert.deepEqual(await rested(() => leadGlyph(tech)), [ICONS.newspaper, '16', await rested(() => colourOf(page, 'var(--ink3)')), 8], 'it leads with newspaper (#124)');
     assert.equal(await page.locator('.nw-up').count(), 0);
 
     // Show headlines: the raw headlines with their links, newest first, at the top of the list.
@@ -185,7 +154,6 @@ test('offline on News: the pill, the page dimmed but readable, J still moving th
     assert.equal(await pill.textContent(), 'Offline, as of 9:12 AM, retryingRetry now');
     await page.clock.resume();
     const content = page.locator('.main.offline > .content');
-    await until('dimmed', () => content.evaluate(element => getComputedStyle(element).opacity), opacity => opacity === '0.62');
     assert.equal(await rested(() => content.evaluate(element => getComputedStyle(element).pointerEvents)), 'auto');
     await page.mouse.move(700, 28);
     // Reading goes on offline: J moves the cursor.

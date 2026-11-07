@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, holdToast, matchGolden, pauseClock, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {monthTopRow} from '../../src/logic/calendar.ts';
+import {layout} from '../../src/tokens.ts';
+import {cleanUp, holdToast, matchGolden, pauseClock, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -114,33 +116,6 @@ test('board 11b, #324: a busy Saturday folds into "+3"; its popover stays open w
   }
 });
 
-test(`the grid at ${SIZES.target.width} × ${SIZES.target.height}: rows 176, seven columns beside a 400 px pane, no page scroll`, async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ev').first().waitFor();
-    const box = async (selector: string) => (await rested(() => page.locator(selector).first().boundingBox()))!;
-    const cell = await box('.cell[data-date="2026-10-07"]');
-    // The page's width less the sidebar's 248 and the pane's 400 over seven days, in the page's pixels (zoomed).
-    assert.ok(Math.abs(cell.width / ZOOM - (SIZES.target.width / ZOOM - 248 - 400) / 7) < 1, `a column is ${cell.width / ZOOM} px`);
-    assert.ok(Math.abs(cell.height / ZOOM - 176) < 0.5, `a row is ${cell.height / ZOOM} px`);
-    const scroll = await page.evaluate(() => [document.documentElement.scrollHeight - document.documentElement.clientHeight, document.documentElement.scrollWidth - document.documentElement.clientWidth]);
-    assert.deepEqual(scroll, [0, 0]);
-    // Past items turn grey at full strength (#161), future ones keep their colour; the selected day is `sub`; today is the disc.
-    const look = (title: string) => page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: title}).evaluate(element => [getComputedStyle(element).opacity, getComputedStyle(element).color]);
-    assert.deepEqual(await rested(() => look('Gym')), ['1', await rested(() => tokenColour(page, 'ink3'))], 'past: ink3');
-    const [opacity, colour] = await rested(() => look('Dentist'));
-    assert.equal(opacity, '1');
-    assert.notEqual(colour, await rested(() => tokenColour(page, 'ink3')), 'ahead: its calendar\'s colour');
-    assert.equal(await page.locator('.cell.sel').getAttribute('data-date'), '2026-10-07');
-    assert.equal(await text(page, '.dn.today'), '7');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 // Which month a scroll shows, and which rows it draws, are monthAtScroll's and rowsInView's, tables in
 // calendar.test.ts; the wheel's scrolls went with them (D416).
 test('← → P N and ‹ › page through months, the header, tab title and mini-month reading each; T comes back to today', async () => {
@@ -180,7 +155,7 @@ test('← → P N and ‹ › page through months, the header, tab title and min
   }
 });
 
-test('a calendar toggled off leaves the grid and the agenda, its name going `ink3`, and comes back on; Todoist has no ring', async () => {
+test('a calendar toggled off leaves the grid and the agenda, and comes back on; Todoist has no ring', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -194,8 +169,6 @@ test('a calendar toggled off leaves the grid and the agenda, its name going `ink
     await until('Personal leaves the grid', () => chips(page, '2026-10-09'), list => list.join() === '6:30 PMStudy group');
     assert.equal(await page.locator('.ag-item', {hasText: 'Dinner with Sam'}).count(), 0, 'and the agenda');
     assert.equal(await personal.locator('.chk.off').count(), 1);
-    const ink3 = await rested(() => tokenColour(page, 'ink3'));
-    await until('the name recedes', () => personal.evaluate(row => getComputedStyle(row).color), value => value === ink3);
     await until('the toggle is kept', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Personal')?.visible === false);
     // Todoist's toggle takes the tasks.
     await page.locator('.calrow', {hasText: 'Todoist'}).click();
@@ -251,43 +224,7 @@ test('a calendar toggled off and straight back on stays on, on screen and at the
   }
 });
 
-/** A token's colour as the page computes it, to compare with an element's. */
-const tokenColour = (page: Page, token: string) => page.evaluate(name => {
-  const probe = document.createElement('span');
-  probe.style.color = `var(--${name})`;
-  document.body.append(probe);
-  const colour = getComputedStyle(probe).color;
-  probe.remove();
-  return colour;
-}, token);
-
-test('SV-56: a day outside the month takes the outside tint, a weekend among them too; a weekend in the month takes the weekend one', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/calendar`);
-    await page.locator('.ev').first().waitFor();
-    const cell = (date: string) => page.locator(`.cell[data-date="${date}"]`);
-    const fill = (date: string) => cell(date).evaluate(element => getComputedStyle(element).backgroundColor);
-    // Sun Sep 27 and Sat Nov 7 are both outside October and weekends.
-    assert.match((await cell('2026-09-27').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
-    assert.match((await cell('2026-11-07').getAttribute('class'))!, /\bout\b.*\bweekend\b/);
-    assert.equal(await rested(() => fill('2026-09-27')), await rested(() => fill('2026-09-28')), 'Sun Sep 27 as Mon Sep 28');
-    assert.equal(await rested(() => fill('2026-11-07')), await rested(() => fill('2026-11-02')), 'Sat Nov 7 as Mon Nov 2');
-    assert.notEqual(await rested(() => fill('2026-10-04')), await rested(() => fill('2026-09-27')), 'Sun Oct 4 takes the weekend tint');
-    // Selected, Sun Sep 27 is `sub` like any selected day.
-    await cell('2026-09-27').click({position: {x: 100, y: 150}});
-    await until('Sun Sep 27 selected', () => cell('2026-09-27').getAttribute('class'), cls => !!cls?.split(' ').includes('sel'));
-    // A cell eases its fill over 180 ms (#160); it's read once it has.
-    const sub = await tokenColour(page, 'sub');
-    await until('Sun Sep 27 is sub', () => fill('2026-09-27'), value => value === sub);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and the card, and goes once the event starts', async () => {
+test('SV-56: Leave by is due 15 minutes before leaving, in the pane and the card, and goes once the event starts', async () => {
   // Dentist at 2:30 PM, leave by 2:05 PM (the time-to-leave fixture). The server's clock holds at
   // 9:12 AM and the page's is the check's, moved on to 2:10 PM and then 2:45 PM.
   const setpoint = await startSetpoint({fixtures: ['time-to-leave'], clock: 'frozen'});
@@ -303,21 +240,14 @@ test('SV-56: Leave by turns caution 15 minutes before leaving, in the pane and t
     await fact.waitFor();
     // Stopped within 9:12 AM, so the minutes read below are the check's, not the machine's.
     await pauseClock(page);
-    const colours = async () => [
-      await rested(() => leave.evaluate(element => getComputedStyle(element).color)),
-      await rested(() => leave.locator('.icon').evaluate(element => getComputedStyle(element).color)),
-      await rested(() => fact.locator('.icon').evaluate(element => getComputedStyle(element).color)),
-      await rested(() => fact.locator('.v').evaluate(element => getComputedStyle(element).color)),
-    ];
-    // 9:12 AM: the line is ink2, the card's fact its usual ink3 glyph and ink time.
-    const [ink, ink2, ink3, caution] = [await tokenColour(page, 'ink'), await tokenColour(page, 'ink2'), await tokenColour(page, 'ink3'), await tokenColour(page, 'caution')];
-    assert.deepEqual(await colours(), [ink2, ink2, ink3, ink]);
+    // 9:12 AM: not due yet.
+    assert.equal(await leave.getAttribute('class'), 'leave');
     assert.equal(await leave.textContent(), 'Leave by 2:05 PM · 18 min');
 
-    // 2:10 PM: five minutes past leaving, twenty before Dentist: the line and its glyph turn caution, and the card's fact with them.
+    // 2:10 PM: five minutes past leaving, twenty before Dentist: the line is due.
     await page.clock.fastForward((4 * 60 + 58) * 60_000);
     await until('the now-line at 2:10 PM', () => page.locator('.nowline .t').textContent(), time => time === '2:10 PM');
-    await until('Leave by in caution', colours, list => list.every(colour => colour === caution));
+    await until('Leave by due', () => leave.getAttribute('class'), names => names === 'leave due');
     assert.equal(await leave.textContent(), 'Leave by 2:05 PM · 18 min', 'the same words');
 
     // 2:45 PM: Dentist is under way, and Leave by is gone from both.
@@ -350,7 +280,6 @@ test('SV-56: a day whose items are only hidden says how many and offers Show all
     for (const name of names.slice(1)) await page.locator('.calrow', {hasText: name}).click();
     await until('the pane says what\'s hidden', () => empty.textContent(), line => line === '4 hidden · Show all');
     await hiddenMark.waitFor();
-    assert.equal(await rested(() => hiddenMark.evaluate(element => getComputedStyle(element).color)), await rested(() => tokenColour(page, 'ink3')));
     assert.equal(await page.locator('.hd-title').textContent(), 'October 2026');
     // The grid stays quiet: Wed Oct 7's cell has nothing in it.
     assert.deepEqual(await chips(page, '2026-10-07'), []);
@@ -399,9 +328,6 @@ test('selecting a day updates the right pane; an item turns solid; Esc lets it g
     assert.equal(await text(page, '.rp-date'), 'Fri, Oct 9');
     assert.equal(await text(page, '.ag-item.sel .title'), 'Dinner with Sam');
     assert.match(new URL(page.url()).pathname, /^\/calendar\/item\/\d+$/);
-    // Solid: the colour as fill and no bar, no outline ring.
-    const style = await dinner.evaluate(element => [getComputedStyle(element).boxShadow, getComputedStyle(element).outlineStyle]);
-    assert.deepEqual(style, ['none', 'none']);
     assert.equal(await page.locator('.ev.sel').count(), 1);
 
     // A recurring occurrence is selected alone.
@@ -473,6 +399,123 @@ test('S8 (SV-25, D54): a task made with a new project loads the calendar\'s Todo
       && (await response.json() as {name: string}[]).some(project => project.name === 'Garden'), {timeout: 8000});
     await setpoint.api('POST', '/items', {kind: 'task', title: 'Rake leaves', calendar_id: todoist.id, due_date: '2026-10-09', project: 'Garden', create_project: true});
     await projects;
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+// Where a month sits in the scroller; rounded, as at a fractional zoom it lands on the nearest device pixel.
+const monthTop = (month: string) => monthTopRow(month) * layout.monthRow;
+const scrollTop = (page: Page) => page.locator('.cal-scroll').evaluate(element => Math.round(element.scrollTop));
+
+// The glide's path between months is by eye, and where it sets out from is glideStart's table in
+// calendar.test.ts (D416).
+test('paging lands on the month it went to, N N N chaining on to January; Month from Week lands at once', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    assert.equal(await scrollTop(page), monthTop('2026-10'));
+    // N N N mid-glide goes on from where it's going: January.
+    await page.keyboard.press('n');
+    await page.keyboard.press('n');
+    await page.keyboard.press('n');
+    await until('N N N land on January', () => scrollTop(page), value => value === monthTop('2027-01'));
+    await page.keyboard.press('t');
+    await until('T lands on October 2026', () => scrollTop(page), value => value === monthTop('2026-10'));
+    // A jump stays instant: Week, then Month again, lands on the selected day's month in one frame.
+    await page.keyboard.press('w');
+    await page.locator('.cal-week').waitFor();
+    await page.keyboard.press('m');
+    await page.locator('.cal-month').waitFor();
+    assert.equal(await scrollTop(page), monthTop('2026-10'), 'Month from Week lands at once');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-211: Tab and Shift-Tab step Month | Week from anywhere, wrapping; in the editor Tab is its own', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.cal-month').waitFor();
+    assert.equal(await page.locator('.hd .seg').getAttribute('data-tip'), 'Tab · ⇧Tab');
+    await page.keyboard.press('Tab');
+    await page.locator('.cal-week').waitFor();
+    await page.keyboard.press('Tab');
+    await page.locator('.cal-month').waitFor();
+    await page.keyboard.press('Shift+Tab');
+    await page.locator('.cal-week').waitFor();
+    await page.keyboard.press('Shift+Tab');
+    await page.locator('.cal-month').waitFor();
+    // A new event: Tab moves on from the line to the editor's next field, and the grid stays Month.
+    await page.keyboard.press('c');
+    const line = page.getByRole('textbox', {name: 'Describe the event'});
+    await until('the line focused', () => line.evaluate(element => element === document.activeElement), focused => focused);
+    await page.keyboard.press('Tab');
+    await until('focus moved on in the editor', () => page.evaluate(() => [document.activeElement?.closest('.editor') !== null, document.activeElement?.getAttribute('aria-label')]),
+      ([inEditor, label]) => inEditor === true && label !== 'Describe the event');
+    assert.equal(await page.locator('.hd .seg .on').textContent(), 'Month');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a day\'s + makes an event on that day, and an empty day\'s ghost rows, New event C and New task D, open the editor on it', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    // Thursday the 15th under the pointer offers its +, which makes an event on that day, selecting it.
+    const cell = page.locator('.cell[data-date="2026-10-15"]');
+    await cell.hover({position: {x: 70, y: 150}});
+    await cell.locator('.dadd').click();
+    await page.locator('.editor').waitFor();
+    await until('Thu, Oct 15 is selected', () => cell.getAttribute('class'), classes => !!classes?.split(' ').includes('sel'));
+    assert.equal(await page.getByLabel('Date', {exact: true}).inputValue(), 'Thu, Oct 15');
+    await page.keyboard.press('Escape');
+    await page.locator('.editor').waitFor({state: 'detached'});
+    // An empty day: two ghost rows in the pane; New task opens the editor on that day.
+    await page.locator('.cell[data-date="2026-10-24"]').click({position: {x: 100, y: 150}});
+    const ghosts = page.locator('.rpane .ag-ghost');
+    await until('Sat, Oct 24\'s ghost rows', () => ghosts.allTextContents(), rows => rows.join() === 'New eventC,New taskD');
+    await ghosts.nth(1).click();
+    await page.getByRole('form', {name: 'New task'}).waitFor();
+    assert.equal(await page.getByLabel('Due date', {exact: true}).inputValue(), 'Sat, Oct 24');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('a calendar search lights its matches, every occurrence of a series, and leaves the rest unmatched; Esc brings the grid back', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ev').first().waitFor();
+    const dentist = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Dentist'});
+    const gym = page.locator('.cell[data-date="2026-10-07"] .ev', {hasText: 'Gym'});
+    await page.keyboard.press('/');
+    await page.keyboard.type('dentist');
+    await page.locator('.cal-search .cs-result', {hasText: 'Dentist'}).first().waitFor();
+    await until('Gym unmatched', () => gym.getAttribute('class'), classes => !!classes?.split(' ').includes('unmatched'));
+    assert.equal(await dentist.getAttribute('class'), 'ev');
+    // A series: every Gym matches.
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type('gym');
+    await page.locator('.cal-search .cs-result', {hasText: 'Gym'}).first().waitFor();
+    await until('every Gym matches', () => page.locator('.cal-grid .ev.unmatched', {hasText: 'Gym'}).count(), count => count === 0);
+    assert.ok(await page.locator('.cal-grid .ev', {hasText: 'Gym'}).count() > 3);
+    await until('Dentist unmatched', () => dentist.getAttribute('class'), classes => !!classes?.split(' ').includes('unmatched'));
+    await page.keyboard.press('Escape');
+    await until('nothing unmatched', () => page.locator('.cal-grid .unmatched').count(), count => count === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

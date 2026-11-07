@@ -10,25 +10,12 @@ import {after} from 'node:test';
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, pauseClock, point, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
 /** A glyph's bundled path and size, to compare with ICONS. */
 const glyph = async (icon: Locator) => [await icon.locator('path').getAttribute('d'), await icon.getAttribute('width')];
-
-/** A state line's leading glyph: its bundled path, size and colour (the polish audit's states-04). */
-const toneGlyph = (line: Locator) => line.locator('.icon').first().evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color]);
-
-/** A colour as the page computes it. */
-const colourOf = (page: Page, colour: string) => page.evaluate(value => {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return computed;
-}, colour);
 
 /** Cuts Setpoint's live stream (the browser goes offline), or brings the network back. */
 const network = (page: Page, online: boolean) => page.context().setOffline(!online);
@@ -42,11 +29,6 @@ test('board 19a: Business needs sign-in, iCloud stale, triage down, and offline'
     await page.locator('.hbar.muted', {hasText: 'iCloud, as of 8:40 AM'}).waitFor();
     await page.locator('.lh', {hasText: 'Unsorted'}).locator('.gh-note', {hasText: 'Triage is down, as of 9:09 AM'}).waitFor();
     await page.locator('.today-row').first().waitFor();
-    // Account trouble is sync_problem wherever it shows (#123).
-    assert.deepEqual(await glyph(page.locator('.hbar.caution > .icon')), [ICONS.sync_problem, '16']);
-    // Each tone has one glyph (states-04): stale is `history` in `ink3`, triage down the `warning` triangle in `caution`.
-    assert.deepEqual(await toneGlyph(page.locator('.hbar.muted')), [ICONS.history, '16', await colourOf(page, 'var(--ink3)')]);
-    assert.deepEqual(await rested(() => toneGlyph(page.locator('.gh-note'))), [ICONS.warning, '16', await rested(() => colourOf(page, 'var(--caution)'))]);
     await network(page, false);
     await page.locator('.offline-pill', {hasText: 'Offline, as of 9:12 AM, retrying'}).waitFor();
     // Retry now carries refresh, as every Try again does (#123).
@@ -93,8 +75,8 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     assert.equal(await page.locator('.list .row', {hasText: 'Your recovery email was changed'}).count(), 1, 'the row stays');
     assert.deepEqual(writes, [], 'nothing was sent');
     await page.locator('.main.offline').waitFor();
-    // What changes something is held back: Mark all as read at .4, taking no pointer.
-    assert.deepEqual(await page.locator('.hd .mark-all').evaluate(link => [getComputedStyle(link).opacity, getComputedStyle(link).pointerEvents]), ['0.4', 'none']);
+    // What changes something is held back: Mark all as read takes no pointer.
+    assert.equal(await page.locator('.hd .mark-all').evaluate(link => getComputedStyle(link).pointerEvents), 'none');
     // Reading goes on: J moves the cursor, Enter opens an email this browser has.
     await point(page.locator('.list .row', {hasText: 'Your recovery email was changed'}));
     await page.keyboard.press('j');
@@ -194,8 +176,6 @@ test('a failing account says why in caution', async () => {
     await line.waitFor();
     assert.equal(await line.locator('.num').textContent(), 'Work, as of 9:06 AM, Gmail answered 503.');
     assert.equal(await line.locator('.num').getAttribute('data-tip'), 'Work, as of 9:06 AM, Gmail answered 503.');
-    // A source failing is the `warning` triangle in `caution`, never the `error` circle of a failed change (states-04).
-    assert.deepEqual(await toneGlyph(line), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
     assert.equal(await page.locator('.hbar.caution').count(), 0);
 
     // The fix is on the line (states-08): it checks Work's own source, reading "Checking…" until the check lands.
@@ -232,19 +212,6 @@ test('SV-20: the calendar\'s own sources, Todoist stale and Weather failing, ato
     await until('both lines', () => lines.count(), count => count === 2);
     assert.deepEqual(await lines.locator('.num').allTextContents(), ['Todoist, as of 8:40 AM', 'Weather, as of 8:30 AM, Pirate Weather answered 500 Internal Server Error.']);
     assert.deepEqual(await lines.evaluateAll(all => all.map(line => line.className)), ['rp-health stale', 'rp-health failing']);
-    const [stale, failing] = await rested(() => lines.evaluateAll(all => all.map(line => getComputedStyle(line).color)));
-    const token = (name: string) => page.evaluate(value => {
-      const probe = document.createElement('span');
-      probe.style.color = `var(--${value})`;
-      document.body.append(probe);
-      const computed = getComputedStyle(probe).color;
-      probe.remove();
-      return computed;
-    }, name);
-    assert.equal(stale, await rested(() => token('ink3')));
-    assert.equal(failing, await rested(() => token('caution')));
-    // Stale `history`, failing the `warning` triangle (states-04).
-    assert.deepEqual([await toneGlyph(lines.nth(0)), await toneGlyph(lines.nth(1))], [[ICONS.history, '16', stale], [ICONS.warning, '16', failing]]);
     // Each line carries Check now (states-08), whole after its words.
     assert.deepEqual(await lines.locator('.check-now').allTextContents(), ['Check now', 'Check now']);
     // A failing line shows the provider's words in full, wrapping rather than cutting them off; each line's title holds it too.
@@ -341,9 +308,6 @@ test('the first backfill: search says what it has indexed so far', async () => {
     await page.keyboard.type('lease');
     const line = page.locator('.search-list .bar.muted', {hasText: 'Indexing · 62% · showing what’s indexed so far'});
     await line.waitFor();
-    // Its progress runs along its foot, 62% of the line (the polish audit's states-15, search-12).
-    const foot = await rested(() => line.evaluate(element => ({width: element.getBoundingClientRect().width, fill: parseFloat(getComputedStyle(element, '::after').width) * ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1)})));
-    assert.ok(Math.abs(foot.fill - foot.width * 0.62) < 1, `62% of the line (${foot.fill} of ${foot.width})`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

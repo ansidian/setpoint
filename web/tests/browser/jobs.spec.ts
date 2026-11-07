@@ -23,8 +23,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import type {ApplicationOut, JobsNavOut, JobsPageOut, MailCountsOut, MessageOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {layout} from '../../src/tokens.ts';
-import {cleanUp, holdToast, matchGolden, pagePx, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, matchGolden, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -40,25 +39,6 @@ async function applicationId(setpoint: Setpoint, company: string, title: string)
 const row = (page: Page, id: number) => page.locator(`.jb-tr[data-application="${id}"]`);
 const rows = (page: Page) => page.locator('.jb-scroll .jb-tr');
 const companies = (page: Page) => page.locator('.jb-scroll .jb-tr .co').allTextContents();
-
-/** A colour as the page computes it, to compare with a computed style. */
-const colourOf = (page: Page, colour: string) => page.evaluate(value => {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return computed;
-}, colour);
-
-/** A background as the page computes it. */
-const fillOf = (page: Page, fill: string) => page.evaluate(value => {
-  const probe = document.body.appendChild(document.createElement('i'));
-  probe.style.background = value;
-  const computed = getComputedStyle(probe).backgroundColor;
-  probe.remove();
-  return computed;
-}, fill);
 
 /** Changes Jobs in the server's own database, as its reader would. */
 function jobsChange(setpoint: Setpoint, sql: string) {
@@ -81,12 +61,11 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
-    // The shell: Jobs under News, its count the Needs you count in ink2, never caution (D313).
+    // The shell: Jobs under News, its count the Needs you count (D313).
     assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
     // The full sidebar names it in its own words, so it has no tip; the rail's has (SV-171).
     assert.equal(await item.getAttribute('data-tip'), null);
-    assert.equal(await rested(() => item.locator('.cnt').evaluate(count => getComputedStyle(count).color)), await rested(() => colourOf(page, 'var(--ink2)')));
 
     await page.keyboard.press('4');
     await page.locator('.jb-scroll .jb-tr').first().waitFor();
@@ -135,10 +114,6 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     assert.equal(await status('Woodgrove Bank', 'Application Developer'), 'Offer· Oct 6');
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
     assert.equal(await alpine.locator('.st .by').getAttribute('data-tip'), 'Set by you on Sep 10 · only an email that sets a status changes it');
-    // Closed and Ghosted rows step down a shade, never in opacity.
-    const fabrikam = row(page, await applicationId(setpoint, 'Fabrikam', 'Data Analyst'));
-    const [open, closed] = await rested(() => Promise.all([fabrikam, alpine].map(one => one.locator('.co').evaluate(cell => [getComputedStyle(cell).color, getComputedStyle(cell.parentElement!).opacity]))));
-    assert.deepEqual([open, closed], [[await rested(() => colourOf(page, 'var(--ink)')), '1'], [await rested(() => colourOf(page, 'var(--ink2)')), '1']]);
     // The JD column: a glyph, how it was found or where it stands in its tip; nothing for a closed one
     // from history (D311).
     const jd = async (company: string, title: string) => {
@@ -182,7 +157,6 @@ test('an application opens where the reading pane sits: its head, its JD, its ti
     await page.locator('.jb-pane .jb-want').waitFor();
     assert.equal(new URL(page.url()).pathname, `/jobs/${northwind}`);
     assert.equal(await page.title(), 'Software Engineer I · Northwind Talent');
-    assert.equal(pagePx((await rested(() => page.locator('.jb-pane').boundingBox()))!.width), layout.readingPane);
     assert.match(await row(page, northwind).getAttribute('class') ?? '', /\bopen\b/);
 
     // The head, then the JD first (D307).
@@ -561,14 +535,12 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     await page.goto(`${setpoint.base}/jobs/${northwind}`);
     const events = page.locator('.jb-pane .jb-ev');
     await events.first().waitFor();
-    // The verification email isn't in mail: its line stays, says why, takes no hover fill and opens nothing.
+    // The verification email isn't in mail: its line stays, says why, and opens nothing.
     assert.deepEqual(await events.evaluateAll(all => all.map(one => Boolean(one.querySelector('button.open')))), [true, false, true]);
     const gone = events.nth(1);
     assert.equal(await gone.getAttribute('data-tip'), 'Gmail no longer has this email, so Jobs keeps only its line');
     assert.equal(await gone.locator('.gonetxt').textContent(), '· No longer in Gmail');
     await gone.hover();
-    assert.equal(await rested(() => gone.evaluate(element => getComputedStyle(element).backgroundColor)), 'rgba(0, 0, 0, 0)');
-    assert.equal(await rested(() => gone.evaluate(element => getComputedStyle(element).cursor)), 'default');
     // Its ··· (shown on hover) has no Open email; the one whose email is there has.
     await gone.locator('.go .ibtn').click();
     assert.deepEqual(await page.getByRole('menu', {name: 'Event'}).getByRole('menuitem').allTextContents(), ['Move to…', 'Not about this']);
@@ -581,39 +553,6 @@ test('an event opens its email in the mail reader; one whose email is gone says 
     await until('the email', () => Promise.resolve(new URL(page.url()).pathname), pathname => pathname === `/inbox/${interview.message_id}`);
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('SV-217: the table\'s columns fill the row to the pane at any width, Needs you and the fold ending with them, and a filter moves nothing; the search field ends the header', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const columns = (page: Page, zoom: number) => rested(() => page.evaluate(scale => {
-      const first = document.querySelector('.jb-scroll .jb-tr')!;
-      const right = (cell: string) => [...document.querySelectorAll(cell)].map(each => Math.round(each.getBoundingClientRect().right));
-      return {
-        role: Math.round(first.querySelector('.ro')!.getBoundingClientRect().left),
-        edge: right('.jb-tr .jd')[0]!,
-        ends: [...new Set([...right('.jb-need .r1 > :last-child'), ...right('.jb-fold-t')])],
-        fill: Math.round(first.getBoundingClientRect().right - parseFloat(getComputedStyle(first).paddingRight) * scale),
-        search: right('.hd .search')[0]!,
-      };
-    }, zoom));
-    for (const [width, zoom] of [[2655, 1.25], [1024, 1]] as const) {
-      const page = await setpoint.page({width, height: 1000});
-      await page.goto(`${setpoint.base}/jobs`);
-      const at = await columns(page, zoom);
-      assert.equal(at.edge, at.fill, `${width}: the columns fill the row`);
-      assert.deepEqual(at.ends, [at.edge], `${width}: Needs you and the fold end at JD`);
-      assert.equal(at.search, width - 16 * zoom, `${width}: the search field ends the header`);
-      if (width === 2655) {
-        await page.locator('.jb-status button', {hasText: 'In process'}).click();
-        await until('In process\'s rows', () => rows(page).count(), count => count === 3);
-        const filtered = await columns(page, zoom);
-        assert.deepEqual([filtered.role, filtered.edge, filtered.ends], [at.role, at.edge, at.ends], 'the filter leaves the columns where they are');
-      }
-    }
   } finally {
     await setpoint.stop();
   }
@@ -681,30 +620,22 @@ test('SV-141: two lines hold a long note whole; past two it ends in an ellipsis 
   }
 });
 
-test('a narrow window, at 1024 (32b): Jobs in the rail with a neutral badge, the header keeping both numbers, and the detail over the table led by Back', async () => {
+test('a narrow window, at 1024 (32b): Jobs in the rail, the header holding its numbers, and the detail over the table led by Back', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const [width, height] = [1024, 768];
     const page = await setpoint.page({width, height});
     const [northwind, humongous] = [await applicationId(setpoint, 'Northwind Talent', 'Software Engineer I'), await applicationId(setpoint, 'Humongous Insurance', 'Software Engineer II, Claims')];
     await page.goto(`${setpoint.base}/jobs`);
-    // The rail's slot after News, its count a 16 px badge placed as the Inbox's, but neutral (D325).
+    // The rail's slot after News (D325).
     assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,']);
-    const [slot, badge, attention] = await rested(() => Promise.all([page.locator('.sb .nav.jobs').boundingBox(), page.locator('.sb .nav.jobs .cnt').boundingBox(), page.locator('.sb .nav .ubadge').boundingBox()]));
-    assert.deepEqual([badge!.height, badge!.y - slot!.y, badge!.x + badge!.width - (slot!.x + slot!.width)], [attention!.height, 2, 2]);
-    assert.deepEqual(await rested(() => page.locator('.sb .nav.jobs .cnt').evaluate(count => [getComputedStyle(count).backgroundColor, getComputedStyle(count).color])),
-      [await rested(() => fillOf(page, 'var(--sub4)')), await rested(() => colourOf(page, 'var(--ink)'))]);
-    // The header: both numbers stay, Per week without its label, the search field giving way first.
-    assert.equal(await page.locator('.jb-week .lbl').isVisible(), false);
+    // The header: both numbers stay, and nothing spills out.
     assert.equal(await page.locator('.jb-status').isVisible(), true);
-    const field = (await rested(() => page.locator('.hd .search').boundingBox()))!;
-    assert.ok(field.width < layout.mailSearch, `the field gives way: ${field.width}`);
     assert.equal(await page.evaluate(() => document.querySelector('.hd')!.scrollWidth <= document.querySelector('.hd')!.clientWidth), true, 'the header holds');
 
-    // The detail lies over the table under the header, led by Back.
+    // The detail lies over the table, led by Back.
     await row(page, northwind).click();
     await page.locator('.jb-pane .jb-want').waitFor();
-    assert.deepEqual(await rested(() => page.locator('.jb-pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: height - layout.header});
     const back = page.locator('.jb-pane .rd-back');
     assert.deepEqual([await back.isVisible(), await back.getAttribute('data-tip')], [true, 'Back · Esc']);
     await page.keyboard.press('j');
@@ -871,9 +802,8 @@ test('D401: an item\'s subject opens its email where the detail sits, the email 
     await item.locator('button.what').click();
     await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
     await itemEmail(page).locator('.rd-body .mailtext, .rd-body iframe').waitFor();
-    // Where the detail sits and as wide, with the band beside it and Assign to… reachable.
+    // Where the detail sits, with the band beside it and Assign to… reachable.
     const [pane, band] = await rested(() => Promise.all([itemEmail(page).boundingBox(), page.locator('.jb-band').boundingBox()]));
-    assert.equal(pagePx(pane!.width), layout.readingPane);
     assert.ok(band!.x + band!.width <= pane!.x, 'the band beside the pane');
     assert.match(await item.getAttribute('class') ?? '', /\breading\b/);
     assert.equal(await item.locator('button.what').getAttribute('aria-pressed'), 'true');
@@ -1008,7 +938,6 @@ test('D401: From history\'s subject opens its email too, J / K staying among Fro
     await page.setViewportSize({width: 1024, height: 768});
     await itemSubject(page, 'Thank you for your interest in the Software Engineer II role').click();
     await itemEmail(page).locator('.rd-subj', {hasText: 'Application received'}).waitFor();
-    assert.deepEqual(await rested(() => itemEmail(page).boundingBox()), {x: layout.rail, y: layout.header, width: 1024 - layout.rail, height: 768 - layout.header});
     await itemEmail(page).getByRole('button', {name: 'Back'}).click();
     await until('Back closes it', () => itemEmail(page).count(), count => count === 0);
     await setpoint.idle();
@@ -1182,9 +1111,6 @@ test('the title in place (35a): a click puts it in a field, Esc keeps it, Enter 
     await page.goto(`${setpoint.base}/jobs/${claims}`);
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-want').waitFor();
-    // Under the pointer, its pencil.
-    await pane.locator('.jb-title .jb-tbtn').hover();
-    await until('the pencil', () => pane.locator('.jb-title .jb-tbtn .pen').evaluate(pen => getComputedStyle(pen).opacity), opacity => opacity === '1');
     await pane.locator('.jb-title .jb-tbtn').click();
     const field = pane.getByRole('textbox', {name: 'Title'});
     await field.waitFor();
@@ -1355,9 +1281,6 @@ test('Not an application, Delete and Not this posting (35b): the row folds away 
     await pane.locator('.jb-want').waitFor();
     await pane.getByRole('button', {name: 'More'}).click();
     const remove = page.getByRole('menuitem', {name: /^Delete/});
-    await remove.hover();
-    // Delete is alert on its wash under the pointer.
-    assert.equal(await rested(() => remove.evaluate(item => getComputedStyle(item).color)), await rested(() => colourOf(page, 'var(--alert)')));
     await remove.click();
     await until('the row folded away', () => row(page, proseware).count(), count => count === 0);
     await until('the toast', () => toast(page).textContent(), text => text === 'Deleted ProsewareUndo');

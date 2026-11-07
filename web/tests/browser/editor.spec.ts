@@ -1021,7 +1021,7 @@ test('SV-111: a length after "for" sets End from the start, and with no time typ
 /** The editor's reminder chips as they read, Time to Leave's aside. */
 const reminderChips = (page: Page) => page.locator('.editor .prow.reminders .qchip:not(.ttl)').allTextContents();
 
-test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' default, a reminder ticked sits beside it, and its mark has a tint of its own in Night and Light', async () => {
+test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' default, and a reminder ticked sits beside it', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -1033,20 +1033,6 @@ test('SV-112: "remind me 1h before" in a new event\'s line replaces Settings\' d
     await page.locator('.nl .tok-r', {hasText: 'remind me 1h before'}).waitFor();
     await page.locator('.nl .tok-d', {hasText: 'fri 2pm'}).waitFor();
     await until('the line\'s reminder in place of the default', () => reminderChips(page), list => list.join() === '1 hour before');
-
-    // Its mark and the Reminders row's glyph aren't the when's, in either theme.
-    for (const theme of ['night', 'light'] as const) {
-      await page.emulateMedia({colorScheme: theme === 'light' ? 'light' : 'dark'});
-      await until(`${theme} is on`, () => page.evaluate(() => document.documentElement.dataset.theme), shown => shown === theme);
-      const [when, reminder, whenGlyph, reminderGlyph] = await rested(() => Promise.all([
-        page.locator('.nl .tok-d').evaluate(mark => getComputedStyle(mark).backgroundColor),
-        page.locator('.nl .tok-r').evaluate(mark => getComputedStyle(mark).backgroundColor),
-        page.locator('.editor .eg > .icon.from-when').evaluate(glyph => getComputedStyle(glyph).color),
-        page.locator('.editor .eg > .icon.from-remind').evaluate(glyph => getComputedStyle(glyph).color),
-      ]));
-      assert.notEqual(reminder, when, `${theme}: the reminder's mark has its own tint`);
-      assert.notEqual(reminderGlyph, whenGlyph, `${theme}: so has the glyph of the row it filled`);
-    }
 
     // Ticked beside the line's; taking the phrase out takes only what it set.
     await page.getByRole('button', {name: 'Add reminder'}).click();

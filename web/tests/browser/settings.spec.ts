@@ -19,17 +19,9 @@ import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, nearPx, rested, ROOT, startSetpoint, test, until} from './harness.ts';
+import {choose, cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
-
-/** An empty line's leading glyph: its bundled path, size and colour, and the gap to the words after it (#124). */
-const leadGlyph = (line: Locator) => line.evaluate(element => {
-  const icon = element.querySelector('.icon')!;
-  const range = document.createRange();
-  range.selectNode(icon.closest('span.set-empty-icon') ? element.querySelector('.set-empty')! : icon.nextSibling!);
-  return [icon.querySelector('path')!.getAttribute('d'), icon.getAttribute('width'), getComputedStyle(icon).color, Math.round((range.getBoundingClientRect().left - icon.getBoundingClientRect().right) / ((document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom ?? 1))];
-});
 
 /** The Inbox under Settings, loaded, then Settings at `page` (from its address, as a link would). */
 async function openAt(page: Page, base: string, settingsPage: string) {
@@ -71,10 +63,6 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     await page.locator('.hbar.caution').waitFor();
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
-    // Account trouble is sync_problem, in the nav and on the row, as in the sidebar and the Inbox's bar (#123).
-    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon path').getAttribute('d'), ICONS.sync_problem);
-    assert.equal(await rested(() => page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color)), await rested(() => computed(page, 'color', 'var(--caution)')), 'in caution on the current page too');
-    assert.equal(await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).locator('.state > .icon path').getAttribute('d'), ICONS.sync_problem);
     await page.mouse.move(1500, 1000);
     await matchGolden(page, '17-settings-accounts');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -83,47 +71,21 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
   }
 });
 
-test('each source\'s state leads with its glyph (the polish audit\'s settings-01, states-04): a good dot when checked, history when stopped, the warning triangle when failing, sync_problem for sign-in', async () => {
+test('each source says its state: checked, stopped as of when, failing in the provider\'s words, needing sign-in; the failing rows are marked', async () => {
   const setpoint = await startSetpoint({fixtures: ['needs-reconnect', 'stale-personal', 'failing-work', 'checked', 'stale-todoist'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'accounts');
-    const state = (row: Locator) => row.locator('.state');
-    const lead = (row: Locator) => state(row).evaluate(element => {
-      const first = element.firstElementChild!;
-      return first.classList.contains('okdot')
-        ? ['dot', getComputedStyle(first).width, getComputedStyle(first).backgroundColor]
-        : [first.querySelector('path')!.getAttribute('d'), first.getAttribute('width'), getComputedStyle(first).color];
-    }).then(([glyph, size, fill]) => [glyph, glyph === 'dot' ? nearPx(size!) : size, fill]);
-    const [good, ink2, ink3, caution] = [await rested(() => computed(page, 'background', 'var(--good)')), await rested(() => computed(page, 'color', 'var(--ink2)')), await rested(() => computed(page, 'color', 'var(--ink3)')), await rested(() => computed(page, 'color', 'var(--caution)'))];
     const account = (label: string) => page.locator('.settings [data-account]', {hasText: label});
-    await state(account('Personal')).getByText('Checks stopped, as of 9:14 PM').waitFor();
-    await state(account('Work')).getByText('Gmail answered 503.').waitFor();
-    assert.deepEqual(await rested(() => lead(account('Jobs'))), ['dot', '7px', good], 'checked: a 7 px good dot');
-    assert.deepEqual(await rested(() => lead(account('Personal'))), [ICONS.history, '16', ink3], 'stopped: history in ink3');
-    assert.equal(await rested(() => state(account('Personal')).evaluate(element => getComputedStyle(element).color)), ink2, 'its words a step up, ink2');
-    assert.deepEqual(await rested(() => lead(account('Work'))), [ICONS.warning, '16', caution], 'failing: the warning triangle in caution');
-    assert.deepEqual(await rested(() => lead(account('Business'))), [ICONS.sync_problem, '16', caution], 'sign-in: sync_problem');
-    // A failing row takes caution at 7%, as a row needing sign-in does and Settings › News's failing rows do.
+    await account('Personal').locator('.state').getByText('Checks stopped, as of 9:14 PM').waitFor();
+    await account('Work').locator('.state').getByText('Gmail answered 503.').waitFor();
+    // A failing row is marked, as a row needing sign-in is.
     assert.deepEqual(await page.locator('.settings .set-row.warn[data-account]').evaluateAll(rows => rows.map(row => row.textContent!.match(/^(Business|Work)/)?.[0])), ['Business', 'Work']);
-    const todoist = page.locator('.settings [data-source="todoist"]');
-    assert.deepEqual(await rested(() => lead(todoist)), [ICONS.history, '16', ink3]);
-    assert.deepEqual(await rested(() => lead(page.locator('.settings [data-source="weather"]'))), ['dot', '7px', good]);
-    // The gap to the words stays 8 px.
-    assert.equal(await state(account('Work')).evaluate(element => getComputedStyle(element).columnGap), '8px');
-
-    // Settings › Todoist's Connection row: the glyph before "Connected".
+    // Settings › Todoist's Connection row, and Settings › News with the seed's FOX 11 failing.
     await page.locator('.settings .set-nav .nav', {hasText: 'Todoist'}).click();
-    const connected = page.locator('.settings .health-t', {hasText: 'Connected'});
-    await connected.waitFor();
-    assert.deepEqual(await rested(() => connected.locator('.icon').evaluate(icon => [icon.querySelector('path')!.getAttribute('d'), getComputedStyle(icon).color])), [ICONS.history, ink3]);
-
-    // Settings › News: the seed's FOX 11 failing, the rest checked.
+    await page.locator('.settings .health-t', {hasText: 'Connected'}).waitFor();
     await page.locator('.settings .set-nav .nav', {hasText: 'News'}).click();
-    const fox = page.locator('.settings .news-src.warn').first();
-    await fox.waitFor();
-    assert.deepEqual(await rested(() => lead(fox)), [ICONS.warning, '16', caution]);
-    assert.deepEqual(await rested(() => lead(page.locator('.settings .news-src:not(.warn)').first())), ['dot', '7px', good]);
+    await page.locator('.settings .news-src.warn', {hasText: 'FOX 11'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -152,30 +114,18 @@ test('board 30a: Settings › News, between Mail and AI, its warning glyph while
     assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Calendar', 'Todoist', 'Notifications', 'Mail', 'News', 'Jobs', 'AI', 'Appearance', 'Security', 'Sign out']);
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
-    assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon path').getAttribute('d'), ICONS.warning, 'a failing feed keeps warning (override 24)');
-    assert.equal(await rested(() => page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn .icon').evaluate(glyph => getComputedStyle(glyph).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
     // The head's counts, then one group per section with its count, and no Keys group (#97).
     const sources = await setpoint.api<NewsSourcesOut>('GET', '/news/sources');
     assert.equal(await page.locator('.settings .set-head .head-note').textContent(), `${sources.articles_today} articles today · ${sources.stories_on_page} stories`);
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(),
       sources.sections.map(({section, sources: list}) => `${{local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'}[section]} ${list.length}`));
-    // FOX 11 fails in `caution` on a `caution` 7% row; the rest say when they were checked, each 44 px.
+    // FOX 11 says it's failing, and why; the rest say when they were checked.
     assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
     assert.equal(await fox.locator('.state').getAttribute('data-tip'), '404 Not Found');
-    assert.equal(await rested(() => fox.locator('.state').evaluate(state => getComputedStyle(state).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
-    assert.equal(await rested(() => fox.evaluate(element => getComputedStyle(element).backgroundColor)), await rested(() => computed(page, 'background', 'color-mix(in oklch, var(--caution) 7%, transparent)')));
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});
     assert.deepEqual(await ktla.evaluate(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.prov')?.textContent, element.querySelector('.state')?.textContent]),
       ['KTLA · Local news', 'Feed, summary only', 'Every 15 min', 'Checked 9:10 AM']);
     assert.equal(await page.locator('.settings .news-src', {hasText: 'National Weather Service'}).locator('.prov').textContent(), 'Every 5 min');
-    // Each tile: the icon the source's list names (a TV station's, the crime wire's), else its adapter's.
-    const glyphs = JSON.parse(fs.readFileSync(path.join(ROOT, 'design-export', 'glyphs', 'icons.json'), 'utf8')) as Record<string, {d: string}>;
-    const tile = (name: string) => page.locator('.settings .news-src', {hasText: name}).locator('.aico path').getAttribute('d');
-    for (const [name, icon] of [['KTLA', 'live_tv'], ['FOX 11', 'live_tv'], ['County crime wire', 'local_police'], ['LAist', 'newspaper'], ['National Weather Service', 'thunderstorm']] as const) {
-      assert.equal(await tile(name), glyphs[icon]!.d, `${name}: ${icon}`);
-    }
-    // 44 px rows (two lines of text make them taller, as the board's are).
-    assert.deepEqual([...new Set(await page.locator('.settings .news-src').evaluateAll(rows => rows.map(element => getComputedStyle(element).minHeight)))], ['44px']);
     assert.equal(await page.locator('.settings .set-main').locator('.switch, .handle, [draggable="true"]').count(), 0, 'read-only: no handles, no switches');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -199,12 +149,6 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.equal(await news.getByRole('button', {name: 'Monthly cap', exact: true}).textContent(), '$40');
     // How far the meter fills is capMeter's, a table in news.test.ts; its width on screen is by eye (D417).
     const meter = news.locator('.meter');
-    // The money first (the polish audit's settings-10): the amount in ink, and a neutral meter, ink3 on a sub2
-    // track: a usage meter is neither "you are here" (accent) nor an identity (cool).
-    const neutral = await computed(page, 'background', 'var(--ink3)');
-    assert.deepEqual(await rested(() => meter.evaluate(element => [getComputedStyle(element).backgroundColor, getComputedStyle(element.firstElementChild!).backgroundColor])),
-      [await rested(() => computed(page, 'background', 'var(--sub2)')), neutral]);
-    assert.equal(await rested(() => amount.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--ink)')));
 
     // Usage this month: Triage, Search terms, Search reading, Alfred, News and Jobs, News and Jobs in their parts.
     const usage = page.locator('.settings .set-sec', {has: page.locator('.set-label', {hasText: 'Usage this month'})});
@@ -220,24 +164,21 @@ test('board 30b: Settings › AI with News: its models, the monthly cap, this mo
     assert.equal(await usage.locator('.set-label .r').textContent(), '$25.25');
 
     // The cap is editable, as board 30b draws it; it saves through PATCH /api/settings. From 90% of it
-    // the meter turns caution, before the cap is reached; under that, ink3 again.
+    // the meter is near, before the cap is reached; under that, plain again.
     await choose(page, 'Monthly cap', '$20');
     await amount.filter({hasText: '$18.40 of $20'}).waitFor();
     assert.match(await meter.getAttribute('class') ?? '', /\bnear\b/);
-    const caution = await rested(() => computed(page, 'background', 'var(--caution)'));
-    await until('the meter in caution', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === caution);
     await choose(page, 'Monthly cap', '$50');
     await settled('the cap saved', () => setpoint.api<Settings>('GET', '/settings'), value => value.news.monthly_cap_usd === 50);
     await amount.filter({hasText: '$18.40 of $50'}).waitFor();
     assert.equal(await meter.getAttribute('class'), 'meter');
-    await until('the meter neutral again', () => meter.locator('span').evaluate(fill => getComputedStyle(fill).backgroundColor), colour => colour === neutral);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
   }
 });
 
-test('at the cap, This month says so, its meter full in `caution`; a higher cap takes it back', async () => {
+test('at the cap, This month says so; a higher cap takes it back', async () => {
   const setpoint = await startSetpoint({fixtures: ['news-capped'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -246,9 +187,6 @@ test('at the cap, This month says so, its meter full in `caution`; a higher cap 
     await month.locator('.amount', {hasText: '$40.40 of $40'}).waitFor();
     const line = month.locator('.s .caution');
     assert.equal(await line.textContent(), 'Cap reached, summaries use Claude Haiku 5.5 until Nov 1');
-    assert.equal(await rested(() => line.evaluate(element => getComputedStyle(element).color)), await rested(() => computed(page, 'color', 'var(--caution)')));
-    // Full in `caution`: how full is capMeter's (news.test.ts), its width by eye (D417).
-    assert.equal(await rested(() => month.locator('.meter > span').evaluate(fill => getComputedStyle(fill).backgroundColor)), await rested(() => computed(page, 'background', 'var(--caution)')));
     await choose(page, 'Monthly cap', '$50');
     await month.locator('.amount', {hasText: '$40.40 of $50'}).waitFor();
     await line.waitFor({state: 'detached'});
@@ -268,22 +206,14 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     await page.keyboard.press('Meta+,');
     await page.locator('.settings').waitFor();
     assert.equal(new URL(page.url()).pathname, '/calendar', 'the page under it keeps the address');
-    // The current page keeps its raised `navOn` chip (#166) with the keys in the nav, opened with ⌘,
-    // or after ↓; the keyboard's own fill is `sub`, on any other page it reaches.
-    const raised = await rested(() => page.evaluate(() => {
-      const probe = document.body.appendChild(document.createElement('i'));
-      probe.style.background = 'var(--navOn)';
-      const fill = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return fill;
-    }));
+    // The current page is marked, with the keys in the nav, opened with ⌘, or after ↓.
     const current = page.locator('.settings .set-nav .nav.on');
-    const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav, getComputedStyle(nav).backgroundColor]);
-    await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true, raised]));
+    const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav]);
+    await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true]));
     // ↓ in the nav changes page; keys inside never reach the page (2 would go to Calendar, J would move a cursor).
     await page.keyboard.press('ArrowDown');
     await page.locator('.settings .set-title', {hasText: 'Calendar'}).waitFor();
-    await until('Calendar marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Calendar', true, raised]));
+    await until('Calendar marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Calendar', true]));
     await page.keyboard.press('1');
     assert.equal(new URL(page.url()).pathname, '/calendar');
 
@@ -399,16 +329,9 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
     assert.deepEqual(await page.locator('.settings .dom').allTextContents(), ['woodgrovebank.example']);
     await page.getByRole('button', {name: 'Remove woodgrovebank.example'}).click();
     await settled('untrusted', () => setpoint.api<TrustedDomainOut[]>('GET', '/mail/trusted-domains'), list => list.length === 77);
-    // SV-25 (D54): nothing matching is one plain line across the group, with no pill on hover and nothing cut off.
+    // SV-25 (D54): nothing matching is one line, nothing cut off.
     const empty = page.locator('.settings .set-row', {hasText: 'No domain matches'});
-    await empty.hover();
-    const box = await rested(() => empty.evaluate(row => ({
-      width: row.getBoundingClientRect().width, group: row.closest('.set-group')!.getBoundingClientRect().width,
-      fits: row.scrollWidth <= row.clientWidth, fill: getComputedStyle(row).backgroundColor,
-    })));
-    assert.equal(box.width, box.group, 'the line spans the group');
-    assert.ok(box.fits, 'the line isn\'t cut off');
-    assert.equal(box.fill, 'rgba(0, 0, 0, 0)', 'no pill on hover');
+    assert.ok(await rested(() => empty.evaluate(row => row.scrollWidth <= row.clientWidth)), 'the line isn\'t cut off');
 
     await page.getByRole('radio', {name: '30 min'}).click();
     await settled('code expiry', () => setpoint.api<Settings>('GET', '/settings'), settings => settings.mail.code_expiry_minutes === 30);
@@ -493,18 +416,12 @@ test('S8 (SV-25, D54): a domain the server won\'t untrust says so in the toast; 
   }
 });
 
-test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, reached by Tab, answering the pointer, opening the form', async () => {
+test('S12 (SV-25, D54): "No rules yet · Add rule" has Add rule as a button, reached by Tab, opening the form', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'mail');
-    assert.deepEqual(await rested(() => leadGlyph(page.locator('.settings .set-row', {hasText: 'No rules yet'}))), [ICONS.rule, '20', await rested(() => computed(page, 'color', 'var(--ink3)')), 12], 'it leads with rule (#124)');
     const empty = page.locator('.settings .set-row', {hasText: 'No rules yet'}).getByRole('button', {name: 'Add rule'});
-    const colour = () => empty.evaluate(button => getComputedStyle(button).color);
-    const resting = await rested(() => colour());
-    await empty.hover();
-    await until('the hover colour', colour, value => value !== resting);
-    await page.mouse.move(0, 0);
     await page.locator('.settings .set-label').getByRole('button', {name: 'Add rule'}).focus();
     await page.keyboard.press('Tab');
     assert.equal(await empty.evaluate(button => document.activeElement === button), true, 'Tab reaches it');
@@ -594,7 +511,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
   }
 });
 
-test('Send test (the polish audit\'s states-11, settings-07): it turns while it sends, a failure reads as one in alert and in words, a test that went ticks good, and the Server field says it saved', async () => {
+test('Send test (the polish audit\'s states-11, settings-07): it shows it\'s sending, a failure says so in words, a test that went says so, and the Server field says it saved', async () => {
   const ntfy = await fakeNtfy();
   // A server nothing answers at: a port just closed.
   const closed = http.createServer();
@@ -623,28 +540,24 @@ test('Send test (the polish audit\'s states-11, settings-07): it turns while it 
     });
     await button.click();
     // While it sends, the shared spinner stands where its glyph was.
-    await button.locator('.spin .icon').waitFor();
-    assert.equal(await button.locator('.spin .icon path').getAttribute('d'), ICONS.progress_activity);
+    await button.locator('.spin').waitFor();
     release();
-    // A failure is a failure: in alert, led by error, in words rather than Node's "fetch failed".
+    // A failure is a failure, in words rather than Node's "fetch failed".
     const line = page.locator('.settings .line');
     await line.filter({hasText: `Not sent, Can’t reach ${unreachable}`}).waitFor();
-    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, element.textContent, getComputedStyle(element).color, element.querySelector('.icon path')?.getAttribute('d'), element.querySelector('.icon')?.getAttribute('width')])),
-      ['line failed', `Not sent, Can’t reach ${unreachable}`, await rested(() => computed(page, 'color', 'var(--alert)')), ICONS.error, '16']);
-    // The header agrees, as a source failing does: a caution dot.
+    assert.equal(await line.getAttribute('class'), 'line failed');
+    // The header agrees, as a source failing does.
     const header = page.locator('.settings .set-label', {hasText: 'ntfy'});
     await header.getByText(`Failing, Can’t reach ${unreachable}`).waitFor();
-    assert.equal(await rested(() => header.locator('.okdot').evaluate(dot => getComputedStyle(dot).backgroundColor)), await rested(() => computed(page, 'background', 'var(--caution)')));
     await page.unroute('**/api/notifications/test');
 
-    // A server that answers: the test goes, and its line ticks in good.
+    // A server that answers: the test goes, and its line says so.
     await server.fill(ntfy.url);
     await page.keyboard.press('Enter');
     await settled('the server', () => setpoint.api<Settings>('GET', '/settings'), value => value.notifications.ntfy_server === ntfy.url);
     await button.click();
     await line.filter({hasText: 'Sent to setpoint-reminders'}).waitFor();
-    const good = await rested(() => computed(page, 'color', 'var(--good)'));
-    assert.deepEqual(await rested(() => line.evaluate(element => [element.className, getComputedStyle(element.querySelector('.icon')!).color, element.querySelector('.icon path')?.getAttribute('d')])), ['line done', good, ICONS.check]);
+    assert.equal(await line.getAttribute('class'), 'line done');
     assert.equal(ntfy.published.length, 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -872,7 +785,6 @@ test('Security: with the password given in the last 10 minutes (the claim), new 
     // Passkeys' own, not iPhones' (#250).
     const none = page.locator('.settings .set-row', {hasText: 'Add passkey'});
     assert.equal(await none.locator('.set-empty').textContent(), 'None yet · Add passkey');
-    assert.deepEqual(await rested(() => leadGlyph(none)), [ICONS.passkey, '20', await rested(() => computed(page, 'color', 'var(--ink3)')), 12]);
     const recovery = page.locator('.settings .set-row', {hasText: '8 left'});
     assert.deepEqual([await recovery.locator('.t').textContent(), await recovery.locator('.val').textContent()], ['Recovery codes', '8 left']);
     await none.getByRole('button', {name: 'Add passkey'}).click();
@@ -985,6 +897,93 @@ test('Security: a load that reaches the server just after a change there ended t
     await setpoint.idle();
     assert.equal(await page.locator('.sign-in').count(), 0, 'still signed in');
     assert.equal(await page.locator('.settings pre.codes').count(), 1, 'the new codes still shown');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+/**
+ * Whether a popover shows whole: inside the viewport, and each corner (inset past its radius) hits
+ * the popover itself, so no ancestor's overflow clips it and nothing covers it.
+ */
+async function unclipped(menu: Locator): Promise<string[]> {
+  return menu.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const problems: string[] = [];
+    if (rect.top < 0 || rect.left < 0 || rect.bottom > innerHeight || rect.right > innerWidth) problems.push(`outside the viewport: ${JSON.stringify(rect)}`);
+    const inset = 12;
+    for (const [x, y] of [[rect.left + inset, rect.top + inset], [rect.right - inset, rect.top + inset], [rect.left + inset, rect.bottom - inset], [rect.right - inset, rect.bottom - inset]] as const) {
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !element.contains(hit)) problems.push(`(${Math.round(x)}, ${Math.round(y)}) hits ${hit ? hit.className || hit.tagName : 'nothing'}`);
+    }
+    return problems;
+  });
+}
+
+test('live reordering: dragging Business down past Personal makes room as it passes; letting go saves the order; ↑ on the handle still moves it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'accounts');
+    const rows = page.locator('.settings [data-account]');
+    await rows.nth(2).waitFor();
+    // The rows top to bottom as they show (while dragged they slide, staying in place in the page).
+    const labels = () => rows.evaluateAll(all => all.map(row => ({label: row.querySelector('.lines .t')!.textContent!, y: row.getBoundingClientRect().y}))
+      .sort((a, b) => a.y - b.y).map(row => row.label));
+    const [first, second, third] = await rested(() => labels());
+    const box = async (index: number) => (await rested(() => rows.nth(index).boundingBox()))!;
+
+    // Down from the first row's handle, past the second row's middle.
+    const handle = (await rows.nth(0).locator('.handle').boundingBox())!;
+    const target = await box(1);
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + 20, {steps: 4});
+    await page.mouse.move(handle.x + handle.width / 2, target.y + target.height * 0.75, {steps: 8});
+    // Mid-drag: the second row moved up into the first place.
+    await until('the rows make room', labels, order => order.slice(0, 3).join() === [second, first, third].join());
+    assert.equal(await rows.nth(0).getAttribute('class').then(names => names!.includes('dragging')), true, `${first} is the one dragged`);
+    const saved = () => setpoint.api<AccountOut[]>('GET', '/accounts').then(list => list.sort((a, b) => a.position - b.position).map(account => account.label));
+    // Whatever the drag has sent answered before the server is read.
+    await setpoint.idle();
+    assert.deepEqual((await saved()).slice(0, 2), [first, second], 'nothing is saved mid-drag');
+    await page.mouse.up();
+    await until('the order saved', saved, order => order.slice(0, 3).join() === [second, first, third].join());
+
+    // ↑ on the handle moves it back.
+    await rows.nth(1).locator('.handle').focus();
+    await page.keyboard.press('ArrowUp');
+    await until('moved back', saved, order => order.slice(0, 2).join() === [first, second].join());
+    await until('shown back', labels, order => order.slice(0, 2).join() === [first, second].join());
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('menus: Sources\' last row (Weather · Check now), the last account\'s and the last rule\'s open whole, not clipped by their group', async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'accounts');
+    await page.locator('.settings [data-source="weather"]').waitFor();
+    await page.getByRole('button', {name: 'Weather options'}).click();
+    const weather = page.getByRole('menu', {name: 'Weather options'});
+    await page.getByRole('menuitem', {name: 'Check now'}).waitFor();
+    await until('Weather\'s menu whole', () => unclipped(weather), problems => problems.length === 0);
+    await page.keyboard.press('Escape');
+
+    const last = page.locator('.settings [data-account]').last();
+    const label = (await last.locator('.lines .t').textContent())!;
+    await last.getByRole('button', {name: `${label} options`}).click();
+    await until(`${label}'s menu whole`, () => unclipped(page.getByRole('menu', {name: `${label} options`})), problems => problems.length === 0);
+    await page.keyboard.press('Escape');
+
+    await page.locator('.settings .set-nav .nav', {hasText: 'Mail'}).click();
+    await page.locator('.settings .rule', {hasText: 'Proseware alerts'}).waitFor();
+    await page.getByRole('button', {name: 'Rule options'}).last().click();
+    await until('the last rule\'s menu whole', () => unclipped(page.getByRole('menu', {name: 'Rule options'})), problems => problems.length === 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

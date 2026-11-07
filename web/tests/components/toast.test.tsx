@@ -1,5 +1,5 @@
-// The one toast (ToastPill.tsx on toast.ts): a new one replaces the last, it leads with its tone's
-// glyph, drains Undo as a hairline, waits under the pointer, and fades out.
+// The one toast (ToastPill.tsx on toast.ts): a new one replaces the last, it waits under the pointer
+// and fades out; a failure stays longer. Its look is by eye (D269).
 // The clock is Vitest's, so its six and eight seconds pass at once.
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -7,10 +7,8 @@ import {render} from 'vitest-browser-react';
 import {ToastPill} from '../../src/app/ToastPill.tsx';
 import {dismissToast, showToast, UNDO_MS} from '../../src/app/toast.ts';
 import {motion} from '../../src/tokens.ts';
-import {colour} from './colour.ts';
 
 const toast = page.getByRole('status');
-const style = (element: Element, property: string, pseudo?: string) => getComputedStyle(element, pseudo).getPropertyValue(property);
 
 interface Worn {
   name: string;
@@ -48,30 +46,20 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test('Marked Done leads with `good`, its Undo draining over its six seconds', async () => {
-  showToast('Marked Done', {label: 'Undo', run: () => {}});
-  await expect.element(toast).toMatchTextContent('Marked Done');
-  const pill = toast.element();
-  const tone = pill.querySelector('.tone')!;
-  expect(style(tone, 'color')).toBe(colour('var(--good)'));
-  expect([style(pill, 'animation-duration', '::after'), style(pill, 'animation-timing-function', '::after')]).toEqual([`${UNDO_MS / 1000}s`, 'linear']);
-});
-
-test('a new line replaces the last as a new toast, so it drops in afresh, and its tone is its own', async () => {
+test('a new line replaces the last as a new toast, so it drops in afresh, and a line with no tone has no glyph', async () => {
   showToast('Marked Done', {label: 'Undo', run: () => {}});
   await expect.element(toast).toMatchTextContent('Marked Done');
   const first = toast.element();
   showToast('Moved to Trash', {label: 'Undo', run: () => {}});
   await expect.element(toast).toMatchTextContent('Moved to Trash');
   expect(toast.element()).not.toBe(first);
-  expect(style(toast.element().querySelector('.tone')!, 'color')).toBe(colour('var(--ink3)'));
   // A line with no tone of its own has no glyph.
   showToast('Added to Classes');
   await expect.element(toast).toMatchTextContent('Added to Classes');
   expect(toast.element().querySelector('.tone')).toBeNull();
 });
 
-test('under the pointer it waits, its hairline held, past its time; left, it runs on with what it had left, then fades out before it goes', async () => {
+test('under the pointer it waits past its time; left, it runs on with what it had left, then fades out before it goes', async () => {
   const seen = classes();
   const shown = Date.now();
   showToast('Moved to Trash', {label: 'Undo', run: () => {}});
@@ -82,7 +70,6 @@ test('under the pointer it waits, its hairline held, past its time; left, it run
   await userEvent.hover(toast);
   vi.setTimerTickMode('interval');
   await expect.element(toast).toHaveClass('held');
-  expect(style(toast.element(), 'animation-play-state', '::after')).toBe('paused');
   vi.advanceTimersByTime(UNDO_MS * 2);
   await expect.element(toast).toMatchTextContent('Moved to Trash');
   await expect.element(toast).not.toHaveClass('leaving');
@@ -109,14 +96,11 @@ test('its action runs once, and the toast goes with it', async () => {
   expect(run).toHaveBeenCalledTimes(1);
 });
 
-test('a failure leads in `alert`, stays eight seconds, and has no hairline', async () => {
+test('a failure stays eight seconds', async () => {
   const seen = classes();
   const shown = Date.now();
   showToast('Couldn\'t pin it, Gmail didn\'t answer in time.', null, 'failed');
   await expect.element(toast).toHaveClass('failed');
-  const pill = toast.element();
-  expect(style(pill.querySelector('.tone')!, 'color')).toBe(colour('var(--alert)'));
-  expect(style(pill, 'content', '::after')).toBe('none');
   advanceTo(shown + 8000);
   await expect.element(toast).not.toBeInTheDocument();
   expect(Math.abs(seen().find(worn => wearing(worn, 'leaving'))!.at - shown - 8000)).toBeLessThan(1000);

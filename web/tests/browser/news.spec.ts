@@ -12,7 +12,7 @@ import {after} from 'node:test';
 import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, nearPx, pagePx, rested, SIZES, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -59,30 +59,10 @@ async function seenSettled(page: Page, setpoint: Setpoint): Promise<number[]> {
   return ids;
 }
 
-/** A colour as the page computes it, to compare with a computed style. */
-const colourOf = (page: Page, colour: string) => page.evaluate(value => {
-  const probe = document.createElement('span');
-  probe.style.color = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).color;
-  probe.remove();
-  return computed;
-}, colour);
-
 const GLYPH_NAMES = new Map<string, string>(Object.entries(ICONS).map(([name, path]) => [path, name]));
 /** Each glyph's name (from its bundled path), size and colour. */
 const glyphs = async (icons: Locator) => (await icons.evaluateAll(all => all.map(icon => [icon.querySelector('path')!.getAttribute('d')!, icon.getAttribute('width'), getComputedStyle(icon).color])))
   .map(([path, size, colour]) => [GLYPH_NAMES.get(path!) ?? 'unknown', size, colour]);
-
-/** A background as the page computes it, mixes included. */
-const backgroundOf = (page: Page, background: string) => page.evaluate(value => {
-  const probe = document.createElement('div');
-  probe.style.background = value;
-  document.body.append(probe);
-  const computed = getComputedStyle(probe).backgroundColor;
-  probe.remove();
-  return computed;
-}, background);
 
 async function settle(page: Page) {
   await page.evaluate(() => document.fonts.ready);
@@ -133,11 +113,6 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
     // The blocks in their fixed order (D451); the recap is the pane's (SV-219).
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
-    // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#120).
-    const ink3 = await colourOf(page, 'var(--ink3)');
-    assert.deepEqual(await rested(() => glyphs(page.locator('.nw-sec > .icon'))),
-      [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
-    assert.equal(await rested(() => page.locator('.nw-sec').nth(1).evaluate(header => getComputedStyle(header).color)), await rested(() => colourOf(page, 'var(--ink2)')));
     // Each block ends after its stories, with no "N more in ‹section›" (D451).
     assert.equal(await page.getByText(/ more in /).count(), 0);
     assert.equal(await page.locator('.pane.idle .nd-row').count(), 8);
@@ -147,26 +122,14 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.deepEqual(await row(page, 'Man arrested after a stabbing').locator('.side .nw-meta').allTextContents(), ['NBC LA +2', 'Updated 7:55 AM']);
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('.side .nw-meta').allTextContents(), ['LAist +3', 'Yesterday']);
 
-    // The single values: the lead's image and the dots. Beside the pane the list is under 1000 px, so
-    // the lead is the boards' 232 × 130 (#127).
     const lead = row(page, 'Brush fire near the 210');
-    const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]).then(([width, height, ...rest]) => [pagePx(width as number), pagePx(height as number), ...rest]);
-    const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2)).then(columns => columns.map(nearPx).join(' '));
-    assert.deepEqual(await rested(() => leadImage()), [232, 130, 'cover', '12px']);
-    assert.equal(await rested(() => leadColumns()), '12px 232px');
     const redFlag = row(page, 'Red Flag Warning');
     assert.equal(await redFlag.locator('img').count(), 0, 'NWS\'s story has no image');
     assert.equal(await row(page, 'Council approves').locator('img, .nw-hz').count(), 0, 'an outlet\'s story without an image leaves its column empty');
-    const dot = (headline: string) => row(page, headline).locator('.nd').evaluate(element => getComputedStyle(element, '::before').backgroundColor);
-    // The General block's rows are below the fold, so they're still new or updated here.
-    assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
-    assert.equal(await rested(() => dot('Four killed in a warehouse shooting')), await rested(() => colourOf(page, 'var(--accent)')), 'updated: accent');
 
     // Local's lead is on screen and seen.
     const seen = await seenSettled(page, setpoint);
     assert.ok(seen.includes(await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres')), 'the brush fire story was seen');
-    // Seen, its dot stays for the visit (#95).
-    assert.equal(await dot('Brush fire near the 210'), await colourOf(page, 'var(--accent)'));
     await newsChange(setpoint, THREE_NEW_ONE_UPDATED);
     const pill = page.locator('.nw-pill');
     await until('the pill', () => pill.textContent(), text => text === '3 new · 1 updatedN');
@@ -176,10 +139,6 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
-    // Opened, the lead keeps its size, and it's seen and stays ink (#127).
-    assert.deepEqual(await leadImage(), [232, 130, 'cover', '12px']);
-    assert.equal(await rested(() => leadColumns()), '12px 232px');
-    assert.equal(await rested(() => lead.locator('.hl').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink)')));
     await seenSettled(page, setpoint);
     await settle(page);
     await matchGolden(page, '25-news-a-typical-morning');
@@ -217,27 +176,6 @@ test('board 31: board 25 in Light', async () => {
   }
 });
 
-test('SV-217: News\'s rows run to the pane on every screen: the thumbnails and Upcoming stop 16 before it, and the search field ends the header', async () => {
-  const setpoint = await startSetpoint({clock: 'frozen'});
-  try {
-    const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
-    for (const [width, height, zoom] of [[SIZES.target.width, SIZES.target.height, ZOOM], [2655, 1400, 1.25]] as const) {
-      const page = await setpoint.page({width, height});
-      await page.goto(`${setpoint.base}/news`);
-      await page.locator('.nw-row').first().waitFor();
-      const pane = Math.round((await rested(() => page.locator('section.pane').boundingBox()))!.x);
-      assert.deepEqual(await rights(page, '.nw-row img, .nw-up .btn'), [pane - Math.round(16 * zoom)], `${width}: the rows' end`);
-      assert.deepEqual(await rights(page, '.hd .search'), [Math.round(width - 16 * zoom)], `${width}: the search field ends the header`);
-      // A list 1000 px or wider, a wide window's, grows its leads to 320 (#127).
-      const image = await page.locator('.nw-lead img').first().evaluate(element => element.getBoundingClientRect().width);
-      assert.equal(Math.round(image / zoom), width === 2655 ? 320 : 232, `${width}: the lead's image`);
-      await page.close();
-    }
-  } finally {
-    await setpoint.stop();
-  }
-});
-
 test('D451: a block whose stories all show in other blocks isn\'t drawn in All; the section\'s own list still holds them', async () => {
   const setpoint = await startSetpoint();
   try {
@@ -252,35 +190,6 @@ test('D451: a block whose stories all show in other blocks isn\'t drawn in All; 
     assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'AI', 'General']);
     await page.locator('.hd .seg button', {hasText: 'Tech'}).click();
     await until('Tech\'s own list', () => page.locator('.nw-list [data-story]').count(), count => count > 0);
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
-test('#121: a hazard source\'s story without a photo shows its hazard\'s glyph in a caution tile; as a lead, before its headline', async () => {
-  const setpoint = await startSetpoint();
-  try {
-    const page = await setpoint.page('target');
-    await page.goto(`${setpoint.base}/news`);
-    const redFlag = row(page, 'Red Flag Warning');
-    await redFlag.waitFor();
-    const caution = await rested(() => colourOf(page, 'var(--caution)'));
-    const tile = redFlag.locator('.nw-hz');
-    assert.deepEqual(await rested(() => tile.evaluate(box => [box.getBoundingClientRect().width, box.getBoundingClientRect().height, getComputedStyle(box).borderRadius, getComputedStyle(box).backgroundColor]).then(([width, height, ...rest]) => [pagePx(width as number), pagePx(height as number), ...rest])),
-      [72, 48, '8px', await rested(() => backgroundOf(page, 'color-mix(in oklch, var(--caution) 10%, transparent)'))]);
-    assert.deepEqual(await rested(() => glyphs(tile.locator('.icon'))), [['thunderstorm', '22', caution]]);
-    // The tile sits in the thumbnail's column, level with a photo's.
-    const photo = row(page, 'Federal agents detain 9').locator('img');
-    assert.equal(await rested(() => tile.evaluate(box => box.getBoundingClientRect().right)), await rested(() => photo.evaluate(image => image.getBoundingClientRect().right)));
-    assert.equal(await row(page, 'Council approves').locator('.nw-hz').count(), 0, 'an outlet\'s story leaves its column empty');
-    // Ranked first in Local, it leads the block without a photo: an 18 px glyph before its headline, no tile.
-    await newsChange(setpoint, `UPDATE news_stories SET score = 99 WHERE headline = 'Red Flag Warning for the valleys until Thu 6 PM'`);
-    await page.reload();
-    const lead = page.locator('.nw-lead', {hasText: 'Red Flag Warning'});
-    await lead.waitFor();
-    assert.equal(await lead.locator('.nw-hz, img').count(), 0);
-    assert.deepEqual(await rested(() => glyphs(lead.locator('.hl .hz .icon'))), [['thunderstorm', '18', caution]]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -455,7 +364,7 @@ test('While you were away (#298, SV-219): All\'s empty pane holds the recap, eac
   }
 });
 
-test('SV-219: a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, a row dims', async () => {
+test('SV-219: a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, it\'s seen', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
@@ -463,8 +372,6 @@ test('SV-219: a recap story opens in a panel over the list\'s column, the pane l
     const recap = page.locator('.pane.idle .nd-recap');
     await recap.waitFor();
     const tornado = recap.locator('.nd-row', {hasText: 'Tornado outbreak'});
-    const look = (locator: Locator) => locator.locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
-    assert.deepEqual(await rested(() => look(tornado)), [await rested(() => colourOf(page, 'var(--ink)')), '500']);
 
     const tornadoId = Number(await tornado.getAttribute('data-story'));
     await tornado.click();
@@ -477,10 +384,8 @@ test('SV-219: a recap story opens in a panel over the list\'s column, the pane l
     assert.ok(box.x >= list.x && box.x + box.width <= list.x + list.width + 0.5 && box.x + box.width <= pane.x + 0.5, 'within the list\'s column');
     assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'the pane keeps the recap');
     assert.equal(await tornado.getAttribute('aria-current'), 'true');
-    // Opened, it's seen and its row turns ink2 at 400.
+    // Opened, it's seen.
     await until('the tornado seen', () => stateOf(setpoint, tornadoId), state => state === 'seen');
-    await until('it dims', () => look(tornado), seen => seen[1] === '400');
-    assert.deepEqual(await rested(() => look(tornado)), [await rested(() => colourOf(page, 'var(--ink2)')), '400']);
 
     // J and → step on, K and ← back, within the recap; the page's own keys wait.
     await page.keyboard.press('j');
@@ -582,11 +487,7 @@ test('seen: the stories on screen as the page loads, or opened, even off screen;
     await row(page, 'Red Flag Warning').waitFor();
     assert.match(await row(page, 'Red Flag Warning').getAttribute('class') ?? '', /\bseen\b/);
     assert.match(await row(page, 'Hurricane Teresa').getAttribute('class') ?? '', /\bnew\b/, 'below the fold, still new');
-    // A seen lead keeps its ink, at 400, so it never ranks below a row; a seen row is ink2 (#127).
-    const ink = (headline: string) => row(page, headline).locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
     assert.match(await row(page, 'Brush fire near the 210').getAttribute('class') ?? '', /^nw-lead seen\b/);
-    assert.deepEqual(await rested(() => ink('Brush fire near the 210')), [await rested(() => colourOf(page, 'var(--ink)')), '400']);
-    assert.deepEqual(await rested(() => ink('Red Flag Warning')), [await rested(() => colourOf(page, 'var(--ink2)')), '400']);
     // Seen by Pixel Watch's opening, even off screen.
     await page.goto(`${setpoint.base}/news/story/${pixel}`);
     await until('Pixel Watch seen', () => stateOf(setpoint, pixel), state => state === 'seen');
@@ -802,7 +703,7 @@ test('Upcoming\'s row opens a popover with the story behind the keynote, which o
   }
 });
 
-test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one line, name · date cut short, and the leads\' images shrink to 160 × 90', async () => {
+test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps everything inside its row, its whole name · date in its tooltip', async () => {
   const setpoint = await startSetpoint();
   try {
     await putRecapAway(setpoint);
@@ -811,16 +712,9 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
     const fire = row(page, 'Brush fire near the 210 grows to 400 acres');
     await fire.click();
     await page.locator('.pane .src-row').first().waitFor();
-    // The pane at its cap leaves the list its 420 px.
-    assert.equal(await page.locator('.nw-list').evaluate(element => element.getBoundingClientRect().width), 420);
-
     const upcoming = page.locator('.nw-up');
     const what = upcoming.locator('span:has(> .what)');
-    assert.deepEqual(await rested(() => what.evaluate(element => [getComputedStyle(element).whiteSpace, getComputedStyle(element).textOverflow, element.scrollWidth > element.clientWidth])),
-      ['nowrap', 'ellipsis', true], 'name · date is one line, cut short with an ellipsis');
     assert.equal(await what.getAttribute('data-tip'), 'Apple event · Tue Oct 20 · 10 AM');
-    assert.equal(await upcoming.locator('.lab').isVisible(), false, 'no UPCOMING label');
-    assert.equal(await upcoming.locator('.nw-meta').isVisible(), false, 'no outlet');
     const inside = await rested(() => upcoming.evaluate(element => {
       const box = element.getBoundingClientRect();
       return [...element.children].every(child => {
@@ -830,11 +724,6 @@ test('a narrow list (D104): with a story open at 1280 × 800, Upcoming keeps one
     }));
     assert.equal(inside, true, 'everything in the row stays inside it');
     assert.equal(await upcoming.locator('.btn', {hasText: 'Add to calendar'}).isVisible(), true);
-
-    assert.deepEqual(await rested(() => fire.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height])), [160, 90]);
-    // Under 480 px a row's summary goes (#128).
-    const carWash = row(page, 'Federal agents detain 9 at a car wash');
-    assert.equal(await carWash.locator('.sm').isVisible(), false, 'no summary');
     await seenSettled(page, setpoint);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

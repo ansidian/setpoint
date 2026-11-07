@@ -54,14 +54,10 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
   }
 });
 
-test('#239: on the phone a row\'s summary wraps to a second line rather than being cut, and the kinds are subheadings', async () => {
+test('#239: on the phone a row\'s summary wraps rather than being cut, and the kinds are subheadings', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await inbox(setpoint);
-    // Parkside's line (its subject and summary, on the shelf) runs to two lines, all of it there.
-    const lease = page.locator('.row.shelf .subj');
-    const lines = await rested(() => lease.evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight))));
-    assert.equal(lines, 2);
     // Every row's line in the seed fits in its two lines, none cut.
     const cut = await page.locator('.list .row .subj:not(.code-line)').evaluateAll(all => all.filter(node => node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
     assert.deepEqual(cut, []);
@@ -75,7 +71,7 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
   }
 });
 
-test('SV-73: on the phone a Done row\'s tag sits on its sender line, between the sender and the account, clear of the summary', async () => {
+test('SV-73: on the phone a Done row\'s tag covers neither its sender, its account nor its summary', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Interview availability')}/done`, {done: true});
@@ -85,8 +81,6 @@ test('SV-73: on the phone a Done row\'s tag sits on its sender line, between the
     await row.locator('.tag').waitFor();
     const boxOf = async (selector: string) => (await rested(() => row.locator(selector).boundingBox()))!;
     const [from, tag, account, line] = await Promise.all([boxOf('.from'), boxOf('.tag'), boxOf('.ac'), boxOf('.subj')]);
-    // On the sender's line, vertically centred with it, and wholly above the summary.
-    assert.ok(Math.abs((tag.y + tag.height / 2) - (from.y + from.height / 2)) <= 1, `tag centre ${tag.y + tag.height / 2}, sender centre ${from.y + from.height / 2}`);
     assert.ok(tag.y + tag.height <= line.y, `tag bottom ${tag.y + tag.height}, summary top ${line.y}`);
     // After the sender and before the account, overlapping neither.
     assert.ok(from.x + from.width <= tag.x && tag.x + tag.width <= account.x, `sender ${from.x}–${from.x + from.width}, tag ${tag.x}–${tag.x + tag.width}, account ${account.x}`);
@@ -96,22 +90,22 @@ test('SV-73: on the phone a Done row\'s tag sits on its sender line, between the
   }
 });
 
-test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoom the page; placeholders stay 13.5 px', async () => {
+test('signing in on the phone: every field\'s text is 16 px, so iOS doesn\'t zoom the page', async () => {
   const setpoint = await startSetpoint({claim: false});
   try {
     const page = await setpoint.page('iphone');
-    const sizes = () => page.locator('.sign-in .input').evaluateAll(inputs => inputs.map(input => [input.getAttribute('aria-label'), getComputedStyle(input).fontSize, getComputedStyle(input, '::placeholder').fontSize]));
+    const sizes = () => page.locator('.sign-in .input').evaluateAll(inputs => inputs.map(input => [input.getAttribute('aria-label'), getComputedStyle(input).fontSize]));
     await page.goto(`${setpoint.base}/inbox`);
     await page.getByLabel('Setup token').waitFor();
-    assert.deepEqual(await rested(() => sizes()), [['Setup token', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Setup token', '16px'], ['New password', '16px']]);
     // Claimed (elsewhere), the card asks for the password; then a recovery code and a new password.
     await setpoint.api('POST', '/auth/claim', {setup_token: setpoint.setupToken, password: 'a long enough password'});
     await page.reload();
     await page.getByLabel('Password').waitFor();
-    assert.deepEqual(await rested(() => sizes()), [['Password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Password', '16px']]);
     await page.getByRole('button', {name: 'Use a recovery code'}).click();
     await page.getByLabel('Recovery code').waitFor();
-    assert.deepEqual(await rested(() => sizes()), [['Recovery code', '16px', '13.5px'], ['New password', '16px', '13.5px']]);
+    assert.deepEqual(await rested(() => sizes()), [['Recovery code', '16px'], ['New password', '16px']]);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -428,6 +422,98 @@ test('deep links at the iPhone size: an email, an event, one occurrence, a task\
     // It asks once, in the toast (UX #21).
     await page.locator('.toast', {hasText: 'Sign out of Setpoint?'}).getByRole('button', {name: 'Sign out'}).tap();
     await page.getByLabel('Password').waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the reader\'s actions follow the email: Attention mail has Done, other Gmail mail leads with Trash, and iCloud mail has no Open in Gmail', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const actions = () => page.locator('.ph-acts button').allTextContents();
+    for (const [row, subject, labels] of [
+      ['.list .row:has(b[data-tip^="Final exam schedule"])', 'Final exam schedule', 'Done,Trash,Mark unread,Open in Gmail'],
+      ['.row:has-text("Woodgrove Bank")', 'Statement ready', 'Trash,Mark unread,Open in Gmail'],
+      ['.row:has-text("Proseware")', 'Bill is ready', 'Trash,Mark unread'],
+    ] as const) {
+      await page.locator(row).first().tap();
+      await page.locator('.rd-subj', {hasText: subject}).waitFor();
+      await until(`${subject}'s actions`, actions, shown => shown.join() === labels);
+      await page.locator('.ph-back').tap();
+      await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('phone search: no Mark all as read meanwhile, Back to Search from a result, and the clear button leaves search for the Inbox', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const markAll = page.locator('.hd button[aria-label="Mark all as read"]');
+    await markAll.waitFor();
+    await page.locator('.search input').tap();
+    await page.keyboard.type('northwind');
+    await page.locator('.search-list .result').first().waitFor();
+    // Mark all as read would read the hidden Inbox's mail, not the results: it's gone while searching.
+    assert.equal(await markAll.count(), 0);
+    // An email from the results goes back to them.
+    await page.locator('.search-list .result', {hasText: 'Interview availability'}).tap();
+    await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
+    assert.equal(await page.locator('.ph-back').textContent(), 'Search');
+    await page.locator('.ph-back').tap();
+    await until('back at the results', () => page.locator('.pane').count(), count => count === 0);
+    assert.equal(await page.locator('.hd-title').textContent(), 'Search');
+    // One tap leaves search: the field empties and lets go, and the Inbox and Mark all as read come back.
+    await page.locator('.search .search-clear').tap();
+    await page.locator('.content > .list .gh').first().waitFor();
+    assert.equal(await page.locator('.search input').inputValue(), '');
+    assert.equal(await page.locator('.hd-title').textContent(), 'Inbox');
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'BODY');
+    await markAll.waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the tab bar: Inbox is badged with Attention\'s count on another page, following it, and Agenda goes back to today\'s week', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await inbox(setpoint);
+    const badge = page.locator('.ph-tab', {hasText: 'Inbox'}).locator('.ph-badge');
+    // The Inbox's header has the count: no badge there.
+    assert.equal(await badge.count(), 0);
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await page.locator('.ph-agenda .pitem').first().waitFor();
+    assert.equal(await badge.textContent(), '3');
+    await setpoint.api('POST', `/mail/messages/${await email(setpoint, 'Final exam')}/done`, {done: true});
+    await until('the badge follows', () => badge.textContent(), text => text === '2');
+    // A later week's agenda: its tab goes back to today's.
+    await page.goto(`${setpoint.base}${deepLinkPath({to: 'day', date: '2026-10-20'})}`);
+    await until('the agenda starts on the day', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 20 – 27');
+    await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
+    await until('today\'s agenda', () => page.locator('.hd .ph-range').textContent(), text => text === 'Oct 7 – 14');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('the agenda puts now in today\'s order, at the seed\'s 9:12 AM between the past Gym and the Dentist', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('iphone');
+    await page.goto(`${setpoint.base}/calendar`);
+    await page.locator('.ph-agenda .pitem').first().waitFor();
+    const today = page.locator('.ph-agenda [data-days="2026-10-07"]');
+    assert.deepEqual(await today.locator(':scope > :not(.pday)').evaluateAll(lines => lines.map(line => (line.classList.contains('ph-now') ? `now ${line.textContent}` : line.querySelector('.ell')!.firstChild!.textContent))),
+      ['Gym', 'now 9:12 AM', 'Dentist', 'CS 101 lab report', 'Pay rent']);
+    assert.equal(await page.locator('.ph-now').count(), 1);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

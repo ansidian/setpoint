@@ -1734,3 +1734,29 @@ test('a task proposal: no Place; Project suggests Todoist\'s projects, and makes
     await setpoint.stop();
   }
 });
+
+test('search-13: no results are the field\'s own chips, and × knocking one off takes the line with it', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('/');
+    await page.keyboard.type('north');
+    await page.locator('.arow.result').first().waitFor();
+    // No results: each part is the field's own chip.
+    await page.locator('.search input').fill('!confirmation march');
+    await page.locator('.suggest').click();
+    await until('their chips', () => page.locator('.search .qchip').count(), count => count === 2);
+    await page.locator('.search input').click();
+    await page.keyboard.type('zebra');
+    const parts = page.locator('.no-results .part');
+    await until('no results', () => parts.count(), count => count >= 2);
+    // Knocking off "zebra" leaves a search with emails, so the line goes rather than losing one chip.
+    await parts.last().getByRole('button').click();
+    await until('a chip knocked off, and the line gone with it', () => page.locator('.no-results').count(), count => count === 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

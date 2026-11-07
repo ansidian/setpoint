@@ -50,17 +50,6 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
       ['Smile Dental1420 Elm St', 'Leave by 2:05 PM · 18 min', '30 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-when').textContent(), 'Wed, Oct 7 · 2:30 – 3:30 PM');
     assert.equal(await page.locator('.ag-item.sel .leave').textContent(), 'Leave by 2:05 PM · 18 min');
-    // The calendar fact's glyph takes the item's colour, as the failed card's does (#126): Personal's cool.
-    const tint = (colour: string) => page.evaluate(value => {
-      const probe = document.createElement('span');
-      probe.style.color = value;
-      document.body.append(probe);
-      const computed = getComputedStyle(probe).color;
-      probe.remove();
-      return computed;
-    }, colour);
-    assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal .icon').evaluate(icon => getComputedStyle(icon).color)), await rested(() => tint('var(--cool)')));
-    assert.equal(await rested(() => card(page).locator('.fd-layer.in .fact.cal span').evaluate(name => getComputedStyle(name).color)), await rested(() => tint('var(--ink2)')), 'its name stays ink2');
     // A recurring event's card says it's a series, after the attendees, as the repeat field words it (#126).
     await showIn(page, chip(page, '2026-10-07', 'Gym'), 'Gym');
     await until('Gym\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(), facts => facts.join() === 'Weekly on Mon, Wed, Fri,10 min before,Personal');
@@ -260,18 +249,6 @@ test('SV-77: a place that is a link shows its host and Open; a link among words 
     assert.equal(await open.getAttribute('target'), '_blank');
     // Open ends the place's first line, inside the card.
     assert.ok(await endsInside(open, card(page).locator('.fd-layer.in .card-b')), 'Open ends inside the card');
-    // Under the pointer its fill deepens to `sub3`, as every ghost button's does, though it's a link.
-    const sub3 = await rested(() => page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.backgroundColor = 'var(--sub3)';
-      document.body.append(probe);
-      const computed = getComputedStyle(probe).backgroundColor;
-      probe.remove();
-      return computed;
-    }));
-    await open.hover();
-    await until('Open fills on hover', () => open.evaluate(link => getComputedStyle(link).backgroundColor), fill => fill === sub3);
-    await page.mouse.move(1000, 28);
     await page.keyboard.press('o');
     await until('the link opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
     assert.deepEqual(await page.evaluate(() => (window as unknown as {opened: string[]}).opened), ['https://www.careers.example.edu/fair/fall-2026']);

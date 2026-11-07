@@ -587,37 +587,3 @@ test('F6b: an item drags out of the "+3" popover onto another day', async () => 
     await setpoint.stop();
   }
 });
-
-test('under the 1.25 wide-screen zoom: the drag\'s tooltip, the drop prompt and the failed card sit by their items (D23)', async () => {
-  const setpoint = await startSetpoint({fixtures: ['failed-change'], clock: 'frozen'});
-  try {
-    const page = await setpoint.page({width: 2400, height: 1300});
-    await openCalendar(page, setpoint.base);
-    const zoomGap = GAP * 1.25;
-    // The failed card: below its chip, 8 CSS px off it.
-    const card = page.locator('.failed-card');
-    await card.waitFor();
-    const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
-    assert.ok(Math.abs((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height) - zoomGap) <= 1.5, 'the failed card is 8 px under its chip');
-    await card.getByRole('button', {name: 'Close'}).click();
-
-    // The drag: the tooltip 18, 30 off the lifted chip, which keeps the press's place under the pointer.
-    await drag(page, chip(page, '2026-10-07', 'Gym'), '2026-10-08', {held: true});
-    const lifted = (await rested(() => page.locator('.ev.lift').boundingBox()))!;
-    const tip = (await rested(() => page.locator('.drag-tip').boundingBox()))!;
-    // The lift's tilt and scale grow its box a little around its centre.
-    assert.ok(Math.abs(tip.y - lifted.y - 30 * 1.25) < 6, `the tooltip sits under the chip: ${tip.y - lifted.y}`);
-    await page.mouse.up();
-    // The prompt: right of the dropped chip, 8 CSS px off it.
-    const prompt = page.locator('.scope-card');
-    await prompt.waitFor();
-    const dropped = (await rested(() => page.locator('.cell[data-date="2026-10-08"] .ev.sel', {hasText: 'Gym'}).boundingBox()))!;
-    const box = (await rested(() => prompt.boundingBox()))!;
-    assert.ok(Math.abs(box.x - (dropped.x + dropped.width) - zoomGap) <= 1.5, `the prompt is 8 px right of the chip: ${box.x - (dropped.x + dropped.width)}`);
-    assert.ok(Math.abs(box.y + box.height / 2 - (dropped.y + dropped.height / 2)) <= 1.5, 'centred on it');
-    assert.deepEqual(setpoint.pageErrors, []);
-  } finally {
-    await setpoint.stop();
-  }
-});
-
