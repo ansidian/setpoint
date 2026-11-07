@@ -60,15 +60,18 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
 
 ## Tests own behaviour
 
-- Every bug fix starts with a failing test. There is no known-failing list.
+- Every behaviour bug fix starts with a failing test. A presentation bug is fixed without one,
+  unless it hides or breaks content and the sweep doesn't catch it. When a bug looks visual but its
+  cause is logic (state, timing, data), test that logic at the smallest level, not its appearance.
+  There is no known-failing list.
 - Pure rules are tested as tables. Persistence runs against an ephemeral SQLite database.
 - Providers are faked at the HTTP or IMAP boundary: no test, seed or dev run reaches a real
   provider, ntfy, Home Assistant or a model. No mocks of internal modules.
 - A widget's own behaviour goes to a component test (`web/tests/components/`); a browser check
   keeps what needs the app around it: the server, routing, layout across pages, journeys.
-- Assert what the screen does, plus a single value only where it depends on state, theme or the
-  cascade, or is a relation (fits, beside, equal room). A literal that restates the stylesheet or a
-  token goes untested on purpose (D269).
+- Assert what the screen does. A single value goes untested unless it's a relation that keeps
+  content usable (fits, not clipped, not covered); colours, sizes and motion are judged by eye
+  (D269).
 - Checks are deterministic: no stress run (D446), no dependence on animation, scrolling or real
   time (D417). A timed window is held (`holdToast`, `page.clock`, a held server answer), a read
   waits for what it reads, and a check that races is fixed by removing the dependence, never by
