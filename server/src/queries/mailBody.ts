@@ -19,13 +19,13 @@ export interface BodyPage {
 }
 
 /**
- * The body page, with images when the rule allows them or `show` asks (DESIGN.md › The reader › Images),
- * for the web's frame or the iPhone app's, which runs no script.
+ * The body page, with images when `images` says so, or, when it's null, when the rule allows them
+ * (DESIGN.md › The reader › Images), for the web's frame or the iPhone app's, which runs no script.
  */
-export function messageBody(store: Store, messageId: number, show: boolean, frame: EmailFrame = 'web'): BodyPage {
+export function messageBody(store: Store, messageId: number, images: boolean | null, frame: EmailFrame = 'web'): BodyPage {
   const message = messageDetail(store, messageId);
   if (!message.body_html) throw notFound('That email has no HTML body.');
-  const load = message.remote_content.load || show;
+  const load = images ?? message.remote_content.load;
   return {html: emailPage(safeEmail(message.body_html, load), frame), policy: emailPolicy(load, frame), load};
 }
 

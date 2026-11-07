@@ -143,6 +143,8 @@ export interface AppOptions {
 }
 
 const MAX_STREAMS = 20;
+// How long the browser keeps an email's body page: a sitting's worth, so a release's changes to it reach the reader soon.
+const BODY_KEPT_S = 3600;
 const ICS_READ_PATH = '/api/calendar/import/read';
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
 
@@ -293,6 +295,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     cancelPendingSignIn(store, readCookie(c, cookies.pending));
     clearCookie(c, cookies, 'session');
     clearCookie(c, cookies, 'pending');
+    // The email bodies the browser kept go with the session.
+    c.header('Clear-Site-Data', '"cache"');
     return c.body(null, 204);
   });
 
@@ -535,9 +539,15 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
   app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
   // The HTML body as its own page, for the reader's sandboxed frame: its own policy, not the app's
-  // (?images=show is the images bar's Show; ?frame=app is the iPhone app's, with no script). Plain-text email has none.
+  // (?frame=app is the iPhone app's, with no script). Plain-text email has none. ?images=show loads
+  // its images (the rule's or the images bar's Show), ?images=hide doesn't, and without it the rule
+  // decides. The web's, named either way, is always the same page, so the browser keeps it a while
+  // and an email opened again shows without asking (sign-out clears it).
   app.get('/api/mail/messages/:id/body', c => {
-    const page = messageBody(store, id(c.req.param('id')), c.req.query('images') === 'show', c.req.query('frame') === 'app' ? 'app' : 'web');
+    const images = c.req.query('images');
+    const frame = c.req.query('frame') === 'app' ? 'app' : 'web';
+    const page = messageBody(store, id(c.req.param('id')), images === 'show' ? true : images === 'hide' ? false : null, frame);
+    if (frame === 'web' && (images === 'show' || images === 'hide')) c.header('Cache-Control', `private, max-age=${BODY_KEPT_S}`);
     c.header('Content-Security-Policy', page.policy);
     c.header('X-Content-Type-Options', 'nosniff');
     c.header('Referrer-Policy', 'no-referrer');

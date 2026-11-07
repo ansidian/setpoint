@@ -718,6 +718,40 @@ test('SV-159: copying a code reads its email, in place: the row\'s Copy and the 
   }
 });
 
+test('an email read earlier shows again at once, the window\'s focus between: its own answers and its frame\'s held, it draws at the height it had', async () => {
+  const setpoint = await startSetpoint({fixtures: ['coffee-html']});
+  try {
+    const page = await load(setpoint);
+    const coffee = await idOf(setpoint, 'The Contoso Coffee Journal');
+    const box = page.locator('.mailframe-box');
+    await openNoise(page);
+    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    await page.frameLocator('iframe.mailframe').locator('table').waitFor();
+    await until('the frame has its height', () => box.getAttribute('class'), name => name === 'mailframe-box');
+    const height = await page.locator('iframe.mailframe').evaluate(frame => frame.style.height);
+    await rowOf(page, 'Pick a 30-minute slot').click();
+    await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
+    // Back from another window: what's on screen refreshes, what isn't keeps its answer.
+    const refetched = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/mail/inbox');
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await drawn(page, await refetched);
+    const gate = Promise.withResolvers<void>();
+    await page.route(new RegExp(`/api/mail/messages/${coffee}(/body.*|/open)?$`), async route => {
+      await gate.promise;
+      await route.continue().catch(() => undefined);
+    });
+    await page.locator('.row', {hasText: 'Contoso Coffee'}).click();
+    // The body shows only once the email is in, so with its answer held this is the one kept.
+    await box.waitFor();
+    assert.equal(await box.getAttribute('class'), 'mailframe-box');
+    assert.equal(await page.locator('iframe.mailframe').evaluate(frame => frame.style.height), height);
+    gate.resolve();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('images hidden: Show loads them this time; Always show trusts the domain', async () => {
   const setpoint = await startSetpoint({fixtures: ['coffee-html']});
   try {
@@ -751,7 +785,7 @@ test('images hidden: Show loads them this time; Always show trusts the domain', 
     // policy names) and loads the body page by src.
     const element = page.locator('iframe.mailframe');
     assert.equal(await element.getAttribute('sandbox'), 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
-    assert.match((await element.getAttribute('src'))!, /^\/api\/mail\/messages\/\d+\/body$/);
+    assert.match((await element.getAttribute('src'))!, /^\/api\/mail\/messages\/\d+\/body\?images=hide$/);
     // Hidden, nothing has left 127.0.0.1.
     await page.waitForTimeout(300);
     assert.equal(elsewhere.length, 0, elsewhere.join(' '));

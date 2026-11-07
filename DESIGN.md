@@ -388,7 +388,7 @@ Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
   type's tile (#122), name and size, then the preview's eye and **Download** with its glyph; PDF,
   image and CSV open a preview, and an invitation (ICS) has **Add to calendar** before Download (#122).
 - **Opening:** the tools and the head draw from the email's row at once; only the body waits, a
-  skeleton meanwhile (#229).
+  skeleton meanwhile (#229); an email read earlier shows whole at once (#343).
 
 ### Search
 
@@ -4248,3 +4248,9 @@ it changes what's on screen.
     included, turns Light into Night and Night into Light, kept per browser as Appearance is. It
     never goes to System, and on System it does nothing, so the browser's preference stays in
     charge until Appearance in Settings or ⌘K is changed. No toast, and no motion of its own (#291).
+343. **What was read earlier shows again at once** (Claude's call, 2026-11-07). An email, story, job
+    or event opened earlier comes back as it was while it refreshes, coming back from another window
+    included (focus refreshes what's on screen and keeps the rest, up to the 60 longest off screen
+    forgotten). An email's body page is kept by the browser for an hour (sign-out clears it), and its
+    frame draws at the height it had, without the fade-in of #229, the page correcting it if the pane
+    has changed width.

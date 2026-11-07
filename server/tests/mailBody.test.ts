@@ -72,6 +72,25 @@ describe('GET /api/mail/messages/:id/body', () => {
     expect((await api.send('GET', `/api/mail/messages/${id}/body`)).headers.get('content-security-policy')).toContain('https:');
   });
 
+  test('the web\'s page named with or without images is kept by the browser, and is the same whatever the rule says; the rule\'s own and the iPhone app\'s are not kept', async () => {
+    const {api, id} = await coffee();
+    await api.send('POST', '/api/mail/trusted-domains', {body: {domain: 'contosocoffee.example'}});
+    const hidden = await api.send('GET', `/api/mail/messages/${id}/body?images=hide`);
+    expect(hidden.headers.get('cache-control')).toBe('private, max-age=3600');
+    expect(hidden.headers.get('content-security-policy')).not.toContain('https:');
+    expect(hidden.body.match(/data-hidden-image/g)).toHaveLength(7);
+    const shown = await api.send('GET', `/api/mail/messages/${id}/body?images=show`);
+    expect(shown.headers.get('cache-control')).toBe('private, max-age=3600');
+    expect(shown.headers.get('content-security-policy')).toContain('https:');
+    expect((await api.send('GET', `/api/mail/messages/${id}/body`)).headers.get('cache-control')).toBe('no-store');
+    expect((await api.send('GET', `/api/mail/messages/${id}/body?frame=app&images=show`)).headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('signing out clears what the browser kept', async () => {
+    const {api} = await coffee();
+    expect((await api.send('POST', '/api/auth/sign-out')).headers.get('clear-site-data')).toBe('"cache"');
+  });
+
   test('plain-text email has no body page; signed out is refused', async () => {
     const {w, api, id} = await coffee();
     expect((await api.send('GET', `/api/mail/messages/${idOf(w, 'Interview availability for Software Engineer I')}/body`)).status).toBe(404);

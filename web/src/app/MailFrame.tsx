@@ -14,6 +14,17 @@ const TALLEST = 200_000;
 /** What a frame holds before its page says its height. */
 const RESERVED = 240;
 
+// The height each body page last said, the latest last: an email opened again (the browser keeps its
+// page) draws at once at that height instead of fading in, and its page corrects it if the pane changed.
+const KEPT_HEIGHTS = 60;
+const heights = new Map<string, number>();
+
+function keepHeight(src: string, height: number) {
+  heights.delete(src);
+  heights.set(src, height);
+  if (heights.size > KEPT_HEIGHTS) heights.delete(heights.keys().next().value!);
+}
+
 const KEY_FLAGS = ['metaKey', 'ctrlKey', 'altKey', 'shiftKey', 'repeat', 'isComposing'] as const;
 
 /** The key the measuring script says was pressed in the email, or null when it isn't one. */
@@ -27,16 +38,25 @@ function pressedKey(sent: unknown): KeyboardEventInit | null {
 export function MailFrame({messageId, show, title}: {messageId: number; show: boolean; title: string}) {
   const src = emailBodyPath(messageId, show);
   const frame = useRef<HTMLIFrameElement>(null);
+  // The page the frame holds, for the height it says.
+  const shown = useRef(src);
+  useEffect(() => {
+    shown.current = src;
+  }, [src]);
   // Null until the page has said how tall it is: until then the frame holds 240 px on `sub`, unseen,
-  // then fades in at its height (reader-01, #229).
-  const [height, setHeight] = useState<number | null>(null);
+  // then fades in at its height (reader-01, #229). An email seen before starts at its last height.
+  const [height, setHeight] = useState<number | null>(() => heights.get(src) ?? null);
 
   useEffect(() => {
     const listen = (event: MessageEvent) => {
       if (!frame.current || event.source !== frame.current.contentWindow) return;
       const data = event.data as {setpointMailHeight?: unknown; setpointMailKey?: unknown} | null;
       const reported = data?.setpointMailHeight;
-      if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) setHeight(Math.min(Math.ceil(reported), TALLEST));
+      if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) {
+        const next = Math.min(Math.ceil(reported), TALLEST);
+        keepHeight(shown.current, next);
+        setHeight(next);
+      }
       // A key pressed in the email comes to the page's own keys as if the frame itself held it (SV-149).
       const key = pressedKey(data?.setpointMailKey);
       if (key) frame.current.dispatchEvent(new KeyboardEvent('keydown', {...key, bubbles: true, cancelable: true}));

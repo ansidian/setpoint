@@ -27,10 +27,10 @@ export const PROMPTS_PATH = '/mail/prompts';
 export const TRIAGE_PATH = '/mail/triage';
 
 /**
- * The email's HTML body as its own page, for the reader's sandboxed frame (its own policy; Show
- * asks for its remote images this time).
+ * The email's HTML body as its own page, for the reader's sandboxed frame (its own policy), with its
+ * remote images or without, as the rule or Show has it: named either way, the browser keeps it.
  */
-export const emailBodyPath = (id: number, show: boolean) => `/api/mail/messages/${id}/body${show ? '?images=show' : ''}`;
+export const emailBodyPath = (id: number, images: boolean) => `/api/mail/messages/${id}/body?images=${images ? 'show' : 'hide'}`;
 
 const inboxPaths = () => cachedPaths('/mail/inbox');
 

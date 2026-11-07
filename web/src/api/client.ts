@@ -191,20 +191,35 @@ export function prefetch(path: string) {
 /** The resources on screen. */
 export const mountedPaths = () => [...mounted.keys()];
 
-/** Refreshes a resource on screen; one that isn't is forgotten, so it loads fresh when it shows. */
-export function refreshIfShown(path: string) {
-  if (mounted.has(path)) void refresh(path);
-  else cache.delete(path);
+// A resource that leaves the screen keeps its last answer, so going back to it (an email read
+// earlier, a story, a job) shows it at once while it refreshes, as it does when it mounts. Past this
+// many, the one longest off screen is forgotten. Oldest first.
+export const KEPT_OFF_SCREEN = 60;
+const offScreen = new Set<string>();
+
+function forget(path: string) {
+  cache.delete(path);
+  offScreen.delete(path);
 }
 
-/** Refreshes everything on screen (focus, a resync, signing in again). */
+/** Refreshes a resource on screen; one that isn't, which a change has made wrong, is forgotten, so it loads fresh when it shows. */
+export function refreshIfShown(path: string) {
+  if (mounted.has(path)) void refresh(path);
+  else forget(path);
+}
+
+/**
+ * Refreshes everything on screen (focus, a resync, signing in again). What's off screen keeps its
+ * answer, which may be from before: it refreshes when it shows again.
+ */
 export function refreshAll() {
-  for (const path of [...cache.keys()]) refreshIfShown(path);
+  for (const path of mounted.keys()) void refresh(path);
 }
 
 /** Forgets every answer, after signing out. */
 export function clearCache() {
   cache.clear();
+  offScreen.clear();
   notify();
 }
 
@@ -242,11 +257,17 @@ const subscribe = (listener: () => void) => {
 function mountResource(path: string): () => void {
   const shown = mounted.has(path);
   mounted.set(path, (mounted.get(path) ?? 0) + 1);
+  offScreen.delete(path);
   if (!shown) void refresh(path);
   return () => {
     const count = (mounted.get(path) ?? 1) - 1;
-    if (count) mounted.set(path, count);
-    else mounted.delete(path);
+    if (count) return void mounted.set(path, count);
+    mounted.delete(path);
+    offScreen.add(path);
+    for (const oldest of offScreen) {
+      if (offScreen.size <= KEPT_OFF_SCREEN) break;
+      forget(oldest);
+    }
   };
 }
 
