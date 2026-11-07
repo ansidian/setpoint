@@ -21,7 +21,7 @@ export interface OpenDatabase {
  * `search_body` for every email already there with the rule new mail gets, inside its own
  * transaction. Every database replays it once, so this stays while that migration does.
  */
-export function registerMigrationFunctions(sqlite: Database.Database) {
+function registerMigrationFunctions(sqlite: Database.Database) {
   sqlite.function('search_body_of', {deterministic: true}, body => searchBody(String(body)));
 }
 

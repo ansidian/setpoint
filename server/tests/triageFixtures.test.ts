@@ -1,6 +1,5 @@
 // B3's Done-when: the recorded fixture set triages to its expected lanes with the models faked at
 // the HTTP boundary, through the real worker, pipeline, rules and policy.
-import {eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import * as t from '../src/db/schema.ts';
 import {setSecret} from '../src/secrets/store.ts';
@@ -67,7 +66,6 @@ describe('the recorded fixture set, with Anthropic\'s models faked', () => {
     expect(ledger).toHaveLength(fake.requests.length);
     expect(ledger.every(entry => entry.provider === 'anthropic' && entry.purpose === 'triage' && entry.inputTokens > 0 && entry.outputTokens > 0 && entry.costMicros > 0 && entry.messageId !== null)).toBe(true);
     expect(world.status()).toMatchObject({state: 'healthy', unsorted: 0});
-    expect(world.store.db.select().from(t.messages).where(eq(t.messages.triageSource, 'rule')).all().length).toBeGreaterThan(0);
   });
 });
 

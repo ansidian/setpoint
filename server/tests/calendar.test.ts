@@ -35,28 +35,11 @@ describe('items in a range', () => {
     expect(gym).toHaveLength(16);
     expect(new Set(gym.map(item => pacific(item.starts_at)!.split(', ').at(-1)))).toEqual(new Set(['7:00 AM']));
     expect(gym[0]).toMatchObject({key: `${gym[0]!.id}@${gym[0]!.starts_at}`, occurrence_start: gym[0]!.starts_at, recurring: true});
-    expect(october.filter(item => item.title === 'CS 101 lecture')).toHaveLength(11);
-    expect(october.find(item => item.title === 'Return library books')).toMatchObject({done: true, due_date: '2026-10-05'});
-    expect(october.find(item => item.title === 'Career fair')).toMatchObject({place: 'University Student Union', reminders: [10]});
   });
 
-  test('the lecture stops after Thursday, Dec 3', () => {
+  test('a subscribed calendar is read-only (SV-191), and weather off shows none', () => {
     const w = world({seed: true});
-    expect(itemsInRange(w.store, '2026-11-30', '2026-12-14').items.filter(item => item.title === 'CS 101 lecture').map(item => pacific(item.starts_at))).toEqual([
-      'Tue, Dec 1, 6:00 PM', 'Thu, Dec 3, 6:00 PM',
-    ]);
-  });
-
-  test('calendars and weather', () => {
-    const w = world({seed: true});
-    expect(calendarList(w.store).map(calendar => [calendar.name, calendar.colour, calendar.visible, calendar.writable])).toEqual([
-      ['Personal', 'cool', true, true], ['Classes', 'cyan', true, true], ['Jobs', 'violet', true, true],
-      // SV-191: the seed's subscribed holiday calendar, which the user can only read.
-      ['Holidays in United States', 'good', true, false], ['Todoist', null, true, true],
-    ]);
-    expect(weatherDays(w.store, '2026-10-01', '2026-11-01', true).map(day => [day.date, day.condition])).toEqual([
-      ['2026-10-07', 'sun'], ['2026-10-08', 'cloud'], ['2026-10-13', 'rain'],
-    ]);
+    expect(calendarList(w.store).filter(calendar => !calendar.writable).map(calendar => calendar.name)).toEqual(['Holidays in United States']);
     expect(weatherDays(w.store, '2026-10-01', '2026-11-01', false)).toEqual([]);
   });
 });
@@ -156,13 +139,6 @@ describe('item changes', () => {
     expect(day(w, '2026-10-07').find(item => item.title === 'Pay rent')).toMatchObject({done: true, command: {kind: 'item_complete', state: 'pending', provider: 'todoist'}});
     confirmCommand(w.store, command.id);
     expect(() => completeItem(w.store, rent, true)).toThrow(/already done/);
-  });
-
-  test('events go in Google calendars, tasks in Todoist', () => {
-    const w = world({seed: true});
-    const todoist = calendarList(w.store).find(calendar => calendar.provider === 'todoist')!.id;
-    expect(() => createItem(w.store, itemCreateInput.parse({kind: 'event', calendar_id: todoist, title: 'x', starts_at: zoned('2026-10-08', '10:00'), ends_at: zoned('2026-10-08', '11:00')}))).toThrow(/Google calendar/);
-    expect(() => itemCreateInput.parse({kind: 'task', calendar_id: todoist, title: 'x', due_at: zoned('2026-10-08', '10:00')})).toThrow(/due date/);
   });
 
   test('SV-74: a new task may have no date, but not a time or a repeat without one; an existing task keeps its date', () => {

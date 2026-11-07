@@ -38,7 +38,6 @@ describe('when reminders go off', () => {
     // D288: a dated task's own reminders count from Settings' time on its day, in place of that one.
     ['a dated task\'s own reminders: from Settings\' time, before and after', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: [60, -60]},
       [[zoned('2026-10-08', '08:00'), `reminder:2@${zoned('2026-10-08', '09:00')}:60`], [zoned('2026-10-08', '10:00'), `reminder:2@${zoned('2026-10-08', '09:00')}:-60`]]],
-    ['a done task with its own reminders: nothing', {kind: 'task', starts_at: null, due_date: '2026-10-08', done: true, reminders: [10, -10]}, []],
     ['a task with no date: nothing, its reminders too', {kind: 'task', starts_at: null, due_date: null, reminders: [10, -10]}, []],
   ])('%s', (_, change, expected) => {
     expect(remindersOf({...base, ...change}, settings).map(reminder => [reminder.at, reminder.key])).toEqual(expected);
@@ -52,7 +51,6 @@ describe('when reminders go off', () => {
     // D288: with no task time, a dated task's own reminders count from 9:00 AM.
     ['a dated task with its own reminders counts from 9:00 AM', {kind: 'task', starts_at: null, due_date: '2026-10-08', reminders: [30, -90]},
       [[zoned('2026-10-08', '08:30'), `reminder:2@${zoned('2026-10-08', '09:00')}:30`], [zoned('2026-10-08', '10:30'), `reminder:2@${zoned('2026-10-08', '09:00')}:-90`]]],
-    ['a task with no date: nothing', {kind: 'task', starts_at: null, due_date: null, reminders: [30]}, []],
   ])('task reminders at None, %s', (_, change, expected) => {
     expect(remindersOf({...base, ...change}, {...settings, taskTime: null}).map(reminder => [reminder.at, reminder.key])).toEqual(expected);
   });

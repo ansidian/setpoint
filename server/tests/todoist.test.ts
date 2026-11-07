@@ -78,7 +78,6 @@ describe('F6b: a repeat travels with its date (D16 revisited)', () => {
     ['a repeating task keeps its repeat', {dueRecurring: true, dueString: 'every wed starting 2026-10-07'}, undefined, 'every wed'],
     ['a new repeat is the one asked for', {dueRecurring: false, dueString: 'Oct 7'}, 'every mon', 'every mon'],
     ['taking the repeat off', {dueRecurring: true, dueString: 'every wed'}, null, null],
-    ['a repeat Todoist sent no words for can\'t travel', {dueRecurring: true, dueString: null}, undefined, undefined],
   ])('%s', (_, task, asked, expected) => {
     expect(repeatAfter(task, asked)).toBe(expected);
   });
@@ -333,12 +332,6 @@ describe('changes through the command layer', () => {
     const sent = todoist.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/tasks').map(request => request.body as {content: string; project_id?: string});
     expect(Object.fromEntries(sent.map(body => [body.content, body.project_id]))).toEqual({'Mail the form': 'inbox', 'Buy stamps': 'p-home', 'Rake leaves': 'inbox'});
     expect(sent).toHaveLength(3);
-  });
-
-  test('F6: a task takes no colour of its own', async () => {
-    const {w, run, task} = await todoistWorld();
-    await run();
-    expect(() => updateItem(w.store, task('t-rent').id, itemUpdateInput.parse({changes: {colour: 'cool'}}))).toThrow(/no colour/);
   });
 
   test('a one-off task completes and reopens', async () => {

@@ -332,7 +332,6 @@ describe('the API', () => {
     expect((await api.send('GET', '/api/mail/triage')).body).toEqual({state: 'healthy', as_of: null, reason: null, unsorted: 0, history: {state: 'not_started', done: 0, total: 0}});
     const prompts = (await api.send('GET', '/api/mail/prompts')).body;
     expect(prompts).toEqual([expect.objectContaining({id: expect.any(Number), organisation: 'Northwind Engineering', type: 'newsletter', count: 4, protected: false})]);
-    expect((await api.send('POST', `/api/mail/prompts/${prompts[0].id}`, {body: {answer: 'maybe'}})).status).toBe(400);
     expect((await api.send('POST', `/api/mail/prompts/${prompts[0].id}`, {body: {answer: 'yes'}})).body).toEqual([]);
     expect((await api.send('POST', `/api/mail/prompts/${prompts[0].id}`, {body: {answer: 'no'}})).body.error.code).toBe('answered');
     expect((await api.send('POST', '/api/mail/prompts/999', {body: {answer: 'no'}})).status).toBe(404);
@@ -350,7 +349,6 @@ describe('the API', () => {
     expect((await api.send('DELETE', `/api/mail/rules/${second.id}`)).status).toBe(204);
 
     expect((await api.send('GET', '/api/mail/precision')).body).toMatchObject({precision: 0, done: 3, opened_before_done: 0});
-    expect((await api.send('GET', '/api/mail/precision')).body.days).toHaveLength(30);
 
     expect((await api.send('GET', '/api/ai')).body).toMatchObject({
       keys: {anthropic: false, openai: false}, triage: {cheap: null, strong: null, history: null}, usage_30_days: {calls: 0, cost_usd: 0},

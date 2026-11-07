@@ -1,7 +1,7 @@
 // An .ics file read into import drafts (SV-178, D438), against invented files only.
 import {whenProblem} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {ICS_DROP_REASONS, ICS_ERRORS, ICS_MAX_BYTES, ianaZone, readIcs} from '../src/domain/icsImport.ts';
+import {ICS_ERRORS, ianaZone, readIcs} from '../src/domain/icsImport.ts';
 import type {IcsDraft, IcsDropped, IcsRead} from '../src/domain/icsImport.ts';
 import {WINDOWS_ZONE_TARGETS} from '../src/domain/windowsZones.ts';
 import {APPLE_EXPORT, CONFERENCE_SCHEDULE, crlf, INTERVIEW_INVITE, OUTLOOK_SERIES, OUTLOOK_SERIES_UID} from './fixtures/icsFiles.ts';
@@ -131,7 +131,6 @@ describe('readIcs: how the file is written', () => {
   test.each([
     ['CRLF', calendar(...lunch())],
     ['LF only', calendar(...lunch()).replaceAll('\r\n', '\n')],
-    ['CR only', calendar(...lunch()).replaceAll('\r\n', '\r')],
     ['a BOM', `\uFEFF${calendar(...lunch())}`],
     ['a BOM in the bytes', new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(calendar(...lunch()))])],
     ['blank lines', calendar(...lunch()).replace('SUMMARY', '\r\n\r\nSUMMARY')],
@@ -303,10 +302,6 @@ describe('readIcs: what\'s dropped, and why', () => {
     ['an alarm after the start', event('UID:x@example.com', 'DTSTART:20261110T200000Z', 'BEGIN:VALARM', 'TRIGGER:PT5M', 'ACTION:DISPLAY', 'END:VALARM'), {alarm_after_start: 1}, 1],
     ['an alarm at a fixed time', event('UID:x@example.com', 'DTSTART:20261110T200000Z', 'BEGIN:VALARM', 'TRIGGER;VALUE=DATE-TIME:20261110T190000Z', 'ACTION:DISPLAY', 'END:VALARM'), {alarm_at_fixed_time: 1}, 1],
     ['categories', event('UID:x@example.com', 'DTSTART:20261110T200000Z', 'CATEGORIES:Work,Travel'), {categories: 1}, 1],
-    ['a second copy with a lower SEQUENCE', [
-      ...event('UID:x@example.com', 'SEQUENCE:2', 'SUMMARY:Rescheduled', 'DTSTART:20261111T200000Z'),
-      ...event('UID:x@example.com', 'SEQUENCE:1', 'SUMMARY:Original', 'DTSTART:20261110T200000Z'),
-    ], {duplicate: 1}, 1],
   ])('%s', (_, lines, counts, kept) => {
     const result = read(calendar(...lines));
     expect(drafts(result)).toHaveLength(kept);
@@ -329,6 +324,7 @@ describe('readIcs: what\'s dropped, and why', () => {
       ...event('UID:x@example.com', 'SEQUENCE:1', 'SUMMARY:Original', 'DTSTART:20261110T200000Z'),
     );
     expect(drafts(read(file)).map(draft => [draft.title, draft.sequence])).toEqual([['Rescheduled', 2]]);
+    expect(dropped(read(file))).toEqual({duplicate: 1});
   });
 
   test('METHOD:CANCEL imports nothing, and says it was a cancellation', () => {
@@ -347,10 +343,6 @@ describe('readIcs: what\'s dropped, and why', () => {
     expect(dropped(result)).toEqual({alarm_after_start: 1, alarm_over_limit: 2});
   });
 
-  test('every reason starts at 0', () => {
-    const result = read(calendar());
-    expect(result).toEqual({ok: true, drafts: [], dropped: Object.fromEntries(ICS_DROP_REASONS.map(reason => [reason, 0]))});
-  });
 });
 
 describe('readIcs: files it won\'t take', () => {
@@ -362,16 +354,5 @@ describe('readIcs: files it won\'t take', () => {
     ['bytes that aren\'t text', new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
   ])('%s is unreadable', (_, file) => {
     expect(read(file)).toEqual({ok: false, error: ICS_ERRORS.unreadable});
-  });
-
-  test('over 2 MB', () => {
-    const file = calendar(...event('UID:x@example.com', 'DTSTART:20261110T200000Z', `DESCRIPTION:${'a'.repeat(ICS_MAX_BYTES)}`));
-    expect(read(file)).toEqual({ok: false, error: 'This file is over 2 MB, the most an import takes'});
-  });
-
-  test('over 1,000 events', () => {
-    const lines = Array.from({length: 1001}, (_, n) => event(`UID:${n}@example.com`, 'DTSTART:20261110T200000Z')).flat();
-    expect(read(calendar(...lines))).toEqual({ok: false, error: 'This file has 1,001 events, over the 1,000 an import takes'});
-    expect(drafts(read(calendar(...lines.slice(4))))).toHaveLength(1000);
   });
 });

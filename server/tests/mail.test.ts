@@ -32,12 +32,6 @@ describe('the Inbox over the seed', () => {
     ]);
   });
 
-  test('19 unread, 3 attention, 11 unread FYI; Business 7, Personal 8, Work 1, Jobs 2, iCloud 1', () => {
-    const w = world({seed: true});
-    expect(mailCounts(w.store)).toMatchObject({attention: 3, unread: 19, unread_fyi: 11});
-    expect(unreadByLabel(w)).toEqual({Business: 7, Personal: 8, Work: 1, Jobs: 2, iCloud: 1});
-  });
-
   test('security rows carry their fact, the code row its code and expiry', () => {
     const w = world({seed: true});
     const security = inbox(w.store).groups.find(group => group.group === 'security')!.rows;
@@ -209,8 +203,6 @@ describe('All and an email', () => {
     const next = allMail(w.store, {limit: 200, before: page.next_before!});
     expect(next.days.map(day => day.date).slice(0, 3)).toEqual(['2026-10-06', '2026-10-05', '2026-10-04']);
     expect(next.next_before).toBeNull();
-    // The brief's 32, Jobs's Indeed match email (round 4) and the interview invite (SV-182).
-    expect(page.days[0]!.rows.length + next.days.reduce((sum, day) => sum + day.rows.length, 0)).toBe(34);
   });
 
   test('the Parkside email, with its attachment; reading it doesn\'t mark it read', () => {

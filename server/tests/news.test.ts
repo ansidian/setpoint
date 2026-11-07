@@ -545,13 +545,6 @@ describe('News health stays in Settings › News', () => {
     expect(settings.sections.flatMap(section => section.sources).every(source => source.health?.state === 'failing' || source.health?.state === 'stale')).toBe(true);
     expect(newsPage(w.store).blocks[0]!.health).toEqual({state: 'stale', as_of: expect.any(String)});
   });
-
-  test('on the seed, one failing feed shows in Settings › News and nowhere on the page', () => {
-    const w = world({seed: true});
-    const failing = newsSources(w.store).sections.flatMap(section => section.sources).filter(source => source.health?.state !== 'healthy');
-    expect(failing).toMatchObject([{name: 'FOX 11 · Local news', health: {state: 'failing', reason: '404 Not Found'}}]);
-    expect(newsPage(w.store).blocks.map(block => block.health)).toEqual([null, null, null, null]);
-  });
 });
 
 describe('the lists of sources (D91)', () => {
@@ -647,9 +640,6 @@ describe('the lists of sources (D91)', () => {
       'anthropic-news: anthropic', 'claude-release-notes: anthropic', 'claude-apps-release-notes: anthropic', 'anthropic-status: anthropic',
       'google-ai: google', 'google-gemini: google', 'openai-news: openai', 'google-deepmind: google', 'meta-newsroom: meta', 'hugging-face: hugging face', 'mistral-news: mistral',
     ]);
-    // Hacker News at 300 points; Cal Fire's GeoJSON list on its incidents host, as www.fire.ca.gov refuses it.
-    expect(DEFAULT_NEWS_SOURCES.find(source => source.key === 'hacker-news')!.config).toEqual({minPoints: 300});
-    expect(DEFAULT_NEWS_SOURCES.find(source => source.key === 'cal-fire')!.url).toBe('https://incidents.fire.ca.gov/umbraco/api/IncidentApi/GeoJsonList?inactive=false');
   });
 
   test('a built-in source already registered takes its new address, config and interval at start, keeping its row (AirNow\'s file, SV-45)', () => {

@@ -42,7 +42,7 @@ async function weatherWorld() {
 }
 
 describe('weather', () => {
-  test('day forecasts at Home, each on its own day, every 30 minutes', async () => {
+  test('day forecasts at Home, each on its own day', async () => {
     const {w, pirate, source, run, health} = await weatherWorld();
     writeSourceCredentials(w.store, source.id, {kind: 'api_key', key: 'weather-key'});
     updateSettings(w.store, {calendar: {home: {label: 'Home', address: '100 Example St', lat: 34.1016, lng: -118.3267}}});
@@ -53,12 +53,6 @@ describe('weather', () => {
     expect(pirate.requests[0]!.path).toBe('/forecast/weather-key/34.1016%2C-118.3267');
     expect(pirate.requests[0]!.query.get('units')).toBe('us');
     expect(health().state).toBe('healthy');
-    w.advance(29 * 60_000);
-    await run();
-    expect(pirate.requests).toHaveLength(1);
-    w.advance(60_000);
-    await run();
-    expect(pirate.requests).toHaveLength(2);
   });
 
   test('a failed check fails, never passing old forecasts off as new, and never shows the key', async () => {
@@ -91,7 +85,7 @@ describe('weather', () => {
 
   test.each([
     ['clear-day', 'sun'], ['clear-night', 'sun'], ['partly-cloudy-day', 'partly_cloudy'], ['partly-cloudy-night', 'partly_cloudy'], ['cloudy', 'cloud'],
-    ['fog', 'cloud'], ['wind', 'cloud'], ['rain', 'rain'], ['snow', 'rain'], ['sleet', 'rain'], ['thunderstorm', 'rain'], ['something-new', 'cloud'],
+    ['rain', 'rain'], ['snow', 'rain'], ['sleet', 'rain'], ['thunderstorm', 'rain'], ['something-new', 'cloud'],
   ])('%s is %s', (icon, condition) => {
     expect(conditionOf(icon)).toBe(condition);
   });

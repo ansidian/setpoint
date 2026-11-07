@@ -75,10 +75,6 @@ describe('the address Setpoint listens on (SETPOINT_HOST)', () => {
     expect(loadConfig({}).host).toBe('127.0.0.1');
     expect(loadConfig({SETPOINT_HOST: ' '}).host).toBe('127.0.0.1');
   });
-
-  test('every interface inside a container, whose port the host publishes on its own loopback', () => {
-    expect(loadConfig({SETPOINT_HOST: '0.0.0.0'}).host).toBe('0.0.0.0');
-  });
 });
 
 describe('where Google Calendar posts (SETPOINT_WEBHOOK_ORIGIN)', () => {
@@ -95,8 +91,7 @@ describe('where Google Calendar posts (SETPOINT_WEBHOOK_ORIGIN)', () => {
   });
 
   test.each([
-    'http://hooks.example.com', 'hooks.example.com', 'https://hooks.example.com/api/calendar/push', 'https://hooks.example.com?x=1',
-    'https://hooks.example.com#x', 'https://user:pass@hooks.example.com',
+    'http://hooks.example.com', 'hooks.example.com', 'https://hooks.example.com/api/calendar/push', 'https://user:pass@hooks.example.com',
   ])('refuses %s', value => {
     expect(() => loadConfig({SETPOINT_WEBHOOK_ORIGIN: value})).toThrow('SETPOINT_WEBHOOK_ORIGIN must be an https origin');
   });

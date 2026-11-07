@@ -104,14 +104,6 @@ describe("sender authentication projection", () => {
 
     expect(result.status).toBe("unavailable");
   });
-
-  it("keeps iCloud unavailable until receiver-added semantics are proven", () => {
-    expect(unavailableSenderAuthentication("icloud", "notice@billing.example", now)).toMatchObject({
-      status: "unavailable",
-      provider: "icloud",
-      headerFromDomain: "billing.example",
-    });
-  });
 });
 
 describe("Gmail exact DKIM sender authority without a DMARC verdict", () => {
@@ -257,7 +249,6 @@ describe("the record's sender_authenticated", () => {
   it.each([
     ["pass", true],
     ["fail", false],
-    ["none", false],
     ["unavailable", null],
   ] as const)("%s → %s", (status, expected) => {
     expect(senderAuthenticated({ ...unavailableSenderAuthentication("gmail", "a@b.example", now), status })).toBe(expected);

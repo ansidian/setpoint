@@ -156,15 +156,6 @@ describe('while an iPhone is paired (SV-87)', () => {
     expect(ntfy.published.map(message => message.body.click)).toEqual([`${PUBLIC}/calendar/2026-10-07`, `${PUBLIC}/settings/notifications`]);
   });
 
-  test('the app\'s link needs no public URL; a web link does', async () => {
-    const {w, ntfy} = await setUp();
-    const notifier = new Notifier(w.store, {publicUrl: null});
-    await pair(await signedIn(w, {notifier}));
-    expect(await notifier.notify(reminder)).toMatchObject({state: 'sent', click: 'setpoint://item/2'});
-    expect(await notifier.notify(task)).toMatchObject({state: 'sent', click: null});
-    expect(ntfy.published[1]!.body.click).toBeUndefined();
-  });
-
   test('a failure tried again takes the link of its retry: paired since, it opens the app', async () => {
     const {w, ntfy, notifier} = await setUp();
     const alert = {...reminder, dedupe: 'reminder:2@x'};

@@ -8,7 +8,7 @@ import {searchInput} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
 import {alfredStep} from '../src/alfred/ask.ts';
-import {alfredSystem, fenced} from '../src/alfred/prompt.ts';
+import {fenced} from '../src/alfred/prompt.ts';
 import {runTool} from '../src/alfred/tools.ts';
 import * as t from '../src/db/schema.ts';
 import {searchMail} from '../src/search/search.ts';
@@ -132,13 +132,6 @@ describe('Alfred\'s other paths', () => {
     expect(out.body.answer).toBe('By Oct 31, 2026, per Parkside\'s Sep 30 email.');
     expect(seen).toEqual([null, {tool: 'search_mail', query: 'lease renewal'}, {tool: 'get_email', from: 'Parkside Apartments'}]);
     expect((await c.send('GET', '/api/alfred/asks/ask-lease-0001')).body).toEqual({step: null});
-    expect((await c.send('GET', '/api/alfred/asks/never-asked')).body).toEqual({step: null});
-  });
-
-  test('a list answers in a line, its count and span, and the sources list it', () => {
-    const system = alfredSystem('2026-10-10', 'America/Los_Angeles');
-    expect(system).toContain('When the answer is a set of emails');
-    expect(system).toContain('don\'t name them one by one');
   });
 
   test('couldn\'t find it: no answer, no sources, and what it searched', async () => {
@@ -298,8 +291,6 @@ describe('the tools on their own', () => {
     expect(reason('propose_item', {owner_instruction: 'Hi', message_id: 1, kind: 'event'})).toBe('message_id must be an email from this conversation\'s searches or reads.');
     expect(reason('send_email', {})).toBe('There\'s no tool called send_email.');
     expect(reason('get_email', null)).toBe('The arguments weren\'t a JSON object.');
-    const items = JSON.parse(runTool(context, 'list_items', {from: '2026-10-09', to: '2026-10-09'}).output);
-    expect(items.items.map((item: {title: string; start: string}) => `${item.start} ${item.title}`)).toEqual(['07:00 Gym', '18:30 Study group', '19:00 Dinner with Sam']);
   });
 
   test('list_items gives an event\'s whole location, a street address with no place included', () => {

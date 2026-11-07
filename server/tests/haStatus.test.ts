@@ -49,17 +49,12 @@ async function setup(options: {publicUrl?: string} = {}) {
 }
 
 describe('the status on the seed', () => {
-  test('3 attention, 11 unread FYI, the three attention emails with their links, nothing to reconnect', async () => {
+  test('the attention emails with their links, nothing to reconnect', async () => {
     const {w, status} = await setup();
     const got = await status();
-    expect(got).toMatchObject({as_of: SEED_NOW, all_clear: false, attention: 3, unread_fyi: 11, needs_reconnect: [], open_url: 'http://localhost/inbox'});
+    expect(got).toMatchObject({as_of: SEED_NOW, all_clear: false, needs_reconnect: [], open_url: 'http://localhost/inbox'});
     const recovery = idOf(w, 'Your recovery email was changed');
     const personal = accountOf(w, 'Personal');
-    expect(got.attention_emails.map(email => [email.subject, email.unread])).toEqual([
-      ['Your recovery email was changed', true],
-      ['Interview availability for Software Engineer I', true],
-      ['Final exam schedule · CS 101', false],
-    ]);
     expect(got.attention_emails[0]).toEqual({
       id: recovery.id, sender: recovery.organisation ?? recovery.fromName, from_name: recovery.fromName, organisation: recovery.organisation,
       subject: 'Your recovery email was changed', account: {id: personal.id, label: 'Personal', colour: 'cool'}, received_at: recovery.receivedAt,

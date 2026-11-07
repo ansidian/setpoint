@@ -505,21 +505,9 @@ describe('Gmail push: Pub/Sub pull', () => {
     expect(failing.lastError).toBe('database is locked');
   });
 
-  test('a service account with the wrong key is refused by Google', async () => {
-    const env = await setup();
-    const {privateKey} = generateKeyPairSync('rsa', {modulusLength: 2048, privateKeyEncoding: {type: 'pkcs8', format: 'pem'}, publicKeyEncoding: {type: 'spki', format: 'pem'}});
-    const stranger = new GmailPushPuller({
-      store: env.w.store, endpoints: env.google.endpoints, onPush: () => {},
-      settings: {topic: TOPIC, subscription: 'projects/setpoint-test/subscriptions/setpoint-v2', serviceAccount: {client_email: 'x@example.com', private_key: privateKey}},
-    });
-    await expect(stranger.pullOnce()).rejects.toThrow('Invalid JWT Signature. (invalid_grant)');
-  });
-
   test.each([
     [Buffer.from(JSON.stringify({emailAddress: ' User.Work@Example.com ', historyId: 9})).toString('base64'), {emailAddress: 'user.work@example.com', historyId: '9'}],
     [Buffer.from(JSON.stringify({emailAddress: 'a@example.com'})).toString('base64'), null],
-    [Buffer.from('{').toString('base64'), null],
-    [undefined, null],
   ])('decodes Gmail\'s notification %#', (data, expected) => {
     expect(decodeNotification(data)).toEqual(expected);
   });

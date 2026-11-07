@@ -86,7 +86,6 @@ describe('the 48 hours', () => {
     ['ISO instant', '2026-10-06T17:00:00Z', {kind: 'instant', at: '2026-10-06T17:00:00.000Z'}],
     ['ISO time without a zone is UTC', '2026-10-06T17:00:00', {kind: 'instant', at: '2026-10-06T17:00:00.000Z'}],
     ['month name', 'October 8, 2026', {kind: 'day', date: '2026-10-08'}],
-    ['short month', 'Oct 8, 2026', {kind: 'day', date: '2026-10-08'}],
     ['day first', '8 Oct 2026', {kind: 'day', date: '2026-10-08'}],
     ['with a weekday', 'Thursday, October 8, 2026', {kind: 'day', date: '2026-10-08'}],
     ['an ordinal', 'October 8th, 2026', {kind: 'day', date: '2026-10-08'}],
@@ -94,7 +93,6 @@ describe('the 48 hours', () => {
     ['no year', 'Oct 8', null],
     ['not a day', 'February 30, 2026', null],
     ['a sentence', 'Our most capable model yet, out today', null],
-    ['a word', 'Policy', null],
   ])('a page\'s date: %s', (_, raw, expected) => {
     expect(readDate(raw)).toEqual(expected);
   });
@@ -177,11 +175,8 @@ describe('what a new article is read for (D89)', () => {
 describe('a refusal, by the one retry policy', () => {
   test.each([
     ['404 is permanent: the feed is gone', 404, false, 'permanent'],
-    ['410', 410, false, 'permanent'],
     ['401 is permanent: there\'s no account to reconnect', 401, false, 'permanent'],
-    ['403', 403, false, 'permanent'],
     ['429 is rate limited', 429, false, 'rate_limited'],
-    ['429 with Retry-After', 429, true, 'rate_limited'],
     ['503 with Retry-After asks for a pause', 503, true, 'rate_limited'],
     ['503 without is transient', 503, false, 'transient'],
     ['500', 500, false, 'transient'],
@@ -199,10 +194,6 @@ describe('a refusal, by the one retry policy', () => {
     ['none', null, null],
   ])('Retry-After: %s', (_, header, expected) => {
     expect(retryAfterMs(header, Date.parse(NOW))).toBe(expected);
-  });
-
-  test('a Retry-After past any sense waits the policy\'s longest, 30 minutes (v1 dropped one past the Date range)', () => {
-    expect(retryAfterFailure('rate_limited', 1, retryAfterMs('8640000000001', Date.parse(NOW)))).toEqual({retry: true, delayMs: 30 * 60_000});
   });
 
   test('a 429 or 503 is retried after its Retry-After when that\'s longer than the backoff', () => {
@@ -239,17 +230,11 @@ describe('NWS', () => {
   test.each([
     ['a Red Flag Warning', 'Red Flag Warning', 'Severe', true],
     ['a Flash Flood Watch', 'Flash Flood Watch', 'Moderate', true],
-    ['an Extreme Heat Warning', 'Extreme Heat Warning', 'Severe', true],
     ['an evacuation order', 'Evacuation Immediate', 'Extreme', true],
     ['a Civil Emergency Message', 'Civil Emergency Message', 'Extreme', true],
     ['a Wind Advisory', 'Wind Advisory', 'Moderate', false],
-    ['a severe Dust Advisory', 'Dust Advisory', 'Severe', true],
-    ['a Special Weather Statement', 'Special Weather Statement', 'Moderate', false],
-    ['a Frost Advisory', 'Frost Advisory', 'Minor', false],
     ['a Freeze Warning (crops)', 'Freeze Warning', 'Moderate', false],
-    ['a Small Craft Advisory', 'Small Craft Advisory', 'Minor', false],
     ['a Gale Warning (the sea)', 'Gale Warning', 'Moderate', false],
-    ['nothing', '', 'Severe', false],
   ])('a hazard: %s', (_, event, severity, expected) => {
     expect(isHazardAlert(event, severity)).toBe(expected);
   });

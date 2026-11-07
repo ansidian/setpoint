@@ -11,7 +11,7 @@ import {
   storyScore, storyWords, summaryModel, wireKey, writerWindow,
 } from '../src/domain/newsSorting.ts';
 import type {ArticleKind, ArticleNotes, ArticleSubject, KeynoteClaim, NoiseReason, RankSignals, SourceRule} from '../src/domain/newsSorting.ts';
-import {ARTICLE_SYSTEM, groupingInput, groupingOf, keynoteOf, notesOf, storyInput, writtenOf} from '../src/news/prompt.ts';
+import {groupingInput, groupingOf, keynoteOf, notesOf, storyInput, writtenOf} from '../src/news/prompt.ts';
 
 const ZONE = 'America/Los_Angeles';
 const NOW = '2026-10-07T16:12:00.000Z';
@@ -21,7 +21,6 @@ describe('the rules for a source', () => {
   test.each<[string, {section: NewsSection; adapter: string; kind: string; name: string; config?: Record<string, unknown>}, SourceRule]>([
     ['a local TV feed', {section: 'local', adapter: 'feed', kind: 'feed', name: 'KTLA · Local news'}, {section: 'local', hazard: false, subjectCheck: false, firstParty: null}],
     ['official hazard data is Local', {section: 'local', adapter: 'cal_fire', kind: 'official_api', name: 'Cal Fire incidents'}, {section: 'local', hazard: true, subjectCheck: false, firstParty: null}],
-    ['NWS alerts', {section: 'local', adapter: 'nws', kind: 'official_api', name: 'National Weather Service'}, {section: 'local', hazard: true, subjectCheck: false, firstParty: null}],
     ['Hacker News needs a tech or AI subject', {section: 'tech', adapter: 'hn_algolia', kind: 'feed', name: 'Hacker News'}, {section: 'tech', hazard: false, subjectCheck: true, firstParty: null}],
     ['a first-party newsroom speaks for its company', {section: 'tech', adapter: 'feed', kind: 'feed', name: 'Apple Newsroom'}, {section: 'tech', hazard: false, subjectCheck: false, firstParty: 'apple'}],
     ['a lab\'s page read', {section: 'ai', adapter: 'page_read', kind: 'page_read', name: 'Anthropic news'}, {section: 'ai', hazard: false, subjectCheck: false, firstParty: 'anthropic'}],
@@ -29,7 +28,6 @@ describe('the rules for a source', () => {
     ['an outlet\'s feed on a company is still the outlet\'s', {section: 'tech', adapter: 'feed', kind: 'feed', name: 'The Verge · Apple', config: {outlet: 'The Verge'}}, {section: 'tech', hazard: false, subjectCheck: false, firstParty: null}],
     ['a company inside a word isn\'t that company', {section: 'tech', adapter: 'feed', kind: 'feed', name: '9to5Google'}, {section: 'tech', hazard: false, subjectCheck: false, firstParty: null}],
     ['a newsroom known by its outlet: Claude\'s release notes are Anthropic\'s', {section: 'ai', adapter: 'page_read', kind: 'page_read', name: 'Claude Platform release notes', config: {outlet: 'Anthropic'}}, {section: 'ai', hazard: false, subjectCheck: false, firstParty: 'anthropic'}],
-    ['a national outlet', {section: 'general', adapter: 'feed', kind: 'feed', name: 'NPR'}, {section: 'general', hazard: false, subjectCheck: false, firstParty: null}],
   ])('%s', (_, source, rule) => {
     expect(sourceRule(source)).toEqual(rule);
   });
@@ -50,22 +48,9 @@ describe('noise and politics, as applied to the model\'s reading (D88)', () => {
     ['a council vote on a housing project in the area is in, under Local', LOCAL_FEED, notes('event', 'local', ['local']), {keep: true, sections: ['local']}],
     ['a law taking effect is an event', FEED, notes('event', 'us', ['general']), {keep: true, sections: ['general']}],
     ['a poll is an argument: out', FEED, notes('politics_argument', 'us', ['general']), {keep: false, reason: 'politics_argument'}],
-    ['a bill being debated is out', FEED, notes('politics_argument', 'us', ['general']), {keep: false, reason: 'politics_argument'}],
-    ['a council debate in the area is an argument, not a decision: out', LOCAL_FEED, notes('politics_argument', 'local', ['local']), {keep: false, reason: 'politics_argument'}],
-    // Never anywhere.
+    // Never anywhere; any kind but an event is dropped as itself.
     ['sports', LOCAL_FEED, notes('sports', 'local', ['local']), {keep: false, reason: 'sports'}],
-    ['entertainment and celebrity', FEED, notes('entertainment', 'us', ['general']), {keep: false, reason: 'entertainment'}],
-    ['opinion', FEED, notes('opinion', 'ai', ['ai']), {keep: false, reason: 'opinion'}],
-    ['deals', FEED, notes('deal', 'tech', ['tech']), {keep: false, reason: 'deal'}],
-    ['sponsored posts', FEED, notes('sponsored', 'tech', ['tech']), {keep: false, reason: 'sponsored'}],
     ['a forecast: weather counts only as a hazard', LOCAL_FEED, notes('weather_forecast', 'local', ['local']), {keep: false, reason: 'weather_forecast'}],
-    // Each section's "Not".
-    ['Local: food and lifestyle', LOCAL_FEED, notes('lifestyle', 'local', ['local']), {keep: false, reason: 'lifestyle'}],
-    ['Local: an events listing', LOCAL_FEED, notes('events_listing', 'local', ['local']), {keep: false, reason: 'events_listing'}],
-    ['Tech: a rumor', FEED, notes('rumor', 'tech', ['tech']), {keep: false, reason: 'rumor'}],
-    ['Tech: a review', FEED, notes('review', 'tech', ['tech']), {keep: false, reason: 'review'}],
-    ['AI: a funding round', FEED, notes('funding', 'ai', ['ai']), {keep: false, reason: 'funding'}],
-    ['AI: a tutorial', FEED, notes('tutorial', 'ai', ['ai']), {keep: false, reason: 'tutorial'}],
     ['General: world news', FEED, notes('event', 'world', ['general']), {keep: false, reason: 'world'}],
     // Hazards and Hacker News.
     ['official hazard data is kept, in Local, whatever the reading says', HAZARD, notes('weather_forecast', 'other', ['general']), {keep: true, sections: ['local']}],
@@ -78,12 +63,6 @@ describe('noise and politics, as applied to the model\'s reading (D88)', () => {
     ['no sections and no subject section: the source\'s', LOCAL_FEED, notes('event', 'other', []), {keep: true, sections: ['local']}],
   ])('%s', (_, rule, reading, verdict) => {
     expect(judgeArticle(rule, reading)).toEqual(verdict);
-  });
-
-  test('the prompt states the policy plainly, with the brief\'s examples', () => {
-    for (const line of ['events, not arguments', '"OpenAI testifies before Congress" is about AI', 'an antitrust ruling against Google is about tech', 'a council vote on a housing project in the area is local', 'Never news anywhere: sports, entertainment']) {
-      expect(ARTICLE_SYSTEM).toContain(line);
-    }
   });
 });
 

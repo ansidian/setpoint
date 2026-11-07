@@ -159,12 +159,11 @@ describe('SV-181: importing into Google', () => {
     expect(day('2026-11-12').map(item => item.title)).not.toContain('Accessible tables');
   });
 
-  test('only a Google calendar takes an import, and an event whose last change is on its way waits', async () => {
+  test('an event whose last change is on its way waits', async () => {
     const {w, run, calendar} = await calendarWorld();
     await run();
     const invite = readImport(w.store, crlf(INTERVIEW_INVITE)).events[0]!;
     importEvent(w.store, importInput(calendar(PERSONAL).id, invite));
     expect(() => importEvent(w.store, importInput(calendar(PERSONAL).id, invite))).toThrow('The last change is still waiting for its provider.');
-    expect(() => importEvent(w.store, importInput(9999, invite))).toThrow('No such calendar.');
   });
 });

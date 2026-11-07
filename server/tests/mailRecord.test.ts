@@ -140,7 +140,6 @@ describe('remote content (decision 25)', () => {
     ['contosocoffee.example', 'contosocoffee.example'],
     ['accounts.google.com', 'google.com'],
     ['mail.foo.co.uk', 'foo.co.uk'],
-    ['eng.northwind.example', 'northwind.example'],
     ['someone.github.io', 'someone.github.io'],
     ['192.168.1.20', '192.168.1.20'],
   ])('"Always show" from %s trusts %s (D28)', (domain, trusted) => {

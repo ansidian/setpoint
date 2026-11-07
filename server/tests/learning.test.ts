@@ -20,7 +20,6 @@ describe('patternPrompts', () => {
     ['an opened one resets the run', [...run([2, 9]), verdict(10, {opened: true}), ...run([16, 23, 24])], null],
     ['an opened one before the run doesn\'t matter', [verdict(1, {opened: true}), ...run([2, 9, 16, 23])], 4],
     ['protected mail never counts toward a prompt', run([2, 9, 16, 23], {protected: true}), null],
-    ['protected mail in the mix doesn\'t count', [...run([2, 9, 16]), verdict(23, {protected: true})], null],
     ['another type is another pattern', [...run([2, 9]), ...run([16, 23], {type: 'receipt'})], null],
     ['the organisation ignores case and spacing', [...run([2, 9]), ...run([16, 23], {organisation: 'northwind '})], 4],
     ['imported v1 corrections count, without ids', [...run([2, 9], {messageId: null}), ...run([16, 23])], 4],

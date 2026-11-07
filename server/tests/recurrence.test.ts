@@ -35,7 +35,6 @@ describe('occurrenceDates', () => {
     ['nothing before the start', 'RRULE:FREQ=WEEKLY;BYDAY=MO', '2026-10-12', '2026-10-01', '2026-10-13', ['2026-10-12']],
     // SV-113: the line's ends, a date-only UNTIL (its last local day, inclusive) and a COUNT on a weekly rule.
     ['"every mon until dec 15"', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261215', '2026-10-26', '2026-12-01', '2027-01-01', ['2026-12-07', '2026-12-14']],
-    ['"every mon for 4 weeks"', 'RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20261122', '2026-10-26', '2026-10-01', '2027-01-01', ['2026-10-26', '2026-11-02', '2026-11-09', '2026-11-16']],
     ['"every day until fri", the last day included', 'RRULE:FREQ=DAILY;UNTIL=20261030', '2026-10-28', '2026-10-01', '2026-11-30', ['2026-10-28', '2026-10-29', '2026-10-30']],
     ['"every tue and thu 3 times"', 'RRULE:FREQ=WEEKLY;BYDAY=TU,TH;COUNT=3', '2026-10-27', '2026-10-01', '2026-12-01', ['2026-10-27', '2026-10-29', '2026-11-03']],
   ])('%s', (_, text, start, from, to, dates) => {

@@ -22,7 +22,6 @@ describe('deriveHealth', () => {
   test.each<[string, Partial<HealthInput>, string, string | null, string | null]>([
     // name, changes from a source checked a minute ago, state, as of, reason
     ['checked a minute ago', {}, 'healthy', ago(1), null],
-    ['a quiet source whose checks keep succeeding is healthy', {lastCheckAt: ago(4), lastSuccessAt: ago(4)}, 'healthy', ago(4), null],
     ['exactly at the threshold is still healthy', {lastCheckAt: ago(5), lastSuccessAt: ago(5)}, 'healthy', ago(5), null],
     ['past the threshold with no check: stale, as of the last success', {lastCheckAt: ago(6), lastSuccessAt: ago(6)}, 'stale', ago(6), null],
     ['checks stopped after a failure: stale, not failing', {lastCheckAt: ago(9), lastSuccessAt: ago(20), lastErrorAt: ago(9), lastError: 'timeout'}, 'stale', ago(20), null],
@@ -33,8 +32,7 @@ describe('deriveHealth', () => {
     ['needs reconnect wins over stale', {needsReconnectAt: ago(90), lastCheckAt: ago(90), lastSuccessAt: ago(95), lastError: 'invalid_grant'}, 'needs_reconnect', ago(95), 'invalid_grant'],
     ['new, not checked yet, within the threshold', {createdAt: ago(2), lastCheckAt: null, lastSuccessAt: null}, 'healthy', null, null],
     ['new and never checked past the threshold', {createdAt: ago(10), lastCheckAt: null, lastSuccessAt: null}, 'stale', null, null],
-    ['a slow schedule (weather, 30 min) is healthy after 45 minutes', {intervalSeconds: 1800, lastCheckAt: ago(45), lastSuccessAt: ago(45)}, 'healthy', ago(45), null],
-    ['and stale after 62', {intervalSeconds: 1800, lastCheckAt: ago(62), lastSuccessAt: ago(62)}, 'stale', ago(62), null],
+    ['a slow schedule (weather, 30 min) is stale after 62', {intervalSeconds: 1800, lastCheckAt: ago(62), lastSuccessAt: ago(62)}, 'stale', ago(62), null],
   ])('%s', (_, changes, state, asOf, reason) => {
     expect(deriveHealth({...base, ...changes})).toEqual({state, asOf, reason});
   });

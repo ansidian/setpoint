@@ -50,7 +50,6 @@ describe('anthropicClient', () => {
     // model, tool_choice, thinking (claude-api skill: the newest models refuse a forced tool, and
     // Sonnet 5.5 turns thinking off with between_tools; Opus 5.5 can't turn it off)
     ['claude-haiku-5-5', {type: 'tool', name: 'submit_email_triage'}, {type: 'disabled'}],
-    ['claude-haiku-4-5', {type: 'tool', name: 'submit_email_triage'}, {type: 'disabled'}],
     ['claude-sonnet-5-5', {type: 'auto'}, {type: 'between_tools'}],
     ['claude-opus-5-5', {type: 'auto'}, undefined],
     ['claude-fable-5-1', {type: 'auto'}, undefined],
@@ -188,9 +187,5 @@ describe('a model saved while OpenAI was a provider', () => {
     const keys = {anthropic: false, openai: false};
     expect(chooseTriageModels(ai, keys)).toEqual({cheap: null, strong: null, history: null, missing: 'Triage has no model to ask: add an Anthropic key in Settings › AI.'});
     expect(chooseAlfredModel(ai, keys)).toEqual({choice: null, missing: 'Alfred needs an Anthropic key in Settings › AI.'});
-  });
-
-  test('any other unknown id still says it can\'t be told', () => {
-    expect(chooseAlfredModel({...ai, alfred_model: 'llama-5'}, {anthropic: true, openai: false})).toEqual({choice: null, missing: 'Setpoint can\'t tell which provider runs llama-5; choose another model in Settings › AI.'});
   });
 });

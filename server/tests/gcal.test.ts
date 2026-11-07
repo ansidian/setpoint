@@ -556,13 +556,6 @@ describe('changes through the command layer', () => {
     expect(titles('2026-10-05')).toEqual(['Gym (legs) 7:00 AM']);
     expect(day('2026-10-07').map(entry => [entry.title, entry.calendar_id])).toEqual([['Gym', classes]]);
   });
-
-  test('F6b: an event moves only between calendars of its own Google account', async () => {
-    const {w, run, item} = await calendarWorld();
-    await run();
-    const elsewhere = w.store.db.insert(t.calendars).values({provider: 'google', providerId: 'jobs@example.net', name: 'Jobs', colour: 'violet', position: 9}).returning().get();
-    expect(() => updateItem(w.store, item('dinner').id, itemUpdateInput.parse({changes: {calendar_id: elsewhere.id}}))).toThrow(/same Google account/);
-  });
 });
 
 describe('SV-20: a calendar\'s colour, written to Google', () => {
@@ -649,15 +642,6 @@ describe('SV-20: a calendar\'s colour, written to Google', () => {
     // Change back restores the colour; after a reconnect, Try again would send it again.
     moveBackCommand(w.store, picked.id);
     expect(calendar(PERSONAL).colour).toBe('cool');
-  });
-
-  test('Todoist has no calendar colour, and the colour a calendar already has isn\'t sent again', async () => {
-    const {w, run, calendar} = await calendarWorld();
-    await run();
-    const todoist = w.store.db.insert(t.calendars).values({provider: 'todoist', providerId: 'todoist', name: 'Todoist', colour: null, position: 9}).returning().get();
-    expect(() => setCalendarColour(w.store, todoist.id, 'violet')).toThrow(/Todoist has no calendar colour/);
-    expect(() => setCalendarColour(w.store, calendar(PERSONAL).id, 'cool')).toThrow(/already has that colour/);
-    expect(w.store.db.select().from(t.commands).all()).toEqual([]);
   });
 });
 

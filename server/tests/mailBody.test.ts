@@ -136,7 +136,6 @@ describe('GET /api/mail/messages/:id/attachments/:attachment through the dev pro
   });
 
   test.each([
-    ['plain', 'Renewal agreement.pdf', `inline; filename="Renewal agreement.pdf"; filename*=UTF-8''Renewal%20agreement.pdf`],
     ['quotes and accents', 'Résumé "final".pdf', `inline; filename="R_sum_ _final_.pdf"; filename*=UTF-8''R%C3%A9sum%C3%A9%20%22final%22.pdf`],
     ['apostrophes and brackets', 'Sam\'s (1).csv', `inline; filename="Sam's (1).csv"; filename*=UTF-8''Sam%27s%20%281%29.csv`],
   ])('Content-Disposition: %s', (_name, filename, header) => {

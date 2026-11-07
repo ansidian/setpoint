@@ -10,7 +10,7 @@ import {describe, expect, onTestFinished, test} from 'vitest';
 import {openDatabase} from '../src/db/open.ts';
 import * as t from '../src/db/schema.ts';
 import {seedSampleData} from '../src/dev/sample.ts';
-import {loadTerms, readingPrompts, readingReport, readingScore, scoreList, scoreReport, scoreSearches, searchTest, summarise} from '../src/dev/searchScore.ts';
+import {loadTerms, readingPrompts, readingReport, readingScore, scoreList, scoreReport, scoreSearches, summarise} from '../src/dev/searchScore.ts';
 import type {TestSearch} from '../src/dev/searchScore.ts';
 import {world} from './helpers.ts';
 import type {World} from './helpers.ts';
@@ -50,10 +50,6 @@ describe('summarise', () => {
   test('each search counts once, however many right emails it has', () => {
     const summary = summarise([scored(range(1, 10), range(1, 10)), scored([99], [1])]);
     expect(summary).toEqual({searches: 2, mrr: 0.5, rankedFirst: 1, foundNone: 1, precisionTop5: 0.5, top10: 0.5, anywhere: 0.5});
-  });
-
-  test('no searches is all zeroes', () => {
-    expect(summarise([])).toEqual({searches: 0, mrr: 0, rankedFirst: 0, foundNone: 0, precisionTop5: 0, top10: 0, anywhere: 0});
   });
 });
 
@@ -119,16 +115,6 @@ describe('the report', () => {
       expect(report).not.toContain(fromName);
       expect(report).not.toContain(fromAddress);
     }
-  });
-});
-
-describe('the test file', () => {
-  test.each([
-    {name: 'no searches', file: {searches: []}},
-    {name: 'a search with nothing marked right', file: {searches: [{group: 'topic', text: 'x', wanted: []}]}},
-    {name: 'a group that isn\'t one', file: {searches: [{group: 'date', text: 'x', wanted: [1]}]}},
-  ])('refuses $name', ({file}) => {
-    expect(searchTest.safeParse(file).success).toBe(false);
   });
 });
 

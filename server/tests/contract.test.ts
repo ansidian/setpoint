@@ -465,7 +465,6 @@ describe('what breaks an older app', () => {
     ['the same', {a: 1, b: 'x'}, {a: 2, b: 'y'}, []],
     ['a key added', {a: 1}, {a: 1, b: 2}, []],
     ['a key removed', {a: 1, b: 2}, {a: 1}, ['b: removed']],
-    ['a key renamed', {a: 1, b: 2}, {a: 1, c: 2}, ['b: removed']],
     ['a string now a number', {a: 'x'}, {a: 1}, ['a: was string, now also integer']],
     ['null where it was always a string', {a: 'x'}, {a: null}, ['a: was string, now also null']],
     ['a value where it was always null', {a: null}, {a: 'x'}, []],

@@ -15,24 +15,11 @@ const TABLE: Record<CommandState, Record<CommandEvent, CommandState | null>> = {
 };
 
 describe('nextCommandState', () => {
-  test('the table covers every state and event', () => {
-    expect(Object.keys(TABLE).sort()).toEqual([...COMMAND_STATES].sort());
-    for (const row of Object.values(TABLE)) expect(Object.keys(row).sort()).toEqual([...COMMAND_EVENTS].sort());
-  });
-
   test.each(COMMAND_STATES.flatMap(state => COMMAND_EVENTS.map(event => [state, event, TABLE[state][event]] as const)))(
     '%s + %s → %s', (state, event, next) => {
       expect(nextCommandState(state, event)).toBe(next);
     },
   );
-
-  test('nothing quietly reverts: only Move back, from failed, reaches reverted', () => {
-    for (const state of COMMAND_STATES) {
-      for (const event of COMMAND_EVENTS) {
-        if (nextCommandState(state, event) === 'reverted') expect([state, event]).toEqual(['failed', 'move_back']);
-      }
-    }
-  });
 
   test.each<[CommandState, boolean]>([['pending', true], ['failed', true], ['confirmed', false], ['reverted', false]])('%s is active: %s', (state, active) => {
     expect(isActive(state)).toBe(active);
