@@ -795,12 +795,14 @@ async function fakePictures(page: Page) {
 
 /**
  * How the email sits in its frame: what overflows the frame's viewport across and down (0 when
- * nothing scrolls inside it), and how far the email's end is from the frame's bottom (a zoomed
+ * nothing scrolls inside it), and how far the email's lowest box is from the frame's bottom (a zoomed
  * email ends on a fraction of a pixel, which the frame rounds up).
  */
 const fit = (page: Page) => page.frameLocator('iframe.mailframe').locator('html').evaluate(root => {
   const end = root.querySelector('setpoint-end');
-  return [root.scrollWidth - innerWidth, root.scrollHeight - innerHeight, end ? Math.round(innerHeight - end.getBoundingClientRect().bottom) : -1];
+  // The email ends at the marker after it, or lower, at a box held out of the page's flow (SV-228).
+  const bottom = Math.max(...[end, ...document.body.children].map(box => box?.getBoundingClientRect().bottom ?? -Infinity));
+  return [root.scrollWidth - innerWidth, root.scrollHeight - innerHeight, end ? Math.round(innerHeight - bottom) : -1];
 }).catch(() => [-1, -1, -1]);
 const fits = ([across, down, below]: number[]) => across === 0 && down === 0 && (below === 0 || below === 1);
 const picturesLoaded = (page: Page) => page.frameLocator('iframe.mailframe').locator('img')
@@ -875,6 +877,40 @@ test('an email of three whole documents shows all three, in order, as tall as th
     await setpoint.stop();
   }
 });
+
+/** Opens an email and waits for it to fit its frame; says the frame's box and where each line sits in the page. */
+async function fitted(page: Page, setpoint: Setpoint, subject: string, lines: string[]) {
+  await page.goto(`${setpoint.base}${deepLinkPath({to: 'message', id: await idOf(setpoint, subject)})}`);
+  const frame = page.frameLocator('iframe.mailframe');
+  await frame.getByText(lines.at(-1)!).waitFor();
+  await until(`${subject} fits its frame`, () => fit(page), fits);
+  const box = (await rested(() => page.locator('iframe.mailframe').boundingBox()))!;
+  const boxes = await Promise.all(lines.map(line => rested(() => frame.getByText(line).boundingBox())));
+  return {box, boxes: boxes.map(line => line!)};
+}
+
+const INVITE_LINES = ['Join us on Oct 15', 'Questions from the audience', 'Manage your email preferences'];
+const NOTICE_LINES = ['Your package is out for delivery', 'Tracking number', 'Manage your delivery preferences'];
+
+for (const device of ['target', 'iphone'] as const) {
+  test(`${device === 'iphone' ? 'on the phone, ' : ''}an email that sizes its page to the window, or holds itself out of the page's flow, shows whole, top to bottom (SV-228)`, async () => {
+    const setpoint = await startSetpoint({fixtures: ['viewport-html', 'positioned-html']});
+    try {
+      const page = await setpoint.page(device);
+      for (const [subject, lines] of [['Webinar: what\'s new in Litware 12', INVITE_LINES], ['Out for delivery', NOTICE_LINES]] as const) {
+        const {box, boxes} = await fitted(page, setpoint, subject, [...lines]);
+        const tops = boxes.map(line => line.y);
+        assert.deepEqual([...tops].sort((a, b) => a - b), tops, `${subject}: its lines in order`);
+        // Every line inside the frame, the first near its top: nothing above it or below it is cut off.
+        for (const line of boxes) assert.ok(line.y >= box.y && line.y + line.height <= box.y + box.height, `${subject}: a line at ${line.y} outside the frame at ${box.y}, ${box.height} tall`);
+        assert.ok(boxes[0]!.y - box.y < 120, `${subject}: its first line ${boxes[0]!.y - box.y} px down the frame`);
+      }
+      assert.deepEqual(setpoint.pageErrors, []);
+    } finally {
+      await setpoint.stop();
+    }
+  });
+}
 
 test('with the email clicked into, its keys still reach Setpoint, and its text stays selected (SV-149)', async () => {
   const setpoint = await startSetpoint({fixtures: ['stitched-html']});

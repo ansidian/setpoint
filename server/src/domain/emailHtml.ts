@@ -3,13 +3,13 @@
 // is sandboxed without scripts or an origin of its own, and the page's policy allows no scripts;
 // this also strips what an email must never do there: scripts, frames, plugins, base and meta tags
 // (a meta refresh would navigate the frame), stylesheets from elsewhere, forms' targets, event
-// handlers and javascript: links. While remote content is hidden, images become board 02's hatched
-// placeholders with their alt text (or the hidden-image glyph), as tall as their picture would be when
-// they say so and holding the email's shape when they don't; tracking pixels go, and remote
-// backgrounds go. Links open in a
-// new tab. The page ends with the reader's measuring script, the one script its policy lets run;
-// the iPhone app's frame (`app`) measures the page itself, so its page has no script and its policy
-// lets none run. Pure: a string in, a page out.
+// handlers and javascript: links. Media rules that ask the window's height are answered as a tall
+// window would (the frame's height is the page's own). While remote content is hidden, images become
+// board 02's hatched placeholders with their alt text (or the hidden-image glyph), as tall as their
+// picture would be when they say so and holding the email's shape when they don't; tracking pixels
+// go, and remote backgrounds go. Links open in a new tab. The page ends with the reader's measuring
+// script, the one script its policy lets run; the iPhone app's frame (`app`) measures the page
+// itself, so its page has no script and its policy lets none run. Pure: a string in, a page out.
 import {createHash} from 'node:crypto';
 import render from 'dom-serializer';
 import {Element, isDirective, Text} from 'domhandler';
@@ -19,6 +19,14 @@ import {parseDocument} from 'htmlparser2';
 
 /** The page's base style, before the email's own: the board's `.paper` (Helvetica, 13 / 1.35, `#1d1f22` on white). */
 export const FRAME_STYLE = 'html, body { margin: 0; padding: 0; background: #ffffff; } body { font: 13px/1.35 Helvetica, Arial, sans-serif; color: #1d1f22; -webkit-font-smoothing: antialiased; overflow-wrap: break-word; } img { max-width: 100%; }';
+
+/**
+ * The page's own box, after the email's styles (SV-228): the frame is as tall as its page, so a page
+ * sized to the window (`height: 100vh`, a flexed and centred body) would be sized to the frame and
+ * never grow. `:root` outranks the `html` and `body` an email's styles name, and the body's own
+ * attributes don't reach the page.
+ */
+export const PAGE_BOX = ':root, :root > body { height: auto !important; min-height: 0 !important; max-height: none !important; display: block !important; }';
 
 // Board 02's `.imgph`, on the frame's own font (Geist is the app's, not the email's).
 const PLACEHOLDER = 'background: repeating-linear-gradient(135deg, #eceef0 0 3px, #f6f7f8 3px 8px); color: #8a8e94; font: 12px Helvetica, Arial, sans-serif; place-items: center; overflow: hidden; max-width: 100%; text-align: center; vertical-align: bottom;';
@@ -88,6 +96,23 @@ const shown = (nodes: ChildNode[]): ChildNode[] => nodes.flatMap(node => {
   return node instanceof Element && DOCUMENT_TAGS.has(node.name) ? shown(node.children) : [node];
 });
 
+/**
+ * A media rule's conditions on the window's height, read as a tall window would answer them (SV-228):
+ * the frame is as tall as its page, so asking the frame could flip the email's layout as the frame grows
+ * and flip it back as it shrinks. Width and the device's own size are the frame's to answer.
+ */
+const ALWAYS = '(min-width: 0px)';
+const NEVER = '(max-width: 0px)';
+const TALL_WINDOW: [RegExp, string][] = [
+  [/\(\s*orientation\s*:\s*landscape\s*\)/gi, NEVER],
+  [/\(\s*orientation\s*:\s*portrait\s*\)/gi, ALWAYS],
+  [/\(\s*min-height\s*:[^)]*\)/gi, ALWAYS],
+  [/\(\s*max-height\s*:[^)]*\)/gi, NEVER],
+  [/\(\s*min-aspect-ratio\s*:[^)]*\)/gi, NEVER],
+  [/\(\s*max-aspect-ratio\s*:[^)]*\)/gi, ALWAYS],
+];
+const framedMedia = (css: string) => css.replace(/@media[^{;]*\{/gi, prelude => TALL_WINDOW.reduce((text, [feature, answer]) => text.replace(feature, answer), prelude));
+
 export interface SafeEmail {
   styles: string[];
   body: string;
@@ -123,7 +148,7 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
     }
   }
   const styles = elements(doc, item => item.name === 'style').map(style => {
-    const text = render(style.children, {encodeEntities: 'utf8'}).replace(/@import[^;]*;?/gi, '');
+    const text = framedMedia(render(style.children, {encodeEntities: 'utf8'}).replace(/@import[^;]*;?/gi, ''));
     removeElement(style);
     return loadImages ? text : text.replace(REMOTE_URL, 'none');
   });
@@ -134,8 +159,9 @@ export function safeEmail(html: string, loadImages: boolean): SafeEmail {
  * The reader's measuring script, at the end of the page: the frame has no origin the reader can
  * reach into, so the page tells the reader how tall it is, as it lays out and as each image loads.
  * The page never scrolls itself (only the reading pane does), and an email wider than the frame is
- * zoomed down to fit it. The height counts to a marker after the
- * email, in the frame's own pixels whichever way the browser reports a zoomed box.
+ * zoomed down to fit it. The height counts to a marker after the email, or to the lowest of the
+ * body's own boxes when one sits out of the flow (SV-228), in the frame's own pixels whichever way
+ * the browser reports a zoomed box.
  * A key pressed with the email clicked into is passed on to the reader too (SV-149), unless a field
  * of the email's own takes it. The page keeps its own defaults, so selecting and copying still work;
  * only ⌘F, ⌘K and ⌘, are kept from the browser, as Setpoint keeps them everywhere else.
@@ -155,7 +181,9 @@ export const MEASURE_SCRIPT = `(() => {
     const scale = Math.min(1, width / root.scrollWidth);
     if (scale < 1) root.style.zoom = String(scale);
     const box = root.getBoundingClientRect();
-    const height = Math.ceil((end.getBoundingClientRect().bottom - box.top) * width / box.width);
+    let bottom = end.getBoundingClientRect().bottom;
+    for (const child of document.body.children) bottom = Math.max(bottom, child.getBoundingClientRect().bottom);
+    const height = Math.ceil((bottom - box.top) * width / box.width);
     if (height !== sent) parent.postMessage({setpointMailHeight: (sent = height)}, '*');
   };
   const later = () => {
@@ -179,10 +207,10 @@ const MEASURE_HASH = createHash('sha256').update(MEASURE_SCRIPT).digest('base64'
 /** Who frames the page: the web reader's sandboxed frame, or the iPhone app's web view, which runs no script. */
 export type EmailFrame = 'web' | 'app';
 
-/** The frame's whole page: the base style, the email's styles, its body, and in the web's frame the measuring script. */
+/** The frame's whole page: the base style, the email's styles, the page's own box, its body, and in the web's frame the measuring script. */
 export function emailPage(email: SafeEmail, frame: EmailFrame = 'web'): string {
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer">'
-    + `<style>${FRAME_STYLE}</style>${email.styles.map(style => `<style>${style}</style>`).join('')}</head>`
+    + `<style>${FRAME_STYLE}</style>${email.styles.map(style => `<style>${style}</style>`).join('')}<style>${PAGE_BOX}</style></head>`
     + `<body>${email.body}${frame === 'web' ? `<script>${MEASURE_SCRIPT}</script>` : ''}</body></html>`;
 }
 

@@ -13,6 +13,10 @@
 //                   images with only a width, in a shell wider than the frame
 //   stitched-html   mail checks: Woodgrove Bank's statement as three whole HTML documents, one after
 //                   the other
+//   viewport-html   mail checks: Litware's webinar invitation with its page sized to the window and
+//                   centred in it, as some mailing services build one (SV-228)
+//   positioned-html mail checks: Consolidated Messenger's delivery notice in a box positioned out of
+//                   the page's flow, so nothing in the flow is as tall as the email (SV-228)
 //   last-year       search checks: a Northwind rejection from Dec 20, 2025, so a row's age carries its
 //                   year ("Dec 20, 2025"), the longest it gets
 import {SEED_NOW} from '@setpoint/shared';
@@ -161,6 +165,35 @@ export const STITCHED_NOTICE_HTML = stitched('.band { height: 120px; }', `
     <p>This mailbox isn't read, so please don't reply to this email.</p>
   </td><td></td></tr>`);
 
+// The shape some mailing services give an email (SV-228): the page as tall as the window, flexed and
+// centred in it, so in a frame sized to its page the page would size itself to the frame.
+export const VIEWPORT_INVITE_HTML = `<!DOCTYPE html>
+<html lang="en"><head><style>html,body{margin:0 auto!important;padding:0!important;height:100vh!important;width:100%!important;background-color:#f9fafb;display:inline-flex!important;justify-content:center!important;align-items:center!important;font-size:16px}
+p{margin:0;padding:0}.card-body{padding:1.5em}.card-body p{font-size:1.1em;line-height:28px;color:#344054}.card-foot{font-size:12px;color:#667085;padding-top:1em}</style></head>
+<body style="margin: 0 auto !important; min-height: 100vh !important; display: inline-flex !important; justify-content: center !important; align-items: flex-start !important;">
+<div style="max-width: 576px; margin: 10px auto; background: #ffffff;"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tbody>
+  <tr><td style="padding: 1.3em 1.2em; font: 600 22px Helvetica, sans-serif">Litware</td></tr>
+  <tr><td class="card-body">
+    <p>Join us on Oct 15 for a tour of what's new in Litware 12.</p><br>
+    <p>In an hour we'll cover:</p>
+    <ul><li>The new sharing panel</li><li>Faster sync on large projects</li><li>Offline edits that merge themselves</li><li>Questions from the audience</li></ul>
+    <p>Seats are limited, so register soon.</p><br>
+    <p>See you there,</p><p>The Litware Team</p>
+    <p class="card-foot">You're receiving this because you use Litware. Manage your email preferences.</p>
+  </td></tr>
+</tbody></table></div>
+</body></html>`;
+
+// A notice held in an absolutely positioned box (SV-228): the page's own flow ends where it starts.
+export const POSITIONED_NOTICE_HTML = `<html><head><style>.shell { position: absolute; top: 0; left: 0; right: 0; } .notice { max-width: 560px; margin: 0 auto; padding: 32px; font: 15px/1.5 Helvetica, sans-serif; }</style></head>
+<body><div class="shell"><div class="notice">
+  <h1>Your package is out for delivery</h1>
+  <p>It should arrive by 8 PM today.</p>
+  <p>Tracking number 1Z 999 AA1 01 2345 6784.</p>
+  <p>If nobody's home, we'll leave it with a neighbour or try again tomorrow.</p>
+  <p>Consolidated Messenger, 1 Harbour Way. Manage your delivery preferences.</p>
+</div></div></body></html>`;
+
 const bySubject = (db: Db, subject: string) => {
   const row = db.select().from(t.messages).where(eq(t.messages.subject, subject)).get();
   if (!row) throw new Error(`The seed has no email "${subject}": run \`npm run seed\` first.`);
@@ -175,6 +208,10 @@ export const coffeeHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso Coffe
 export const newsletterHtml = ({db}: OpenDatabase) => setHtml(db, 'The Contoso Coffee Journal · October', IMAGE_NEWSLETTER_HTML);
 
 export const stitchedHtml = ({db}: OpenDatabase) => setHtml(db, 'Statement ready', STITCHED_NOTICE_HTML);
+
+export const positionedHtml = ({db}: OpenDatabase) => setHtml(db, 'Out for delivery', POSITIONED_NOTICE_HTML);
+
+export const viewportHtml = ({db}: OpenDatabase) => setHtml(db, 'Webinar: what\'s new in Litware 12', VIEWPORT_INVITE_HTML);
 
 export const recoveryHtml = ({db}: OpenDatabase) => setHtml(db, 'Your recovery email was changed', GOOGLE_RECOVERY_HTML);
 

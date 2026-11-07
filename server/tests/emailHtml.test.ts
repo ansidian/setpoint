@@ -2,7 +2,7 @@
 // stripped, what hidden remote content becomes, and the page's own policy.
 import {createHash} from 'node:crypto';
 import {describe, expect, test} from 'vitest';
-import {emailPage, emailPolicy, MEASURE_SCRIPT, safeEmail} from '../src/domain/emailHtml.ts';
+import {emailPage, emailPolicy, MEASURE_SCRIPT, PAGE_BOX, safeEmail} from '../src/domain/emailHtml.ts';
 
 const body = (html: string, load = false) => safeEmail(html, load).body;
 
@@ -51,6 +51,22 @@ describe('what a browser would show', () => {
   test('each document\'s styles come along, in order, and what each must never do stays out', () => {
     const email = safeEmail('<html><head><style>p { margin: 0; }</style></head><body><p>One</p></body></html><html><head><style>h1 { margin: 0; }</style></head><body onload="steal()"><h1>Two</h1><script>steal()</script></body></html>', false);
     expect(email).toEqual({styles: ['p { margin: 0; }', 'h1 { margin: 0; }'], body: '<p>One</p><h1>Two</h1>'});
+  });
+});
+
+describe('what the frame\'s own height can\'t change', () => {
+  // The frame is as tall as its page, so a rule that asks how tall the window is would ask the frame,
+  // and could flip as the frame grows (a notice flipped from landscape to portrait at 600 px
+  // and back, forever): such rules read as they would in a tall window (SV-228).
+  test.each([
+    ['landscape never holds', '@media screen and (max-width: 767px) and (orientation: landscape) { .t { width: 360px; } }', '@media screen and (max-width: 767px) and (max-width: 0px) { .t { width: 360px; } }'],
+    ['portrait always does', '@media (orientation:portrait) { .t { width: 100%; } }', '@media (min-width: 0px) { .t { width: 100%; } }'],
+    ['a minimum height always holds, a maximum never', '@media (min-height: 500px) { a { color: red; } } @media (max-height: 400px) { a { color: blue; } }', '@media (min-width: 0px) { a { color: red; } } @media (max-width: 0px) { a { color: blue; } }'],
+    ['so do aspect ratios, the other way round', '@media (min-aspect-ratio: 16/9) { a { color: red; } } @media (max-aspect-ratio: 1/1) { a { color: blue; } }', '@media (max-width: 0px) { a { color: red; } } @media (min-width: 0px) { a { color: blue; } }'],
+    ['the width and the device\'s own size are left alone', '@media (max-width: 600px) and (max-device-height: 900px) { a { color: red; } }', '@media (max-width: 600px) and (max-device-height: 900px) { a { color: red; } }'],
+    ['so are declarations', '.p { max-height: 0px; min-height: 10px; }', '.p { max-height: 0px; min-height: 10px; }'],
+  ])('%s', (_name, css, framed) => {
+    expect(safeEmail(`<style>${css}</style><p>Hi</p>`, true).styles).toEqual([framed]);
   });
 });
 
@@ -104,7 +120,13 @@ describe('remote content', () => {
   test('the page: the base style, then the email\'s styles and body', () => {
     const page = emailPage({styles: ['p { margin: 0; }'], body: '<p>Hi</p>'});
     expect(page).toMatch(/^<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>html, body \{ margin: 0;/);
-    expect(page).toMatch(/<style>p \{ margin: 0; \}<\/style><\/head><body><p>Hi<\/p><script>/);
+    expect(page).toMatch(/<style>p \{ margin: 0; \}<\/style><style>[^<]*<\/style><\/head><body><p>Hi<\/p><script>/);
+  });
+
+  test('the page\'s own box comes last, after the email\'s styles, so an email can\'t size it to the window (SV-228)', () => {
+    const page = emailPage({styles: ['html, body { height: 100vh !important; display: inline-flex !important; }'], body: '<p>Hi</p>'});
+    expect(page).toContain(`<style>html, body { height: 100vh !important; display: inline-flex !important; }</style><style>${PAGE_BOX}</style></head>`);
+    expect(emailPage({styles: [], body: '<p>Hi</p>'}, 'app')).toContain(`<style>${PAGE_BOX}</style></head>`);
   });
 
   test('the page ends with the measuring script, after the email, and nothing else runs', () => {

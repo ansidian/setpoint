@@ -10,7 +10,7 @@ import {openDatabase} from '../../db/open.ts';
 import type {OpenDatabase} from '../../db/open.ts';
 import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
-import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, stitchedHtml} from './mailBoards.ts';
+import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
 import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
@@ -32,6 +32,10 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'newsletter-html': {board: 'mail checks', apply: newsletterHtml},
   // Not a board: the mail checks show an email of three whole documents in one frame (SV-127).
   'stitched-html': {board: 'mail checks', apply: stitchedHtml},
+  // Not a board: the mail checks show an email whose page sizes itself to the window (SV-228).
+  'viewport-html': {board: 'mail checks', apply: viewportHtml},
+  // Not a board: the mail checks size the frame to an email held out of the page's flow (SV-228).
+  'positioned-html': {board: 'mail checks', apply: positionedHtml},
   // Not a board: the floating detail's place line with a link in it (SV-76, SV-77).
   'link-places': {board: 'detail checks', apply: linkPlaces},
   // Not a board: a free event during the CS 101 final's proposed evening (SV-180).
