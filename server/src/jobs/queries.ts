@@ -2,12 +2,13 @@
 // pass) and an application's detail, shaped as `@setpoint/shared`'s jobs/api.ts; J5's search and
 // the shell's item; J7's emails for mail's slots. Ghosted comes from the clock here, never from a stored status (rules.ts).
 import type {
-  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
+  ApplicationLinkOut, ApplicationOut, ApplicationRowOut, JdCandidateOut, JdSummaryOut, JobEventOut, JobsCheckOut, JobsMailApplicationOut, JobMoveOut, JobsMovementOut, JobsMailMessageOut, JobsMailOut, JobsNavOut,
   JobsPageOut, JobsSearchOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
-import {isQuietJobEvent} from '@setpoint/shared';
+import {GHOSTED_AFTER_DAYS, isQuietJobEvent, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
+import type {JobStatus} from '@setpoint/shared';
 import {and, asc, desc, eq, inArray, isNotNull, isNull} from 'drizzle-orm';
-import {localDay} from '../domain/time.ts';
+import {addDays, localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {isoNow} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -224,5 +225,62 @@ export function jobsCheck(store: Store, postings: {company: string; title: strin
       const found = checkPosting(posting, known);
       return {role: found.role.map(application => summary(application.id)), others: found.others.map(application => summary(application.id)), query: found.query};
     }),
+  };
+}
+
+/** How many applications the pane's recent movement lists (D467). */
+export const MOVES_SHOWN = 8;
+
+/**
+ * GET /api/jobs/movement (SV-220, D467, D470): each application's latest status change, newest first, the
+ * last MOVES_SHOWN. Its emails, oldest first, change it when one sets a status it didn't have (the first
+ * from nothing, a new application); a status set by hand changes it from what its emails had set before
+ * (it keeps no history, so only the latest hand move shows); and turning Ghosted, at the start of the day
+ * 30 days after its last email of any kind, changes it from Applied. Nothing here writes, and there are
+ * no counts (D314).
+ */
+export function jobsMovement(store: Store): JobsMovementOut {
+  const db = jobsDb(store.sqlite);
+  const now = isoNow(store);
+  const settings = db.select({accounts: j.jobsSettings.accounts}).from(j.jobsSettings).get();
+  const events = new Map<number, {at: string; kind: typeof j.jobsEvents.$inferSelect.kind}[]>();
+  for (const event of db.select({applicationId: j.jobsEvents.applicationId, at: j.jobsEvents.at, kind: j.jobsEvents.kind}).from(j.jobsEvents)
+    .orderBy(asc(j.jobsEvents.at), asc(j.jobsEvents.id)).all()) {
+    events.set(event.applicationId, [...(events.get(event.applicationId) ?? []), event]);
+  }
+  let since: string | null = null;
+  const moves: JobMoveOut[] = [];
+  for (const application of db.select().from(j.jobsApplications).all()) {
+    const own = events.get(application.id) ?? [];
+    const first = own[0]?.at;
+    const earliest = first && first < application.appliedAt ? first : application.appliedAt;
+    if (since === null || earliest < since) since = earliest;
+    const base = {application_id: application.id, company: application.company, title: application.title};
+    const hand = application.statusSetBy === 'user' ? application.statusSetAt : null;
+    let status: JobStatus | null = null;
+    let latest: JobMoveOut | null = null;
+    const change = (to: JobStatus, at: string, byHand: boolean) => {
+      // An application exists because it was applied for, so a first email that isn't a confirmation comes from Applied.
+      const from = status ?? (to === 'applied' ? null : 'applied');
+      if (from !== to) latest = {...base, from, to, by_hand: byHand, at};
+      status = to;
+    };
+    for (const event of own) {
+      if (hand !== null && event.at > hand) break;
+      if (!isQuietJobEvent(event.kind)) change(STATUS_OF_JOB_EVENT[event.kind], event.at, false);
+    }
+    if (hand !== null) change(application.status, hand, true);
+    const lastEmail = own.at(-1)?.at ?? application.appliedAt;
+    if (isGhosted(application.status, lastEmail, now, store.timeZone)) {
+      latest = {...base, from: 'applied', to: 'ghosted', by_hand: false, at: zonedInstant(addDays(localDay(lastEmail, store.timeZone), GHOSTED_AFTER_DAYS), '00:00', store.timeZone)};
+    }
+    // Tracked by hand with no email that set a status: it's new, from when it was applied.
+    latest ??= {...base, from: null, to: 'applied', by_hand: false, at: application.appliedAt};
+    moves.push(latest);
+  }
+  return {
+    moves: moves.sort((a, b) => b.at.localeCompare(a.at) || b.application_id - a.application_id).slice(0, MOVES_SHOWN),
+    accounts: (settings?.accounts ?? []).map(account => account.account_id),
+    since,
   };
 }

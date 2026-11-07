@@ -154,6 +154,8 @@ export const attTint = {night: 8, light: 6} as const;
 export const paneGlow = {night: 10, light: 18} as const;
 /** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
 export const fyiWash = {night: 4, light: 9} as const;
+/** Jobs's pane rows (SV-220): Offer's and Ghosted's words keep this share of their colour, the rest `ink`, so Light's lighter green and yellow reach 4.5:1 on `panel` at 12.5 px. */
+export const moveInk = {night: 100, light: 85} as const;
 /** The HTML email frame's brightness (#171): Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
 /**
@@ -397,6 +399,7 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
   vars['--paneGlow'] = `${light ? paneGlow.light : paneGlow.night}%`;
   vars['--fyiWash'] = `${light ? fyiWash.light : fyiWash.night}%`;
+  vars['--moveInk'] = `${light ? moveInk.light : moveInk.night}%`;
   vars['--mailDim'] = String(light ? mailDim.light : mailDim.night);
   vars['--ringMin'] = String((light ? ringL.light : ringL.night).min);
   vars['--ringMax'] = String((light ? ringL.light : ringL.night).max);

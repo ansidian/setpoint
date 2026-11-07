@@ -7,6 +7,8 @@ import {getCached, refreshIfShown, sendJson, setCached} from '../../api/client.t
 
 /** GET /api/jobs: the two numbers, Needs you, From history and the rows. */
 export const JOBS_PATH = '/jobs';
+/** GET /api/jobs/movement: the empty pane's recent movement (SV-220). */
+export const MOVEMENT_PATH = '/jobs/movement';
 /** GET /api/jobs/nav: whether Jobs is on, and today's Needs you count, for the shell on every page. */
 export const NAV_PATH = '/jobs/nav';
 /** GET /api/jobs/applications/:id: the detail. */

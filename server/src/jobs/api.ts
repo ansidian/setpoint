@@ -20,7 +20,7 @@ import {
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
 import {jobsAi} from './models.ts';
-import {applicationDetail, jobsCheck, jobsInMail, jobsNav, jobsPage, jobsSearch} from './queries.ts';
+import {applicationDetail, jobsCheck, jobsInMail, jobsMovement, jobsNav, jobsPage, jobsSearch} from './queries.ts';
 import {jobsSettings, updateJobsSettings} from './settings.ts';
 import {jobsTokenMatches} from './token.ts';
 import {undoCorrection} from './undo.ts';
@@ -39,6 +39,8 @@ export function jobsApi(store: Store) {
   const api = new Hono();
   api.get('/jobs', c => c.json(jobsPage(store)));
   api.get('/jobs/nav', c => c.json(jobsNav(store)));
+  // The empty pane's recent movement (SV-220).
+  api.get('/jobs/movement', c => c.json(jobsMovement(store)));
   // Jobs's own search, never mail's or ⌘K's (D316).
   api.get('/jobs/search', c => c.json(jobsSearch(store, parse(jobsSearchInput, {q: c.req.query('q') ?? ''}).q)));
   // Mail's slots (J7): a page of rows, or the email open, in one request (D306).

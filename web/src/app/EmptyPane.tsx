@@ -1,7 +1,7 @@
 // The pane beside the Inbox, News and Jobs with nothing open in it (SV-217, D464): always there on a
-// desktop, at the dragged width, so the list and header never move as an item opens or closes. For
-// the Inbox it shows how the mail day is going (SV-218, InboxDay.tsx); News and Jobs keep a placeholder,
-// the page's glyph, one line and the keys, until SV-219 and SV-220 fill theirs.
+// desktop, at the dragged width, so the list and header never move as an item opens or closes. Each
+// page fills it: the Inbox's mail day (SV-218, InboxDay.tsx), News's recap (SV-219, NewsDay.tsx) and
+// Jobs's recent movement (SV-220, JobsDay.tsx).
 //
 // In a narrow window an open item covers the list, and the empty pane comes over it only from a
 // 30 px `right_panel_open` button before search, as Calendar's day does (#196): lit while showing,
@@ -94,22 +94,14 @@ function TroubleChip({trouble}: {trouble: PaneTrouble[]}) {
   );
 }
 
-/**
- * The empty pane: what the page puts in it, and its foot (any trouble's chip and a quiet line, then the keys) pinned to the bottom. With no `children`,
- * the placeholder: the page's glyph and one line, centred (News and Jobs, until SV-219 and SV-220).
- */
-export function EmptyPane({label, glyph, line, keys, foot, trouble = [], children}: {label: string; glyph?: IconName; line?: string; keys: PaneKey[]; foot?: ReactNode; trouble?: PaneTrouble[]; children?: ReactNode}) {
+/** The empty pane: what the page puts in it, and its foot (any trouble's chip and a quiet line, then the keys) pinned to the bottom. */
+export function EmptyPane({label, keys, foot, trouble = [], children}: {label: string; keys: PaneKey[]; foot?: ReactNode; trouble?: PaneTrouble[]; children: ReactNode}) {
   const width = useReadingPaneWidth();
   return (
     <section className="pane idle" aria-label={label} style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
       <div className="pane-empty">
-        {children ?? (
-          <div className="pane-placeholder">
-            {glyph && <Icon name={glyph} size={28} />}
-            <p>{line}</p>
-          </div>
-        )}
+        {children}
         <footer className="pane-foot">
           {(foot || trouble.length > 0) && <div className="pane-facts">{trouble.length > 0 && <TroubleChip trouble={trouble} />}{foot}</div>}
           <ul className="pane-keys">

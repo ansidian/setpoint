@@ -235,6 +235,11 @@ the lint rule still refuses an import of Jobs from triage.
 - **The shell's item:** `GET /api/jobs/nav` answers whether Jobs is on and today's Needs you count,
   for the sidebar, the rail, ⌘K's Go to and `4` on every page; it's under `/jobs`, so the `jobs`
   event refreshes it.
+- **The empty pane's recent movement** (SV-220, D467, D470): `GET /api/jobs/movement` ([`queries.ts`](queries.ts)
+  `jobsMovement`) answers each application's latest status change, newest first, the last eight: an email
+  that set a status it didn't have, a status set by hand (from what its emails had set), or turning
+  Ghosted; with the accounts Jobs reads and its earliest email, for the pane's quiet line. Not in the
+  iPhone app's contract. It's under `/jobs`, so the `jobs` event refreshes it.
 
 ## Needs you's answers and the corrections (J6)
 

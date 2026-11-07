@@ -251,7 +251,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   its dragged width (480 to 1100), giving way so the list keeps 420 ([Decided while
   building](#decided-while-building) #327, amending decision 43); its left edge resizes it, and shows
   so under the pointer (#210). Empty, the Inbox's shows how the mail day is going (#331) and News's
-  its recap and facts (#332); Jobs's holds the page's glyph, one line and the keys. Every empty pane
+  its recap and facts (#332), and Jobs's its recent movement (#336). Every empty pane
   has the mark's faint glow behind it (#334).
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
@@ -4145,3 +4145,24 @@ it changes what's on screen.
     can cross into it, and leaving both or Esc folds it again. Every trouble in it is `alert`, a
     stale section's too, so the card reads as one thing. The same on every empty pane, the Inbox's
     and News's.
+336. **Jobs's empty pane lists recent movement** (amending #327's placeholder for Jobs; Andy,
+    2026-11-06; darma SV-220, D467, D470). In the Inbox's and News's shape (#331, #332): one block
+    centred across the pane, a third of the way down, scrolling when it's long. Under the mark at 40
+    px, Recent movement as a 36 px neutral band (News's While you were away, `history`, no count),
+    over a `hair` box on `panel` holding one row per application, its latest status change, newest
+    first, the last eight. A row is the table's status dot for where it went; the company in `ink`
+    13.5 / 500, then "Applied → Rejected" at 12.5, each status in its dot's colour (Applied `ink2`,
+    In process `inProcess`, Offer `good`, Rejected `alert` 500, Withdrawn `ink3`, Ghosted `sunGlyph`
+    500; in Light, Offer and Ghosted keep 85% of their colour, the rest `ink`, to reach 4.5:1), the
+    arrow `ink3`; a status set by hand adds the table's `edit` glyph ("Set by you"); the day on the
+    right in `ink3` 12 ("Today", "Yesterday", "Fri" within the week, then "Oct 28"); and the role
+    under them in `ink3` 12. Only status changes count: an email that sets a status the application
+    didn't have, the first from nothing (a new application reads "Applied" alone, no arrow); turning
+    Ghosted ("Applied → Ghosted", the start of the day 30 days after its last email); a status set by
+    hand, from what its emails had set before it (only the latest is kept, so two in a row show as
+    one). A second interview doesn't move a row. A row's press opens the application's detail; its
+    right-click is the table row's menu without Not this posting and Look up the JD again. The foot
+    holds "Reading Jobs and Personal, since Mar 2026." at 12 `ink3` (the accounts Jobs reads in
+    Settings › Jobs's order, and the month of its earliest email), no numbers (D314), over the keys:
+    J K Move, Enter Open, / Search. The AI down folds into the foot (#335), with Settings › AI when
+    that's the fix; the line over the table stays. With no applications: "Nothing has moved yet".

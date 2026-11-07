@@ -2,7 +2,7 @@
 // the JD column, the per-week tip, Needs you's lines, and the table's order; mail's chip and badge
 // (J7); and J8's states and Settings (38a, 38b, 39a, 39b). Pure, so the page and its pane stay thin.
 import type {
-  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobReadMode, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsReadingOut, JobStatus,
+  ApplicationOut, ApplicationRowOut, JdSummaryOut, JobEventKind, JobMoveOut, JobReadMode, JobsAiOut, JobsHistoryOut, JobsMailApplicationOut, JobsReadingOut, JobStatus,
   JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {clockTime, localDate, readerTime} from '../../logic/format.ts';
@@ -382,4 +382,25 @@ export const jobsModelWith = (label: string, search = false) => (search ? `${lab
 export function jobsUsageParts(month: JobsAiOut['this_month']): string {
   const parts: [string, number][] = [['Emails', month.emails.cost_usd], ['finding JDs', month.finding_jds.cost_usd], ['reading JDs', month.reading_jds.cost_usd]];
   return parts.map(([name, cost]) => `${name} ${dollars(cost, true)}`).join(' · ');
+}
+
+/** A side of a pane row's change (SV-220, D470): its label and the table's mark, Ghosted its own. */
+export const moveSide = (status: JobMoveOut['to']): {label: string; mark: Mark} =>
+  status === 'ghosted' ? {label: 'Ghosted', mark: 'ghost'} : {label: STATUS_LABELS[status], mark: markOf({status, ghosted: false})};
+
+/** When it moved: "Today", "Yesterday", the weekday within the week ("Fri"), else the day ("Oct 28"). */
+export function moveDay(at: string, timeZone: string, today: string): string {
+  const day = localDate(at, timeZone);
+  const ago = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${day}T12:00:00Z`)) / 86_400_000);
+  if (ago <= 0) return 'Today';
+  if (ago === 1) return 'Yesterday';
+  if (ago < 7) return onDay(day, {weekday: 'short'});
+  return dayWord(day, today);
+}
+
+/** The pane's quiet line (SV-220), without numbers (D314): "Reading Jobs and Personal, since Mar 2026". */
+export function movementFoot(names: readonly string[], since: string | null, timeZone: string): string {
+  const who = names.length <= 1 ? names[0] ?? 'no accounts' : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  const from = since ? `, since ${new Date(since).toLocaleDateString('en-US', {timeZone, month: 'short', year: 'numeric'})}` : '';
+  return `Reading ${who}${from}`;
 }

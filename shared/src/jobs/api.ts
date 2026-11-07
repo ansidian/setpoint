@@ -13,6 +13,7 @@
 //   GET  /api/jobs/nav                   JobsNavOut (J5: the sidebar's and the rail's item, ⌘K's Go to and `4`)
 //   GET  /api/jobs/mail?messages=1,2,3   JobsMailOut (J7: what mail's slots draw for a page of rows, or the email open)
 //   GET  /api/jobs/ai                    JobsAiOut (J8: Settings › AI's Jobs group and its row in Usage this month)
+//   GET  /api/jobs/movement              JobsMovementOut (SV-220: the empty pane's recent movement)
 //   POST /api/jobs/check                 jobsCheckInput → JobsCheckOut (SV-173: the browser extension's, with its own token, not the session)
 //
 // J6's answers and corrections each answer JobsChangeOut, whose `undo` the toast's Undo sends back:
@@ -41,6 +42,7 @@ import {
   JD_SOURCES, JD_STATES, JOB_EVENT_KINDS, JOB_HAND_FIELDS, JOB_HISTORY_STATES, JOB_READ_MODES, JOB_READING_CAUSES, JOB_STATUS_SETTERS, JOB_STATUSES,
   JOB_WORKPLACES, NEEDS_YOU_KINDS, NEEDS_YOU_REASONS,
 } from './enums.ts';
+import type {JobStatus} from './enums.ts';
 
 export const jobStatusSchema = z.enum(JOB_STATUSES);
 
@@ -477,4 +479,32 @@ export interface JobsLiveEvent {
   applications: number[];
   needs_you: number[];
   history?: JobsHistoryOut;
+}
+
+/**
+ * One application's latest status change (SV-220, D467, D470): an email that set a new status, turning
+ * Ghosted (30 days after its last email, computed) or a status set by hand (the latest only, its `from`
+ * the status its emails had set before it). `from` is null for a new application, which reads "Applied".
+ */
+export interface JobMoveOut {
+  application_id: number;
+  company: string;
+  title: string;
+  from: JobStatus | null;
+  to: JobStatus | 'ghosted';
+  by_hand: boolean;
+  at: string;
+}
+
+/**
+ * GET /api/jobs/movement: Jobs's pane with nothing open (SV-220, D467), newest first, one per application.
+ * Not in the iPhone app's contract. No counts (D314): the quiet line names the accounts Jobs reads and the
+ * month of the earliest email it has.
+ */
+export interface JobsMovementOut {
+  moves: JobMoveOut[];
+  // mail's accounts.id, in Settings › Jobs's order.
+  accounts: number[];
+  // The earliest email or Applied date Jobs has; null with no applications.
+  since: string | null;
 }

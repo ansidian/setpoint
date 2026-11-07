@@ -136,10 +136,16 @@ export interface CorrectionActions {
 /**
  * More's list (35b, 300 wide), which a row's right-click shares: the two edits, Set status ›, Merge
  * with… ›; Not this posting and Look up the JD again; then the two that remove it, each saying how
- * it differs (D321).
+ * it differs (D321). Condensed (the Jobs pane's rows, SV-220) leaves out the JD's two.
  */
-export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions): MenuEntry[] {
+export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions, condensed = false): MenuEntry[] {
   const saved = row.jd.state === 'found';
+  const jd: MenuEntry[] = condensed ? [] : [
+    {kind: 'item', id: 'not-this-posting', icon: 'link_off', label: 'Not this posting', disabled: !saved, title: saved ? undefined : 'No JD saved to take away', run: on.notThisPosting},
+    {kind: 'item', id: 'look-up', icon: 'manage_search', label: 'Look up the JD again', disabled: saved || row.jd.state === 'looking',
+      title: saved ? 'Not this posting first: a saved JD is never replaced' : row.jd.state === 'looking' ? 'Looking for the posting' : undefined, run: on.lookUpAgain},
+    {kind: 'sep'},
+  ];
   return [
     {kind: 'item', id: 'company', icon: 'edit', label: 'Edit company', run: on.editCompany},
     {kind: 'item', id: 'title', icon: 'edit_note', label: 'Edit title', run: on.editTitle},
@@ -147,10 +153,7 @@ export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], t
     {kind: 'item', id: 'merge', icon: 'merge', label: 'Merge with…',
       submenu: () => searchApplications('Merge with', rows, {except: [row.id], company: row.company, today, placeholder: 'Search applications', run: on.merge})},
     {kind: 'sep'},
-    {kind: 'item', id: 'not-this-posting', icon: 'link_off', label: 'Not this posting', disabled: !saved, title: saved ? undefined : 'No JD saved to take away', run: on.notThisPosting},
-    {kind: 'item', id: 'look-up', icon: 'manage_search', label: 'Look up the JD again', disabled: saved || row.jd.state === 'looking',
-      title: saved ? 'Not this posting first: a saved JD is never replaced' : row.jd.state === 'looking' ? 'Looking for the posting' : undefined, run: on.lookUpAgain},
-    {kind: 'sep'},
+    ...jd,
     {kind: 'item', id: 'not-an-application', icon: 'visibility_off', label: 'Not an application', sub: 'Hides it · its emails never make one again', run: on.notAnApplication},
     {kind: 'item', id: 'delete', icon: 'delete', label: 'Delete', sub: 'Forgets it · a later email can make it again', danger: true, run: on.remove},
   ];
@@ -160,9 +163,9 @@ export const moreMenu = (row: ApplicationRowOut, rows: ApplicationRowOut[], toda
 
 /**
  * A row's right-click (#268, D366): Open ↵, Open posting O with a link, More's list, then Copy
- * company and role and Copy posting link.
+ * company and role and Copy posting link. Condensed for the Jobs pane's rows (SV-220): no JD's two.
  */
-export function rowMenu(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions & {open: () => void; openPosting: () => void; copy: (text: string) => void}): MenuSpec {
+export function rowMenu(row: ApplicationRowOut, rows: ApplicationRowOut[], today: string, on: CorrectionActions & {open: () => void; openPosting: () => void; copy: (text: string) => void}, condensed = false): MenuSpec {
   const link = row.jd.link;
   return {
     label: `${row.company} · ${titleOf(row)}`, width: 300,
@@ -170,7 +173,7 @@ export function rowMenu(row: ApplicationRowOut, rows: ApplicationRowOut[], today
       {kind: 'item', id: 'open', icon: 'open_in_full', label: 'Open', hint: '↵', run: on.open},
       ...(link ? [{kind: 'item', id: 'posting', icon: 'open_in_new', label: 'Open posting', hint: 'O', run: on.openPosting} as const] : []),
       {kind: 'sep'},
-      ...moreEntries(row, rows, today, on),
+      ...moreEntries(row, rows, today, on, condensed),
       {kind: 'sep'},
       {kind: 'item', id: 'copy', icon: 'content_copy', label: 'Copy company and role', run: () => on.copy(`${row.company} · ${titleOf(row)}`)},
       ...(link ? [{kind: 'item', id: 'copy-link', icon: 'content_copy', label: 'Copy posting link', run: () => on.copy(link)} as const] : []),

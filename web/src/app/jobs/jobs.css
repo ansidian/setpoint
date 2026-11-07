@@ -513,3 +513,26 @@
 @media (hover: hover) { .jb-badge:hover { background: var(--sub); box-shadow: inset 0 0 0 1px var(--edgeHover); color: var(--ink); } }
 .jb-badge:active { background: var(--sub2); transform: scale(.97); transition-duration: var(--dur-press); }
 .jb-badge.lg { height: 26px; padding: 0 10px 0 8px; font-size: 12.5px; gap: 6px; align-self: flex-start; max-width: 100%; }
+/* Jobs's empty pane (SV-220, DESIGN.md #336): News's recap box (`.nd-recap`, `.nd-list`) holding one row per
+   application, its latest status change (D470): the table's status dot for where it went, the company in
+   `ink` 500, then "Applied → Rejected" in the table's label colours, the day on the right in `ink3`, and
+   the role under them in `ink3`. */
+.jobs-day { overflow-y: auto; min-height: 0; margin: 0 -28px; padding: 0 28px; }
+.jd-move { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 3px; align-items: center; padding: 10px 14px 9px; text-align: left; }
+.jd-move > .sd { grid-row: 1; }
+.jd-what { display: flex; align-items: baseline; gap: 10px; min-width: 0; font-size: 13.5px; line-height: 18px; white-space: nowrap; }
+.jd-what > .co { min-width: 0; color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.jd-change { flex: none; display: inline-flex; align-items: baseline; gap: 6px; font-size: 12.5px; }
+.jd-arrow { color: var(--ink3); }
+.jd-change > .by { color: var(--ink3); align-self: center; display: inline-flex; }
+.jd-when { color: var(--ink3); font-size: 12px; }
+.jd-role { grid-column: 2 / -1; color: var(--ink3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) { .jd-move:hover { background: var(--sub); } }
+.jd-none { display: inline-flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 12.5px; flex: none; }
+/* In the pane every status takes its dot's colour (D470): Rejected `alert`, Ghosted the ghost
+   ring's `sunGlyph`, the rest as the table's labels (Withdrawn stays `ink3`, as its ring). The sweep caught
+   Light's Offer at 4.38:1, so Offer and Ghosted lean toward `ink` there. */
+.jd-change > .sl.rej { color: var(--alert); font-weight: 500; }
+/* Offer and Ghosted keep `--moveInk` of their colour (all of it in Night, 85% in Light, the rest `ink`) to read at 4.5:1 on `panel`. */
+.jd-change > .sl.offer { color: color-mix(in oklch, var(--good) var(--moveInk), var(--ink)); }
+.jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--moveInk), var(--ink)); font-weight: 500; }

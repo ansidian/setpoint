@@ -5,11 +5,12 @@
 // lines (38a, 38b), Settings › Jobs's (39a) and Usage this month's Jobs row (39b); a JD's long facts
 // wrapping in their boxes (SV-129); the area that takes a pasted posting and a candidate Jobs can't
 // read (SV-140); an item's subject, which opens its email (D401); Setpoint on LinkedIn's chip saying an
-// application's standing as mail does (SV-174). What they do with the props and the pointer or keys they're
+// application's standing as mail does (SV-174); the empty pane's rows of recent movement and their words,
+// and a row's menu condensed for them (SV-220, D470). What they do with the props and the pointer or keys they're
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
-  ApplicationOut, JdCandidateOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
+  ApplicationOut, JdCandidateOut, JobMoveOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {MAX_PASTED_CHARS, PASTED_TOO_LONG} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
@@ -27,15 +28,18 @@ import {AppliedBefore, JdChip} from '../../src/app/jobs/InMail.tsx';
 import {readsWith} from '../../src/app/jobs/JobsSettings.tsx';
 import {JobsMenu} from '../../src/app/jobs/Menu.tsx';
 import type {MenuSpec} from '../../src/app/jobs/Menu.tsx';
-import {chooseMenu} from '../../src/app/jobs/menus.ts';
+import {chooseMenu, rowMenu} from '../../src/app/jobs/menus.ts';
+import {MoveRow} from '../../src/app/jobs/JobsDay.tsx';
 import type {FullPostingHandle} from '../../src/app/jobs/FullPosting.tsx';
 import {NeedsYou} from '../../src/app/jobs/NeedsYou.tsx';
 import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
+import {moveDay, movementFoot, moveSide} from '../../src/app/jobs/words.ts';
 import {appliedStanding, foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine, recedes} from '../../src/app/jobs/words.ts';
 import {appliedStanding as chipStanding, closes as chipCloses} from '../../../extension/src/words.ts';
 import {colour} from './colour.ts';
+import {applyTheme} from '../../src/tokens.ts';
 
 const ZONE = 'America/Los_Angeles';
 const TODAY = '2026-10-07';
@@ -892,5 +896,105 @@ test('SV-174: Setpoint on LinkedIn\'s chip says an application\'s standing, and 
   for (const application of applications) {
     expect(chipStanding(application, today)).toBe(appliedStanding(application, today));
     expect(chipCloses(application)).toBe(recedes(application));
+  }
+});
+
+// ---- The empty pane's recent movement (SV-220, D467, D470) ----
+
+test('SV-220: a move\'s sides are the table\'s labels and marks, Ghosted its own', () => {
+  expect((['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const).map(moveSide)).toEqual([
+    {label: 'Applied', mark: 'applied'}, {label: 'In process', mark: 'proc'}, {label: 'Offer', mark: 'offer'}, {label: 'Rejected', mark: 'rej'},
+    {label: 'Withdrawn', mark: 'wd'}, {label: 'Ghosted', mark: 'ghost'},
+  ]);
+});
+
+test.each([
+  ['2026-10-07T19:00:00.000Z', 'Today'],
+  ['2026-10-07T07:30:00.000Z', 'Today'],
+  ['2026-10-07T06:30:00.000Z', 'Yesterday'],
+  ['2026-10-02T17:00:00.000Z', 'Fri'],
+  ['2026-09-30T17:00:00.000Z', 'Sep 30'],
+  ['2025-12-12T17:00:00.000Z', 'Dec 12, 2025'],
+])('SV-220: a move at %s is dated %s', (at, word) => {
+  expect(moveDay(at, ZONE, TODAY)).toBe(word);
+});
+
+test('SV-220: the quiet line names the accounts Jobs reads and its earliest month, never a number of applications (D314)', () => {
+  expect(movementFoot(['Jobs', 'Personal'], '2026-03-02T09:00:00.000Z', ZONE)).toBe('Reading Jobs and Personal, since Mar 2026');
+  expect(movementFoot(['Jobs', 'Personal', 'Work'], null, ZONE)).toBe('Reading Jobs, Personal and Work');
+  expect(movementFoot(['Jobs'], '2026-03-01T03:00:00.000Z', ZONE)).toBe('Reading Jobs, since Feb 2026');
+  expect(movementFoot([], null, ZONE)).toBe('Reading no accounts');
+});
+
+const MOVE: JobMoveOut = {application_id: 7, company: 'Northwind Talent', title: 'Software Engineer I', from: 'applied', to: 'rejected', by_hand: false, at: '2026-10-06T17:00:00.000Z'};
+
+test('SV-220: a row reads the company, "Applied → Rejected" with each side in its dot\'s colour, the day and the role; a press opens it and a right-click asks for the menu', async () => {
+  const onOpen = vi.fn();
+  const onMenu = vi.fn((event: {preventDefault: () => void}) => event.preventDefault());
+  const moves: JobMoveOut[] = [MOVE, {...MOVE, application_id: 8, company: 'Contoso', to: 'ghosted'}, {...MOVE, application_id: 9, company: 'Fabrikam', from: null, to: 'applied'},
+    {...MOVE, application_id: 10, company: 'Woodgrove Bank', from: 'offer', to: 'withdrawn', by_hand: true}];
+  await render(<ol className="nd-list" style={{width: 460}}>{moves.map(move => <li key={move.application_id}><MoveRow move={move} timeZone={ZONE} today={TODAY} onOpen={onOpen} onMenu={onMenu} /></li>)}</ol>);
+  const rows = [...document.querySelectorAll<HTMLElement>('.jd-move')];
+  expect(rows.map(row => row.textContent)).toEqual([
+    'Northwind TalentApplied→RejectedYesterdaySoftware Engineer I',
+    'ContosoApplied→GhostedYesterdaySoftware Engineer I',
+    'FabrikamAppliedYesterdaySoftware Engineer I',
+    'Woodgrove BankOffer→WithdrawnYesterdaySoftware Engineer I',
+  ]);
+  const side = (row: number, which: 'first' | 'last') => getComputedStyle(rows[row]!.querySelector(`.jd-change > .sl:${which}-of-type`)!).color;
+  expect([side(0, 'last'), side(1, 'last'), side(0, 'first'), side(3, 'first')]).toEqual([colour('var(--alert)'), colour('var(--sunGlyph)'), colour('var(--ink2)'), colour('var(--good)')]);
+  expect(rows[2]!.querySelector('.jd-arrow')).toBeNull();
+  await expect.element(page.getByRole('img', {name: 'Set by you'})).toBeVisible();
+  expect(rows[3]!.contains(page.getByRole('img', {name: 'Set by you'}).element())).toBe(true);
+  await userEvent.click(rows[0]!);
+  expect(onOpen).toHaveBeenCalledOnce();
+  rows[0]!.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}));
+  expect(onMenu).toHaveBeenCalledOnce();
+});
+
+test('SV-220: the menu a pane row gets is the table row\'s without Not this posting and Look up the JD again', () => {
+  const row = detailOf(null);
+  const on = {
+    editCompany: () => {}, editTitle: () => {}, setStatus: () => {}, merge: () => {}, notThisPosting: () => {}, lookUpAgain: () => {}, notAnApplication: () => {}, remove: () => {},
+    open: () => {}, openPosting: () => {}, copy: () => {},
+  };
+  const ids = (spec: MenuSpec) => spec.entries.map(entry => (entry.kind === 'item' ? entry.id : entry.kind));
+  const full = ids(rowMenu(row, [row], TODAY, on));
+  expect(full).toEqual(['open', 'sep', 'company', 'title', 'status', 'merge', 'sep', 'not-this-posting', 'look-up', 'sep', 'not-an-application', 'delete', 'sep', 'copy']);
+  expect(ids(rowMenu(row, [row], TODAY, on, true))).toEqual(full.filter((id, index) => !['not-this-posting', 'look-up'].includes(id) && index !== full.indexOf('look-up') + 1));
+});
+
+/** WCAG's contrast between two computed `rgb()` colours. */
+function contrast(a: string, b: string): number {
+  const luminance = (value: string) => {
+    const [r, g, bl] = value.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(channel => {
+      const c = channel / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (high! + 0.05) / (low! + 0.05);
+}
+
+test('SV-220: every status a row can name reads at 4.5:1 on the list\'s panel, in Night and in Light (the sweep caught Light\'s Offer)', async () => {
+  const sides = (['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const);
+  await render(<ol className="nd-list">{sides.map((to, index) => <li key={to}><MoveRow move={{...MOVE, application_id: index + 1, from: null, to}} timeZone={ZONE} today={TODAY} onOpen={() => {}} onMenu={() => {}} /></li>)}</ol>);
+  const sRgb = (value: string) => {
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.fillStyle = value;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+  try {
+    for (const theme of ['night', 'light'] as const) {
+      applyTheme(document.documentElement, theme);
+      const panel = sRgb(colour('var(--panel)'));
+      const ratios = [...document.querySelectorAll<HTMLElement>('.jd-change > .sl')].map(side => contrast(sRgb(getComputedStyle(side).color), panel));
+      expect(ratios.filter(ratio => ratio < 4.5), theme).toEqual([]);
+    }
+  } finally {
+    applyTheme(document.documentElement, 'night');
   }
 });

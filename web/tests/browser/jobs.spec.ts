@@ -10,7 +10,8 @@
 // SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
 // SV-170: Paste the posting while it's looked up stops the lookup, and the JD's location set in place.
 // D401: an item's email opening where the detail sits, and Esc leaving the item unanswered. D402: an
-// application's email opening from Assign to…, the menu staying beside it.
+// application's email opening from Assign to…, the menu staying beside it. SV-220: the empty pane's
+// recent movement, a hand move landing in it, its row's condensed menu and a row opening its detail.
 // Per week's chart, the status control, the posting's unfolding, the menus' keys, the candidate
 // picker and the title's field are the component tests' (web/tests/components/jobs.test.tsx); what
 // each correction keeps, and that it sticks, the server's (server/src/jobs/tests/corrections.test.ts).
@@ -613,6 +614,44 @@ test('SV-217: the table\'s columns fill the row to the pane at any width, Needs 
         assert.deepEqual([filtered.role, filtered.edge, filtered.ends], [at.role, at.edge, at.ends], 'the filter leaves the columns where they are');
       }
     }
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-220: the empty pane lists recent movement, one row per application newest first; a row opens its detail, and its right-click is the table\'s menu without the JD\'s two', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/jobs`);
+    const pane = page.locator('section.pane.idle');
+    const moves = pane.locator('.jd-move');
+    await moves.first().waitFor();
+    assert.equal(await pane.getAttribute('aria-label'), 'Jobs pane');
+    assert.equal(await moves.count(), 8);
+    assert.equal(await pane.locator('.md-need').textContent(), 'Recent movement');
+    assert.match(await pane.locator('.pane-foot .md-kept').textContent() ?? '', /^Reading .+, since [A-Z][a-z]{2} \d{4}$/);
+
+    // A hand move lands on top as the server's `jobs` event arrives, from what its emails had set.
+    const woodgrove = await applicationId(setpoint, 'Woodgrove Bank', 'Application Developer');
+    await setpoint.api('POST', `/jobs/applications/${woodgrove}/status`, {status: 'withdrawn'});
+    await until('the hand move on top', () => moves.first().getAttribute('data-application'), id => id === String(woodgrove));
+    assert.equal(await moves.first().locator('.jd-what').textContent(), 'Woodgrove BankOffer→Withdrawn');
+    assert.equal(await moves.first().getByRole('img', {name: 'Set by you'}).count(), 1);
+
+    await moves.first().click({button: 'right'});
+    const menu = page.getByRole('menu');
+    await menu.waitFor();
+    const items = await menu.locator('.menu-i').allTextContents();
+    assert.equal(items.some(item => /Not this posting|Look up the JD again/.test(item)), false, 'no JD\'s two');
+    assert.equal(items.some(item => item.startsWith('Set status')), true);
+    await page.keyboard.press('Escape');
+    await menu.waitFor({state: 'detached'});
+
+    await moves.first().click();
+    await page.locator('.jb-pane .jb-co').waitFor();
+    assert.equal(new URL(page.url()).pathname, `/jobs/${woodgrove}`);
+    assert.equal(await pane.count(), 0, 'the detail takes the pane');
   } finally {
     await setpoint.stop();
   }

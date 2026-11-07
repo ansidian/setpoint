@@ -54,7 +54,10 @@ import {
   applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
   pickCandidate, searchPath, setStatus,
 } from './api.ts';
-import {EmptyPane, EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
+import {EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
+import type {PaneTrouble} from '../EmptyPane.tsx';
+import {JobsDay} from './JobsDay.tsx';
+import {openSettings} from '../settings/store.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {rowMenu} from './menus.ts';
@@ -67,7 +70,7 @@ import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
 import {JobsLines, JobsOff} from './States.tsx';
 import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
-import {DEFAULT_SORT, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
+import {DEFAULT_SORT, pickWords, readingLine, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import {useListFade} from '../../ui/Segmented.tsx';
 import './jobs.css';
@@ -201,6 +204,11 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const email = useHold(reading, compact ? motion.medium : motion.fast);
   // The pane beside the table (SV-217): the application, else an item's email, else empty.
   const pane = useEmptyPane(open !== null || email.shown !== null);
+  // The AI down folds into the empty pane's foot (#335) as well as its line over the table.
+  const down = page ? readingLine(page.reading, page.history, now, zone) : null;
+  const paneTrouble: PaneTrouble[] = down
+    ? [{text: down, glyph: 'warning', ...(page?.reading.retrying ? {} : {fix: {label: 'Settings › AI', run: () => openSettings('ai')}})}]
+    : [];
 
   // Closing: the content fades over 120 ms (in a narrow window it slides off over 180), then the pane goes.
   const [leaving, setLeaving] = useState(false);
@@ -373,10 +381,10 @@ export function JobsPage({route}: {route: JobsRoute}) {
   };
   // A row's right-click (#248, #268): its actions at the pointer; the cursor moves to it, and it doesn't open.
   const zoom = () => (document.documentElement as HTMLElement & {currentCSSZoom?: number}).currentCSSZoom || 1;
-  const onRowMenu = (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => {
+  const onRowMenu = (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>, condensed = false) => {
     if (!takesContextMenu(event, event.currentTarget)) return;
     event.preventDefault();
-    setCursor(rowKey(row.id));
+    if (!condensed) setCursor(rowKey(row.id));
     const link = row.jd.link;
     setRowMenuOpen({
       anchor: {point: {x: event.clientX / zoom(), y: event.clientY / zoom()}},
@@ -385,7 +393,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
         open: () => openAt(row.id),
         openPosting: () => link && window.open(link, '_blank', 'noopener'),
         copy: text => copyText(text),
-      }),
+      }, condensed),
     });
   };
 
@@ -464,7 +472,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
             onInbox={() => navigate({page: 'inbox', account: null, open: email.shown!.message})} />
         )}
         {pane.drawn && enabled && (
-          <EmptyPane label="Jobs pane" glyph="work" line="Open an application to see it here." keys={[{keys: ['J', 'K'], does: 'Move'}, {keys: ['Enter'], does: 'Open'}]} />
+          <JobsDay trouble={paneTrouble} timeZone={zone} today={today} onOpen={openAt}
+            onMenu={(id, event) => { const row = rows.find(each => each.id === id); if (row) onRowMenu(row, event, true); }} />
         )}
       </div>
       {rowMenuOpen && <JobsMenu spec={rowMenuOpen.spec} anchor={rowMenuOpen.anchor} onClose={() => setRowMenuOpen(null)} />}

@@ -485,9 +485,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .pane { position: relative; max-width: calc(100% - 420px); }
 /* With nothing open: the page's content, and its keys pinned to the bottom (SV-217, SV-218). */
 .pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px 20px; color: var(--ink3); min-height: 0; }
-/* Jobs's placeholder: the page's glyph and one line, centred (until SV-220). */
-.pane-placeholder { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
-.pane-placeholder > p { margin: 0; color: var(--ink2); font-size: 13px; }
 .pane-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .pane-foot p { margin: 0; }
 /* The foot's facts line, led by the pane's trouble when there is some (#335): one `warning` chip in
@@ -542,6 +539,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .md-tile.fyi.lit { background: color-mix(in srgb, var(--cool) var(--fyiWash), var(--panel)); }
 .md-tile.fyi.lit > dt > .icon { color: var(--cool); }
 .md-kept { color: var(--ink3); font-size: 12px; }
+/* A neutral band over a boxed list of rows, News's recap (#332) and Jobs's recent movement (#336). */
+.nd-recap { width: min(100%, 460px); display: flex; flex-direction: column; align-items: center; gap: 12px; flex: none; }
+.md-need.nd-away { color: var(--ink); background: color-mix(in srgb, var(--sub) 70%, var(--page)); box-shadow: inset 0 0 0 1px var(--hair); }
+.md-need.nd-away > .icon { color: var(--ink3); }
+.nd-list { list-style: none; margin: 0; padding: 0; width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; text-align: left; }
+.nd-list > li + li { border-top: 1px solid var(--hair); }
 /* The pane's left edge resizes it (2026-10-09), and shows it can (reader-09, SV-201): a 10 px strip
    straddling the border (placed from inside it; the pane draws past its left side for it, as its
    scroller clips its own content). At rest it's only the border. Under the pointer, after 80 ms so a
