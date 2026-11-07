@@ -1,7 +1,7 @@
 // The page's theme: the choice this browser keeps (localStorage), resolved against the browser's
 // preference, drawn with tokens.ts.
 import {useSyncExternalStore} from 'react';
-import {parseThemeChoice, resolveTheme} from '../logic/theme.ts';
+import {flippedTheme, parseThemeChoice, resolveTheme} from '../logic/theme.ts';
 import type {ThemeChoice} from '../logic/theme.ts';
 import {applyTheme, colour, lightColour} from '../tokens.ts';
 
@@ -64,3 +64,9 @@ export const useThemeChoice = () => useSyncExternalStore(listener => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }, () => choice);
+
+/** ⌘J: Light and Night trade places; on System it does nothing, leaving the browser in charge. */
+export function flipTheme() {
+  const next = flippedTheme(choice);
+  if (next) setThemeChoice(next);
+}

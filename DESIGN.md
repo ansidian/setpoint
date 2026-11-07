@@ -1497,7 +1497,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   asked. Only Attention mail not yet Done offers it (#93). **Trash** (`E`) offers Undo for 6 seconds, as v1 does, in the export's `.toast` (a 40 px pill
   at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
   six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
-- **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
+- **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, ⌘J Light or Night (#342), Esc closes the
   topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter
   Tab ⇧Tab (the views, #338);
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Tab ⇧Tab, Enter, Esc; News (after 2.0) `3`,
@@ -4244,3 +4244,7 @@ it changes what's on screen.
     with it. An address from the filter's time (/inbox?account=2) opens the plain Inbox, keeping its
     view and open email, and the address drops the account. On Calendar the sidebar has nothing to
     fold, so Calendar and News stay where they are; the page's section still fades in.
+342. **⌘J switches Light and Night** (Andy, 2026-11-07). ⌘J, or Ctrl-J, from anywhere, a field
+    included, turns Light into Night and Night into Light, kept per browser as Appearance is. It
+    never goes to System, and on System it does nothing, so the browser's preference stays in
+    charge until Appearance in Settings or ⌘K is changed. No toast, and no motion of its own (#291).

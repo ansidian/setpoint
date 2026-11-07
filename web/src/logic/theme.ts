@@ -14,3 +14,7 @@ export const parseThemeChoice = (stored: string | null): ThemeChoice =>
 /** The theme a choice draws in, given whether the browser prefers dark. */
 export const resolveTheme = (choice: ThemeChoice, prefersDark: boolean): Theme =>
   choice === 'system' ? (prefersDark ? 'night' : 'light') : choice;
+
+/** What ⌘J switches a choice to: Light and Night trade places, and System stays System (null). */
+export const flippedTheme = (choice: ThemeChoice): ThemeChoice | null =>
+  choice === 'light' ? 'night' : choice === 'night' ? 'light' : null;

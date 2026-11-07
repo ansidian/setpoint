@@ -61,3 +61,32 @@ test('System follows the browser', async () => {
     await setpoint.stop();
   }
 });
+
+test('⌘J switches Light and Night, from a field too, and leaves System alone', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    // System, with the browser preferring dark: ⌘J keeps following the browser.
+    await page.keyboard.press('ControlOrMeta+j');
+    assert.equal(await theme(page), 'night');
+    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.theme')), null);
+    await page.emulateMedia({colorScheme: 'light'});
+    await until('System still following the browser', () => theme(page), value => value === 'light');
+
+    await page.evaluate(() => localStorage.setItem('setpoint.theme', 'light'));
+    await page.reload();
+    await page.locator('.list .row').first().waitFor();
+    await page.keyboard.press('ControlOrMeta+j');
+    await until('Night', () => theme(page), value => value === 'night');
+    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.theme')), 'night');
+    await page.keyboard.press('/');
+    await page.keyboard.press('ControlOrMeta+j');
+    await until('Light, from the search field', () => theme(page), value => value === 'light');
+    assert.equal(await page.evaluate(() => localStorage.getItem('setpoint.theme')), 'light');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
