@@ -83,6 +83,28 @@ test('SV-218: with nothing open the Inbox\'s pane says how the day is going, a t
   }
 });
 
+test('SV-222: closing an email brings the Inbox\'s pane back as it was, its numbers there at once and its mark already settled', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const pane = page.locator('section.pane.idle');
+    await until('the day', () => pane.locator('.md-need').textContent(), text => text === '3 need you, 1 overdue');
+    // From here the day's answer never comes, so whatever the pane shows on its return it already had.
+    await page.route(url => url.pathname === '/api/mail/day', () => {});
+    // Opening Google's email reads it, which the live stream passes on as a change to the mail.
+    await rowOf(page, 'Your recovery email was changed').click();
+    await until('Google read', () => unreadCount(page), text => text === '18');
+    await page.keyboard.press('Escape');
+    await pane.waitFor();
+    assert.equal(await pane.locator('.md-need').count(), 1);
+    assert.equal(await pane.locator('.md-tile').count(), 3);
+    assert.equal(await pane.locator('.mail-day > .mark').evaluate(mark => mark.classList.contains('settle')), false);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Done on the open email opens the next, which reads it; the pill drops for the Done, and the email goes to its day', async () => {
   const setpoint = await startSetpoint();
   try {

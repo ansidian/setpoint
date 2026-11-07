@@ -61,7 +61,7 @@ import {toastFailure} from '../toast.ts';
 import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import {NewsSkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
-import {NewsDay} from './NewsDay.tsx';
+import {NewsDay, PANE_PATHS} from './NewsDay.tsx';
 import type {PaneTrouble} from '../EmptyPane.tsx';
 import {openSettings} from '../settings/store.ts';
 import {RecapPanel} from './RecapPanel.tsx';
@@ -317,7 +317,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   useSeen(list, shown, rows);
   useListFade(list, view);
   // The pane beside the list (SV-217): the open story, else empty, with the recap on All (SV-219).
-  const pane = useEmptyPane(open !== null);
+  const pane = useEmptyPane(open !== null, PANE_PATHS);
   // The user on News, with the recap's stories once the pane shows them: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn && pane.drawn, open !== null) ? recapShown?.ids ?? null : null);
 
@@ -480,7 +480,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             canStep={{previous: neighbourStory(storyKeys, shownOpenKey, -1) !== null, next: neighbourStory(storyKeys, shownOpenKey, 1) !== null}}
             onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close} />
         )}
-        {pane.drawn && <NewsDay recap={recapShown} rows={rows} trouble={trouble} now={now} zone={zone} openAt={recapAt} onRecap={setRecapAt} />}
+        {pane.drawn && <NewsDay settle={pane.settle} recap={recapShown} rows={rows} trouble={trouble} now={now} zone={zone} openAt={recapAt} onRecap={setRecapAt} />}
         {recapOpen.shown && (
           <RecapPanel ids={recapOpen.shown.ids} at={recapOpen.shown.at} closing={recapOpen.closing} rows={rows} now={now} zone={zone} onAt={setRecapAt} onClose={closeRecap}
             onSeen={before => setVisit(current => ({...current, dots: openedInVisit(visitDots(current.dots, [before]), before.id)}))} />

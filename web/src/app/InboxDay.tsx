@@ -16,6 +16,9 @@ import type {PaneKey, PaneTrouble} from './EmptyPane.tsx';
 import {openSettings} from './settings/store.ts';
 import {reconnectFrom} from './states/States.tsx';
 
+// What the pane reads, kept on screen while the Inbox is up (SV-222).
+export const PANE_PATHS = [DAY_PATH, TRIAGE_PATH];
+
 const KEYS: PaneKey[] = [
   {keys: ['J', 'K'], does: 'Move'},
   {keys: ['Enter'], does: 'Open'},
@@ -25,7 +28,7 @@ const KEYS: PaneKey[] = [
   {keys: ['P'], does: 'Pin'},
 ];
 
-export function InboxDay() {
+export function InboxDay({settle}: {settle: boolean}) {
   const {data: day} = useResource<MailDayOut>(DAY_PATH);
   const {data: triage} = useResource<TriageStatusOut>(TRIAGE_PATH);
   const {list} = useAccounts();
@@ -41,7 +44,7 @@ export function InboxDay() {
   return (
     <EmptyPane label="Inbox pane" keys={KEYS} trouble={trouble} foot={day && <p className="md-kept num">{keptLine(day, zone)}</p>}>
       <div className="mail-day">
-        <Mark size={40} settle />
+        <Mark size={40} settle={settle} />
         {day && (
           <>
             {need

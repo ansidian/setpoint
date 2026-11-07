@@ -23,7 +23,11 @@ const KEYS: PaneKey[] = [
   {keys: ['Tab'], does: 'Section'},
 ];
 
-export function NewsDay({recap, rows, trouble, now, zone, openAt, onRecap}: {
+// What the pane reads, kept on screen while News is up (SV-222).
+export const PANE_PATHS = [NEWS_DAY_PATH];
+
+export function NewsDay({recap, rows, trouble, now, zone, openAt, onRecap, settle}: {
+  settle: boolean;
   // The recap held for the visit, as it's drawn (only on All); null without one.
   recap: HeldRecap | null;
   rows: ReadonlyMap<number, StoryRowOut>;
@@ -41,7 +45,7 @@ export function NewsDay({recap, rows, trouble, now, zone, openAt, onRecap}: {
   return (
     <EmptyPane label="News pane" keys={KEYS} trouble={trouble} foot={day && <p className="md-kept num">{newsKeptLine(day)}</p>}>
       <div className="mail-day news-day">
-        <Mark size={40} settle />
+        <Mark size={40} settle={settle} />
         {stories.length > 0 && (
           <section className="nd-recap" aria-label="While you were away">
             <p className="md-need nd-away"><Icon name="history" size={18} /><span>While you were away</span>{since && <span className="nd-since num">{since}</span>}</p>

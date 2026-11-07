@@ -21,7 +21,11 @@ const KEYS: PaneKey[] = [
   {keys: ['/'], does: 'Search'},
 ];
 
-export function JobsDay({trouble, timeZone, today, onOpen, onMenu}: {
+// What the pane reads, kept on screen while Jobs is up (SV-222).
+export const PANE_PATHS = [MOVEMENT_PATH];
+
+export function JobsDay({trouble, timeZone, today, onOpen, onMenu, settle}: {
+  settle: boolean;
   trouble: PaneTrouble[];
   timeZone: string;
   today: string;
@@ -35,7 +39,7 @@ export function JobsDay({trouble, timeZone, today, onOpen, onMenu}: {
   return (
     <EmptyPane label="Jobs pane" keys={KEYS} trouble={trouble} foot={movement && <p className="md-kept num">{movementFoot(names, movement.since, timeZone)}</p>}>
       <div className="mail-day jobs-day">
-        <Mark size={40} settle />
+        <Mark size={40} settle={settle} />
         {movement && movement.moves.length > 0 && (
           <section className="nd-recap" aria-label="Recent movement">
             <p className="md-need nd-away"><Icon name="history" size={18} /><span>Recent movement</span></p>

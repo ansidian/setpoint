@@ -6,8 +6,13 @@
 // In a narrow window an open item covers the list, and the empty pane comes over it only from a
 // 30 px `right_panel_open` button before search, as Calendar's day does (#196): lit while showing,
 // closed by the button again or Esc, on every load, and when an item opens.
+//
+// While its page is up, the pane's answers stay on screen even with an item open (SV-222), so a
+// change to the mail meanwhile refreshes them rather than forgetting them, and closing the item brings
+// the pane back as it was. Its mark settles in only the first time the pane shows in a visit.
 import {useState} from 'react';
 import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
+import {useResources} from '../api/client.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {useCompact, usePhone} from './Phone.tsx';
@@ -20,22 +25,34 @@ export interface EmptyPaneState {
   // Whether the narrow window's button is in the header, and whether it has the pane showing.
   button: boolean;
   shown: boolean;
+  // Whether its mark settles in: until the pane has been drawn and put away once.
+  settle: boolean;
   toggle: () => void;
   close: () => void;
 }
 
-/** The empty pane's state for a page; `open` is whether an item has the pane. */
-export function useEmptyPane(open: boolean): EmptyPaneState {
+/**
+ * The empty pane's state for a page; `open` is whether an item has the pane, and `keep` the paths
+ * the pane reads, kept on screen while the page is up.
+ */
+export function useEmptyPane(open: boolean, keep: string[]): EmptyPaneState {
   const compact = useCompact();
   const phone = usePhone();
+  useResources(phone ? [] : keep);
   const [asked, setAsked] = useState(false);
+  const [seen, setSeen] = useState(false);
+  const [settle, setSettle] = useState(true);
   // An item opening puts it away, as does a window wide enough to show it anyway.
   if (asked && (open || !compact)) setAsked(false);
   const shown = asked && compact && !open;
+  const drawn = !phone && !open && (!compact || shown);
+  if (drawn && !seen) setSeen(true);
+  if (!drawn && seen && settle) setSettle(false);
   return {
-    drawn: !phone && !open && (!compact || shown),
+    drawn,
     button: compact,
     shown,
+    settle,
     toggle: () => setAsked(!shown),
     close: () => setAsked(false),
   };

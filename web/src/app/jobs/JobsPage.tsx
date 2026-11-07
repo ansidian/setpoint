@@ -56,7 +56,7 @@ import {
 } from './api.ts';
 import {EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import type {PaneTrouble} from '../EmptyPane.tsx';
-import {JobsDay} from './JobsDay.tsx';
+import {JobsDay, PANE_PATHS} from './JobsDay.tsx';
 import {openSettings} from '../settings/store.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
@@ -203,7 +203,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
   const email = useHold(reading, compact ? motion.medium : motion.fast);
   // The pane beside the table (SV-217): the application, else an item's email, else empty.
-  const pane = useEmptyPane(open !== null || email.shown !== null);
+  const pane = useEmptyPane(open !== null || email.shown !== null, PANE_PATHS);
   // The AI down folds into the empty pane's foot (#335) as well as its line over the table.
   const down = page ? readingLine(page.reading, page.history, now, zone) : null;
   const paneTrouble: PaneTrouble[] = down
@@ -472,7 +472,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
             onInbox={() => navigate({page: 'inbox', account: null, open: email.shown!.message})} />
         )}
         {pane.drawn && enabled && (
-          <JobsDay trouble={paneTrouble} timeZone={zone} today={today} onOpen={openAt}
+          <JobsDay settle={pane.settle} trouble={paneTrouble} timeZone={zone} today={today} onOpen={openAt}
             onMenu={(id, event) => { const row = rows.find(each => each.id === id); if (row) onRowMenu(row, event, true); }} />
         )}
       </div>
