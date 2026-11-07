@@ -52,7 +52,7 @@ test('an email\'s right-click: its actions at the pointer, the cursor there, not
     // Whatever the right-click set off answered and drawn before what it shouldn't have done is read.
     await setpoint.idle();
     assert.match((await row.getAttribute('class'))!, /\bunread\b/, 'still unread');
-    assert.equal(await page.locator('.pane').count(), 0, 'nothing opened');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'nothing opened');
 
     // Esc closes it alone.
     await page.keyboard.press('Escape');
@@ -267,7 +267,7 @@ test('a story\'s right-click: Open, Open at its outlet, Copy link, the cursor th
     assert.equal(offered[2], 'Copy link');
     assert.match((await row.getAttribute('class'))!, /\bcur\b/);
     await setpoint.idle();
-    assert.equal(await page.locator('.pane').count(), 0, 'nothing opened');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'nothing opened');
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {origin: setpoint.base});
     await item(page, 'Copy link').click();
     await page.locator('.toast', {hasText: 'link'}).waitFor();

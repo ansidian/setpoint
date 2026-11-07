@@ -191,8 +191,8 @@ export function Reader({id, travel = null, row, accounts, now, timeZone, canStep
 /**
  * The pane's scroller. Each email opens at its top, one shown before (straight from the cache) too,
  * and swaps in from the side the user stepped from (reader-03): up 8 px from below going down the
- * list, down from above going up, a fade for a click; the email the pane opened on arrives with the
- * pane (its slide in), not as a swap. The tools stay still.
+ * list, down from above going up, a fade for a click; the first email shows at once (in a narrow
+ * window it arrives with the pane's slide over the list), not as a swap. The tools stay still.
  */
 function Swap({id, travel, children}: {id: number; travel: Travel | null; children: ReactNode}) {
   const [arrived] = useState(id);

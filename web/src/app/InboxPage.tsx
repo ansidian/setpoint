@@ -56,6 +56,7 @@ import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
 import type {SelectionHandlers} from './emailActions.ts';
 import {SelectionPane} from './SelectionPane.tsx';
+import {EmptyPane, EmptyPaneButton, useEmptyPane} from './EmptyPane.tsx';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
@@ -523,6 +524,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
     close,
   };
 
+  // The pane beside the list (SV-217): the open email, else the selection, else empty.
+  const showsSelection = open === null && selected.length > 0 && !compact;
+  const pane = useEmptyPane(open !== null || showsSelection);
+
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
   useLayoutEffect(() => {
@@ -570,6 +575,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
         else if (open !== null) run(close);
+        else if (pane.shown) run(pane.close);
         else if (alfred.open) run(() => {
           // The Answer card folds away, as its own Esc does (app/fold.ts).
           foldAway(document.querySelector('.search-list > .answer'));
@@ -644,7 +650,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
 
   return (
     <>
-      <header className="hd ends">
+      <header className="hd">
         {phone && <Mark />}
         {/* A filtered Inbox names its account, so the filter isn't only the sidebar's (UX #15); the phone's account button already does. */}
         <h1 className="hd-title">{searching ? 'Search' : filteredTo && !phone ? `Inbox · ${filteredTo}` : 'Inbox'}</h1>
@@ -669,6 +675,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
             {!searching && <button className="ibtn ph-icon" type="button" aria-label="Mark all as read" onClick={actions.markAllRead}><Icon name="done_all" size={20} /></button>}
           </>
         )}
+        <EmptyPaneButton pane={pane} />
         <SearchField search={search} onAsk={askAlfred} onEnter={first => setCursor(`all:${first.id}`)} />
       </header>
       {/* Filtered to one account, the rows drop the account they'd all repeat (inbox-12). */}
@@ -697,9 +704,10 @@ export function InboxPage({route}: {route: InboxRoute}) {
             canStep={{previous: neighbour(stops, open, -1) !== null, next: neighbour(stops, open, 1) !== null}} />
         )}
         {/* From 640 to 1099 px a pane covers the list, so the selection shows only on its rows there. */}
-        {open === null && selected.length > 0 && !compact && (
+        {showsSelection && (
           <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
+        {pane.drawn && <EmptyPane label="Inbox pane" glyph="inbox" line="Open an email to read it here." keys={[{keys: ['J', 'K'], does: 'Move'}, {keys: ['Enter'], does: 'Open'}]} />}
       </div>
     </>
   );

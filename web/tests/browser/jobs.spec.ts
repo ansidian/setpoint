@@ -126,10 +126,10 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     // The table: every application, newest first by Applied (D314), its status with Ghosted and the step (D309).
     assert.equal(await rows(page).count(), 62);
     assert.deepEqual((await companies(page)).slice(0, 6), ['Fabrikam', 'Relecloud', 'Lucerne Publishing', 'Tailspin Toys', 'Trey Research', 'Northwind Talent']);
-    assert.deepEqual(await page.locator('.jb-th .h').allTextContents(), ['Company', 'Role', 'Platform', 'Applied', 'Status', 'JD']);
+    assert.deepEqual(await page.locator('.jb-th .h').allTextContents(), ['Company', 'Role', 'Applied', 'Status', 'JD']);
     const status = async (company: string, title: string) => row(page, await applicationId(setpoint, company, title)).locator('.st').textContent();
     assert.equal(await status('Northwind Talent', 'Software Engineer I'), 'In process· Pick a 30-minute interview slot this week');
-    assert.equal(await status('Relecloud', 'Support Engineer'), 'Applied· Re-applied, rejected Sep 2');
+    assert.equal(await status('Relecloud', 'Support Engineer'), 'Applied· Re-applied');
     assert.equal(await status('Proseware', 'Software Engineer, Platform'), 'Ghosted· no email in 48 days');
     assert.equal(await status('Woodgrove Bank', 'Application Developer'), 'Offer· Oct 6');
     const alpine = row(page, await applicationId(setpoint, 'Alpine Ski House', 'Web Developer'));
@@ -138,17 +138,17 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     const fabrikam = row(page, await applicationId(setpoint, 'Fabrikam', 'Data Analyst'));
     const [open, closed] = await rested(() => Promise.all([fabrikam, alpine].map(one => one.locator('.co').evaluate(cell => [getComputedStyle(cell).color, getComputedStyle(cell.parentElement!).opacity]))));
     assert.deepEqual([open, closed], [[await rested(() => colourOf(page, 'var(--ink)')), '1'], [await rested(() => colourOf(page, 'var(--ink2)')), '1']]);
-    // The JD column: how it was found, or where it stands; nothing for a closed one from history (D311).
+    // The JD column: a glyph, how it was found or where it stands in its tip; nothing for a closed one
+    // from history (D311).
     const jd = async (company: string, title: string) => {
       const cell = row(page, await applicationId(setpoint, company, title)).locator('.jd');
-      return [await cell.textContent(), await cell.getAttribute('data-tip')];
+      return [await cell.locator('.icon').count(), await cell.getAttribute('data-tip')];
     };
-    assert.deepEqual(await jd('Northwind Talent', 'Software Engineer I'), ['Greenhouse', 'Greenhouse · found Oct 1']);
-    assert.deepEqual(await jd('Lucerne Publishing', 'Junior Developer'), ['In Needs you', '2 candidates in Needs you']);
-    // No tip where it would only say the words again (SV-171).
-    assert.deepEqual(await jd('Trey Research', 'Data Engineer I'), ['No JD found', null]);
-    assert.deepEqual(await jd('Tailspin Toys', 'Full Stack Developer'), ['The email\'s link', 'The email\'s link · found Oct 2']);
-    assert.deepEqual(await jd('Northwind Talent', 'Junior Developer'), ['', null]);
+    assert.deepEqual(await jd('Northwind Talent', 'Software Engineer I'), [1, 'Greenhouse · found Oct 1']);
+    assert.deepEqual(await jd('Lucerne Publishing', 'Junior Developer'), [1, '2 candidates in Needs you']);
+    assert.deepEqual(await jd('Trey Research', 'Data Engineer I'), [1, 'No JD found']);
+    assert.deepEqual(await jd('Tailspin Toys', 'Full Stack Developer'), [1, 'The email\'s link · found Oct 2']);
+    assert.deepEqual(await jd('Northwind Talent', 'Junior Developer'), [0, null]);
 
     // A header sorts by it, and again flips it.
     await page.locator('.jb-th .h', {hasText: 'Company'}).click();
@@ -170,7 +170,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
   }
 });
 
-test('an application opens where the reading pane sits: Platform drops and JD is a glyph, its head, its JD, its timeline and Applied before, and O its posting', async () => {
+test('an application opens where the reading pane sits: its head, its JD, its timeline and Applied before, and O its posting', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -183,11 +183,6 @@ test('an application opens where the reading pane sits: Platform drops and JD is
     assert.equal(await page.title(), 'Software Engineer I · Northwind Talent');
     assert.equal(pagePx((await rested(() => page.locator('.jb-pane').boundingBox()))!.width), layout.readingPane);
     assert.match(await row(page, northwind).getAttribute('class') ?? '', /\bopen\b/);
-    // Beside the detail, Platform drops and JD is its glyph alone, its words in the tooltip.
-    assert.equal(await page.locator('.jb-th .h.c-plat').isVisible(), false);
-    assert.equal(await row(page, northwind).locator('.pl').isVisible(), false);
-    assert.equal(await row(page, northwind).locator('.jd .t').isVisible(), false);
-    assert.equal(await row(page, northwind).locator('.jd .icon').isVisible(), true);
 
     // The head, then the JD first (D307).
     const pane = page.locator('.jb-pane');
@@ -418,7 +413,7 @@ test('a failed pick (SV-132, SV-140): it says so and Open posting opens it; Past
     await page.keyboard.press('Meta+Enter');
     await full.waitFor();
     assert.match((await full.textContent())!, /^Full postingPasted by you · Oct 7, \d+:\d\d [AP]Mglassdoor\.exampleShow$/);
-    await until('its row', () => row(page, phone).locator('.jd').textContent(), value => value === 'Pasted');
+    await until('its row', () => row(page, phone).locator('.jd').getAttribute('data-tip'), value => Boolean(value?.startsWith('Pasted by you · ')));
     // Nothing read yet, so nothing claimed: no empty summary, no "Salary not stated", only Add location.
     assert.equal(await pane.locator('.jb-want').count(), 0);
     assert.equal(await pane.locator('.jb-facts').textContent(), 'Add location');
@@ -501,7 +496,7 @@ test('Paste the posting while it\'s looked up (SV-170): the lookup stops, Esc le
     await until('the area focused', () => area.evaluate(element => element === document.activeElement), focused => focused);
     assert.equal(await pane.locator('.jb-nojd').textContent(), 'Lookup stopped · You stopped it on Oct 7');
     await until('stopped on the server', () => setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`), detail => detail.jd.state === 'not_found' && detail.jd.stopped);
-    await until('its row', () => row(page, trey).locator('.jd').textContent(), value => value === 'Stopped');
+    await until('its row', () => row(page, trey).locator('.jd').getAttribute('data-tip'), value => value === 'You stopped the lookup');
 
     // Esc leaves it stopped, Paste the posting first.
     await page.keyboard.press('Escape');
@@ -546,7 +541,7 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     await pane.locator('.jb-src.looking').waitFor();
     assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then searchPaste the posting');
     assert.equal(await pane.locator('[data-skeleton="jobs-jd"] .sk-bar').count(), 4);
-    await until('its row looking', () => row(page, trey).locator('.jd').textContent(), text => text === 'Looking it up…');
+    await until('its row looking', () => row(page, trey).locator('.jd').getAttribute('data-tip'), text => text === 'Looking it up…');
     await setpoint.idle();
     assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${trey}`)).jd.state, 'looking');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -590,54 +585,34 @@ test('an event opens its email in the mail reader; one whose email is gone says 
   }
 });
 
-test('SV-141: Role stops at its longest title and the page ends at the table\'s JD edge, the Needs you dates, the fold and the search field with it, through a filter; a detail takes the header to its end, and at 1024 the rows still fill', async () => {
+test('SV-217: the table\'s columns fill the row to the pane at any width, Needs you and the fold ending with them, and a filter moves nothing; the search field ends the header', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    const columns = (page: Page) => rested(() => page.evaluate(() => {
-      const all = [...document.querySelectorAll('.jb-scroll .jb-tr')];
-      const first = all[0]!;
+    const columns = (page: Page, zoom: number) => rested(() => page.evaluate(scale => {
+      const first = document.querySelector('.jb-scroll .jb-tr')!;
       const right = (cell: string) => [...document.querySelectorAll(cell)].map(each => Math.round(each.getBoundingClientRect().right));
-      const inks = all.map(each => {
-        const range = document.createRange();
-        range.selectNodeContents(each.querySelector('.ro')!);
-        return range.getBoundingClientRect().right;
-      });
       return {
-        longest: Math.max(...inks),
-        role: first.querySelector('.ro')!.getBoundingClientRect().right,
-        platform: first.querySelector('.pl')?.getBoundingClientRect().left,
+        role: Math.round(first.querySelector('.ro')!.getBoundingClientRect().left),
         edge: right('.jb-tr .jd')[0]!,
-        ends: [...new Set([...right('.jb-need .r1 > :last-child'), ...right('.jb-fold-t'), ...right('.hd .search')])],
-        row: Math.round(first.getBoundingClientRect().right),
-        padding: parseFloat(getComputedStyle(first).paddingRight),
-        clipped: all.filter(each => each.querySelector('.ro')!.scrollWidth > each.querySelector('.ro')!.clientWidth).length,
+        ends: [...new Set([...right('.jb-need .r1 > :last-child'), ...right('.jb-fold-t')])],
+        fill: Math.round(first.getBoundingClientRect().right - parseFloat(getComputedStyle(first).paddingRight) * scale),
+        search: right('.hd .search')[0]!,
       };
-    }));
-    const width = 2655;
-    const zoom = 1.25;
-    const page = await setpoint.page({width, height: 1000});
-    await page.goto(`${setpoint.base}/jobs`);
-    const at = await columns(page);
-    assert.equal(at.clipped, 0, 'every title whole');
-    const room = at.role - at.longest;
-    assert.ok(room >= 16 * zoom && room <= 48 * zoom, `Role keeps a comfortable margin past its longest title, no more: ${room}`);
-    assert.ok(at.row - at.edge > 200, `spare width past JD: ${at.row - at.edge}`);
-    assert.deepEqual(at.ends, [at.edge], 'Needs you, the fold and the search field end at JD');
-    await page.locator('.jb-status button', {hasText: 'In process'}).click();
-    await until('In process\'s rows', () => rows(page).count(), count => count === 3);
-    const filtered = await columns(page);
-    assert.deepEqual([filtered.platform, filtered.edge, filtered.ends], [at.platform, at.edge, at.ends], 'the filter leaves the columns and the edge where they are');
-    await page.locator('.jb-status button', {hasText: 'All'}).click();
-    await until('all the rows', () => rows(page).count(), count => count === 62);
-    await rows(page).first().click();
-    await page.locator('.jb-pane').waitFor();
-    const search = await rested(() => page.locator('.hd .search').boundingBox());
-    assert.equal(Math.round(search!.x + search!.width), width - 16 * zoom, 'beside a detail the header runs to the pane\'s end');
-    const narrow = await setpoint.page({width: 1024, height: 768});
-    await narrow.goto(`${setpoint.base}/jobs`);
-    const fitted = await columns(narrow);
-    assert.equal(fitted.edge, fitted.row - fitted.padding, 'at 1024 the columns still fill the row');
-    assert.deepEqual(fitted.ends, [fitted.edge], 'and Needs you and the header end with them');
+    }, zoom));
+    for (const [width, zoom] of [[2655, 1.25], [1024, 1]] as const) {
+      const page = await setpoint.page({width, height: 1000});
+      await page.goto(`${setpoint.base}/jobs`);
+      const at = await columns(page, zoom);
+      assert.equal(at.edge, at.fill, `${width}: the columns fill the row`);
+      assert.deepEqual(at.ends, [at.edge], `${width}: Needs you and the fold end at JD`);
+      assert.equal(at.search, width - 16 * zoom, `${width}: the search field ends the header`);
+      if (width === 2655) {
+        await page.locator('.jb-status button', {hasText: 'In process'}).click();
+        await until('In process\'s rows', () => rows(page).count(), count => count === 3);
+        const filtered = await columns(page, zoom);
+        assert.deepEqual([filtered.role, filtered.edge, filtered.ends], [at.role, at.edge, at.ends], 'the filter leaves the columns where they are');
+      }
+    }
   } finally {
     await setpoint.stop();
   }
@@ -779,7 +754,7 @@ test('a JD to confirm (34a, 34b): ↑ ↓ and Enter pick a candidate, the item f
     await need(page, 'Lucerne').getByRole('radio', {name: 'None of these'}).click();
     await until('Lucerne gone again', () => need(page, 'Lucerne').count(), count => count === 0);
     await until('the toast', () => toast(page).textContent(), text => text === 'None of these for Lucerne PublishingUndo');
-    await until('its row: No JD found', () => row(page, lucerne).locator('.jd').textContent(), text => text === 'No JD found');
+    await until('its row: No JD found', () => row(page, lucerne).locator('.jd').getAttribute('data-tip'), text => text === 'No JD found');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

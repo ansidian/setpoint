@@ -61,7 +61,7 @@ test('the open email\'s commands: Done, Add to calendar and Mark unread, and Esc
     await page.keyboard.press('Escape');
     await page.locator('.palette').waitFor({state: 'detached'});
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'TrashE');
-    assert.equal(await page.locator('.pane').count(), 1, 'Esc closed only the palette');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 1, 'Esc closed only the palette');
 
     // Add to calendar opens the proposal card, as the reader's button does.
     await page.keyboard.press('Meta+k');
@@ -74,7 +74,7 @@ test('the open email\'s commands: Done, Add to calendar and Mark unread, and Esc
     await page.keyboard.press('Meta+k');
     await page.keyboard.type('unread');
     await page.keyboard.press('Enter');
-    await page.locator('.pane').waitFor({state: 'detached'});
+    await page.locator('.pane:not(.idle)').waitFor({state: 'detached'});
     await until('unread again', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.unread);
 
     // Done, with the cursor moved down and back.

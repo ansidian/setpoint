@@ -61,7 +61,7 @@ for (const size of sizes) {
         for (let index = 0; index < 6; index += 1) await page.keyboard.press('j');
         await page.keyboard.press('k');
         assert.equal(await cursorKey(page), `all:${code}`);
-        assert.equal(await page.locator('.pane').count(), 0);
+        assert.equal(await page.locator('.pane:not(.idle)').count(), 0);
         // The pointer onto a row makes it the cursor.
         await point(row(page, `attention:${northwind}`));
         assert.equal(await cursorKey(page), `attention:${northwind}`);
@@ -79,7 +79,7 @@ for (const size of sizes) {
         await page.waitForTimeout(300);
         await setpoint.idle();
 
-        assert.equal(await page.locator('.pane').count(), 0, 'nothing opened');
+        assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'nothing opened');
         // Today's three Noise emails show now, unread too.
         assert.equal(await page.locator('.list .row.unread').count(), unreadRows + 3, 'every unread row is still unread');
         const after = await counts(setpoint);
@@ -112,7 +112,7 @@ for (const size of sizes) {
         assert.equal(await page.title(), 'Interview availability for Software Engineer I');
         // Esc closes the reader; read, not Done, it stays in Attention without its dot, with its ring.
         await page.keyboard.press('Escape');
-        await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
+        await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
         assert.equal(await row(page, `attention:${northwind}`).count(), 1);
         assert.equal(await isUnread(page, `attention:${northwind}`), false);
         assert.equal(await page.title(), '(3) Inbox');
@@ -144,7 +144,7 @@ for (const size of sizes) {
         assert.equal(await row(page, `all:${signIn}`).count(), 1);
         assert.equal(await isUnread(page, `all:${signIn}`), false);
         await page.keyboard.press('Escape');
-        await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
+        await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
         assert.equal(await row(page, `all:${signIn}`).count(), 1);
         // Trash it, and ⌘Z: back in its place, read.
         await point(row(page, `all:${signIn}`));
@@ -190,14 +190,14 @@ for (const size of sizes) {
           assert.equal(await page.title(), 'Interview availability for Software Engineer I');
           await page.keyboard.press('Escape');
         }
-        await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
+        await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
         assert.equal(await page.title(), '(2) Inbox');
         // Done from the row, without opening: Contoso University (read, not Done) leaves too.
         await point(row(page, `attention:${exams}`));
         await page.keyboard.press('h');
         await until('Contoso University leaves', () => row(page, `attention:${exams}`).count(), count => count === 0);
         await until('the server agrees', () => counts(setpoint), value => value.attention === 1 && value.unread === unread);
-        assert.equal(await page.locator('.pane').count(), 0, 'Done from the row opens nothing');
+        assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'Done from the row opens nothing');
         assert.deepEqual(setpoint.pageErrors, []);
       } finally {
         await setpoint.stop();
@@ -231,7 +231,7 @@ for (const size of sizes) {
         // Security's codes and sign-in alerts are left unread, in their day: they're read by opening them.
         await until('Attention goes', bands, value => value === 'pinned');
         assert.equal(await page.locator('.list .row.unread:not(.done)').count(), 3);
-        assert.equal(await page.locator('.pane').count(), 0);
+        assert.equal(await page.locator('.pane:not(.idle)').count(), 0);
         await until('the server agrees', () => counts(setpoint), value => value.attention === 0 && value.unread === 3);
         if (await page.locator('.sb').isVisible()) await until('the sidebar follows', () => sidebar(page), shown => shown?.pill === '' && shown.unread === '3');
         assert.deepEqual(setpoint.pageErrors, []);

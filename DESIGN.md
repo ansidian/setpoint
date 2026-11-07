@@ -172,8 +172,9 @@ calendar change's landing (420 ms, #192) and an editor field another's change mo
 Overlays arrive on these timings ([Decided while building](#decided-while-building) #148): every
 menu and popover grows from its anchor's corner (4 px and .97, 180 ms), the "+N" popover from its
 "+N", and a card anchored to a calendar item opens as the floating detail does; ⌘K rises 6 px over
-180 ms and Settings 8 px over 260 ms, their scrims fading in; a pane's content, and the editor however
-it's opened, slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
+180 ms and Settings 8 px over 260 ms, their scrims fading in; a pane's content over a narrow
+window's list (on a desktop the pane is always there, #330), and the editor however it's opened,
+slides in 12 px over 180 ms; Alfred's Answer card and a proposal slide down 6 px, and
 fold away when closed. ⌘K, Settings, the "+N" popover and menus close at once.
 
 **Loading** ([Decided while building](#decided-while-building) #225): a page whose data is on its
@@ -246,8 +247,10 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   with its `C` hint).
 - **Content** under the header; the list or grid scrolls, the shell never does.
 - **Panes** sit under the header with a `hair` left border: the **reading pane** 680 px, Calendar's
-  **right pane** 400 px. The reading pane collapses when nothing is open (decision 43); its left edge
-  resizes it, and shows so under the pointer (#210).
+  **right pane** 400 px. The reading pane is always there on a desktop, with nothing open too, at
+  its dragged width (480 to 1100), giving way so the list keeps 420 ([Decided while
+  building](#decided-while-building) #327, amending decision 43); its left edge resizes it, and shows
+  so under the pointer (#210). Empty, it holds the page's glyph, one line and the keys.
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
@@ -264,7 +267,10 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
   hides each calendar.
 - **Reading pane and story pane:** an open email or story covers the list under the header, its tools
   led by Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the list, and the edge
-  doesn't drag.
+  doesn't drag. With nothing open the pane is away; a 30 px `right_panel_open` button before search
+  shows the empty pane over the list, as Calendar's day (lit `sub2` while showing; it again or Esc
+  closes it; closed on every load and when an item opens). The same on Inbox, News and Jobs
+  ([Decided while building](#decided-while-building) #329).
 - **Calendar:** the grid, month or week, takes the width. The right pane lies over its right side (400
   px, `page`, an `edgeOn` left edge and the popover shadow, in 24 px over 180 ms) while it holds the
   editor or search; the day's pane comes over it only from a 30 px `right_panel_open` button before
@@ -316,15 +322,15 @@ no Unread or All to choose between, and going to the Inbox always opens it.
   or Trashed, and the pattern prompt under its last row (#309).
 - **Pinned** rows sit on their shelf, with ages, and Unpin takes the age's place under the pointer
   (board 10); a pinned email's line is its subject and summary.
-- **Row** 38 px, padding 0 16 0 12: the kind column (100, as [The days](#the-days) say), the unread
-  gutter (12), sender or organisation (200, ellipsis), subject then " · " and the summary in `ink3`
+- **Row** 38 px, padding 0 16 0 12: the unread gutter (12), sender or organisation (a quarter of the
+  row, 112 to 200, ellipsis), subject then " · " and the summary in `ink3`
   (ellipsis), the **account** (dot and label in `ink3` 12, 76 px, on every row, decision 41, dropped
   only while the list is filtered to one account, #207), the age or time (72, right, `ink3` 12).
-  The list's content stops 1480 from its left, and the header's with it (#283).
+  Rows run to the pane (#328).
   Hover `sub`; the keyboard cursor `sub2`; the open email `sub3` with a 2 px `accent` bar at its left
-  edge, and a press `sub3` at once (#164). Other chips drop while the reading pane is open; the
-  account never does, the kind becomes a subheading (#237), and the sender narrows to a quarter of
-  the row (#240).
+  edge, and a press `sub3` at once (#164). Beside the pane the row has no other chips; the account
+  is always there, the kind is a subheading (#237), and the sender takes a quarter of the row
+  (#240, #328).
 - **Security row:** the organisation, then the extracted fact as the subject ("**New sign-in** ·
   MacBook Pro · Los Angeles"); protected mail keeps its subject in `alert` 500. A **code** row,
   wherever it is, shows the code (Geist Mono, two groups of three), a **Copy** button and "Expires in
@@ -341,9 +347,8 @@ Oct 6", "MON Oct 5"), except what Attention and the shelf show, which leaves its
 (#101, #309). A heading with unread mail in it ends "· 3 new" (12, `ink3`, the count `ink2`), Done
 mail left out (#241). Today's rows show ages, as Attention's and the shelf's do; earlier days show
 **clock times** (decision 39, #309). Unread rows keep their place, drawn unread. Each day groups its rows by lane, and
-the kind shows once, in a left column, where an FYI run starts, after its group's glyph at 13 px
-(#119); with the reading pane open and on the phone, where the column has no room, it's a
-subheading over its run instead (#237); each day's Noise folds to one line ([Decided while
+the kind shows once, as a subheading over its run where an FYI run starts, after its group's glyph
+at 13 px (#119, #237, #328); each day's Noise folds to one line ([Decided while
 building](#decided-while-building) #48). Triage's note, while triage is down, is on the newest
 Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
 
@@ -359,7 +364,7 @@ Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
   the clock time, with the date before it on older mail
   ([Decided while building](#decided-while-building) #88). A verification code follows in its
   **code card**, with Copy and its countdown (#209). Each email swaps in from the side the user
-  stepped from (#208).
+  stepped from (#208); the first shows at once (#330).
 - **Actions** (28 px outline buttons, labels `ink2` and icons `ink3`, `ink` under the pointer, #170):
   **Add to calendar**, **Add as task**, **Ask about this email**.
   Security mail has no Add to calendar; it shows the **facts card** instead (board 03: what happened,
@@ -696,8 +701,8 @@ navigation.
   section shows **Today**, as on mail pages.
 - **Header:** "News"; the segmented control **All | Local | Tech | AI | General**; a spacer; the
   380 × 32 search field, "Search news" with its `/` hint. There's no primary action.
-- **Content:** the list on the left. The **story pane** sits where the reading pane does (680 px,
-  `hair` left border) and collapses when nothing is open.
+- **Content:** the list on the left. The **story pane** sits where the reading pane does (its
+  dragged width, `hair` left border), always there on a desktop (#327).
 - **Tab title:** "News", or the open story's headline.
 
 ### The list
@@ -716,12 +721,12 @@ navigation.
   - Image: 232 × 130 px, radius 12.
   - Text: the headline 16 / 500 `ink` at 1.35, still `ink` once seen, at 400; the summary `ink3` 13 /
     1.45, clamped to two lines; the meta line at the foot (#127).
-  - When the list is 1000 px or wider (nothing open at the design target), the lead grows: 12 | 320
+  - When the list is 1000 px or wider (a wide window with a narrow pane), the lead grows: 12 | 320
     | text, 18 apart, padding 16 16 16 12; the image 320 × 180; the headline 19 at 1.3, −.01em, max
     760; the summary 13.5 / 1.5, three lines, max 680 (#127).
 - **Story row:**
-  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below. The list's
-    content stops 1480 from its left, and the header's with it (#283).
+  - Layout: a grid of 12 | 1fr | meta | 72, 12 apart, padding 9 16 9 12, `hair` below. Rows run
+    to the pane (#328).
   - The headline: 13, `ink` 500 when new or updated, `ink2` 400 once seen.
   - Under it, the summary in `ink3` 12.5, one line, ellipsis. In a list under 480 px the headline
     wraps to two 18 px lines instead and the summary goes; the row keeps its height (#128).
@@ -920,14 +925,16 @@ desktop and keeps it (D325).
     `edgeOn` ring, the pill shadow, 12): "Sep 27 – Oct 3 · 8 applications". It has no press: it's
     information.
 - **Content:** Needs you, then the table, in one column that scrolls under the header. The
-  **detail** sits where the reading pane does (680 px, `hair` left border) and collapses when
-  nothing is open.
+  **detail** sits where the reading pane does (its dragged width, `hair` left border), always there
+  on a desktop (#327).
 - **Tab title:** "Jobs", or "Software Engineer I · Northwind Talent" with an application open. No
   count, ever.
 - **A narrow window** (32b, D325):
   - **Rail:** Jobs's 40 × 40 slot comes after News, named in its tooltip. Its Needs you count is a
     16 px badge placed as the Inbox's (10.5 / 600, a 2 px `panel` ring), but neutral: `sub4` with
     `ink` text, not `caution`.
+  - **The empty pane** comes over the table from the header's `right_panel_open` button, as on the
+    mail pages (#329).
   - **The detail** lies over the table under the header (`page`, no left border), its tools led by
     Back (`arrow_back`, "Back · Esc"); Esc, J / K and ↑ ↓ work as beside the table. It arrives 12 px
     from the right over 180 ms, and Back slides it off the same way.
@@ -1034,22 +1041,16 @@ desktop and keeps it (D325).
 
 ### The table
 
-- **Columns,** with the detail closed (34a): a 12 px gutter | Company 220 | Role | Platform 120 |
-  Applied 72 | Status 300 | JD 128, 12 apart, padding 0 16 0 12. Role is as wide as the longest
-  title among all applications plus 32, or what's left when that doesn't fit, so a filter or a
-  search doesn't move the columns, and the end of JD is the page's right edge: Needs you, From
-  history and the header stop there too
-  ([Decided while building](#decided-while-building) #282, #283).
-- **Beside the detail** (32): Platform drops and JD is a glyph alone, as mail drops its chips beside
-  the reader: 12 | 156 | Role | 60 | 214 | 18. It re-lays in the frame the pane opens, with no width
-  tween, and Platform comes back in the frame it closes.
+- **Columns,** beside the detail, which is always there (32; [Decided while
+  building](#decided-while-building) #328): a 12 px gutter | Company 156 | Role | Applied 60 | Status
+  214 | JD 18, 12 apart, padding 0 16 0 12. There's no Platform column, and JD is a glyph alone.
 - **The header row** (30 px, `panel`, `hair` above and below, 11.5 uppercase .08em `ink3`): each
   label is a 22 px target (padding 0 6, radius 6; `sub` and `ink2` under the pointer, `sub3`
   pressed). A click sorts by it and a second flips it; the sorted label is `ink2` with a 14 px
   `arrow_downward` or `arrow_upward`. Newest first by Applied, by default (D314). JD's tooltip is
   "Job description".
 - **A row** is 36 px, `hair` below, or 54 when its status's note wraps (#283):
-  - Company in `ink`, Role in `ink2`, Platform in `ink3` 12.5, Applied in `ink2` 12.5 tabular
+  - Company in `ink`, Role in `ink2`, Applied in `ink2` 12.5 tabular
     ("Today", "Oct 6", "Feb 9"), each ending in an ellipsis. The 12 px gutter stays empty.
   - Hover `sub`, the cursor `sub2`, a press `sub3`; the open row `sub3` with a 2 px `accent` bar at
     its left edge.
@@ -1060,7 +1061,7 @@ desktop and keeps it (D325).
 
   | Status | Mark | Label | Step |
   | --- | --- | --- | --- |
-  | Applied | a 1.5 px `ink2` ring | `ink2` | "· Re-applied" beside the detail, "· Re-applied, rejected Sep 2" without it |
+  | Applied | a 1.5 px `ink2` ring | `ink2` | "· Re-applied" |
   | In process | an `inProcess` disc | `inProcess` 500 | the latest step in `ink2`: "· Interview Tue Oct 13, 2:00 PM", "· Case study due Oct 12" |
   | Offer | a `good` disc | `good` 500 | "· Oct 6" |
   | Rejected | an `alert` disc (#265) | `ink3` | "· Oct 5" |
@@ -1073,8 +1074,7 @@ desktop and keeps it (D325).
     tip "Set by you on Sep 10 · only an email that sets a status changes it".
 - **Closed rows** (Rejected, Withdrawn) and **Ghosted** rows step down: Company `ink2`, Role `ink3`.
   Never a lower opacity, which means a change waiting for its provider.
-- **JD** in `ink3` 12.5, its 16 px glyph in `ink3`, then how it was found, or a glyph alone with
-  that as its tooltip beside the detail:
+- **JD:** a 16 px glyph in `ink3`, how it was found in its tooltip:
   - `description` with "Search", "Greenhouse", "The email's link", "Pasted" (tooltip "Search · found
     7h ago", "Greenhouse · found Oct 1", "Pasted by you · 2h ago")
   - `pending` "In Needs you" (tooltip "2 candidates in Needs you")
@@ -4053,3 +4053,30 @@ it changes what's on screen.
     swatches grow 1.25, #12) and its 3.5 px ring is its own colour at 50%, over 120 ms; the picked
     one keeps its full ring and its size. The same in the right-click menu and the floating
     detail; a disabled swatch doesn't react, and reduced motion keeps the ring without the growth.
+327. **The pane beside Inbox, News and Jobs is always there** (amending decision 43, Shell › Panes,
+    News › Shell and Jobs › Shell; Andy, 2026-11-06; darma SV-217, D464). The reading pane, the
+    story pane and Jobs's detail collapsed when nothing was open, so the list and the header
+    re-laid whenever an item opened or closed. On a desktop the pane now shows with nothing open, at
+    its dragged width (480 to 1100), and gives way so the list keeps 420 px, getting its width back
+    as the window widens. Empty, it holds a placeholder for now: the page's glyph (`inbox`,
+    `newspaper`, `work`), one line ("Open an email to read it here."), and J K Move, Enter Open. Its
+    left edge drags as the full pane's does. The header's search stays at the far right, above it.
+    The compact tier still starts under 1100 for every page, so between 1100 and about 1150 the
+    pane narrows under 480 (to about 430 at 1100) to keep the list's 420.
+328. **One row layout, the pane's** (amending #237, #240, #283 and The table; Andy, 2026-11-06; darma
+    SV-217, D464). With the pane always there only the pane-open layout remains: an Inbox row has no
+    other chips, All's kind is always a subheading over its run (#237's scroll correction on open
+    and close goes with the column), and the sender is always a quarter of the row (#240). The 1480
+    line (`listRowMax`, `--row-end`, #283) is gone: rows and the header run to the pane on every
+    screen. Jobs's table always has the columns beside the detail (no Platform, JD a glyph named
+    in its tip, Re-applied without the earlier one's end) and nothing re-lays. News's headline wrap
+    (#128) and large lead (#127) stay, since they follow the list's own width.
+329. **A narrow window shows the empty pane from a header button** (amending Compact; Andy,
+    2026-11-06; darma SV-217, D464). Under the compact tier an open item still covers the list. With
+    nothing open, a 30 px `right_panel_open` button before search shows the empty pane over the list,
+    as Calendar's day does (#196): lit `sub2` while showing, closed by it again or Esc, on every load,
+    and when an item opens. The same on Inbox, News and Jobs.
+330. **The pane no longer slides in on a desktop** (amending #148 and #208; Andy, 2026-11-06; darma
+    SV-217, D464). The pane is always there, so an item opened from the empty pane shows at once; J /
+    K and clicks still swap emails as #208 says. In a narrow window, where the pane comes over the
+    list, its content still slides in 12 px over 180 ms.

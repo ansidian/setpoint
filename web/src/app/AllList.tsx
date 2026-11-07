@@ -1,9 +1,8 @@
 // The Inbox, days first (SV-199, D449; DESIGN.md › The list; board 05): Attention, the Pinned shelf,
 // then every email, Noise included, newest first, under day headings, Today first. Unread mail stays
 // in its day, drawn unread, and a heading with any says how many ("· 3 new"). Each day's rows go by
-// lane, the kind once in a left column where an FYI run starts (a subheading over the run where the
-// column has no room, #237), its Noise folded to one line that opens in place (#48). Attention and the
-// shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
+// lane, the kind once as a subheading where an FYI run starts (#237), its Noise folded to one line
+// that opens in place (#48). Attention and the shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
 // shelf; an email in either leaves its day meanwhile (D105). Today's rows show ages, earlier days'
 // clock times. A live code has Copy and its countdown wherever it is. Pages load as the list nears its
 // end. What shows comes from logic/all.ts; actions are the page's. A trashed row folds out and Undo
@@ -11,8 +10,8 @@
 // quiet with a Done tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another
 // module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
-import {useLayoutEffect, useMemo, useRef, useState} from 'react';
-import type {MouseEvent, ReactNode, RefObject, UIEvent} from 'react';
+import {useMemo, useState} from 'react';
+import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
@@ -139,17 +138,13 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
   // Every row the list holds, for the slot after the subject, asked about all at once.
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
   const afterSubject = useRowSlot(slotRows);
-  const [list, keep] = useKeptRow(openId);
   const ticked = useTicked(days);
   // A row Trash took beats first; rows folding together start one after another.
   const delays = foldDelays(shown, runOf);
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
   return (
-    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox" ref={list} onScroll={event => {
-      keep();
-      onScroll(event);
-    }}>
+    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox" onScroll={onScroll}>
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);
@@ -217,7 +212,6 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
         return (
           <div key={key} ref={ref} className={classes} data-key={leaving ? undefined : key} data-id={row.id} aria-hidden={leaving || undefined}
             onMouseMove={leaving ? undefined : () => key !== cursor && onPoint(key)} onMouseDown={keepTextUnselected} onClick={leaving ? undefined : event => onOpen(row.id, key, event)}>
-            <span className="kd">{item.group && <><Icon name={GROUP_GLYPHS[item.group]} size={13} /><span className="ell">{GROUP_LABELS[item.group]}</span></>}</span>
             <Gutter beat={beat ?? (tick ? 'done' : null)} />
             <span className="from">{line.from}</span>
             {/* A live code has Copy and its countdown wherever it is (D449); once it's expired the code is inside the subject. */}
@@ -290,37 +284,3 @@ function useTicked(days: DayView[]): ReadonlySet<number> {
 
 /** Whether each row the days show is Done. */
 const doneOf = (days: DayView[]) => new Map(days.flatMap(day => day.lanes.flatMap(lane => lane.rows.map(({row}): [number, boolean] => [row.id, row.done]))));
-
-/**
- * The reading pane opening or closing shows or hides the kinds' subheadings (#237), which would move
- * every row under them; the list scrolls by as much, so the email opened, or the one just closed,
- * stays where it was. On the phone they always show, and nothing moves. The open row's place is
- * noted after every render and scroll: the list takes the ref, and calls the note on scroll.
- */
-function useKeptRow(openId: number | null): [RefObject<HTMLElement | null>, () => void] {
-  const list = useRef<HTMLElement>(null);
-  const kept = useRef<{id: number | null; top: number; headed: boolean}>({id: null, top: 0, headed: false});
-  const rowOf = (id: number | null) => (id === null ? null : list.current?.querySelector<HTMLElement>(`.row[data-id="${id}"]`) ?? null);
-  const topOf = (row: HTMLElement) => row.getBoundingClientRect().top - list.current!.getBoundingClientRect().top;
-  const headed = () => (list.current?.querySelector('.kh')?.getClientRects().length ?? 0) > 0;
-  const note = () => {
-    const row = rowOf(openId);
-    kept.current = {id: openId, top: row ? topOf(row) : 0, headed: headed()};
-  };
-  useLayoutEffect(() => {
-    const scroller = list.current;
-    const was = kept.current;
-    if (scroller && headed() !== was.headed) {
-      const row = rowOf(openId ?? was.id);
-      // Opened: the subheadings above its row came in. Closed: they went, so it's back by its noted place.
-      if (row && openId !== null) {
-        const above = [...scroller.querySelectorAll<HTMLElement>('.kh')].filter(kh => kh.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING);
-        scroller.scrollTop += above.reduce((sum, kh) => sum + kh.offsetHeight, 0);
-      } else if (row) {
-        scroller.scrollTop += topOf(row) - was.top;
-      }
-    }
-    note();
-  });
-  return [list, note];
-}

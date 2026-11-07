@@ -206,16 +206,16 @@ test('reader-03, -04, -09: J and K step through the emails with the tools stayin
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
 
     // The edge drags the pane wider, and a double-click puts it back to 680.
-    const pane = (await page.locator('.pane').boundingBox())!;
+    const pane = (await page.locator('.pane:not(.idle)').boundingBox())!;
     const edge = page.locator('.pane-edge');
     await page.mouse.move(pane.x, pane.y + 300);
     await page.mouse.down();
     await page.mouse.move(pane.x - 100 * ZOOM, pane.y + 300, {steps: 4});
     assert.equal(await edge.evaluate(element => element.classList.contains('dragging')), true);
     await page.mouse.up();
-    await until('wider', async () => pagePx((await page.locator('.pane').boundingBox())!.width), width => width === 780);
+    await until('wider', async () => pagePx((await page.locator('.pane:not(.idle)').boundingBox())!.width), width => width === 780);
     await edge.dblclick();
-    await until('back to 680', async () => pagePx((await page.locator('.pane').boundingBox())!.width), width => width === 680);
+    await until('back to 680', async () => pagePx((await page.locator('.pane:not(.idle)').boundingBox())!.width), width => width === 680);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

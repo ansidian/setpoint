@@ -31,7 +31,7 @@
 // place by the sort and settles from `sub2` over 900 ms; a row an email moves on crossfades its status
 // and settles the same way. In a filtered view a row stays put until the next visit.
 import type {ApplicationOut, ApplicationRowOut, JdCandidateOut, JobEventOut, JobsPageOut, JobsSearchOut, NeedsYouItemOut} from '@setpoint/shared';
-import type {CSSProperties, MouseEvent as ReactMouseEvent} from 'react';
+import type {MouseEvent as ReactMouseEvent} from 'react';
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {timeZone as userZone} from '../../api/auth.ts';
 import {getJson, updateCached, useResource} from '../../api/client.ts';
@@ -54,6 +54,7 @@ import {
   applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
   pickCandidate, searchPath, setStatus,
 } from './api.ts';
+import {EmptyPane, EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
 import {rowMenu} from './menus.ts';
@@ -65,7 +66,7 @@ import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
 import {JobsLines, JobsOff} from './States.tsx';
-import {HeaderRow, rowKey, Rows, takenAway, useRoleFit} from './Table.tsx';
+import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
 import {DEFAULT_SORT, pickWords, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import {useListFade} from '../../ui/Segmented.tsx';
@@ -157,8 +158,6 @@ export function JobsPage({route}: {route: JobsRoute}) {
 
   // A filtered view holds its rows for the visit: one an email moves out of the filter stays put.
   const rows = useMemo(() => page?.rows ?? [], [page]);
-  const roleFit = useRoleFit(rows);
-  const roleStyle = {'--role-fit': roleFit} as CSSProperties;
   const [hold, setHold] = useState<{filter: Filter; ids: ReadonlySet<number>}>({filter: 'all', ids: new Set()});
   const held = useMemo(() => (hold.filter === filter ? hold.ids : new Set<number>()), [hold, filter]);
   // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
@@ -200,6 +199,8 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const [reading, setReading] = useState<{item: number; message: number; history: boolean; travel: Travel | null; of: string | null} | null>(null);
   if (reading && page && (open !== null || ![...page.needs_you, ...page.from_history].some(item => item.id === reading.item))) setReading(null);
   const email = useHold(reading, compact ? motion.medium : motion.fast);
+  // The pane beside the table (SV-217): the application, else an item's email, else empty.
+  const pane = useEmptyPane(open !== null || email.shown !== null);
 
   // Closing: the content fades over 120 ms (in a narrow window it slides off over 180), then the pane goes.
   const [leaving, setLeaving] = useState(false);
@@ -304,6 +305,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
         if (posting.current?.escape()) run(() => {});
         else if (reading !== null) run(() => setReading(null));
         else if (open !== null) run(close);
+        else if (pane.shown) run(pane.close);
         else if (searching && query) run(() => setQuery(''));
         else if (searching) run(leaveSearch);
         else if (cursor !== null) run(() => setCursor(null));
@@ -391,15 +393,16 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const rowState = (row: ApplicationRowOut) => ({
     cursor: cursor === rowKey(row.id), open: open === row.id, landed: seen.landed.has(row.id) || seen.moved.has(row.id), moved: seen.moved.has(row.id),
   });
-  const rowProps = {rowState, besideDetail: open !== null || email.shown !== null, query: q || null, now, timeZone: zone, today, onPoint, onClick: onRowClick, onMenu: onRowMenu};
+  const rowProps = {rowState, query: q || null, now, timeZone: zone, today, onPoint, onClick: onRowClick, onMenu: onRowMenu};
 
   return (
     <>
-      <header className="hd jb-hd ends" style={roleStyle}>
+      <header className="hd jb-hd">
         <h1 className="hd-title" key={searching ? 'search' : 'jobs'}>{searching ? 'Search' : 'Jobs'}</h1>
         {!searching && page?.enabled && <StatusFilter counts={page.counts} value={filter} onChange={setFilter} />}
         <span className="grow" />
         {!searching && page?.enabled && <PerWeek weeks={page.weeks} today={today} />}
+        {enabled && <EmptyPaneButton pane={pane} />}
         {enabled && (
           <label className={searching ? 'search active' : 'search'} onClick={() => !searching && enterSearch()}>
             <span className="glass"><Icon name="search" size={16} /></span>
@@ -425,7 +428,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
         )}
       </header>
       <div className="content">
-        <section className="jb-col" style={roleStyle} aria-label={q ? `Applications matching ${q}` : 'Applications'}>
+        <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
           {page?.enabled && !q && <JobsLines page={page} now={now} timeZone={zone} />}
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
             <div className="jb-scroll jb-tbl" ref={scroller}>
@@ -460,6 +463,9 @@ export function JobsPage({route}: {route: JobsRoute}) {
             canStep={{previous: emailBeside(-1) !== null, next: emailBeside(1) !== null}} onStep={stepEmail} onClose={() => setReading(null)}
             onInbox={() => navigate({page: 'inbox', account: null, open: email.shown!.message})} />
         )}
+        {pane.drawn && enabled && (
+          <EmptyPane label="Jobs pane" glyph="work" line="Open an application to see it here." keys={[{keys: ['J', 'K'], does: 'Move'}, {keys: ['Enter'], does: 'Open'}]} />
+        )}
       </div>
       {rowMenuOpen && <JobsMenu spec={rowMenuOpen.spec} anchor={rowMenuOpen.anchor} onClose={() => setRowMenuOpen(null)} />}
     </>
@@ -473,7 +479,7 @@ function TableSkeleton() {
     <Sk kind="jobs" className="sk-list jb-tbl">
       {widths.map((w, index) => (
         <div key={index} className="jb-tr">
-          <span /><Bar w={w} /><Bar w={`${40 + (index * 7) % 30}%`} /><Bar w={44} /><Bar w={36} /><Bar w={90} /><Bar w={18} />
+          <span /><Bar w={w} /><Bar w={`${40 + (index * 7) % 30}%`} /><Bar w={36} /><Bar w={90} /><Bar w={18} />
         </div>
       ))}
     </Sk>

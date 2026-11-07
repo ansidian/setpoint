@@ -43,18 +43,14 @@ export const recedes = (row: Pick<ApplicationRowOut, 'status' | 'ghosted'>) => r
 
 /**
  * The step after a row's status: In process its latest step ("Interview Tue Oct 13, 2:00 PM"), a
- * re-application "Re-applied" (with the earlier one's end without the detail open), Ghosted "no
- * email in 48 days", the rest the day the status was set ("Oct 6").
+ * re-application "Re-applied", Ghosted "no email in 48 days", the rest the day the status was set
+ * ("Oct 6").
  */
-export function statusStep(row: ApplicationRowOut, besideDetail: boolean, today: string): string | null {
+export function statusStep(row: ApplicationRowOut, today: string): string | null {
   if (row.status === 'in_process') return row.step;
   if (row.status === 'applied') {
     if (row.ghosted) return `no email in ${row.days_without_email} days`;
-    if (row.reapplied_from) {
-      const before = row.reapplied_from;
-      return besideDetail ? 'Re-applied' : `Re-applied, ${STATUS_LABELS[before.status].toLowerCase()} ${dayWord(before.status_on, today)}`;
-    }
-    return null;
+    return row.reapplied_from ? 'Re-applied' : null;
   }
   return dayWord(row.status_on, today);
 }
@@ -263,7 +259,7 @@ export function foundShort(posting: Pick<PostingOut, 'source' | 'platform' | 'fo
 
 // ---- The table's order (D314: newest first by Applied, by default) ----
 
-export const SORT_KEYS = ['company', 'role', 'platform', 'applied', 'status', 'jd'] as const;
+export const SORT_KEYS = ['company', 'role', 'applied', 'status', 'jd'] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 export interface Sort {
   key: SortKey;
@@ -287,7 +283,6 @@ export function sortRows<T extends ApplicationRowOut>(rows: readonly T[], sort: 
   const by: Record<SortKey, (a: T, b: T) => number> = {
     company: (a, b) => text(a.company, b.company),
     role: (a, b) => text(a.title, b.title),
-    platform: (a, b) => text(a.platform, b.platform),
     applied: (a, b) => a.applied_at.localeCompare(b.applied_at) || a.id - b.id,
     status: (a, b) => STATUS_ORDER[markOf(a)] - STATUS_ORDER[markOf(b)],
     jd: (a, b) => JD_ORDER[a.jd.state] - JD_ORDER[b.jd.state],

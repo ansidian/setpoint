@@ -176,13 +176,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
-/* A page's one right edge (SV-141): a list's content and its header's stop at the same line, the spare
-   width being each row's right padding, so bands, fills and hairlines still run the full width. A
-   pane beside the list is the page's end, so the header then runs to it. */
-:root { --row-end: 16px; }
-.list, .nw-list, .hd.ends { --row-end: max(16px, calc(100% - var(--listRowMax))); }
-.main:has(.pane, .jb-pane) .hd.ends { --row-end: 16px; }
-.hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 var(--row-end) 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
 /* Each page's title is its heading one (axe's page-has-heading-one, SV-99), drawn as before. */
 .hd-title { margin: 0; font-size: 15px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap; }
 .seg { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border-radius: 10px; background: var(--sub); height: 28px; flex: none; position: relative; }
@@ -218,7 +212,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .pane { width: var(--readingPane); flex: none; border-left: 1px solid var(--hair); min-height: 0; display: flex; flex-direction: column; overflow: hidden; container: pane / inline-size; }
 
 /* ---------- The list ---------- */
-.gh { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.gh { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .gh .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .gh .chev { margin-left: auto; color: var(--ink3); }
 .gh .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -255,7 +249,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
    page, drawn as an inset fill so they fade over 120 ms as every fill does. */
 .gh { box-shadow: inset 0 0 0 100vmax transparent; }
 .gh.collapsed.cur { box-shadow: inset 0 0 0 100vmax var(--sub2); }
-.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 var(--row-end) 0 12px; color: var(--ink2); position: relative; flex: none; }
+.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 16px 0 12px; color: var(--ink2); position: relative; flex: none; }
 @media (hover: hover) { .row:hover { background: var(--sub); } }
 .row.cur { background: var(--sub2); }
 .ud { width: 12px; flex: none; display: grid; place-items: center; }
@@ -295,7 +289,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .row.ticked .tag { animation: beat-in var(--dur-fast) var(--ease); }
 @keyframes tick-settle { from, 32% { background: color-mix(in oklch, var(--good) 14%, transparent); } }
 @keyframes tick-out { to { opacity: 0; } }
-.row .from { width: 172px; flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The list sits beside the pane, so the sender takes a quarter of its row (between 112 px and its own
+   width) and the summary keeps room (#240). */
+.row .from { width: clamp(112px, 24%, 172px); flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row .subj .sum { color: var(--ink3); }
 .row.unread .from, .row.unread .subj b { color: var(--ink); font-weight: 500; }
@@ -308,7 +304,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .row .ac { display: inline-flex; align-items: center; gap: 6px; flex: none; width: var(--ac-w, 76px); color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .row .ac .label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .code { font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--ink); }
-.arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px var(--row-end) 10px 12px; color: var(--ink2); position: relative; flex: none; border-bottom: 1px solid var(--hair); }
+.arow { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; padding: 9px 16px 10px 12px; color: var(--ink2); position: relative; flex: none; border-bottom: 1px solid var(--hair); }
 .arow:last-child { border-bottom: 0; }
 @media (hover: hover) { .arow:hover { background: var(--sub); } }
 .arow.cur { background: var(--sub2); }
@@ -374,7 +370,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .rd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 /* Each email swaps in from the side the user stepped from (reader-03), as the week pages: up 8 px from
    below going down the list (J, ↓, Done or Trash moving on), down 8 px from above going up (K, ↑), over
-   180 ms; a click fades it in over 120 ms. The email the pane opened on arrives with the pane. */
+   180 ms; a click fades it in over 120 ms. The first email shows at once (in a narrow window it
+   arrives with the pane). */
 .rd-swap { flex: 1 0 auto; display: flex; flex-direction: column; }
 .rd-swap[data-swap="next"] { animation: rd-in-next var(--dur-medium) var(--ease); }
 .rd-swap[data-swap="prev"] { animation: rd-in-prev var(--dur-medium) var(--ease); }
@@ -436,28 +433,20 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* All (board 05, #48): the Pinned shelf (D105), day headings, lane labels under them, the kind where an
    FYI run starts, each day's Noise folded to one line, clock times. Only the headings are bands. */
 .gh .date { text-transform: none; letter-spacing: 0; font-size: 12px; }
-.lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 var(--row-end) 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.lh { height: 26px; flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 0 16px 3px 24px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .lh .n, .nfold .n { letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--ink2); }
 .lh.att, .lh.att .n { color: var(--caution); }
-.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
+.nfold { height: 30px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; border-top: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); }
 .nfold .preview { text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .nfold .chev { margin-left: auto; }
 .nfold.cur { background: var(--sub2); }
-.list.all .row .kd { width: 100px; margin-left: 12px; margin-right: -10px; flex: none; display: flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; }
-.list.all .row .from { width: 200px; }
-/* Beside the reading pane the list is narrow, so the sender takes a quarter of its row (between 112 px
-   and its own width) and the summary keeps room (#240). Under 1100 px the pane covers the list. */
-.content:has(> .pane) .row .from { width: clamp(112px, 24%, 172px); }
-.content:has(> .pane) .list.all .row .from { width: clamp(112px, 24%, 200px); }
+.list.all .row .from { width: clamp(112px, 24%, 200px); }
 .list.all .row .age { width: 72px; }
 .list.all .row.shelf .hact { width: 72px; }
 .list.all .row .subj .alertsubj { color: var(--alert); font-weight: 500; }
 .list.all .row .subj .code { font-size: 13px; }
-/* Other chips drop while the reading pane is open; the account never does. The kind, which has no
-   room left, becomes a subheading over its run instead (#237). */
-.content:has(> .pane) .list.all .row .kd { display: none; }
-.list.all .kh { display: none; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 var(--row-end) 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-.content:has(> .pane) .list.all .kh { display: flex; }
+/* The kind is a subheading over its run, as the row has no room for its column (#237). */
+.list.all .kh { display: flex; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
    (#169): the floating detail's Delete and Complete, the editor's More › Delete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
@@ -491,7 +480,15 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 
 /* The reader's tools: Pin on a pinned email is Unpin, held (board 10). */
 .rd-tools .tool.active { background: var(--sub2); color: var(--ink); }
+/* The pane is always beside the list on a desktop (SV-217, D464), at its dragged width, giving way so
+   the list keeps 420. */
 .pane { position: relative; max-width: calc(100% - 420px); }
+/* With nothing open: the page's glyph, one line and the keys, centred (a placeholder until SV-218..220). */
+.pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; color: var(--ink3); text-align: center; }
+.pane-empty > p { margin: 0; color: var(--ink2); font-size: 13px; }
+.pane-keys { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; }
+.pane-keys > li { display: inline-flex; align-items: center; gap: 4px; }
+.pane-keys > li > span:last-child { margin-left: 2px; }
 /* The pane's left edge resizes it (2026-10-09), and shows it can (reader-09, SV-201): a 10 px strip
    straddling the border (placed from inside it; the pane draws past its left side for it, as its
    scroller clips its own content). At rest it's only the border. Under the pointer, after 80 ms so a
@@ -701,8 +698,9 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .hd > .cal-title { flex-shrink: .01; overflow: hidden; text-overflow: ellipsis; }
   .palette { max-width: calc(100% - 32px); }
 
-  .content:has(> .pane) > .pane { position: absolute; inset: 0; width: auto; max-width: none; z-index: 4; background: var(--page); border-left: 0; }
+  .content > .pane { position: absolute; inset: 0; width: auto; max-width: none; z-index: 4; background: var(--page); border-left: 0; }
   .pane > .pane-edge { display: none; }
+  .ibtn.pane-open[aria-pressed="true"] { background: var(--sub2); color: var(--ink); }
   .rd-tools .rd-back { display: inline-grid; }
 }
 
@@ -726,10 +724,13 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .scope-card[data-side="below"], .failed-card[data-side="below"] { transform-origin: center top; }
 /* A scrim fades in under what it's behind. */
 @keyframes scrim-in { from { opacity: 0; } }
-/* A pane's content arrives beside the list, 12 px, as the editor does after E; swapping what it shows
-   (J, K, another row) keeps the pane, so that stays instant. */
+/* In a narrow window a pane's content arrives over the list, 12 px, as the editor does after E; swapping
+   what it shows (J, K, another row) keeps the pane, so that stays instant. On a desktop the pane is
+   always there, so nothing arrives (SV-217). */
 @keyframes pane-in { from { opacity: 0; transform: translateX(12px); } }
-.pane > :not(.pane-edge) { animation: pane-in var(--dur-medium) var(--ease); }
+@media (min-width: 640px) and (max-width: 1099px) {
+  .pane > :not(.pane-edge) { animation: pane-in var(--dur-medium) var(--ease); }
+}
 /* Alfred's Answer card and a proposal slide into place (and fold away, app/fold.ts › foldAway); each
    answer, and the question waiting for it, fades up. */
 @keyframes card-in { from { opacity: 0; transform: translateY(-6px); } }

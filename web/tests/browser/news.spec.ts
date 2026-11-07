@@ -148,13 +148,13 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.deepEqual(await row(page, 'Man arrested after a stabbing').locator('.side .nw-meta').allTextContents(), ['NBC LA +2', 'Updated 7:55 AM']);
     assert.deepEqual(await row(page, 'Federal agents detain 9').locator('.side .nw-meta').allTextContents(), ['LAist +3', 'Yesterday']);
 
-    // The single values: the lead's image and the dots. With nothing open the list
-    // is 1,429 px wide, and its leads grow: 320 × 180 (#127).
+    // The single values: the lead's image and the dots. Beside the pane the list is under 1000 px, so
+    // the lead is the boards' 232 × 130 (#127).
     const lead = row(page, 'Brush fire near the 210');
     const leadImage = () => lead.locator('img').evaluate(image => [image.getBoundingClientRect().width, image.getBoundingClientRect().height, getComputedStyle(image).objectFit, getComputedStyle(image).borderRadius]).then(([width, height, ...rest]) => [pagePx(width as number), pagePx(height as number), ...rest]);
     const leadColumns = () => lead.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').slice(0, 2)).then(columns => columns.map(nearPx).join(' '));
-    assert.deepEqual(await rested(() => leadImage()), [320, 180, 'cover', '12px']);
-    assert.equal(await rested(() => leadColumns()), '12px 320px');
+    assert.deepEqual(await rested(() => leadImage()), [232, 130, 'cover', '12px']);
+    assert.equal(await rested(() => leadColumns()), '12px 232px');
     const redFlag = row(page, 'Red Flag Warning');
     assert.equal(await redFlag.locator('img').count(), 0, 'NWS\'s story has no image');
     assert.equal(await row(page, 'Council approves').locator('img, .nw-hz').count(), 0, 'an outlet\'s story without an image leaves its column empty');
@@ -177,8 +177,7 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     await page.locator('.st-new .lab', {hasText: 'New since you looked · Mon 10:40 PM'}).waitFor();
     await page.locator('.pane .src-row').first().waitFor();
     assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
-    // With the pane open the list is under 1000 px, and the lead is the boards' 232 × 130 again; opened,
-    // it's seen, and stays ink (#127).
+    // Opened, the lead keeps its size, and it's seen and stays ink (#127).
     assert.deepEqual(await leadImage(), [232, 130, 'cover', '12px']);
     assert.equal(await rested(() => leadColumns()), '12px 232px');
     assert.equal(await rested(() => lead.locator('.hl').evaluate(element => getComputedStyle(element).color)), await rested(() => colourOf(page, 'var(--ink)')));
@@ -219,23 +218,22 @@ test('board 31: board 25 in Light', async () => {
   }
 });
 
-test('SV-141: News has one right edge: at the design target it\'s the row\'s end, and on a very wide window the thumbnails, Upcoming and the search field all stop at it, a story\'s pane taking the header to its end', async () => {
+test('SV-217: News\'s rows run to the pane on every screen: the thumbnails and Upcoming stop 16 before it, and the search field ends the header', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
-    const ENDS = '.nw-row img, .nw-up .btn, .hd .search';
-    const target = await setpoint.page('target');
-    await target.goto(`${setpoint.base}/news`);
-    assert.deepEqual(await rights(target, ENDS), [Math.round(SIZES.target.width - 16 * ZOOM)], 'the row\'s end, as ever');
-    const width = 2655;
-    const wide = await setpoint.page({width, height: 1400});
-    await wide.goto(`${setpoint.base}/news`);
-    const ends = await rights(wide, ENDS);
-    assert.equal(ends.length, 1, `one right edge: ${ends.join()}`);
-    assert.ok(width - ends[0]! > 300, `spare width past it: ${width - ends[0]!}`);
-    await wide.locator('.nw-row').first().click();
-    await wide.locator('.pane').waitFor();
-    assert.deepEqual(await rights(wide, '.hd .search'), [width - 20], 'beside the pane the header runs to its end');
+    for (const [width, height, zoom] of [[SIZES.target.width, SIZES.target.height, ZOOM], [2655, 1400, 1.25]] as const) {
+      const page = await setpoint.page({width, height});
+      await page.goto(`${setpoint.base}/news`);
+      await page.locator('.nw-row').first().waitFor();
+      const pane = Math.round((await rested(() => page.locator('section.pane').boundingBox()))!.x);
+      assert.deepEqual(await rights(page, '.nw-row img, .nw-up .btn'), [pane - Math.round(16 * zoom)], `${width}: the rows' end`);
+      assert.deepEqual(await rights(page, '.hd .search'), [Math.round(width - 16 * zoom)], `${width}: the search field ends the header`);
+      // A list 1000 px or wider, a wide window's, grows its leads to 320 (#127).
+      const image = await page.locator('.nw-lead img').first().evaluate(element => element.getBoundingClientRect().width);
+      assert.equal(Math.round(image / zoom), width === 2655 ? 320 : 232, `${width}: the lead's image`);
+      await page.close();
+    }
   } finally {
     await setpoint.stop();
   }
@@ -298,7 +296,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await page.goto(`${setpoint.base}/news`);
     const fire = row(page, 'Brush fire near the 210 grows to 400 acres');
     await fire.click();
-    const pane = page.locator('section.pane');
+    const pane = page.locator('section.pane:not(.idle)');
     await pane.locator('.src-row').first().waitFor();
     assert.equal(await pane.locator('.rd-tools').textContent(), 'Open at KTLAO');
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local', 'Updated']);
@@ -339,7 +337,7 @@ test('the story pane: its head, New since you looked, Sources; an article (26a),
     await pane.locator('.tool', {hasText: 'Back to story'}).click();
     await pane.locator('.st-head').waitFor();
     await page.keyboard.press('Escape');
-    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    await until('the pane closes', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
     assert.equal(await page.title(), 'News');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
@@ -600,7 +598,7 @@ test('keys: 3 opens News; J and K move; Enter opens; J opens the next with one o
     await page.locator('.pane .rd-subj', {hasText: 'Red Flag Warning for the valleys'}).waitFor();
     assert.equal(await page.locator('.nw-list .open').textContent().then(text => text?.slice(0, 16)), 'Red Flag Warning');
     await page.keyboard.press('Escape');
-    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    await until('the pane closes', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
     // 1 and 2 still leave for the Inbox and Calendar.
     await page.keyboard.press('2');
     await page.waitForURL(/\/calendar/);
@@ -642,7 +640,7 @@ test('SV-207: Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping
     await page.keyboard.press('Enter');
     await until('ABC7\'s article opened', () => page.evaluate(() => (window as unknown as {opened: string[]}).opened), opened => opened.length === 1);
     assert.match((await page.evaluate(() => (window as unknown as {opened: string[]}).opened))[0]!, /^https:\/\/abc7\.example\//);
-    assert.equal(await page.locator('section.pane').count(), 0);
+    assert.equal(await page.locator('section.pane:not(.idle)').count(), 0);
 
     // A story Tech doesn't list: the pane closes, the cursor on Tech's first story.
     await page.goto(`${setpoint.base}/news/local/story/${fire}`);
@@ -650,7 +648,7 @@ test('SV-207: Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping
     await page.keyboard.press('Tab');
     await page.waitForURL(/\/news\/tech$/);
     await until('the cursor on Tech\'s first story', () => page.locator('.nw-list .cur').textContent(), text => text?.startsWith('Pixel Watch 5') ?? false);
-    assert.equal(await page.locator('section.pane').count(), 0);
+    assert.equal(await page.locator('section.pane:not(.idle)').count(), 0);
 
     // One General lists too: the pane stays on it, there and back.
     await page.goto(`${setpoint.base}/news/ai/story/${chips}`);
@@ -662,7 +660,7 @@ test('SV-207: Tab and Shift-Tab step All | Local | Tech | AI | General, wrapping
 
     // In Search news, Tab is the browser's: focus leaves the field and the view stays.
     await page.keyboard.press('Escape');
-    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    await until('the pane closes', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
     await page.getByRole('textbox', {name: 'Search news'}).focus();
     await page.keyboard.press('Tab');
     await until('focus left the field', () => page.evaluate(() => document.activeElement?.getAttribute('aria-label')), label => label !== 'Search news');

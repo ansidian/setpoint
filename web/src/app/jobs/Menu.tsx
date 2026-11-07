@@ -104,11 +104,9 @@ function placeBeside(item: HTMLElement, parent: HTMLElement, size: {width: numbe
   return {left, top, up: false, right};
 }
 
-export function JobsMenu({spec, anchor, shifted = 0, onClose}: {
+export function JobsMenu({spec, anchor, onClose}: {
   spec: MenuSpec;
   anchor: MenuAnchor;
-  // Changed as what it hangs from moves without a scroll (a pane opening beside it): it's placed again.
-  shifted?: number;
   onClose: () => void;
 }) {
   const tree = useId();
@@ -171,14 +169,13 @@ export function JobsMenu({spec, anchor, shifted = 0, onClose}: {
   }, [anchor, tree]);
 
   // Drawn in the page's main landmark, as the toast is, beside the page rather than inside what clips it.
-  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} shifted={shifted} onBack={null} onClose={close} />, document.querySelector('main') ?? document.body);
+  return createPortal(<Level spec={spec} tree={tree} place={size => placeAt(anchor, size)} onBack={null} onClose={close} />, document.querySelector('main') ?? document.body);
 }
 
-function Level({spec, tree, place, shifted = 0, onBack, onClose}: {
+function Level({spec, tree, place, onBack, onClose}: {
   spec: MenuSpec;
   tree: string;
   place: (size: {width: number; height: number}) => {left: number; top: number; up: boolean; right: boolean};
-  shifted?: number;
   // A submenu's way back to its parent (← or Esc); null for the menu itself.
   onBack: (() => void) | null;
   onClose: (giveBack: boolean) => void;
@@ -204,8 +201,8 @@ function Level({spec, tree, place, shifted = 0, onBack, onClose}: {
     const element = box.current;
     if (!element) return;
     setWhere(place({width: element.offsetWidth, height: element.offsetHeight}));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- placed where it opened, and again only if that moved
-  }, [shifted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- placed where it opened
+  }, []);
   const placed = where !== null;
   useLayoutEffect(() => {
     if (!placed) return;

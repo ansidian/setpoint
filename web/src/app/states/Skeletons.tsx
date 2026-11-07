@@ -21,11 +21,10 @@ function Header({index, first, w}: {index: number; first: boolean; w?: number}) 
   return <div className={first ? 'sk-gh first' : 'sk-gh'}><Bar w={w ?? at(LABEL, index)} h={8} /></div>;
 }
 
-/** A mail row (.row): the sender, the subject, the account and the age; All's with its kind's column. */
+/** A mail row (.row): the sender, the subject, the account and the age. */
 function Row({index, all = false}: {index: number; all?: boolean}) {
   return (
     <div className="sk-row">
-      {all && <span className="kd"><Bar w={at([54, 40, 62], index)} h={8} /></span>}
       <span className="ud" />
       <span className="from"><Bar w={at(FROM, index)} /></span>
       <span className="subj"><Bar w={share(at(SUBJECT, index))} /></span>

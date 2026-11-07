@@ -71,7 +71,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
-    await page.locator('.pane').waitFor({state: 'detached'});
+    await page.locator('.pane:not(.idle)').waitFor({state: 'detached'});
     await page.keyboard.press('k');
     await page.locator('.list .row.cur', {hasText: 'Your recovery email was changed'}).waitFor();
     // When the network went (the app's own listener, added first, has run by then).
@@ -104,7 +104,7 @@ test('offline: changes are refused at once, not queued; after 2 s the pill shows
     await page.keyboard.press('Enter');
     await page.locator('.pane .rd-subj', {hasText: 'Interview availability'}).waitFor();
     await page.keyboard.press('Escape');
-    await page.locator('.pane').waitFor({state: 'detached'});
+    await page.locator('.pane:not(.idle)').waitFor({state: 'detached'});
     // Settings still opens from the sidebar, and Esc still closes the topmost thing.
     await page.locator('.sb-foot .nav', {hasText: 'Settings'}).click();
     await page.locator('.settings').waitFor();

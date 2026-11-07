@@ -143,7 +143,7 @@ test('a recovery code signs in when the password is lost: a new password, then n
 });
 
 describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
-  test('sidebar 248, header 56, reading pane 680 only while an email is open; the shell never scrolls; no focus rings', async () => {
+  test('sidebar 248, header 56, the reading pane 680 with or without an email open, nothing moving as one opens and closes; the shell never scrolls; no focus rings', async () => {
     const setpoint = await startSetpoint();
     try {
       const page = await setpoint.page('target');
@@ -151,12 +151,16 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       await page.locator('.list .row').first().waitFor();
       assert.equal((await box(page, '.sb')).width, 248);
       assert.equal((await box(page, '.hd')).height, 56);
-      assert.equal(await page.locator('.pane').count(), 0, 'nothing open: the pane is collapsed and the list takes the width');
-      assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248);
-      await page.locator('.list .row:has(b[data-tip^="Final exam schedule"])').click();
-      await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
-      assert.equal((await box(page, '.pane')).width, 680);
+      // Nothing open: the empty pane is there all the same (SV-217), so nothing moves as an email opens or closes.
+      assert.equal((await box(page, '.pane.idle')).width, 680);
       assert.equal((await box(page, '.list')).width, pagePx(SIZES.target.width) - 248 - 680);
+      const row = page.locator('.list .row:has(b[data-tip^="Final exam schedule"])');
+      const still = () => Promise.all(['.hd .search', '.list'].map(selector => box(page, selector)).concat(row.boundingBox().then(rect => rect!)));
+      const before = await rested(still);
+      await row.click();
+      await page.locator('.rd-subj', {hasText: 'Final exam schedule'}).waitFor();
+      assert.equal((await box(page, '.pane:not(.idle)')).width, 680);
+      assert.deepEqual(await rested(still), before, 'opening moves nothing');
       // Every row keeps its account while the pane is open (decision 41).
       for (const label of await page.locator('.list .row .ac').allTextContents()) assert.match(label, /Business|Personal|Work|Jobs|iCloud/);
       const scroll = await page.evaluate(() => [document.documentElement.scrollHeight, document.documentElement.clientHeight, document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -165,6 +169,9 @@ describe(`the shell at ${SIZES.target.width} × ${SIZES.target.height}`, () => {
       await page.locator('.rd-tools .tool').first().focus();
       const outline = await rested(() => page.locator('.rd-tools .tool').first().evaluate(element => getComputedStyle(element).outlineStyle));
       assert.equal(outline, 'none');
+      await page.keyboard.press('Escape');
+      await page.locator('.pane.idle').waitFor();
+      assert.deepEqual(await rested(still), before, 'closing moves nothing');
       assert.deepEqual(setpoint.pageErrors, []);
     } finally {
       await setpoint.stop();

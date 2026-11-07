@@ -60,7 +60,7 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     const [first, second, third] = await fourInADay(page, setpoint);
 
     // ⌘-click: selected, the pane up, nothing opened or read.
-    await row(page, first!.id).click({modifiers: ['ControlOrMeta']});
+    await row(page, first!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await pane(page).waitFor();
     assert.equal(await pane(page).locator('.rd-subj').textContent(), '1 email selected');
     assert.equal(await reader(page).count(), 0, 'nothing opened');
@@ -70,7 +70,7 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     assert.ok(!new URL(page.url()).searchParams.has('open') && !page.url().includes('/open/'), 'the address opens nothing');
 
     // ⇧-click: every email from the last one clicked to this one, in the list's order.
-    await row(page, third!.id).click({modifiers: ['Shift']});
+    await row(page, third!.id).locator('.from').click({modifiers: ['Shift']});
     await until('three selected', () => listed(page), ids => ids.length === 3);
     assert.deepEqual(await listed(page), [first!.id, second!.id, third!.id]);
     assert.deepEqual(await selectedRows(page), [first!.id, second!.id, third!.id]);
@@ -82,7 +82,7 @@ test('⌘-click and ⇧-click select without opening or reading; the pane lists 
     // × takes one out; ⌘-click on a selected row does too.
     await pane(page).locator(`li[data-id="${second!.id}"] .sel-drop`).click();
     await until('two listed', () => listed(page), ids => ids.length === 2);
-    await row(page, third!.id).click({modifiers: ['ControlOrMeta']});
+    await row(page, third!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await until('one listed', () => listed(page), ids => ids.length === 1);
     assert.deepEqual(await selectedRows(page), [first!.id]);
 
@@ -103,9 +103,9 @@ test('the first ⌘-click takes the open email, its reader giving way; a plain c
     await openInbox(page, setpoint.base);
     const [first, second, third] = await fourInADay(page, setpoint);
 
-    await row(page, first!.id).click();
+    await row(page, first!.id).locator('.from').click();
     await reader(page).waitFor();
-    await row(page, second!.id).click({modifiers: ['ControlOrMeta']});
+    await row(page, second!.id).locator('.from').click({modifiers: ['ControlOrMeta']});
     await pane(page).waitFor();
     assert.deepEqual(await listed(page), [first!.id, second!.id]);
     await reader(page).waitFor({state: 'detached'});
@@ -113,7 +113,7 @@ test('the first ⌘-click takes the open email, its reader giving way; a plain c
     assert.equal((await message(setpoint, second!.id)).unread, second!.unread, 'the one ⌘-clicked isn\'t read');
 
     // A plain click opens that email, and the selection ends.
-    await row(page, third!.id).click();
+    await row(page, third!.id).locator('.from').click();
     await reader(page).waitFor();
     await pane(page).waitFor({state: 'detached'});
     assert.deepEqual(await selectedRows(page), []);

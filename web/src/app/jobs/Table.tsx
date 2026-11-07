@@ -1,13 +1,14 @@
 // The table (DESIGN.md › The table; boards 32, 34a, 36a, 36b; D309, D314): a header row whose labels
 // sort it (newest first by Applied, by default; a second click flips it), and a 36 px row per
-// application, 54 when its status's note wraps (SV-141): company, role, platform, Applied, the status
-// with its mark and step, and how its JD was found. Closed and Ghosted rows step down a shade. Search's rows highlight what matched, and a
-// match only in a JD's text adds the line it matched under its row. A row a correction takes away
+// application, 54 when its status's note wraps (SV-141): company, role, Applied, the status with its
+// mark and step, and how its JD was found as a glyph, named in its tip. They're the columns beside the
+// detail, which is always there (SV-217). Closed and Ghosted rows step down a shade. Search's rows
+// highlight what matched, and a match only in a JD's text adds the line it matched under its row. A row a correction takes away
 // (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
 // right-click opens its actions at the pointer (#268).
 import type {ApplicationRowOut} from '@setpoint/shared';
 import type {MouseEvent as ReactMouseEvent} from 'react';
-import {useEffect, useMemo, useState} from 'react';
+import {useMemo} from 'react';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {foldIn, foldOut, useFold} from '../fold.ts';
@@ -16,33 +17,6 @@ import {appliedWord, jdCell, markLabel, markOf, marks, nextSort, recedes, setByY
 import type {Sort, SortKey} from './words.ts';
 
 export const rowKey = (id: number) => `r:${id}`;
-
-// What Role keeps past its longest title, so that title doesn't crowd Platform.
-const ROLE_ROOM = 32;
-
-/**
- * Role's column: the longest title drawn in the table's font, and ROLE_ROOM. It reads every
- * application rather than the rows shown, so a filter or a search doesn't move the columns.
- */
-export function useRoleFit(rows: ApplicationRowOut[]): string | undefined {
-  const font = useMemo(() => `13px ${getComputedStyle(document.body).fontFamily}`, []);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    let live = true;
-    void document.fonts?.load(font).then(() => live && setLoaded(true), () => {});
-    return () => {
-      live = false;
-    };
-  }, [font]);
-  return useMemo(() => {
-    const context = document.createElement('canvas').getContext('2d');
-    if (!context || !rows.length) return undefined;
-    context.font = font;
-    return `${Math.ceil(Math.max(...rows.map(row => context.measureText(titleOf(row)).width))) + ROLE_ROOM}px`;
-    // `loaded` measures again once the webfont is in.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, font, loaded]);
-}
 
 /**
  * The applications a correction is taking away just now, so their rows fold out rather than vanish;
@@ -53,10 +27,9 @@ export const takenAway = new Set<number>();
 
 const ROW_FOLDS: FoldRules<ApplicationRowOut> = {folds: entry => entry.id !== null && takenAway.has(entry.id), arrives: () => true};
 
-const COLUMNS: {key: SortKey; label: string; className?: string; title?: string}[] = [
+const COLUMNS: {key: SortKey; label: string; title?: string}[] = [
   {key: 'company', label: 'Company'},
   {key: 'role', label: 'Role'},
-  {key: 'platform', label: 'Platform', className: 'c-plat'},
   {key: 'applied', label: 'Applied'},
   {key: 'status', label: 'Status'},
   {key: 'jd', label: 'JD', title: 'Job description'},
@@ -69,7 +42,7 @@ export function HeaderRow({sort, first, onSort}: {sort: Sort; first: boolean; on
       {COLUMNS.map(column => {
         const on = sort.key === column.key;
         return (
-          <button key={column.key} type="button" className={['h', on && 'on', column.className].filter(Boolean).join(' ')} data-tip={column.title}
+          <button key={column.key} type="button" className={on ? 'h on' : 'h'} data-tip={column.title}
             data-sort={on ? (sort.down ? 'down' : 'up') : undefined} onClick={() => onSort(nextSort(sort, column.key))}>
             {column.label}{on && <Icon name={sort.down ? 'arrow_downward' : 'arrow_upward'} size={14} />}
           </button>
@@ -87,10 +60,9 @@ export interface RowState {
   moved: boolean;
 }
 
-export function Row({row, state, besideDetail, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu}: {
+export function Row({row, state, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu}: {
   row: ApplicationRowOut;
   state: RowState;
-  besideDetail: boolean;
   // Search's query, to highlight what it matched; and the JD line a match only there quotes.
   query: string | null;
   line?: string;
@@ -105,7 +77,7 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
   const key = rowKey(row.id);
   const leaving = fold === 'out';
   const mark = markOf(row);
-  const step = statusStep(row, besideDetail, today);
+  const step = statusStep(row, today);
   const jd = jdCell(row.jd, now, timeZone);
   const text = (value: string) => (query ? <Marked parts={marks(value, query)} /> : value);
   const classes = ['jb-tr', line !== undefined && 'two', recedes(row) && 'recedes', state.cursor && 'cur', state.open && 'open', state.landed && 'landed', state.moved && 'moved']
@@ -118,7 +90,6 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
       <span />
       <span className="co" data-tip={row.company}>{text(row.company)}</span>
       <span className={row.title.trim() ? 'ro' : 'ro none'} data-tip={titleOf(row)}>{row.title.trim() ? text(row.title) : titleOf(row)}</span>
-      <span className="pl c-plat">{row.platform ?? ''}</span>
       <span className="ap">{appliedWord(row.applied_on, today)}</span>
       <span className={mark === 'proc' ? 'st proc' : 'st'}>
         <i className={`sd ${mark}`} />
@@ -128,9 +99,8 @@ export function Row({row, state, besideDetail, query, line, now, timeZone, today
           {row.status_set_by === 'user' && <span className="by" role="img" aria-label={setByYou(row, today)} data-tip={setByYou(row, today)}><Icon name="edit" size={14} /></span>}
         </span>
       </span>
-      <span className="jd" data-tip={jd?.title}>
+      <span className="jd" data-tip={jd?.title ?? jd?.text}>
         {jd && (jd.spin ? <span className="spin"><Icon name={jd.icon} size={16} /></span> : <Icon name={jd.icon} size={16} />)}
-        {jd && <span className="t">{jd.text}</span>}
       </span>
       {line !== undefined && (
         <span className="snip" data-tip={line}><span className="lab">Full posting · </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
@@ -144,7 +114,6 @@ export function Rows({rows, lines, rowState, ...rest}: {
   rows: ApplicationRowOut[];
   lines?: Map<number, string>;
   rowState: (row: ApplicationRowOut) => RowState;
-  besideDetail: boolean;
   query: string | null;
   now: number;
   timeZone: string;

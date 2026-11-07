@@ -302,9 +302,6 @@ export const layout = {
   rail: 56,
   header: 56,
   readingPane: 680,
-  // Where the Inbox's and News's content stops, the row's width at 1728 wide: past that, the spare
-  // width is each row's right padding, so nothing sits further out than anything else (SV-141).
-  listRowMax: 1480,
   rightPane: 400,
   // 360, wider than board 12a's 280, so a long title wraps to fewer lines (#308, override 43).
   floatingDetail: 360,

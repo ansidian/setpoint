@@ -80,7 +80,6 @@
   .sk-row > .from, .sk-row > .subj { display: flex; align-items: center; font-size: 13px; line-height: 1.35; height: 1.35em; }
   .sk-row > .ac { grid-area: ac; width: auto; }
   .sk-row > .age, .list.all .sk-row > .age { grid-area: age; width: auto; min-width: 36px; }
-  .sk-row > .kd { display: none; }
   .sk-arow { padding: 8px 16px 9px 8px; }
   .row .subj.code-line { gap: 6px; }
   .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
@@ -101,8 +100,6 @@
   .ph-acts .icon, .ph-tab .icon { transition: transform var(--dur-fast) var(--ease); }
   .ph-acts > button:active .icon, .ph-tab:active .icon { transform: scale(.88); }
   .arow .l1 .via { display: none; }
-  .list.all .row .kd { display: none; }
-  .list.all .kh { display: flex; }
 
   /* ---------- The reader: the whole screen, Back and Pin at the top, its actions at the bottom ---------- */
   .pane { position: fixed; inset: 0; width: auto; max-width: none; border-left: 0; background: var(--page); z-index: 6; padding-top: env(safe-area-inset-top); }
@@ -147,8 +144,6 @@
      (#139): a view transition (InboxPage's slide), the root saying which way. 260 ms, the modal
      timing, as the reader takes the whole screen. Taps go to the page beneath while it runs. */
   .pane { view-transition-name: ph-reader; }
-  /* The whole reader slides, so its content doesn't slide in again inside it (styles.css › pane-in). */
-  .pane > :not(.pane-edge) { animation: none; }
   .content > .list { view-transition-name: ph-list; }
   ::view-transition { pointer-events: none; }
   ::view-transition-group(ph-reader), ::view-transition-group(ph-list) { animation-duration: var(--dur-slow); }

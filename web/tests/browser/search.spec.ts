@@ -16,7 +16,7 @@ import {SUGGESTION_PAUSE_MS} from '../../src/app/search/mailSearch.ts';
 import {TYPING_MS} from '../../src/app/search/state.ts';
 import {FAKE_ANTHROPIC_KEY, fakeAlfred, leaseAlfred, listAlfred, rejectionsAlfred, SEED_READINGS} from './fakeAlfred.ts';
 import type {FakeReading} from './fakeAlfred.ts';
-import {cleanUp, drawn, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, drawn, pagePx, pauseClock, point, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -1257,6 +1257,10 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
   try {
     await setpoint.api('PUT', '/secrets/anthropic_api_key', {value: FAKE_ANTHROPIC_KEY});
     const page = await load(setpoint);
+    // The pane dragged to its narrowest, so the card runs wider than the reading measure.
+    await page.evaluate(() => localStorage.setItem('setpoint.readingPane', '480'));
+    await page.reload();
+    await page.locator('.list .row').first().waitFor();
     await page.keyboard.press('/');
     await typeWords(page, setpoint, 'northwind');
     await page.keyboard.press('Meta+Enter');
@@ -1284,8 +1288,8 @@ test('Alfred: the card says what Alfred is doing as it works, the steps it took 
     await page.locator('.answer .more', {hasText: 'Show fewer'}).click();
     assert.equal(await page.locator('.answer .src').count(), 5);
     // The answer's lines stop at a reading measure, though the card runs the list's width.
-    const [line, card] = await Promise.all([page.locator('.answer .ans').evaluate(element => element.getBoundingClientRect().width), page.locator('.answer').evaluate(element => element.getBoundingClientRect().width)]);
-    assert.ok(card > 900 && line <= 680, `the answer ${Math.round(line)} px wide in a ${Math.round(card)} px card`);
+    const [line, card] = (await Promise.all([page.locator('.answer .ans').evaluate(element => element.getBoundingClientRect().width), page.locator('.answer').evaluate(element => element.getBoundingClientRect().width)])).map(width => pagePx(width));
+    assert.ok(card! > 760 && line! <= 680, `the answer ${line} px wide in a ${card} px card`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

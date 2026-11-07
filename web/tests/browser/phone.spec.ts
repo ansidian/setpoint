@@ -65,11 +65,10 @@ test('#239: on the phone a row\'s summary wraps to a second line rather than bei
     // Every row's line in the seed fits in its two lines, none cut.
     const cut = await page.locator('.list .row .subj:not(.code-line)').evaluateAll(all => all.filter(node => node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
     assert.deepEqual(cut, []);
-    // The kind column has no room on the phone, so each FYI run gets its subheading.
+    // Each FYI run gets its subheading, as on the desktop.
     const subheads = page.locator('.list.all .kh');
     await subheads.first().waitFor();
     assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.equal(await page.locator('.list.all .row .kd').first().isVisible(), false);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

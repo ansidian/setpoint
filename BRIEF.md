@@ -218,10 +218,10 @@ he asked for), and hiding it would train him to miss the rest. So:
 ### The reader
 
 - **A reading pane, never a full-screen reader.** The list is on the left, the open email on the
-  right; Andy reads several emails in a sitting. With nothing open (All caught up, a fresh load) the
-  pane collapses and the list takes the width; it opens with the first email.
-- The pane is about **680 px**, because most HTML email is a 600 px table. While it's open, rows
-  drop their chips.
+  right; Andy reads several emails in a sitting. The pane is always there on a desktop, empty until
+  an email opens, so the list never re-lays (D464).
+- The pane is about **680 px**, because most HTML email is a 600 px table. Rows beside it drop their
+  chips.
 - **Header:** sender, organisation, account (colour dot and label), date, and actions: Done,
   Trash, Pin, **Open in Gmail** (`O`), More. Leave room for Reply.
 - **Body:** HTML in a sandboxed frame. Remote content (images, tracking pixels) **loads
@@ -1307,7 +1307,8 @@ From design round 1's review (2026-10-07, Andy):
 40. **FYI kinds are Career and People**, not Work and Personal, which are account names.
 41. **Every row shows its account's label** beside its dot, even with the reading pane open.
 42. **mantel's needs-sign-in chip is an alert**, like the finance importer's.
-43. **The reading pane collapses when nothing is open.**
+43. **The reading pane collapses when nothing is open.** Amended 2026-11-06 (D464, DESIGN.md #327):
+    the pane is always there on a desktop, empty until something opens.
 44. **The mark is a placeholder**; Andy picks one later. He picked Day stack (DESIGN.md #87).
 45. **Light uses darma's Light tokens** exactly; round 1 guessed them.
 

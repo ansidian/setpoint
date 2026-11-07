@@ -172,7 +172,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
 
     // Trash from the cursor row, no reader: nothing opens, and Undo is offered for 6 seconds.
     await page.keyboard.press('Escape');
-    await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
+    await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
     const ups = await idOf(setpoint, 'Out for delivery');
     await point(page.locator('.row:has(b[data-tip="Out for delivery"])'));
     // The row leaves at once, before the server has the Trash (held here at its door).
@@ -190,7 +190,7 @@ test('Trash opens the next email, and Undo brings the trashed one back to the re
     await pauseClock(page);
     await page.keyboard.press('e');
     await page.locator('.toast', {hasText: 'Moved to Trash'}).waitFor();
-    assert.equal(await page.locator('.pane').count(), 0, 'Trash from the row opens nothing');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'Trash from the row opens nothing');
     // Its row, not the one folding away (it has no key).
     const upsRow = page.locator('.row[data-key]:has(b[data-tip="Out for delivery"])');
     await until('Consolidated Messenger leaves', () => upsRow.count(), count => count === 0);
@@ -601,7 +601,7 @@ test('a code row: Copy puts the code on the clipboard, or says it couldn\'t, and
     await row.locator('button', {hasText: 'Copy'}).click();
     await row.locator('button', {hasText: 'Copied'}).waitFor();
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), '482913');
-    assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'Copy doesn\'t open the email');
     // "Copied" for a second and a half.
     await page.clock.runFor(1500);
     await row.locator('button', {hasText: 'Copy'}).waitFor();
@@ -652,7 +652,7 @@ test('SV-159: copying a code reads its email, in place: the row\'s Copy and the 
     assert.equal(after.unread, before.unread - 1);
     assert.equal(after.attention, before.attention, 'the pill doesn\'t move');
     assert.ok(await row.isVisible(), 'it stays where it is, in its day');
-    assert.equal(await page.locator('.pane').count(), 0, 'Copy doesn\'t open the email');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'Copy doesn\'t open the email');
     assert.equal(await page.locator('.toast').count(), 0, 'Copied says it; no Marked as read');
 
     // The menu's Copy code does the same, its toast saying what it took.
@@ -719,7 +719,7 @@ test('images hidden: Show loads them this time; Always show trusts the domain', 
 
     // Show was for this time: opened again (still in its day, read), they're hidden again.
     await page.keyboard.press('Escape');
-    await until('the pane collapses', () => page.locator('.pane').count(), count => count === 0);
+    await until('the reader closes', () => page.locator('.pane:not(.idle)').count(), count => count === 0);
     await page.locator('.list.all .row', {hasText: 'Contoso Coffee'}).click();
     await page.locator('.imgbar', {hasText: 'Images hidden'}).waitFor();
     await frame.locator('[data-hidden-image]').first().waitFor();
@@ -921,7 +921,7 @@ test('an attachment opens its preview over the reading pane; Esc closes the prev
     assert.match(response.headers()['content-disposition']!, /^inline; filename="Renewal agreement.pdf"/);
     await page.keyboard.press('Escape');
     await until('the preview closes', () => page.locator('.attach-preview').count(), count => count === 0);
-    assert.equal(await page.locator('.pane').count(), 1, 'the reader stays');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 1, 'the reader stays');
     // When the provider can't serve it, the preview says so.
     await page.route('**/api/mail/messages/*/attachments/*', route => route.fulfill({status: 502, json: {error: {code: 'provider_failed', message: 'Gmail didn\'t answer in time.'}}}));
     await card.click();
@@ -1015,8 +1015,6 @@ test('days first: Attention, the shelf, then the days, Today first, each saying 
     assert.equal(await page.locator('.hd-count').textContent(), '19 new');
     // Today's lanes and Yesterday's, the kind once where an FYI run starts (#48).
     assert.deepEqual((await page.locator('.list.all .lh').allTextContents()).slice(0, 2), ['FYI 8', 'FYI 4']);
-    assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').textContent(), 'Security');
-    assert.equal(await page.locator('.list.all .row', {hasText: 'New sign-in'}).first().locator('.kd').textContent(), '');
     // The summary takes the subject's place; the subject is its tooltip (SV-203).
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     assert.equal(await fabrikam.locator('.subj').textContent(), 'Data Analyst · via Workday');
@@ -1043,8 +1041,7 @@ test('days first: Attention, the shelf, then the days, Today first, each saying 
     await until('the row reads as read', () => coffee.first().getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
     await until('Today counts one less', () => page.locator('.list.all .gh.day').first().textContent(), text => text === 'Today Wed, Oct 7 · 10 new');
     assert.equal(await page.locator('.hd-count').textContent(), '18 new');
-    // The kind drops while the reading pane is open; the account never does.
-    assert.equal(await page.locator('.list.all .row', {hasText: 'Contoso Insurance'}).first().locator('.kd').isVisible(), false);
+    // The account stays on every row beside the reading pane.
     assert.equal(await coffee.first().locator('.ac').isVisible(), true);
     // Trash takes the row out, and ⌘Z brings it back; the folds are by eye (D416).
     await page.keyboard.press('Escape');
@@ -1060,32 +1057,23 @@ test('days first: Attention, the shelf, then the days, Today first, each saying 
   }
 });
 
-test('#237: with the reader open, the kinds turn into subheadings under FYI, and the row clicked stays where it was', async () => {
+test('#237: the kinds are subheadings under FYI, each before its run, with the pane open or not', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
     const subheads = page.locator('.list.all .kh');
-    // Wide, the kinds sit in the left column and no subheading shows.
-    assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), true);
-    assert.equal(await subheads.first().isVisible(), false);
+    // Each FYI run of one kind gets its subheading, under FYI's header, before its run's first row.
+    await subheads.first().waitFor();
+    assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
+    const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
+    assert.equal(order[order.indexOf('lh:FYI 8') + 1], 'kh:Security');
+    // Opening an email leaves them, and the row clicked, where they were.
     const fabrikam = page.locator('.list.all .row', {hasText: 'Fabrikam'}).first();
     const before = (await rested(() => fabrikam.boundingBox()))!.y;
     await fabrikam.click();
     await page.locator('.rd-subj', {hasText: 'Application received'}).waitFor();
-    // Each FYI run of one kind gets its subheading; the column goes.
-    await subheads.first().waitFor();
-    assert.deepEqual((await subheads.allTextContents()).slice(0, 4), ['Security', 'Deliveries', 'Money', 'Career']);
-    assert.equal(await page.locator('.list.all .row .kd:has(.icon)').first().isVisible(), false);
-    // Today's subheadings sit under FYI's header, each before its run's first row.
-    const order = await page.locator('.list.all > *').evaluateAll(all => all.slice(0, 12).map(node => node.classList.contains('kh') ? `kh:${node.textContent}` : node.classList.contains('lh') ? `lh:${node.textContent}` : node.classList[0]));
-    assert.equal(order[order.indexOf('lh:FYI 8') + 1], 'kh:Security');
-    // The subheadings came in above the row, and the list scrolled by as much: it hasn't moved.
-    assert.equal(Math.round((await fabrikam.boundingBox())!.y), Math.round(before));
-    // Closed again, the column is back and the row is still where it was.
-    await page.keyboard.press('Escape');
-    await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
-    assert.equal(await subheads.first().isVisible(), false);
-    assert.equal(Math.round((await rested(() => fabrikam.boundingBox()))!.y), Math.round(before));
+    assert.equal(await subheads.first().isVisible(), true);
+    assert.equal((await rested(() => fabrikam.boundingBox()))!.y, before);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -1222,7 +1210,7 @@ test('the reading pane resizes from its left edge, within bounds, and this brows
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
-    const pane = page.locator('.pane');
+    const pane = page.locator('.pane:not(.idle)');
     const paneWidth = async () => Math.round((await rested(() => pane.boundingBox()))!.width / ZOOM);
     await page.locator('.row', {hasText: 'New sign-in'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
@@ -1283,7 +1271,7 @@ test('under the wide screen\'s zoom, the pane\'s edge drags with the pointer and
     const page = await load(setpoint);
     // From 2200 px the page is drawn at 1.25 (styles.css), so the pointer's pixels are 1.25 of the page's.
     await page.setViewportSize({width: 2400, height: 1300});
-    const pane = page.locator('.pane');
+    const pane = page.locator('.pane:not(.idle)');
     await page.locator('.row', {hasText: 'New sign-in'}).click();
     await page.locator('.rd-subj', {hasText: 'Security alert'}).waitFor();
     const edge = page.locator('.pane-edge');
@@ -1340,7 +1328,7 @@ test('S8 (SV-25, D54): offline, opening an email shows no failure toast: the off
       history.pushState(null, '', `/inbox/${id}`);
       dispatchEvent(new PopStateEvent('popstate'));
     }, northwind);
-    await page.locator('.pane').waitFor();
+    await page.locator('.pane:not(.idle)').waitFor();
     // Nothing happens to wait for: no failure toast comes.
     await page.waitForTimeout(500);
     await setpoint.idle();
@@ -1405,7 +1393,7 @@ test('UX #11: ⇧U marks the open email unread and closes the reader; ⌘K names
     await rowOf(page, 'Your recovery email was changed').click();
     await until('Google read', () => unreadCount(page), text => text === '18');
     await page.keyboard.press('Shift+U');
-    await page.locator('.pane').waitFor({state: 'detached'});
+    await page.locator('.pane:not(.idle)').waitFor({state: 'detached'});
     await until('unread again', () => unreadCount(page), text => text === '19', 5000);
     // Unread again where it was, in Attention.
     await page.locator('.list .row.unread', {hasText: 'Your recovery email was changed'}).waitFor();

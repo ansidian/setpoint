@@ -302,7 +302,7 @@ test('a story opens at once from its row: sections, headline and meta; its summa
     const lead = page.locator('.nw-lead', {hasText: 'Brush fire near the 210'});
     const headline = await lead.locator('.hl').textContent();
     await lead.click();
-    const pane = page.locator('section.pane');
+    const pane = page.locator('section.pane:not(.idle)');
     await pane.locator('.rd-subj', {hasText: headline!}).waitFor();
     assert.deepEqual(await pane.locator('.st-secs .tag').allTextContents(), ['Local']);
     const meta = await pane.locator('.st-meta').textContent();

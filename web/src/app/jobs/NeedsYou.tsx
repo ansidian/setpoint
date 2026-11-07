@@ -97,7 +97,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
   const [answered, setAnswered] = useState<ReadonlyMap<number, Answered>>(new Map());
   const [gone, setGone] = useState<ReadonlySet<number>>(new Set());
   const [menu, setMenu] = useState<{spec: MenuSpec; anchor: MenuAnchor; owner: string} | null>(null);
-  // J / K to another item's email takes its menu away; a pane opening moves what the menu hangs from.
+  // J / K to another item's email takes its menu away.
   if (menu && reading && !menu.owner.endsWith(`:${reading.item}`)) setMenu(null);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(timer => window.clearTimeout(timer)), []);
@@ -232,7 +232,7 @@ export function NeedsYou({items, history, rows, accounts, cursor, folded, now, t
           </div>
         )}
       </div>
-      {menu && <JobsMenu spec={menu.spec} anchor={menu.anchor} shifted={reading ? 1 : 0} onClose={() => setMenu(null)} />}
+      {menu && <JobsMenu spec={menu.spec} anchor={menu.anchor} onClose={() => setMenu(null)} />}
     </div>
   );
 }

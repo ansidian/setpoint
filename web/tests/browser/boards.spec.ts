@@ -36,29 +36,25 @@ test('board 01: the Inbox on a typical morning, Northwind open', async () => {
   }
 });
 
-test('SV-141: the Inbox has one right edge: at the design target it\'s the row\'s end, and on a very wide window the ages, the accounts\' column, the fold\'s chevron, the search field and a search\'s rows all stop at it, a reading pane taking the header to its end', async () => {
+test('SV-217: the Inbox\'s rows run to the pane on every screen: the ages, the accounts\' column, the fold\'s chevron and a search\'s rows stop 16 before it, and the search field ends the header', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const rights = (page: Page, cells: string) => rested(() => page.evaluate(selector => [...new Set([...document.querySelectorAll(selector)].map(each => Math.round(each.getBoundingClientRect().right)))], cells));
-    const ENDS = '.row .age, .nfold .chev .icon, .hd .search';
-    const target = await setpoint.page('target');
-    await target.goto(`${setpoint.base}/inbox`);
-    assert.deepEqual(await rights(target, ENDS), [Math.round(SIZES.target.width - 16 * ZOOM)], 'the row\'s end, as ever');
-    const width = 2655;
-    const wide = await setpoint.page({width, height: 1400});
-    await wide.goto(`${setpoint.base}/inbox`);
-    const ends = await rights(wide, ENDS);
-    assert.equal(ends.length, 1, `one right edge: ${ends.join()}`);
-    assert.ok(width - ends[0]! > 300, `spare width past it: ${width - ends[0]!}`);
-    assert.equal((await rights(wide, '.row .ac')).length, 1, 'the accounts in one column');
-    await wide.locator('.list.all .row').first().click();
-    await wide.locator('.pane').waitFor();
-    assert.deepEqual(await rights(wide, '.hd .search'), [width - 20], 'beside the pane the header runs to its end');
-    await wide.goto(`${setpoint.base}/inbox`);
-    await wide.keyboard.press('/');
-    await wide.keyboard.type('northwind');
-    await wide.locator('.arow.result').first().waitFor();
-    assert.deepEqual(await rights(wide, '.arow.result .age, .hd .search'), ends, 'a search\'s rows stop there too');
+    const paneLeft = async (page: Page) => Math.round((await rested(() => page.locator('section.pane').boundingBox()))!.x);
+    for (const [width, height, zoom] of [[SIZES.target.width, SIZES.target.height, ZOOM], [2655, 1400, 1.25]] as const) {
+      const page = await setpoint.page({width, height});
+      await page.goto(`${setpoint.base}/inbox`);
+      await page.locator('.list.all .row').first().waitFor();
+      const end = await paneLeft(page) - Math.round(16 * zoom);
+      assert.deepEqual(await rights(page, '.row .age, .nfold .chev .icon'), [end], `${width}: the rows' end`);
+      assert.equal((await rights(page, '.row .ac')).length, 1, `${width}: the accounts in one column`);
+      assert.deepEqual(await rights(page, '.hd .search'), [Math.round(width - 16 * zoom)], `${width}: the search field ends the header`);
+      await page.keyboard.press('/');
+      await page.keyboard.type('northwind');
+      await page.locator('.arow.result').first().waitFor();
+      assert.deepEqual(await rights(page, '.arow.result .age'), [end], `${width}: a search's rows stop there too`);
+      await page.close();
+    }
   } finally {
     await setpoint.stop();
   }

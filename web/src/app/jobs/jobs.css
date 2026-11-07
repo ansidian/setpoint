@@ -39,10 +39,6 @@
 
 /* ---------- The column: Needs you, then the table, scrolling under the header ---------- */
 .jb-col { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; container: jbcol / inline-size; }
-/* The page's right edge is the table's (SV-141): the end of JD, 936 px past the row's start with Role
-   taken out (its fixed columns, gaps and left padding), and no edge at all under the 1100 px where
-   the narrower columns fill the row. Before the table has measured, nothing is held back. */
-.jb-hd.ends, .jb-col { --row-end: max(16px, calc(100% - max(1084px, calc(936px + var(--role-fit, 100vw))))); }
 .jb-scroll { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; }
 .jb-col .gh > .icon { color: var(--ink3); }
 
@@ -50,7 +46,7 @@
 .jb-band { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .jb-band.folded { grid-template-rows: 0fr; }
 .jb-band > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.jb-need { display: grid; grid-template-columns: 12px 18px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 7px; padding: 10px var(--row-end) 11px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none;
+.jb-need { display: grid; grid-template-columns: 12px 18px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 7px; padding: 10px 16px 11px 12px; border-bottom: 1px solid var(--hair); color: var(--ink2); flex: none;
   transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-need:hover { background: var(--sub); } }
 .jb-need.cur { background: var(--sub2); }
@@ -98,7 +94,7 @@
 .jb-histsec { display: grid; grid-template-rows: 1fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .jb-histsec > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .jb-histsec.closing { grid-template-rows: 0fr; transition-delay: var(--dur-medium); }
-.jb-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 var(--row-end) 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; cursor: default;
+.jb-fold { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2); font-size: 12.5px; flex: none; cursor: default;
   transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-fold:hover { background: var(--sub); color: var(--ink); } }
 .jb-fold-t { display: flex; align-items: center; gap: 10px; height: 100%; flex: 1 1 auto; min-width: 0; text-align: left; color: inherit; }
@@ -111,7 +107,7 @@
 .jb-hist-wrap { display: grid; grid-template-rows: 0fr; flex: none; transition: grid-template-rows var(--dur-medium) var(--ease); }
 .jb-hist-wrap.open { grid-template-rows: 1fr; }
 .jb-hist-wrap > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.jb-hist { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; column-gap: 10px; align-items: center; height: 36px; padding: 0 var(--row-end) 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2);
+.jb-hist { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; column-gap: 10px; align-items: center; height: 36px; padding: 0 16px 0 34px; border-bottom: 1px solid var(--hair); color: var(--ink2);
   font-size: 12.5px; flex: none; background: color-mix(in srgb, var(--panel) 50%, transparent); transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-hist:hover { background: var(--sub); } }
 .jb-hist > .icon { color: var(--ink3); }
@@ -126,15 +122,9 @@
 .jb-hist .acts .btn { height: 24px; font-size: 12px; padding: 0 9px; }
 
 /* ---------- The table (D309, D314) ---------- */
-/* Its columns with the detail closed (34a); a table narrower than they need (beside the detail, as at
-   board 32, or a narrow window) drops Platform and draws JD as a glyph, as mail drops its chips beside
-   the reader. It re-lays in the frame the pane opens, with no width tween. Role stops at its longest
-   title and the spare width sits past JD (--role-fit, Table.tsx › useRoleFit; SV-141). */
-.jb-tbl { --cols: 12px 220px minmax(0, var(--role-fit, 1fr)) 120px 72px 300px 128px; --gap: 12px; }
-@container jbcol (max-width: 1099.98px) {
-  .jb-tbl { --cols: 12px 156px minmax(0, 1fr) 60px 214px 18px; }
-  .jb-tbl :is(.jb-th, .jb-tr) > .c-plat, .jb-tr .jd .t { display: none; }
-}
+/* Its columns beside the detail, which is always there (board 32; SV-217): no Platform, and JD as a
+   glyph named in its tip. */
+.jb-tbl { --cols: 12px 156px minmax(0, 1fr) 60px 214px 18px; --gap: 12px; }
 @container jbcol (max-width: 599.98px) {
   .jb-tbl { --cols: 12px minmax(0, 1fr) minmax(0, 1fr) 52px minmax(0, 1.2fr) 18px; --gap: 10px; }
   .jb-th .h { max-width: calc(100% + 6px); overflow: hidden; text-overflow: ellipsis; }
@@ -173,12 +163,10 @@
 .jb-tr .co { color: var(--ink); }
 .jb-tr .ro { color: var(--ink2); }
 .jb-tr .ro.none { color: var(--ink3); }
-.jb-tr .pl { color: var(--ink3); font-size: 12.5px; }
 .jb-tr .ap { color: var(--ink2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .jb-tr .jd { color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
 .jb-tr .jd > .icon, .jb-tr .jd > .spin .icon { color: var(--ink3); }
 .jb-tr .jd > .spin { margin-left: 0; vertical-align: 0; }
-.jb-tr .jd .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* Closed (Rejected, Withdrawn) and Ghosted rows step down: ink2 / ink3, never opacity, which means pending. */
 .jb-tr.recedes .co { color: var(--ink2); }
 .jb-tr.recedes .ro { color: var(--ink3); }
@@ -186,7 +174,7 @@
 .jb-tr.two { min-height: 56px; grid-template-rows: auto auto; align-items: start; padding-top: 9px; }
 .jb-tr.two .st { grid-row: 1; padding-block: 0; line-height: inherit; }
 .jb-tr.two > .snip { grid-row: 2; grid-column: 2 / -1; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); font-size: 12.5px; }
-.jb-none { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 var(--row-end) 0 24px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); flex: none; }
+.jb-none { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 24px; color: var(--ink3); font-size: 12.5px; border-bottom: 1px solid var(--hair); flex: none; }
 .jb-none > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .jb-scroll .gh.sr { border-top: 0; }
 
@@ -428,7 +416,7 @@
 /* ---------- J8's states (38a–38c) ---------- */
 /* The AI down and the history pass: a 32 px line at the top of the column, over a hairline, as mail's
    health lines and News's first run are. The pass's progress runs along its foot (states.css's .progress). */
-.jb-state { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 var(--row-end) 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.jb-state { flex: none; display: flex; align-items: center; gap: 10px; min-height: 32px; padding: 0 16px 0 24px; font-size: 12.5px; border-bottom: 1px solid var(--hair); min-width: 0; }
 .jb-state.failing { color: var(--caution); }
 .jb-state.muted { color: var(--ink3); }
 .jb-state .spin { margin-left: 0; vertical-align: 0; color: inherit; }

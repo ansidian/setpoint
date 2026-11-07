@@ -62,6 +62,7 @@ import {LoadFailed, useArrival, useLoadFailed} from '../states/Loading.tsx';
 import {NewsSkeleton} from '../states/Skeletons.tsx';
 import {NewsImage} from './NewsImage.tsx';
 import {StoryPane} from './StoryPane.tsx';
+import {EmptyPane, EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import './news.css';
 
 type NewsRoute = Extract<Route, {page: 'news'}>;
@@ -215,7 +216,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
   const open = route.story;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const shownOpenKey = open === null ? null : openKey !== null && keyStory(openKey) === open && storyKeys.includes(openKey) ? openKey : storyKeys.find(key => keyStory(key) === open) ?? null;
-  // The view Tab moved to with the pane closed: the cursor goes to its first story once it's drawn.
+  // The view Tab moved to with no story open: the cursor goes to its first story once it's drawn.
   const [firstIn, setFirstIn] = useState<NewsView | null>(null);
   if (firstIn !== null && firstIn === view && latest) {
     setFirstIn(null);
@@ -311,6 +312,8 @@ export function NewsPage({route}: {route: NewsRoute}) {
   useListFade(list, view);
   // The user on News, with the recap's stories once it's on screen: fixed, and put away an hour after they leave.
   useHere(recapNow.held !== undefined && recapOnScreen(drawn, open !== null) ? recapShown?.ids ?? null : null);
+  // The pane beside the list (SV-217): the open story, else empty.
+  const pane = useEmptyPane(open !== null);
 
   // Attached again with each render as it's drawn, before any key can come: a passive effect can
   // wait until after a hover's render is on screen, and a key then would act on the render before.
@@ -338,6 +341,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
       else if (plainKey(event, 'Escape')) {
         if (route.article !== null) run(() => go({article: null}));
         else if (open !== null) run(close);
+        else if (pane.shown) run(pane.close);
         else if (searching) run(() => search.clear());
         else if (cursor !== null) run(() => setCursor(null));
       }
@@ -363,12 +367,13 @@ export function NewsPage({route}: {route: NewsRoute}) {
 
   return (
     <>
-      <header className="hd ends">
+      <header className="hd">
         <h1 className="hd-title">{searching ? 'Search' : 'News'}</h1>
         {!searching && (
           <Segmented value={view} onChange={switchTo} onTab={stepSection} segments={VIEW_SEGMENTS} />
         )}
         <span className="grow" />
+        <EmptyPaneButton pane={pane} />
         <SearchField search={search} label="Search news" onEnter={first => setCursor(storyKey(SEARCH_SHELF, first.id))} />
       </header>
       <div className="content">
@@ -474,6 +479,7 @@ export function NewsPage({route}: {route: NewsRoute}) {
             canStep={{previous: neighbourStory(storyKeys, shownOpenKey, -1) !== null, next: neighbourStory(storyKeys, shownOpenKey, 1) !== null}}
             onStep={step} onOriginal={openOriginal} onArticle={article => go({article})} onBack={() => go({article: null})} onClose={close} />
         )}
+        {pane.drawn && <EmptyPane label="News pane" glyph="newspaper" line="Open a story to read it here." keys={[{keys: ['J', 'K'], does: 'Move'}, {keys: ['Enter'], does: 'Open'}]} />}
       </div>
     </>
   );

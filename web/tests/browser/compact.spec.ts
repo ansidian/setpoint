@@ -3,8 +3,9 @@
 // tooltips, the attention pill a badge on Inbox), an email or a story covering the list with Back
 // (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
 // the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
-// rail's lost filters; and the day's pane brought over the grid by its header button (D183). At
-// 1100 the full sidebar and the panes beside return.
+// rail's lost filters; the day's pane brought over the grid by its header button (D183), and the
+// empty pane over Inbox, News and Jobs by theirs (SV-217). At 1100 the full sidebar and the panes
+// beside return, the empty one with nothing open.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {AccountOut, CalendarOut} from '@setpoint/shared';
@@ -49,7 +50,7 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       // An email covers the list, under the header: Back leads its tools.
       await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
       await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-      assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
+      assert.deepEqual(await rested(() => page.locator('section.pane:not(.idle)').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the reader`);
       assert.equal(await page.locator('.pane-edge').isVisible(), false, 'nothing to drag');
       const backButton = page.locator('.rd-tools .rd-back');
       assert.deepEqual([await backButton.isVisible(), await backButton.getAttribute('data-tip')], [true, 'Back · Esc']);
@@ -60,10 +61,10 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
         await page.keyboard.press('k');
         await page.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
         await page.keyboard.press('Escape');
-        await until('Esc closes it', () => page.locator('section.pane').count(), count => count === 0);
+        await until('Esc closes it', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
         await page.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
         await backButton.click();
-        await until('Back closes it', () => page.locator('section.pane').count(), count => count === 0);
+        await until('Back closes it', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
         assert.ok(await page.locator('.list .row:has(b[data-tip^="Interview availability"])').isVisible());
       }
 
@@ -73,9 +74,9 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: News's header`);
       await page.locator('.nw-list [data-story]').first().click();
       await page.locator('section.pane .rd-subj').waitFor();
-      assert.deepEqual(await rested(() => page.locator('section.pane').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the story`);
+      assert.deepEqual(await rested(() => page.locator('section.pane:not(.idle)').boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${width}: the story`);
       await page.locator('section.pane .rd-back').click();
-      await until('Back closes the story', () => page.locator('section.pane').count(), count => count === 0);
+      await until('Back closes the story', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
       assert.equal(await rested(() => sideways(page)), 0);
       // ⌘K fits too.
       await page.keyboard.press('Meta+k');
@@ -91,11 +92,56 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
     await wide.locator('.list .row').first().waitFor();
     assert.equal((await rested(() => wide.locator('aside.sb').boundingBox()))!.width, layout.sidebar);
     assert.ok(await wide.locator('.sb .acct').first().isVisible());
+    // The empty pane is there with nothing open, giving way so the list keeps 420 (SV-217); no button.
+    assert.equal((await rested(() => wide.locator('section.list').boundingBox()))!.width, 420);
+    assert.equal(await wide.locator('section.pane.idle').count(), 1);
+    assert.equal(await wide.locator('.hd .pane-open').count(), 0);
     await wide.locator('.list .row:has(b[data-tip^="Interview availability"])').click();
     await wide.locator('.rd-subj', {hasText: 'Interview availability'}).waitFor();
-    const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane').boundingBox()))!];
+    const [list, pane] = [(await rested(() => wide.locator('section.list').boundingBox()))!, (await rested(() => wide.locator('section.pane:not(.idle)').boundingBox()))!];
     assert.equal(pane.x, list.x + list.width, 'beside the list');
     assert.equal(await wide.locator('.rd-tools .rd-back').isVisible(), false);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-217: in the compact tier the empty pane comes over the list only from the header\'s button, on Inbox, News and Jobs; it again, Esc or an item opening puts it away', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const width = 1099;
+    const page = await setpoint.page({width, height: HEIGHT});
+    for (const [path, ready, label] of [['inbox', '.list .row', 'Inbox pane'], ['news', '.nw-list [data-story]', 'News pane'], ['jobs', '.jb-tr[data-application]', 'Jobs pane']] as const) {
+      await page.goto(`${setpoint.base}/${path}`);
+      await page.locator(ready).first().waitFor();
+      const button = page.locator('.hd .pane-open');
+      const pane = page.locator('section.pane.idle');
+      assert.equal(await pane.count(), 0, `${path}: away on load`);
+      // Before search, which ends the header.
+      assert.equal(await button.evaluate(element => element.nextElementSibling!.classList.contains('search')), true, `${path}: before search`);
+      await button.click();
+      await pane.waitFor();
+      assert.deepEqual([await pane.getAttribute('aria-label'), await button.getAttribute('aria-pressed')], [label, 'true']);
+      assert.deepEqual(await rested(() => pane.boundingBox()), {x: layout.rail, y: layout.header, width: width - layout.rail, height: HEIGHT - layout.header}, `${path}: over the list`);
+      await page.keyboard.press('Escape');
+      await until(`${path}: Esc puts it away`, () => pane.count(), count => count === 0);
+      assert.equal(await button.getAttribute('aria-pressed'), 'false');
+      await button.click();
+      await pane.waitFor();
+      await button.click();
+      await until(`${path}: the button again puts it away`, () => pane.count(), count => count === 0);
+    }
+    // An item opening takes its place.
+    await page.goto(`${setpoint.base}/inbox`);
+    await page.locator('.list .row').first().waitFor();
+    await page.locator('.hd .pane-open').click();
+    await page.locator('section.pane.idle').waitFor();
+    await page.evaluate(() => (document.activeElement as HTMLElement).blur());
+    await page.keyboard.press('j');
+    await page.keyboard.press('Enter');
+    await page.locator('section.pane[aria-label="Reading pane"]').waitFor();
+    assert.equal(await page.locator('section.pane.idle').count(), 0);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -125,7 +125,7 @@ test('37c: Applied before on the Contoso Pharmaceuticals match email, on its Noi
     assert.equal(sets[1], `?messages=${match}`);
 
     // In the reader, where the chip sits.
-    await row.click();
+    await row.locator('.from').click();
     const large = page.locator('.rd-head .jb-badge.lg');
     await large.waitFor();
     assert.equal(await page.locator('.rd-head .jb-chip').count(), 0);

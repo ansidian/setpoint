@@ -222,7 +222,7 @@ test('Search news: the stories found replace the list, the archive too; one open
     assert.match(await found.first().getAttribute('class') ?? '', /\bopen\b/);
     // Esc closes the pane, then clears the search, and the list is back.
     await page.keyboard.press('Escape');
-    await until('the pane closes', () => page.locator('section.pane').count(), count => count === 0);
+    await until('the pane closes', () => page.locator('section.pane:not(.idle)').count(), count => count === 0);
     assert.equal(await page.locator('.hd-title').textContent(), 'Search');
     await page.keyboard.press('Escape');
     await page.locator('.hd-title', {hasText: 'News'}).waitFor();
