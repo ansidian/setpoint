@@ -403,6 +403,8 @@ export function seedSampleData({sqlite, db}: OpenDatabase, {newsImagesDir = null
         receivedAt,
         unread: email.unread,
         lane: email.lane,
+        // Sorted as it arrived, so the Inbox's pane has today's sorting to count (SV-218).
+        triagedAt: email.lane ? receivedAt : null,
         kind: email.kind ?? null,
         type: email.type ?? null,
         keyDate: email.keyDate ?? null,

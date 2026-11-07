@@ -115,3 +115,43 @@ export function markAllReadTargets<T extends InboxCandidate>(messages: T[]): T[]
   return messages.filter(message => message.unread && !message.trashedAt && !message.archivedAt
     && !(message.lane === 'attention' && !message.doneAt) && !(message.lane === 'fyi' && message.kind === 'security'));
 }
+
+/** What the Inbox's empty pane counts from one email (SV-218). */
+export interface DayCandidate extends InboxCandidate {
+  triagedAt: string | null;
+  triageSource: string | null;
+}
+
+export interface MailDay {
+  done: number;
+  needYou: number;
+  overdue: number;
+  sortedFyi: number;
+  sortedNoise: number;
+}
+
+const OVERDUE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How the mail day is going since `dayStart` (the user's midnight, SV-218, D465): Done today; what
+ * needs the user (Attention not Done, the attention pill's number) and how much of it has waited
+ * over 24 hours since arriving; and what triage sorted today out of Attention, to FYI and to Noise.
+ * The pass over backfilled history isn't today's sorting, and trashed mail counts nowhere.
+ */
+export function mailDay(messages: DayCandidate[], now: string, dayStart: string): MailDay {
+  const day: MailDay = {done: 0, needYou: 0, overdue: 0, sortedFyi: 0, sortedNoise: 0};
+  const overdueBefore = new Date(Date.parse(now) - OVERDUE_MS).toISOString();
+  for (const message of messages) {
+    if (message.trashedAt && !message.held) continue;
+    if (message.doneAt && message.doneAt >= dayStart) day.done += 1;
+    if (laneGroup(message, now) === 'attention') {
+      day.needYou += 1;
+      if (message.receivedAt < overdueBefore) day.overdue += 1;
+    }
+    if (message.triagedAt && message.triagedAt >= dayStart && message.triageSource !== 'history') {
+      if (message.lane === 'fyi') day.sortedFyi += 1;
+      else if (message.lane === 'noise') day.sortedNoise += 1;
+    }
+  }
+  return day;
+}

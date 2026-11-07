@@ -3,6 +3,7 @@
 //
 //   GET  /api/mail/inbox?account_id=3          InboxOut (counts are always every account's)
 //   GET  /api/mail/counts                      MailCountsOut (the sidebar and the tab title)
+//   GET  /api/mail/day                         MailDayOut (the Inbox's empty pane, SV-218)
 //   GET  /api/mail/all?account_id=&before=&limit=   AllOut
 //   GET  /api/mail/messages/:id                MessageOut, without marking it read
 //   POST /api/mail/messages/:id/open           MessageOut; marks it read (a command) if unread
@@ -68,6 +69,26 @@ export interface MailCountsOut {
   // Unread FYI: mantel's FYI half.
   unread_fyi: number;
   accounts: {account_id: number; unread: number}[];
+}
+
+/**
+ * How the mail day is going, for the Inbox's pane with nothing open (SV-218, D465). Today is since
+ * the user's midnight. Not in the iPhone app's contract.
+ */
+export interface MailDayOut {
+  // Emails marked Done today.
+  done: number;
+  // Attention not Done, read or not (MailCountsOut.attention), and those of them waiting over 24 h.
+  need_you: number;
+  overdue: number;
+  // What triage sorted today, out of Attention: to FYI and to Noise.
+  sorted_fyi: number;
+  sorted_noise: number;
+  // Every email kept (trashed mail aside), their size in bytes (text, HTML and attachments), and the
+  // oldest one's arrival; null with none.
+  total: number;
+  bytes: number;
+  oldest_at: string | null;
 }
 
 export interface InboxOut {

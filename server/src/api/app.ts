@@ -58,7 +58,7 @@ import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_P
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
 import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
-import {allMail, inbox, indexing, mailCounts, messageDetail, trustedDomains} from '../queries/mail.ts';
+import {allMail, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
 import {searchCalendar} from '../search/calendar.ts';
@@ -531,6 +531,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
 
   app.get('/api/mail/inbox', c => c.json(inbox(store, parse(inboxInput, c.req.query()).account_id)));
   app.get('/api/mail/counts', c => c.json(mailCounts(store)));
+  app.get('/api/mail/day', c => c.json(mailDayOf(store)));
   app.get('/api/mail/all', c => c.json(allMail(store, parse(allInput, c.req.query()))));
   app.get('/api/mail/messages/:id', c => c.json(messageDetail(store, id(c.req.param('id')))));
   // The HTML body as its own page, for the reader's sandboxed frame: its own policy, not the app's

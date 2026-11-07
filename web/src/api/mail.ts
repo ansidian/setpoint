@@ -9,6 +9,8 @@ import {afterPending, ApiFailure, cachedPaths, getCached, holdLoads, loadingOf, 
 
 export const inboxPath = (account: number | null) => (account ? `/mail/inbox?account_id=${account}` : '/mail/inbox');
 export const COUNTS_PATH = '/mail/counts';
+// How the mail day is going: the Inbox's empty pane (SV-218).
+export const DAY_PATH = '/mail/day';
 export const messagePath = (id: number) => `/mail/messages/${id}`;
 export const ACCOUNTS_PATH = '/accounts';
 
@@ -98,7 +100,7 @@ function updateMessage(id: number, change: Partial<MessageOut>): number {
 
 // What a change to an email shows at once in. A load asked while the change is on its way can be
 // answered from before the server has it, so these hold their answers until it's in (SV-150).
-const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH];
+const MAIL_LOADS = ['/mail/inbox', '/mail/all', COUNTS_PATH, DAY_PATH];
 
 /** Sends a change with the lists and counts held; the release loads them again. */
 async function change<T>(send: () => Promise<T>): Promise<T> {

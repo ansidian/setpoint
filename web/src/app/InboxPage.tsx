@@ -56,7 +56,8 @@ import {openContextMenu} from './ContextMenu.tsx';
 import {emailActions, selectionActions} from './emailActions.ts';
 import type {SelectionHandlers} from './emailActions.ts';
 import {SelectionPane} from './SelectionPane.tsx';
-import {EmptyPane, EmptyPaneButton, useEmptyPane} from './EmptyPane.tsx';
+import {EmptyPaneButton, useEmptyPane} from './EmptyPane.tsx';
+import {InboxDay} from './InboxDay.tsx';
 import type {Travel} from './Reader.tsx';
 import {useCommands} from './palette/commands.ts';
 import type {Command} from './palette/commands.ts';
@@ -707,7 +708,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {showsSelection && (
           <SelectionPane rows={selectedRows} on={forSelection} onOpen={id => openEmail(id)} onDrop={id => select({...selection, ids: selected.filter(one => one !== id)})} />
         )}
-        {pane.drawn && <EmptyPane label="Inbox pane" glyph="inbox" line="Open an email to read it here." keys={[{keys: ['J', 'K'], does: 'Move'}, {keys: ['Enter'], does: 'Open'}]} />}
+        {pane.drawn && <InboxDay />}
       </div>
     </>
   );

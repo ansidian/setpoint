@@ -250,7 +250,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   **right pane** 400 px. The reading pane is always there on a desktop, with nothing open too, at
   its dragged width (480 to 1100), giving way so the list keeps 420 ([Decided while
   building](#decided-while-building) #327, amending decision 43); its left edge resizes it, and shows
-  so under the pointer (#210). Empty, it holds the page's glyph, one line and the keys.
+  so under the pointer (#210). Empty, the Inbox's shows how the mail day is going (#331); News's and
+  Jobs's hold the page's glyph, one line and the keys.
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
@@ -4080,3 +4081,21 @@ it changes what's on screen.
     SV-217, D464). The pane is always there, so an item opened from the empty pane shows at once; J /
     K and clicks still swap emails as #208 says. In a narrow window, where the pane comes over the
     list, its content still slides in 12 px over 180 ms.
+331. **The Inbox's empty pane shows how the mail day is going** (amending #327's placeholder for
+    the Inbox; Andy, 2026-11-06; darma SV-218, D465). With nothing open, one block sits centred across
+    the pane and a third of the way down it (the room above it half the room below). Top to bottom:
+    trouble only when there is some, each in `caution` with its fix ("Business needs sign-in ·
+    Reconnect", "Triage is down, as of 9:09 AM · Settings › AI"); the mark at 40 px, settling in
+    once; what needs the user, Attention not Done, as a 36 px `caution` band like Attention's with
+    `flag`: "3 need you, 1 overdue" (overdue is over 24 hours since arriving, the clause only when
+    there is one), or All caught up as the same band in `good` with `task_alt`; then today's strip,
+    three cells on `panel` in a `hair` box, the number at 24 / 500 over its glyph and label at 12
+    `ink3`: Done today (`task_alt`), Sorted to FYI (`inbox`), Sorted to Noise (`low_priority`). A zero
+    is `ink3`. Above 0, Done's cell takes a 5% `good` wash and its number `good`, and FYI's a `cool`
+    wash (4%, 9% in Light) with its glyph `cool`, its number `ink`: too faint to read as `accent`, a
+    deliberate exception to #163. Behind the block, a faint glow of the mark's three colours (10%,
+    18% in Light, where its colours are darker) is gone well before the pane's edges. The foot, centred
+    at the bottom, holds "12,408 emails · 1.3 GB, since Mar 2019." at 12 `ink3` (every kept email, its
+    stored text and HTML plus its attachments at the provider's size, and the oldest one's month)
+    over the keys: J K Move, Enter Open, U Next unread, H Done, E Trash, P Pin. Today is since the
+    user's midnight. There's no unread line (SV-221). The list's own reconnect bar stays.

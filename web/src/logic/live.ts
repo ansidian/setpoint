@@ -25,7 +25,7 @@ export function offlineRefuses(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | '
   return ['h', 'e', 'p', 'c', 'd', 'Delete', 'Backspace'].includes(key);
 }
 
-const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage'];
+const MAIL_LISTS = ['/mail/inbox', '/mail/counts', '/mail/all', '/mail/triage', '/mail/day'];
 
 export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): string[] {
   const under = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}?`) || path.startsWith(`${prefix}/`);

@@ -1,14 +1,14 @@
 // Mail's read queries over the message record (SV-2 decision D4): the Inbox's groups and counts,
 // All by day, and one email. Every view is a query; nothing is copied per view. The rules for what
 // the Inbox shows and counts are src/domain/inbox.ts.
-import type {AllOut, CommandOut, InboxOut, IndexingOut, MailCountsOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
-import {and, count, desc, eq, inArray, lt, or} from 'drizzle-orm';
+import type {AllOut, CommandOut, InboxOut, IndexingOut, MailCountsOut, MailDayOut, MessageOut, MessageRowOut, TrustedDomainOut} from '@setpoint/shared';
+import {and, count, desc, eq, inArray, isNull, lt, or, sql} from 'drizzle-orm';
 import {activeCommands, commandPresenter} from '../commands/index.ts';
 import * as t from '../db/schema.ts';
-import {inboxCounts, inboxGroups, nextInboxChange} from '../domain/inbox.ts';
+import {inboxCounts, inboxGroups, mailDay, nextInboxChange} from '../domain/inbox.ts';
 import type {InboxCandidate} from '../domain/inbox.ts';
 import {isTrustedDomain, trustDomainOf, remoteContent} from '../domain/remoteContent.ts';
-import {localDay} from '../domain/time.ts';
+import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
 import {backfillProgress, readBackfill} from '../sync/cursors.ts';
 import {isoNow} from '../store.ts';
@@ -71,6 +71,28 @@ const accountIdsOf = (store: Store) => store.db.select({id: t.accounts.id}).from
 
 export function mailCounts(store: Store): MailCountsOut {
   return countsOf(candidates(store), isoNow(store), accountIdsOf(store));
+}
+
+/**
+ * How the mail day is going (SV-218): today's counts since the user's midnight, and every email kept
+ * with its size (its text and HTML as stored, and its attachments as the provider gave their size)
+ * and the oldest one's arrival.
+ */
+export function mailDayOf(store: Store): MailDayOut {
+  const now = isoNow(store);
+  const day = mailDay(candidates(store), now, zonedInstant(localDay(now, store.timeZone), '00:00', store.timeZone));
+  const kept = isNull(t.messages.trashedAt);
+  const stored = store.db.select({
+    total: count(),
+    bytes: sql<number>`coalesce(sum(length(cast(${t.messages.bodyText} as blob)) + coalesce(length(cast(${t.messages.bodyHtml} as blob)), 0)), 0)`,
+    oldest: sql<string | null>`min(${t.messages.receivedAt})`,
+  }).from(t.messages).where(kept).get()!;
+  const attached = store.db.select({bytes: sql<number>`coalesce(sum(${t.attachments.sizeBytes}), 0)`})
+    .from(t.attachments).innerJoin(t.messages, eq(t.messages.id, t.attachments.messageId)).where(kept).get()!;
+  return {
+    done: day.done, need_you: day.needYou, overdue: day.overdue, sorted_fyi: day.sortedFyi, sorted_noise: day.sortedNoise,
+    total: stored.total, bytes: stored.bytes + attached.bytes, oldest_at: stored.oldest,
+  };
 }
 
 /** The Inbox, optionally for one account; the counts are always every account's (the sidebar's). */

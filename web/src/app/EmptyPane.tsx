@@ -1,12 +1,13 @@
 // The pane beside the Inbox, News and Jobs with nothing open in it (SV-217, D464): always there on a
 // desktop, at the dragged width, so the list and header never move as an item opens or closes. For
-// now it holds a placeholder, the page's glyph, one line and the keys; SV-218..220 fill it.
+// the Inbox it shows how the mail day is going (SV-218, InboxDay.tsx); News and Jobs keep a placeholder,
+// the page's glyph, one line and the keys, until SV-219 and SV-220 fill theirs.
 //
 // In a narrow window an open item covers the list, and the empty pane comes over it only from a
 // 30 px `right_panel_open` button before search, as Calendar's day does (#196): lit while showing,
 // closed by the button again or Esc, on every load, and when an item opens.
 import {useState} from 'react';
-import type {CSSProperties} from 'react';
+import type {CSSProperties, ReactNode} from 'react';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {useCompact, usePhone} from './Phone.tsx';
@@ -49,20 +50,32 @@ export function EmptyPaneButton({pane}: {pane: EmptyPaneState}) {
   );
 }
 
-/** The placeholder: the page's glyph, one line and its keys, centred. */
-export function EmptyPane({label, glyph, line, keys}: {label: string; glyph: IconName; line: string; keys: {keys: string[]; does: string}[]}) {
+export type PaneKey = {keys: string[]; does: string};
+
+/**
+ * The empty pane: what the page puts in it, and its foot (a quiet line, then the keys) pinned to the bottom. With no `children`,
+ * the placeholder: the page's glyph and one line, centred (News and Jobs, until SV-219 and SV-220).
+ */
+export function EmptyPane({label, glyph, line, keys, foot, children}: {label: string; glyph?: IconName; line?: string; keys: PaneKey[]; foot?: ReactNode; children?: ReactNode}) {
   const width = useReadingPaneWidth();
   return (
     <section className="pane idle" aria-label={label} style={{'--readingPane': `${width}px`} as CSSProperties}>
       <PaneEdge width={width} />
       <div className="pane-empty">
-        <Icon name={glyph} size={28} />
-        <p>{line}</p>
-        <ul className="pane-keys">
+        {children ?? (
+          <div className="pane-placeholder">
+            {glyph && <Icon name={glyph} size={28} />}
+            <p>{line}</p>
+          </div>
+        )}
+        <footer className="pane-foot">
+          {foot}
+          <ul className="pane-keys">
           {keys.map(key => (
             <li key={key.does}>{key.keys.map(one => <span key={one} className="kbd">{one}</span>)}<span>{key.does}</span></li>
           ))}
-        </ul>
+          </ul>
+        </footer>
       </div>
     </section>
   );

@@ -58,6 +58,31 @@ async function idOf(setpoint: Setpoint, subjectStart: string): Promise<number> {
 const inAll = async (setpoint: Setpoint, id: number) =>
   (await setpoint.api<AllOut>('GET', '/mail/all?limit=500')).days.some(day => day.rows.some(row => row.id === id));
 
+test('SV-218: with nothing open the Inbox\'s pane says how the day is going, a third of the way down; a Done elsewhere moves its numbers', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await load(setpoint);
+    const pane = page.locator('section.pane.idle');
+    const tiles = () => pane.locator('.md-tile').evaluateAll(all => all.map(tile => [tile.querySelector('dd')!.textContent, tile.querySelector('dt')!.textContent, tile.classList.contains('lit')]));
+    await until('the day', () => pane.locator('.md-need').textContent(), text => text === '3 need you, 1 overdue');
+    assert.deepEqual(await tiles(), [['0', 'Done today', false], ['8', 'Sorted to FYI', true], ['3', 'Sorted to Noise', true]]);
+    assert.equal(await pane.locator('.pane-foot .md-kept').textContent(), '34 emails · 192 KB, since Mar 2026.');
+    // Its middle sits a third of the way down: the room above the block is half the room below it.
+    const rect = (selector: string) => pane.locator(selector).boundingBox().then(found => found!);
+    const [day, mark, strip] = await rested(() => Promise.all([rect('.mail-day'), rect('.mail-day > .mark'), rect('.md-today')]));
+    const above = mark.y - day.y;
+    const below = day.y + day.height - (strip.y + strip.height);
+    assert.ok(Math.abs(below - 2 * above) < 40, `above ${above}, below ${below}`);
+    // Done from elsewhere (the phone) reaches the pane through the live stream.
+    await setpoint.api('POST', `/mail/messages/${await idOf(setpoint, 'Your recovery email was changed')}/done`, {done: true});
+    await until('one fewer needs the user', () => pane.locator('.md-need').textContent(), text => text === '2 need you, 1 overdue');
+    assert.deepEqual((await tiles())[0], ['1', 'Done today', true]);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('Done on the open email opens the next, which reads it; the pill drops for the Done, and the email goes to its day', async () => {
   const setpoint = await startSetpoint();
   try {

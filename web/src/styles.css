@@ -483,12 +483,55 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The pane is always beside the list on a desktop (SV-217, D464), at its dragged width, giving way so
    the list keeps 420. */
 .pane { position: relative; max-width: calc(100% - 420px); }
-/* With nothing open: the page's glyph, one line and the keys, centred (a placeholder until SV-218..220). */
-.pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; color: var(--ink3); text-align: center; }
-.pane-empty > p { margin: 0; color: var(--ink2); font-size: 13px; }
-.pane-keys { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; }
+/* With nothing open: the page's content, and its keys pinned to the bottom (SV-217, SV-218). */
+.pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px 20px; color: var(--ink3); min-height: 0; }
+/* News's and Jobs's placeholder: the page's glyph and one line, centred (until SV-219, SV-220). */
+.pane-placeholder { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.pane-placeholder > p { margin: 0; color: var(--ink2); font-size: 13px; }
+.pane-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pane-foot > p { margin: 0; }
+.pane-keys { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; }
 .pane-keys > li { display: inline-flex; align-items: center; gap: 4px; }
 .pane-keys > li > span:last-child { margin-left: 2px; }
+/* The Inbox's: how the mail day is going, one block centred across the pane and a third of the way down it (SV-218, #331). Trouble
+   first, in `caution` with its fix; the mark; what needs the user as a `caution` band like
+   Attention's (`flag`, its overdue at full strength), or All caught up as a `good` one (`task_alt`);
+   today's strip, three cells on `panel` in a `hair` box, each number over its glyph and label at 12
+   `ink3`, a zero in `ink3`; Done above 0 tinted `good` with its number in `good`, FYI above 0 a
+   faint `cool` wash. The quiet facts sit in the foot over the keys, at 12 `ink3`. */
+/* Behind it, a faint glow of the mark's three colours, gone well before the pane's edges. */
+.pane-empty:has(> .mail-day) { background:
+  radial-gradient(38% 30% at 42% 30%, color-mix(in srgb, var(--cool) var(--paneGlow), transparent), transparent 70%),
+  radial-gradient(34% 28% at 60% 36%, color-mix(in srgb, var(--caution) calc(var(--paneGlow) * .85), transparent), transparent 70%),
+  radial-gradient(36% 30% at 48% 46%, color-mix(in srgb, var(--violet) var(--paneGlow), transparent), transparent 70%); }
+.mail-day { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+/* Its middle a third of the way down, not halfway: the room above it is half the room below. */
+.mail-day::before { content: ""; flex: 1 1 0; }
+.mail-day::after { content: ""; flex: 2 1 0; }
+.mail-day p { margin: 0; }
+.md-trouble { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.md-fix { display: flex; align-items: center; gap: 8px; color: var(--caution); font-size: 13px; }
+.md-fix > .sep { color: var(--ink3); }
+.md-fix > .act { color: var(--ink); height: 26px; padding: 0 10px; margin-left: -10px; border-radius: 999px; }
+.md-fix > .act:hover { background: var(--sub); }
+.md-need { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 500;
+  color: var(--caution); background: color-mix(in srgb, var(--caution) var(--attTint), var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caution) 24%, transparent); }
+.md-need .md-overdue { font-weight: 600; }
+.md-need.caught { color: var(--good); background: color-mix(in srgb, var(--good) 9%, var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--good) 24%, transparent); }
+.md-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(100%, 420px); margin: 0; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; }
+.md-tile { display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; padding: 16px 8px 14px; }
+.md-tile + .md-tile { border-left: 1px solid var(--hair); }
+.md-tile > dd { margin: 0; color: var(--ink); font-size: 24px; font-weight: 500; line-height: 1; }
+.md-tile > dt { display: inline-flex; align-items: center; gap: 5px; color: var(--ink3); font-size: 12px; }
+.md-tile > dd { transition: color var(--dur-medium) var(--ease); }
+.md-tile:not(.lit) > dd { color: var(--ink3); }
+.md-tile.done.lit { background: color-mix(in srgb, var(--good) 5%, var(--panel)); }
+.md-tile.done.lit > dd, .md-tile.done.lit > dt > .icon { color: var(--good); }
+/* FYI's wash is `cool` at 4% (9% in Light) with its glyph in `cool`, the number in `ink`: too faint to read as
+   `accent`'s "you are here" (#331, an exception to #163's one job per colour). */
+.md-tile.fyi.lit { background: color-mix(in srgb, var(--cool) var(--fyiWash), var(--panel)); }
+.md-tile.fyi.lit > dt > .icon { color: var(--cool); }
+.md-kept { color: var(--ink3); font-size: 12px; }
 /* The pane's left edge resizes it (2026-10-09), and shows it can (reader-09, SV-201): a 10 px strip
    straddling the border (placed from inside it; the pane draws past its left side for it, as its
    scroller clips its own content). At rest it's only the border. Under the pointer, after 80 ms so a

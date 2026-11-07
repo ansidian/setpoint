@@ -150,6 +150,10 @@ export const evland = {night: 34, light: 26} as const;
 export const tintL = {night: 1, light: 0.43} as const;
 /** Attention's band: `caution` mixed into its `panel` at this share (#167); 8% reads salmon in Light. */
 export const attTint = {night: 8, light: 6} as const;
+/** The Inbox's empty pane's glow (SV-218, #331): the mark's colours mixed in at this share at its heart; Light's darker colours need more to show on its page. */
+export const paneGlow = {night: 10, light: 18} as const;
+/** FYI's cell in that pane's strip: `cool` mixed into `panel` at this share, faint enough not to read as `accent`. */
+export const fyiWash = {night: 4, light: 9} as const;
 /** The HTML email frame's brightness (#171): Night takes the glare off its white, Light leaves it. */
 export const mailDim = {night: 0.95, light: 1} as const;
 /**
@@ -391,6 +395,8 @@ export function themeVariables(theme: Theme): Record<string, string> {
   vars['--scrollbar-thumb'] = light ? scrollbar.lightThumb : scrollbar.thumb;
   vars['--tintL'] = String(light ? tintL.light : tintL.night);
   vars['--attTint'] = `${light ? attTint.light : attTint.night}%`;
+  vars['--paneGlow'] = `${light ? paneGlow.light : paneGlow.night}%`;
+  vars['--fyiWash'] = `${light ? fyiWash.light : fyiWash.night}%`;
   vars['--mailDim'] = String(light ? mailDim.light : mailDim.night);
   vars['--ringMin'] = String((light ? ringL.light : ringL.night).min);
   vars['--ringMax'] = String((light ? ringL.light : ringL.night).max);
