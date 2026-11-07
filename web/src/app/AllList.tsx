@@ -188,7 +188,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         }
         if (item.kind === 'kh') {
           return (
-            <div key={key} ref={ref} className={['kh', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+            <div key={key} ref={ref} data-kind={item.group} className={['kh', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
               <Icon name={GROUP_GLYPHS[item.group]} size={13} />{GROUP_LABELS[item.group]}
             </div>
           );

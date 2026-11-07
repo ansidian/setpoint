@@ -825,3 +825,12 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 :is(.row, .arow, .nav, .acct, .today-row, .ag-item, .nw-row, .nw-lead, .calrow, .menu-i, .palette .item):is(:active, [data-echo]) { background: var(--sub3); transition-duration: var(--dur-press); }
 /* Trash presses in its own `alert`, 20% (#169). */
 .rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }
+
+/* Pinned's glyph is `sun`, and each FYI kind's glyph its own `kind*` hue; Other stays `ink3` (#340). */
+.gh.pinned .gi { color: var(--sun); }
+.list.all .kh[data-kind=deliveries] > .icon { color: var(--kindDeliveries); }
+.list.all .kh[data-kind=money] > .icon { color: var(--kindMoney); }
+.list.all .kh[data-kind=updates] > .icon { color: var(--kindUpdates); }
+.list.all .kh[data-kind=security] > .icon { color: var(--kindSecurity); }
+.list.all .kh[data-kind=career] > .icon { color: var(--kindCareer); }
+.list.all .kh[data-kind=people] > .icon { color: var(--kindPeople); }

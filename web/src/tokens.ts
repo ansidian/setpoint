@@ -64,6 +64,13 @@ export const colour = {
   remind: 'oklch(0.8 0.11 345)',
   // Jobs's In process (#264): a cobalt of its own, deeper than `accent` so it never reads as the open row's bar.
   inProcess: 'oklch(0.7 0.15 258)',
+  // FYI's kinds, one hue each at one lightness and chroma, clear of caution, alert and sun (#340).
+  kindDeliveries: 'oklch(0.78 0.12 70)',
+  kindMoney: 'oklch(0.78 0.12 140)',
+  kindUpdates: 'oklch(0.78 0.12 190)',
+  kindSecurity: 'oklch(0.78 0.12 250)',
+  kindCareer: 'oklch(0.78 0.12 300)',
+  kindPeople: 'oklch(0.78 0.12 345)',
 } as const;
 
 export type ColourToken = keyof typeof colour;
@@ -117,6 +124,12 @@ export const lightColour: Record<ColourToken, string> = {
   dayOut: 'rgba(29,30,33,.048)',
   remind: 'oklch(0.55 0.14 345)',
   inProcess: 'oklch(0.5 0.16 258)',
+  kindDeliveries: 'oklch(0.55 0.13 70)',
+  kindMoney: 'oklch(0.55 0.13 140)',
+  kindUpdates: 'oklch(0.55 0.13 190)',
+  kindSecurity: 'oklch(0.55 0.13 250)',
+  kindCareer: 'oklch(0.55 0.13 300)',
+  kindPeople: 'oklch(0.55 0.13 345)',
 };
 
 /** Overlay shadows; shadows only on overlays. */

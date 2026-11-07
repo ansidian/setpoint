@@ -94,6 +94,12 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `dayOff` / `dayOut` | `rgba(255,255,255,.02)` / `.035` | `rgba(29,30,33,.028)` / `.048` | the calendar's weekends / days outside the shown month |
 | `remind` | `oklch(0.8 0.11 345)` | `oklch(0.55 0.14 345)` | the editor's line: a reminder phrase's mark, and the Reminders row's glyph it filled (#258) |
 | `inProcess` | `oklch(0.7 0.15 258)` | `oklch(0.5 0.16 258)` | Jobs's In process: its mark, its label and its events' node (#264) |
+| `kindDeliveries` | `oklch(0.78 0.12 70)` | `oklch(0.55 0.13 70)` | the Deliveries kind's glyph in the Inbox (#340) |
+| `kindMoney` | `oklch(0.78 0.12 140)` | `oklch(0.55 0.13 140)` | the Money kind's glyph in the Inbox (#340) |
+| `kindUpdates` | `oklch(0.78 0.12 190)` | `oklch(0.55 0.13 190)` | the Updates kind's glyph in the Inbox (#340) |
+| `kindSecurity` | `oklch(0.78 0.12 250)` | `oklch(0.55 0.13 250)` | the Security kind's glyph in the Inbox (#340) |
+| `kindCareer` | `oklch(0.78 0.12 300)` | `oklch(0.55 0.13 300)` | the Career kind's glyph in the Inbox (#340) |
+| `kindPeople` | `oklch(0.78 0.12 345)` | `oklch(0.55 0.13 345)` | the People kind's glyph in the Inbox (#340) |
 
 - **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
@@ -351,7 +357,7 @@ Oct 6", "MON Oct 5"), except what Attention and the shelf show, which leaves its
 (#101, #309). Today's rows show ages, as Attention's and the shelf's do; earlier days show
 **clock times** (decision 39, #309). Unread rows keep their place, drawn unread. Each day groups its rows by lane, and
 the kind shows once, as a subheading over its run where an FYI run starts, after its group's glyph
-at 13 px (#119, #237, #328); each day's Noise folds to one line ([Decided while
+at 13 px in that kind's hue (#119, #237, #328, #340); each day's Noise folds to one line ([Decided while
 building](#decided-while-building) #48). Triage's note, while triage is down, is on the newest
 Unsorted lane. Done mail stays in its day, quiet, with a ✓ Done tag (#241).
 
@@ -4219,3 +4225,14 @@ it changes what's on screen.
     9:05 AM", its newest email, Done or not; none without one); and Show All. In a list 1200 px wide
     the headline is 17 px and the quiet line 13 px. No mark and no glow: those are the empty pane's
     (#331, #335).
+340. **Each FYI kind's glyph has its own hue** (amending #119; Andy, 2026-11-07; darma SV-227, D475). So
+    lanes and kinds stand apart at a glance, the glyph before a kind's subheading takes that kind's
+    colour: Deliveries `kindDeliveries` (amber), Money `kindMoney` (green), Updates `kindUpdates`
+    (cyan), Security `kindSecurity` (blue), Career `kindCareer` (violet), People `kindPeople` (pink),
+    and Other stays `ink3`. The six share one lightness and chroma per theme, their hues 45 to 85°
+    apart and clear of `caution`, `alert` and `sun`, so a kind never reads as a warning or as Pinned;
+    each passes 3:1 on every list background in both themes. The Pinned shelf's `keep` is `sun`, and
+    Attention's `flag` stays `caution`. Only the glyph is coloured: the label, the rows and the
+    account dots are as they were, and a kind may share an account's hue, its shape and place telling
+    them apart. A rule down each run's left edge was tried and dropped, as too much. Noise's colour is
+    still to decide.
