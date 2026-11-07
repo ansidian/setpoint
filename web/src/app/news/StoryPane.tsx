@@ -40,14 +40,11 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
   onClose: () => void;
 }) {
   const width = useReadingPaneWidth();
-  const storyLoad = {path: storyPath(storyId), ...useResource<StoryOut>(storyPath(storyId))};
-  const story = storyLoad.data?.id === storyId ? storyLoad.data : undefined;
-  const articleLoad = {path: articleId ? articlePath(articleId) : null, ...useResource<ArticleOut>(articleId ? articlePath(articleId) : null)};
-  const articleData = articleLoad.data;
+  const {data: loaded} = useResource<StoryOut>(storyPath(storyId));
+  const story = loaded?.id === storyId ? loaded : undefined;
+  const {data: articleData} = useResource<ArticleOut>(articleId ? articlePath(articleId) : null);
   const article = articleId !== null && articleData?.id === articleId ? articleData : undefined;
   const style = {'--readingPane': `${width}px`} as CSSProperties;
-  const failed = useLoadFailed([storyLoad]);
-  const arrived = useArrival(story !== undefined, storyId);
 
   if (articleId !== null) {
     return (
@@ -59,19 +56,13 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
           {article && <button className="tool" type="button" data-hint="o" onClick={onOriginal}><Icon name="open_in_new" />Open at {article.outlet}<span className="kbd">O</span></button>}
         </div>
         <div className="rd-scroll">
-          {article ? <Article key={article.id} article={article} story={story} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} /> : (
-            // Its head from the story's own line for it while the article loads (news-05, #232).
-            <ArticleLoading key={articleId} source={story?.sources.find(source => source.article_id === articleId)} load={articleLoad} now={now} timeZone={timeZone} />
-          )}
+          <ArticleContent storyId={storyId} articleId={articleId} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} />
         </div>
       </section>
     );
   }
 
   const lead = story?.lead ?? row?.lead;
-  // What the pane draws its head from: the story, else its row from the list.
-  const shown: StoryRowOut | undefined = story ?? (row?.id === storyId ? row : undefined);
-  const fresh = story && lookedAt ? factsSince(story.facts, lookedAt) : [];
   return (
     <section className="pane" aria-label="Story" style={style}>
       <PaneEdge width={width} />
@@ -83,40 +74,78 @@ export function StoryPane({storyId, articleId, row, lookedAt, now, timeZone, can
         <button className="ibtn" type="button" aria-label="Next story" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>
       </div>
       <div className="rd-scroll">
-        {/* The head from the story's row at once; its summary and sources wait for the story (news-05, #232). */}
-        {shown && (
-          <div className="st-swap" key={storyId}>
-            <div className="st-head">
-              <div className="st-secs">
-                {shown.sections.map(section => <span key={section} className="tag"><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</span>)}
-                {fresh.length > 0 && <span className="tag accent">Updated</span>}
-              </div>
-              <h1 className="rd-subj">{shown.headline}</h1>
-              <div className="st-meta">{storyMeta(story ?? {...shown, outlets: shown.lead.more + 1}, now, timeZone).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span>{part}</span></Fragment>)}</div>
-            </div>
-            {shown.image?.large && (
-              <div className="st-img">
-                <NewsImage key={shown.image.large.url} src={shown.image.large.url} blurred={row?.image?.thumb.url} />
-                <span className="cap">{shown.image.outlet}</span>
-              </div>
-            )}
-            {!story ? <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div> : (
-            <div className={arrived ? 'st-body sk-arrive' : 'st-body'}>
-              {lookedAt && fresh.length > 0 && <NewSince key={story.id} facts={fresh} lookedAt={lookedAt} now={now} timeZone={timeZone} />}
-              {story.summary && <p className="st-sum">{story.summary}</p>}
-              {story.sources.length > 0 && (
-                <>
-                  <div className="st-label">Sources <span className="n">{story.sources.length}</span></div>
-                  <Sources sources={story.sources} now={now} timeZone={timeZone} onArticle={onArticle} />
-                </>
-              )}
-            </div>
-            )}
-          </div>
-        )}
-        {!shown && <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div>}
+        <StoryContent storyId={storyId} row={row} lookedAt={lookedAt} now={now} timeZone={timeZone} onArticle={onArticle} />
       </div>
     </section>
+  );
+}
+
+/** A story's head, image, New since you looked, summary and Sources: the story pane's, and the recap's modal's (SV-219). */
+export function StoryContent({storyId, row, lookedAt, now, timeZone, onArticle}: {
+  storyId: number;
+  row: StoryRowOut | undefined;
+  lookedAt: string | null;
+  now: number;
+  timeZone: string;
+  onArticle: (id: number) => void;
+}) {
+  const storyLoad = {path: storyPath(storyId), ...useResource<StoryOut>(storyPath(storyId))};
+  const story = storyLoad.data?.id === storyId ? storyLoad.data : undefined;
+  const failed = useLoadFailed([storyLoad]);
+  const arrived = useArrival(story !== undefined, storyId);
+  // What the head is drawn from: the story, else its row from the list.
+  const shown: StoryRowOut | undefined = story ?? (row?.id === storyId ? row : undefined);
+  const fresh = story && lookedAt ? factsSince(story.facts, lookedAt) : [];
+  if (!shown) return <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div>;
+  return (
+    // The head from the story's row at once; its summary and sources wait for the story (news-05, #232).
+    <div className="st-swap" key={storyId}>
+      <div className="st-head">
+        <div className="st-secs">
+          {shown.sections.map(section => <span key={section} className="tag"><Icon name={SECTION_GLYPHS[section]} size={14} />{SECTION_LABELS[section]}</span>)}
+          {fresh.length > 0 && <span className="tag accent">Updated</span>}
+        </div>
+        <h1 className="rd-subj">{shown.headline}</h1>
+        <div className="st-meta">{storyMeta(story ?? {...shown, outlets: shown.lead.more + 1}, now, timeZone).map((part, index) => <Fragment key={part}>{index > 0 && <span>·</span>}<span>{part}</span></Fragment>)}</div>
+      </div>
+      {shown.image?.large && (
+        <div className="st-img">
+          <NewsImage key={shown.image.large.url} src={shown.image.large.url} blurred={row?.image?.thumb.url} />
+          <span className="cap">{shown.image.outlet}</span>
+        </div>
+      )}
+      {!story ? <div className="st-body">{failed ? <LoadFailed what="this story" loads={[storyLoad]} /> : <StoryBodySkeleton />}</div> : (
+      <div className={arrived ? 'st-body sk-arrive' : 'st-body'}>
+        {lookedAt && fresh.length > 0 && <NewSince key={story.id} facts={fresh} lookedAt={lookedAt} now={now} timeZone={timeZone} />}
+        {story.summary && <p className="st-sum">{story.summary}</p>}
+        {story.sources.length > 0 && (
+          <>
+            <div className="st-label">Sources <span className="n">{story.sources.length}</span></div>
+            <Sources sources={story.sources} now={now} timeZone={timeZone} onArticle={onArticle} />
+          </>
+        )}
+      </div>
+      )}
+    </div>
+  );
+}
+
+/** An article opened from a story's Sources: the story pane's, and the recap's modal's (SV-219). */
+export function ArticleContent({storyId, articleId, now, timeZone, onArticle, onOriginal}: {
+  storyId: number;
+  articleId: number;
+  now: number;
+  timeZone: string;
+  onArticle: (id: number) => void;
+  onOriginal: () => void;
+}) {
+  const {data: loaded} = useResource<StoryOut>(storyPath(storyId));
+  const story = loaded?.id === storyId ? loaded : undefined;
+  const articleLoad = {path: articlePath(articleId), ...useResource<ArticleOut>(articlePath(articleId))};
+  const article = articleLoad.data?.id === articleId ? articleLoad.data : undefined;
+  return article ? <Article key={article.id} article={article} story={story} now={now} timeZone={timeZone} onArticle={onArticle} onOriginal={onOriginal} /> : (
+    // Its head from the story's own line for it while the article loads (news-05, #232).
+    <ArticleLoading key={articleId} source={story?.sources.find(source => source.article_id === articleId)} load={articleLoad} now={now} timeZone={timeZone} />
   );
 }
 

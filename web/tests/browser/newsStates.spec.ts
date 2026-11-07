@@ -71,9 +71,19 @@ test('board 29a: Unsorted with the AI down, AI stale, and nothing new in Tech; S
     await unsorted.waitFor();
     await row(page, 'Brush fire near the 210').waitFor();
     assert.equal(await unsorted.textContent(), '12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retryingShow headlines');
-    // At the top of the list, above the recap, in `caution`.
+    // At the top of the list, in `caution`.
     assert.deepEqual(await page.locator('.nw-list > *').evaluateAll(all => all.slice(0, 2).map(element => element.className)), ['nw-state failing', 'nw-body']);
-    assert.equal(await page.locator('.nw-list .list > *').first().getAttribute('class'), 'nw-recap');
+    // And folded under one chip leading the empty pane's foot, with the stale section, shown in `alert` under the pointer (SV-219, #335).
+    const chip = page.locator('.pane.idle .pane-foot .pt-chip');
+    assert.equal(await chip.textContent(), '2');
+    assert.equal(await page.locator('.pt-card').count(), 0, 'folded');
+    await chip.hover();
+    const card = page.locator('.pane.idle .pt-card');
+    await card.waitFor();
+    assert.deepEqual(await card.locator('.pt-line').allTextContents(), ['12 articles not sorted yet, Anthropic unreachable since 8:52 AM, retrying', 'AI, as of 7:02 AM']);
+    assert.equal(await rested(() => card.locator('.pt-line').first().evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--alert)')));
+    await page.locator('.hd-title').hover();
+    await until('folded again', () => card.count(), count => count === 0);
     assert.equal(await rested(() => unsorted.evaluate(line => getComputedStyle(line).color)), await rested(() => colourOf(page, 'var(--caution)')));
     // News's AI down is a source struggling: the `warning` triangle in `caution` (states-04).
     assert.deepEqual(await toneGlyph(unsorted), [ICONS.warning, '16', await colourOf(page, 'var(--caution)')]);
@@ -142,7 +152,8 @@ test('board 29b: the first run, sorting the last 48 hours; no recap; nothing sor
     await line.waitFor();
     await row(page, 'Brush fire near the 210').waitFor();
     assert.equal(await line.textContent(), 'Sorting the last 48 hours · 186 of 312 articles · showing what’s sorted so far');
-    assert.equal(await page.locator('.nw-recap').count(), 0, 'no recap');
+    await page.locator('.pane.idle .nd-fresh').waitFor();
+    assert.equal(await page.locator('.nd-recap').count(), 0, 'no recap');
     assert.equal(await page.locator('.nw-state.failing').count(), 0, 'articles waiting while sorting runs are no Unsorted line');
     const ai = page.locator('.nw-sec', {hasText: 'AI'}).locator('xpath=following-sibling::*[1]');
     assert.deepEqual(await ai.evaluate(element => [element.className, element.textContent]), ['nw-empty', 'Nothing sorted in AI yet']);
@@ -209,7 +220,7 @@ test('Search news: the stories found replace the list, the archive too; one open
     await until('the field 520 wide', () => page.locator('.hd .search').evaluate(field => [field.getBoundingClientRect().width, field.querySelector('.kbd')?.textContent]),
       seen => pagePx(seen[0] as number) === 520 && seen[1] === 'Esc');
     assert.equal(await results.locator('.bar.muted').textContent(), '1 result·newest first');
-    assert.equal(await page.locator('.nw-recap, .nw-sec, .nw-pill').count(), 0, 'the list, its recap and headers, are replaced');
+    assert.equal(await page.locator('.nw-sec, .nw-pill').count(), 0, 'the list and its headers are replaced');
     const found = results.locator('[data-story]');
     assert.equal(await found.count(), 1);
     assert.deepEqual(await found.first().locator('.side .nw-meta').allTextContents(), ['General·ABC News +7', 'Updated 7:10 AM']);

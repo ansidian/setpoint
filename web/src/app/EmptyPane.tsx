@@ -7,7 +7,7 @@
 // 30 px `right_panel_open` button before search, as Calendar's day does (#196): lit while showing,
 // closed by the button again or Esc, on every load, and when an item opens.
 import {useState} from 'react';
-import type {CSSProperties, ReactNode} from 'react';
+import type {CSSProperties, KeyboardEvent, ReactNode} from 'react';
 import type {IconName} from '../ui/glyphs.ts';
 import {Icon} from '../ui/Icon.tsx';
 import {useCompact, usePhone} from './Phone.tsx';
@@ -52,11 +52,53 @@ export function EmptyPaneButton({pane}: {pane: EmptyPaneState}) {
 
 export type PaneKey = {keys: string[]; does: string};
 
+/** Something wrong the page's pane names, with its fix when it has one ("Reconnect", "Settings › AI"). */
+export interface PaneTrouble {
+  text: string;
+  glyph: IconName;
+  fix?: {label: string; run: () => void};
+}
+
 /**
- * The empty pane: what the page puts in it, and its foot (a quiet line, then the keys) pinned to the bottom. With no `children`,
+ * The pane's trouble, folded under one `warning` chip in `alert` at the start of the foot's facts line
+ * (SV-219, DESIGN.md #335), so the block above never moves: the pointer over it, or focus, shows a card
+ * above it listing each in `alert` with its fix, which the pointer can move into; leaving it or Esc
+ * puts it away. Nothing shows without trouble.
+ */
+function TroubleChip({trouble}: {trouble: PaneTrouble[]}) {
+  const [open, setOpen] = useState(false);
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !open) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(false);
+  };
+  return (
+    <span className="pane-trouble" onPointerEnter={() => setOpen(true)} onPointerLeave={() => setOpen(false)} onKeyDown={onKeyDown}
+      onFocus={() => setOpen(true)} onBlur={event => !event.currentTarget.contains(event.relatedTarget) && setOpen(false)}>
+      <button className="pt-chip num" type="button" aria-expanded={open} aria-label={trouble.length === 1 ? 'Something needs attention' : `${trouble.length} things need attention`}
+        onClick={() => setOpen(true)}>
+        <Icon name="warning" size={14} />{trouble.length}
+      </button>
+      {open && (
+        <span className="pop pt-card" role="group" aria-label="Trouble">
+          {trouble.map(one => (
+            <span key={one.text} className="pt-line">
+              <Icon name={one.glyph} size={16} /><span className="num">{one.text}</span>
+              {one.fix && <><span className="sep">·</span><button className="act" type="button" onClick={one.fix.run}>{one.fix.label}</button></>}
+            </span>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The empty pane: what the page puts in it, and its foot (any trouble's chip and a quiet line, then the keys) pinned to the bottom. With no `children`,
  * the placeholder: the page's glyph and one line, centred (News and Jobs, until SV-219 and SV-220).
  */
-export function EmptyPane({label, glyph, line, keys, foot, children}: {label: string; glyph?: IconName; line?: string; keys: PaneKey[]; foot?: ReactNode; children?: ReactNode}) {
+export function EmptyPane({label, glyph, line, keys, foot, trouble = [], children}: {label: string; glyph?: IconName; line?: string; keys: PaneKey[]; foot?: ReactNode; trouble?: PaneTrouble[]; children?: ReactNode}) {
   const width = useReadingPaneWidth();
   return (
     <section className="pane idle" aria-label={label} style={{'--readingPane': `${width}px`} as CSSProperties}>
@@ -69,7 +111,7 @@ export function EmptyPane({label, glyph, line, keys, foot, children}: {label: st
           </div>
         )}
         <footer className="pane-foot">
-          {foot}
+          {(foot || trouble.length > 0) && <div className="pane-facts">{trouble.length > 0 && <TroubleChip trouble={trouble} />}{foot}</div>}
           <ul className="pane-keys">
           {keys.map(key => (
             <li key={key.does}>{key.keys.map(one => <span key={one} className="kbd">{one}</span>)}<span>{key.does}</span></li>

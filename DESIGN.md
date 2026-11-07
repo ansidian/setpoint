@@ -250,8 +250,9 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   **right pane** 400 px. The reading pane is always there on a desktop, with nothing open too, at
   its dragged width (480 to 1100), giving way so the list keeps 420 ([Decided while
   building](#decided-while-building) #327, amending decision 43); its left edge resizes it, and shows
-  so under the pointer (#210). Empty, the Inbox's shows how the mail day is going (#331); News's and
-  Jobs's hold the page's glyph, one line and the keys.
+  so under the pointer (#210). Empty, the Inbox's shows how the mail day is going (#331) and News's
+  its recap and facts (#332); Jobs's holds the page's glyph, one line and the keys. Every empty pane
+  has the mark's faint glow behind it (#334).
 - **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
   "October 2026 · Calendar".
 
@@ -759,7 +760,7 @@ navigation.
     takes an ellipsis; the leads' images shrink to 160 × 90 (#99).
   - The row opens a popover with the story that announced the keynote, which opens that story
     (#100).
-- **While you were away** (#298): All's first block, above Local, while it holds stories (below).
+- **While you were away** (#298): in News's empty pane, never in the list (#332, below).
 - **New-stories pill:**
   - A 32 px pill centred 10 px below the list's top: `cardOn`, an `edgeOn` ring, the pill shadow.
   - It shows `arrow_upward`, "3 new · 1 updated" (the updated count in `cool`) and the `N` hint.
@@ -820,14 +821,15 @@ navigation.
 
 ### While you were away
 
-The recap (#298): what left the page before the user saw it, offered once at the top of All rather
-than kept as a list to clear. No board draws it.
-- **Header:** a section header (32 px, `history` in `ink3`), "While you were away", then on the
-  right "since Fri 6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one).
-  No Done (#312).
+The recap (#298): what left the page before the user saw it, offered once beside All rather than
+kept as a list to clear. It sits in News's empty pane (#332), and its stories open in a panel over
+the list (#333). No board draws it.
+- **Header:** a 36 px neutral band, `history` in `ink3`, "While you were away", then "since Fri
+  6:10 PM" in `ink3` (a stamp, as [the pane's meta](#the-story-pane) words one). No Done (#312).
 - **Rows:** each section's biggest stories that left the page unseen since the last recap was put
   away, up to 2 per section (8 at most, D429), grouped in the blocks' order (Local, Tech, AI,
-  General) and biggest first within each. Story rows only, no lead. Each row names its section in the meta.
+  General) and biggest first within each, in a `hair` box on `panel`: the headline (two lines at
+  most) over its meta, which names its section ("General · NPR +9 · Yesterday").
 - **No dots:** everything in it is unseen. An opened story's headline turns `ink2` 400, as a seen
   row's does, so the user can tell what they've read.
 - **Fixed on arrival:** the recap is chosen when All opens and holds for the visit. Nothing slides
@@ -835,8 +837,8 @@ than kept as a list to clear. No board draws it.
   block and isn't in the recap.
 - **Put away:** once it has been on screen and the user has then been away from News for about an
   hour; a shorter trip to another page, or opening News into a section or from a story link before
-  it has shown, keeps it, and nothing else puts it away (#312): it folds away (180 ms) when an answer
-  no longer has it. Its stories stay unseen and in search's archive (D91), and the next recap holds
+  it has shown, keeps it, and nothing else puts it away (#312): it goes when an answer no longer
+  has it. Its stories stay unseen and in search's archive (D91), and the next recap holds
   only what left after.
 - Only on All: not in a section's list, in search, or during the first run.
 
@@ -847,8 +849,10 @@ than kept as a list to clear. No board draws it.
   lists the raw headlines with their links.
 - **A stale section:** the muted line under its header, "AI, as of 7:02 AM", led by `history`
   (#218). Its stories stay.
+- **AI down and a stale section** also fold into News's empty pane's foot (#335).
 - **A failing feed** shows only in Settings › News, unless its whole section is affected (BRIEF ›
-  When things break).
+  When things break), or it has failed every attempt for 6 hours: then the empty pane's freshness
+  line adds "· 1 feed failing" (#332).
 - **First run** (29b):
   - The muted line "Sorting the last 48 hours · 186 of 312 articles · showing what's sorted so
     far", its progress along its foot (#223).
@@ -4084,8 +4088,7 @@ it changes what's on screen.
 331. **The Inbox's empty pane shows how the mail day is going** (amending #327's placeholder for
     the Inbox; Andy, 2026-11-06; darma SV-218, D465). With nothing open, one block sits centred across
     the pane and a third of the way down it (the room above it half the room below). Top to bottom:
-    trouble only when there is some, each in `caution` with its fix ("Business needs sign-in ·
-    Reconnect", "Triage is down, as of 9:09 AM · Settings › AI"); the mark at 40 px, settling in
+    the mark at 40 px, settling in
     once; what needs the user, Attention not Done, as a 36 px `caution` band like Attention's with
     `flag`: "3 need you, 1 overdue" (overdue is over 24 hours since arriving, the clause only when
     there is one), or All caught up as the same band in `good` with `task_alt`; then today's strip,
@@ -4097,5 +4100,48 @@ it changes what's on screen.
     18% in Light, where its colours are darker) is gone well before the pane's edges. The foot, centred
     at the bottom, holds "12,408 emails · 1.3 GB, since Mar 2019." at 12 `ink3` (every kept email, its
     stored text and HTML plus its attachments at the provider's size, and the oldest one's month)
-    over the keys: J K Move, Enter Open, U Next unread, H Done, E Trash, P Pin. Today is since the
-    user's midnight. There's no unread line (SV-221). The list's own reconnect bar stays.
+    over the keys: J K Move, Enter Open, U Next unread, H Done, E Trash, P Pin; trouble ("Business
+    needs sign-in · Reconnect", "Triage is down, as of 9:09 AM · Settings › AI") is folded into the
+    foot (#335). Today is since the user's midnight. There's no unread line (SV-221). The list's own reconnect bar stays.
+332. **News's empty pane holds the recap and News's facts** (amending #298's placement and #327's
+    placeholder for News; Andy, 2026-11-06; darma SV-219, D466, D468). In the Inbox's shape (#331):
+    one block centred across the pane, a third of the way down, scrolling when the recap is long.
+    Top to bottom: the mark at 40 px; on
+    All, While you were away (#298) as a 36 px neutral band in the Inbox band's shape over its
+    stories (a band without a count, D87); the freshness line in `ink2` 12.5, "Updated 8:40 AM, next
+    around 9:40" (the hourly ranking, "Not ranked yet" before the first), adding "· 2 feeds failing"
+    in `ink3` only for feeds failing every attempt for 6 hours, a link to Settings › News; then
+    today's strip as the Inbox's, its numbers `ink` (`ink3` at zero) with no wash: Articles fetched
+    (`article`, every article fetched since midnight, sorted or not), Stories started (`newspaper`,
+    stories on the page first reported since midnight) and Outlets (`public`, those today's
+    articles came from), each with a tooltip saying what it counts. The foot holds "8,214 stories ·
+    $38 of AI this month." at 12 `ink3` (every story kept, News's AI this month in whole dollars
+    from $10) over the keys: J K Move, Enter Open, O Original, Tab Section. Trouble (sorting stopped,
+    with "Settings › AI" when that's the fix; each whole section stale, "AI, as of 7:02 AM") is
+    folded into the foot (#335). The list keeps its own Unsorted and section lines. No count of new stories (D87).
+333. **A recap story opens in a panel over the list** (amending #298; Andy, 2026-11-06; darma
+    SV-219, D468). A click on a recap row opens its story in a panel covering the list's column, 8
+    px inside it, with the modal's radius and shadow and no scrim, so the pane and its recap stay
+    in view. It grows out of the clicked row into the column over 260 ms and shrinks back into the
+    row it shows as it closes; with reduced motion it simply shows. Its head holds "3 of 8" in
+    `ink2`, Open at its outlet `O`, previous and next (`chevron_left`, `chevron_right`) and ×; below,
+    the story pane's content in a centred 656 px column, its sources opening their articles in the
+    panel. The pane stays live: the open story's row is marked `sub2`, and a click on another recap
+    row switches the story in place. J / K or ← → step through the recap; Esc goes from an article
+    back to its story, then closes it, as × and a click anywhere else do. While it's open the page's
+    own keys wait. Opened, a story is seen and its row turns `ink2` 400. It isn't in the address bar.
+    In a narrow window, where the pane covers the list, it opens as a modal in Settings's frame
+    (1040 × 720) over the scrim instead. A story from the list still opens in the pane.
+334. **The mark's glow is behind every empty pane** (amending #331; Andy, 2026-11-06; darma SV-219,
+    D468). The faint glow of the mark's three colours that #331 put behind the Inbox's block sits
+    behind every empty pane, News's and Jobs's placeholder too, with the same values (10%, 18% in
+    Light).
+335. **An empty pane's trouble folds into its foot** (amending #331 and #332; Andy, 2026-11-06;
+    darma SV-219, D469). Trouble no longer stacks above the mark and pushes the block down. It folds
+    into one chip at the start of the foot's facts line: a 24 px pill, `warning` 14 and the count in
+    `alert` 12 / 500, on a 10% `alert` wash with a 24% ring, shown only when there's trouble. Under the
+    pointer or with focus, a popover card above it, at once, lists each on its own line in `alert` 13
+    with its glyph and, after a `·`, its fix as a button ("Reconnect", "Settings › AI"); the pointer
+    can cross into it, and leaving both or Esc folds it again. Every trouble in it is `alert`, a
+    stale section's too, so the card reads as one thing. The same on every empty pane, the Inbox's
+    and News's.

@@ -1,7 +1,7 @@
 // The Inbox's pane with nothing open (SV-218, D465, DESIGN.md #331): how the mail day is going, as one
-// block centred in the pane. Trouble first, only when there is some, each with its fix; the mark; what
-// needs the user ("3 need you, 1 overdue", or All caught up); today's strip (Done, and what triage
-// sorted to FYI and to Noise); and, in the foot over the keys, the quiet facts in `ink3` (EmptyPane).
+// block centred in the pane. The mark; what needs the user ("3 need you, 1 overdue", or All caught up);
+// today's strip (Done, and what triage sorted to FYI and to Noise); and, in the foot over the keys,
+// the quiet facts in `ink3`, led by any trouble's chip, each with its fix (EmptyPane, #335).
 import type {MailDayOut, TriageStatusOut} from '@setpoint/shared';
 import {timeZone} from '../api/auth.ts';
 import {useResource} from '../api/client.ts';
@@ -12,7 +12,7 @@ import {Icon, Mark} from '../ui/Icon.tsx';
 import {useAccounts} from './accounts.ts';
 import {useNow} from './clock.ts';
 import {EmptyPane} from './EmptyPane.tsx';
-import type {PaneKey} from './EmptyPane.tsx';
+import type {PaneKey, PaneTrouble} from './EmptyPane.tsx';
 import {openSettings} from './settings/store.ts';
 import {reconnectFrom} from './states/States.tsx';
 
@@ -34,25 +34,13 @@ export function InboxDay() {
   const reconnect = reconnectLine(list);
   const triageDown = triageNote(triage, now, zone);
   const need = day ? needLine(day) : null;
+  const trouble: PaneTrouble[] = [
+    ...(reconnect ? [{text: reconnect, glyph: 'sync_problem' as const, fix: {label: 'Reconnect', run: () => reconnectFrom(list)}}] : []),
+    ...(triageDown ? [{text: triageDown, glyph: 'warning' as const, fix: {label: 'Settings › AI', run: () => openSettings('ai')}}] : []),
+  ];
   return (
-    <EmptyPane label="Inbox pane" keys={KEYS} foot={day && <p className="md-kept num">{keptLine(day, zone)}</p>}>
+    <EmptyPane label="Inbox pane" keys={KEYS} trouble={trouble} foot={day && <p className="md-kept num">{keptLine(day, zone)}</p>}>
       <div className="mail-day">
-        {(reconnect || triageDown) && (
-          <div className="md-trouble">
-            {reconnect && (
-              <p className="md-fix" role="alert">
-                <Icon name="sync_problem" size={16} /><span>{reconnect}</span><span className="sep">·</span>
-                <button className="act" type="button" onClick={() => reconnectFrom(list)}>Reconnect</button>
-              </p>
-            )}
-            {triageDown && (
-              <p className="md-fix" role="alert">
-                <Icon name="warning" size={16} /><span className="num">{triageDown}</span><span className="sep">·</span>
-                <button className="act" type="button" onClick={() => openSettings('ai')}>Settings › AI</button>
-              </p>
-            )}
-          </div>
-        )}
         <Mark size={40} settle />
         {day && (
           <>

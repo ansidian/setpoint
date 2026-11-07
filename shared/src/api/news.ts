@@ -8,6 +8,7 @@
 //   GET  /api/news/articles/:id            ArticleOut (a source opened in the pane); a metered article is 404
 //   GET  /api/news/missed                  MissedOut (the iPhone app's Catch up: the recap's stories by day)
 //   GET  /api/news/sources                 NewsSourcesOut (Settings › News)
+//   GET  /api/news/day                     NewsDayOut (News's empty pane: freshness, today, the quiet facts; SV-219)
 //   GET  /api/news/images/:id              Setpoint's own copy of an image (outlets never see the user's browsing)
 //   POST /api/news/seen      {story_ids}   NewsSeenOut (a row on screen for about a second, or opened)
 //
@@ -322,6 +323,26 @@ export const newsSourcesSchema = z.strictObject({
   sections: z.array(z.strictObject({section: newsSectionSchema, sources: z.array(newsSourceSchema)})).length(NEWS_SECTIONS.length),
 });
 export type NewsSourcesOut = z.infer<typeof newsSourcesSchema>;
+
+/**
+ * News's pane with nothing open (SV-219, D466), under the recap. Not in the iPhone app's contract.
+ * Today is since the user's midnight, the month since midnight on the 1st. No count of new stories (D87).
+ */
+export interface NewsDayOut {
+  // The page's last hourly ranking ("Updated 8:40 AM"), and the next one due ("next around 9:40"); null before the first.
+  updated_at: string | null;
+  next_at: string | null;
+  // Feeds that have failed every attempt for 6 hours ("· 2 feeds failing"); intermittent failures never count.
+  feeds_failing: number;
+  // Today: the articles read, the stories they made (first reported today) and the outlets they came from.
+  articles_today: number;
+  stories_today: number;
+  outlets_today: number;
+  // Every story kept: the 90-day archive with those on the page.
+  stories_total: number;
+  // What News's AI has cost this month (Settings › AI's News meter).
+  ai_this_month_usd: number;
+}
 
 /** Stories seen: a row fully on screen for about a second, or opened (D87). */
 export const newsSeenInput = z.strictObject({story_ids: z.array(id).min(1).max(500)});

@@ -160,6 +160,19 @@ export function sectionHealth(healths: readonly (Health | null)[]): {state: 'sta
   return {state: checked.some(health => health.state === 'stale') ? 'stale' : 'failing', asOf};
 }
 
+/** A feed shows as failing on News's pane only once it has failed every attempt this long (D466). */
+export const FEED_FAILING_MS = 6 * HOUR;
+
+/**
+ * How many feeds News's pane says are failing (SV-219, D466): those whose failure began at least six
+ * hours ago and hasn't been broken by a success since (a success clears `failingSince`). Intermittent
+ * failures, and a source only stale, never count.
+ */
+export function feedsFailing(sources: readonly {failingSince: string | null}[], now: string): number {
+  const before = Date.parse(now) - FEED_FAILING_MS;
+  return sources.filter(source => source.failingSince !== null && Date.parse(source.failingSince) <= before).length;
+}
+
 // ---- While you were away (#298, D418, D419, D422, D429) ----
 
 /** The recap holds up to this many stories per section (8 at most, D429). */

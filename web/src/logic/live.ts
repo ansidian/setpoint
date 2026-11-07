@@ -42,7 +42,7 @@ export function pathsForEvent(event: LiveEvent, mounted: readonly string[]): str
       const lists = event.stories.length > 0 || event.sections.length > 0 || event.sources.length > 0;
       const named = new Set(event.stories.map(id => `/news/stories/${id}`));
       return mounted.filter(path => (lists && (path === '/news' || under('/news/sections')(path)))
-        || named.has(path) || (event.sources.length > 0 && path === '/news/sources') || path === '/news/status' || path === '/news/unsorted');
+        || named.has(path) || (event.sources.length > 0 && path === '/news/sources') || path === '/news/status' || path === '/news/unsorted' || path === '/news/day');
     }
     // Jobs (after News, J1): its page and detail, once J5 draws them.
     case 'jobs':

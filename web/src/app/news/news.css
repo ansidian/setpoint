@@ -21,14 +21,41 @@
 .nw-sec.first { border-top: 0; }
 .nw-sec .day { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); margin-left: auto; }
 
-/* While you were away (#298): All's first block, its header a section header with "since Fri 6:10 PM"
-   and a ghost small Done on the right. Done folds it away as Dismiss all folds its rows (180 ms). Its
-   rows have no dot, their headlines a new row's until opened, then a seen row's. */
-.nw-recap { flex: none; display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--dur-medium) var(--ease); }
-.nw-recap.closing { grid-template-rows: 0fr; }
-.nw-recap > div { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.nw-recap .nw-sec .btn { text-transform: none; letter-spacing: 0; }
-.nw-row.rc:not(.seen) .hl { color: var(--ink); font-weight: 500; }
+/* News's empty pane (SV-219, #332), in the Inbox's shape (styles.css › .mail-day): While you were away
+   under the mark as a neutral band ("since Fri 6:10 PM" in `ink3`) over its stories in a `hair` box on
+   `panel`, each headline in `ink` until opened, then `ink2`; the freshness line, its failing feeds a quiet
+   `ink3` link to Settings › News; then today's strip. The block scrolls when the recap is long. */
+.news-day { overflow-y: auto; min-height: 0; margin: 0 -28px; padding: 0 28px; }
+.nd-recap { width: min(100%, 460px); display: flex; flex-direction: column; align-items: center; gap: 12px; flex: none; }
+.md-need.nd-away { color: var(--ink); background: color-mix(in srgb, var(--sub) 70%, var(--page)); box-shadow: inset 0 0 0 1px var(--hair); }
+.md-need.nd-away > .icon { color: var(--ink3); }
+.nd-since { color: var(--ink3); font-size: 13px; font-weight: 400; }
+.nd-list { list-style: none; margin: 0; padding: 0; width: 100%; border: 1px solid var(--hair); border-radius: 12px; background: var(--panel); overflow: hidden; text-align: left; }
+.nd-list > li + li { border-top: 1px solid var(--hair); }
+.nd-row { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 10px 14px 9px; text-align: left; }
+.nd-row .hl { color: var(--ink); font-size: 13.5px; font-weight: 500; line-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color var(--dur-fast) var(--ease); }
+.nd-row.seen .hl { color: var(--ink2); font-weight: 400; }
+@media (hover: hover) { .nd-row:hover { background: var(--sub); } }
+.nd-fresh { display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); font-size: 12.5px; flex: none; }
+.nd-fresh > .icon, .nd-fresh > .sep { color: var(--ink3); }
+.nd-failing { color: var(--ink3); font-size: 12.5px; }
+@media (hover: hover) { .nd-failing:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; } }
+
+/* The recap's story panel (SV-219, #332), and in a narrow window its modal in Settings's frame, scrim
+   and rise; either holds the story pane's content in a centred column, with "3 of 8" in its head. */
+.nw-modal-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 30; animation: scrim-in var(--dur-slow) var(--ease); }
+.nw-modal { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--settingsWidth); height: var(--settingsHeight); max-width: calc(100% - 32px); max-height: calc(100% - 32px);
+  display: flex; flex-direction: column; background: var(--modal); border-radius: var(--r-modal); box-shadow: inset 0 0 0 1px var(--edgeOn), var(--shadow-modal); overflow: hidden; z-index: 31;
+  animation: nw-modal-in var(--dur-slow) var(--ease); outline: none; }
+@keyframes nw-modal-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } }
+.nw-modal > .rd-tools { padding: 0 12px 0 16px; height: 56px; }
+.nw-modal-at { padding: 0 10px; color: var(--ink2); font-size: 12.5px; flex: none; }
+.nw-modal > .rd-scroll { align-items: center; }
+/* On a desktop it's a panel over the list's column (its box set from the column's, 8 px inside), with no
+   scrim, growing out of its recap row (RecapPanel.tsx animates that); the row it shows is marked. */
+.nw-modal.nw-panel { transform: none; max-width: none; max-height: none; animation: none; transform-origin: top left; z-index: 20; }
+.nd-row.on { background: var(--sub2); }
+.nw-modal > .rd-scroll > * { width: min(100%, 656px); }
 
 /* N5's states (DESIGN.md › States; boards 29a, 29b): the Unsorted line in `caution` with Show headlines, the
    first run's muted line, a whole section's line under its header, and a section with nothing to show. */

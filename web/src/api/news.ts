@@ -15,6 +15,8 @@ export const articlePath = (id: number) => `/news/articles/${id}`;
 export const STATUS_PATH = '/news/status';
 /** Show headlines: what waits Unsorted, with its links. */
 export const UNSORTED_PATH = '/news/unsorted';
+/** News's empty pane: freshness, today and the quiet facts (SV-219). */
+export const NEWS_DAY_PATH = '/news/day';
 /** Settings › News. */
 export const NEWS_SOURCES_PATH = '/news/sources';
 

@@ -5,18 +5,20 @@
 // and the recap's stories follow src/domain/news.ts. N3 adds the bar (a story under it never shows:
 // not on the page, in the recap or in search), and search over the 90-day archive.
 import type {
-  AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
+  AlsoReportedOut, ArticleOut, MissedOut, NewsBlockOut, NewsDayOut, NewsImageOut, NewsPageOut, NewsSearchInput, NewsSearchOut, NewsSection, NewsSectionOut, NewsSourcesOut,
   RecapOut, RecapStoryOut, SectionHealthOut, StoryFactOut, StoryOut, StoryRowOut, UpcomingOut,
 } from '@setpoint/shared';
 import {NEWS_SECTIONS, NEWS_SOURCE_ICONS} from '@setpoint/shared';
 import type {NewsSourceIcon} from '@setpoint/shared';
-import {and, asc, count, desc, eq, gt, gte, inArray, isNotNull, lte, max} from 'drizzle-orm';
+import {and, asc, count, countDistinct, desc, eq, gt, gte, inArray, isNotNull, lte, max} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import type {Health} from '../domain/health.ts';
-import {ARCHIVE_MS, blockSize, leadOf, listedArticles, mainSection, newSince, recapStories, sectionHealth, sectionOrder, storyState} from '../domain/news.ts';
-import {hazardOf, matchesAll, searchWords} from '../domain/newsSorting.ts';
+import {ARCHIVE_MS, blockSize, feedsFailing, leadOf, listedArticles, mainSection, newSince, recapStories, sectionHealth, sectionOrder, storyState} from '../domain/news.ts';
+import {hazardOf, matchesAll, RANK_EVERY_MS, searchWords} from '../domain/newsSorting.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {notFound} from '../errors.ts';
+import {newsSpentThisMonth} from '../news/models.ts';
+import {sortingRow} from '../news/sortState.ts';
 import {activeNewsSources} from '../news/sources.ts';
 import {recapState} from '../news/recap.ts';
 import {liveCondition, newsSourceHealth, overBar, recapCondition, writtenCondition} from '../news/store.ts';
@@ -273,6 +275,29 @@ export function newsSources(store: Store): NewsSourcesOut {
         local: source.origin === 'local', health: newsSourceHealth(source, now),
       })),
     })),
+  };
+}
+
+/**
+ * News's pane with nothing open (SV-219, D466): when the page was last ranked and the next is due,
+ * the feeds failing every attempt for 6 hours, today's articles, the stories first reported today
+ * and the outlets read, every story kept, and the month's AI cost. Stories count
+ * as the page does: written, over the bar.
+ */
+export function newsDay(store: Store): NewsDayOut {
+  const now = isoNow(store);
+  const midnight = zonedInstant(localDay(now, store.timeZone), '00:00', store.timeZone);
+  const ranked = sortingRow(store).lastRankedAt;
+  const today = store.db.select({articles: count(), outlets: countDistinct(t.newsArticles.outlet)}).from(t.newsArticles).where(gte(t.newsArticles.fetchedAt, midnight)).get()!;
+  const shown = and(overBar(), writtenCondition());
+  const kept = store.db.select({total: count()}).from(t.newsStories).where(shown).get()!;
+  return {
+    updated_at: ranked, next_at: ranked && new Date(Date.parse(ranked) + RANK_EVERY_MS).toISOString(),
+    feeds_failing: feedsFailing(activeNewsSources(store), now),
+    articles_today: today.articles, outlets_today: today.outlets,
+    stories_today: store.db.select({n: count()}).from(t.newsStories).where(and(shown, gte(t.newsStories.firstReportedAt, midnight))).get()!.n,
+    stories_total: kept.total,
+    ai_this_month_usd: newsSpentThisMonth(store),
   };
 }
 

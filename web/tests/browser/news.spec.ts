@@ -1,5 +1,5 @@
 // News (N4; DESIGN.md › News, boards 25–27) against the seed's sample (BRIEF.md › Sample data ›
-// News): All's blocks with the recap, Upcoming and the pill; the story pane, its Sources, an article
+// News): All's blocks, Upcoming and the pill; the empty pane with the recap, its panel and News's facts (SV-219); the story pane, its Sources, an article
 // (26a) and one that can't be read here (26b); a section (27) with Also reported (D452); While you were away (#298) with Done
 // and Undo; seen; the held order with the pill; Add to calendar; the keys; and board 31, board 25 in
 // Light (N5); Tab and Shift-Tab between the views (SV-207). A change to News arrives as ingest's will: the
@@ -131,17 +131,16 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');
-    // The recap first, with no Done, then the blocks in their fixed order (D451).
-    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['While you were awaysince Mon 10:40 PM', 'Local', 'Tech', 'AI', 'General']);
-    assert.equal(await page.locator('.nw-recap button').count(), 0);
-    // Each section's glyph before its name, and the recap's `history`, 14 px in ink3, the name in ink2 (#120).
+    // The blocks in their fixed order (D451); the recap is the pane's (SV-219).
+    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'Tech', 'AI', 'General']);
+    // Each section's glyph before its name, 14 px in ink3, the name in ink2 (#120).
     const ink3 = await colourOf(page, 'var(--ink3)');
     assert.deepEqual(await rested(() => glyphs(page.locator('.nw-sec > .icon'))),
-      [['history', '14', ink3], ['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
+      [['location_on', '14', ink3], ['computer', '14', ink3], ['auto_awesome', '14', ink3], ['public', '14', ink3]]);
     assert.equal(await rested(() => page.locator('.nw-sec').nth(1).evaluate(header => getComputedStyle(header).color)), await rested(() => colourOf(page, 'var(--ink2)')));
     // Each block ends after its stories, with no "N more in ‹section›" (D451).
     assert.equal(await page.getByText(/ more in /).count(), 0);
-    assert.equal(await page.locator('.nw-recap [data-story]').count(), 8);
+    assert.equal(await page.locator('.pane.idle .nd-row').count(), 8);
     assert.equal(await page.locator('.nw-up').textContent(), 'UpcomingApple event · Tue Oct 20 · 10 AMMacRumors +6Add to calendar');
     // The meta: the lead's on one line, a row's on two.
     assert.equal(await row(page, 'Brush fire near the 210').locator('.nw-meta').textContent(), 'KTLA +4·1h·Updated 8:40 AM');
@@ -163,7 +162,7 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     assert.equal(await dot('Federal judge blocks a rule'), await colourOf(page, 'var(--ink)'), 'new: ink');
     assert.equal(await rested(() => dot('Four killed in a warehouse shooting')), await rested(() => colourOf(page, 'var(--accent)')), 'updated: accent');
 
-    // Under the recap, Local's lead is on screen and seen.
+    // Local's lead is on screen and seen.
     const seen = await seenSettled(page, setpoint);
     assert.ok(seen.includes(await storyId(setpoint, 'Brush fire near the 210 grows to 400 acres')), 'the brush fire story was seen');
     // Seen, its dot stays for the visit (#95).
@@ -250,7 +249,7 @@ test('D451: a block whose stories all show in other blocks isn\'t drawn in All; 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/news`);
     await row(page, 'Brush fire near the 210').waitFor();
-    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['While you were awaysince Mon 10:40 PM', 'Local', 'AI', 'General']);
+    assert.deepEqual(await page.locator('.nw-sec').allTextContents(), ['Local', 'AI', 'General']);
     await page.locator('.hd .seg button', {hasText: 'Tech'}).click();
     await until('Tech\'s own list', () => page.locator('.nw-list [data-story]').count(), count => count > 0);
     assert.deepEqual(setpoint.pageErrors, []);
@@ -392,7 +391,7 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
     await until('Local\'s whole list', () => page.locator('.nw-list [data-story]').count(), count => count === 17);
     assert.equal(await page.locator('.hd .seg .on').textContent(), 'Local');
     assert.equal(await page.locator('.nw-sec').count(), 0);
-    assert.equal(await page.locator('.nw-recap').count(), 0, 'the recap is All\'s alone');
+    assert.equal(await page.locator('.nd-recap').count(), 0, 'the recap is All\'s alone');
     assert.deepEqual(await page.locator('.nw-list [data-story]').evaluateAll(rows => rows.map(element => element.className.split(' ')[0])).then(classes => classes.slice(0, 3)), ['nw-lead', 'nw-row', 'nw-row']);
     // Shown now, Water main is seen after its second on screen.
     await until('Water main seen', () => stateOf(setpoint, water), state => state === 'seen', 5000);
@@ -414,40 +413,26 @@ test('a section (27): the header\'s Local opens Local\'s full list, biggest firs
   }
 });
 
-test('While you were away (#298): All opens with the recap, each section\'s biggest two without dots, naming their sections; opened, one dims; nothing slides in, and the pill counts none of it', async () => {
+test('While you were away (#298, SV-219): All\'s empty pane holds the recap, each section\'s biggest two, naming their sections; nothing slides in, and the pill counts none of it', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     const shown = recapShown(page);
     await page.goto(`${setpoint.base}/news`);
-    const recap = page.locator('.nw-recap');
+    const recap = page.locator('.pane.idle .nd-recap');
     await recap.waitFor();
     const fixed = (await shown).request().postDataJSON() as {recap: number[]};
-    assert.equal(await recap.locator('.nw-sec').textContent(), 'While you were awaysince Mon 10:40 PM');
-    const headlines = () => recap.locator('[data-story] .hl').evaluateAll(all => all.map(element => element.textContent!.split(' ').slice(0, 2).join(' ')));
+    assert.equal(await recap.locator('.nd-away').textContent(), 'While you were awaysince Mon 10:40 PM');
+    assert.equal(await page.locator('.nw-list .nd-recap, .nw-list [data-key^="recap"]').count(), 0, 'never in the list');
+    const headlines = () => recap.locator('.nd-row .hl').evaluateAll(all => all.map(element => element.textContent!.split(' ').slice(0, 2).join(' ')));
     const before = await headlines();
     assert.deepEqual(before, [
       'Overnight closures', 'Teen hurt', 'iOS 26.1', 'Samsung sets', 'Google DeepMind', 'OpenAI opens', 'Tornado outbreak', 'Amtrak derailment',
     ]);
     assert.deepEqual(fixed.recap, (await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id), 'the page tells the server what it shows');
-    const tornado = row(page, 'Tornado outbreak across Oklahoma and Kansas');
     // Ages follow DESIGN.md › Copy: Tuesday is "Yesterday" on a Wednesday.
-    assert.deepEqual(await tornado.locator('.side .nw-meta').allTextContents(), ['General·NPR +9', 'Yesterday']);
-    // No dots: every row's headline as a new one's, ink at 500, with nothing in the dot's place.
-    const look = (locator: Locator) => locator.evaluate(element => [
-      getComputedStyle(element.querySelector('.nd')!, '::before').backgroundColor, getComputedStyle(element.querySelector('.hl')!).color, getComputedStyle(element.querySelector('.hl')!).fontWeight,
-    ]);
-    const ink = await rested(() => colourOf(page, 'var(--ink)'));
-    assert.deepEqual(await rested(() => look(tornado)), ['rgba(0, 0, 0, 0)', ink, '500']);
-
-    // Opened, it's seen and its headline turns a seen row's, ink2 at 400.
-    const tornadoId = Number(await tornado.getAttribute('data-story'));
-    await tornado.click();
-    await page.locator('.pane .rd-subj', {hasText: 'Tornado outbreak'}).waitFor();
-    await until('the tornado seen', () => stateOf(setpoint, tornadoId), state => state === 'seen');
-    await until('it dims', () => look(tornado), seen => seen[2] === '400');
-    assert.deepEqual(await rested(() => look(tornado)), ['rgba(0, 0, 0, 0)', await rested(() => colourOf(page, 'var(--ink2)')), '400']);
-    // Being on screen doesn't see the others: they stay unseen, once the rows in view with a dot have been.
+    assert.equal(await recap.locator('.nd-row', {hasText: 'Tornado outbreak'}).locator('.nw-meta').textContent(), 'General·NPR +9·Yesterday');
+    // Being on screen doesn't see them: they stay unseen, once the list's rows in view have been.
     await seenSettled(page, setpoint);
     assert.equal(await stateOf(setpoint, fixed.recap[0]!), 'new');
 
@@ -470,23 +455,106 @@ test('While you were away (#298): All opens with the recap, each section\'s bigg
   }
 });
 
+test('SV-219: a recap story opens in a panel over the list\'s column, the pane live beside it; J / K step, a row switches, Esc or a click elsewhere closes; opened, a row dims', async () => {
+  const setpoint = await startSetpoint();
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    const recap = page.locator('.pane.idle .nd-recap');
+    await recap.waitFor();
+    const tornado = recap.locator('.nd-row', {hasText: 'Tornado outbreak'});
+    const look = (locator: Locator) => locator.locator('.hl').evaluate(element => [getComputedStyle(element).color, getComputedStyle(element).fontWeight]);
+    assert.deepEqual(await rested(() => look(tornado)), [await rested(() => colourOf(page, 'var(--ink)')), '500']);
+
+    const tornadoId = Number(await tornado.getAttribute('data-story'));
+    await tornado.click();
+    const panel = page.locator('.nw-panel');
+    await panel.locator('.rd-subj', {hasText: 'Tornado outbreak'}).waitFor();
+    assert.equal(await panel.locator('.nw-modal-at').textContent(), '7 of 8');
+    // Over the list's column, the pane beside it still the empty pane, its row marked.
+    const bounds = (selector: string) => page.locator(selector).boundingBox().then(found => found!);
+    const [box, list, pane] = await rested(() => Promise.all([bounds('.nw-panel'), bounds('.nw-list'), bounds('.pane.idle')]));
+    assert.ok(box.x >= list.x && box.x + box.width <= list.x + list.width + 0.5 && box.x + box.width <= pane.x + 0.5, 'within the list\'s column');
+    assert.equal(await page.locator('.pane:not(.idle)').count(), 0, 'the pane keeps the recap');
+    assert.equal(await tornado.getAttribute('aria-current'), 'true');
+    // Opened, it's seen and its row turns ink2 at 400.
+    await until('the tornado seen', () => stateOf(setpoint, tornadoId), state => state === 'seen');
+    await until('it dims', () => look(tornado), seen => seen[1] === '400');
+    assert.deepEqual(await rested(() => look(tornado)), [await rested(() => colourOf(page, 'var(--ink2)')), '400']);
+
+    // J and → step on, K and ← back, within the recap; the page's own keys wait.
+    await page.keyboard.press('j');
+    await panel.locator('.rd-subj', {hasText: 'Amtrak derailment'}).waitFor();
+    assert.equal(await panel.locator('.nw-modal-at').textContent(), '8 of 8');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('k');
+    await panel.locator('.rd-subj', {hasText: 'OpenAI opens'}).waitFor();
+    assert.equal(await page.url(), `${setpoint.base}/news`, 'not in the address bar');
+    // Another of the recap's rows switches the story in place.
+    await recap.locator('.nd-row').first().click();
+    await panel.locator('.rd-subj', {hasText: 'Overnight closures'}).waitFor();
+    assert.equal(await panel.locator('.nw-modal-at').textContent(), '1 of 8');
+    // Esc closes it back to the pane, as a click anywhere else does.
+    await page.keyboard.press('Escape');
+    await until('closed', () => panel.count(), count => count === 0);
+    await recap.locator('.nd-row').nth(2).click();
+    await panel.locator('.rd-subj', {hasText: 'iOS 26.1'}).waitFor();
+    await page.locator('.hd-title').click();
+    await until('closed by a click elsewhere', () => panel.count(), count => count === 0);
+    // A story from the list still opens in the pane.
+    await row(page, 'Brush fire near the 210').click();
+    await page.locator('.pane:not(.idle) .rd-subj', {hasText: 'Brush fire near the 210'}).waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-219: News\'s pane says when the page was ranked and is next, what today brought and the quiet facts; a feed failing every attempt for 6 hours shows, opening Settings › News', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    await page.goto(`${setpoint.base}/news`);
+    const pane = page.locator('.pane.idle');
+    const fresh = pane.locator('.nd-fresh');
+    await fresh.waitFor();
+    const day = await setpoint.api<{updated_at: string | null}>('GET', '/news/day');
+    assert.match(await fresh.textContent() ?? '', day.updated_at ? /^Updated \d{1,2}:\d\d [AP]M, next around \d{1,2}:\d\d( [AP]M)?$/ : /^Not ranked yet$/);
+    const tiles = await pane.locator('.md-tile').evaluateAll(all => all.map(tile => tile.querySelector('dt')!.textContent));
+    assert.deepEqual(tiles, ['Articles fetched', 'Stories started', 'Outlets']);
+    assert.match(await pane.locator('.pane-foot .md-kept').textContent() ?? '', /^[\d,]+ stories · \$[\d.,]+ of AI this month\.$/);
+    assert.equal(await pane.locator('.nd-failing').count(), 0, 'no feed failing for 6 hours');
+    // A feed failing every attempt since seven hours ago.
+    await newsChange(setpoint, `UPDATE news_sources SET failing_since = '2026-10-07T08:00:00.000Z', last_error = '404 Not Found'
+      WHERE id = (SELECT min(id) FROM news_sources WHERE retired_at IS NULL);`);
+    const failing = pane.locator('.nd-failing');
+    await until('the feed failing', () => failing.count(), count => count === 1);
+    assert.equal(await failing.textContent(), '1 feed failing');
+    await failing.click();
+    await page.locator('.settings .set-main', {hasText: 'News'}).first().waitFor();
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('the recap has no Done (D451): only the server puts it away, after an hour away, its stories still unseen; put away, the next visit has none', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     const shown = recapShown(page);
     await page.goto(`${setpoint.base}/news`);
-    const recap = page.locator('.nw-recap');
+    const recap = page.locator('.pane.idle .nd-recap');
     await recap.waitFor();
     await shown;
-    assert.equal(await recap.locator('button').count(), 0, 'nothing on the web puts it away');
+    assert.equal(await recap.getByRole('button', {name: 'Done'}).count(), 0, 'nothing on the web puts it away');
     const ids = (await setpoint.api<NewsPageOut>('GET', '/news')).recap!.stories.map(story => story.id);
     // As the server does an hour after it has shown with the user away (server/tests/news.test.ts has the hour).
     await putRecapAway(setpoint);
     await page.reload();
     await row(page, 'Brush fire near the 210').waitFor();
-    assert.equal(await page.locator('.nw-recap').count(), 0);
-    assert.equal(await page.locator('.nw-sec').first().textContent(), 'Local', 'Local is All\'s first block again');
+    await page.locator('.pane.idle .nd-fresh').waitFor();
+    assert.equal(await page.locator('.nd-recap').count(), 0);
     assert.deepEqual(await Promise.all(ids.map(id => stateOf(setpoint, id))), ids.map(() => 'new'), 'put away, not seen (D426)');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {

@@ -15,7 +15,7 @@ import {proposeFromNewsEvent} from '../news/proposal.ts';
 import {noteHere, putRecapAway, undoPutAway} from '../news/recap.ts';
 import {newsStatus, unsortedArticles} from '../news/sortState.ts';
 import {markSeen} from '../news/store.ts';
-import {articleDetail, missed, newsPage, newsRecap, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
+import {articleDetail, missed, newsDay, newsPage, newsRecap, newsSearch, newsSection, newsSources, storyDetail, storyRows} from '../queries/news.ts';
 import type {Store} from '../store.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
@@ -41,6 +41,7 @@ export function newsApi(store: Store, {imagesDir = null}: NewsApiOptions = {}) {
   api.get('/news/articles/:id', c => c.json(articleDetail(store, id(c.req.param('id')))));
   api.get('/news/missed', c => c.json(missed(store)));
   api.get('/news/sources', c => c.json(newsSources(store)));
+  api.get('/news/day', c => c.json(newsDay(store)));
   api.get('/news/status', c => c.json(newsStatus(store)));
   api.get('/news/unsorted', c => c.json(unsortedArticles(store)));
   api.get('/news/search', c => c.json(newsSearch(store, parse(newsSearchInput, c.req.query()))));

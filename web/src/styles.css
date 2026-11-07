@@ -485,35 +485,45 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .pane { position: relative; max-width: calc(100% - 420px); }
 /* With nothing open: the page's content, and its keys pinned to the bottom (SV-217, SV-218). */
 .pane-empty { flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; padding: 24px 28px 20px; color: var(--ink3); min-height: 0; }
-/* News's and Jobs's placeholder: the page's glyph and one line, centred (until SV-219, SV-220). */
+/* Jobs's placeholder: the page's glyph and one line, centred (until SV-220). */
 .pane-placeholder { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
 .pane-placeholder > p { margin: 0; color: var(--ink2); font-size: 13px; }
 .pane-foot { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.pane-foot > p { margin: 0; }
+.pane-foot p { margin: 0; }
+/* The foot's facts line, led by the pane's trouble when there is some (#335): one `warning` chip in
+   `alert` with how many, and over it, under the pointer or focus, a card of each in `alert` with its
+   fix. The card's foot reaches down to the chip, so the pointer crosses into it without it closing. */
+.pane-facts { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 24px; }
+.pane-trouble { position: relative; display: inline-flex; }
+.pt-chip { height: 24px; display: inline-flex; align-items: center; gap: 4px; padding: 0 8px 0 6px; border-radius: 999px; color: var(--alert); font-size: 12px; font-weight: 500;
+  background: color-mix(in srgb, var(--alert) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--alert) 24%, transparent); }
+.pt-chip[aria-expanded="true"] { background: color-mix(in srgb, var(--alert) 16%, transparent); }
+.pt-card { position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; z-index: 6; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; white-space: nowrap; transform-origin: bottom center; animation-name: pop-in-up; }
+.pt-card::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
+.pt-line { display: flex; align-items: center; gap: 8px; min-height: 28px; color: var(--alert); font-size: 13px; }
+.pt-line > .sep { color: var(--ink3); }
+.pt-line > .act { color: var(--ink); height: 26px; padding: 0 10px; margin-left: -10px; border-radius: 999px; }
+.pt-line > .act:hover { background: var(--sub); }
 .pane-keys { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; font-size: 12px; }
 .pane-keys > li { display: inline-flex; align-items: center; gap: 4px; }
 .pane-keys > li > span:last-child { margin-left: 2px; }
+/* Behind every empty pane, a faint glow of the mark's three colours, gone well before the pane's
+   edges (SV-218's, shared from SV-219). */
+.pane-empty { background:
+  radial-gradient(38% 30% at 42% 30%, color-mix(in srgb, var(--cool) var(--paneGlow), transparent), transparent 70%),
+  radial-gradient(34% 28% at 60% 36%, color-mix(in srgb, var(--caution) calc(var(--paneGlow) * .85), transparent), transparent 70%),
+  radial-gradient(36% 30% at 48% 46%, color-mix(in srgb, var(--violet) var(--paneGlow), transparent), transparent 70%); }
 /* The Inbox's: how the mail day is going, one block centred across the pane and a third of the way down it (SV-218, #331). Trouble
    first, in `caution` with its fix; the mark; what needs the user as a `caution` band like
    Attention's (`flag`, its overdue at full strength), or All caught up as a `good` one (`task_alt`);
    today's strip, three cells on `panel` in a `hair` box, each number over its glyph and label at 12
    `ink3`, a zero in `ink3`; Done above 0 tinted `good` with its number in `good`, FYI above 0 a
    faint `cool` wash. The quiet facts sit in the foot over the keys, at 12 `ink3`. */
-/* Behind it, a faint glow of the mark's three colours, gone well before the pane's edges. */
-.pane-empty:has(> .mail-day) { background:
-  radial-gradient(38% 30% at 42% 30%, color-mix(in srgb, var(--cool) var(--paneGlow), transparent), transparent 70%),
-  radial-gradient(34% 28% at 60% 36%, color-mix(in srgb, var(--caution) calc(var(--paneGlow) * .85), transparent), transparent 70%),
-  radial-gradient(36% 30% at 48% 46%, color-mix(in srgb, var(--violet) var(--paneGlow), transparent), transparent 70%); }
 .mail-day { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
 /* Its middle a third of the way down, not halfway: the room above it is half the room below. */
 .mail-day::before { content: ""; flex: 1 1 0; }
 .mail-day::after { content: ""; flex: 2 1 0; }
 .mail-day p { margin: 0; }
-.md-trouble { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
-.md-fix { display: flex; align-items: center; gap: 8px; color: var(--caution); font-size: 13px; }
-.md-fix > .sep { color: var(--ink3); }
-.md-fix > .act { color: var(--ink); height: 26px; padding: 0 10px; margin-left: -10px; border-radius: 999px; }
-.md-fix > .act:hover { background: var(--sub); }
 .md-need { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 999px; font-size: 15px; font-weight: 500;
   color: var(--caution); background: color-mix(in srgb, var(--caution) var(--attTint), var(--page)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--caution) 24%, transparent); }
 .md-need .md-overdue { font-weight: 600; }
