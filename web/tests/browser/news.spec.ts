@@ -127,7 +127,7 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     await page.locator('.today-row').first().waitFor();
     assert.equal(await page.title(), 'News');
     // The shell: News under Calendar, current, with no count (Jobs under it).
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     assert.equal(await page.locator('aside.sb .nav.on').textContent(), 'News');
     assert.deepEqual(await page.locator('.hd .seg button').allTextContents(), ['All', 'Local', 'Tech', 'AI', 'General']);
     assert.equal(await page.locator('.hd .search input').getAttribute('placeholder'), 'Search news');

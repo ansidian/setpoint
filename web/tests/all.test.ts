@@ -1,12 +1,13 @@
 // The one list's rules (DESIGN.md › All, Copy) as tables: days at midnight Pacific, their headings,
 // clock times, each day's lanes with the kind where an FYI run starts and its Noise folded (#48),
 // pinned email on the shelf rather than its day (D105), Attention above the days and unread mail in
-// its day (SV-199, D449), and each row's text (codes, security facts, protected mail).
+// its day (SV-199, D449), each row's text (codes, security facts, protected mail), and the views'
+// parts with Unread's hold (SV-221).
 import type {MessageRowOut} from '@setpoint/shared';
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import type {InboxGroupOut} from '@setpoint/shared';
-import {allRowLine, attentionRows, dayHeading, dayStops, dayView, groupByDay, kindGroup, kindLabel, nextUnread} from '../src/logic/all.ts';
+import {allRowLine, attentionRows, dayHeading, dayStops, dayView, groupByDay, heldUnread, kindGroup, kindLabel, nextUnread, sameHold, viewList} from '../src/logic/all.ts';
 import type {Stop} from '../src/logic/inbox.ts';
 
 let nextId = 100;
@@ -109,7 +110,7 @@ describe('dayView', () => {
   });
 
   test('a day without Noise or a lane leaves them out', () => {
-    expect(dayView({date: '2026-10-07', rows: [hub]}, false)).toEqual({date: '2026-10-07', lanes: [{lane: 'fyi', label: 'FYI', rows: [{row: hub, kind: 'deliveries'}]}], noise: null, unread: 1});
+    expect(dayView({date: '2026-10-07', rows: [hub]}, false)).toEqual({date: '2026-10-07', lanes: [{lane: 'fyi', label: 'FYI', rows: [{row: hub, kind: 'deliveries'}]}], noise: null});
   });
 
   test('J and K stop on each row as shown, and on a folded Noise line instead of its rows', () => {
@@ -189,11 +190,6 @@ describe('SV-199: Attention, the shelf, then the days, unread mail in its day', 
     expect(attentionRows([group('attention', [interview, {...recovery, done: true}]), group('other', [handled])]).map(one => one.organisation)).toEqual(['Northwind']);
   });
 
-  test('a day counts its unread mail, Noise\'s included, but not Done mail unread (#241)', () => {
-    const doneUnread = {...interview, done: true};
-    expect(dayView({date: '2026-10-07', rows: [code, coffee, doneUnread, statement]}, false).unread).toBe(2);
-  });
-
   test('reading an Attention email keeps it there', () => {
     expect(attentionRows([group('attention', [{...interview, unread: false}])]).map(one => [one.organisation, one.unread])).toEqual([['Northwind', false]]);
   });
@@ -203,7 +199,6 @@ describe('SV-199: Attention, the shelf, then the days, unread mail in its day', 
     const days = groupByDay([interview, recovery, code, parcel, coffee, statement, lease], zone, new Set(attention.map(one => one.id)));
     expect(days.map(day => [day.date, day.rows.map(one => one.organisation)])).toEqual([['2026-10-07', ['Contoso', 'Consolidated', 'Contoso Coffee']], ['2026-10-06', ['Proseware']]]);
     const views = days.map(day => dayView(day, false));
-    expect(views.map(view => view.unread)).toEqual([3, 0]);
     expect(dayStops(views, [lease], attention).map(stop => stop.key)).toEqual([
       `attention:${interview.id}`, `attention:${recovery.id}`, `pinned:${lease.id}`, `all:${code.id}`, `all:${parcel.id}`, 'noise:2026-10-07', `all:${statement.id}`,
     ]);
@@ -225,3 +220,78 @@ describe('U: the next unread email', () => {
     expect(nextUnread(stops, cursor, new Set(unread))).toBe(key);
   });
 });
+
+describe('SV-221: the views', () => {
+  const interview = row({organisation: 'Northwind', lane: 'attention', kind: null, received_at: '2026-10-07T16:00:00.000Z'});
+  const recovery = row({organisation: 'Google', lane: 'attention', kind: null, unread: false, received_at: '2026-10-06T16:00:00.000Z'});
+  const parcel = row({organisation: 'Consolidated', kind: 'deliveries', received_at: '2026-10-07T15:00:00.000Z'});
+  const statement = row({organisation: 'Proseware', kind: 'money', unread: false, received_at: '2026-10-06T15:00:00.000Z'});
+  const coffee = row({organisation: 'Contoso Coffee', lane: 'noise', kind: null, received_at: '2026-10-07T14:00:00.000Z'});
+  const toys = row({organisation: 'Tailspin Toys', lane: 'noise', kind: null, unread: false, received_at: '2026-10-06T14:00:00.000Z'});
+  const lease = row({organisation: 'Parkside', kind: 'other', pinned: true, unread: false, received_at: '2026-10-07T12:00:00.000Z'});
+  const pinnedAttention = row({organisation: 'Woodgrove', lane: 'attention', kind: null, pinned: true, received_at: '2026-10-07T13:00:00.000Z'});
+  // An unread FYI email from weeks back that All's pages haven't reached.
+  const old = row({organisation: 'Litware', kind: 'updates', received_at: '2026-09-01T15:00:00.000Z'});
+  const group = (name: InboxGroupOut['group'], rows: MessageRowOut[]): InboxGroupOut => ({group: name, count: rows.length, unread: rows.filter(one => one.unread).length, rows});
+  const groups = [group('pinned', [pinnedAttention, lease]), group('attention', [interview, pinnedAttention, recovery]), group('deliveries', [parcel]), group('updates', [old]), group('noise', [coffee])];
+  const rows = [interview, recovery, parcel, statement, coffee, toys, lease, pinnedAttention];
+  const unread = [interview, pinnedAttention, parcel, coffee, old];
+  const names = (list: MessageRowOut[]) => list.map(one => one.organisation);
+  const dayNames = (list: ReturnType<typeof viewList>) => list.days.map(day => [day.date, day.lanes.map(lane => [lane.label, names(lane.rows.map(({row: one}) => one))]), day.noise?.count ?? null]);
+
+  test.each([
+    ['All: Attention, the shelf, then the days with their Noise folded', 'all', ['Northwind', 'Google'], ['Woodgrove', 'Parkside'], [
+      ['2026-10-07', [['FYI', ['Consolidated']]], 1], ['2026-10-06', [['FYI', ['Proseware']]], 1]], true],
+    ['Unread: its Attention, then its days, a pinned one in its place and Noise in full (D472)', 'unread', ['Northwind', 'Woodgrove'], [], [
+      ['2026-10-07', [['FYI', ['Consolidated']], ['Noise', ['Contoso Coffee']]], null], ['2026-09-01', [['FYI', ['Litware']]], null]], true],
+    ['Attention: every Attention email not Done, a pinned one too, newest first', 'attention', ['Northwind', 'Woodgrove', 'Google'], [], [], false],
+    ['FYI: its mail by day, read or not, the Inbox\'s older unread included', 'fyi', [], [], [
+      ['2026-10-07', [['FYI', ['Consolidated', 'Parkside']]], null], ['2026-10-06', [['FYI', ['Proseware']]], null], ['2026-09-01', [['FYI', ['Litware']]], null]], false],
+    ['Noise: its mail by day, in full', 'noise', [], [], [
+      ['2026-10-07', [['Noise', ['Contoso Coffee']]], null], ['2026-10-06', [['Noise', ['Tailspin Toys']]], null]], false],
+  ] as const)('%s', (_name, view, attention, shelf, days, lanes) => {
+    const list = viewList(view, {groups, rows, unread}, zone, new Set());
+    expect([names(list.attention), names(list.shelf), dayNames(list), list.lanes]).toEqual([attention, shelf, days, lanes]);
+  });
+
+  test('FYI\'s kinds show as subheadings where a run starts', () => {
+    const list = viewList('fyi', {groups, rows, unread}, zone, new Set());
+    expect(list.days[0]!.lanes[0]!.rows.map(({kind}) => kind)).toEqual(['deliveries', 'other']);
+  });
+
+  describe('Unread holds what it showed until the user leaves it', () => {
+    const latest = (...list: MessageRowOut[]) => new Map(list.map(one => [one.id, one]));
+    const none: ReadonlySet<number> = new Set();
+    const first = heldUnread(new Map(), [interview, recovery, parcel, coffee], latest(interview, recovery, parcel, coffee), none);
+
+    test('it takes every unread email not Done from the Inbox', () => {
+      expect(names([...first.values()])).toEqual(['Northwind', 'Consolidated', 'Contoso Coffee']);
+    });
+
+    test.each([
+      ['an email read here stays, read, as the lists now have it', [interview, recovery, coffee], [interview, recovery, {...parcel, unread: false}, coffee], none,
+        [['Northwind', true], ['Consolidated', false], ['Contoso Coffee', true]]],
+      ['one no list has any more stays, read', [interview, recovery, coffee], [interview, recovery, coffee], none,
+        [['Northwind', true], ['Consolidated', false], ['Contoso Coffee', true]]],
+      ['an Attention email no list has went Done, and leaves', [recovery, parcel, coffee], [recovery, parcel, coffee], none,
+        [['Consolidated', true], ['Contoso Coffee', true]]],
+      ['one Done leaves', [recovery, parcel, coffee], [{...interview, done: true}, recovery, parcel, coffee], none,
+        [['Consolidated', true], ['Contoso Coffee', true]]],
+      ['one in Trash leaves', [interview, recovery, parcel], [interview, recovery, parcel], new Set([coffee.id]),
+        [['Northwind', true], ['Consolidated', true]]],
+      ['new unread mail joins', [interview, recovery, parcel, coffee, old], [interview, recovery, parcel, coffee, old], none,
+        [['Northwind', true], ['Consolidated', true], ['Contoso Coffee', true], ['Litware', true]]],
+    ] as const)('%s', (_name, inbox, now, gone, expected) => {
+      const next = heldUnread(first, [...inbox], latest(...now), gone);
+      // The hold's order is no one's: the view sorts its rows.
+      expect([...next.values()].map(one => [one.organisation, one.unread]).sort()).toEqual([...expected].sort());
+    });
+
+    test('an answer that changes nothing gives back the same rows', () => {
+      const gone = heldUnread(first, [interview, recovery, coffee], latest(interview, recovery, coffee), none);
+      expect(sameHold(heldUnread(gone, [interview, recovery, coffee], latest(interview, recovery, coffee), none), gone)).toBe(true);
+      expect(sameHold(gone, first)).toBe(false);
+    });
+  });
+});
+

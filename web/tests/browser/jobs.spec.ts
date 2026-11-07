@@ -82,7 +82,7 @@ test('board 32: Jobs under News with its Needs you count, `4`, the two numbers, 
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     // The shell: Jobs under News, its count the Needs you count in ink2, never caution (D313).
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Jobs3', 'Settings⌘,']);
     const item = page.locator('aside.sb .nav.jobs');
     // The full sidebar names it in its own words, so it has no tip; the rail's has (SV-171).
     assert.equal(await item.getAttribute('data-tip'), null);
@@ -690,7 +690,7 @@ test('a narrow window, at 1024 (32b): Jobs in the rail with a neutral badge, the
     await page.goto(`${setpoint.base}/jobs`);
     // The rail's slot after News, its count a 16 px badge placed as the Inbox's, but neutral (D325).
     assert.deepEqual(await page.locator('.sb .nav').evaluateAll(links => links.map(link => link.getAttribute('data-tip'))), ['Inbox', 'Calendar', 'News', 'Jobs · 3 need you', 'Settings · ⌘,']);
-    const [slot, badge, attention] = await rested(() => Promise.all([page.locator('.sb .nav.jobs').boundingBox(), page.locator('.sb .nav.jobs .cnt').boundingBox(), page.locator('.sb .nav .apill').boundingBox()]));
+    const [slot, badge, attention] = await rested(() => Promise.all([page.locator('.sb .nav.jobs').boundingBox(), page.locator('.sb .nav.jobs .cnt').boundingBox(), page.locator('.sb .nav .ubadge').boundingBox()]));
     assert.deepEqual([badge!.height, badge!.y - slot!.y, badge!.x + badge!.width - (slot!.x + slot!.width)], [attention!.height, 2, 2]);
     assert.deepEqual(await rested(() => page.locator('.sb .nav.jobs .cnt').evaluate(count => [getComputedStyle(count).backgroundColor, getComputedStyle(count).color])),
       [await rested(() => fillOf(page, 'var(--sub4)')), await rested(() => colourOf(page, 'var(--ink)'))]);

@@ -64,14 +64,16 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The current page's icon is the accent, "you are here" (#163). */
 .nav.on > .icon { color: var(--accent); }
 .nav .cnt { color: var(--ink3); font-weight: 400; font-size: 12px; }
-.apill { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
-/* The attention pill registers a rise (shell-11): it swells to 1.22 at 40% over 260 ms (Sidebar.tsx
-   plays it; never on a fall, the first paint or a page switch); from none it scales in from .6 over
-   180 ms, and at none it scales out over 120 ms before it goes. */
-.apill.arriving { animation: apill-in var(--dur-medium) var(--ease); }
-.apill.going { animation: apill-out var(--dur-fast) var(--ease) forwards; }
-@keyframes apill-in { from { transform: scale(.6); opacity: 0; } }
-@keyframes apill-out { to { transform: scale(.6); opacity: 0; } }
+.apill, .ubadge { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--caution); color: var(--onInk); font-size: 11.5px; font-weight: 600; display: inline-grid; place-items: center; }
+/* The unread badge (SV-221, D471): `alert`, so unread mail can't be missed. It registers a rise
+   (shell-11): it swells to 1.22 at 40% over 260 ms (UnreadBadge.tsx plays it; never on a fall, the
+   first paint or a page switch); from none it scales in from .6 over 180 ms, and at none it scales out
+   over 120 ms before it goes. */
+.ubadge { background: var(--alert); }
+.ubadge.arriving { animation: badge-in var(--dur-medium) var(--ease); }
+.ubadge.going { animation: badge-out var(--dur-fast) var(--ease) forwards; }
+@keyframes badge-in { from { transform: scale(.6); opacity: 0; } }
+@keyframes badge-out { to { transform: scale(.6); opacity: 0; } }
 /* A count rolls when it changes (Count.tsx, motion-07): for 180 ms the old number (::after) leaves 6 px
    one way as the new comes in from 6 px the other, down for a fall and up for a rise, in one clipped
    cell. At rest it's the number alone. */
@@ -190,6 +192,10 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .seg:not([data-thumb])::before { visibility: hidden; }
 .seg[data-still]::before { transition: none; }
 @media (prefers-reduced-motion: reduce) { .seg::before { transition: none; } }
+/* The Inbox's views (SV-221, D471): Unread's red badge at 16 px, Attention's count in `caution`, leaning
+   toward ink in Light to read at 4.5:1 on the thumb (#337). */
+.ib-views .ubadge { min-width: 16px; height: 16px; padding: 0 5px; font-size: 10.5px; }
+.ib-views .n { color: color-mix(in oklch, var(--caution) var(--textTint), var(--ink)); font-size: 12px; font-weight: 500; }
 .search { width: var(--mailSearch); height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--chip); border: 1px solid var(--edge); color: var(--ink3); flex: none; }
 /* A focused field wakes: `edgeFocus`, stronger than hover's border, on `cardOn` (white in Light) (#172). */
 .search:focus-within { border-color: var(--edgeFocus); background: var(--cardOn); color: var(--ink); }
@@ -237,10 +243,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .gh.day .date { color: var(--ink3); }
 /* A day with unread mail says how many after its date (D449): "· 3 new" in the date's case and
    `ink3`, the count `ink2`, as a band's. */
-.gh.day .fresh { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink3); white-space: pre; }
 /* The Inbox's header (D449): its new count beside the title, quiet as the phone's, and Mark all as
    read before the search, its glyph as ⌘K's (#123). */
-.hd-count { color: var(--ink3); font-size: 12.5px; white-space: nowrap; }
 .hd .mark-all .kbd { margin-left: 4px; }
 /* Each group's glyph before its label (#119): shape alone, in the header's ink3; Attention's flag in caution, as its count. */
 .gh .gi { display: grid; color: var(--ink3); }
@@ -743,8 +747,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .sb-top { width: 40px; padding: 0; justify-content: center; }
   .sb .nav { position: relative; width: 40px; height: 40px; padding: 0; justify-content: center; flex: none; }
   .sb .nav > .grow, .sb .nav > .cnt, .sb .nav > .kbd { display: none; }
-  /* The attention pill, as a 16 px badge on Inbox's icon. */
-  .sb .nav > .apill { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
+  /* The unread badge, at 16 px on Inbox's icon. */
+  .sb .nav > .ubadge { position: absolute; top: 2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10.5px; box-shadow: 0 0 0 2px var(--panel); }
 
   /* The header keeps everything on screen down to 640: the search field narrows first, then a
      calendar title longer than its 128 px ("Sep 27 – Oct 3, 2026") ends in "…". */
@@ -752,6 +756,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   .hd > .search { width: auto; flex: 0 1 var(--mailSearch); min-width: 0; }
   .hd > .search.active { flex-basis: 520px; }
   .hd > .cal-title { flex-shrink: .01; overflow: hidden; text-overflow: ellipsis; }
+  /* Beside the Inbox's views, Mark all as read is its icon alone, named in its tooltip (#338). */
+  .hd > .mark-all > :is(.lbl, .kbd) { display: none; }
   .palette { max-width: calc(100% - 32px); }
 
   .content > .pane { position: absolute; inset: 0; width: auto; max-width: none; z-index: 4; background: var(--page); border-left: 0; }

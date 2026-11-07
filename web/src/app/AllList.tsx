@@ -1,6 +1,6 @@
 // The Inbox, days first (SV-199, D449; DESIGN.md › The list; board 05): Attention, the Pinned shelf,
 // then every email, Noise included, newest first, under day headings, Today first. Unread mail stays
-// in its day, drawn unread, and a heading with any says how many ("· 3 new"). Each day's rows go by
+// in its day, drawn unread. The Inbox's views draw their part of it here too (SV-221). Each day's rows go by
 // lane, the kind once as a subheading where an FYI run starts (#237), its Noise folded to one line
 // that opens in place (#48). Attention and the shelf are bands with ages, the pattern prompt under Attention, and Unpin under the pointer on the
 // shelf; an email in either leaves its day meanwhile (D105). Today's rows show ages, earlier days'
@@ -10,7 +10,7 @@
 // quiet with a Done tag (SV-69). Each row has mail's slot after its subject (slots.tsx), which another
 // module may fill.
 import type {AccountOut, InboxGroup, MessageRowOut} from '@setpoint/shared';
-import {useMemo, useState} from 'react';
+import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
@@ -36,9 +36,9 @@ const BANDS: Record<Band, {label: string; glyph: IconName}> = {
   attention: {label: 'Attention', glyph: GROUP_GLYPHS.attention}, pinned: {label: 'Pinned', glyph: GROUP_GLYPHS.pinned},
 };
 
-// A day's `unread` is its heading's "· 3 new". A row's `noise` is the day whose Noise it's under,
-// folded or not; an `aged` row shows its age rather than its clock time (Attention, the shelf, Today).
-type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: string; unread: number}
+// A row's `noise` is the day whose Noise it's under, folded or not; an `aged` row shows its age rather
+// than its clock time (Attention, the shelf, Today).
+type Part = {kind: 'band'; band: Band; count: number} | {kind: 'day'; date: string}
   | {kind: 'lane'; date: string; lane: AllLane; label: string; count: number; note: boolean}
   | {kind: 'kh'; group: InboxGroup} | {kind: 'noise'; date: string; count: number; preview: string; open: boolean}
   | {kind: 'row'; row: MessageRowOut; group: InboxGroup | null; shelf: boolean; aged: boolean; noise: string | null}
@@ -58,11 +58,17 @@ const NONE: ReadonlySet<number> = new Set();
 // A row's run, for staggering rows that fold together: its lane, its Noise, or its band.
 const runOf = (entry: Folded<Part>) => (entry.item.kind !== 'row' ? null : entry.item.shelf ? 'shelf' : entry.item.noise ? `noise:${entry.item.noise}` : `day:${entry.item.group ?? ''}`);
 
-export function AllList({attention, days, shelf, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
+export function AllList({attention, days, shelf, lanes = true, fill = false, empty = null, cursor, openId, selected = NONE, accounts, now, timeZone, loading, arrived, more, dimmed = false, prompt = null,
   onPoint, onOpen, onToggleNoise, onNearEnd, onUnpin, onAnswer, onCodeCopied}: {
   // Attention's rows, every Attention email not yet Done (D449).
   attention: MessageRowOut[];
   days: DayView[];
+  // Whether the days name their lanes: not in a view that is one lane (FYI, Noise, SV-221).
+  lanes?: boolean;
+  // Whether a list too short to scroll asks for the next page itself, as a filtered view can be.
+  fill?: boolean;
+  // A view with nothing in it says so (SV-221).
+  empty?: ReactNode;
   // The Pinned shelf's rows, newest pin first.
   shelf: MessageRowOut[];
   cursor: string | null;
@@ -92,23 +98,27 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
   onCodeCopied?: (id: number) => void;
 }) {
   const today = localDate(now, timeZone);
+  const nearEnd = (list: HTMLElement) => list.scrollHeight - list.scrollTop - list.clientHeight < 600;
   const onScroll = (event: UIEvent<HTMLElement>) => {
-    const list = event.currentTarget;
-    if (list.scrollHeight - list.scrollTop - list.clientHeight < 600) onNearEnd();
+    if (nearEnd(event.currentTarget)) onNearEnd();
   };
+  const section = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (fill && section.current && nearEnd(section.current)) onNearEnd();
+  });
   const entries = useMemo(() => {
     const rowEntry = (row: MessageRowOut, group: InboxGroup | null, part: 'attention' | 'all', aged: boolean, noise: string | null = null): Entry<Part> =>
       ({key: listKey(part, row.id), id: row.id, item: {kind: 'row', row, group, shelf: false, aged, noise}});
     // Triage's note while it's down sits on the newest Unsorted lane, where the mail it couldn't sort is.
     const noted = days.find(day => day.lanes.some(lane => lane.lane === 'unsorted'))?.date ?? null;
-    const lanes = (day: DayView): Entry<Part>[] => {
+    const dayParts = (day: DayView): Entry<Part>[] => {
       // Today's rows show ages, as Attention's and the shelf's do; an earlier day's, clock times (D449).
       const aged = day.date === today;
       return [
         ...day.lanes.flatMap(lane => [
-          // Attention counts what still needs the user, as the sidebar's pill does (SV-69).
-          {key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
-            count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length, note: lane.lane === 'unsorted' && day.date === noted}} satisfies Entry<Part>,
+          // Attention counts what still needs the user, as Attention's segment does (SV-69).
+          ...(lanes ? [{key: `lane:${day.date}:${lane.lane}`, id: null, item: {kind: 'lane', date: day.date, lane: lane.lane, label: lane.label,
+            count: lane.lane === 'attention' ? lane.rows.filter(({row}) => !row.done).length : lane.rows.length, note: lane.lane === 'unsorted' && day.date === noted}} satisfies Entry<Part>] : []),
           ...lane.rows.flatMap(({row, kind}) => [
             ...(kind ? [{key: `kind:${day.date}:${kind}`, id: null, item: {kind: 'kh', group: kind}} satisfies Entry<Part>] : []),
             rowEntry(row, kind, 'all', aged),
@@ -131,9 +141,9 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
         {...band('pinned', shelf.length), key: groupKey('pinned')},
         ...shelf.map((row): Entry<Part> => ({key: rowKey('pinned', row.id), id: row.id, item: {kind: 'row', row, group: null, shelf: true, aged: true, noise: null}})),
       ] : []),
-      ...days.flatMap((day): Entry<Part>[] => [{key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date, unread: day.unread}}, ...lanes(day)]),
+      ...days.flatMap((day): Entry<Part>[] => [{key: `day:${day.date}`, id: null, item: {kind: 'day', date: day.date}}, ...dayParts(day)]),
     ];
-  }, [attention, days, shelf, prompt, today]);
+  }, [attention, days, shelf, lanes, prompt, today]);
   const shown = useFold(entries, RULES, FOLD_HOLD_MS);
   // Every row the list holds, for the slot after the subject, asked about all at once.
   const slotRows = useMemo(() => entries.flatMap(entry => (entry.item.kind === 'row' ? [entry.item.row] : [])), [entries]);
@@ -144,7 +154,7 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
   // Under a health bar the first band keeps its top line (boards 17, 19a).
   const bars = useHealthBars();
   return (
-    <section className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox" onScroll={onScroll}>
+    <section ref={section} className={['list', 'all', arrived && 'sk-arrive', dimmed && 'search-wait'].filter(Boolean).join(' ')} aria-label="Inbox" onScroll={onScroll}>
       {bars}
       {shown.map(({key, id, item, fold}, index) => {
         const ref = foldRef(fold, delays.get(key), item.kind === 'row' && item.shelf);
@@ -161,11 +171,9 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
         }
         if (item.kind === 'day') {
           const heading = dayHeading(item.date, today);
-          // A day with unread mail says how many after its date (D449).
           return (
             <div key={key} ref={ref} className={['gh', 'day', first && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
               {heading.label} <span className="date">{heading.date}</span>
-              {item.unread > 0 && <>{' '}<span className="fresh">· <span className="n"><Count value={item.unread} /></span> new</span></>}
             </div>
           );
         }
@@ -233,7 +241,7 @@ export function AllList({attention, days, shelf, cursor, openId, selected = NONE
           </div>
         );
       })}
-      {loading}
+      {loading ?? (!shown.length && empty)}
       {more && <AllSkeleton more />}
     </section>
   );

@@ -82,7 +82,7 @@ test('an email\'s menu: Mark read in place with Undo, P by its key, Add as task 
     const id = Number(await row.getAttribute('data-id'));
     const before = await counts(setpoint);
 
-    // Mark read: read where it is, Attention keeping it, the attention pill as it was; Undo or ⌘Z takes it back.
+    // Mark read: read where it is, Attention keeping it, Attention's count as it was; Undo or ⌘Z takes it back.
     await rightClick(row);
     await item(page, 'Mark read').click();
     await page.locator('.toast', {hasText: 'Marked as read'}).waitFor();

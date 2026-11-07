@@ -18,6 +18,11 @@
 // logged with its position. ⌘Enter asks Alfred, whose Answer card sits above the results. Esc closes
 // the reader, then the card, then the search.
 //
+// Views (SV-221, D471): All | Unread | Attention | FYI | Noise in the header's segmented control, Tab
+// and Shift-Tab stepping them. Unread's segment has the red unread badge and Attention's its count;
+// an email read in Unread stays there, drawn read, until the user leaves the view. Mark all as read
+// follows the view, and Attention has none. An empty view says so, with Show All.
+//
 // On the phone (DESIGN.md › Phone; board 21) the header is the mark, Inbox and its counts, the
 // account filter and Mark all as read, with a plain search field under it (no chips, no Alfred).
 import type {AllOut, InboxGroupOut, InboxOut, ItemKind, MailCountsOut, MessageOut, MessageRowOut, RuleOut} from '@setpoint/shared';
@@ -30,23 +35,27 @@ import {
   allPath, answerPrompt, changeEach, COUNTS_PATH, inboxPath, markAllRead, markRead, markUnread, messagePath, openMessage, PROMPTS_PATH, setDone, setPinned, trashMessage, untrashMessage,
 } from '../api/mail.ts';
 import {RULES_PATH} from '../api/settings.ts';
-import {attentionRows, dayStops, dayView, groupByDay, nextUnread, unreadNotDone} from '../logic/all.ts';
+import {attentionRows, dayStops, heldUnread, nextUnread, sameHold, unreadNotDone, viewList} from '../logic/all.ts';
 import {leftOutSection, readerMarks, resultSections} from '../logic/search.ts';
 import {
-  codeExpired, inSight, keepCursor, letGo, markAllReadIds, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
+  codeExpired, inSight, keepCursor, letGo, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving, nextCodeChange, searchStops, stopOf, visiblePrompt, withHeld, withoutEmails, withoutExpiredCodes,
 } from '../logic/inbox.ts';
 import {phoneSlide} from '../logic/phone.ts';
 import {readerActions} from '../logic/reader.ts';
 import {counted, inListOrder, NO_SELECTION, ranged, toggled} from '../logic/selection.ts';
 import type {Selection} from '../logic/selection.ts';
 import type {HeldRow, PatternPrompt, Stop} from '../logic/inbox.ts';
-import type {Route} from '../logic/route.ts';
+import type {InboxView, Route} from '../logic/route.ts';
+import {INBOX_VIEWS} from '../logic/route.ts';
 import {tabTitle} from '../logic/title.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
+import type {IconName} from '../ui/glyphs.ts';
+import {Segmented} from '../ui/Segmented.tsx';
 import {echoKey, isTyping, plainKey} from '../ui/keys.ts';
 import {useAccountColumn, useAccounts} from './accounts.ts';
 import {AllList} from './AllList.tsx';
 import {Count} from './Count.tsx';
+import {UnreadBadge} from './UnreadBadge.tsx';
 import {useNow} from './clock.ts';
 import {beats, foldAway} from './fold.ts';
 import type {Beat} from './fold.ts';
@@ -73,6 +82,16 @@ import {toInbox} from './toInbox.ts';
 import {dismissToast, showToast, toastFailure} from './toast.ts';
 
 type InboxRoute = Extract<Route, {page: 'inbox'}>;
+
+const VIEW_LABELS: Record<InboxView, string> = {all: 'All', unread: 'Unread', attention: 'Attention', fyi: 'FYI', noise: 'Noise'};
+
+// An empty view's glyph and line, for now (SV-226 draws each its illustration).
+const EMPTY_VIEWS: Record<Exclude<InboxView, 'all'>, {glyph: IconName; line: string}> = {
+  unread: {glyph: 'mark_email_read', line: 'All read'},
+  attention: {glyph: 'flag', line: 'Nothing needs you'},
+  fyi: {glyph: 'notifications', line: 'No FYI mail'},
+  noise: {glyph: 'campaign', line: 'No Noise today'},
+};
 
 /**
  * Whether any of the Pinned shelf shows in the list, where a pin lands; with no shelf yet, whether
@@ -138,6 +157,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const accountWidth = useAccountColumn(accountList);
   const phone = usePhone();
   const compact = useCompact();
+  // The phone has the one list (D275).
+  const view: InboxView = phone ? 'all' : route.view ?? 'all';
   const inboxLoad = {path: inboxPath(route.account), ...useResource<InboxOut>(inboxPath(route.account))};
   const inbox = inboxLoad.data;
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
@@ -193,16 +214,36 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const nextCode = nextCodeChange([...withHeld(groups ?? [], held).flatMap(group => group.rows), ...allRows], now);
   if (nextCode !== codeMoment) setCodeMoment(nextCode);
   const takeOut = (ids: number[]) => setKept(state => ({...state, held: state.held.filter(one => !ids.includes(one.row.id))}));
-  // The list: Attention from the Inbox's groups, the Pinned shelf, then the days without anything
-  // above them (D449, D105).
-  const attention = useMemo(() => (ready ? attentionRows(withHeld(groups, held)) : []), [ready, groups, held]);
-  const shelf = useMemo(() => (ready ? groups.find(group => group.group === 'pinned')?.rows ?? [] : []), [ready, groups]);
-  const days = useMemo(() => (ready ? groupByDay(allRows, zone, new Set(attention.map(row => row.id))) : []), [ready, allRows, zone, attention]);
-  const dayViews = useMemo(() => days.map(day => dayView(day, noiseOpen.has(day.date))), [days, noiseOpen]);
+  const inboxGroups = useMemo(() => withHeld(groups ?? [], held), [groups, held]);
+  // Unread's rows for this visit to it (SV-221): one read here stays, drawn read, until the view changes.
+  const holding = view === 'unread' && ready ? `${visit}` : null;
+  const [unreadHold, setUnreadHold] = useState<{holding: string | null; rows: ReadonlyMap<number, MessageRowOut>}>({holding: null, rows: new Map()});
+  const latestRows = useMemo(() => new Map([...allRows, ...inboxGroups.flatMap(group => group.rows)].map(row => [row.id, row])), [allRows, inboxGroups]);
+  const was = unreadHold.holding === holding ? unreadHold.rows : new Map<number, MessageRowOut>();
+  const next = holding === null ? was : heldUnread(was, inboxGroups.flatMap(group => group.rows), latestRows, trashing);
+  // The same map while its rows stay the same, so the list isn't worked out again for nothing.
+  const unreadRows = unreadHold.holding === holding && sameHold(next, unreadHold.rows) ? unreadHold.rows : next;
+  if (unreadRows !== unreadHold.rows || unreadHold.holding !== holding) setUnreadHold({holding, rows: unreadRows});
+  // The list: what the view shows (D449, D105, SV-221).
+  const shown = useMemo(() => (ready ? viewList(view, {groups: inboxGroups, rows: allRows, unread: [...unreadRows.values()]}, zone, noiseOpen) : null),
+    [ready, view, inboxGroups, allRows, unreadRows, zone, noiseOpen]);
+  const attention = useMemo(() => shown?.attention ?? [], [shown]);
+  const shelf = useMemo(() => shown?.shelf ?? [], [shown]);
+  const dayViews = useMemo(() => shown?.days ?? [], [shown]);
   // The emails U can go to: the unread ones the list shows, not Done.
-  const unreadShown = useMemo(() => new Set([...attention, ...days.flatMap(day => day.rows)].filter(unreadNotDone).map(row => row.id)), [attention, days]);
-  // The header's count: this Inbox's unread mail, every account's or the one it's filtered to.
+  const unreadShown = useMemo(() => new Set([...attention, ...shelf, ...dayViews.flatMap(day => day.lanes.flatMap(lane => lane.rows.map(({row}) => row)))].filter(unreadNotDone).map(row => row.id)),
+    [attention, shelf, dayViews]);
+  // Unread's badge: this Inbox's unread mail, every account's or the one it's filtered to; Attention's
+  // count, what's in it not Done.
   const unreadHere = route.account ? counts?.accounts.find(one => one.account_id === route.account)?.unread ?? 0 : counts?.unread ?? 0;
+  const attentionHere = useMemo(() => attentionRows(inboxGroups, false).length, [inboxGroups]);
+  // FYI's or Noise's Mark all as read: that view's unread mail, as Mark all as read reads it (SV-221).
+  const viewReadIds = useMemo(() => (view === 'fyi' || view === 'noise'
+    ? [...new Set([...inboxGroups.flatMap(group => group.rows), ...allRows].filter(row => row.lane === view && markAllReads(row)).map(row => row.id))]
+    : []), [view, inboxGroups, allRows]);
+  // Whether Mark all as read has anything to read (UX #16), in this view.
+  const markable = view === 'attention' ? false : view === 'fyi' || view === 'noise' ? viewReadIds.length > 0 : markAllReadIds(inboxGroups, allRows).length > 0;
+  const markScope = view === 'fyi' || view === 'noise' ? `Mark ${VIEW_LABELS[view]} as read` : 'Mark all as read';
   // Results in Trash leave the search's list until Undo (UX #9).
   const sections = useMemo(() => ({...resultSections(search.results, search.out, search.mentions, trashing), leftOut: leftOutSection(search.results, search.out, search.leftOut, trashing)}),
     [search.results, search.out, search.mentions, search.leftOut, trashing]);
@@ -245,6 +286,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   }, [nextChange, route.account]);
 
   const go = (changes: Partial<InboxRoute>) => navigate({...route, ...changes});
+
+  /** Another view, from its segment or Tab: the open email and the selection give way, and the list starts at its top. */
+  function switchView(next: InboxView) {
+    if (next === view) return;
+    const {view: _was, ...rest} = route;
+    clearSelection();
+    navigate(next === 'all' ? {...rest, open: null} : {...rest, open: null, view: next});
+  }
 
   /**
    * Opens an email. `travel` is the way the user stepped to it (J, K, the arrows, Done or Trash moving
@@ -302,14 +351,14 @@ export function InboxPage({route}: {route: InboxRoute}) {
   const cursorStop = stops.find(stop => stop.key === cursor) ?? null;
   // What H, E and P act on: the open email, else the row under the cursor.
   const target = open ?? (cursorStop?.kind === 'row' ? cursorStop.id : null);
-  // An email's row, from the open email or the list it's in (the Inbox's, a day's or search's).
+  // An email's row, from the open email or the list it's in (the Inbox's, a day's, Unread's or search's).
   const rowOf = (id: number): MessageRowOut | undefined => (openMessageData?.id === id ? openMessageData : undefined)
-    ?? [...withHeld(groups ?? [], held).flatMap(group => group.rows), ...days.flatMap(day => day.rows), ...search.listed.filter(result => !trashing.has(result.id))].find(row => row.id === id);
+    ?? latestRows.get(id) ?? unreadRows.get(id) ?? search.listed.filter(result => !trashing.has(result.id)).find(row => row.id === id);
   // The open email's subject, from its row until the email itself is in (#229).
   const subject = open !== null ? rowOf(open)?.subject ?? null : null;
   useEffect(() => {
-    document.title = tabTitle({page: 'inbox', attention: counts?.attention ?? 0, subject});
-  }, [counts?.attention, subject]);
+    document.title = tabTitle({page: 'inbox', unread: counts?.unread ?? 0, subject});
+  }, [counts?.unread, subject]);
   // Done (H) only on Attention mail not yet Done (#93).
   const doneable = (id: number) => {
     const row = rowOf(id);
@@ -432,7 +481,7 @@ export function InboxPage({route}: {route: InboxRoute}) {
         if (refused.length) toastFailure(counted(refused.length, 'Couldn\'t mark it unread', n => `Couldn't mark ${n} unread`))(refused[0]!.error);
       });
     },
-    // The unread ones of `ids` read, in place: they stay where they are and the attention pill doesn't
+    // The unread ones of `ids` read, in place: they stay where they are and Attention's count doesn't
     // move. A copied code's email reads so, with nothing to say (#295). The ids read.
     read: (ids: number[]) => {
       const unread = ids.filter(id => rowOf(id)?.unread ?? true);
@@ -506,7 +555,13 @@ export function InboxPage({route}: {route: InboxRoute}) {
       requestAnimationFrame(() => document.querySelector(`[data-key="${key}"]`)?.scrollIntoView({block: 'nearest'}));
     },
     // "Marked 12 as read · Undo": Undo marks those same emails unread. Every row stays where it is (D449).
+    // In FYI or Noise only that view's mail (SV-221); Attention has none.
     markAllRead: () => {
+      if (view === 'attention') return;
+      if (view === 'fyi' || view === 'noise') {
+        on.markRead(viewReadIds);
+        return;
+      }
       const ids = markAllReadIds(withHeld(groups ?? [], held), allRows);
       void markAllRead(route.account).catch(toastFailure('Couldn\'t mark all as read'));
       if (!ids.length) return;
@@ -567,12 +622,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
       else if (plainKey(event, 'e')) run(actions.trash, 'e');
       else if (plainKey(event, 'p')) run(actions.pin, 'p');
       else if (plainKey(event, 'o')) run(actions.openInGmail, 'o');
-      else if (plainKey(event, 'i', {shift: true})) run(actions.markAllRead, 'shift+i');
+      else if (plainKey(event, 'i', {shift: true}) && view !== 'attention') run(actions.markAllRead, 'shift+i');
       else if (plainKey(event, 'u', {shift: true})) run(actions.markUnread);
-      // U goes to the next unread email (D449); 1, the Inbox's key elsewhere, only goes back to it from
-      // a search or on the phone.
+      // U goes to the next unread email (D449); 1, the Inbox's key elsewhere, goes back to All from a
+      // search, another view or on the phone.
       else if (plainKey(event, 'u') && !searching) run(actions.toUnread);
-      else if (plainKey(event, '1') && (searching || phone)) run(() => navigate(toInbox()));
+      else if (plainKey(event, '1') && (searching || phone || view !== 'all')) run(() => navigate(toInbox()));
       else if (plainKey(event, 'Escape')) {
         if (selected.length) run(clearSelection, 'escape');
         else if (open !== null) run(close);
@@ -595,7 +650,8 @@ export function InboxPage({route}: {route: InboxRoute}) {
   useCommands(() => ({...(onSelection ? {context: {label: counted(selected.length, '1 email selected', n => `${n} emails selected`), colour: 'ink3' as const}} : {}), commands: [
     ...(onSelection ? selectionActions(selectedRows, forSelection, 'palette').map(action => ({...action, section: 'selection' as const})) : []),
     ...(searching || !unreadShown.size ? [] : [{id: 'to-unread', section: 'more', label: 'Go to next unread', icon: 'mark_email_unread', hint: 'U', keywords: 'unread new', run: actions.toUnread} satisfies Command]),
-    {id: 'mark-all-read', section: 'more', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: actions.markAllRead},
+    // In FYI or Noise it reads that view's mail only, so the sidebar's Mark all as read isn't this one (SV-221).
+    ...(view === 'attention' ? [] : [{id: view === 'fyi' || view === 'noise' ? 'mark-view-read' : 'mark-all-read', section: 'more', label: markScope, icon: 'mark_email_read', hint: '⇧I', run: actions.markAllRead} satisfies Command]),
   ]}));
 
   // Until the list's first answers: its skeleton, or why they didn't come (DESIGN.md #225, #228).
@@ -605,8 +661,6 @@ export function InboxPage({route}: {route: InboxRoute}) {
   // The days' next page on its way, as the list nears its end.
   const allMore = allPages.length > 1 && allPages.at(-1) === undefined;
   const selectedSet = useMemo(() => new Set(selected), [selected]);
-  // Whether Mark all as read has anything to read (UX #16).
-  const markable = markAllReadIds(withHeld(groups ?? [], held), allRows).length > 0;
   const unpin = (id: number) => void setPinned(id, false).catch(toastFailure('Couldn\'t unpin it'));
 
   /**
@@ -657,11 +711,20 @@ export function InboxPage({route}: {route: InboxRoute}) {
         <h1 className="hd-title">{searching ? 'Search' : filteredTo && !phone ? `Inbox · ${filteredTo}` : 'Inbox'}</h1>
         {phone && !searching && counts && counts.attention > 0 && <span className="apill num" data-tip="Attention, not Done">{counts.attention}</span>}
         {phone && !searching && counts && counts.unread > 0 && <span className="ph-count num">{counts.unread}</span>}
-        {/* The Inbox's new count, now that unread mail sits in its day (D449). */}
-        {!phone && !searching && unreadHere > 0 && <span className="hd-count num"><Count value={unreadHere} /> new</span>}
+        {/* The views, Unread's with the red unread badge and Attention's with its count (SV-221, D471). */}
+        {!phone && !searching && (
+          <Segmented className="ib-views" label="Views" value={view} onChange={switchView} onTab={switchView} segments={INBOX_VIEWS.map(one => ({value: one, label: <>
+            {VIEW_LABELS[one]}
+            {one === 'unread' && <UnreadBadge value={unreadHere} />}
+            {one === 'attention' && attentionHere > 0 && <span className="n num"><Count value={attentionHere} /></span>}
+          </>}))} />
+        )}
         <span className="grow" />
         {!phone && !searching && markable && (
-          <button className="btn quiet sm mark-all" type="button" data-hint="shift+i" onClick={actions.markAllRead}><Icon name="mark_email_read" size={16} />Mark all as read<span className="kbd">⇧I</span></button>
+          // Its tooltip names what it reads; below 1100 px it's the icon alone, beside the views.
+          <button className="btn quiet sm mark-all" type="button" data-hint="shift+i" aria-label={markScope} data-tip={`${markScope} · ⇧I`} onClick={actions.markAllRead}>
+            <Icon name="mark_email_read" size={16} /><span className="lbl">Mark all as read</span><span className="kbd">⇧I</span>
+          </button>
         )}
         {phone && (
           <>
@@ -690,9 +753,12 @@ export function InboxPage({route}: {route: InboxRoute}) {
         ) : (
           // Another account's list starts afresh: its rows don't fold. Until both answers are in, its
           // skeleton, or why they didn't come (#225, #228); rows not shown before don't fold in then.
-          <AllList key={visit} attention={attention} days={dayViews} shelf={shelf}
+          // A view starts afresh too, at its top (SV-221).
+          <AllList key={`${visit}:${view}`} attention={attention} days={dayViews} shelf={shelf} lanes={shown?.lanes ?? true} fill={view === 'fyi' || view === 'noise'}
+            empty={view !== 'all' && shown && !attention.length && !dayViews.length && !allMore && (view === 'unread' || view === 'attention' || !allPages.at(-1)?.next_before)
+              ? <EmptyView view={view} onAll={() => switchView('all')} /> : null}
             cursor={cursor} openId={open} selected={selectedSet} accounts={accounts} now={now} timeZone={zone} arrived={listArrived} more={allMore} dimmed={firstWait}
-            loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={prompt}
+            loading={!ready ? (listFailed ? <LoadFailed what="the Inbox" loads={[inboxLoad, allLoad]} /> : <AllSkeleton />) : null} prompt={view === 'all' || view === 'attention' ? prompt : null}
             onPoint={key => key !== cursor && setCursor(key)} onOpen={clickRow} onToggleNoise={toggleNoise} onNearEnd={loadMore} onUnpin={unpin}
             onCodeCopied={id => on.read([id])} onAnswer={(answer, yes) => {
               setAnswered(new Set([...answered, answer.id]));
@@ -711,5 +777,19 @@ export function InboxPage({route}: {route: InboxRoute}) {
         {pane.drawn && <InboxDay settle={pane.settle} />}
       </div>
     </>
+  );
+}
+
+/** An empty view, for now a glyph, a line and Show All (SV-226 draws each its illustration). */
+function EmptyView({view, onAll}: {view: Exclude<InboxView, 'all'>; onAll: () => void}) {
+  const {glyph, line} = EMPTY_VIEWS[view];
+  return (
+    <div className="empty">
+      <div className="empty-line">
+        <Icon name={glyph} size={32} />
+        <span className="t">{line}</span>
+        <button className="btn ghost sm" type="button" onClick={onAll}>Show All</button>
+      </div>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-// A count that rolls when it changes (polish audit motion-07): the attention pill, the sidebar's
+// A count that rolls when it changes (polish audit motion-07): the unread badge, the sidebar's
 // unread counts, a group header's and All's lane counts. For 180 ms it shows both numbers in one
 // cell: going down (a Done, a read), the old one leaves downward and the new one comes in from above,
 // as an odometer rolls; going up, the other way. The old number is drawn by the cell's ::after from

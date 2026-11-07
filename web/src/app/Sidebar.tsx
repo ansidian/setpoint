@@ -1,22 +1,21 @@
-// The sidebar (DESIGN.md › Layout › Shell): the mark and Setpoint; Inbox with the attention pill
-// (not-Done attention, read or not) and the unread count; each account with its dot, label and
+// The sidebar (DESIGN.md › Layout › Shell): the mark and Setpoint; Inbox with the red unread badge
+// (SV-221, D471), its only count; each account with its dot, label and
 // unread count, filtering the Inbox (not on Calendar, board 11); Calendar; News, with no count ever
 // (D87); Jobs while it's on (jobs/, a wiring point); the page's section (Today on mail pages and News, the mini-month and Calendars on Calendar);
 // Settings pinned to the bottom.
 // Counts left out at 0, as board 04 draws them.
 //
 // From 640 to 1099 px (the compact tier, #140) it's a 56 px rail: the mark, then Inbox, Calendar, News
-// and Settings as icons, each named in its tooltip, with the attention pill as a badge on Inbox. The
+// and Settings as icons, each named in its tooltip, with the unread badge on Inbox. The
 // accounts and the page's section give way; ⌘K still filters by account and toggles calendars.
 import type {AccountOut, MailCountsOut} from '@setpoint/shared';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo} from 'react';
 import type {CSSProperties, MouseEvent, ReactNode} from 'react';
 import {useResource} from '../api/client.ts';
 import {ACCOUNTS_PATH, COUNTS_PATH, markAllRead} from '../api/mail.ts';
 import type {Route} from '../logic/route.ts';
 import {routePath} from '../logic/route.ts';
 import {Icon, Mark} from '../ui/Icon.tsx';
-import {motion} from '../tokens.ts';
 import {CalendarSidebar} from './calendar/CalendarSidebar.tsx';
 import {openContextMenu} from './ContextMenu.tsx';
 import type {MenuAction} from './ContextMenu.tsx';
@@ -25,6 +24,7 @@ import {useCompact} from './Phone.tsx';
 import {AccountsSkeleton} from './states/Skeletons.tsx';
 import {reconnectFrom} from './states/States.tsx';
 import {TodayBlock} from './TodayBlock.tsx';
+import {UnreadBadge} from './UnreadBadge.tsx';
 import {dotStyle} from './accounts.ts';
 import {JobsNavItem} from './jobs/index.ts';
 import {offered} from './palette/commands.ts';
@@ -61,34 +61,6 @@ function markAllReadOf(account: number | null): () => void {
   return () => void markAllRead(account).catch(toastFailure('Couldn\'t mark all as read'));
 }
 
-/**
- * The attention pill (DESIGN.md › Layout › Shell): its count rolls (Count), and a rise registers from
- * the corner of the eye (shell-11): the pill swells to 1.22 and back over 260 ms. A fall, the user's
- * own Done, stays quiet. From none it scales in from .6; at none it scales out before it goes.
- */
-function AttentionPill({value}: {value: number}) {
-  // The value last seen, the number shown (the last one while it goes), whether it's arriving, and how many rises.
-  const [seen, setSeen] = useState({value, shown: value, arriving: false, rises: 0});
-  let current = seen;
-  if (value !== seen.value) {
-    current = {value, shown: value || seen.shown, arriving: seen.value === 0, rises: value > seen.value && seen.value > 0 ? seen.rises + 1 : seen.rises};
-    setSeen(current);
-  }
-  const pill = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (current.rises) pill.current?.animate([{transform: 'none'}, {transform: 'scale(1.22)', offset: 0.4}, {transform: 'none'}], {duration: motion.slow, easing: motion.ease});
-  }, [current.rises]);
-  const going = value === 0 && current.shown > 0;
-  useEffect(() => {
-    if (!going) return;
-    const timer = window.setTimeout(() => setSeen(last => (last.value === 0 ? {...last, shown: 0} : last)), motion.fast);
-    return () => window.clearTimeout(timer);
-  }, [going]);
-  if (current.shown === 0) return null;
-  const classes = ['apill num', current.arriving && !going && 'arriving', going && 'going'].filter(Boolean).join(' ');
-  return <span ref={pill} className={classes} data-tip="Attention, not Done"><Count value={current.shown} /></span>;
-}
-
 /** The sidebar. Its accounts are three skeleton rows until their answer comes. */
 export function Sidebar({route}: {route: Route}) {
   const {data: counts} = useResource<MailCountsOut>(COUNTS_PATH);
@@ -108,14 +80,13 @@ export function Sidebar({route}: {route: Route}) {
       </div>
       {/* Filtered by an account, Inbox reads as its parent beside the account's chip (#166); the rail has no
           accounts, so there Inbox stays the current page. */}
-      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} tip={named('Inbox')} to={route.page === 'inbox' ? {...route, account: null, open: null} : toInbox()}
+      <Link className={route.page === 'inbox' ? (filtered && !rail ? 'nav parent' : 'nav on') : 'nav'} tip={named('Inbox')} to={toInbox()}
         onContextMenu={event => counts && counts.unread > 0 && openContextMenu(event, event.currentTarget, [
           {id: 'mark-all-read', label: 'Mark all as read', icon: 'mark_email_read', hint: '⇧I', run: markAllReadOf(null)},
         ])}>
         <Icon name="inbox" />
         <span className="grow">Inbox</span>
-        {counts && <AttentionPill value={counts.attention} />}
-        {counts && counts.unread > 0 && <span className="cnt num"><Count value={counts.unread} /></span>}
+        {counts && <UnreadBadge value={counts.unread} tip="Unread" />}
       </Link>
       {/* On Calendar the accounts fold away to the page's section (board 11), over 180 ms rather than
           in one frame, so Calendar slides up under the pointer that clicked it (shell-08). Until they

@@ -1,6 +1,6 @@
 // The compact tier, 640 to 1099 px (DESIGN.md › Layout › Compact; Decided while building #140): an
 // iPad or a half-width window. At 640 and 1099: the sidebar a 56 px rail (icons named in their
-// tooltips, the attention pill a badge on Inbox), an email or a story covering the list with Back
+// tooltips, the red unread badge on Inbox), an email or a story covering the list with Back
 // (and Esc, J and K, at 640), the header whole, nothing scrolling sideways; Calendar's grid taking
 // the width with the editor and search over it and its sources' health atop it; ⌘K keeping the
 // rail's lost filters; the day's pane brought over the grid by its header button (D183), and the
@@ -8,7 +8,7 @@
 // beside return, the empty one with nothing open.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
-import type {AccountOut, CalendarOut} from '@setpoint/shared';
+import type {AccountOut, CalendarOut, MailCountsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {layout} from '../../src/tokens.ts';
 import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -42,8 +42,8 @@ test('the rail, and an email or a story over the list, at 640 and 1099 px; the f
       })));
       assert.deepEqual(items, [['Inbox', 40, 40, 0], ['Calendar', 40, 40, 0], ['News', 40, 40, 0], ['Jobs · 3 need you', 40, 40, 0], ['Settings · ⌘,', 40, 40, 0]], `${width}: the rail's items`);
       assert.equal(await page.locator('.sb .acct, .sb .today-row, .sb .sb-sec, .sb .sb-name').count(), 0);
-      // The attention pill as a badge on Inbox's icon.
-      assert.equal(await page.locator('.sb .nav .apill').textContent(), '3');
+      // The red unread badge on Inbox's icon (SV-221), the seed's 19 less what an earlier width opened.
+      assert.equal(await page.locator('.sb .nav .ubadge').textContent(), String((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread));
       assert.deepEqual(await rested(() => headerWhole(page)), [], `${width}: the Inbox's header`);
       assert.equal(await sideways(page), 0);
 

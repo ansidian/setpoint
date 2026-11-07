@@ -1,7 +1,8 @@
 // Setpoint's pages, kept in the address bar so a reload, a link or an ntfy notification lands in the
 // same place. The paths agree with `deepLinkPath` in @setpoint/shared (the server builds ntfy's
 // click links from it): /inbox/12 opens an email, /calendar/item/3 an item, /calendar/2026-10-07 a
-// day, /settings/accounts a Settings page. An account filter rides in the query (?account=2).
+// day, /settings/accounts a Settings page. An account filter rides in the query (?account=2), and so
+// does an Inbox view other than All (?view=unread, SV-221).
 // /calendar/new?kind=event opens the editor on a new item; &message=12 pre-fills it from that email's
 // proposal (the proposal card's More options). /calendar/item/3/edit opens the editor on item 3 (the
 // Today block's card's Edit, DESIGN.md › Decided while building #78). The week view rides in the
@@ -20,13 +21,17 @@ export const SETTINGS_PAGES = ['accounts', 'calendar', 'todoist', 'notifications
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 export type Compose = {kind: ItemKind; message: number | null; upcoming?: number};
+/** The Inbox's views (SV-221, D471): All, then Unread, Attention, FYI and Noise. */
+export const INBOX_VIEWS = ['all', 'unread', 'attention', 'fyi', 'noise'] as const;
+export type InboxView = (typeof INBOX_VIEWS)[number];
+
 /** News's list: All or a section. */
 export type NewsView = 'all' | NewsSection;
 /** Calendar's view. A route asking for none keeps the one showing (router.ts). */
 export type CalendarMode = 'month' | 'week';
 
 export type Route =
-  | {page: 'inbox'; account: number | null; open: number | null}
+  | {page: 'inbox'; account: number | null; open: number | null; view?: InboxView}
   | {page: 'calendar'; date: string | null; item: number | null; at: string | null; compose?: Compose; edit?: true; view?: CalendarMode}
   | {page: 'settings'; section: SettingsPage}
   | {page: 'news'; view: NewsView; story: number | null; article: number | null}
@@ -67,15 +72,19 @@ export function parseRoute(pathname: string, search = ''): Route {
     return {page: 'settings', section: (SETTINGS_PAGES as readonly string[]).includes(second ?? '') ? second as SettingsPage : 'accounts'};
   }
   const account = positive(query.get('account'));
+  const asked = query.get('view');
+  const view = asked !== 'all' && (INBOX_VIEWS as readonly string[]).includes(asked ?? '') ? {view: asked as InboxView} : {};
   // All's old address (/inbox/all/12) from before the Inbox was one list (SV-70) lands there too.
-  if (first === 'inbox' && second === 'all') return {page: 'inbox', account, open: positive(third)};
-  return {page: 'inbox', account, open: first === 'inbox' ? positive(second) : null};
+  if (first === 'inbox' && second === 'all') return {page: 'inbox', account, open: positive(third), ...view};
+  return {page: 'inbox', account, open: first === 'inbox' ? positive(second) : null, ...view};
 }
 
 export function routePath(route: Route): string {
   switch (route.page) {
-    case 'inbox':
-      return `/inbox${route.open ? `/${route.open}` : ''}${route.account ? `?account=${route.account}` : ''}`;
+    case 'inbox': {
+      const query = [route.account ? `account=${route.account}` : null, route.view && route.view !== 'all' ? `view=${route.view}` : null].filter(Boolean);
+      return `/inbox${route.open ? `/${route.open}` : ''}${query.length ? `?${query.join('&')}` : ''}`;
+    }
     case 'calendar': {
       const week = route.view === 'week' ? 'view=week' : null;
       const query = (...parts: (string | null)[]) => (parts.some(Boolean) ? `?${parts.filter(Boolean).join('&')}` : '');

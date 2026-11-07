@@ -111,9 +111,9 @@ describe('the Today block', () => {
 });
 
 test.each([
-  ['attention waiting', {page: 'inbox', attention: 3, subject: null}, '(3) Inbox'],
-  ['all caught up', {page: 'inbox', attention: 0, subject: null}, 'Inbox'],
-  ['an email open', {page: 'inbox', attention: 3, subject: 'Interview availability for Software Engineer I'}, 'Interview availability for Software Engineer I'],
+  ['mail unread (SV-221)', {page: 'inbox', unread: 13, subject: null}, '(13) Inbox'],
+  ['all read', {page: 'inbox', unread: 0, subject: null}, 'Inbox'],
+  ['an email open', {page: 'inbox', unread: 13, subject: 'Interview availability for Software Engineer I'}, 'Interview availability for Software Engineer I'],
   ['Calendar', {page: 'calendar', title: 'October 2026'}, 'October 2026 · Calendar'],
   ['Calendar\'s week', {page: 'calendar', title: 'Oct 4 – 10, 2026'}, 'Oct 4 – 10, 2026 · Calendar'],
   ['News', {page: 'news', headline: null}, 'News'],
@@ -129,6 +129,11 @@ describe('routes', () => {
     ['/inbox/12', '', {page: 'inbox', account: null, open: 12}],
     ['/inbox/12', '?account=4', {page: 'inbox', account: 4, open: 12}],
     ['/inbox/nope', '?account=x', {page: 'inbox', account: null, open: null}],
+    // The Inbox's views (SV-221): All is the address without one.
+    ['/inbox', '?view=unread', {page: 'inbox', account: null, open: null, view: 'unread'}],
+    ['/inbox/12', '?account=4&view=fyi', {page: 'inbox', account: 4, open: 12, view: 'fyi'}],
+    ['/inbox', '?view=all', {page: 'inbox', account: null, open: null}],
+    ['/inbox', '?view=nope', {page: 'inbox', account: null, open: null}],
     ['/calendar', '', {page: 'calendar', date: null, item: null, at: null}],
     ['/calendar/2026-10-07', '', {page: 'calendar', date: '2026-10-07', item: null, at: null}],
     ['/calendar/item/3', '?at=2026-10-07T21%3A30%3A00.000Z', {page: 'calendar', date: null, item: 3, at: '2026-10-07T21:30:00.000Z'}],

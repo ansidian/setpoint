@@ -126,7 +126,7 @@ test('board 38c: Jobs off: the header alone and "Jobs is off · Turn on", no sid
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
     await setpoint.idle();
-    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox319', 'Calendar', 'News', 'Settings⌘,']);
+    assert.deepEqual(await page.locator('aside.sb .nav').allTextContents(), ['Inbox19', 'Calendar', 'News', 'Settings⌘,']);
 
     await page.keyboard.press('4');
     const empty = page.locator('.jb-empty');

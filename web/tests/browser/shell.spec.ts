@@ -185,13 +185,13 @@ test('an account filters the Inbox; 1 and 2 go to Inbox and Calendar; the tab ti
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    assert.equal(await page.title(), '(3) Inbox');
+    assert.equal(await page.title(), '(19) Inbox');
     await page.locator('.acct', {hasText: 'Jobs'}).click();
     await until('only Jobs mail', () => page.locator('.list .ac .label, .list .r1 .label').allTextContents(), labels => labels.length > 0 && labels.every(label => label === 'Jobs'));
     assert.equal(new URL(page.url()).search, '?account=4');
     // The counts stay every account's, once what the filter asked is answered and drawn.
     await setpoint.idle();
-    assert.equal(await page.locator('.nav:has-text("Inbox") .cnt').textContent(), '19');
+    assert.equal(await page.locator('.nav:has-text("Inbox") .ubadge').textContent(), '19');
     await page.keyboard.press('2');
     await page.locator('.hd-title', {hasText: 'October 2026'}).waitFor();
     assert.equal(await page.title(), 'October 2026 · Calendar');
@@ -299,7 +299,7 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     const signIn = inbox.groups.flatMap(group => group.rows).find(item => item.subject === 'Security alert')!;
     // Read in another client (Gmail's app would arrive the same way, through sync).
     await setpoint.api('POST', `/mail/messages/${signIn.id}/read`, {unread: false});
-    await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .cnt').textContent(), text => text === '18');
+    await until('the sidebar follows', () => page.locator('.nav:has-text("Inbox") .ubadge').textContent(), text => text === '18');
     assert.equal((await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread, 18);
     // It stays in its day, read, then and after leaving the Inbox (D449).
     const signInRow = page.locator('.row[data-key^="all:"]', {hasText: 'New sign-in'});
@@ -308,11 +308,12 @@ test('live updates: an email read elsewhere loses its dot and leaves the counts 
     await page.waitForURL(/\/calendar/);
     await page.keyboard.press('1');
     await until('still in its day, read', () => signInRow.getAttribute('class'), classes => !classes!.split(' ').includes('unread'));
-    // Done elsewhere drops the pill and the title.
+    // Done elsewhere drops Attention's count; the title counts unread (SV-221).
     const google = inbox.groups.flatMap(group => group.rows).find(item => item.subject.startsWith('Your recovery email'))!;
     await setpoint.api('POST', `/mail/messages/${google.id}/done`, {done: true});
-    await until('the pill drops', () => page.locator('.apill').textContent(), text => text === '2');
-    await until('the title follows', () => page.title(), title => title === '(2) Inbox');
+    await until('Attention\'s count drops', () => page.locator('.hd .ib-views .n').textContent(), text => text === '2');
+    const unread = (await setpoint.api<MailCountsOut>('GET', '/mail/counts')).unread;
+    await until('the title counts unread', () => page.title(), title => title === `(${unread}) Inbox`);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

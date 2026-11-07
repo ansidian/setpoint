@@ -68,13 +68,13 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `chip` | `#0f1013` | `#ffffff` | inputs, tags |
 | `modal` | `#0c0d0f` | `#ffffff` | Settings, popovers, ⌘K |
 | `ink` / `ink2` / `ink3` | `#ecebe7` / `#a3a4a8` / `#8b8d92` | `#1d1e21` / `#4b4d52` / `#606267` | primary / secondary / tertiary text and icons |
-| `onInk` | `#050506` | `#ffffff` | text on `ink`, on the attention pill and on solid calendar chips |
+| `onInk` | `#050506` | `#ffffff` | text on `ink`, on the unread badge, the phone's attention pill and solid calendar chips |
 | `edge` / `edgeOn` / `edgeHover` | `rgba(255,255,255,.055)` / `.12` / `.14` | `rgba(29,30,33,.1)` / `.17` / `.22` | borders / overlays, focus / under the pointer |
 | `hair` | `rgba(255,255,255,.07)` | `rgba(29,30,33,.08)` | dividers, row lines, grid lines |
 | `sub` / `sub2` / `sub3` / `sub4` | `rgba(255,255,255,.055)` / `.09` / `.13` / `.17` | `rgba(29,30,33,.04)` / `.07` / `.11` / `.15` | hover / keyboard cursor, open row, selection / tracks, segmented "on", a press / a ghost button pressed (#150) |
 | `stripe` | `rgba(255,255,255,.045)` | `rgba(29,30,33,.05)` | hatching (drag ghosts, hidden images) |
 | `scrim` | `rgba(0,0,0,.72)` | `rgba(20,26,32,.35)` | behind Settings and ⌘K |
-| `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | attention pill and count, needs-reconnect bar, failing lines |
+| `caution` | `oklch(0.75 0.16 40)` | `oklch(0.535 0.16 40)` | Attention's count, the phone's attention pill, needs-reconnect bar, failing lines |
 | `alert` | `oklch(0.72 0.17 25)` | `oklch(0.535 0.185 25)` | protected mail, failed changes, offline pill, destructive actions, now-line, Jobs's Rejected mark (#265) |
 | `warm` | `oklch(0.8 0.11 55)` | `oklch(0.54 0.12 55)` | Business |
 | `cool` | `oklch(0.8 0.11 235)` | `oklch(0.54 0.12 235)` | Personal (account and calendar), rain |
@@ -230,9 +230,9 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   - the mark and **Setpoint** (36 px row, 8 px below). No search button: search lives in each
     page's header.
   - **Inbox** (32 px nav item, radius 10, `sub` hover; current, a raised `navOn` chip with an inset
-    `navOnEdge` hairline and its icon in `accent`, #166): the **attention pill** (18 px,
-    `caution` fill, `onInk` 11.5 / 600 text; not-Done attention, read or not) then the unread count
-    (`ink3` 12).
+    `navOnEdge` hairline and its icon in `accent`, #166): the **unread badge** alone (18 px,
+    `alert` fill, `onInk` 11.5 / 600 text; every unread email, FYI and Noise included; [Decided while
+    building](#decided-while-building) #338).
   - **Accounts** under Inbox (28 px, indented 34 px; folded away on Calendar, #201): colour dot
     (8 px), label, unread count. A click filters the Inbox to that account (its row the `navOn`
     chip, Inbox its parent in `ink` without a fill); a needs-reconnect account adds a `sync_problem`
@@ -242,7 +242,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
     mini-month and **Calendars** on Calendar.
   - **Settings**, pinned to the bottom, with its ⌘, hint.
 - **Header** 56 px, `hair` bottom border, padding 0 16 0 24: title (15 / 500), the segmented control
-  (28 px; Unread | All on mail, Month | Week on Calendar), a spacer, then **search** (mail: a 380 × 32
+  (28 px; the Inbox's views, #338, Month | Week on Calendar), a spacer, then **search** (mail: a 380 × 32
   field with its `/` hint; Calendar: a 30 px icon button) and the primary action (Calendar: **New**
   with its `C` hint).
 - **Content** under the header; the list or grid scrolls, the shell never does.
@@ -253,7 +253,7 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   so under the pointer (#210). Empty, the Inbox's shows how the mail day is going (#331) and News's
   its recap and facts (#332), and Jobs's its recent movement (#336). Every empty pane
   has the mark's faint glow behind it (#334).
-- **Tab title:** "(3) Inbox" while attention mail is waiting, the subject when an email is open,
+- **Tab title:** "(13) Inbox" while mail is unread (#338), the subject when an email is open,
   "October 2026 · Calendar".
 
 ### Compact (640 to 1099 px)
@@ -263,7 +263,7 @@ An iPad or a half-width window keeps the shell's parts and stops squeezing them
 
 - **Rail:** the sidebar is a 56 px rail: the mark, then Inbox, Calendar, News, Jobs (after News, while it's on) and Settings as 40 × 40
   icons, each named in its tooltip, the current page the `navOn` chip with its icon in `accent` (#166;
-  Inbox stays current while an account filters it, as the rail has no accounts). Inbox's attention pill is a 16 px badge on its icon (2 px from its
+  Inbox stays current while an account filters it, as the rail has no accounts). Inbox's unread badge is 16 px on its icon (2 px from its
   top, 2 px past its right, 10.5 / 600, a 2 px `panel` ring). The accounts, the Today block, the
   mini-month and Calendars give way; ⌘K filters the Inbox by account ("Inbox · Jobs") and shows or
   hides each calendar.
@@ -310,11 +310,13 @@ Esc, × or a click elsewhere closes it; another line moves it there (#78).
 
 The Inbox is **days first** (#309): **Attention**, the **Pinned** shelf, then every email by day,
 Today first. Unread mail sits in its day, drawn unread, so reading an email never moves it. There is
-no Unread or All to choose between, and going to the Inbox always opens it.
+no Unread or All to choose between, and going to the Inbox always opens it, in All.
 
-- **Header:** the title, then the Inbox's new count ("13 new", `ink3` 12.5, its account's when
-  filtered) while anything is unread; at the right, **Mark all as read ⇧I** (a quiet button, a
-  16 px `mark_email_read`, #123) while it has anything to read, then the search.
+- **Header:** the title, then the **views**, All | Unread | Attention | FYI | Noise, in the shared
+  segmented control (#338): Unread's segment carries the red unread badge (16 px, its account's
+  when filtered), Attention's its not-Done count in `caution` 12 / 500; at the right, **Mark all as
+  read ⇧I** (a quiet button, a 16 px `mark_email_read`, #123) while the view has anything to read,
+  then the search.
 - **Bands** 30 px, `panel`, `hair` above and below (none above the first), a 14 px glyph in `ink3`
   8 px before the label, 11.5 uppercase .08em `ink3`, count in `ink2`: **Attention** (`flag`; the
   loudest: `caution` 8% into its `panel`, Light 6%, label, glyph and count in `caution`, a `caution`
@@ -346,8 +348,7 @@ no Unread or All to choose between, and going to the Inbox always opens it.
 
 Every email, Noise included, newest first, under day headings ("TODAY Wed, Oct 7", "YESTERDAY Tue,
 Oct 6", "MON Oct 5"), except what Attention and the shelf show, which leaves its day meanwhile
-(#101, #309). A heading with unread mail in it ends "· 3 new" (12, `ink3`, the count `ink2`), Done
-mail left out (#241). Today's rows show ages, as Attention's and the shelf's do; earlier days show
+(#101, #309). Today's rows show ages, as Attention's and the shelf's do; earlier days show
 **clock times** (decision 39, #309). Unread rows keep their place, drawn unread. Each day groups its rows by lane, and
 the kind shows once, as a subheading over its run where an FYI run starts, after its group's glyph
 at 13 px (#119, #237, #328); each day's Noise folds to one line ([Decided while
@@ -1490,7 +1491,7 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
 - **Read state:** an email becomes read only when opened (Enter or a click), by Mark all as read, or
   by copying its verification code ([Decided while building](#decided-while-building) #295).
   Moving the cursor, scrolling and opening a Noise line never mark anything read. Counts follow at once
-  (opening an unread email drops the unread counts; the attention pill drops only on Done).
+  (opening an unread email drops the unread counts; Attention's count drops only on Done).
 - **Keyboard cursor:** `J` / `K` move it (a `sub2` fill); moving the pointer onto a row makes it the
   cursor, as in darma. Enter opens.
 - **Done** (`H`) leaves Attention; whether the email was opened first is recorded for triage, never
@@ -1498,7 +1499,8 @@ Board 23, for mantel's DESIGN.md (added there first, with Andy's agreement):
   at the top centre in the header's band, at the bottom on the phone, #92; not drawn on a board). The
   six seconds drain as a hairline and wait while the pointer rests on the toast (#147).
 - **Keys:** everywhere ⌘K, `1` Inbox, `2` Calendar, `/` search, ⌘, Settings, Esc closes the
-  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter;
+  topmost thing; mail `J` `K` Enter `H` `E` `P` `O` `U` (to the next unread email, #309) ⇧I ⇧U ⌘Enter
+  Tab ⇧Tab (the views, #338);
   Calendar ← → or `P` `N`, `T`, `C`, `D`, `E`, Delete, `M` `W`, Tab ⇧Tab, Enter, Esc; News (after 2.0) `3`,
   `J` `K` Enter `O` `N` Tab ⇧Tab Esc; Jobs Tab ⇧Tab. Key hints read "Esc",
   "⌘K", "⇧I". They work with an HTML email clicked into, too, but not in a field of its own (#294).
@@ -1642,6 +1644,11 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 44. **No "N more in ‹section›" in All** (#312): boards 25, 26a, 26b, 29a, 29b and 31 end blocks with
     "12 more in Local" and the like. The app's blocks end after their stories; the audit patches
     the link out of 25 and 31, the boards it sets beside the app.
+45. **The Inbox's counts are #338's:** every board with the sidebar draws Inbox's `caution`
+    attention pill and grey unread count, and the mail boards a header with Unread | All or "13 new"
+    and day headings ending "· 3 new". The app draws Inbox's red unread badge alone, the views in the
+    header with Unread's badge and Attention's count, and plain day headings, so the audit expects
+    them to differ. The phone's boards stay as drawn (D275).
 
 ## Not designed yet
 
@@ -4175,3 +4182,28 @@ it changes what's on screen.
     on its green wash, keeps 70% (`--washTint`). Night keeps all of each colour. Dots, icons and
     washes keep theirs: as non-text they need 3:1, and every coloured icon passes. Each is checked in
     its worst state in Night and Light at 4.5:1.
+338. **The Inbox has views, and unread is a red badge** (amending #309; Andy, 2026-11-06; darma
+    SV-221, D471, D472, D473). The header's segmented control holds **All | Unread | Attention | FYI |
+    Noise**, Tab and Shift-Tab stepping them and wrapping (D454, D458); the view rides in the
+    address (?view=unread), and the sidebar's Inbox and `1` always open All. The account filter
+    combines with any view. **All** is the list as #309 has it. **Unread** is the same shape with
+    only unread mail: its Attention, then each day's rows, Noise in full as the day's last lane
+    (D472); an email read there stays, drawn read, until the view changes, and Done and Trash fold
+    it away as anywhere. **Attention** is every Attention email not Done, newest first, with the
+    pattern prompt. **FYI** and **Noise** are their mail by day, read or not, FYI under its kind
+    subheadings and Noise in full, without lane headings. Only All has the Pinned shelf; elsewhere a
+    pinned email sits in Attention or its day. Unread's segment carries the **unread badge**, `alert`
+    filled with `onInk` text (4.5:1 in both themes), hidden at zero, counting every unread email,
+    FYI and Noise included; Attention's carries its not-Done count as `caution` text, toward `ink` in
+    Light (#337); All, FYI and Noise have none. The same badge is Inbox's only count in the sidebar
+    and the rail, rising as the attention pill did (shell-11); Attention's pill leaves the sidebar,
+    the header's "13 new" and the days' "· 3 new" go, and the tab reads "(13) Inbox". Mark all as
+    read follows the view: in FYI or Noise only that view's mail, its tooltip naming it ("Mark FYI as
+    read"); in All and Unread as before; in Attention it isn't there. Switching views is instant, the
+    thumb sliding and the list back at its top; the open email closes. From 640 to 1099 px Mark all
+    as read is its icon alone, named in its tooltip, so the header keeps everything on screen beside
+    the views (Claude's call). An empty view shows a glyph,
+    its line ("All read", "Nothing needs you", "No FYI mail", "No Noise today") and Show All, for now
+    (SV-226 draws each its illustration). The empty pane stays the mail day in every view, and the
+    phone keeps the one list and its header's counts (D275), its days losing "· 3 new" with the
+    desktop's (D473).

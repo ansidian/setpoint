@@ -27,7 +27,7 @@ test('board 20: ⌘K on the open Northwind email', async () => {
     // Night chosen in this browser, as board 20 ticks it.
     await page.addInitScript(() => localStorage.setItem('setpoint.theme', 'night'));
     await openNorthwind(page, setpoint.base);
-    await until('the sidebar\'s unread count', () => page.locator('.nav.on .cnt').textContent(), text => text === '18');
+    await until('the sidebar\'s unread count', () => page.locator('.nav.on .ubadge').textContent(), text => text === '18');
     await page.mouse.move(700, 28);
     await page.keyboard.press('Meta+k');
     await page.locator('.palette').waitFor();

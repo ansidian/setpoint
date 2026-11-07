@@ -182,8 +182,8 @@ function countsAfter(counts: MailCountsOut, row: MessageRowOut, change: {read: b
 }
 
 /**
- * Opening an unread email reads it: the unread counts drop at once, its account's too; the
- * attention pill doesn't (it drops only on Done). The row stays where it is, read.
+ * Opening an unread email reads it: the unread counts drop at once, its account's too;
+ * Attention's count doesn't (it drops only on Done). The row stays where it is, read.
  */
 export function countsAfterOpen(counts: MailCountsOut, row: MessageRowOut): MailCountsOut {
   return countsAfter(counts, row, {read: true, leavesAttention: false});
@@ -202,8 +202,8 @@ export function inboxAfterOpen(inbox: InboxOut, id: number): InboxOut {
 }
 
 /**
- * Done takes an email out of the Inbox's lane groups (the Pinned shelf keeps a pinned one): the
- * attention pill drops if it was in Attention, and an unread one leaves the unread counts with it.
+ * Done takes an email out of the Inbox's lane groups (the Pinned shelf keeps a pinned one):
+ * Attention's count drops if it was in Attention, and an unread one leaves the unread counts with it.
  */
 export function countsAfterDone(counts: MailCountsOut, row: MessageRowOut, wasAttention: boolean): MailCountsOut {
   return countsAfter(counts, row, {read: true, leavesAttention: wasAttention});
