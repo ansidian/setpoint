@@ -99,6 +99,8 @@ Personal, which are account names). The UI says "Done", never "handled".
 | `kindSecurity` | `oklch(0.78 0.12 250)` | `oklch(0.55 0.13 250)` | the Security kind's glyph in the Inbox (#340) |
 | `kindCareer` | `oklch(0.78 0.12 300)` | `oklch(0.55 0.13 300)` | the Career kind's glyph in the Inbox (#340) |
 | `kindPeople` | `oklch(0.78 0.12 345)` | `oklch(0.55 0.13 345)` | the People kind's glyph in the Inbox (#340) |
+| `kindOther` | `oklch(0.74 0.05 65)` | `oklch(0.55 0.06 65)` | the Other kind's glyph in the Inbox, a muted taupe (#344) |
+| `kindNoise` | `oklch(0.74 0.05 250)` | `oklch(0.55 0.06 250)` | the glyph on each day's folded Noise line, a muted slate (#344) |
 
 - **Roles** (#163): each colour has one job, so a screen has two or three anchors. **`accent`**
   says "you are here" (named for its job, with `cool`'s values, so recolouring Personal never moves
@@ -4224,8 +4226,8 @@ was decided; the audit itself was retired by D480.
     each passes 3:1 on every list background in both themes. The Pinned shelf's `keep` is `sun`, and
     Attention's `flag` stays `caution`. Only the glyph is coloured: the label, the rows and the
     account dots are as they were, and a kind may share an account's hue, its shape and place telling
-    them apart. A rule down each run's left edge was tried and dropped, as too much. Noise's colour is
-    still to decide.
+    them apart. A rule down each run's left edge was tried and dropped, as too much. Noise's colour,
+    and Other's, are #344.
 341. **The Inbox has no account filter** (amending #207, #140, #201, #234 and #338; Andy, 2026-11-07;
     darma SV-225, D476). Andy never filters the Inbox by account, so the views are the only way to
     narrow it. The sidebar has no account rows under Inbox (their dots, labels and unread counts, the
@@ -4248,3 +4250,11 @@ was decided; the audit itself was retired by D480.
     forgotten). An email's body page is kept by the browser for an hour (sign-out clears it), and its
     frame draws at the height it had, without the fade-in of #229, the page correcting it if the pane
     has changed width.
+344. **Other and Noise take muted tints** (amending #340; Andy, 2026-11-07; darma SV-227, D483). So
+    the last two stand apart from `ink3` without competing with the six kinds, they take the same
+    place at a lower chroma: Other's `mail` glyph is `kindOther`, a taupe, and each day's folded
+    Noise line now leads with Noise's `campaign` glyph, 14 px as a band's, in `kindNoise`, a slate.
+    Night is `oklch(0.74 0.05 h)` and Light `oklch(0.55 0.06 h)`, at 65° and 250°; each passes 3:1
+    on every list background in both themes. Only the glyph is coloured: Noise's label, count and
+    preview stay `ink3`, so Noise still recedes (#168). Two more full-strength hues were weighed and
+    left, as the free hues are spent and they'd read as Money or Updates.

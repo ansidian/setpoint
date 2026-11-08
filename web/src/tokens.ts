@@ -71,6 +71,9 @@ export const colour = {
   kindSecurity: 'oklch(0.78 0.12 250)',
   kindCareer: 'oklch(0.78 0.12 300)',
   kindPeople: 'oklch(0.78 0.12 345)',
+  // Other's kind and the Noise fold: low-chroma taupe and slate, coloured but quieter than the six (#344).
+  kindOther: 'oklch(0.74 0.05 65)',
+  kindNoise: 'oklch(0.74 0.05 250)',
 } as const;
 
 export type ColourToken = keyof typeof colour;
@@ -130,6 +133,8 @@ export const lightColour: Record<ColourToken, string> = {
   kindSecurity: 'oklch(0.55 0.13 250)',
   kindCareer: 'oklch(0.55 0.13 300)',
   kindPeople: 'oklch(0.55 0.13 345)',
+  kindOther: 'oklch(0.55 0.06 65)',
+  kindNoise: 'oklch(0.55 0.06 250)',
 };
 
 /** Overlay shadows; shadows only on overlays. */

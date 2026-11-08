@@ -198,7 +198,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
           return (
             <div key={key} ref={ref} className={['nfold', folded && 'collapsed', folded && cursor === key && 'cur', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}
               data-key={folded ? key : undefined} onMouseMove={folded ? () => key !== cursor && onPoint(key) : undefined} onClick={leaving ? undefined : () => onToggleNoise(item.date)}>
-              Noise <span className="n">{item.count}</span>
+              <span className="gi"><Icon name={GROUP_GLYPHS.noise} size={14} /></span>Noise <span className="n">{item.count}</span>
               <span className="preview">{item.preview}</span>
               {/* One chevron, turned to point right while it's folded (inbox-14). */}
               <span className="chev"><Icon name="expand_more" /></span>

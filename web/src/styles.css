@@ -808,7 +808,8 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* Trash presses in its own `alert`, 20% (#169). */
 .rd-tools .tool.trash:is(:active, [data-echo]) { background: color-mix(in oklch, var(--alert) 20%, transparent); color: var(--alert); }
 
-/* Pinned's glyph is `sun`, and each FYI kind's glyph its own `kind*` hue; Other stays `ink3` (#340). */
+/* Pinned's glyph is `sun`, and each FYI kind's glyph its own `kind*` hue (#340); Other's and the Noise
+   fold's are muted, `kindOther` and `kindNoise` (#344). */
 .gh.pinned .gi { color: var(--sun); }
 .list.all .kh[data-kind=deliveries] > .icon { color: var(--kindDeliveries); }
 .list.all .kh[data-kind=money] > .icon { color: var(--kindMoney); }
@@ -816,3 +817,5 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list.all .kh[data-kind=security] > .icon { color: var(--kindSecurity); }
 .list.all .kh[data-kind=career] > .icon { color: var(--kindCareer); }
 .list.all .kh[data-kind=people] > .icon { color: var(--kindPeople); }
+.list.all .kh[data-kind=other] > .icon { color: var(--kindOther); }
+.nfold .gi { display: grid; color: var(--kindNoise); }
