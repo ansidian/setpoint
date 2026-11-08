@@ -57,7 +57,7 @@ import {admitPush} from '../providers/gcal/push.ts';
 import {BIND_COOKIE, beginTodoistOAuth, completeTodoistOAuth, TODOIST_CALLBACK_PATH, TodoistOAuthError} from '../providers/todoist/oauth.ts';
 import type {TodoistOAuthOptions} from '../providers/todoist/oauth.ts';
 import {admitTodoistWebhook, WEBHOOK_PATH} from '../providers/todoist/webhook.ts';
-import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarVisible, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
+import {calendarList, itemDetail, itemsInRange, recentPlaceList, setCalendarShown, todoistLabels, todoistProjects, weatherDays} from '../queries/items.ts';
 import {allMail, inbox, indexing, mailCounts, mailDayOf, messageDetail, trustedDomains} from '../queries/mail.ts';
 import {attachmentFile, messageBody} from '../queries/mailBody.ts';
 import {recordChipRemoved, recordOpened, recordSuggestion} from '../search/log.ts';
@@ -716,8 +716,8 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
   app.patch('/api/calendars/:id', async c => {
     const calendarId = id(c.req.param('id'));
     const input = parse(calendarUpdateInput, await body(c));
-    if (input.visible !== undefined) {
-      setCalendarVisible(store, calendarId, input.visible);
+    if (input.visible !== undefined || input.listed !== undefined) {
+      setCalendarShown(store, calendarId, {visible: input.visible, listed: input.listed});
       noteLive(store, {type: 'items', items: [], calendars: [calendarId], commands: []});
     }
     // SV-20: a colour is a command to Google; the calendar answers with it pending.

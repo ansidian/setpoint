@@ -204,9 +204,12 @@ function dayOrder(a: ItemOut, b: ItemOut): number {
   return rank(a) - rank(b) || (a.starts_at ?? '').localeCompare(b.starts_at ?? '') || a.title.localeCompare(b.title) || a.key.localeCompare(b.key);
 }
 
-/** Items by local day, in the grid's order, leaving out the calendars toggled off. */
+/** Whether Calendar draws a calendar's items: listed in Settings › Calendar and checked in the sidebar. */
+export const calendarShown = (calendar: Pick<CalendarOut, 'visible' | 'listed'>) => calendar.visible && calendar.listed;
+
+/** Items by local day, in the grid's order, leaving out the calendars toggled off or not listed. */
 export function itemsByDay(items: ItemOut[], calendars: CalendarOut[] | undefined, timeZone: string): Map<string, ItemOut[]> {
-  const hidden = new Set((calendars ?? []).filter(calendar => !calendar.visible).map(calendar => calendar.id));
+  const hidden = new Set((calendars ?? []).filter(calendar => !calendarShown(calendar)).map(calendar => calendar.id));
   const days = new Map<string, ItemOut[]>();
   const seen = new Set<string>();
   for (const item of items) {
@@ -230,9 +233,12 @@ export function withSlot(items: ItemOut[], item: ItemOut): ItemOut[] {
   return [...items.filter(one => one.key !== item.key), {...item, key: `slot:${item.key}`}].sort(dayOrder);
 }
 
-/** How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events" (SV-56). */
+/**
+ * How many of a day's items the calendars toggled off hide, so an empty day can say so rather than "No events" (SV-56).
+ * A calendar not listed doesn't count: Show all doesn't bring it back.
+ */
 export function hiddenOn(day: string, items: ItemOut[], calendars: CalendarOut[] | undefined, timeZone: string): number {
-  const hidden = new Set((calendars ?? []).filter(calendar => !calendar.visible).map(calendar => calendar.id));
+  const hidden = new Set((calendars ?? []).filter(calendar => calendar.listed && !calendar.visible).map(calendar => calendar.id));
   if (!hidden.size) return 0;
   return itemsByDay(items.filter(item => hidden.has(item.calendar_id)), undefined, timeZone).get(day)?.length ?? 0;
 }

@@ -162,7 +162,11 @@ export const calendars = sqliteTable('calendars', {
   // Null for Todoist, which shows its ring glyph instead.
   colour: text('colour', {enum: COLOURS}),
   position: integer('position').notNull(),
+  // The Calendar sidebar's checkbox: a quick filter over the listed calendars.
   visible: integer('visible', {mode: 'boolean'}).notNull().default(true),
+  // Settings › Calendar's switch: off, the calendar leaves Calendar entirely (its sidebar, grid,
+  // agenda, pickers and search), whatever its checkbox says.
+  listed: integer('listed', {mode: 'boolean'}).notNull().default(true),
   // SV-191: Google's accessRole for the calendar (calendarWritable reads it); null for Todoist and
   // for a Google calendar not listed since the column came.
   accessRole: text('access_role'),

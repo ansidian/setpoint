@@ -563,7 +563,7 @@ test('Send test (the polish audit\'s states-11, settings-07): it shows it\'s sen
   }
 });
 
-test('Calendar, Todoist and Appearance: a calendar hidden, Home set with its coordinates, weather off, the default project, Light', async () => {
+test('Calendar, Todoist and Appearance: a calendar unlisted, Home set with its coordinates, weather off, the default project, Light', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -574,7 +574,7 @@ test('Calendar, Todoist and Appearance: a calendar hidden, Home set with its coo
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Home', 'Weather and places']);
 
     await page.getByRole('switch', {name: 'Show Classes'}).click();
-    await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.visible === false);
+    await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.listed === false);
 
     await page.getByRole('button', {name: 'Set Home'}).click();
     await page.locator('.settings input[aria-label="Home"]').fill('blue door');

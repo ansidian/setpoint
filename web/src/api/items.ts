@@ -21,10 +21,19 @@ export const monthWeatherPath = (month: string) => weatherPath(firstOfMonth(mont
 // put back what it changed.
 const toggles = new Map<number, Promise<unknown>>();
 
-/** Shows a calendar or hides it on the grid and in the agenda. */
-export async function setCalendarVisible(id: number, visible: boolean): Promise<void> {
-  updateCached<CalendarOut[]>(CALENDARS_PATH, list => list.map(calendar => (calendar.id === id ? {...calendar, visible} : calendar)));
-  const sending = (toggles.get(id) ?? Promise.resolve()).catch(() => undefined).then(() => sendJson<CalendarOut>('PATCH', `/calendars/${id}`, {visible}));
+/** Shows a calendar or hides it on the grid and in the agenda (the sidebar's checkbox). */
+export function setCalendarVisible(id: number, visible: boolean): Promise<void> {
+  return setCalendarShown(id, {visible});
+}
+
+/** Lists a calendar in Calendar or leaves it out entirely (Settings › Calendar's switch). */
+export function setCalendarListed(id: number, listed: boolean): Promise<void> {
+  return setCalendarShown(id, {listed});
+}
+
+async function setCalendarShown(id: number, shown: {visible: boolean} | {listed: boolean}): Promise<void> {
+  updateCached<CalendarOut[]>(CALENDARS_PATH, list => list.map(calendar => (calendar.id === id ? {...calendar, ...shown} : calendar)));
+  const sending = (toggles.get(id) ?? Promise.resolve()).catch(() => undefined).then(() => sendJson<CalendarOut>('PATCH', `/calendars/${id}`, shown));
   toggles.set(id, sending);
   try {
     const calendar = await sending;

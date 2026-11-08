@@ -202,7 +202,11 @@ export interface CalendarOut {
   // Null for Todoist, which shows its ring glyph.
   colour: Colour | null;
   position: number;
+  // The Calendar sidebar's checkbox, a quick filter over the listed calendars.
   visible: boolean;
+  // Settings › Calendar's switch: false, the calendar is left out of Calendar entirely (its sidebar,
+  // grid, agenda, pickers and search), whatever `visible` says.
+  listed: boolean;
   // SV-191: false for a calendar the user can only read (Google's accessRole reader or freeBusyReader,
   // as a subscribed holiday calendar is): its events are read-only and no picker offers it.
   writable: boolean;
@@ -210,9 +214,9 @@ export interface CalendarOut {
   command: CommandOut | null;
 }
 export const calendarProviderSchema = z.enum(CALENDAR_PROVIDERS);
-/** Show or hide a calendar (Setpoint's own setting), and SV-20: pick a Google calendar's colour, written to Google. */
-export const calendarUpdateInput = z.strictObject({visible: z.boolean().optional(), colour: z.enum(COLOURS).optional()})
-  .refine(input => input.visible !== undefined || input.colour !== undefined, 'Nothing to change.');
+/** Show or hide a calendar, list it in Calendar or not (Setpoint's own settings), and SV-20: pick a Google calendar's colour, written to Google. */
+export const calendarUpdateInput = z.strictObject({visible: z.boolean().optional(), listed: z.boolean().optional(), colour: z.enum(COLOURS).optional()})
+  .refine(input => input.visible !== undefined || input.listed !== undefined || input.colour !== undefined, 'Nothing to change.');
 export type CalendarUpdateInput = z.infer<typeof calendarUpdateInput>;
 
 export interface WeatherDayOut {

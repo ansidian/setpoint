@@ -12,7 +12,8 @@ import type {Store} from '../store.ts';
 
 export function searchCalendar(store: Store, input: z.output<typeof calendarSearchInput>): CalendarSearchOut {
   const clock = {now: isoNow(store), timeZone: store.timeZone};
-  const calendars = store.db.select().from(t.calendars).all();
+  // Calendars switched off in Settings › Calendar aren't searched or offered as a chip.
+  const calendars = store.db.select().from(t.calendars).all().filter(calendar => calendar.listed);
   const parsed = parseCalendarQuery(input.text, calendars.map(calendar => calendar.name), clock);
   const chips: CalendarSearchChip[] = [];
   for (const chip of [...input.chips, ...parsed.chips]) if (!chips.some(existing => sameChip(existing, chip))) chips.push(chip);

@@ -43,11 +43,11 @@ describe('the week', () => {
 
   test.each([['2026-09-27', '2026-09'], ['2026-11-29', '2026-12'], [WEEK, '2026-10']])('the week of %s is mostly in %s', (start, month) => expect(weekMonth(start)).toBe(month));
 
-  test('calendars toggled off and repeated keys are left out', () => {
+  test('calendars toggled off or not listed and repeated keys are left out', () => {
     const shown = item({key: 'a', calendar_id: 1});
     const off = item({key: 'b', calendar_id: 2});
-    const calendars = [{id: 1, visible: true}, {id: 2, visible: false}] as CalendarOut[];
-    expect(visibleItems([shown, off, {...shown}], calendars).map(one => one.key)).toEqual(['a']);
+    const calendars = [{id: 1, visible: true, listed: true}, {id: 2, visible: false, listed: true}, {id: 3, visible: true, listed: false}] as CalendarOut[];
+    expect(visibleItems([shown, off, item({key: 'c', calendar_id: 3}), {...shown}], calendars).map(one => one.key)).toEqual(['a']);
   });
 });
 

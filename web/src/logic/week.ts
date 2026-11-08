@@ -5,7 +5,7 @@
 // are `YYYY-MM-DD` and times minutes after a day's midnight, in the owner's zone.
 import type {CalendarOut, ItemChanges, ItemOut} from '@setpoint/shared';
 import {week as tokens} from '../tokens.ts';
-import {dayOfWeek, dayTitle, timeRange, weekIndex} from './calendar.ts';
+import {calendarShown, dayOfWeek, dayTitle, timeRange, weekIndex} from './calendar.ts';
 import {addDays, clockTime, daysBetween, instantAt, localDate, minutesOf} from './format.ts';
 
 const MINUTE = 60_000;
@@ -53,9 +53,9 @@ function barDays(item: ItemOut, timeZone: string): {first: string; last: string}
   return {first: localDate(item.starts_at!, timeZone), last: minutesOf(item.ends_at!, timeZone) === 0 ? addDays(end, -1) : end};
 }
 
-/** The items the week shows, once each, leaving out calendars toggled off. */
+/** The items the week shows, once each, leaving out calendars toggled off or not listed. */
 export function visibleItems(items: ItemOut[], calendars: CalendarOut[] | undefined): ItemOut[] {
-  const hidden = new Set((calendars ?? []).filter(calendar => !calendar.visible).map(calendar => calendar.id));
+  const hidden = new Set((calendars ?? []).filter(calendar => !calendarShown(calendar)).map(calendar => calendar.id));
   const seen = new Set<string>();
   return items.filter(item => {
     if (hidden.has(item.calendar_id) || seen.has(item.key)) return false;

@@ -25,7 +25,8 @@ export function ProposalCard({proposal, now, timeZone, onClose, inAnswer = false
   onClose?: () => void;
   inAnswer?: boolean;
 }) {
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  // Its pickers offer only the calendars listed in Settings › Calendar.
+  const calendars = useResource<CalendarOut[]>(CALENDARS_PATH).data?.filter(calendar => calendar.listed);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [closed, setClosed] = useState(false);

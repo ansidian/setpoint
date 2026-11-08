@@ -28,9 +28,9 @@ const event = (title: string, date: string, start: string, end: string, fields: 
 const task = (title: string, due: string, fields: Partial<ItemOut> = {}) => item({kind: 'task', title, all_day: true, due_date: due, calendar_id: 4, ...fields});
 
 const calendars: CalendarOut[] = [
-  {id: 1, provider: 'google', account_id: 2, name: 'Personal', colour: 'cool', position: 0, visible: true, writable: true, command: null},
-  {id: 2, provider: 'google', account_id: 2, name: 'Classes', colour: 'cyan', position: 1, visible: true, writable: true, command: null},
-  {id: 4, provider: 'todoist', account_id: null, name: 'Todoist', colour: null, position: 3, visible: true, writable: true, command: null},
+  {id: 1, provider: 'google', account_id: 2, name: 'Personal', colour: 'cool', position: 0, visible: true, listed: true, writable: true, command: null},
+  {id: 2, provider: 'google', account_id: 2, name: 'Classes', colour: 'cyan', position: 1, visible: true, listed: true, writable: true, command: null},
+  {id: 4, provider: 'todoist', account_id: null, name: 'Todoist', colour: null, position: 3, visible: true, listed: true, writable: true, command: null},
 ];
 
 describe('weeks and months', () => {
@@ -134,6 +134,8 @@ describe('items on days', () => {
     const titles = (cals: CalendarOut[]) => itemsByDay(items, cals, zone).get('2026-10-07')!.map(one => one.title);
     expect(titles(calendars)).toEqual(['Fall break', 'Gym', 'Dentist', 'Lecture', 'CS 101 lab report', 'Pay rent']);
     expect(titles(calendars.map(cal => (cal.name === 'Personal' || cal.name === 'Todoist' ? {...cal, visible: false} : cal)))).toEqual(['Lecture']);
+    // Switched off in Settings › Calendar, its items go whatever its checkbox says.
+    expect(titles(calendars.map(cal => (cal.name === 'Classes' ? {...cal, listed: false} : cal)))).toEqual(['Fall break', 'Gym', 'Dentist', 'CS 101 lab report', 'Pay rent']);
   });
 
   // SV-56: what the calendars toggled off hide on a day, so an empty day can say so rather than "No events".
@@ -144,6 +146,7 @@ describe('items on days', () => {
     ['Classes off: the lecture alone', ['Classes'], '2026-10-07', 1],
     ['an all-day event hidden on each of its days', ['Personal'], '2026-10-09', 1],
     ['a day with nothing on it', ['Personal', 'Classes', 'Todoist'], '2026-10-20', 0],
+    ['Classes not listed: Show all wouldn\'t bring it back, so it doesn\'t count', ['-Classes'], '2026-10-07', 0],
   ])('hidden: %s', (_name, off, date, count) => {
     const items = [
       task('Pay rent', '2026-10-07'), task('CS 101 lab report', '2026-10-07'),
@@ -153,7 +156,7 @@ describe('items on days', () => {
     ];
     // Loaded twice (two months' ranges), Gym still counts once.
     const loaded = [...items, {...items[3]!}];
-    expect(hiddenOn(date, loaded, calendars.map(cal => (off.includes(cal.name) ? {...cal, visible: false} : cal)), zone)).toBe(count);
+    expect(hiddenOn(date, loaded, calendars.map(cal => (off.includes(`-${cal.name}`) ? {...cal, visible: false, listed: false} : off.includes(cal.name) ? {...cal, visible: false} : cal)), zone)).toBe(count);
   });
 
   test('an item loaded twice (two months\' ranges) shows once', () => {

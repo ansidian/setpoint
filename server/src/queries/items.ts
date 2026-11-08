@@ -131,13 +131,13 @@ export function calendarList(store: Store): CalendarOut[] {
   const presentCommand = commandPresenter(store);
   const commands = new Map(activeCommands(store, 'calendar').map(row => [row.targetId, presentCommand(row)]));
   return store.db.select().from(t.calendars).orderBy(asc(t.calendars.position)).all().map(row => ({
-    id: row.id, provider: row.provider, account_id: row.accountId, name: row.name, colour: row.colour, position: row.position, visible: row.visible,
+    id: row.id, provider: row.provider, account_id: row.accountId, name: row.name, colour: row.colour, position: row.position, visible: row.visible, listed: row.listed,
     writable: calendarWritable(row.accessRole), command: commands.get(row.id) ?? null,
   }));
 }
 
-export function setCalendarVisible(store: Store, calendarId: number, visible: boolean): CalendarOut {
-  const updated = store.db.update(t.calendars).set({visible}).where(eq(t.calendars.id, calendarId)).returning().get();
+export function setCalendarShown(store: Store, calendarId: number, shown: {visible?: boolean; listed?: boolean}): CalendarOut {
+  const updated = store.db.update(t.calendars).set(shown).where(eq(t.calendars.id, calendarId)).returning().get();
   if (!updated) throw notFound('No such calendar.');
   return calendarList(store).find(calendar => calendar.id === calendarId)!;
 }

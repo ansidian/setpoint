@@ -184,9 +184,9 @@ describe('calendar search over the seed', () => {
     expect(find(w, 'zebra')).toMatchObject({total: 0, results: []});
   });
 
-  test('a hidden calendar is left out', () => {
+  test.each([{visible: false}, {listed: false}])('a hidden or unlisted calendar is left out: %o', off => {
     const w = world({seed: true});
-    w.store.db.update(t.calendars).set({visible: false}).where(eq(t.calendars.name, 'Classes')).run();
+    w.store.db.update(t.calendars).set(off).where(eq(t.calendars.name, 'Classes')).run();
     expect(find(w, 'classes').total).toBe(0);
     expect(find(w, 'cs 101').results.map(result => result.item.title)).toEqual(['CS 101 lab report']);
   });

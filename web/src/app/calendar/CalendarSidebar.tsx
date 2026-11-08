@@ -52,7 +52,7 @@ export function setVisible(calendar: Pick<CalendarOut, 'id' | 'name'>, visible: 
  * Undo in the toast turns the same ones off again.
  */
 export function showHidden(calendars: CalendarOut[]) {
-  const hidden = calendars.filter(calendar => !calendar.visible);
+  const hidden = calendars.filter(calendar => calendar.listed && !calendar.visible);
   if (!hidden.length) return;
   const what = hidden.length === 1 ? hidden[0]!.name : `${hidden.length} calendars`;
   const show = (visible: boolean) => Promise.all(hidden.map(calendar => setCalendarVisible(calendar.id, visible)));
@@ -68,7 +68,9 @@ export function CalendarSidebar({route}: {route: Extract<Route, {page: 'calendar
   const now = useNow();
   const today = localDate(now, timeZone());
   const view = useCalendarView();
-  const {data: calendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  const {data: allCalendars} = useResource<CalendarOut[]>(CALENDARS_PATH);
+  // A calendar switched off in Settings › Calendar isn't listed here at all.
+  const calendars = allCalendars?.filter(calendar => calendar.listed);
   const {list: accounts} = useAccounts();
   const month = view.mini ?? monthOf(route.date ?? today);
   const selected = view.selected ?? route.date ?? today;

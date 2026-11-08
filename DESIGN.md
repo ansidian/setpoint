@@ -522,7 +522,8 @@ The **mini-month** (26 px discs, six rows always; today an `alert` disc (#165); 
 on the left (off: an outline, and the name `ink3`), the name; **Todoist** reads as the others, its
 checkbox and name with no mark of its own. Toggled, a calendar's items fade out over 120 ms before they
 go, or fade back in over 180 ms (#185). With every calendar off, a 16 px `ink3` `visibility_off`
-follows the header's title (#113).
+follows the header's title (#113). Only the calendars listed in Settings › Calendar are rows here; one
+switched off there leaves Calendar entirely (#345).
 Until the calendars have come, four skeleton rows: a 14 px box (radius 4) and a bar (#227).
 
 ### Right pane
@@ -4258,3 +4259,9 @@ was decided; the audit itself was retired by D480.
     on every list background in both themes. Only the glyph is coloured: Noise's label, count and
     preview stay `ink3`, so Noise still recedes (#168). Two more full-strength hues were weighed and
     left, as the free hues are spent and they'd read as Money or Updates.
+345. **Settings › Calendar lists a calendar; the sidebar filters it** (Andy, 2026-11-07; darma
+    SV-232, D484). Each calendar has two switches. Settings › Calendar's Show is `listed`: off, the
+    calendar leaves Calendar entirely, from the sidebar, the grid, the agenda and day pane, the hidden
+    count and Show all, ⌘K, the pickers and Calendar search. The sidebar's checkbox is `visible`, a
+    quick filter over the listed ones, as before. Before this, both set the one flag, so a Google
+    account's calendars switched off in Settings still sat in the sidebar unchecked.

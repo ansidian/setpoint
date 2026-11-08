@@ -166,7 +166,10 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const today = localDate(now, zone);
   const view = useCalendarView();
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
-  const calendars = calendarsLoad.data;
+  // Every calendar, for leaving out the items of those not shown; and the ones listed in Settings ›
+  // Calendar, the only ones the page offers (its toggles, pickers, Show all).
+  const allCalendars = calendarsLoad.data;
+  const calendars = useMemo(() => allCalendars?.filter(calendar => calendar.listed), [allCalendars]);
   // The compact tier: the grid takes the width, and the right pane lies over it while it holds the
   // editor or search; the day's pane isn't drawn (#140).
   const compact = useCompact();
@@ -271,7 +274,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
     if (ask?.kind === 'move' || ask?.kind === 'resize') list.push({...movedItem(ask.item, ask.changes), id: -ask.item.id, key: `moving:${ask.item.key}`});
     return [...list, ...previews.items];
   }, [items, present, creating, ask, previews.items]);
-  const byDay = useMemo(() => itemsByDay(drawn, calendars, zone), [drawn, calendars, zone]);
+  const byDay = useMemo(() => itemsByDay(drawn, allCalendars, zone), [drawn, allCalendars, zone]);
   const looks = useMemo(() => {
     const map = new Map<string, ChipLook>(previews.items.map(item => [item.key, 'ghost']));
     if (ask?.kind === 'move' || ask?.kind === 'resize') map.set(ask.item.key, 'faded');
@@ -288,7 +291,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   // The day's items or the calendars couldn't load: the pane says so where its agenda would be (#228).
   const dayFailed = useLoadFailed([dayMonthLoad, calendarsLoad]);
   const {data: dayWeather} = useResource<WeatherDayOut[]>(monthWeatherPath(monthOf(selectedDay)));
-  const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, calendars, zone, selectedDay]);
+  const paneItems = useMemo(() => itemsByDay(present(dayMonth?.items ?? EMPTY_ITEMS), allCalendars, zone).get(selectedDay) ?? EMPTY_ITEMS, [dayMonth, present, allCalendars, zone, selectedDay]);
   // What the calendars toggled off hide on that day, so its pane doesn't call it free (SV-56).
   const paneHidden = useMemo(() => hiddenOn(selectedDay, present(dayMonth?.items ?? EMPTY_ITEMS), calendars, zone), [dayMonth, present, calendars, zone, selectedDay]);
   // Every calendar off: the header says the view is filtered, whatever the day (SV-56).
@@ -979,7 +982,7 @@ export function CalendarPage({route}: {route: CalendarRoute}) {
   const askTitle = ask ? {move: 'Move recurring event', resize: 'Change recurring event', delete: 'Delete recurring event', colour: 'Colour recurring event'}[ask.kind] : '';
   const askLine = ask?.kind === 'move' ? moveLine(ask.item.title, ask.from, ask.to, ask.changes.starts_at ?? null, zone)
     : ask?.kind === 'resize' ? `${ask.item.title} · ${timeRange(movedItem(ask.item, ask.changes), zone)}` : undefined;
-  const weekItems = useMemo(() => (mode === 'week' ? visibleItems(drawn, calendars) : EMPTY_ITEMS), [mode, drawn, calendars]);
+  const weekItems = useMemo(() => (mode === 'week' ? visibleItems(drawn, allCalendars) : EMPTY_ITEMS), [mode, drawn, allCalendars]);
   const detailProps = {target: detailTarget, exit: handedKey && handedKey === selectedKey ? 'edit' as const : 'close' as const, timeZone: zone, actions,
     onClose: () => selectDay(selectedDay), onEdit: (target: DetailTarget) => editItem(target.item, true)};
 

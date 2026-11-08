@@ -6,7 +6,7 @@ import type {CalendarOut, PlaceSuggestionOut, SecretOut, Settings, SourceOut} fr
 import {SWATCH_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import {useResource} from '../../api/client.ts';
-import {CALENDARS_PATH, placeSuggestions, setCalendarColour, setCalendarVisible, settleCalendarColour, SETTINGS_PATH} from '../../api/items.ts';
+import {CALENDARS_PATH, placeSuggestions, setCalendarColour, setCalendarListed, settleCalendarColour, SETTINGS_PATH} from '../../api/items.ts';
 import {findPlace, patchSettings, SECRETS_PATH, setSourceKey, SOURCES_PATH} from '../../api/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -33,7 +33,7 @@ export function CalendarPage() {
         {!calendars ? <SkeletonRows count={4} one /> : (
           <div className="set-group">
             {[...calendars].sort((a, b) => a.position - b.position).map(calendar => (
-              <CalendarRow key={calendar.id} calendar={calendar} onShow={on => void save.attempt(() => setCalendarVisible(calendar.id, on))} />
+              <CalendarRow key={calendar.id} calendar={calendar} onShow={on => void save.attempt(() => setCalendarListed(calendar.id, on))} />
             ))}
           </div>
         )}
@@ -106,7 +106,7 @@ function CalendarRow({calendar, onShow}: {calendar: CalendarOut; onShow: (on: bo
           <button className="btn out sm" type="button" onClick={() => void settle.attempt(() => settleCalendarColour(command.id, 'move-back'))}><Icon name="undo" size={16} />Change back</button>
         </>
       )}
-      <Switch on={calendar.visible} label={`Show ${calendar.name}`} onChange={onShow} />
+      <Switch on={calendar.listed} label={`Show ${calendar.name}`} onChange={onShow} />
     </div>
   );
 }
