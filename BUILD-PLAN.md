@@ -87,14 +87,13 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
 - No mocks of internal modules. Presentation goes to browser checks, not unit tests.
 - **Playwright** runs in Chromium at 1677 × 1050, 1728 × 1117 and an iPhone size, against the
   production build with the seed. The checks state behaviour, relations and state-dependent values;
-  nine whole-page screenshots (`web/tests/browser/pages.ts`, D281, in place of D69's region goldens)
-  are compared only at release, and the board audit (`npm run audit:boards`) sets them beside their
-  boards then. A check is deterministic on its own: it waits for what it reads, holds a server
+  how a page looks is Andy's to judge by eye before a session moves on, with no page screenshots or
+  board audit (D479, D480; D281's screenshots and D69's audit retired). A check is deterministic on its own: it waits for what it reads, holds a server
   answer or the page's clock to read a state between, and never reads by timing, so it passes or
   fails the same on a busy machine (SV-195, in place of D81's stress run). A failed check keeps a trace
   (SV-75), and a one-shot read of a style or box rests first (`rested`; the lint asks). A single
-  value is stated in a check only where a golden can't hold it: a state-, theme- or cascade-dependent
-  colour, a relation, or a value that has moved by accident before (D269).
+  value goes untested unless it's a relation that keeps content usable; a colour the user picks is
+  data (D269).
 - Every bug fix starts with a failing test. There is no known-failing list.
 
 ### Verification
@@ -102,9 +101,8 @@ Candidates are listed per slice. Nothing else is copied. v1 is read-only through
 - `npm test`: lint, typecheck and Vitest.
 - `npm run test:browser`: build plus Playwright.
 - Both pass before every commit that touches what they cover, and the orchestrator states what ran.
-- Before a release, `npm run release:check`: the same plus the image build, the page screenshots
-  and the board audit, each only where it hasn't already passed on what it reads (D274, SV-193). It
-  runs ahead after each push to master (SV-194).
+- Before a release, `npm run release:check`: the same plus the image build, each only where it
+  hasn't already passed on what it reads (D274, SV-193).
 
 ## Slices
 
