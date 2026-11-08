@@ -1560,7 +1560,7 @@ Comparing a page with its board, these are expected differences.
     mail; the app leaves it out, so Trash leads the tools.
 
 **News** (design round 3, boards 25–31; N4 and N5). Where a board draws only some of a block's
-stories, or other numbers than the seed's, the audit patches in the seed's (D3); those aren't listed.
+stories, or other numbers than the seed's, the app shows the seed's (D3); those aren't listed.
 
 19. **News's icons are drawn from `glyphs/icons.json`**, not the full icon font the boards load from
     the network; the photo placeholders stand in for Setpoint's own image copies.
@@ -1592,7 +1592,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 **The polish audit** (darma SV-54, D120; [Decided while building](#decided-while-building) #157–#176).
 
-31. **Some tokens' values are the audit's:** Night `ink3` `#8b8d92` (the export's `#707277`, #286), Light
+31. **Some tokens' values are the app's:** Night `ink3` `#8b8d92` (the export's `#707277`, #286), Light
     `ink3` `#606267` (`#6d6f74`, #286), Light `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
@@ -1604,8 +1604,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 
 33. **The Inbox is days first:** boards 01–04, 09, 10, 17, 19a, 19b, 20, 21a and 22a draw Unread's
     groups (and 04 All caught up, 05 All by itself); the app draws Attention, the Pinned shelf, then
-    the days, Today first, unread mail in its day, so the audit compares them as they are and
-    expects the list to differ.
+    the days, Today first, unread mail in its day, so the list differs.
 
 **Jobs** (design round 4, boards 32–40, 32b, 34c and the states strip; darma SV-118).
 
@@ -1630,7 +1629,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     `ink2` and `ink3`, with the keycap Ask Alfred's row draws above it.
 40. **What SV-151 took out still shows in the export:** board 34b's outcome line (#287), board 38a's
     skeleton rows (#292), and in `jobs/motion.md` the theme fade (#291) and the AI line's `good`
-    check (#293). The audit patches the two boards. Boards 30b and 39b still draw an OpenAI key's
+    check (#293). Boards 30b and 39b still draw an OpenAI key's
     row, which went with OpenAI itself (D411).
 41. **Stories and ranking's line** (#297): 30b and 39b draw "Headlines and summaries, the hourly
     ranking"; the app reads "Headlines, summaries and how much each matters".
@@ -1639,16 +1638,14 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 43. **The floating detail is 360 px wide** (#308): board 12a draws it at 280 with its title on one
     line. The app's card is 80 px wider and its title wraps, up to 3 lines.
 44. **No "N more in ‹section›" in All** (#312): boards 25, 26a, 26b, 29a, 29b and 31 end blocks with
-    "12 more in Local" and the like. The app's blocks end after their stories; the audit patches
-    the link out of 25 and 31, the boards it sets beside the app.
+    "12 more in Local" and the like. The app's blocks end after their stories.
 45. **The Inbox's counts are #338's:** every board with the sidebar draws Inbox's `caution`
     attention pill and grey unread count, and the mail boards a header with Unread | All or "13 new"
     and day headings ending "· 3 new". The app draws Inbox's red unread badge alone, the views in the
-    header with Unread's badge and Attention's count, and plain day headings, so the audit expects
-    them to differ. The phone's boards stay as drawn (D275).
+    header with Unread's badge and Attention's count, and plain day headings, so they differ. The phone's boards stay as drawn (D275).
 46. **No account filter** (#341): the boards with the sidebar draw each account under Inbox with
     its dot, label and unread count, and board 21 the phone's account button ("All accounts"). The
-    app has neither, so the audit expects them to differ.
+    app has neither.
 
 ## Not designed yet
 
@@ -1664,7 +1661,8 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
 ## Decided while building
 
 Record each decision made during the build here, numbered and dated, with Andy's agreement where
-it changes what's on screen.
+it changes what's on screen. An entry's "Board audit" note records how the boards compared when it
+was decided; the audit itself was retired by D480.
 
 1. **The segmented control's outer radius is 10**, as the export draws it (`.seg`); Shape no longer
    lists it under 999 too (Andy, 2026-10-07; darma SV-1).
