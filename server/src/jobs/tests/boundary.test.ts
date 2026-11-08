@@ -15,23 +15,15 @@ async function refusals(filePath: string, code: string) {
 
 test.each([
   ['mail\'s sync engine importing Jobs\'s store', 'server/src/sync/engine.ts', 'import {jobsDb} from \'../jobs/db.ts\';\nexport {jobsDb};\n'],
-  ['mail\'s queries importing it by a longer way round', 'server/src/queries/mail.ts', 'import {jobsPage} from \'../../src/jobs/queries.ts\';\nexport {jobsPage};\n'],
   ['re-exporting it', 'server/src/api/app.ts', 'export * from \'../jobs/index.ts\';\n'],
   ['a dynamic import', 'server/src/triage/worker.ts', 'export const load = () => import(\'../jobs/index.ts\');\n'],
   ['the reader importing the web module', 'web/src/app/Reader.tsx', 'import {JdChip} from \'./jobs/JdChip.tsx\';\nexport {JdChip};\n'],
   ['mail\'s contract importing Jobs\'s', 'shared/src/api/mail.ts', 'import type {JobsPageOut} from \'../jobs/api.ts\';\nexport type {JobsPageOut};\n'],
-  ['a test outside Jobs', 'server/tests/mail.test.ts', 'import {seedJobs} from \'../src/jobs/seed.ts\';\nexport {seedJobs};\n'],
 ])('refuses %s', async (_, file, code) => {
   expect(await refusals(file, code)).not.toEqual([]);
 });
 
-test.each([
-  ['the server, a wiring point', 'server/src/server.ts', 'import {jobsApi} from \'./jobs/index.ts\';\nexport {jobsApi};\n'],
-  ['the command line, a wiring point', 'server/src/cli.ts', 'import {rereadPlan} from \'./jobs/index.ts\';\nexport {rereadPlan};\n'],
-  ['the seed, a wiring point', 'server/src/dev/sample.ts', 'import {seedJobs} from \'../jobs/index.ts\';\nexport {seedJobs};\n'],
-  ['shared\'s index, a wiring point', 'shared/src/index.ts', 'export * from \'./jobs/index.ts\';\n'],
-  ['Jobs itself', 'server/src/jobs/queries.ts', 'import {jobsDb} from \'./db.ts\';\nimport * as t from \'../db/schema.ts\';\nexport {jobsDb, t};\n'],
-  ['a file merely named jobs', 'server/src/sync/engine.ts', 'import {x} from \'./jobs.ts\';\nexport {x};\n'],
-])('lets through %s', async (_, file, code) => {
-  expect(await refusals(file, code)).toEqual([]);
+// The wiring points and Jobs itself pass because `npm test` lints the real files.
+test('lets through a file merely named jobs', async () => {
+  expect(await refusals('server/src/sync/engine.ts', 'import {x} from \'./jobs.ts\';\nexport {x};\n')).toEqual([]);
 });

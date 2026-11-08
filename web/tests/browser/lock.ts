@@ -2,10 +2,8 @@
 // side by side slow each other into failing. The lock is a file in /tmp, not the session's own
 // temp directory, so every session sees it; a lock whose process has gone is taken over. Every way
 // in takes it: `npm run test:browser` (run.ts) before its build, a `node --test` with the global
-// setup in its globalSetup, release:check (release.ts) for as long as it runs anything, and anything else (a bare `node --test` of a spec, the board audit) when
-// it first launches Chromium (harness.ts › launchBrowser). `npm test` doesn't. A checkout from before the lock doesn't take it, so a run also waits while a Playwright
-// Chromium outside it is open.
-import {execFileSync} from 'node:child_process';
+// setup in its globalSetup, release:check (release.ts) for as long as it runs anything, and anything else (a bare `node --test` of a spec) when
+// it first launches Chromium (harness.ts › launchBrowser). `npm test` doesn't.
 import fs from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
@@ -40,40 +38,6 @@ function alive(pid: number): boolean {
   }
 }
 
-/** A Playwright Chromium open outside `owner`'s processes, and the directory of who opened it. */
-function unlockedBrowser(owner: number): {pid: number; dir: string} | null {
-  let listing: string;
-  try {
-    listing = execFileSync('ps', ['-Ao', 'pid=,ppid=,command='], {encoding: 'utf8'});
-  } catch {
-    return null;
-  }
-  const parent = new Map<number, number>();
-  const browsers: number[] = [];
-  for (const line of listing.split('\n')) {
-    const [, pid, ppid, command] = line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/) ?? [];
-    if (!pid || !command) continue;
-    parent.set(Number(pid), Number(ppid));
-    // The browser process itself, not its renderers and helpers (--type=…).
-    if (command.includes('playwright_chromiumdev_profile') && command.includes('--remote-debugging-pipe') && !command.includes('--type=')) browsers.push(Number(pid));
-  }
-  const ours = (pid: number) => {
-    for (let at: number | undefined = pid; at && at > 1; at = parent.get(at)) if (at === owner) return true;
-    return false;
-  };
-  // One whose run has gone (its parent is now launchd) is left over, not running checks.
-  const other = browsers.find(pid => parent.get(pid) !== 1 && !ours(pid));
-  if (!other) return null;
-  let dir = '?';
-  try {
-    dir = execFileSync('lsof', ['-a', '-p', String(parent.get(other) ?? other), '-d', 'cwd', '-Fn'], {encoding: 'utf8'})
-      .split('\n').find(line => line.startsWith('n'))?.slice(1) ?? dir;
-  } catch {
-    // Its directory is only for the message.
-  }
-  return {pid: other, dir};
-}
-
 /**
  * Takes the lock for the run whose process is `owner`, waiting for another run to finish;
  * resolves with how long it waited. A lock `owner` already holds is kept, and so is one held by the
@@ -98,8 +62,7 @@ export async function acquire(owner = process.pid): Promise<number> {
       fs.rmSync(LOCK, {force: true});
       continue;
     }
-    const unlocked = other ? null : unlockedBrowser(owner);
-    if (!other && !unlocked) {
+    if (!other) {
       try {
         fs.writeFileSync(LOCK, JSON.stringify({pid: owner, dir: ROOT, since: new Date().toISOString()} satisfies Holder), {flag: 'wx'});
         return Date.now() - started;
@@ -109,9 +72,9 @@ export async function acquire(owner = process.pid): Promise<number> {
         continue;
       }
     }
-    const whose = other ? `the test run in ${other.dir} (pid ${other.pid}` : `a browser run outside the lock in ${unlocked?.dir} (Chromium pid ${unlocked?.pid}`;
-    if (Date.now() - started > WAIT) throw new Error(`Gave up after ${clock(WAIT)} waiting for ${whose}).`);
-    tell(`Waiting for ${whose}${other ? `, since ${new Date(other.since).toLocaleTimeString()}` : ''}).`);
+    const whose = `the test run in ${other.dir} (pid ${other.pid})`;
+    if (Date.now() - started > WAIT) throw new Error(`Gave up after ${clock(WAIT)} waiting for ${whose}.`);
+    tell(`Waiting for ${whose}, since ${new Date(other.since).toLocaleTimeString()}.`);
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
 }
@@ -133,7 +96,7 @@ let holding = false;
  * The lock for a run that didn't come through run.ts. A spec file under `node --test` belongs to
  * the test runner's run, its parent: the first of the run's files to get here takes the lock for
  * it, the rest find it held, and it's taken over once the runner has gone. Anything else (the
- * runner's global setup, the board audit) holds it itself until it exits, for what it starts too.
+ * runner's global setup) holds it itself until it exits, for what it starts too.
  */
 export async function holdForRun() {
   const held = Number(process.env[HELD]);

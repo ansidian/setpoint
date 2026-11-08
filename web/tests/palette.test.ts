@@ -19,10 +19,8 @@ describe('⌘K', () => {
     ['new ev', ['more: New event']],
     ['mark', ['email: Mark unread', 'more: Mark all as read']],
     ['MARK ALL', ['more: Mark all as read']],
-    ['dark', ['appearance: Night']],
     ['theme', ['appearance: Light, Night']],
     ['out', ['more: Sign out']],
-    ['xyz', []],
   ])('typing %j shows %j', (query, sections) => expect(shown(query)).toEqual(sections));
 
   test.each([

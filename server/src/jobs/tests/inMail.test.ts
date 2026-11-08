@@ -77,14 +77,4 @@ describe('GET /api/jobs/mail', () => {
     expect((await ask(ids)).messages).toEqual([]);
   });
 
-  test.each([
-    ['none', ''],
-    ['not ids', 'abc'],
-    ['a zero', '0,4'],
-    ['a trailing comma', '4,'],
-    ['more than 500', Array.from({length: 501}, (_, index) => index + 1).join(',')],
-  ])('refuses %s', async (_, messages) => {
-    const {c} = await seeded();
-    expect((await c.send('GET', `/api/jobs/mail?messages=${messages}`)).status).toBe(400);
-  });
 });

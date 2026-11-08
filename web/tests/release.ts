@@ -1,16 +1,12 @@
 // `npm run release:check` (SV-83, D274): the release checks, each run only where it hasn't already
-// passed on what it reads in HEAD (passes.ts, SV-193): npm test, the page screenshots (pages.ts,
-// D281), the image build (SV-188), each browser spec file and the board audit, in that order. There's no stress
-// run (SV-195): a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
+// passed on what it reads in HEAD (passes.ts, SV-193): npm test, the image build (SV-188), each
+// browser spec file, in that order. There's no stress run (SV-195): a check is deterministic on its own (AGENTS.md › Tests own behaviour). It says what it skipped and why, and ends by saying whether HEAD is ready to release.
 // What's left to run waits for the browser lock (lock.ts) and holds it to the end, so it never runs
 // beside another session's browser run, and a release:check started while another runs on the same
-// content (ahead.ts, after a push) waits for it and then finds everything passed. With nothing left,
-// it takes no lock and answers at once.
+// content waits for it and then finds everything passed. With nothing left, it takes no lock and
+// answers at once.
 //
-// `-- pages image` runs only the steps named (unit, image, browser, pages, audit): a slice
-// that touches the screen runs those before it lands. `--keep-going` runs every step even after one
-// fails, for the check ahead, so a release finds every step that can pass already passed; otherwise
-// it stops at the first that fails.
+// `-- unit image` runs only the steps named (unit, image, browser). It stops at the first that fails.
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -19,14 +15,13 @@ import {head, missing, passesOf, record, specsOf} from './passes.ts';
 import {acquire, clock, handDown, release} from './browser/lock.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-// The cheap steps likeliest to fail come first, so a golden to re-capture or an image that won't
+// The cheap steps likeliest to fail come first, so a failing npm test or an image that won't
 // build stops a release in a couple of minutes, before the browser checks run once.
-const STEPS = ['unit', 'pages', 'image', 'browser', 'audit'] as const;
+const STEPS = ['unit', 'image', 'browser'] as const;
 type Step = (typeof STEPS)[number];
 
 const args = process.argv.slice(2);
-const keepGoing = args.includes('--keep-going');
-const named = args.filter(arg => arg !== '--keep-going');
+const named = args;
 for (const name of named) {
   if (!(STEPS as readonly string[]).includes(name)) {
     console.error(`release:check has no step ${name}: name any of ${STEPS.join(', ')}.`);
@@ -54,7 +49,7 @@ function when(passes: Pass[]): string {
 const list = (names: string[]) => (names.length > 6 ? `${names.slice(0, 6).join(', ')} and ${names.length - 6} more` : names.join(', '));
 
 const TITLES: Record<Step, string> = {
-  unit: 'npm test', image: 'Image build', browser: 'Browser checks', pages: 'Page screenshots', audit: 'Board audit',
+  unit: 'npm test', image: 'Image build', browser: 'Browser checks',
 };
 
 /** A step's state on HEAD: passed (the line saying so), or what's left and how to run it. */
@@ -91,16 +86,11 @@ function state(step: Step): State {
   }
   const recorded = () => passesOf(tree, check).length > 0;
   if (step === 'unit') return passes.length ? {passed: `passed on what it reads ${when(passes)}`} : {running: 'running.', run: npm('test'), recorded, passing: 'passed'};
-  if (step === 'image') return passes.length ? {passed: `built from what it reads ${when(passes)}`} : {running: 'running (git archive HEAD | docker build).', run: buildImage, recorded, passing: 'built'};
-  if (step === 'pages') return passes.length ? {passed: `matched on what they read ${when(passes)}`} : {running: 'comparing.', run: npm('run', 'test:pages'), recorded, passing: 'matched'};
-  return passes.length
-    ? {passed: `the goldens and boards are as they were when it ran ${when(passes)}, so its page would be the same`}
-    : {running: 'running, as the goldens or boards have changed since it last ran.', run: npm('run', 'audit:boards'), recorded, passing: 'ran. Read test-results/audit/index.html before releasing; it has no pass or fail'};
+  return passes.length ? {passed: `built from what it reads ${when(passes)}`} : {running: 'running (git archive HEAD | docker build).', run: buildImage, recorded, passing: 'built'};
 }
 
 console.log(`release:check for ${rev}${named.length ? `, ${steps.map(step => TITLES[step]).join(', ')} only` : ''}\n`);
 const summary: string[] = [];
-const failed: Step[] = [];
 let locked = false;
 process.on('exit', () => release());
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal, () => process.exit(130));
@@ -108,8 +98,8 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(signal
 for (const step of steps) {
   let now = state(step);
   if (!('passed' in now) && !locked) {
-    // What's left waits for any other browser run, which may be this same check run ahead; what it
-    // recorded meanwhile is then skipped.
+    // What's left waits for any other browser run, which may be a release:check of the same content;
+    // what it recorded meanwhile is then skipped.
     const waited = await acquire();
     if (waited > 2000) console.log(`Waited ${clock(waited)} for the test lock.`);
     handDown();
@@ -125,11 +115,8 @@ for (const step of steps) {
   console.log(`${title}: ${now.running}`);
   const status = now.run();
   if (status !== 0) {
-    summary.push(`${title}: FAILED.`);
-    failed.push(step);
-    console.error(`\n${title} failed${keepGoing ? ', going on (--keep-going).' : `, so ${rev} isn't ready to release.`}\n`);
-    if (!keepGoing) process.exit(status);
-    continue;
+    console.error(`\n${title} failed, so ${rev} isn't ready to release.\n`);
+    process.exit(status);
   }
   if (!now.recorded()) {
     console.error(`\nrelease:check stopped: ${title} passed but wasn't recorded for ${rev} (did the files change while it ran?).`);
@@ -141,5 +128,4 @@ for (const step of steps) {
 if (locked) release();
 
 const what = named.length ? `${steps.map(step => TITLES[step]).join(', ')} for ${rev}` : rev;
-console.log(`${summary.join('\n')}\n\n${failed.length ? `${what}: ${failed.map(step => TITLES[step]).join(', ')} failed, so it isn't ready.` : `${named.length ? `${what} passed` : `${rev} is ready to release`}.`}`);
-process.exitCode = failed.length ? 1 : 0;
+console.log(`${summary.join('\n')}\n\n${named.length ? `${what} passed` : `${rev} is ready to release`}.`);

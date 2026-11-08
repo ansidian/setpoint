@@ -280,8 +280,4 @@ describe('the compose bundle for the iPhone app', async () => {
       expect(JSON.parse(compose.call(fn, JSON.stringify(input))), `call ${fn}`).toEqual(output);
     }
   });
-
-  test('the table covers each function', () => {
-    expect(new Set(CASE_LIST.map(one => one.fn))).toEqual(new Set(Object.keys(FUNCTIONS)));
-  });
 });

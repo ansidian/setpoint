@@ -1,10 +1,10 @@
-// Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), each also one of the
-// release's page screenshots (pages.ts), then the switch itself: System follows the browser and a
+// Light, System and Night (F7): boards 22a and 22b (boards 01 and 11 in Light), then the
+// switch itself: System follows the browser and a
 // choice is kept per browser.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -21,8 +21,6 @@ test('board 22a: the Inbox in Light (System, with the browser preferring light),
     await page.locator('.rd-subj', {hasText: 'Interview availability for Software Engineer I'}).waitFor();
     await until('the sidebar\'s unread count', () => page.locator('.nav.on .ubadge').textContent(), text => text === '18');
     assert.equal(await theme(page), 'light');
-    await page.mouse.move(700, 28);
-    await matchGolden(page, '22a-light-inbox');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -39,8 +37,6 @@ test('board 22b: October 2026 in Light, chosen in this browser', async () => {
     await page.locator('.ag-item', {hasText: 'Dentist'}).waitFor();
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     assert.equal(await theme(page), 'light');
-    await page.mouse.move(1000, 28);
-    await matchGolden(page, '22b-light-calendar');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -11,14 +11,11 @@ const at = (date: string, time = '12:00') => zonedInstant(date, time, SEED_TIME_
 describe('Ghosted (decision 55)', () => {
   // Now is Wed Oct 7, 2026, 9:12 AM Pacific.
   test.each<[string, JobStatus, string, number, boolean]>([
-    ['Proseware: Applied Aug 20, no email since', 'applied', at('2026-08-20', '09:15'), 48, true],
     ['30 days to the day', 'applied', at('2026-09-07', '23:59'), 30, true],
     ['29 days', 'applied', at('2026-09-08', '00:01'), 29, false],
     ['an email today', 'applied', at('2026-10-07', '07:12'), 0, false],
     ['late last night, Pacific, is yesterday', 'applied', at('2026-10-06', '23:30'), 1, false],
     ['In process is never Ghosted', 'in_process', at('2026-08-01'), 67, false],
-    ['nor is Rejected', 'rejected', at('2026-08-01'), 67, false],
-    ['nor Withdrawn', 'withdrawn', at('2026-08-01'), 67, false],
   ])('%s', (_, status, lastEmailAt, days, ghosted) => {
     expect(daysWithoutEmail(lastEmailAt, SEED_NOW, SEED_TIME_ZONE)).toBe(days);
     expect(isGhosted(status, lastEmailAt, SEED_NOW, SEED_TIME_ZONE)).toBe(ghosted);
@@ -73,7 +70,8 @@ describe('Applied before and Also at (D306)', () => {
 
 test.each([
   ['Software Engineer II (Java) (2026-1042)', 'software engineer ii'],
-  ['Software Engineer II', 'software engineer ii'],
+  ['Remote Software Engineer II', 'software engineer ii'],
+  ['(2026-1042)', ''],
   ['Software Engineer II, Claims', 'software engineer ii claims'],
   ['Data Engineer I [Remote]', 'data engineer i'],
   ['Web Developer - Hybrid', 'web developer'],

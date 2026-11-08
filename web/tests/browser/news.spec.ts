@@ -12,7 +12,7 @@ import {after} from 'node:test';
 import type {NewsPageOut, NewsSectionOut, StoryOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -63,14 +63,6 @@ const GLYPH_NAMES = new Map<string, string>(Object.entries(ICONS).map(([name, pa
 /** Each glyph's name (from its bundled path), size and colour. */
 const glyphs = async (icons: Locator) => (await icons.evaluateAll(all => all.map(icon => [icon.querySelector('path')!.getAttribute('d')!, icon.getAttribute('width'), getComputedStyle(icon).color])))
   .map(([path, size, colour]) => [GLYPH_NAMES.get(path!) ?? 'unknown', size, colour]);
-
-async function settle(page: Page) {
-  await page.evaluate(() => document.fonts.ready);
-  // Out of the way of every row, so no hover fill shows.
-  await page.mouse.move(700, 28);
-  // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-  await page.waitForTimeout(250);
-}
 
 /**
  * Changes News as ingest and ranking would, in the server's own database, then sends a `news` event
@@ -140,8 +132,6 @@ test('board 25: All on a typical morning, the recap, Upcoming, the pill, and the
     await page.locator('.pane .src-row').first().waitFor();
     assert.equal(await page.title(), 'Brush fire near the 210 grows to 400 acres');
     await seenSettled(page, setpoint);
-    await settle(page);
-    await matchGolden(page, '25-news-a-typical-morning');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -168,8 +158,6 @@ test('board 31: board 25 in Light', async () => {
     await page.locator('.pane .src-row').first().waitFor();
     await page.locator('.pane .st-img .nw-img').evaluate((image: HTMLImageElement) => image.decode());
     await seenSettled(page, setpoint);
-    await settle(page);
-    await matchGolden(page, '31-light-news');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

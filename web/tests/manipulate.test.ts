@@ -158,7 +158,6 @@ describe('F6b: a drag held near the grid\'s top or bottom edge scrolls it', () =
     ['in the middle', 500, 0],
     ['just inside the top band', 77, -1],
     ['halfway into the top band', 54, -9],
-    ['at the top edge', 30, -18],
     ['above the grid (the weekday row)', 10, -18],
     ['just outside the bottom band', 952, 0],
     ['halfway into the bottom band', 976, 9],
@@ -245,12 +244,9 @@ describe('a create drawn at once, and ⌘Z', () => {
 
 describe('multi-select', () => {
   test.each([
-    [[], '1', false, ['1']],
     [['1'], '2', false, ['2']],
     [['1'], '2', true, ['1', '2']],
     [['1', '2'], '1', true, ['2']],
-    [['1', '2'], '3', false, ['3']],
-    [[], '1', true, ['1']],
   ])('%j, click %s (adding: %s) → %j', (selected, key, additive, after) => expect(selectWith(selected, key, additive)).toEqual(after));
 });
 

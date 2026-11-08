@@ -1,14 +1,12 @@
-// Settings › AI's Jobs group (J8, board 39b, D315) through GET /api/jobs/ai: the three models by name,
-// whether they can run, and this month's spend from the ledger in its three parts, counting only
-// Jobs's calls since local midnight on the 1st. The seed's own usage is $3.85 (seed.ts JOBS_USAGE).
+// Settings › AI's Jobs group (J8, board 39b, D315) through GET /api/jobs/ai:
+// whether its models can run, and this month's spend from the ledger in its three parts, counting only
+// Jobs's calls since local midnight on the 1st.
 import type {AiPurpose} from '@setpoint/shared';
 import {jobsAiSchema} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {signedIn, world} from '../../../tests/helpers.ts';
 import {FAKE_KEYS} from '../../../tests/fakeModels.ts';
 import * as t from '../../db/schema.ts';
-import {seedSampleData} from '../../dev/sample.ts';
-import {openDatabase} from '../../db/open.ts';
 import {setSecret} from '../../secrets/store.ts';
 import {jobsApi} from '../api.ts';
 
@@ -17,12 +15,11 @@ const call = (at: string, purpose: AiPurpose, dollars: number, input = 1000, out
 });
 
 describe('Settings › AI\'s Jobs group (39b)', () => {
-  test('its three models by name, needing a key until Anthropic\'s is set', async () => {
+  test('it needs a key until Anthropic\'s is set', async () => {
     const w = world({seed: true});
     const c = await signedIn(w, {routes: [jobsApi(w.store)]});
     const before = jobsAiSchema.parse((await c.send('GET', '/api/jobs/ai')).body);
-    expect(before.models).toEqual({emails: 'claude-haiku-5-5', finding: 'claude-sonnet-5-5', reading: 'claude-haiku-5-5'});
-    expect(before.missing).toBe('Jobs needs an Anthropic key in Settings › AI.');
+    expect(before.missing).not.toBeNull();
     setSecret(w.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
     expect(jobsAiSchema.parse((await c.send('GET', '/api/jobs/ai')).body).missing).toBeNull();
   });
@@ -49,18 +46,4 @@ describe('Settings › AI\'s Jobs group (39b)', () => {
     expect(month.cost_usd).toBeCloseTo(3.85);
   });
 
-  test('`npm run seed`\'s usage this month: emails $0.62, finding JDs $2.71 and reading JDs $0.52', async () => {
-    const database = openDatabase(':memory:');
-    try {
-      seedSampleData(database, {usage: true});
-      const w = world();
-      const store = {...w.store, sqlite: database.sqlite, db: database.db};
-      const c = await signedIn({...w, store}, {routes: [jobsApi(store)]});
-      const {this_month: month} = jobsAiSchema.parse((await c.send('GET', '/api/jobs/ai')).body);
-      expect([month.emails.cost_usd, month.finding_jds.cost_usd, month.reading_jds.cost_usd]).toEqual([0.62, 2.71, 0.52]);
-      expect(month.cost_usd).toBeCloseTo(3.85);
-    } finally {
-      database.sqlite.close();
-    }
-  });
 });

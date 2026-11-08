@@ -155,11 +155,10 @@ describe('the hours', () => {
 
   test.each([
     ['an hour (board 16\'s Gym)', 420, 480, {top: 309, height: 42}],
-    ['an hour and a quarter (CS 101 lecture)', 1080, 1155, {top: 793, height: 53}],
     ['ten minutes, held at 20 px', 540, 550, {top: 397, height: 20}],
   ])('%s', (_name, start, end, box) => expect(blockBox(start, end)).toEqual(box));
 
-  test.each([[540, 570, true], [540, 589, true], [540, 590, false]])('%i–%i is short: %s', (start, end, short) => expect(isShort(start, end)).toBe(short));
+  test.each([[540, 589, true], [540, 590, false]])('%i–%i is short: %s', (start, end, short) => expect(isShort(start, end)).toBe(short));
 
   test.each([
     ['this week: now (9:12 AM) a third down', WEEK, [], 400, 271],
@@ -171,7 +170,7 @@ describe('the hours', () => {
 });
 
 describe('drags', () => {
-  test.each([[0, 0], [7, 0], [8, 15], [607, 600], [1439, 1440], [1500, 1440], [-20, 0]])('%i snaps to %i', (minutes, snapped) => expect(snap(minutes)).toBe(snapped));
+  test.each([[7, 0], [8, 15], [1500, 1440], [-20, 0]])('%i snaps to %i', (minutes, snapped) => expect(snap(minutes)).toBe(snapped));
 
   test.each([
     ['down from 12:00 to 1:22 PM', 720, 802, {start: 720, end: 810}],

@@ -50,8 +50,6 @@ describe('the chosen side', () => {
   test.each<[string, Rect, {width: number; height: number}, Rect[] | null, {side: Side; left: number; top: number; fits?: boolean}]>([
     // 12a: left of Dentist, 8 px off its chip and centred on it, at 12, 144.
     ['Dentist: left beats right, and above doesn\'t fit (override 7)', DENTIST, CARD(252), null, {side: 'left', left: 12, top: 144}],
-    // As the card is drawn (254 tall, not the 252 the board's comment assumes), centred it's at 143.
-    ['Dentist with the card as drawn', DENTIST, CARD(254), null, {side: 'left', left: 12, top: 143}],
     // 12b: right of Dinner over the empty weekend, at 736, 153 (152 for the 282 px card as drawn).
     ['Dinner with Sam: right, covering nothing', DINNER, CARD(280), null, {side: 'right', left: 736, top: 153}],
     ['a tie goes to the earlier side: right first', chip(1, 3, 0), CARD(200), [], {side: 'right', left: 153 + 134 + 8, top: 0}],

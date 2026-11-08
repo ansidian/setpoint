@@ -38,8 +38,8 @@ const windowNetwork = ['window', 'globalThis', 'self'].flatMap(object => network
 
 // The browser checks' own rules. A fixed pause says why on the line before it (SV-40): one that
 // waits for something to happen should wait for it (`until`, a waiting locator), as a pause long
-// enough on an idle machine is too short on a busy one; a "nothing happened" check, or a hover
-// fading before a screenshot, keeps its pause and says so. A bound shorter than the 5 s default
+// enough on an idle machine is too short on a busy one; a "nothing happened" check keeps its pause
+// and says so. A bound shorter than the 5 s default
 // says why too (SV-49): "at once" is proven by holding the server's answer, not by a short limit,
 // which only adds a way for a slow machine to fail. A one-shot read of a computed style or box goes
 // through `rested` (nothing moving first) or polls with `until`, or says why on the line before it
@@ -203,10 +203,9 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    rules: {
-      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', ignoreRestSiblings: true}],
-      '@typescript-eslint/consistent-type-imports': 'error',
-    },
+    // Unused names and type-only imports are tsc's (tsconfig.base.json: noUnusedLocals, noUnusedParameters,
+    // verbatimModuleSyntax), so lint doesn't report them a second time.
+    rules: {'@typescript-eslint/no-unused-vars': 'off'},
   },
   {
     files: ['server/**', 'shared/**', '*.js', '*.ts', 'web/*.ts', 'web/tests/**'],

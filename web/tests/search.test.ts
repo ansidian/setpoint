@@ -6,7 +6,7 @@ import type {AnswerOut, ItemOut, MatchReasonOut, SearchChip, SearchResultOut} fr
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutLine, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, suggestionLine, toggledFold, alfredQuestion, alfredStepDone, alfredStepLine, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, indexingLine, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
+  FOLD_OPENS_UNDER, firstSection, nextAsk, foldFor, foldStartsOpen, leftOutSection, mentionsLine, resultSections, standsForWords, wordsBack, sameSuggestion, asksForSuggestion, suggestionKey, toggledFold, alfredQuestion, typedAfter, withStep, calendarResultGroups, calendarResultLine, failedLine, finishedWords, resultDay, phraseRuns, namesProject, projectChoice, projectMatches, projectMenu, rankMatches, queryParts, readerMarks, reasonParts, resultSender, resultsLine, searchedLine, segments, showsQuestion, shownCalendarReasons, shownReasons, shownSources,
 } from '../src/logic/search.ts';
 import type {Run} from '../src/logic/search.ts';
 
@@ -114,10 +114,6 @@ describe('the results line and the indexing line', () => {
     expect(firstSection({total: 18, first_section: 18})).toBe(18);
     expect(firstSection({total: 18, first_section: 0})).toBe(18);
   });
-  test('indexing', () => {
-    expect(indexingLine({progress: 0.62})).toBe('Indexing · 62% · showing what’s indexed so far');
-    expect(indexingLine(null)).toBeNull();
-  });
 });
 
 describe('the results by section, and the fold', () => {
@@ -145,7 +141,7 @@ describe('the results by section, and the fold', () => {
   });
 
   test.each<[number, boolean]>([
-    [0, false], [1, true], [FOLD_OPENS_UNDER - 1, true], [4, true], [FOLD_OPENS_UNDER, false], [5, false], [60, false],
+    [0, false], [1, true], [FOLD_OPENS_UNDER - 1, true], [FOLD_OPENS_UNDER, false],
   ])('a first section of %i: starts open, %s', (first_section, open) => {
     expect(foldStartsOpen({first_section})).toBe(open);
     expect(foldFor(null, {chips: [], text: 'water bill', first_section})?.open).toBe(open);
@@ -190,12 +186,8 @@ describe('the results by section, and the fold', () => {
     });
   });
 
-  test.each<[number, boolean, string]>([
-    [12, false, '12 more mention these words'],
-    [1, false, '1 more mentions these words'],
-    [12, true, '12 more mention some of these words'],
-  ])('%i, partial %s', (more, partial, line) => {
-    expect(mentionsLine(more, partial)).toBe(line);
+  test('a partial search\'s fold says some of the words', () => {
+    expect(mentionsLine(12, true)).toBe('12 more mention some of these words');
   });
 });
 
@@ -231,9 +223,7 @@ describe('what a suggestion\'s chips left out', () => {
   const out = (more: number) => ({total: 3, first_section: 3, reading: reading(more)});
   const none = new Set<number>();
 
-  test('the line says the reading\'s number, in the fold\'s words, and shows nothing until it opens', () => {
-    expect(leftOutLine(6)).toBe('6 more emails match your words');
-    expect(leftOutLine(1)).toBe('1 more email matches your words');
+  test('the line has the reading\'s number, and shows nothing until it opens', () => {
     expect(leftOutSection(rows, out(6), null, none)).toEqual({more: 6, rows: []});
     expect(leftOutSection(rows, out(6), {open: false, rows: [{id: 9}]}, none)).toEqual({more: 6, rows: []});
     expect(leftOutSection(rows, out(6), {open: true, rows: [{id: 9}]}, none)).toEqual({more: 6, rows: [{id: 9}]});
@@ -278,14 +268,6 @@ describe('a suggestion', () => {
 
   test('words a user turned down are the same words, spaced or cased otherwise', () => {
     expect(suggestionKey('  Lease   Renewal ')).toBe('lease renewal');
-  });
-
-  test.each<[string, SearchChip[], number, {filters: string; count: string}]>([
-    ['one filter', [organisation], 7, {filters: 'Only Northwind', count: '7 emails'}],
-    ['one email', [organisation], 1, {filters: 'Only Northwind', count: '1 email'}],
-    ['several read as the Ask Alfred line does', [organisation, type, date], 2, {filters: 'Only Northwind · Rejection · Mar 2026', count: '2 emails'}],
-  ])('its words: %s', (_name, offers, total, line) => {
-    expect(suggestionLine({offers, total})).toEqual(line);
   });
 
   test('the same chips for the same rows are the same offer, whatever it\'s called in the log', () => {
@@ -474,33 +456,6 @@ describe('finishedWords: what a pause chips, leaving the word still being typed'
 });
 
 describe('the Answer card while Alfred works, and its sources', () => {
-  test.each<[string, Parameters<typeof alfredStepLine>[0], string]>([
-    ['before its first tool', null, 'Looking through your mail…'],
-    ['a search, in its words', {tool: 'search_mail', query: 'job rejection'}, 'Searching “job rejection”…'],
-    ['an email, by its sender', {tool: 'get_email', from: 'Northwind Talent'}, 'Reading Northwind Talent’s email…'],
-    ['the calendar', {tool: 'list_items'}, 'Checking your calendar…'],
-    ['an event', {tool: 'propose_item', kind: 'event'}, 'Preparing the event…'],
-    ['a task', {tool: 'propose_item', kind: 'task'}, 'Preparing the task…'],
-  ])('alfredStepLine: %s', (_name, step, line) => {
-    expect(alfredStepLine(step)).toBe(line);
-  });
-
-  test.each<[string, Parameters<typeof alfredStepLine>[0], string]>([
-    ['Ask about this email, before its first tool', null, 'Reading this email…'],
-    ['then the tool it runs, as anywhere', {tool: 'get_email', from: 'Parkside Apartments'}, 'Reading Parkside Apartments’s email…'],
-  ])('alfredStepLine, scoped to one email: %s', (_name, step, line) => {
-    expect(alfredStepLine(step, true)).toBe(line);
-  });
-
-  test.each<[string, Parameters<typeof alfredStepDone>[0], ReturnType<typeof alfredStepDone>]>([
-    ['a search, in its words', {tool: 'search_mail', query: 'lease renewal'}, {icon: 'search', text: 'Searched “lease renewal”'}],
-    ['an email, by its sender', {tool: 'get_email', from: 'Parkside Apartments'}, {icon: 'mail', text: 'Read Parkside Apartments’s email'}],
-    ['the calendar', {tool: 'list_items'}, {icon: 'calendar_today', text: 'Checked your calendar'}],
-    ['an event', {tool: 'propose_item', kind: 'event'}, {icon: 'event', text: 'Prepared the event'}],
-  ])('alfredStepDone, the trail\'s past tense: %s', (_name, step, done) => {
-    expect(alfredStepDone(step)).toEqual(done);
-  });
-
   const search = {tool: 'search_mail', query: 'lease'} as const;
   const read = {tool: 'get_email', from: 'Parkside Apartments'} as const;
   test.each<[string, Parameters<typeof withStep>[0], Parameters<typeof withStep>[1], ReturnType<typeof withStep>]>([

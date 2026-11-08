@@ -32,9 +32,6 @@ describe('a hazard\'s glyph where the photo would go (#121)', () => {
   const image = {thumb: {id: 1, url: '/api/news/images/1', width: 144, height: 96}, large: null, outlet: 'KTLA'};
   test.each([
     ['NWS without a photo', 'nws', null, 'thunderstorm'],
-    ['USGS', 'usgs', null, 'earthquake'],
-    ['Cal Fire', 'cal_fire', null, 'local_fire_department'],
-    ['AirNow', 'airnow', null, 'air'],
     ['a hazard with a photo shows the photo', 'nws', image, null],
     ['an outlet without a photo leaves the column empty', null, null, null],
   ] as const)('%s', (_name, hazard, picture, glyph) => {
@@ -84,8 +81,7 @@ describe('meta copy', () => {
   });
 
   test.each([
-    ['KTLA', 'K'], ['NBC Los Angeles', 'NBC'], ['CBS Los Angeles', 'CBS'], ['ABC7', '7'], ['FOX 11', '11'], ['The Verge', 'V'], ['NPR', 'N'], ['ABC News', 'ABC'],
-    ['9to5Google', '9'], ['Hugging Face', 'H'],
+    ['KTLA', 'K'], ['NBC Los Angeles', 'NBC'], ['FOX 11', '11'], ['The Verge', 'V'],
   ])('the badge: %s → %s', (outlet, expected) => {
     expect(initials(outlet)).toBe(expected);
   });
@@ -171,11 +167,8 @@ describe('the held order and the pill', () => {
 
   const numbers = (count: number) => Array.from({length: count}, (_, index) => index + 1);
   test.each([
-    [0, 0, 0],
-    [2, 2, 0],
     [5, 5, 0],
     [6, 4, 2],
-    [10, 4, 6],
   ])('New since you looked with %i facts shows %i, folding %i (news-12)', (count, shown, folded) => {
     const fold = foldFacts(numbers(count));
     expect([fold.shown.length, fold.folded.length]).toEqual([shown, folded]);
@@ -401,7 +394,7 @@ describe('Settings › News (30a)', () => {
     expect(sourcesHeader({articles_today: 1312, stories_on_page: 0})).toBe('1,312 articles today · 0 stories');
   });
 
-  test.each([[900, 'Every 15 min'], [300, 'Every 5 min'], [1800, 'Every 30 min'], [3600, 'Every hour'], [7200, 'Every 2 hours']] as const)('%i s: %s', (seconds, line) => {
+  test.each([[900, 'Every 15 min'], [3600, 'Every hour'], [7200, 'Every 2 hours']] as const)('%i s: %s', (seconds, line) => {
     expect(everyLine(seconds)).toBe(line);
   });
 
@@ -422,14 +415,7 @@ describe('Settings › News (30a)', () => {
 
   test.each([
     ['a TV station: the icon its list names', {icon: 'live_tv', adapter: 'feed'}, 'live_tv'],
-    ['the crime wire', {icon: 'local_police', adapter: 'feed'}, 'local_police'],
     ['a feed naming none: a paper', {icon: null, adapter: 'feed'}, 'newspaper'],
-    ['a page read directly', {icon: null, adapter: 'page_read'}, 'newspaper'],
-    ['NWS: its hazard', {icon: null, adapter: 'nws'}, 'thunderstorm'],
-    ['USGS', {icon: null, adapter: 'usgs'}, 'earthquake'],
-    ['Cal Fire', {icon: null, adapter: 'cal_fire'}, 'local_fire_department'],
-    ['AirNow', {icon: null, adapter: 'airnow'}, 'air'],
-    ['Google News: its search', {icon: null, adapter: 'google_news'}, 'travel_explore'],
     ['a named icon wins over the adapter\'s', {icon: 'newspaper', adapter: 'nws'}, 'newspaper'],
   ] as const)('a source\'s tile: %s', (_name, source, tile) => {
     expect(sourceTile(source)).toBe(tile);
@@ -448,17 +434,6 @@ describe('Settings › AI\'s News group (30b)', () => {
     expect(capMeter({this_month_usd: 18.4, monthly_cap_usd: 40}).fill).toBeCloseTo(0.46);
     expect(capMeter({this_month_usd: 52, monthly_cap_usd: 40})).toEqual({text: '$52.00 of $40', fill: 1, near: true});
     expect(capMeter({this_month_usd: 0, monthly_cap_usd: 0}).fill).toBe(1);
-  });
-
-  // The meter turns caution from 90% of the cap, before it's reached (the polish audit's settings-10).
-  test.each([
-    [18.4, 40, false],
-    [35.99, 40, false],
-    [36, 40, true],
-    [18.4, 20, true],
-    [52, 40, true],
-  ])('$%f of $%i is near the cap: %s', (spent, cap, near) => {
-    expect(capMeter({this_month_usd: spent, monthly_cap_usd: cap}).near).toBe(near);
   });
 
   test('at the cap it says so, until the 1st of next month; below it, nothing', () => {

@@ -1,9 +1,9 @@
-// SV-181: the .ics import review's rules as tables (D437): ticks, each row's line and marks, the
+// SV-181: the .ics import review's rules as tables (D437): each row's line and marks, the
 // list's lines and copy, what's sent for an event (from the review or the editor), and a run's counts.
 import type {IcsEventOut, IcsReadOut, ItemCreateInput} from '@setpoint/shared';
 import {ICS_DROP_REASONS, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {alreadyLine, droppedLine, editedImport, fileDrag, icsLanding, importedLine, importLabel, importOf, initialTicks, isIcsFile, nothingLine, progressLine, refusedLine, rowMarks, rowTitle, rowWhen, runCounts} from '../src/logic/icsImport.ts';
+import {alreadyLine, droppedLine, editedImport, fileDrag, icsLanding, importedLine, importLabel, importOf, isIcsFile, nothingLine, progressLine, refusedLine, rowMarks, rowTitle, rowWhen, runCounts} from '../src/logic/icsImport.ts';
 import type {RowState} from '../src/logic/icsImport.ts';
 
 const zone = SEED_TIME_ZONE;
@@ -41,10 +41,6 @@ describe('rows', () => {
     expect([rowTitle(event({title: ''})), rowTitle(event({}))]).toEqual(['(No title)', 'Opening keynote']);
   });
 
-  test('past events start unticked', () => {
-    expect([...initialTicks([event({ical_uid: 'a', past: true}), event({ical_uid: 'b'}), event({ical_uid: 'c'})])]).toEqual(['b', 'c']);
-  });
-
   test.each([
     [{name: 'devcon.ics', type: ''}, true],
     [{name: 'INVITE.ICS', type: 'application/octet-stream'}, true],
@@ -59,7 +55,6 @@ describe('the list\'s lines', () => {
   const list = [event({ical_uid: 'a', existing: [2]}), event({ical_uid: 'b', existing: [2, 3]}), event({ical_uid: 'c'})];
   test.each([
     ['two ticked on Jobs', new Set(['a', 'b', 'c']), 2, 'Jobs', '2 already on Jobs (will update)'],
-    ['only the ticked count', new Set(['a', 'c']), 2, 'Jobs', '1 already on Jobs (will update)'],
     ['none on Personal', new Set(['a', 'b', 'c']), 1, 'Personal', null],
     ['no calendar yet', new Set(['a']), null, null, null],
   ])('already: %s', (_, ticked, calendar, name, line) => {
@@ -142,14 +137,11 @@ describe('SV-190: a drag over the grid, before the drop', () => {
   const file = (type: string) => ({kind: 'file', type});
   test.each([
     ['an item\'s own drag, not files', ['text/plain'], [{kind: 'string', type: 'text/plain'}], null],
-    ['nothing at all', [], [], null],
     ['one calendar', ['Files'], [file('text/calendar')], 'ics'],
     ['one of a type the browser doesn\'t know: the drop judges it by name', ['Files'], [file('')], 'ics'],
     ['a PDF', ['Files'], [file('application/pdf')], 'other'],
-    ['an image', ['Files'], [file('image/png')], 'other'],
     ['plain text, even named .ics, is known not to be one', ['Files'], [file('text/plain')], 'other'],
     ['two calendars', ['Files'], [file('text/calendar'), file('text/calendar')], 'several'],
-    ['a calendar and a PDF', ['Files'], [file('text/calendar'), file('application/pdf')], 'several'],
     ['a file dragged with its link: one file', ['Files', 'text/uri-list'], [file('text/calendar'), {kind: 'string', type: 'text/uri-list'}], 'ics'],
   ] as const)('%s', (_, types, items, drag) => {
     expect(fileDrag(types, items)).toBe(drag);

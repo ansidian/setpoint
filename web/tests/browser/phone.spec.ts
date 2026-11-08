@@ -1,7 +1,6 @@
 // The phone at 390 × 844 (DESIGN.md › Phone; board 21; F8): board 21's three phones (the Inbox after
-// reading Northwind, the reader on it, the agenda, the Inbox also one of the release's page
-// screenshots, pages.ts), the Inbox, reader and agenda by taps, read state, Done, Trash with Undo,
-// Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
+// reading Northwind, the reader on it, the agenda), the Inbox, reader and agenda by taps, read
+// state, Done, Trash with Undo, Mark unread and read, Mark all as read, plain search, and every kind of deep link an ntfy
 // notification carries (`deepLinkPath`): an email, an event, one occurrence of a recurring event, a
 // task's day, and a Settings page. Sign-in's fields are 16 px, so iOS doesn't zoom into them.
 import assert from 'node:assert/strict';
@@ -9,7 +8,7 @@ import {after} from 'node:test';
 import type {InboxOut, ItemsOut, MailCountsOut} from '@setpoint/shared';
 import {deepLinkPath} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -43,7 +42,6 @@ test('board 21: the Inbox after reading Northwind, the reader on it, and the age
     await page.locator('.ph-back').tap();
     await until('the reader closes', () => page.locator('.pane').count(), count => count === 0);
     await until('the count follows', () => page.locator('.hd .ph-count').textContent(), text => text === '18');
-    await matchGolden(page, '21a-phone-inbox');
 
     await page.locator('.ph-tab', {hasText: 'Agenda'}).tap();
     await page.locator('.ph-agenda .pitem').first().waitFor();

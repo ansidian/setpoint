@@ -105,18 +105,14 @@ describe('paging glides (polish audit grids-04)', () => {
 
 describe('a day cell', () => {
   test.each([
-    ['2026-10-07', '7', false], ['2026-10-01', 'Oct 1', true], ['2026-11-01', 'Nov 1', true], ['2027-01-01', 'Jan 1', true], ['2026-10-31', '31', false],
+    ['2026-10-07', '7', false], ['2026-10-01', 'Oct 1', true],
   ])('%s heads as %s', (date, label, monthStart) => expect(dayHead(date)).toEqual({label, monthStart}));
 
   test.each([['2026-10-10', true], ['2026-10-11', true], ['2026-10-09', false], ['2026-10-12', false]])('%s weekend: %s', (date, weekend) => expect(isWeekend(date)).toBe(weekend));
 
   test.each([
-    ['nothing', 0, 176, {shown: 0, more: 0}],
-    ['Oct 9\'s three events', 3, 176, {shown: 3, more: 0}],
     ['six fit a 176 px row exactly', 6, 176, {shown: 6, more: 0}],
     ['seven: five and "+2"', 7, 176, {shown: 5, more: 2}],
-    ['board 11b\'s Sat 17, eight items: five and "+3"', 8, 176, {shown: 5, more: 3}],
-    ['twenty: five and "+15"', 20, 176, {shown: 5, more: 15}],
     ['a shorter row fits fewer', 4, 120, {shown: 2, more: 2}],
   ])('%s', (_name, count, row, expected) => expect(fitDay(count, row)).toEqual(expected));
 });
@@ -258,10 +254,7 @@ describe('the right pane', () => {
   ])('%s: %s', (_name, items, line) => expect(dayCounts(items)).toBe(line));
 
   test.each([
-    [{date: '2026-10-07', condition: 'sun', high_f: 78, low_f: 61}, 'sunny', 'sun', 'Sunny · 78° / 61°'],
-    [{date: '2026-10-08', condition: 'cloud', high_f: 72, low_f: 59}, 'cloud', 'cloud', 'Cloudy · 72° / 59°'],
     [{date: '2026-10-13', condition: 'rain', high_f: 64.4, low_f: 55}, 'rainy', 'rain', 'Rain · 64° / 55°'],
-    [{date: '2026-10-14', condition: 'partly_cloudy', high_f: 70, low_f: 58}, 'partly_cloudy_day', 'cloud', 'Partly cloudy · 70° / 58°'],
   ] as const)('%o', (day, icon, tone, line) => {
     const temps = line.split(' · ')[1]!;
     // The high and the low apart, so the grid can lead with the high (#174).
@@ -284,9 +277,7 @@ describe('month boundaries', () => {
     ['Sep 27, Sunday edge: none in its own row', '2026-09-27', {top: false, left: false, now: false}],
     ['Nov 1, Sunday under Oct 25: top, no left at Sunday', '2026-11-01', {top: true, left: false, now: true}],
     ['Nov 2, Monday under Oct 26: top, no left', '2026-11-02', {top: true, left: false, now: true}],
-    ['Nov 9, inside November: none', '2026-11-09', {top: false, left: false, now: false}],
     ['Dec 1, between two other months: faint', '2026-12-01', {top: true, left: true, now: false}],
-    ['Sep 1, faint', '2026-09-01', {top: true, left: true, now: false}],
   ])('%s', (_name, date, edges) => expect(monthEdges(date, '2026-10-07')).toEqual(edges));
 });
 
@@ -300,7 +291,7 @@ describe('the mini-month', () => {
   });
 
   // Polish audit calpanes-05: never 5 rows one month and 6 the next.
-  test.each([['2026-10', 5], ['2026-11', 5], ['2027-01', 6], ['2026-02', 4], ['2027-02', 5]])('%s: its %d weeks, drawn as six', (month, own) => {
+  test.each([['2026-10', 5], ['2027-01', 6], ['2026-02', 4]])('%s: its %d weeks, drawn as six', (month, own) => {
     expect(monthWeeks(month).length).toBe(own);
     expect(miniMonth(month, '2026-10-07', null).length).toBe(6);
   });

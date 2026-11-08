@@ -1,6 +1,6 @@
 // Passing runs recorded by the content they ran on (SV-83, D274), so a release runs only what hasn't
 // already passed on its exact content (release.ts). Each check is keyed on what it reads (SV-193):
-// INPUTS names whole directories, less what that check never reads, so a goldens-only commit leaves
+// INPUTS names whole directories, less what that check never reads, so a boards-only commit leaves
 // npm test and the browser checks passed, a docs-only one leaves everything passed, and a new file
 // under a directory a check reads counts without being listed. The browser checks are kept per spec
 // file: a pass records each file it ran with its content, under a key of everything the spec files
@@ -17,12 +17,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {PAGES} from './browser/pages.ts';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const KEEP_MS = 30 * 24 * 60 * 60_000;
 
-export type Check = 'unit' | 'image' | 'browser' | 'pages' | 'audit';
+export type Check = 'unit' | 'image' | 'browser';
 
 /** What a check reads: every file under `include` (a path, or '' for the whole tree), less `exclude`. */
 interface Inputs {
@@ -36,26 +35,19 @@ const named = (...files: string[]) => (file: string) => files.includes(file);
 const prose = (file: string) => (!file.includes('/') && /\.md$|^LICENSE$/.test(file)) || under('docs', 'reviews')(file);
 // The export, less what the app builds from (its stylesheet and fonts) and the glyphs' tests read.
 const boards = (file: string) => under('design-export')(file) && !under('design-export/styles', 'design-export/glyphs')(file);
-const goldens = under('web/tests/browser/goldens');
 // What only npm test runs: Vitest's files, the contract it records, its fakes and component tests.
 const unitOnly = (file: string) => /\.test\.tsx?$/.test(file) || under('shared/contract', 'server/tests', 'web/tests/components')(file);
 const SPEC = /^web\/tests\/browser\/([^/]+)\.spec\.ts$/;
 const spec = (file: string) => SPEC.test(file);
-const PAGE_SPECS = new Set(PAGES.map(shot => `web/tests/browser/${shot.spec}.spec.ts`));
 // The app and what a browser run builds, boots and drives it with, less the spec files themselves.
 const APP = ['package.json', 'package-lock.json', 'tsconfig.base.json', 'shared', 'server', 'web', 'design-export/styles', 'design-export/glyphs'];
 
 export const INPUTS: Record<Check, Inputs> = {
   // Lint and typecheck read every source file, so it's the whole tree less what they skip.
-  unit: {include: [''], exclude: [prose, boards, goldens, named('Dockerfile', '.dockerignore')]},
-  // OPERATIONS.md's build reads what the Dockerfile copies; the goldens come along in web/ but
-  // build nothing.
-  image: {include: ['Dockerfile', '.dockerignore', 'package.json', 'package-lock.json', 'tsconfig.base.json', 'shared', 'server', 'web', 'extension'], exclude: [goldens]},
-  browser: {include: APP, exclude: [goldens, unitOnly, spec]},
-  // The app as the browser checks have it, the goldens, and the spec files that take the screenshots.
-  pages: {include: APP, exclude: [unitOnly, file => spec(file) && !PAGE_SPECS.has(file)]},
-  // It draws the boards beside the goldens, not the app.
-  audit: {include: ['design-export', 'web/tests/browser/goldens', 'web/tests/browser/audit.ts', 'web/tests/browser/harness.ts', 'web/src/tokens.ts'], exclude: []},
+  unit: {include: [''], exclude: [prose, boards, named('Dockerfile', '.dockerignore')]},
+  // OPERATIONS.md's build reads what the Dockerfile copies.
+  image: {include: ['Dockerfile', '.dockerignore', 'package.json', 'package-lock.json', 'tsconfig.base.json', 'shared', 'server', 'web', 'extension'], exclude: []},
+  browser: {include: APP, exclude: [unitOnly, spec]},
 };
 
 export interface Pass {

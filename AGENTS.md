@@ -33,11 +33,7 @@ Todoist tasks. A ground-up rebuild of v1 (`../setpoint`) on darma's stack.
   shared styles runs them all. Say what ran.
 - One browser run at a time per machine, behind a shared lock: run them in the background when
   another session may be testing.
-- Before a release, `npm run release:check` (Docker running); read `npm run ahead -- status` first
-  and fix what failed.
-- A slice that changes what a page screenshot shows runs `npm run release:check -- pages image`
-  before it lands. A changed golden goes to Andy beside its diff and is re-captured with
-  `npm run goldens` in that slice, never just to make a run pass.
+- Before a release, `npm run release:check` (Docker running).
 - A new native package goes in the browser bundle's `external` (web/tests/browser/bundle.ts).
 
 ## Dev server

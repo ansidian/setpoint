@@ -30,6 +30,4 @@ News's components, and the DESIGN.md overrides that the round-2 stylesheet doesn
   `local_fire_department` and `travel_explore`. The build adds their paths to
   `glyphs/icons.json`, at the same settings as the rest. `image` is only drawn inside the
   placeholders.
-- **In the board audit from N4:** `npm run audit:boards` reads these boards too (25–31, N5 adding 29–31),
-  drawing News's icons from `glyphs/icons.json` rather than the network.
 - **Links:** "Catch up" on board 25 opens board 28, and board 28's back arrow returns to 25.

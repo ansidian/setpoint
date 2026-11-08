@@ -21,32 +21,30 @@ describe('missing', () => {
 
 // Which checks read a file, so which a commit changing only it runs again (SV-193).
 describe('reads', () => {
-  const CHECKS: Check[] = ['unit', 'image', 'browser', 'pages', 'audit'];
+  const CHECKS: Check[] = ['unit', 'image', 'browser'];
   it.each([
     ['AGENTS.md', []],
     ['docs/media/board.png', []],
     ['reviews/2026-10-15-single-value-checks.md', []],
-    ['server/src/jobs/README.md', ['unit', 'image', 'browser', 'pages']],
-    ['web/tests/browser/goldens/11-calendar-october-2026.png', ['pages', 'audit']],
-    ['design-export/boards/11-calendar.html', ['audit']],
-    ['design-export/styles/setpoint.css', ['unit', 'browser', 'pages', 'audit']],
-    ['design-export/glyphs/icons.json', ['unit', 'browser', 'pages', 'audit']],
+    ['server/src/jobs/README.md', ['unit', 'image', 'browser']],
+    ['design-export/boards/11-calendar.html', []],
+    ['design-export/styles/setpoint.css', ['unit', 'browser']],
+    ['design-export/glyphs/icons.json', ['unit', 'browser']],
     ['Dockerfile', ['image']],
     ['.dockerignore', ['image']],
-    ['package-lock.json', ['unit', 'image', 'browser', 'pages']],
+    ['package-lock.json', ['unit', 'image', 'browser']],
     ['shared/contract/mail-inbox.json', ['unit', 'image']],
     ['server/tests/fakeGoogle.ts', ['unit', 'image']],
     ['web/tests/inbox.test.ts', ['unit', 'image']],
     ['web/tests/components/select.test.tsx', ['unit', 'image']],
     ['extension/src/words.ts', ['unit', 'image']],
     ['eslint.config.js', ['unit']],
-    ['server/src/server.ts', ['unit', 'image', 'browser', 'pages']],
-    ['server/src/domain/new-module.ts', ['unit', 'image', 'browser', 'pages']],
-    ['web/src/tokens.ts', ['unit', 'image', 'browser', 'pages', 'audit']],
-    ['web/tests/browser/harness.ts', ['unit', 'image', 'browser', 'pages', 'audit']],
+    ['server/src/server.ts', ['unit', 'image', 'browser']],
+    ['server/src/domain/new-module.ts', ['unit', 'image', 'browser']],
+    ['web/src/tokens.ts', ['unit', 'image', 'browser']],
+    ['web/tests/browser/harness.ts', ['unit', 'image', 'browser']],
     // Each spec file counts on its own for the browser checks (missing, above).
     ['web/tests/browser/mail.spec.ts', ['unit', 'image']],
-    ['web/tests/browser/calendar.spec.ts', ['unit', 'image', 'pages']],
   ] as const)('%s', (file, checks) => {
     expect(CHECKS.filter(check => reads(check, file))).toEqual(checks);
   });

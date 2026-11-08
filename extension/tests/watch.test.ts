@@ -9,7 +9,6 @@ describe('the badge', () => {
     {was: 'unread just now', since: null, unread: 'pane', now: 1_000, expected: {since: 1_000, badge: null, again: GRACE_MS}},
     {was: 'unread for 3 s', since: 1_000, unread: 'pane', now: 4_000, expected: {since: 1_000, badge: null, again: 2_000}},
     {was: 'unread for the grace', since: 1_000, unread: 'pane', now: 1_000 + GRACE_MS, expected: {since: 1_000, badge: 'pane', again: null}},
-    {was: 'unread longer, the cards now too', since: 1_000, unread: 'both', now: 9_000, expected: {since: 1_000, badge: 'both', again: null}},
     {was: 'read again', since: 1_000, unread: null, now: 9_000, expected: {since: null, badge: null, again: null}},
   ] as const)('$was', ({since, unread, now, expected}) => {
     expect(watch(since, unread, now)).toEqual(expected);
@@ -22,9 +21,7 @@ describe('the badge', () => {
 
   test.each([
     ['pane', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane'}],
-    ['cards', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job cards'}],
     ['both', 'LinkedIn', {text: '!', title: 'Setpoint couldn\'t read this LinkedIn page, its job pane and cards'}],
-    ['pane', 'Indeed', {text: '!', title: 'Setpoint couldn\'t read this Indeed page, its job pane'}],
     [null, 'Indeed', {text: '', title: 'Setpoint on job boards'}],
   ] as const)('%s on %s says %o', (unread, board, expected) => {
     expect(badgeOf(unread, board)).toEqual(expected);

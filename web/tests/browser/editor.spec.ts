@@ -1,6 +1,6 @@
 // The editor in the right pane (DESIGN.md › Editor and Recurring events; boards 13 and 14): boards
 // 13 and 14 built and checked (board 13's Dinner with Sam isn't on the calendar yet, the no-dinner
-// fixture, D3; board 13 also takes one of the release's page screenshots, pages.ts), then the flows:
+// fixture, D3), then the flows:
 // creating the board's two events at once, an edit asking which occurrences (This event, then All
 // events), a Todoist task from the same editor, the editor opened from an email's proposal at
 // /calendar/new, an edited item's Title read as a line (SV-90), and a new item's one line, its lit
@@ -10,7 +10,7 @@ import {after} from 'node:test';
 import type {CommandOut, ItemsOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
-import {cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -82,10 +82,6 @@ test('board 13: two new events drafted from one line each, the conflict preview 
     await page.keyboard.press('End');
     await page.locator('.places .menu-i.cur', {hasText: 'Blue Door'}).waitFor();
     await page.getByRole('button', {name: 'Create 2 events'}).waitFor();
-    await page.mouse.move(700, 28);
-    // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-    await page.waitForTimeout(250);
-    await matchGolden(page, '13-editor-new-event');
 
     // ⌘Enter creates both; they wait for the provider in place, then settle.
     await page.keyboard.press('Meta+Enter');

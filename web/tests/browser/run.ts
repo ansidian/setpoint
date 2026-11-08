@@ -6,14 +6,11 @@
 // failed runs again with them (SV-144), up to RETRACED checks, the run failing whatever that finds:
 // its traces are under test-results/browser/traces/ (harness.ts), emptied at the start of each run,
 // and a check that passes the second time says so. A run that passes
-// records its spec files for the content they read (passes.ts), unless the files changed meanwhile
-// or it was capturing goldens, so release:check doesn't run them again. With SETPOINT_PAGES
-// (`npm run test:pages`, `npm run goldens`) it runs only the checks that take the release's page
-// screenshots (pages.ts), and those compare them. `-- settings --only "board 17"` runs only the
+// records its spec files for the content they read (passes.ts), unless the files changed meanwhile,
+// so release:check doesn't run them again. `-- settings --only "board 17"` runs only the
 // checks whose names start that way, and isn't recorded. A file's checks run side by side, as many as
 // SLOTS shared out over the files run (SV-102): one file uses every slot, a whole run one each.
-// Each check boots its server from a bundle made here (bundle.ts), but the page screenshots from the
-// source, so a release has run the entry point production runs.
+// Each check boots its server from a bundle made here (bundle.ts).
 import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,7 +18,6 @@ import {fileURLToPath} from 'node:url';
 import {record, specName, treeOf, unchanged} from '../passes.ts';
 import {bundleServer} from './bundle.ts';
 import {acquire, clock, handDown, release} from './lock.ts';
-import {COMPARING, PAGES} from './pages.ts';
 
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const HERE = fileURLToPath(new URL('./', import.meta.url));
@@ -110,10 +106,9 @@ async function main(): Promise<number> {
   const at = args.indexOf('--only');
   const named = at === -1 ? null : args.splice(at, 2)[1];
   if (at !== -1 && !named) throw new Error('--only takes the start of a check\'s name.');
-  if (COMPARING && (args.length || named)) throw new Error('The page screenshots run as a set (pages.ts); name no spec files or checks.');
-  const files = specs(COMPARING ? [...new Set(PAGES.map(shot => shot.spec))] : args);
-  // The checks that take a page screenshot, or the ones named, by the start of their names.
-  const only = (COMPARING ? PAGES.map(shot => shot.test) : named ? [named] : []).map(start => `--test-name-pattern=^${escape(start)}`);
+  const files = specs(args);
+  // The checks named, by the start of their names.
+  const only = named ? [`--test-name-pattern=^${escape(named)}`] : [];
   process.env.SETPOINT_FILE_CONCURRENCY ??= String(Math.max(1, Math.floor(SLOTS / files.length)));
   const waited = await acquire();
   if (waited > 2000) console.log(`Waited ${clock(waited)} for the lock.`);
@@ -123,31 +118,31 @@ async function main(): Promise<number> {
   // A new checkout has no folder yet, and a check that fails notes itself here before anything else.
   fs.mkdirSync(path.dirname(FAILED), {recursive: true});
   process.env.SETPOINT_BROWSER_FAILED = FAILED;
-  const tree = process.env.SETPOINT_UPDATE_GOLDENS === '1' ? null : treeOf();
+  const tree = treeOf();
   const started = Date.now();
   const timer = setTimeout(() => {
     console.error(`\nThe browser run passed its ${clock(LIMIT)} limit (SETPOINT_BROWSER_LIMIT_MIN) and was stopped.`);
     stop();
   }, LIMIT);
   try {
-    const built = await run('npm', ['run', 'build']);
+    // Vite alone: npm test has typechecked the web already, and the image's build (`npm run build`) still does.
+    const built = await run('npm', ['exec', '-w', 'web', '--', 'vite', 'build']);
     if (built !== 0) return built;
-    if (!COMPARING) process.env.SETPOINT_BROWSER_BUNDLE = await bundleServer(ROOT);
+    process.env.SETPOINT_BROWSER_BUNDLE = await bundleServer(ROOT);
     const building = Date.now() - started;
     const code = await checks(only, files);
     const took = Date.now() - started;
-    const whole = !COMPARING && !named && files.length === specs([]).length;
+    const whole = !named && files.length === specs([]).length;
     console.log(`\nBrowser run: ${clock(took)} (build ${clock(building)}, checks ${clock(took - building)})${whole ? `, budget ${clock(BUDGET)}` : ''}.`);
     if (whole && took > BUDGET) console.log('Over budget: look at the slowest checks above before adding more.');
     if (Date.now() - started >= LIMIT) return 1;
-    if (code === 0 && tree && !named) {
-      const check = COMPARING ? 'pages' : 'browser';
-      const ran = COMPARING ? [] : files.map(specName);
-      if (unchanged(tree, treeOf(), check, ran)) record(tree, check, COMPARING ? undefined : ran);
+    if (code === 0 && !named) {
+      const ran = files.map(specName);
+      if (unchanged(tree, treeOf(), 'browser', ran)) record(tree, 'browser', ran);
       else console.log('The files changed during the run, so it isn\'t recorded for release:check.');
     }
     const failed = code === 0 ? [] : failures();
-    if (failed.length && !COMPARING && !process.env.SETPOINT_BROWSER_TRACE) await traceAgain(failed);
+    if (failed.length && !process.env.SETPOINT_BROWSER_TRACE) await traceAgain(failed);
     return code;
   } finally {
     clearTimeout(timer);

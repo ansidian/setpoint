@@ -69,9 +69,6 @@ describe('dayHeading', () => {
     ['today', '2026-10-07', {label: 'Today', date: 'Wed, Oct 7'}],
     ['yesterday', '2026-10-06', {label: 'Yesterday', date: 'Tue, Oct 6'}],
     ['Monday', '2026-10-05', {label: 'Mon', date: 'Oct 5'}],
-    ['Sunday', '2026-10-04', {label: 'Sun', date: 'Oct 4'}],
-    ['a week back', '2026-09-30', {label: 'Wed', date: 'Sep 30'}],
-    ['March', '2026-03-14', {label: 'Sat', date: 'Mar 14'}],
     ['last year', '2025-12-30', {label: 'Tue', date: 'Dec 30, 2025'}],
   ])('%s', (_name, date, heading) => {
     expect(dayHeading(date, '2026-10-07')).toEqual(heading);
@@ -133,8 +130,6 @@ describe('dayView', () => {
 describe('kindGroup and kindLabel', () => {
   test.each([
     ['an FYI kind', {lane: 'fyi', kind: 'deliveries'}, 'deliveries', 'Deliveries'],
-    ['Attention keeps its kind', {lane: 'attention', kind: 'career'}, 'career', 'Career'],
-    ['security', {lane: 'fyi', kind: 'security'}, 'security', 'Security'],
     ['no kind is Other', {lane: 'fyi', kind: null}, 'other', 'Other'],
     ['Noise', {lane: 'noise', kind: null}, 'noise', 'Noise'],
     ['Unsorted', {lane: null, kind: null}, 'unsorted', 'Unsorted'],

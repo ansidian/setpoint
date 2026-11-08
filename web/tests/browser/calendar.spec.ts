@@ -1,7 +1,6 @@
 // The Calendar in the browser: boards 11 and 11b built and checked (11b's busy Saturday is the
-// busy-saturday fixture, decision D3; board 11 also takes one of the release's page screenshots,
-// pages.ts), then the flows: the grid's sizes, paging through months, a calendar
-// toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
+// busy-saturday fixture, decision D3), then the flows: the grid's sizes, paging through months, a
+// calendar toggled off and on, the "+3" popover opening and closing with Esc, selecting a day and an item,
 // the mini-month, and the Today block's links landing on the right day.
 import assert from 'node:assert/strict';
 import {after} from 'node:test';
@@ -9,17 +8,9 @@ import type {CalendarOut} from '@setpoint/shared';
 import type {Page} from 'playwright-core';
 import {monthTopRow} from '../../src/logic/calendar.ts';
 import {layout} from '../../src/tokens.ts';
-import {cleanUp, holdToast, matchGolden, pauseClock, startSetpoint, test, until} from './harness.ts';
+import {cleanUp, holdToast, pauseClock, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
-
-async function settle(page: Page) {
-  await page.evaluate(() => document.fonts.ready);
-  // Over the header's empty middle, so no hover fill shows.
-  await page.mouse.move(1000, 28);
-  // Lets a hover fill the move left fade out (120 ms) before the screenshot.
-  await page.waitForTimeout(250);
-}
 
 const text = (page: Page, selector: string) => page.locator(selector).first().textContent();
 const chips = (page: Page, date: string) => page.locator(`.cell[data-date="${date}"] :is(.ev, .tk)`).allTextContents();
@@ -40,9 +31,7 @@ test('board 11: October 2026, Wed Oct 7 selected, with Time to Leave on Dentist'
     const dentist = page.locator('.ag-item', {hasText: 'Dentist'});
     assert.equal(await dentist.locator('.line').textContent(), '2:30 – 3:30 PM · Personal');
     assert.equal(await dentist.locator('.place').textContent(), 'Smile Dental');
-    await settle(page);
     assert.equal(await page.title(), 'October 2026 · Calendar');
-    await matchGolden(page, '11-calendar-october-2026');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

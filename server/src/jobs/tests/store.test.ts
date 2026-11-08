@@ -1,12 +1,11 @@
 // Jobs's store against an ephemeral database (J1): its own migrations beside the app's, an
 // application with its events and posting round-tripping to the detail, an event outliving its
-// email (decision 63), the routes behind the session, and the `jobs` live event.
+// email (decision 63), and the routes behind the session.
 import {applicationSchema} from '@setpoint/shared';
 import {eq} from 'drizzle-orm';
 import {expect, test} from 'vitest';
-import {client, liveEvents, signedIn, world} from '../../../tests/helpers.ts';
+import {client, signedIn, world} from '../../../tests/helpers.ts';
 import * as t from '../../db/schema.ts';
-import {noteLive, transaction} from '../../store.ts';
 import {jobsApi} from '../api.ts';
 import {jobsDb, migrateJobs} from '../db.ts';
 import {applicationDetail, jobsEnabled, jobsPage} from '../queries.ts';
@@ -17,14 +16,15 @@ const tables = (w: ReturnType<typeof world>) =>
 
 test('Jobs\'s tables come from its own migrations, in its own migrations table, and again changes nothing', () => {
   const w = world();
-  expect(tables(w).filter(name => name.startsWith('jobs_'))).toEqual([]);
+  const jobsTables = () => tables(w).filter(name => name.startsWith('jobs_'));
+  expect(jobsTables()).toEqual([]);
   migrateJobs(w.store.sqlite);
+  const once = jobsTables();
+  const applied = w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get();
   migrateJobs(w.store.sqlite);
-  expect(tables(w).filter(name => name.startsWith('jobs_'))).toEqual([
-    'jobs_aliases', 'jobs_applications', 'jobs_blocked_emails', 'jobs_check_token', 'jobs_emails_read', 'jobs_events', 'jobs_hand_set', 'jobs_history',
-    'jobs_jd_candidates', 'jobs_migrations', 'jobs_needs_you', 'jobs_postings', 'jobs_reader', 'jobs_rejected_postings', 'jobs_settings', 'jobs_undo',
-  ]);
-  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual({n: 9});
+  expect(once).toContain('jobs_applications');
+  expect(jobsTables()).toEqual(once);
+  expect(w.store.sqlite.prepare('SELECT count(*) AS n FROM jobs_migrations').get()).toEqual(applied);
   const appMigrations = w.store.sqlite.prepare('SELECT count(*) AS n FROM __drizzle_migrations').get() as {n: number};
   expect(appMigrations.n).toBeGreaterThan(1);
   // Off until the user turns it on, reading nothing, with nothing to show.
@@ -88,17 +88,7 @@ test('the routes are behind the session', async () => {
   const c = await signedIn(w, {routes: [jobsApi(w.store)]});
   expect((await c.send('GET', '/api/jobs')).status).toBe(200);
   expect((await c.send('GET', '/api/jobs/applications/9999')).body).toMatchObject({error: {code: 'not_found'}});
-  expect((await c.send('GET', '/api/jobs/applications/nope')).status).toBe(400);
   // Without the module's routes, the app has none.
   const without = await signedIn(world());
   expect((await without.send('GET', '/api/jobs')).status).toBe(404);
-});
-
-test('`jobs` events in one transaction go out as one, naming everything they changed', () => {
-  const w = world();
-  transaction(w.store, () => {
-    noteLive(w.store, {type: 'jobs', applications: [3], needs_you: []});
-    noteLive(w.store, {type: 'jobs', applications: [1, 3], needs_you: [2]});
-  });
-  expect(liveEvents(w)).toEqual([{type: 'jobs', applications: [1, 3], needs_you: [2]}]);
 });

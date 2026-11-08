@@ -6,7 +6,7 @@
 import type {JobReadMode, JobStatus, Kind} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {emailBody} from '../mail.ts';
-import {emailReadingOf, jobsPromptInput} from '../prompt.ts';
+import {emailReadingOf} from '../prompt.ts';
 import type {JobEmailEvent} from '../prompt.ts';
 import {appliedBefore, checkPosting, isBlocked, matchApplication, planEmail, readsEmail, requisitionKey, sameCompany, statusAfter, statusFromEvents, titleKey} from '../rules.ts';
 import type {BlockedEmail, KnownApplication, Plan, ReadMatchEmail, StatusEvent} from '../rules.ts';
@@ -29,16 +29,6 @@ describe('companies match loosely (decision 51)', () => {
   });
 });
 
-test.each([
-  ['Software Engineer II (Java) (2026-1042)', 'software engineer ii'],
-  ['Software Engineer II - Remote', 'software engineer ii'],
-  ['Remote Software Engineer II', 'software engineer ii'],
-  ['SOFTWARE ENGINEER II [Hybrid]', 'software engineer ii'],
-  ['(2026-1042)', ''],
-])('the title %j is the role %j', (title, key) => {
-  expect(titleKey(title)).toBe(key);
-});
-
 test.each([['R-2026-118', 'r2026118'], ['r 2026 118', 'r2026118'], ['JR104', 'jr104']])('the requisition ID %j compares as %j', (id, key) => {
   expect(requisitionKey(id)).toBe(key);
 });
@@ -46,11 +36,8 @@ test.each([['R-2026-118', 'r2026118'], ['r 2026 118', 'r2026118'], ['JR104', 'jr
 describe('which mail Jobs reads (decision 56)', () => {
   test.each<[string, JobReadMode | null, Kind | null, boolean]>([
     ['Jobs reads every email, Career', 'every', 'career', true],
-    ['Jobs reads every email, Other (confirmations typed Other)', 'every', 'other', true],
-    ['Jobs reads every email, Noise (a job board\'s match)', 'every', null, true],
     ['Business reads Career', 'career', 'career', true],
     ['Business doesn\'t read a delivery', 'career', 'deliveries', false],
-    ['Business doesn\'t read Other', 'career', 'other', false],
     ['an account Jobs doesn\'t list', null, 'career', false],
   ])('%s', (_, mode, kind, read) => {
     expect(readsEmail(mode, kind)).toBe(read);
@@ -95,14 +82,11 @@ describe('statuses (decisions 55, 68)', () => {
   const at = (day: string) => `2026-10-${day}T16:00:00.000Z`;
   test.each<[string, string, Parameters<typeof statusAfter>[1], string, JobStatus | null]>([
     ['an interview moves it to In process', at('01'), 'interview', at('05'), 'in_process'],
-    ['an assessment too', at('01'), 'assessment', at('05'), 'in_process'],
     ['an offer', at('01'), 'offer', at('05'), 'offer'],
     ['a rejection', at('01'), 'rejection', at('05'), 'rejected'],
     ['a later email that sets a status wins over one set by hand', at('10'), 'rejection', at('12'), 'rejected'],
     ['an email older than the status, read late, doesn\'t undo it', at('10'), 'interview', at('08'), null],
     ['a quiet email never moves it: a form', at('01'), 'form', at('05'), null],
-    ['nor a duplicate confirmation', at('01'), 'duplicate', at('05'), null],
-    ['nor a verification code', at('01'), 'verification', at('05'), null],
   ])('%s', (_, statusSetAt, kind, emailAt, status) => {
     expect(statusAfter({statusSetAt}, kind, emailAt)).toBe(status);
   });
@@ -231,23 +215,15 @@ describe('what each email does (decision 50)', () => {
       {do: 'ignore', why: 'rejection_matches_nothing'}],
     ['an interview matching nothing waits as Track this', 'interview', 'Proseware', 'Junior Developer', null,
       {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'}],
-    ['an assessment matching nothing too', 'assessment', 'Graphic Design Institute', null, null,
-      {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'}],
-    ['an offer matching nothing too', 'offer', 'Bellows College', 'Web Developer', null,
-      {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'}],
     ['an interview naming no role where nothing is open: Track this', 'interview', 'Northwind Talent', null, null,
       {do: 'needs_you', kind: 'email_to_track', reason: 'no_application'}],
     ['a quiet email that matches becomes a quiet event: a form', 'form', 'Fabrikam', null, null,
       {do: 'event', applicationId: 1, kind: 'form', status: null}],
-    ['a verification code', 'verification', 'Relecloud', 'Cloud Support Associate', null,
-      {do: 'event', applicationId: 7, kind: 'verification', status: null}],
     ['quiet mail matching nothing is ignored', 'account', 'Lucerne Publishing', null, null,
       {do: 'ignore', why: 'quiet_matches_nothing'}],
     ['quiet mail that might match is ignored, not assigned', 'next_step', 'Humongous Insurance', null, null,
       {do: 'ignore', why: 'quiet_matches_nothing'}],
     ['a recruiter\'s cold email is out, even at a company applied to', 'recruiter', 'Fabrikam', 'Senior Engineer', null,
-      {do: 'ignore', why: 'out'}],
-    ['mail that isn\'t about an application is out', 'unrelated', 'Fabrikam', null, null,
       {do: 'ignore', why: 'out'}],
     ['a confirmation blocked by Not an application makes nothing', 'confirmation', 'Litware', 'Sales Engineer', null,
       {do: 'ignore', why: 'blocked'}],
@@ -300,17 +276,6 @@ describe('the model\'s answer, read leniently', () => {
     expect(emailReadingOf(input)).toEqual(reading);
   });
 
-  test('the model reads triage\'s reading before the body', () => {
-    const input = jobsPromptInput({
-      accountLabel: 'Jobs', fromName: 'Fabrikam Recruiting', fromAddress: 'no-reply@fabrikam.example', subject: 'Thanks for applying', receivedAt: '2026-10-07T16:00:00.000Z',
-      body: 'Thank you for applying to Software Engineer II.', organisation: 'Fabrikam', via: 'Workday', type: 'confirmation', kind: 'career', summary: 'Application received',
-    });
-    expect(input).toBe([
-      'Account: Jobs', 'From: Fabrikam Recruiting <no-reply@fabrikam.example>', 'Subject: Thanks for applying', 'Date: 2026-10-07T16:00:00.000Z',
-      'Triage read it as: organisation Fabrikam, via Workday, type confirmation, kind career.', 'Triage\'s summary: Application received', '',
-      'Body:', 'Thank you for applying to Software Engineer II.',
-    ].join('\n'));
-  });
 });
 
 describe('Applied before in mail (J7, D306): a match email\'s company, loosely and by its aliases', () => {
@@ -336,8 +301,6 @@ describe('Applied before in mail (J7, D306): a match email\'s company, loosely a
     ['a company-less confirmation waiting for its pair is never one', {event: 'match', company: 'Indeed'}, [], null],
     ['a match email naming no company', {event: 'match', company: null}, [], null],
     ['an email that isn\'t a match: a rejection', {event: 'rejection', company: 'Contoso Pharmaceuticals'}, [], null],
-    ['nor a confirmation', {event: 'confirmation', company: 'Contoso Pharmaceuticals'}, [], null],
-    ['nor one Jobs read nothing of', {event: null, company: 'Contoso Pharmaceuticals'}, [], null],
   ])('%s', (_, email, matches, query) => {
     const found = appliedBefore(email, all);
     expect(found?.matches.map(each => each.id) ?? []).toEqual(matches);

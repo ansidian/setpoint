@@ -1,8 +1,7 @@
 // The server a browser run starts, once per check (SV-145): server.ts and the templates' script,
 // each in one file with what it imports. Finding and reading a few hundred modules was most of a
 // boot: 0.19 s against 0.55, 0.25 s of a core against 0.74, and 168 MB against 351. Only run.ts asks
-// for it, for a run it has just bundled, so nothing else can meet a stale one, and the page
-// screenshots stay on the source, so a release has run the entry point production runs.
+// for it, for a run it has just bundled, so nothing else can meet a stale one.
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';

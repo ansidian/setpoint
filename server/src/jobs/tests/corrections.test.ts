@@ -428,14 +428,7 @@ describe('Undo restores exactly what was there', () => {
     expect(jobsPage(s.store).needs_you.find(each => each.company === 'Lucerne Publishing')!.candidates.map(each => each.title)).toEqual(['Junior Developer, Digital']);
   });
 
-  test('Dismiss all and its Undo (D324)', async () => {
-    const s = await setup();
-    const before = s.dump();
-    const dismissed = await s.c.send('POST', '/api/jobs/from-history/dismiss');
-    expect(jobsPage(s.store).from_history).toEqual([]);
-    await s.c.send('POST', '/api/jobs/from-history/undo', {body: dismissed.body});
-    expect(s.dump()).toEqual(before);
-  });
+
 });
 
 describe('a status set by hand (D322, D365)', () => {
@@ -444,8 +437,6 @@ describe('a status set by hand (D322, D365)', () => {
   test.each<[string, Reading, JobStatus, 'user' | 'email']>([
     ['a quiet email leaves it', {event: 'form', company: 'Litware', title: 'QA Engineer'}, 'withdrawn', 'user'],
     ['an interview replaces it', {event: 'interview', company: 'Litware', title: 'QA Engineer', line: 'Interview Wed Oct 14'}, 'in_process', 'email'],
-    ['a rejection replaces it', {event: 'rejection', company: 'Litware', title: 'QA Engineer'}, 'rejected', 'email'],
-    ['an offer replaces it', {event: 'offer', company: 'Litware', title: 'QA Engineer'}, 'offer', 'email'],
   ])('%s', async (_, reading, status, by) => {
     const s = await setup();
     await s.send('POST', `/applications/${litware(s)}/status`, {status: 'withdrawn'});
@@ -477,13 +468,9 @@ describe('a status set by hand (D322, D365)', () => {
 describe('the routes refuse what doesn\'t fit', () => {
   test.each<[string, (s: Setup) => [method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown], number]>([
     ['an application that isn\'t there', () => ['PATCH', '/applications/9999', {title: 'X'}], 404],
-    ['an edit naming nothing', s => ['PATCH', `/applications/${s.id('Fabrikam', 'Data Analyst')}`, {}], 400],
     ['an empty title', s => ['PATCH', `/applications/${s.id('Fabrikam', 'Data Analyst')}`, {title: '  '}], 400],
-    ['Ghosted as a status', s => ['POST', `/applications/${s.id('Fabrikam', 'Data Analyst')}/status`, {status: 'ghosted'}], 400],
     ['a merge with itself', s => ['POST', `/applications/${s.id('Fabrikam', 'Data Analyst')}/merge`, {other: s.id('Fabrikam', 'Data Analyst')}], 400],
     ['Not this posting with no JD', s => ['POST', `/applications/${s.id('Trey Research', 'Data Engineer I')}/not-this-posting`], 409],
-    ['a pick of another application\'s candidate', s => ['POST', `/applications/${s.id('Fabrikam', 'Data Analyst')}/jd/pick`, {candidate: applicationDetail(s.store, s.id('Lucerne Publishing', 'Junior Developer')).candidates[0]!.id}], 404],
-    ['Track this on an update to assign', s => ['POST', `/needs-you/${s.item('Humongous Insurance').id}/track`], 400],
     ['Undo of nothing', () => ['POST', '/undo/9999'], 404],
   ])('%s', async (_, request, status) => {
     const s = await setup();

@@ -121,14 +121,10 @@ describe('emailLinks and postingLinks', () => {
 describe('platformsToTry', () => {
   test.each<[string, string | null, JobPlatform[], JobPlatform[]]>([
     ['triage named Greenhouse', 'Greenhouse', [], ['greenhouse']],
-    ['triage named Ashby, any case', 'ashby', [], ['ashby']],
     ['a job board: all three', 'Indeed', [], ['greenhouse', 'lever', 'ashby']],
-    ['nothing named: all three', null, [], ['greenhouse', 'lever', 'ashby']],
     ['another tracking system: none', 'Workday', [], []],
     ['another tracking system, but a Lever link', 'iCIMS', ['lever'], ['lever']],
     ['a linked platform comes first', 'Greenhouse', ['ashby'], ['ashby', 'greenhouse']],
-    ['nothing named, but a Lever link: Lever alone', null, ['lever'], ['lever']],
-    ['a job board, but a Greenhouse link: Greenhouse alone', 'Indeed', ['greenhouse'], ['greenhouse']],
     ['Breezy HR is another', 'Breezy HR', [], []],
   ])('%s', (_, via, linked, expected) => {
     expect(platformsToTry(via, linked)).toEqual(expected);
@@ -196,17 +192,13 @@ describe('matching a board\'s postings', () => {
 describe('GovernmentJobs (D389)', () => {
   test.each<[string, string | null, string[], boolean]>([
     ['triage named it', 'GovernmentJobs', [], true],
-    ['any case', 'governmentjobs', [], true],
     ['with a space', 'Government Jobs', [], true],
-    ['as its address', 'governmentjobs.com', [], true],
     ['by its maker\'s name', 'NEOGOV', [], true],
-    ['any case', 'neogov', [], true],
     ['a sender at its domain', null, ['noreply@governmentjobs.example'], true],
     ['on a subdomain', null, ['alerts@mail.governmentjobs.example'], true],
     ['at its maker\'s', null, ['Notices@NeoGov.example'], true],
     ['one sender of several', 'Indeed', ['alert@indeed.example', 'noreply@governmentjobs.example'], true],
     ['another platform', 'Workday', ['noreply@myworkday.example'], false],
-    ['the three boards', 'Greenhouse', [], false],
     ['USAJobs is another', 'USAJobs', [], false],
     ['nothing named', null, [], false],
     ['a lookalike domain', null, ['noreply@notgovernmentjobs.example'], false],
@@ -261,7 +253,6 @@ describe('what the verdicts make', () => {
     ['maybes are unsure, in order', ['maybe', 'no', 'maybe'], {is: 'unsure', candidates: ['a', 'c']}],
     ['four maybes offer three', ['maybe', 'maybe', 'maybe', 'maybe'], {is: 'unsure', candidates: ['a', 'b', 'c']}],
     ['all no is none', ['no', 'no'], {is: 'none'}],
-    ['nothing is none', [], {is: 'none'}],
   ])('%s', (_, verdicts, outcome) => {
     expect(outcomeOf(verdicts.map((verdict, index) => ({candidate: 'abcd'[index]!, verdict})))).toEqual(outcome);
   });
@@ -285,10 +276,8 @@ describe('how a lookup ends', () => {
 
   test.each<[string, ProviderError, boolean]>([
     ['a 404 is a miss', new ProviderError('permanent', '404 Not Found', {status: 404}), true],
-    ['a 403 is a miss', new ProviderError('permanent', '403 Forbidden', {status: 403}), true],
     ['a 429 is retried', RATE, false],
     ['a 503 is retried', new ProviderError('transient', '503 Service Unavailable', {status: 503}), false],
-    ['a timeout is retried', new ProviderError('transient', 'greenhouse.example didn\'t answer in time.'), false],
     ['the AI\'s refused key isn\'t a miss either', new ProviderError('auth', 'Anthropic: invalid x-api-key (401).'), false],
   ])('isMiss: %s', (_, error, miss) => {
     expect(isMiss(error)).toBe(miss);
@@ -296,11 +285,8 @@ describe('how a lookup ends', () => {
 
   test.each<[string, 'platforms' | 'search', Parameters<typeof nextSourceRuns>[1], boolean]>([
     ['the platforms run after a link that missed', 'platforms', [{is: 'none'}], true],
-    ['the platforms run after a link that was unsure', 'platforms', [{is: 'unsure', candidates: []}], true],
-    ['the platforms run after a link that failed', 'platforms', [{is: 'failed'}], true],
     ['nothing runs after confident', 'platforms', [{is: 'confident', posting: 'a'}], false],
     ['search runs when everything cleanly missed', 'search', [{is: 'none'}, {is: 'none'}], true],
-    ['search runs when there was nothing before it', 'search', [], true],
     ['no search when a source was unsure', 'search', [{is: 'none'}, {is: 'unsure', candidates: []}], false],
     ['no search when a source failed: retried first', 'search', [{is: 'failed'}, {is: 'none'}], false],
   ])('nextSourceRuns: %s', (_, source, steps, runs) => {

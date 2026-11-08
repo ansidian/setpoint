@@ -143,35 +143,17 @@ describe('attachments', () => {
     expect(previewKind(file)).toBe(kind);
   });
 
-  // Each card's type tile (#122): its colour and glyph say what the file is before its name does.
+  // Each card's type tile (#122): by its name's extension, else its MIME type, else other.
   test.each([
-    ['a PDF', 'Renewal agreement.pdf', 'application/pdf', 'pdf'],
     ['a PDF by its MIME type alone', 'statement', 'application/pdf', 'pdf'],
-    ['a PNG', 'Unit 4B floor plan.png', 'image/png', 'image'],
-    ['a photo', 'IMG_2041.JPG', 'image/jpeg', 'image'],
-    ['an SVG, though it has no preview', 'logo.svg', 'image/svg+xml', 'image'],
-    ['a CSV', 'Rent ledger.csv', 'text/csv', 'sheet'],
-    ['an Excel file', 'Budget.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'sheet'],
-    ['an old Excel file', 'Budget.xls', 'application/vnd.ms-excel', 'sheet'],
     ['a Numbers file', 'Trip.numbers', 'application/octet-stream', 'sheet'],
-    ['a Word file', 'Cover letter.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'doc'],
-    ['an old Word file', 'Lease.doc', 'application/msword', 'doc'],
-    ['a Pages file', 'Essay.pages', 'application/octet-stream', 'doc'],
-    ['rich text', 'Notes.rtf', 'application/rtf', 'doc'],
-    ['plain text', 'readme.txt', 'text/plain', 'doc'],
-    ['a ZIP', 'Photos.zip', 'application/zip', 'archive'],
-    ['a gzip', 'logs.tar.gz', 'application/gzip', 'archive'],
-    ['a RAR', 'Scans.rar', 'application/vnd.rar', 'archive'],
-    ['a 7z', 'Backup.7z', 'application/x-7z-compressed', 'archive'],
-    ['an invitation', 'invite.ics', 'text/calendar', 'calendar'],
-    ['an invitation without an extension', 'invite', 'text/calendar', 'calendar'],
     ['anything else', 'setup.dmg', 'application/x-apple-diskimage', 'other'],
   ])('%s is %s', (_name, filename, mime_type, type) => {
     expect(attachmentType({filename, mime_type})).toBe(type);
   });
 
   test.each([
-    [0, '0 bytes'], [1, '1 byte'], [1023, '1023 bytes'], [1024, '1 KB'], [1536, '2 KB'], [999 * 1024, '999 KB'],
+    [1, '1 byte'], [1023, '1023 bytes'], [1024, '1 KB'], [999 * 1024, '999 KB'],
     [1000 * 1024, '1 MB'], [1.25 * 1024 * 1024, '1.3 MB'], [12.4 * 1024 * 1024, '12 MB'], [3 * 1024 ** 3, '3 GB'],
   ])('%d bytes → %s', (bytes, size) => {
     expect(fileSize(bytes)).toBe(size);

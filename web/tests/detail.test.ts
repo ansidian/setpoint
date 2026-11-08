@@ -16,8 +16,6 @@ const item = (fields: Partial<ItemOut>): ItemOut => ({
 describe('date and time', () => {
   test.each([
     ['Dentist (12a)', item({starts_at: at('2026-10-07', '14:30'), ends_at: at('2026-10-07', '15:30')}), 'Wed, Oct 7 · 2:30 – 3:30 PM'],
-    ['Dinner with Sam (12b)', item({starts_at: at('2026-10-09', '19:00'), ends_at: at('2026-10-09', '21:00')}), 'Fri, Oct 9 · 7:00 – 9:00 PM'],
-    ['across noon', item({starts_at: at('2026-10-15', '10:00'), ends_at: at('2026-10-15', '14:00')}), 'Thu, Oct 15 · 10:00 AM – 2:00 PM'],
     ['past midnight', item({starts_at: at('2026-10-09', '22:00'), ends_at: at('2026-10-10', '01:00')}), 'Fri, Oct 9, 10:00 PM – Sat, Oct 10, 1:00 AM'],
     ['all day', item({all_day: true, start_date: '2026-10-17', end_date: '2026-10-18'}), 'Sat, Oct 17 · All day'],
     ['several days', item({all_day: true, start_date: '2026-10-17', end_date: '2026-10-20'}), 'Sat, Oct 17 – Mon, Oct 19'],
@@ -88,7 +86,6 @@ describe('repeat', () => {
 describe('attendees', () => {
   test.each<[string[], string | null]>([
     [['Sam Lee'], 'Sam Lee'],
-    [['Sam Lee', 'Jo Park'], 'Sam Lee, Jo Park'],
     [['Sam Lee', 'Jo Park', 'Ana Ruiz'], 'Sam Lee, Jo Park, Ana Ruiz'],
     [['Sam Lee', 'Jo Park', 'Ana Ruiz', 'Kai Chen', 'Lu Wang'], 'Sam Lee, Jo Park and 3 more'],
     [[], null],

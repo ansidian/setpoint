@@ -2,7 +2,7 @@
 // Each check gets its own Setpoint: a copy of a fresh seed in a scratch data directory, the real
 // server on a free port serving the production build (web/dist) with the seed's clock, claimed in
 // its template so the browser starts signed in. Under run.ts the server is a bundle of the source
-// (bundle.ts), which is a third of the boot; the page screenshots run the source. Spec files run side by side (eight at
+// (bundle.ts), which is a third of the boot. Spec files run side by side (eight at
 // once, run.ts), each check on its own port and data. Chromium comes from playwright-core:
 // the browser Playwright keeps in its cache, else the installed Google Chrome (darma's way);
 // nothing is downloaded.
@@ -24,17 +24,12 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright-core';
 import type {Browser, BrowserContext, Locator, Page, Request, Response} from 'playwright-core';
 import {holdForRun} from './lock.ts';
-import {COMPARING, PAGES} from './pages.ts';
 import {viewport} from '../../src/tokens.ts';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const WEB_DIST = path.join(ROOT, 'web', 'dist');
-/** Where each run's screenshots and diffs go (git ignores it). */
-export const OUTPUT = path.join(ROOT, 'test-results', 'browser');
-/** Where a failed check's traces go (run.ts empties it at the start of a run). */
-export const TRACES = path.join(OUTPUT, 'traces');
-/** The release's page screenshots (pages.ts, D281). */
-export const GOLDENS = fileURLToPath(new URL('./goldens/', import.meta.url));
+/** Where a failed check's traces go (run.ts empties it at the start of a run; git ignores it). */
+export const TRACES = path.join(ROOT, 'test-results', 'browser', 'traces');
 
 /** The sizes every check runs at: the design target and an iPhone. */
 export const SIZES = {
@@ -82,11 +77,10 @@ export async function closeBrowser() {
 
 // Each check with the contexts and pages it opened, for its traces and for `rested`. A spec file's
 // checks run side by side (SV-102), so the check a page belongs to is the one whose body is running,
-// kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE says what a context
-// records, a failed or timed-out check's being kept: 1 the whole trace, `light` its DOM at each step
-// without the screencast, 0 nothing. Whole traces were a third of a run's CPU, and light ones a fifth,
-// so nothing is the default, with what failed run again whole (run.ts, SV-144).
-const TRACE = process.env.SETPOINT_BROWSER_TRACE ?? '0';
+// kept in async context rather than in one variable. SETPOINT_BROWSER_TRACE=1 has each context record
+// a trace, a failed or timed-out check's being kept. Traces were a third of a run's CPU, so none is
+// the default, with what failed run again with one (run.ts, SV-144).
+const TRACE = (process.env.SETPOINT_BROWSER_TRACE ?? '0') !== '0';
 // Where a failed check is noted, for run.ts.
 const FAILED = process.env.SETPOINT_BROWSER_FAILED;
 interface Check {
@@ -286,8 +280,8 @@ function template(fixtures: string[], claim: boolean, env: NodeJS.ProcessEnv): T
     // Built aside and renamed into place, so spec files building the same set at once don't collide.
     const building = fs.mkdtempSync(`${dir}.building-`);
     const buildEnv = {...env, SETPOINT_DATA_DIR: path.join(building, 'data')};
-    // The sample's News, never the checkout's snapshot of real news: the checks and goldens are the
-    // sample's. Claimed here, so a check has its signed-in session without a claim of its own (SV-143).
+    // The sample's News, never the checkout's snapshot of real news: the checks are the sample's.
+    // Claimed here, so a check has its signed-in session without a claim of its own (SV-143).
     fs.writeFileSync(path.join(building, 'template.json'), run([TEMPLATE, ...(claim ? ['--claim', PASSWORD] : []), ...fixtures], buildEnv));
     try {
       fs.renameSync(building, dir);
@@ -306,7 +300,7 @@ export interface StartOptions {
   claim?: boolean;
   // Board fixtures layered on the seed (server/src/dev/fixtures/, decision D3).
   fixtures?: string[];
-  // `seed` runs on from the seed's moment; `frozen` holds there, for screenshots.
+  // `seed` runs on from the seed's moment; `frozen` holds there.
   clock?: 'seed' | 'frozen';
   // More of the server's environment (SETPOINT_DEV_AI_URL for a fake model).
   env?: Record<string, string>;
@@ -422,7 +416,7 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
         timezoneId: 'America/Los_Angeles', locale: 'en-US', colorScheme: 'dark',
       });
       contexts.push(context);
-      if (TRACE !== '0') await context.tracing.start({screenshots: TRACE !== 'light', snapshots: true});
+      if (TRACE) await context.tracing.start({screenshots: true, snapshots: true});
       checks.getStore()?.contexts.add(context);
       if (cookie) await context.addCookies([{name: cookie.name, value: cookie.value, url: base}]);
       const page = await context.newPage();
@@ -557,7 +551,7 @@ export async function point(row: Locator): Promise<void> {
 /**
  * Resolves once nothing on the page is moving: every entrance, exit, fold and fade (a finite
  * animation or transition under 2 s; the toast's Undo clock and spinners aside) has run its course,
- * and the page has drawn twice since, so what `rested` reads or a golden screenshots is where it rests
+ * and the page has drawn twice since, so what `rested` reads is where it rests
  * (an overlay mid-entrance is scaled and offset, and drawn on a layer of its own). Not for a check to
  * call: a check doesn't wait out a motion it started (D416).
  */
@@ -579,145 +573,6 @@ export async function readSecurity(setpoint: Setpoint): Promise<void> {
   }
 }
 
-/** Pixels that differ between two same-sized PNGs, and a diff image (red where they differ). */
-export interface Comparison {
-  width: number;
-  height: number;
-  differing: number;
-  ratio: number;
-  diff: Buffer;
-}
-
-/**
- * Compares two PNGs in the browser's canvas, pixelmatch's way: a pixel differs when its YIQ colour
- * distance is over `threshold` (0–1 of the largest possible; 0.1 is pixelmatch's default, which
- * lets antialiasing through). Different sizes count as entirely different.
- */
-export async function compareImages(expected: Buffer, actual: Buffer, threshold = 0.1): Promise<Comparison> {
-  const chromium = await launchBrowser();
-  const page = await chromium.newPage();
-  try {
-    const result = await page.evaluate(async ({a, b, threshold}) => {
-      const load = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = src;
-      });
-      const [one, two] = await Promise.all([load(a), load(b)]);
-      const width = Math.max(one.width, two.width);
-      const height = Math.max(one.height, two.height);
-      const pixels = (image: HTMLImageElement) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d')!;
-        context.drawImage(image, 0, 0);
-        return context.getImageData(0, 0, width, height).data;
-      };
-      const p = pixels(one);
-      const q = pixels(two);
-      const out = document.createElement('canvas');
-      out.width = width;
-      out.height = height;
-      const context = out.getContext('2d')!;
-      const diff = context.createImageData(width, height);
-      const max = 35215 * threshold * threshold;
-      const sameSize = one.width === two.width && one.height === two.height;
-      let differing = 0;
-      for (let i = 0; i < p.length; i += 4) {
-        const dr = p[i]! - q[i]!;
-        const dg = p[i + 1]! - q[i + 1]!;
-        const db = p[i + 2]! - q[i + 2]!;
-        const y = dr * 0.29889531 + dg * 0.58662247 + db * 0.11448223;
-        const iq = dr * 0.59597799 - dg * 0.2741761 - db * 0.32180189;
-        const qq = dr * 0.21147017 - dg * 0.52261711 + db * 0.31114694;
-        const delta = 0.5053 * y * y + 0.299 * iq * iq + 0.1957 * qq * qq;
-        if (!sameSize || delta > max) {
-          differing += 1;
-          diff.data.set([255, 0, 0, 255], i);
-        } else {
-          const grey = 255 + ((p[i]! * 0.3 + p[i + 1]! * 0.59 + p[i + 2]! * 0.11) - 255) * 0.15;
-          diff.data.set([grey, grey, grey, 255], i);
-        }
-      }
-      context.putImageData(diff, 0, 0);
-      return {width, height, differing, png: out.toDataURL('image/png')};
-    }, {a: `data:image/png;base64,${expected.toString('base64')}`, b: `data:image/png;base64,${actual.toString('base64')}`, threshold});
-    return {
-      width: result.width, height: result.height, differing: result.differing, ratio: result.differing / (result.width * result.height),
-      diff: Buffer.from(result.png.slice(result.png.indexOf(',') + 1), 'base64'),
-    };
-  } finally {
-    await page.close();
-  }
-}
-
-/** Writes a run's image under test-results/browser/ and returns its path. */
-export function writeOutput(name: string, png: Buffer): string {
-  fs.mkdirSync(OUTPUT, {recursive: true});
-  const file = path.join(OUTPUT, name);
-  fs.writeFileSync(file, png);
-  return file;
-}
-
-// `npm run goldens` sets it: a screenshot that no longer matches replaces its approved one, for a
-// deliberate change, and its diff is looked at before committing.
-const UPDATE_GOLDENS = process.env.SETPOINT_UPDATE_GOLDENS === '1';
-
-/**
- * Pixels allowed to differ from an approved screenshot. Captures from the same pinned Chromium come
- * out identical but for a stray edge pixel or six (the attention pill, a button's corner); a
- * recoloured chip is about 2,600 and a changed 16 px icon about 100.
- */
-export const MAX_DIFFERING = 20;
-
-/**
- * How far a pixel's colour may move before it counts (compareImages' threshold). Antialiasing
- * jitter moves a channel by 4 at most (about 0.015); `caution` drawn as `alert`, two close tokens,
- * is about 0.05, which pixelmatch's 0.1 would let through.
- */
-const GOLDEN_THRESHOLD = 0.03;
-
-/**
- * Compares the whole page with its approved screenshot, web/tests/browser/goldens/<name>.png, once
- * its fonts are in and it has settled: one of the release's page screenshots (pages.ts, D281), and
- * only when `npm run test:pages` or `npm run goldens` runs, else it returns at once. The actual image
- * and a diff land in test-results/browser/.
- */
-export async function matchGolden(page: Page, name: string): Promise<void> {
-  if (!PAGES.some(shot => shot.name === name)) throw new Error(`${name} isn't one of the release's page screenshots (PAGES in pages.ts).`);
-  if (!COMPARING) return;
-  await page.evaluate(() => document.fonts.ready);
-  // Lets the last hover or scroll settle before the screenshot.
-  await page.waitForTimeout(250);
-  // And whatever arrived lately: it rests where the screenshot expects it, drawn as at rest.
-  await still(page);
-  const actual = await page.screenshot({animations: 'disabled', caret: 'hide'});
-  const actualPath = writeOutput(`${name}.actual.png`, actual);
-  const golden = path.join(GOLDENS, `${name}.png`);
-  const shown = path.relative(ROOT, golden);
-  const approve = () => {
-    fs.mkdirSync(GOLDENS, {recursive: true});
-    fs.writeFileSync(golden, actual);
-  };
-  if (!fs.existsSync(golden)) {
-    if (!UPDATE_GOLDENS) throw new Error(`${name}: no approved screenshot at ${shown}. Capture it with \`npm run goldens\` and look at it before committing.`);
-    approve();
-    console.log(`${name}: captured ${shown}`);
-    return;
-  }
-  const result = await compareImages(fs.readFileSync(golden), actual, GOLDEN_THRESHOLD);
-  const diffPath = writeOutput(`${name}.diff.png`, result.diff);
-  console.log(`${name}: ${result.differing} pixels differ from ${shown}; actual ${actualPath}, diff ${diffPath}`);
-  if (result.differing <= MAX_DIFFERING) return;
-  if (UPDATE_GOLDENS) {
-    approve();
-    console.log(`${name}: re-captured ${shown}; look at ${diffPath} before committing`);
-    return;
-  }
-  throw new Error(`${name} differs from ${shown} in ${result.differing} pixels (at most ${MAX_DIFFERING}); see ${diffPath}. A deliberate change re-captures it with \`npm run goldens\`.`);
-}
 
 /** Picks a choice in a Settings select: its chip opens the shared menu (no browser list), by label or position. */
 export async function choose(page: Page, select: string, option: string | number) {

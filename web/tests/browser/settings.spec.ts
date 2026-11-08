@@ -1,6 +1,5 @@
-// Settings in the browser (F7; DESIGN.md › Settings): board 17 built and checked
-// (board 17 also takes one of the release's page screenshots, pages.ts), then each page saving: the
-// modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
+// Settings in the browser (F7; DESIGN.md › Settings): board 17 built and checked, then each page
+// saving: the modal itself (⌘,, Esc, not in the address bar, a link straight to a page, Reconnect), Accounts
 // (colour, rename, order, Connect Gmail's "not configured", Connect iCloud's form), Mail (a rule, Undo
 // on a learned rule, a domain, code expiry), Notifications (Send test to a fake ntfy on 127.0.0.1,
 // switches, defaults), Calendar (a calendar hidden, Home, weather, and SV-20's colours written to
@@ -19,7 +18,7 @@ import {after} from 'node:test';
 import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {choose, cleanUp, matchGolden, rested, startSetpoint, test, until} from './harness.ts';
+import {choose, cleanUp, rested, startSetpoint, test, until} from './harness.ts';
 
 after(cleanUp);
 
@@ -63,8 +62,6 @@ test('board 17: Settings › Accounts, Business needing sign-in and Personal sta
     await page.locator('.hbar.caution').waitFor();
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');
-    await page.mouse.move(1500, 1000);
-    await matchGolden(page, '17-settings-accounts');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

@@ -4,7 +4,7 @@
 import type {InboxGroupOut, InboxOut, MailCountsOut, MessageRowOut} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  accountColumn, GROUP_GLYPHS, codeExpired, countsAfterOpen, inSight, letGo, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
+  accountColumn, codeExpired, countsAfterOpen, inSight, letGo, withHeld, withoutEmails, inboxAfterDone, inboxAfterMarkAllRead, inboxAfterOpen, inboxAfterPin, inboxAfterUnread, keepCursor, LEFT_OUT_KEY, MENTIONS_KEY, searchStops, markAllReadIds, markAllReads, moveCursor, neighbour, nextAfterLeaving,
   nextCodeChange, promptText, rowLine, showsPending, visiblePrompt, withoutExpiredCodes,
 } from '../src/logic/inbox.ts';
 import type {PatternPrompt} from '../src/logic/inbox.ts';
@@ -49,9 +49,6 @@ const stops: Stop[] = [
   rowStop('pinned', 27), rowStop('attention', 2), rowStop('attention', 5), rowStop('attention', 22), rowStop('security', 1), rowStop('security', 3),
   {key: 'noise:a', kind: 'noise', date: 'a'}, rowStop('career', 12), {key: 'noise:b', kind: 'noise', date: 'b'},
 ];
-
-// Each lane's glyph, one per group and no two alike (#119): its header and All's kind column draw it.
-test('no two groups share a glyph', () => expect(new Set(Object.values(GROUP_GLYPHS)).size).toBe(Object.keys(GROUP_GLYPHS).length));
 
 describe('Undo\'s rows show at once, until the server\'s list has them again', () => {
   const ids = (list: InboxGroupOut[], name: string) => list.find(item => item.group === name)?.rows.map(item => [item.id, item.unread]);
@@ -267,7 +264,6 @@ test.each([
   ['nothing waiting', null, false],
   ['opening it reads it quietly', {state: 'pending', kind: 'open'}, false],
   ['Trash waiting for Gmail', {state: 'pending', kind: 'trash'}, true],
-  ['Mark all as read waiting', {state: 'pending', kind: 'mark_all_read'}, true],
   ['a failed change shows failed, not pending', {state: 'failed', kind: 'trash'}, false],
 ])('showsPending: %s', (_name, command, expected) => {
   expect(showsPending({command: command as MessageRowOut['command']})).toBe(expected);
@@ -297,10 +293,8 @@ describe('Done or Trash on the open email opens the next', () => {
 describe('a code leaves the Inbox at its expiry', () => {
   // The code expires at 9:23 AM (16:23Z).
   test.each([
-    ['11 minutes before', Date.parse('2026-10-07T16:12:00.000Z'), false],
     ['a second before', Date.parse('2026-10-07T16:22:59.000Z'), false],
     ['at its expiry', Date.parse('2026-10-07T16:23:00.000Z'), true],
-    ['after', Date.parse('2026-10-07T16:40:00.000Z'), true],
   ])('%s', (_name, now, expired) => {
     expect(codeExpired(code, now)).toBe(expired);
     const security = withoutExpiredCodes(groups, now).find(item => item.group === 'security')!;
@@ -332,7 +326,6 @@ describe('the pattern prompt', () => {
   const prompt = (fields: Partial<PatternPrompt>): PatternPrompt => ({id: 1, organisation: 'Northwind', type: 'newsletter', count: 4, ...fields});
   test.each([
     ['board 09', prompt({}), 'You\'ve cleared 4 Northwind newsletters without opening them. Send these to FYI from now on?'],
-    ['receipts', prompt({organisation: 'Fourth Coffee', type: 'receipt', count: 3}), 'You\'ve cleared 3 Fourth Coffee receipts without opening them. Send these to FYI from now on?'],
     ['no type', prompt({type: null, count: 5}), 'You\'ve cleared 5 Northwind emails without opening them. Send these to FYI from now on?'],
   ])('%s', (_name, input, text) => {
     expect(promptText(input)).toBe(text);

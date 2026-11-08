@@ -2,8 +2,8 @@
 // Codable types, and an installed build stays older than the server, so what it reads is recorded
 // from the seed into shared/contract/ and every run checks the API still answers in a way that build
 // can decode: no key gone or renamed, no new kind at a path, no status changed, and no enum value it
-// doesn't know. A new key passes. `npm run contract:record` re-records, deliberately (like `npm run
-// goldens`), and its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a
+// doesn't know. A new key passes. `npm run contract:record` re-records, deliberately,
+// and its index lists what each fixture can't speak for. setpoint-ios copies the folder in at a
 // pinned setpoint-v2 commit, and its decoding tests read the same files.
 import fs from 'node:fs';
 import os from 'node:os';

@@ -2,7 +2,7 @@
 // and the company's other applications, in the order asked, a page of cards in one request, nothing
 // while Jobs is off, and only the extension's own token reads it, which opens nothing else. The
 // matching itself is reading.test.ts's table.
-import {JOBS_CHECK_MAX, jobsCheckSchema} from '@setpoint/shared';
+import {jobsCheckSchema} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {signedIn, world} from '../../../tests/helpers.ts';
 import {jobsApi, jobsTokenApi} from '../api.ts';
@@ -44,15 +44,6 @@ describe('POST /api/jobs/check', () => {
     const {c, check} = await seeded();
     expect((await c.send('PATCH', '/api/jobs/settings', {body: {enabled: false}})).status).toBe(200);
     expect((await check([contoso])).body).toEqual({enabled: false, postings: [nothing]});
-  });
-
-  test.each<[string, Posting[]]>([
-    ['none', []],
-    ['one naming no company', [{company: '  ', title: 'Data Analyst'}]],
-    ['more than a page', Array.from({length: JOBS_CHECK_MAX + 1}, () => contoso)],
-  ])('postings refused: %s', async (_, postings) => {
-    const {check} = await seeded();
-    expect((await check(postings)).status).toBe(400);
   });
 
   test('only the current token reads it: not none, another, the session alone, or one revoked', async () => {

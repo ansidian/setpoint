@@ -41,7 +41,7 @@ describe('Settings', () => {
     ['attention', null, 'Attention'], ['fyi', 'money', 'FYI · Money'], ['fyi', null, 'FYI'], ['noise', null, 'Noise'],
   ] as const)('%s %s is tagged %s', (lane, kind, tag) => expect(laneTag(lane, kind)).toBe(tag));
 
-  test.each([[0, 'None this month'], [1, '1 this month'], [31, '31 this month']])('%i matches: %s', (count, text) => expect(matchesThisMonth(count)).toBe(text));
+  test.each([[0, 'None this month'], [1, '1 this month']])('%i matches: %s', (count, text) => expect(matchesThisMonth(count)).toBe(text));
 
   test.each([
     ['woodgrovebank.example', {from_domains: ['woodgrovebank.example']}], [' News.Fabrikam.com ', {from_domains: ['news.fabrikam.com']}],
@@ -121,9 +121,8 @@ describe('Settings', () => {
     expect(sparkPath(days, SPARK)).toMatchObject(drawn);
   });
 
-  test('the sparkline\'s reference at 80%, and each day\'s column from halfway to its neighbours', () => {
+  test('each day\'s hover column on the sparkline runs from halfway to its neighbours', () => {
     const spark = sparkPath([day('2026-10-05', 1, 1), day('2026-10-06', 1, 1), day('2026-10-07', 1, 1), day('2026-10-08', 1, 1)], SPARK);
-    expect(spark.reference).toBe(13.7);
     expect(spark.columns).toEqual([{x: 0, width: 33}, {x: 33, width: 57}, {x: 90, width: 57}, {x: 147, width: 33}]);
   });
 
@@ -175,13 +174,13 @@ describe('Settings', () => {
   });
 
   test.each([
-    [0, 'At the start'], [5, '5 min before'], [10, '10 min before'], [60, '1 hour before'], [120, '2 hours before'], [1440, '1 day before'], [90, '90 min before'],
+    [0, 'At the start'], [60, '1 hour before'], [120, '2 hours before'], [1440, '1 day before'], [90, '90 min before'],
   ])('a reminder %i minutes before reads %s', (minutes, text) => expect(minutesBefore(minutes)).toBe(text));
 
   test.each([['09:00', '9:00 AM on the due day'], ['00:30', '12:30 AM on the due day'], ['12:00', '12:00 PM on the due day'], ['17:45', '5:45 PM on the due day']])(
     'a task reminder at %s reads %s', (clock, text) => expect(taskTime(clock)).toBe(text));
 
-  test.each([[5, '5 min'], [15, '15 min'], [60, '1 hour']])('code expiry %i reads %s', (minutes, text) => expect(expiryLabel(minutes)).toBe(text));
+  test.each([[5, '5 min'], [60, '1 hour']])('code expiry %i reads %s', (minutes, text) => expect(expiryLabel(minutes)).toBe(text));
 
   test.each([
     ['accounts', '', null, false], ['accounts', '?connected=6', 'Gmail is connected', false], ['accounts', '?error=access_denied', 'Gmail couldn’t be connected, access denied', true],

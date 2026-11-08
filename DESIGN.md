@@ -17,9 +17,8 @@ cutover. This file owns what's on screen and how it behaves.
   same data parsed. The build defines tokens once in code, mirroring that file and the tables
   below; a unit test compares them, as mantel's does.
 - **Visual reference:** each board in `design-export/boards/` (gallery: `design-export/index.html`)
-  is the reference for anything not written here, such as exact spacing inside a card. The board
-  audit (`npm run audit:boards`) sets each board beside the app's page screenshot of the same
-  state, where the release keeps one (D69, D281); the browser checks never compare with the boards.
+  is the reference for anything not written here, such as exact spacing inside a card. Andy
+  compares the pages with them by eye (D479); the browser checks never compare with the boards.
 - **Icons:** `design-export/glyphs/icons.json`, Material Symbols Rounded at weight 300 as SVG paths
   (`viewBox="0 -960 960 960"`), bundled. Never the icon font at runtime.
 - **Behaviour:** the tests own behaviour once specs exist; link to them rather than restating
@@ -1528,8 +1527,7 @@ shorter (#124). The UI says "Done".
 ## Overrides to the export
 
 Where the round-2 export and this file differ, this file wins (round-2 review and decisions 46–48).
-In the board audit these are expected differences: `web/tests/browser/audit.ts` draws them onto the
-boards as patches, or the check reaches the board's state another way.
+Comparing a page with its board, these are expected differences.
 
 1. **The overshoot clamps at the grid's edges** (decision 47). The export's README, under "Carried
    from round 2", still describes it crossing about 9 px.
@@ -1598,7 +1596,7 @@ stories, or other numbers than the seed's, the audit patches in the seed's (D3);
     `ink3` `#606267` (`#6d6f74`, #286), Light `ink2` `#4b4d52` (`#56585d`), Night `panel` `#0b0c0e` (`#08090a`) and Light `cardOn` `#ffffff`
     (`#f4f4f2`), `cyan` Night `oklch(0.86 0.11 182)` and Light `oklch(0.58 0.1 182)`
     (`oklch(0.8 0.11 195)`, `oklch(0.54 0.09 195)`), and Light `--evtint` 14% (12%). The export keeps
-    its values; the board audit draws every board with these.
+    its values.
 32. **Alfred's mark is `auto_awesome` in its gradient** (#173): boards 06 and 07 draw it in `ink`, and
     boards 01, 03 and 20 draw Ask about this email with `forum`.
 
@@ -3507,10 +3505,8 @@ it changes what's on screen.
       needs a key", as News's do. Usage this month's total waits for Jobs's answer too.
     - **Matching the board and the text:** a JD to confirm's candidates have a hairline between them,
       as 32 and 34a draw, and From history's fold reads "wasn't" as written here.
-    - **Board audit:**
-      - Board 32 is set beside its page screenshot (`32-jobs-a-typical-morning`), with the seed's rows
-        to the fold and #264, #265, #269 and override 35 patched in. The other Jobs boards are drawn
-        alone.
+    - **Where the boards differ from the app:**
+      - Board 32 predates #264, #265, #269 and override 35, and its rows aren't the seed's.
       - 38a draws a history pass the seed doesn't run (no Needs you, From history 2); jobsStates.spec.ts
         holds it.
       - 38c draws the sidebar's item while off (States says it has none).

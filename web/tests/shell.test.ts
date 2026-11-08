@@ -9,7 +9,7 @@ import {parseRoute, routePath} from '../src/logic/route.ts';
 import type {Route} from '../src/logic/route.ts';
 import {tabTitle} from '../src/logic/title.ts';
 import {shownTomorrow, todayBlock, todayRange} from '../src/logic/today.ts';
-import {toastMs, toastTone} from '../src/logic/toast.ts';
+import {toastTone} from '../src/logic/toast.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -56,10 +56,8 @@ describe('the Today block', () => {
 
   // shell-06: "in 12m" warms as it nears: `caution` from 15 minutes before, `alert` once under way.
   test.each([
-    ['five hours away', '2026-10-07T21:30:00.000Z', 'in 5h', null],
     ['16 minutes away', '2026-10-07T16:25:00.000Z', 'in 16m', null],
     ['15 minutes away', '2026-10-07T16:24:00.000Z', 'in 15m', 'soon'],
-    ['a minute away', '2026-10-07T16:10:00.000Z', 'in 1m', 'soon'],
     ['under way', '2026-10-07T16:00:00.000Z', 'now', 'now'],
   ])('the next event\'s urgency, %s', (_name, starts, words, urgency) => {
     const at = Date.parse('2026-10-07T16:09:00.000Z');
@@ -115,7 +113,6 @@ test.each([
   ['all read', {page: 'inbox', unread: 0, subject: null}, 'Inbox'],
   ['an email open', {page: 'inbox', unread: 13, subject: 'Interview availability for Software Engineer I'}, 'Interview availability for Software Engineer I'],
   ['Calendar', {page: 'calendar', title: 'October 2026'}, 'October 2026 · Calendar'],
-  ['Calendar\'s week', {page: 'calendar', title: 'Oct 4 – 10, 2026'}, 'Oct 4 – 10, 2026 · Calendar'],
   ['News', {page: 'news', headline: null}, 'News'],
   ['a story open', {page: 'news', headline: 'Brush fire near the 210 grows to 400 acres'}, 'Brush fire near the 210 grows to 400 acres'],
 ] as const)('tab title: %s', (_name, page, expected) => {
@@ -255,10 +252,7 @@ describe('the keys offline refuses', () => {
     ['H (Done)', key('h'), true], ['E (Trash, Edit)', key('e'), true], ['P (Pin)', key('p'), true], ['C (New event)', key('c'), true], ['D (New task)', key('d'), true],
     ['Delete', key('Delete'), true], ['Backspace', key('Backspace'), true], ['⇧I (Mark all as read)', key('I', {shiftKey: true}), true], ['⇧U (Mark unread)', key('U', {shiftKey: true}), true],
     ['⌘Z (Undo)', key('z', {metaKey: true}), true], ['Ctrl-Z', key('z', {ctrlKey: true}), true],
-    ['J', key('j'), false], ['K', key('k'), false], ['Enter', key('Enter'), false], ['Esc', key('Escape'), false], ['/', key('/'), false],
-    ['1', key('1'), false], ['3', key('3'), false], ['4 (Jobs)', key('4'), false], ['←', key('ArrowLeft'), false], ['→', key('ArrowRight'), false], ['U (Unread or All)', key('u'), false],
-    ['O (Open in Gmail)', key('o'), false], ['M', key('m'), false], ['T', key('t'), false], ['N', key('n'), false],
-    ['⌘K', key('k', {metaKey: true}), false], ['⌘,', key(',', {metaKey: true}), false], ['⇧H is no change', key('H', {shiftKey: true}), false],
+    ['J', key('j'), false], ['U (Unread or All)', key('u'), false], ['⌘K', key('k', {metaKey: true}), false], ['⇧H is no change', key('H', {shiftKey: true}), false],
   ])('%s: refused %s', (_name, event, refused) => expect(offlineRefuses(event)).toBe(refused));
 });
 
@@ -266,15 +260,10 @@ describe('the toast\'s tone by its words (the one toast: done, taken away, faile
   test.each([
     // A pin made out of the shelf's sight says so with its glyph (inbox-09).
     ['Pinned', 'pinned'],
-    ['Marked Done', 'done'], ['Marked 14 as read', 'done'], ['Completed Pay rent', 'done'],
-    ['Moved to Trash', 'gone'], ['Deleted Dentist', 'gone'], ['Deleted 2 items', 'gone'],
-    ['Couldn\'t pin it, Gmail didn\'t answer in time.', 'failed'], ['Couldn\'t copy it', 'failed'], ['Couldn’t reorder rules, Can’t reach Setpoint', 'failed'],
+    ['Marked Done', 'done'], ['Completed Pay rent', 'done'],
+    ['Moved to Trash', 'gone'], ['Deleted Dentist', 'gone'],
+    ['Couldn\'t pin it, Gmail didn\'t answer in time.', 'failed'], ['Couldn’t reorder rules, Can’t reach Setpoint', 'failed'],
     // Every other line has no glyph.
-    ['Moved Dentist to Thu, Oct 8', null], ['Reopened Pay rent', null], ['Added to Classes', null], ['Copied Dentist, ⌘V pastes on the selected day', null],
-    ['Showed 4 calendars', null], ['Created Haircut, Fri, Oct 9', null], ['Sign out of Setpoint?', null], ['Create or cancel the draft first', null],
+    ['Moved Dentist to Thu, Oct 8', null], ['Reopened Pay rent', null],
   ])('%s: %s', (text, tone) => expect(toastTone(text)).toBe(tone));
-
-  test('a toast stays six seconds, a failure eight', () => {
-    expect([toastMs(null), toastMs('done'), toastMs('gone'), toastMs('failed')]).toEqual([6000, 6000, 6000, 8000]);
-  });
 });

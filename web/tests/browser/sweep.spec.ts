@@ -1,5 +1,4 @@
-// The visual net without baselines (SV-99), beside the release's ten page screenshots (pages.ts,
-// D281): the main pages (the Inbox with an email open, with its JD popover open, and with the
+// The visual net without baselines (SV-99): the main pages (the Inbox with an email open, with its JD popover open, and with the
 // Contoso Pharmaceuticals match email's Applied before on its row and in the reader (J7), the
 // calendar's month and week, the editor, News
 // with a story open, Jobs with an application open, with a Needs you item's email open (D401), and

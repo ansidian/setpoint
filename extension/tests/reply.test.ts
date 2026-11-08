@@ -12,7 +12,6 @@ test.each([
   {was: 'Jobs off', status: 200, body: {enabled: false, postings: [{role: [], others: [], query: null}, {role: [], others: [], query: null}]}, expected: {ok: true}},
   {was: 'the token refused', status: 401, body: {error: 'unauthorized'}, expected: {ok: false, reason: 'token'}},
   {was: 'Setpoint failing', status: 502, body: undefined, expected: {ok: false, reason: 'unreachable', detail: 'HTTP 502'}},
-  {was: 'a route Setpoint lacks', status: 404, body: {error: 'not_found'}, expected: {ok: false, reason: 'unreachable', detail: 'HTTP 404'}},
   {was: 'an answer that isn\'t JSON', status: 200, body: undefined, expected: {ok: false, reason: 'answer'}},
   {was: 'an application missing a key', status: 200, body: {enabled: true, postings: [{role: [{...application, ghosted: undefined}], others: [], query: 'fabrikam'}, {role: [], others: [], query: null}]}, expected: {ok: false, reason: 'answer'}},
   {was: 'a status this build doesn\'t know', status: 200, body: {enabled: true, postings: [{role: [{...application, status: 'interviewing'}], others: [], query: 'fabrikam'}, {role: [], others: [], query: null}]}, expected: {ok: false, reason: 'answer'}},

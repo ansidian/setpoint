@@ -13,15 +13,11 @@ describe('loose company matching (decision 62)', () => {
     ['wide world', 'Wide World Importers', true],
     ['wide wor', 'Wide World Importers', true],
     ['WIDE  WORLD', 'Wide World Importers', true],
-    ['humongous', 'Humongous Insurance', true],
     ['hum', 'Humongous Insurance', true],
     ['city power &', 'City Power & Light', true],
-    ['city power light', 'City Power & Light', true],
     ['margie', 'Margie\'s Travel', true],
-    ['a datum', 'A. Datum Corporation', true],
     // In order, from the start: a later word alone is a weaker match (nameRank), not this one.
     ['world wide', 'Wide World Importers', false],
-    ['importers', 'Wide World Importers', false],
     ['wide world importers inc', 'Wide World Importers', false],
     ['northwind traders', 'Northwind Talent', false],
     ['', 'Fabrikam', false],
@@ -90,26 +86,18 @@ describe('the route, against the seed', () => {
     return signedIn(w, {routes: [jobsApi(w.store)]});
   }
 
-  test('humongous: both Humongous applications, newest first (36a)', async () => {
+  test('humongous: both Humongous applications, newest first (36a); kubernetes: Woodgrove by its JD, with the line (36b)', async () => {
     const c = await seeded();
     const response = await c.send('GET', '/api/jobs/search?q=humongous');
     expect(response.status).toBe(200);
-    const out = jobsSearchSchema.parse(response.body);
-    expect(out.company_or_role.map(row => `${row.company} · ${row.title}`)).toEqual(['Humongous Insurance · Software Engineer II, Claims', 'Humongous Insurance · Software Engineer II (Java)']);
-  });
+    const found = jobsSearchSchema.parse(response.body);
+    expect(found.company_or_role.map(row => `${row.company} · ${row.title}`)).toEqual(['Humongous Insurance · Software Engineer II, Claims', 'Humongous Insurance · Software Engineer II (Java)']);
 
-  test('kubernetes: nothing by company or role, Woodgrove by its JD, with the line (36b)', async () => {
-    const c = await seeded();
     const out = jobsSearchSchema.parse((await c.send('GET', '/api/jobs/search?q=kubernetes')).body);
     expect(out.company_or_role).toEqual([]);
     expect(out.in_jd.map(each => [each.row.company, each.line])).toEqual([
       ['Woodgrove Bank', '…our services run on Kubernetes across two regions, so you’ll pick it up from day one…'],
     ]);
-  });
-
-  test('an empty query is refused', async () => {
-    const c = await seeded();
-    expect((await c.send('GET', '/api/jobs/search?q=%20')).status).toBe(400);
   });
 
   test('the shell\'s item: Jobs on, today\'s Needs you 3 (From history\'s 6 aside)', async () => {

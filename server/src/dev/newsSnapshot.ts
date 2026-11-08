@@ -1,7 +1,7 @@
 // A dev seed on real news: News's tables as src/dev/exportNews.ts took them from a running Setpoint,
 // loaded in place of the sample's by `npm run seed` and `npm run try` whenever the snapshot is there.
 // It's data/news-snapshot/ (news.json and news-images/), outside git: Local's stories name the area.
-// The browser checks seed with --sample-news, so they and the goldens keep the invented sample, as
+// The browser checks seed with --sample-news, so they keep the invented sample, as
 // does a checkout without a snapshot.
 //
 // Its times move by the gap from when it was taken to the seed's moment, so the news is as fresh

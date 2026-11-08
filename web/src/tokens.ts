@@ -1,6 +1,6 @@
 // Setpoint's design tokens, defined once for Night and Light. They mirror DESIGN.md › Tokens, which
 // names where they leave design-export/styles/setpoint.css (its Overrides), so change the two
-// together (tests/tokens.test.ts compares the colours and radii). applyTokens() publishes the
+// together; nothing checks they agree (D482). applyTokens() publishes the
 // theme-free ones as CSS custom properties (`--r-card`, `--dur-fast`, `--sidebar`, `--a-business`…), applyTheme() a
 // theme's colours, shadows and tints, under the export's names (`--page`, `--shadow-pop`, `--evtint`).
 import type {Colour} from '@setpoint/shared';

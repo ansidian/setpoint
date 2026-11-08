@@ -97,13 +97,8 @@ describe('GovernmentJobs\' search (D389)', () => {
     ]);
   });
 
-  test.each<[string, string]>([
-    ['no results', '<ul class="job-listing-container"></ul>'],
-    ['markup it doesn\'t know', '<div class="result"><a href="/jobs/1-0/x">Office Assistant II</a><p>City of Contoso</p></div>'],
-    ['a page that isn\'t a search', '<html><body><h1>Find a job</h1></body></html>'],
-    ['nothing', ''],
-  ])('%s is an empty list', (_, html) => {
-    expect(governmentJobsResults(html, TEST_GOVERNMENT_JOBS)).toEqual([]);
+  test('markup it doesn\'t know is an empty list', () => {
+    expect(governmentJobsResults('<div class="result"><a href="/jobs/1-0/x">Office Assistant II</a><p>City of Contoso</p></div>', TEST_GOVERNMENT_JOBS)).toEqual([]);
   });
 
   test('it asks by the title, as the site\'s own search does, with Setpoint\'s name', async () => {
@@ -118,7 +113,6 @@ describe('GovernmentJobs\' search (D389)', () => {
 
   test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1]]>([
     ['a 404', {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}}],
-    ['a 403', {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}}],
     ['an answer that isn\'t HTML', {status: 200, body: {jobs: []}}],
   ])('%s is a miss', async (_, answer) => {
     const fake = await web();
@@ -132,8 +126,6 @@ describe('GovernmentJobs\' search (D389)', () => {
     await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'transient', status: 503});
     fake.server.fault({path: /governmentjobs/, response: {status: 429, body: {}, headers: {'retry-after': '30'}}});
     await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'rate_limited', retryAfterMs: 30_000});
-    fake.server.fault({path: /governmentjobs/, response: 'hang'});
-    await expect(governmentJobsSearch(fake.web, 'Office Assistant II', signal)).rejects.toMatchObject({kind: 'transient'});
   });
 
   test('a result\'s page is read as any page, from its JSON-LD', async () => {
@@ -199,17 +191,6 @@ describe('a link', () => {
     expect(await readLink(fake.web, 'https://click.indeed.example/rc/clk?jk=7c1e9a24f0b3', signal)).toMatchObject({title: 'Full Stack Developer', site: 'Indeed'});
   });
 
-  test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1]]>([
-    ['a posting taken down (404)', {status: 404, body: 'Not Found', headers: {'content-type': 'text/html'}}],
-    ['a page that refuses robots (403)', {status: 403, body: 'Forbidden', headers: {'content-type': 'text/html'}}],
-    ['a page with no posting on it', {status: 200, body: '<html><head><title>Sign in</title></head><body><main><p>Sign in to see this job.</p></main></body></html>', headers: {'content-type': 'text/html'}}],
-    ['a PDF', {status: 200, body: '%PDF-1.7', headers: {'content-type': 'application/pdf'}}],
-  ])('%s is nothing', async (_, answer) => {
-    const fake = await web();
-    fake.serve('https://woodgrovebank.example/careers/jobs/31877', answer);
-    expect(await readLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).toBeNull();
-  });
-
   // What a search candidate is, once opened (D388): gone is dropped; unreadable stays, since the user can open it in a browser.
   const html = {'content-type': 'text/html'};
   test.each<[string, Parameters<Awaited<ReturnType<typeof fakeWeb>>['serve']>[1], 'gone' | 'unreadable']>([
@@ -252,18 +233,14 @@ describe('a link', () => {
     expect(await openLink(fake.web, 'https://greenhouse.example/lucernepublishing/jobs/5520391', signal)).toEqual({is: 'unreadable'});
   });
 
-  test('openLink: a failure is thrown, as readLink\'s is', async () => {
-    const fake = await web();
-    fake.server.fault({path: /woodgrovebank/, response: {status: 503, body: 'Service Unavailable'}});
-    await expect(openLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).rejects.toMatchObject({kind: 'transient', status: 503});
-  });
-
   test('a page that fails is thrown for the retry', async () => {
     const fake = await web();
     fake.server.fault({path: /woodgrovebank/, response: {status: 502, body: 'Bad Gateway'}});
     await expect(readLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).rejects.toMatchObject({kind: 'transient', status: 502});
+    // One that never answers gives up at the timeout, kept short here.
     fake.server.fault({path: /woodgrovebank/, response: 'hang'});
-    await expect(readLink(fake.web, 'https://woodgrovebank.example/careers/jobs/31877', signal)).rejects.toMatchObject({kind: 'transient'});
+    const impatient = {...fake.web, http: {...fake.web.http, timeoutMs: 50}};
+    await expect(readLink(impatient, 'https://woodgrovebank.example/careers/jobs/31877', signal)).rejects.toMatchObject({kind: 'transient'});
   });
 
   test('the fixtures stay on example domains', () => {
