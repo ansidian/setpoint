@@ -161,6 +161,12 @@ the same kind of email is repeatedly marked Done straight from the row without b
 Attention group shows one line: "You've cleared 4 Northwind newsletters without opening them. Send
 these to FYI from now on?" **[Yes] [No]**. Yes creates a rule. Protected mail never gets a prompt.
 
+**A written rule can also act** (SV-233): mark the email read, and trash it now or 15 min, 1 hour,
+1 day or 1 week after it arrives, in the provider as Andy's own Mark read and Trash do. Actions
+apply only to mail arriving after the rule is saved, never to protected mail, and pinning an email
+cancels its trash. What a rule trashed is found in the provider's trash; Setpoint keeps no record.
+Learned rules only sort. DESIGN.md › Decided while building #347 has the screen.
+
 ### The Inbox
 
 ```
@@ -195,7 +201,7 @@ NOISE · 6                                          ▸
   opening an email in Setpoint marks it read in Gmail. iCloud uses IMAP's seen flag.
 - **An email becomes read only when Andy opens it** (a click or Enter) or uses Mark all as read.
   Moving the keyboard cursor, scrolling and expanding a group never mark anything read, and
-  Noise is never marked read automatically.
+  Noise is never marked read automatically, except by a written rule that says to (below).
 - **Done** (`H`) takes an email out of Attention. Whether it was opened first tells triage
   quietly whether it needed attention: opened then Done means handled; Done from the row means
   it probably didn't. Andy never labels anything.
@@ -865,7 +871,8 @@ the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to 
 - **Calendar:** which calendars show; home location (for Time to Leave); weather on or off.
 - **Todoist:** connection, default project.
 - **Notifications:** ntfy server and topics, reminder defaults, Time to Leave.
-- **Mail:** rules (written and learned), trusted remote-content domains, the code expiry.
+- **Mail:** rules (written and learned; written ones can mark read and trash), trusted
+  remote-content domains, the code expiry.
 - **AI:** the Anthropic key (write-only), the triage and Alfred models; after 2.0, News's
   models, its monthly cap and this month's spend; then Jobs' models and this month's spend (no cap).
 - **News** (after 2.0): the sources by section, each with its health. Read-only until the tuning

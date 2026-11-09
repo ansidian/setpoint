@@ -1404,7 +1404,8 @@ section's label stays under the title (#132).
   Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way. Board 17's
   Attention precision row is gone (#346).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
-  domains, the code expiry presets, and the note that protected mail can't be moved by any rule.
+  domains, the code expiry presets, and the note that protected mail can't be moved, marked read or
+  trashed by any rule (a written rule's actions, [Decided while building](#decided-while-building) #347).
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
   `caution` dot; Send test, which turns while it sends and says under the group how it went, #217;
   Server, Token ([Decided while building](#decided-while-building) #82)), the
@@ -4270,3 +4271,30 @@ was decided; the audit itself was retired by D480.
     line; Andy, 2026-11-08; darma SV-234, D485). Accounts ends after Sources. The figure counted
     attention mail opened before Done, and opening is how an email gets judged, so it sat near 100%
     whatever triage did and couldn't say when Attention notifications should go on.
+347. **A written rule can also mark read and trash** (Andy, 2026-11-08; darma SV-233, D486–D495).
+    Rules gain actions rather than a separate Automations list, so Settings › Mail keeps one list
+    and Add to rule (#296) keeps working.
+    - **Match:** subject, sender name and body each gain **doesn't contain** beside contains. There's
+      no "is exactly" or "starts with" (an anchored regex covers the rare need), and `none_includes`
+      stays as it is.
+    - **Actions:** under Send to, the rule form gains **Mark read** (a switch) and **Trash**, a
+      segmented control like Code expiry's: **Never** (default) · **Now** · **15 min** · **1 hour** ·
+      **1 day** · **1 week**. Either, both or neither. There's no Done (the lane decides that), pin
+      or archive yet. Both reach the provider: Gmail's read state and trash, iCloud's seen flag and
+      Trash.
+    - **Words:** the rule's sentence (#90) goes on after the lane tag: "From ups.com with “delivered”
+      in the subject, without “return” → Noise, mark read, trash after 1 day". "Trash now" when Now.
+    - **Only new mail:** actions apply to email that arrives after the rule is saved or changed,
+      never to mail already there, as a rule sorts new mail. Learned rules and the defaults have no
+      actions. **Protected mail is never marked read or trashed by any rule.**
+    - **The delay** counts from the email's arrival. The row shows **"Trash in 3 h"** in `ink3` in
+      the place a code's "Expires in 11 min" takes, in min, h or d, with no `caution` last minute; a
+      code row keeps its own countdown. **Pinning cancels the trash** and unpinning doesn't bring it
+      back; opening, Done or replying don't spare it. Due mail goes on the next minute's pass, and a
+      restart catches up on what fell due while it was down.
+    - **Turning off or deleting a rule** with trashes waiting asks, as a recurring event's scope
+      does: **Cancel them** (default, "3 emails stay") or **Let them run** ("3 emails go to the
+      trash as planned"), with Turn off or Delete ↵ and Cancel Esc. With none waiting it doesn't
+      ask. Editing a rule leaves its waiting trashes alone.
+    - **What a rule trashed is in the provider's trash.** Setpoint keeps no record of it, no fold
+      and no per-rule counts (a "Trashed by rules" fold was offered and turned down, D492).
