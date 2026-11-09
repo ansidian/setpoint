@@ -191,9 +191,11 @@ test('board 19b: a change that failed stays in place with Google\'s words; Try a
     await card.locator('.card-b', {hasText: 'From Fri, Oct 9'}).waitFor();
     await page.locator('.cell[data-date="2026-10-10"] .ev.failed .icon').waitFor();
     await page.locator('.cell[data-date="2026-10-07"] .tk.pending .spin').waitFor();
-    assert.equal(await card.getAttribute('data-side'), 'below');
+    // A Saturday, in the grid's right half: the card is on its left (#348).
+    assert.equal(await card.getAttribute('data-side'), 'left');
     const failed = (await rested(() => chip(page, '2026-10-10', 'Dinner with Sam').boundingBox()))!;
-    assert.equal(Math.round(((await rested(() => card.boundingBox()))!.y - (failed.y + failed.height)) / ZOOM), GAP);
+    const box = (await rested(() => card.boundingBox()))!;
+    assert.equal(Math.round((failed.x - (box.x + box.width)) / ZOOM), GAP);
 
     // Try again: pending once more at once, before the server has it (held here at its door), then
     // the provider refuses again, in place (SV-42).

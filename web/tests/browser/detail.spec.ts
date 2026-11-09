@@ -36,7 +36,7 @@ async function openDentist(page: Page) {
   await page.getByRole('dialog', {name: 'Dentist'}).waitFor();
 }
 
-test('board 12a: Dentist\'s card, left of it (it covers less there than right; above doesn\'t fit)', async () => {
+test('board 12a: Dentist\'s card, right of it (a Wednesday, in the grid\'s left half, #348)', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
@@ -45,7 +45,7 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
     await openDentist(page);
     assert.equal(await page.getByRole('dialog', {name: 'Dentist'}).count(), 1);
-    assert.equal(await card(page).getAttribute('data-side'), 'left');
+    assert.equal(await card(page).getAttribute('data-side'), 'right');
     assert.deepEqual(await card(page).locator('.fd-layer.in .fact').allTextContents(),
       ['Smile Dental1420 Elm St', 'Leave by 2:05 PM · 18 min', '30 min before', 'Personal']);
     assert.equal(await card(page).locator('.fd-when').textContent(), 'Wed, Oct 7 · 2:30 – 3:30 PM');
@@ -59,19 +59,20 @@ test('board 12a: Dentist\'s card, left of it (it covers less there than right; a
   }
 });
 
-test('board 12b: a click on Dinner with Sam shows it in the same card, below it', async () => {
+test('board 12b: a click on Dinner with Sam shows it in the same card, left of it', async () => {
   const setpoint = await startSetpoint({fixtures: ['time-to-leave']});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cell[data-date="2026-10-13"] .wx').waitFor();
-    await openDentist(page);
+    // From Thursday's lecture, whose card on its left leaves Friday clear (Dentist's would cover it).
+    await showIn(page, chip(page, '2026-10-08', 'CS 101 lecture'), 'CS 101 lecture');
     const before = await card(page).elementHandle();
     await showIn(page, chip(page, '2026-10-09', 'Dinner with Sam'), 'Dinner with Sam');
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
     assert.ok(await before!.evaluate(element => element.isConnected), 'the same card, never closed');
-    // Weeks start on Sunday (SV-29): Friday has only Saturday to its right, too narrow, so it's below.
-    await until('below it', () => card(page).getAttribute('data-side'), side => side === 'below');
+    // Friday is in the grid's right half, so the card is on its left (#348).
+    await until('left of it', () => card(page).getAttribute('data-side'), side => side === 'left');
     await until('Dinner with Sam\'s facts', () => card(page).locator('.fd-layer.in .fact').allTextContents(),
       facts => facts.join() === 'Blue Door2118 Sunset Blvd,Leave by 6:35 PM · 21 min,Sam Lee,1 hour before,Personal');
     assert.deepEqual(setpoint.pageErrors, []);
@@ -105,6 +106,9 @@ test('selecting items already in view never scrolls the grid: Dentist, then Dinn
     assert.equal(await scrollTop(), before, 'Dentist was in view: the grid stays');
     await october('after Dentist');
 
+    // Dentist's card covers Friday (#348), so it's put away first.
+    await page.keyboard.press('Escape');
+    await card(page).waitFor({state: 'detached'});
     await chip(page, '2026-10-09', 'Dinner with Sam').click();
     await until('Dinner with Sam turns solid', () => page.locator('.ev.sel').allTextContents(), list => list.join() === '7 PMDinner with Sam');
     // Nothing happens to wait for: a scroll would have come with the click.

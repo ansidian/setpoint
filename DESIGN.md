@@ -553,8 +553,8 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
   its project as a 9 px dot in it, has no Colour, and is struck through once done (#186). Delete stands apart after a `hair` divider and turns
   `alert` under the pointer, a task's Complete `good` (#169).
-- **Placement:** 8 px off its item, on the side (right, left, above, below; right first) covering the
-  fewest other items, inside the month grid. This applies to every overlay anchored to a calendar
+- **Placement:** 8 px off its item, level with it: on its right when the item is in the grid's left
+  half (the first four columns), on its left in the right half, slid inside the grid (#348). This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt. Clicked in the right pane, it sits beside that row
   instead (#322); a second click on its item puts it away (#323).
 - **Drag:** the card lifts from its grip (shadow deepens), follows the pointer 1:1, and stays where
@@ -679,8 +679,8 @@ Board 16, Sunday-first (override 16), built before 2.0 at Andy's ask with resizi
   minutes only the bottom), in 15-minute steps, never under 15 minutes, the tooltip giving the new
   range; an all-day bar's ends change its first and last day. "Changed Dentist to 2:30 – 4:00 PM ·
   Undo". Tasks and Google's own kinds of event don't resize.
-- **The same as month:** the floating detail and its glide (inside the week, on the side covering
-  the fewest blocks, moving with its block as the hours scroll), the recurring prompt on a drop or
+- **The same as month:** the floating detail and its glide (inside the week, on its side by the
+  halves rule (#348), moving with its block as the hours scroll), the recurring prompt on a drop or
   resize, the failed card, multi-select, Clone, Copy, Paste (the copied time on the selected day),
   Colour, Delete, ⌘Z.
 - **States:** the grid, heads and hours draw at once and blocks fade in (120 ms) as they arrive; an
@@ -1542,8 +1542,8 @@ Comparing a page with its board, these are expected differences.
 5. **Light `page` is `#f6f6f4`** (the export uses `#f8f8f6`); Light row dividers are `hair`.
 6. **The recurring scope defaults to "This event"** in the editor too (14 defaults to "This and
    following").
-7. **Placement covers every anchored overlay:** 15b's drop prompt and 12a's card take the side
-   covering the fewest items; check 12a against "above".
+7. **Placement covers every anchored overlay:** 15b's drop prompt and 12a's card take the same side,
+   by the halves rule (#348, which replaced "the side covering the fewest items").
 8. **New events take Settings' reminder default** (13 shows "30 min before"; the sample's default
    is 10 min, a fresh install's None, D49).
 9. **Summaries are `ink3`** in both themes, as drawn (the brief's token table said `ink2`).
@@ -4308,3 +4308,12 @@ was decided; the audit itself was retired by D480.
       ask. Editing a rule leaves its waiting trashes alone.
     - **What a rule trashed is in the provider's trash.** Setpoint keeps no record of it, no fold
       and no per-rule counts (a "Trashed by rules" fold was offered and turned down, D492).
+348. **The floating detail's side is told by the grid's halves** (amending Placement and override 7;
+    Andy, 2026-11-08; darma SV-239). An item in the grid's left half (the first four columns, the middle
+    one with them) gets the card on its right, one in the right half on its left, level with it and
+    slid inside the grid. Short of room on both sides (a narrow window), it slides over the item's
+    edge rather than moving, as long as it hides no more than half the item or a quarter of the
+    card; only past that, a bar across the week, does it go below, then above. Every
+    overlay anchored to an item follows it. Counting the items each side would cover made the card
+    hop between all four sides as you clicked through a week, and "below" landed on the next week
+    you were about to look at.

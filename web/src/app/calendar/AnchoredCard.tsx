@@ -1,6 +1,6 @@
-// An overlay anchored to a calendar item (DESIGN.md › Placement, override 7): the recurring-drop
-// prompt (board 15b) and the failed card (board 19b). It sits 8 px off its item on the side covering
-// the fewest other items, inside the grid (F5's placeBeside), measured in the month section's own
+// An overlay anchored to a calendar item (DESIGN.md › Placement, #348): the recurring-drop
+// prompt (board 15b) and the failed card (board 19b). It sits 8 px off its item on the side the
+// grid half it is in sets (#348), inside the grid (F5's placeBeside), measured in the month section's own
 // CSS pixels so the wide-screen zoom doesn't throw it off (geometry.ts, D23), and follows its item as
 // the grid scrolls. With its item out of view it hides.
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';

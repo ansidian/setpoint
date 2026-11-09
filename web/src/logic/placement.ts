@@ -1,7 +1,8 @@
 // Where an overlay anchored to a calendar item goes (DESIGN.md › The floating detail › Placement,
-// and override 7): 8 px off its item, on the side covering the fewest other items, trying right,
-// left, above and below in that order (right first on a tie), inside the month grid. The floating
-// detail uses it, and so will every overlay anchored to an item (F6's recurring-drop prompt).
+// #348): 8 px off its item, beside it on the side away from the grid's nearer edge, an item in the
+// grid's left half (the first four columns in month) getting it on its right and one in the right half on its left,
+// level with it and slid inside the grid. The side never depends on what's around the item, so it can
+// be told before the click. The floating detail uses it, and so does every overlay anchored to an item.
 // Rewritten from v1's `calendarFloatingDetailPlacement` through the harvest gate (darma SV-14).
 import {placement} from '../tokens.ts';
 import type {Rect} from './calendar.ts';
@@ -104,19 +105,32 @@ export function besideRow(anchor: Rect, size: Size, bounds: Rect, gap: number = 
 }
 
 /**
- * Where an overlay anchored to `anchor` goes: of the sides it fits on inside `bounds`, the one
- * covering the fewest of `others` (the anchor itself left out), the earlier side in
- * right, left, above, below winning a tie. If it fits on no side, the side it overflows least,
- * slid inside the bounds.
+ * Where an overlay anchored to `anchor` goes (#348): right of an item whose centre is in the left
+ * half of `bounds` (the middle column with them), left of one in the right half, the other of the
+ * two when that side has no room. Short of room on both, the nearer of the two slides inside over
+ * the item's edge, as long as it hides no more than half the item or a quarter of the card; past
+ * that (a bar across the week, a very narrow grid) it goes below, then above, and failing all, the least-overflowing side
+ * slides inside. `others` only counts what the card covers.
  */
 export function placeBeside(anchor: Rect, size: Size, bounds: Rect, others: Rect[], gap: number = placement.gapPx): Placement {
-  const all = candidates(anchor, size, bounds, others, gap);
-  const fitting = all.filter(candidate => candidate.fits);
-  if (fitting.length) return fitting.reduce((best, candidate) => (candidate.covers < best.covers ? candidate : best));
-  const least = placement.sides
-    .map(side => ({side, ...onSide(side, anchor, size, bounds, gap)}))
-    .reduce((best, candidate) => (candidate.overflow < best.overflow ? candidate : best));
-  const inside = clampInto(least.box, size, bounds);
-  const box = {...least.box, left: Math.round(inside.left), top: Math.round(inside.top)};
-  return {side: least.side, left: box.left, top: box.top, covers: others.filter(other => intersects(box, other)).length, fits: false};
+  const centre = anchor.left + anchor.width / 2;
+  // A pixel's leeway keeps the middle column on the right through fractional widths.
+  const leftHalf = centre <= bounds.left + bounds.width / 2 + 1;
+  const tried = (leftHalf ? ['right', 'left', 'below', 'above'] as const : ['left', 'right', 'below', 'above'] as const)
+    .map(side => ({side, ...onSide(side, anchor, size, bounds, gap)}));
+  const result = (chosen: (typeof tried)[number], fits: boolean): Placement => {
+    const inside = fits ? chosen.box : {...chosen.box, ...clampInto(chosen.box, size, bounds)};
+    const box = {...inside, left: Math.round(inside.left), top: Math.round(inside.top)};
+    return {side: chosen.side, left: box.left, top: box.top, covers: others.filter(other => intersects(box, other)).length, fits};
+  };
+  const [first, second] = tried as [(typeof tried)[number], (typeof tried)[number]];
+  if (first.overflow === 0) return result(first, true);
+  if (second.overflow === 0) return result(second, true);
+  const nearer = second.overflow < first.overflow ? second : first;
+  const slid = clampInto(nearer.box, size, bounds);
+  const hidden = Math.max(0, Math.min(slid.left + size.width, anchor.left + anchor.width) - Math.max(slid.left, anchor.left));
+  if (hidden <= Math.min(anchor.width / 2, size.width / 4)) return result(nearer, false);
+  const vertical = tried.slice(2).find(one => one.overflow === 0);
+  if (vertical) return result(vertical, true);
+  return result(tried.reduce((best, one) => (one.overflow < best.overflow ? one : best)), false);
 }

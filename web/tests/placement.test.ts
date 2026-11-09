@@ -1,7 +1,7 @@
-// Placement as tables (DESIGN.md › The floating detail › Placement, override 7): the side covering
-// the fewest other items, right, left, above, below with right first on a tie, 8 px off the item,
-// inside the month grid. The month is October 2026 on the seed as boards 12a and 12b draw it, so
-// the boards' own counts ("right 5, left 3, above 4 and it doesn't fit, below 6") are the table.
+// Placement as tables (DESIGN.md › The floating detail › Placement, #348): right of an item in the
+// grid's left half, left of one in its right half, 8 px off it, inside the month grid, whatever is
+// around it. The month is October 2026 on the seed as boards 12a and 12b draw it; the boards' own
+// counts ("right 5, left 3, above 4 and it doesn't fit, below 6") still check each side's candidate.
 import {describe, expect, test} from 'vitest';
 import type {Rect} from '../src/logic/calendar.ts';
 import {besidePopover, besideRow, candidates, clampInto, placeBeside} from '../src/logic/placement.ts';
@@ -47,25 +47,34 @@ describe('every side, counted as the boards count them', () => {
 });
 
 describe('the chosen side', () => {
-  test.each<[string, Rect, {width: number; height: number}, Rect[] | null, {side: Side; left: number; top: number; fits?: boolean}]>([
-    // 12a: left of Dentist, 8 px off its chip and centred on it, at 12, 144.
-    ['Dentist: left beats right, and above doesn\'t fit (override 7)', DENTIST, CARD(252), null, {side: 'left', left: 12, top: 144}],
-    // 12b: right of Dinner over the empty weekend, at 736, 153 (152 for the 282 px card as drawn).
-    ['Dinner with Sam: right, covering nothing', DINNER, CARD(280), null, {side: 'right', left: 736, top: 153}],
-    ['a tie goes to the earlier side: right first', chip(1, 3, 0), CARD(200), [], {side: 'right', left: 153 + 134 + 8, top: 0}],
-    ['an item in the Sunday column has no room right: left', chip(6, 2, 0), CARD(200), [], {side: 'left', left: 888 - 8 - 280, top: 0}],
-    ['a Monday item with the column beside it full: above', chip(0, 1, 0),
-      CARD(120), [chip(1, 1, 0), chip(1, 1, 1), chip(1, 1, 2), chip(1, 1, 3)], {side: 'above', left: 8, top: 237 - 8 - 120}],
-    ['… and in the first row, with no room above: below', chip(0, 0, 0),
-      CARD(120), [chip(1, 0, 0), chip(1, 0, 1), chip(1, 0, 2), chip(1, 0, 3)], {side: 'below', left: 8, top: 61 + 20 + 8}],
+  test.each<[string, Rect, {width: number; height: number}, Rect[] | null, {side: Side; left: number; top: number; fits?: boolean}, Rect?]>([
+    // Where 12a counted its way to the left, Wednesday's Dentist now takes the right.
+    ['Dentist, a Wednesday: right, though left would cover fewer', DENTIST, CARD(252), null, {side: 'right', left: 442, top: 144}],
+    ['Dinner with Sam, a Friday: left, though right would cover nothing', DINNER, CARD(280), null, {side: 'left', left: 306, top: 153}],
+    ['a Tuesday with nothing around it: right', chip(1, 3, 0), CARD(200), [], {side: 'right', left: 153 + 134 + 8, top: 0}],
+    ['a Sunday: left', chip(6, 2, 0), CARD(200), [], {side: 'left', left: 888 - 8 - 280, top: 0}],
+    ['a Monday with the column beside it full still goes right, never above', chip(0, 1, 0),
+      CARD(120), [chip(1, 1, 0), chip(1, 1, 1), chip(1, 1, 2), chip(1, 1, 3)], {side: 'right', left: 148, top: 247 - 60}],
+    ['Thursday, the middle column, goes right', chip(3, 2, 0), CARD(200), [], {side: 'right', left: 589, top: 0}],
+    ['Friday goes left', chip(4, 2, 0), CARD(200), [], {side: 'left', left: 306, top: 0}],
+    ['a bar too wide for either side goes below it', {left: 8, top: 300, width: 1000, height: 20}, CARD(200), [], {side: 'below', left: 368, top: 328}],
+    ['short of room on both sides, the card slides over the item\'s edge rather than going below', {left: 393, top: 300, width: 117, height: 20},
+      {width: 387, height: 200}, [], {side: 'right', left: 508, top: 210, fits: false}, {left: 0, top: 30, width: 903, height: 964}],
     ['near the bottom, a card beside the item slides up to stay inside', chip(3, 5, 0), CARD(300), [], {side: 'right', left: 0, top: 994 - 8 - 300}],
     ['near the top, it slides down below the weekday row', chip(3, 0, 0), CARD(300), [], {side: 'right', left: 0, top: 30 + 8}],
-  ])('%s', (_, anchor, size, list, expected) => {
-    const place = placeBeside(anchor, size, GRID, list ?? others(anchor));
+  ])('%s', (_, anchor, size, list, expected, grid = GRID) => {
+    const place = placeBeside(anchor, size, grid, list ?? others(anchor));
     expect(place.side).toBe(expected.side);
     if (expected.left) expect(place.left).toBe(expected.left);
     if (expected.top) expect(place.top).toBe(expected.top);
     expect(place.fits).toBe(expected.fits ?? true);
+  });
+
+  test('across every row, Mon–Thu take the right and Fri–Sun the left, whatever is around them', () => {
+    for (let row = 0; row < 6; row++) {
+      const sides = Array.from({length: 7}, (_, column) => placeBeside(chip(column, row, 0), CARD(252), GRID, ITEMS).side);
+      expect(sides).toEqual(['right', 'right', 'right', 'right', 'left', 'left', 'left']);
+    }
   });
 
   test('right is 8 px off the chip\'s right edge, left 8 px off its left edge, centred on it', () => {
