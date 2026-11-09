@@ -1,6 +1,6 @@
 // An event's days in its Date field (Pickers.tsx › DateField with a range, SV-29): one sheet, a
-// first click and then a last, either side of it (#103), the band between following the pointer in
-// `cool` (#104), and typed too. The editor's own fields and its save stay in editor.spec.ts.
+// first click and then a last, either side of it (#103), the band between following the pointer
+// (#104; its fills are by eye, D477), and typed too. The editor's own fields and its save stay in editor.spec.ts.
 import {useState} from 'react';
 import {expect, test} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -9,7 +9,6 @@ import '../../src/app/calendar/editor.css';
 import {DateField} from '../../src/app/calendar/Pickers.tsx';
 import {dayTitle} from '../../src/logic/calendar.ts';
 import {parseDay, parseDays} from '../../src/logic/compose.ts';
-import {colour} from './colour.ts';
 
 const TODAY = '2026-10-09';
 
@@ -30,8 +29,6 @@ const field = page.getByLabelText('Date', {exact: true});
 const sheet = (which: 'first' | 'last') => page.getByRole('dialog', {name: `Date: pick the ${which} day`});
 const day = (date: string) => page.getByRole('dialog').getByRole('button', {name: date, exact: true});
 const band = () => [...document.querySelectorAll('.datepop .mini .in')].map(element => element.textContent);
-/** `cool` at `percent`, as the page mixes it (a fill computes as a colour does). */
-const cool = (percent: number) => colour(`color-mix(in oklch, var(--cool) ${percent}%, transparent)`);
 
 test('a first click, then a last: the sheet asks for each, Sunday first, the band following the pointer to the day picked', async () => {
   await render(<Days from="2026-10-09" to="2026-10-09" />);
@@ -48,15 +45,13 @@ test('a first click, then a last: the sheet asks for each, Sunday first, the ban
   await expect.element(field).toHaveValue('Tue, Oct 13 – Fri, Oct 16');
 });
 
-test('the other end may come before the first: the band runs back with the pointer, `cool` at 28% between, 50% at an end and 60% under the pointer, and the earlier day starts it', async () => {
+test('the other end may come before the first: the band runs back with the pointer, and the earlier day starts it', async () => {
   await render(<Days from="2026-10-13" to="2026-10-16" />);
   await field.click();
   await day('2026-10-16').click();
   await expect.element(sheet('last')).toBeVisible();
   await userEvent.hover(day('2026-10-13'));
   await expect.poll(band).toEqual(['13', '14', '15', '16']);
-  const fills = () => [...document.querySelectorAll('.datepop .mini .in')].map(element => getComputedStyle(element).backgroundColor);
-  await expect.poll(fills).toEqual([cool(60), cool(28), cool(28), cool(50)]);
   await day('2026-10-13').click();
   await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(field).toHaveValue('Tue, Oct 13 – Fri, Oct 16');
@@ -97,20 +92,4 @@ test('an empty field (an email that gave no day, SV-24) picks a first day and th
   await day('2026-10-16').click();
   await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(field).toHaveValue('Tue, Oct 13 – Fri, Oct 16');
-});
-
-test('today is a day like the others (Andy, 2026-11-05): an end of the band takes its pill, its ring drawn over it, and alone the pointer\'s `sub2`', async () => {
-  await render(<Days from={TODAY} to="2026-10-11" />);
-  await field.click();
-  const today = () => document.querySelector<HTMLElement>(`.datepop .mini > [aria-label="${TODAY}"]`)!;
-  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(cool(50));
-  expect(getComputedStyle(today()).backgroundImage).toContain('radial-gradient');
-  await userEvent.hover(day(TODAY));
-  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(cool(60));
-  await userEvent.keyboard('{Escape}');
-  await field.fill('oct 13 - oct 14');
-  await userEvent.keyboard('{Enter}');
-  await field.click();
-  await userEvent.hover(day(TODAY));
-  await expect.poll(() => getComputedStyle(today()).backgroundColor).toBe(colour('var(--sub2)'));
 });

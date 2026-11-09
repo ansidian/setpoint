@@ -14,7 +14,7 @@ import type {AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from
 import type {Locator, Page} from 'playwright-core';
 import {UNDO_MS} from '../../src/app/toast.ts';
 import {ICONS} from '../../src/ui/glyphs.ts';
-import {cleanUp, drawn, holdToast, pagePx, pauseClock, point, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
+import {cleanUp, drawn, holdToast, pauseClock, point, rested, startSetpoint, test, until, ZOOM} from './harness.ts';
 import type {Setpoint} from './harness.ts';
 
 after(cleanUp);
@@ -1016,9 +1016,6 @@ test('an attachment opens its preview over the reading pane; Esc closes the prev
     await page.locator('.row.shelf', {hasText: 'Parkside Apartments'}).click();
     const card = page.locator('.attach', {hasText: 'Renewal agreement.pdf'});
     assert.equal(await card.locator('.size').textContent(), 'PDF · 184 KB');
-    // At least 280 wide, wider to show the whole name; 44 tall.
-    const box = (await card.boundingBox())!;
-    assert.ok(pagePx(box.width) >= 280 && pagePx(box.height) === 44, `the card is ${pagePx(box.width)} × ${pagePx(box.height)}`);
     assert.equal(await card.locator('.name').evaluate(name => name.scrollWidth <= name.clientWidth), true, 'the whole name shows');
     await card.click();
     await page.locator('.attach-preview iframe.preview-pdf').waitFor();

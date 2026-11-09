@@ -929,7 +929,7 @@ test('SV-220: the quiet line names the accounts Jobs reads and its earliest mont
 
 const MOVE: JobMoveOut = {application_id: 7, company: 'Northwind Talent', title: 'Software Engineer I', from: 'applied', to: 'rejected', by_hand: false, at: '2026-10-06T17:00:00.000Z'};
 
-test('SV-220: a row reads the company, "Applied → Rejected" with each side in its dot\'s colour, the day and the role; a press opens it and a right-click asks for the menu', async () => {
+test('SV-220: a row reads the company, "Applied → Rejected", the day and the role; a press opens it and a right-click asks for the menu', async () => {
   const onOpen = vi.fn();
   const onMenu = vi.fn((event: {preventDefault: () => void}) => event.preventDefault());
   const moves: JobMoveOut[] = [MOVE, {...MOVE, application_id: 8, company: 'Contoso', to: 'ghosted'}, {...MOVE, application_id: 9, company: 'Fabrikam', from: null, to: 'applied'},
@@ -942,8 +942,6 @@ test('SV-220: a row reads the company, "Applied → Rejected" with each side in 
     'FabrikamAppliedYesterdaySoftware Engineer I',
     'Woodgrove BankOffer→WithdrawnYesterdaySoftware Engineer I',
   ]);
-  const side = (row: number, which: 'first' | 'last') => getComputedStyle(rows[row]!.querySelector(`.jd-change > .sl:${which}-of-type`)!).color;
-  expect([side(0, 'last'), side(1, 'last'), side(0, 'first'), side(3, 'first')]).toEqual([colour('var(--alert)'), colour('var(--sunGlyph)'), colour('var(--ink2)'), colour('var(--good)')]);
   expect(rows[2]!.querySelector('.jd-arrow')).toBeNull();
   await expect.element(page.getByRole('img', {name: 'Set by you'})).toBeVisible();
   expect(rows[3]!.contains(page.getByRole('img', {name: 'Set by you'}).element())).toBe(true);

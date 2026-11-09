@@ -1,7 +1,7 @@
 // The one segmented control (ui/Segmented.tsx, DESIGN.md #317, SV-211): its segments say which is on
-// as their role asks, its thumb travels to the segment turned on and is placed at once otherwise, and
-// where a page turns it on, Tab and Shift-Tab step it, wrapping, but not in a field, a popover, the
-// editor or a dialog. How the slide looks and paces is by eye (D416); the pages' keys are the specs'.
+// as their role asks, its thumb sits under the segment that's on, and where a page turns it on, Tab
+// and Shift-Tab step it, wrapping, but not in a field, a popover, the editor or a dialog. Whether and
+// how the thumb slides is by eye (D416, D477); the pages' keys are the specs'.
 import {useState} from 'react';
 import {expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
@@ -26,8 +26,6 @@ const seg = () => document.querySelector<HTMLElement>('.seg')!;
 const on = () => seg().querySelector<HTMLElement>(':scope > .on')!;
 /** Where the thumb is headed, and the `on` segment's box. */
 const thumb = () => ({to: [seg().style.getPropertyValue('--thumb-x'), seg().style.getPropertyValue('--thumb-w')], on: [`${on().offsetLeft}px`, `${on().offsetWidth}px`]});
-/** The thumb's transitions running now, by property. */
-const moving = () => document.getAnimations().filter(animation => (animation.effect as KeyframeEffect | null)?.target === seg()).map(animation => (animation as CSSTransition).transitionProperty).sort();
 
 test.each<[SegmentRole | undefined, string, string, string]>([
   [undefined, 'group', 'button', 'aria-pressed'],
@@ -45,27 +43,20 @@ test.each<[SegmentRole | undefined, string, string, string]>([
   expect(onChange.mock.calls).toEqual([['tech']]);
 });
 
-test('the thumb is placed under the segment that\'s on at once, then travels, place and width together, to the one turned on', async () => {
+test('the thumb sits under the segment that\'s on, and goes to the one turned on', async () => {
   await render(<Views />);
   await expect.poll(() => thumb().to).toEqual(thumb().on);
-  expect(moving(), 'placed at once').toEqual([]);
-  // A click's render, its observer and the style it starts, all in this one task.
-  page.getByRole('button', {name: 'Tech'}).element().dispatchEvent(new MouseEvent('click', {bubbles: true}));
-  for (let tick = 0; tick < 5; tick += 1) await Promise.resolve();
-  expect(moving()).toEqual(['transform', 'width']);
-  expect(thumb().to).toEqual(thumb().on);
-  // The `on` segment draws no fill of its own: the thumb is its fill, so nothing hands over.
-  expect(getComputedStyle(on()).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  await page.getByRole('button', {name: 'Tech'}).click();
+  await expect.poll(() => thumb().to).toEqual(thumb().on);
 });
 
-test('the on segment\'s words changing its width move the thumb at once, without a slide', async () => {
+test('the on segment\'s words changing its width move the thumb with it', async () => {
   const {rerender} = await render(<Views />);
   await expect.poll(() => thumb().to).toEqual(thumb().on);
   const before = on().offsetWidth;
   await rerender(<Views labels={SEGMENTS.map(segment => (segment.value === 'all' ? {...segment, label: 'All of them'} : segment))} />);
   await expect.poll(() => on().offsetWidth).toBeGreaterThan(before);
   await expect.poll(() => thumb().to).toEqual(thumb().on);
-  expect(moving()).toEqual([]);
 });
 
 test.each<[View, 1 | -1, View]>([
