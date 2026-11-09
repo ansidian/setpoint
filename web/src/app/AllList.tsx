@@ -172,7 +172,7 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
         if (item.kind === 'day') {
           const heading = dayHeading(item.date, today);
           return (
-            <div key={key} ref={ref} className={['gh', 'day', first && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
+            <div key={key} ref={ref} className={['gh', 'day', item.date === today && 'today', first && 'first', leaving && 'leaving'].filter(Boolean).join(' ')} aria-hidden={leaving || undefined}>
               {heading.label} <span className="date">{heading.date}</span>
             </div>
           );

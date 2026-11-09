@@ -322,7 +322,8 @@ no Unread or All to choose between, and going to the Inbox always opens it, in A
   8 px before the label, 11.5 uppercase .08em `ink3`, count in `ink2`: **Attention** (`flag`; the
   loudest: `caution` 8% into its `panel`, Light 6%, label, glyph and count in `caution`, a `caution`
   20% line under it, #167), **Pinned** (`keep`), then each day's heading ("TODAY Wed, Oct 7 · 11
-  new"). A part with nothing in it doesn't show.
+  new"; today's names itself in `accent` (15% `ink` in it, for contrast) 500 on `accent` at Attention's tint into its `panel`, an
+  `accent` 20% line under it, its date as every day's, #349). A part with nothing in it doesn't show.
 - **Attention** holds every Attention email not yet Done, unread or read, with ages, until it's Done
   or Trashed, and the pattern prompt under its last row (#309).
 - **Pinned** rows sit on their shelf, with ages, and Unpin takes the age's place under the pointer
@@ -4319,3 +4320,10 @@ was decided; the audit itself was retired by D480.
     overlay anchored to an item follows it. Counting the items each side would cover made the card
     hop between all four sides as you clicked through a week, and "below" landed on the next week
     you were about to look at.
+349. **Today's day heading is lit in `accent`** (Andy, 2026-11-09; darma SV-240, D500). "TODAY" is `accent`
+    with 15% `ink` (plain `accent` is 4.0:1 on the tint in Light, under 4.5), 500, on `accent` mixed into its `panel` at Attention's strength (8%, Light 6%), with an `accent`
+    20% line under it; the date and every other day's heading stay as they were. `accent` already
+    means "you are here", so it marks today without borrowing Attention's `caution`. Chosen over
+    the label alone (too quiet), a solid high-contrast fill (a second loud bar, sticky at the top
+    while today's mail scrolls) and the open email's 2 px bar (it would read as a selection); seen
+    under an Attention band with mail in it, the cool band sits apart from the warm one.

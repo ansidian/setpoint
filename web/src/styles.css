@@ -226,6 +226,11 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .list { scroll-padding-top: 30px; }
 .list.all .gh.day { color: var(--ink2); }
 .list.all .gh.day .date { color: var(--ink3); }
+/* Today's heading is lit in `accent`, "you are here": its name 500 on a tint at Attention's strength, a 20% line
+   under it, its date as every day's (SV-240, D500). The name takes 15% `ink`: plain `accent` is 4.0:1 on the
+   tint in Light, under axe's 4.5. */
+.list .gh.day.today { color: color-mix(in oklch, var(--accent), var(--ink) 15%); font-weight: 500; background: color-mix(in srgb, var(--accent) var(--attTint), var(--panel)); border-bottom-color: color-mix(in srgb, var(--accent) 20%, transparent); }
+.list .gh.day.today .date { font-weight: 400; }
 /* A day with unread mail says how many after its date (D449): "· 3 new" in the date's case and
    `ink3`, the count `ink2`, as a band's. */
 /* The Inbox's header (D449): its new count beside the title, quiet as the phone's, and Mark all as
