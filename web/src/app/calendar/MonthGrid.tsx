@@ -17,7 +17,7 @@
 import type {CalendarOut, ItemOut, WeatherDayOut} from '@setpoint/shared';
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, RefObject} from 'react';
-import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, glideStart, isWeekend, withSlot, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, WEEK_COUNT} from '../../logic/calendar.ts';
+import {chipTime, dayHead, dayOfWeek, dayTitle, FIRST_WEEK, fitDay, glideStart, isWeekend, withSlot, monthAtScroll, monthEdges, monthOf, monthTopRow, rowsInView, weatherOf, weekIndex, weekOutOfView, WEEK_COUNT} from '../../logic/calendar.ts';
 import type {Rect} from '../../logic/calendar.ts';
 import {standardEase} from '../../logic/glide.ts';
 import {canMove, dropChange, dropLabel, edgeScroll, movedItem} from '../../logic/manipulate.ts';
@@ -170,12 +170,10 @@ export function MonthGrid(props: MonthGridProps) {
         element.scrollTop = to;
       } else glideTo(element, to, scroll.how === 'today' ? pulseToday : undefined);
     } else {
-      // A day already in view where a glide is going stays put (Today's day, as it lands), and so
-      // does one whose week is partly in view: clicking an item in the half-shown bottom row
-      // doesn't jump to its month (SV-239).
+      // A day in view where a glide is going stays put (Today's day, as it lands), its week partly
+      // in view included (SV-239).
       const at = gliding.current?.to ?? element.scrollTop;
-      const top = (weekIndex(scroll.date) - FIRST_WEEK) * ROW;
-      if (top + ROW <= at || top >= at + element.clientHeight) {
+      if (weekOutOfView((weekIndex(scroll.date) - FIRST_WEEK) * ROW, at, element.clientHeight, ROW)) {
         stopGlide();
         element.scrollTop = monthTopRow(monthOf(scroll.date)) * ROW;
       }

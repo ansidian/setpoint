@@ -6,7 +6,7 @@ import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   addMonths, agenda, calendarLabel, chipTime, dayCounts, dayHead, dayOfWeek, dayTitle, fitDay, FIRST_WEEK, glideStart, hangFrom, withSlot, hiddenOn, isPast, monthEdges, isWeekend, itemDays, itemKey,
-  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex,
+  itemsByDay, miniMonth, monthAtScroll, monthTopRow, monthWeeks, playsDone, rangePick, rowsInView, tasksHeading, timeRange, weatherOf, weekday, weekIndex, weekOutOfView,
 } from '../src/logic/calendar.ts';
 
 const now = Date.parse(SEED_NOW);
@@ -88,6 +88,19 @@ describe('scrolling through months', () => {
     ['at the very top nothing before row 0', 0, 964, [0, 7]],
     ['mid-row', top('2026-10') + 100, 964, [monthTopRow('2026-10') - 2, monthTopRow('2026-10') + 8]],
   ])('%s', (_name, scrollTop, height, [first, last]) => expect(rowsInView(scrollTop, height, ROW)).toEqual({first, last}));
+});
+
+describe('whether showing a day moves the grid (SV-239)', () => {
+  // The grid scrolled to row 10, 600 px tall: rows 10 to 12 whole, then row 13's top 72 px.
+  const at = 10 * ROW;
+  test.each([
+    ['a week in view stays', 11 * ROW, false],
+    ['the half-shown bottom row stays', 13 * ROW, false],
+    ['the row cut off above stays', 9 * ROW + 1, false],
+    ['the row just past the bottom moves it', at + 600, true],
+    ['the row just above the top moves it', 9 * ROW, true],
+    ['a week months away moves it', 40 * ROW, true],
+  ] as const)('%s', (_name, weekTop, moves) => expect(weekOutOfView(weekTop, at, 600, ROW)).toBe(moves));
 });
 
 describe('paging glides (polish audit grids-04)', () => {

@@ -77,6 +77,13 @@ export function rowsInView(scrollTop: number, height: number, rowHeight: number 
   return {first, last};
 }
 
+/** Whether a week's row, its top at `weekTop`, is wholly out of a viewport scrolled to `scrollTop`:
+ * only then does showing a day in it move the grid. A week partly in view (the half-shown bottom
+ * row) stays where it is (SV-239). */
+export function weekOutOfView(weekTop: number, scrollTop: number, height: number, rowHeight: number = layout.monthRow): boolean {
+  return weekTop + rowHeight <= scrollTop || weekTop >= scrollTop + height;
+}
+
 /** The month's weeks, as rows of seven days: the mini-month (Sunday first). */
 export function monthWeeks(month: string): string[][] {
   const first = weekIndex(firstOfMonth(month));
