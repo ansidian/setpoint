@@ -170,10 +170,12 @@ export function MonthGrid(props: MonthGridProps) {
         element.scrollTop = to;
       } else glideTo(element, to, scroll.how === 'today' ? pulseToday : undefined);
     } else {
-      // A day already in view where a glide is going stays put (Today's day, as it lands).
+      // A day already in view where a glide is going stays put (Today's day, as it lands), and so
+      // does one whose week is partly in view: clicking an item in the half-shown bottom row
+      // doesn't jump to its month (SV-239).
       const at = gliding.current?.to ?? element.scrollTop;
       const top = (weekIndex(scroll.date) - FIRST_WEEK) * ROW;
-      if (top < at || top + ROW > at + element.clientHeight) {
+      if (top + ROW <= at || top >= at + element.clientHeight) {
         stopGlide();
         element.scrollTop = monthTopRow(monthOf(scroll.date)) * ROW;
       }

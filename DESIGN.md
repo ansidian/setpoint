@@ -4313,7 +4313,9 @@ was decided; the audit itself was retired by D480.
     one with them) gets the card on its right, one in the right half on its left, level with it and
     slid inside the grid. Short of room on both sides (a narrow window), it slides over the item's
     edge rather than moving, as long as it hides no more than half the item or a quarter of the
-    card; only past that, a bar across the week, does it go below, then above. Every
+    card; only past that, a bar across the week, does it go below, then above. Clicking an item in
+    a week the grid shows only part of (the bottom row) leaves the grid where it is, the card sliding
+    up beside it; only a day wholly out of view brings the grid to its month. Every
     overlay anchored to an item follows it. Counting the items each side would cover made the card
     hop between all four sides as you clicked through a week, and "below" landed on the next week
     you were about to look at.
