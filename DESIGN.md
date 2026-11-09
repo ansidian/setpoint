@@ -210,8 +210,8 @@ only, as the spinner's 900 ms turn is. What replaces it fades in over 120 ms. Sk
   everywhere, the Inbox's needs-reconnect bar included. 16 px in lines and in rows.
 - **Todoist glyphs** (`glyphs/task-open.svg`, `task-done.svg`): open is a 13 px ring, 1.5 px `ink3`
   stroke (12 px, `ink2` on the grid), or its project's colour clamped to the theme's band, with the
-  same colour at 14% inside, as a chip's tint; a ring that completes fills to 24% under the pointer
-  and shows an 11 px `check` centred on it (#175); done is darma's filled disc with the check knocked
+  same colour at 14% inside, as a chip's tint; a ring that completes grows to 1.15 under the pointer,
+  fills to 34% with a 3 px halo of its colour and shows an 11 px `check` centred on it (#175, #350); done is darma's filled disc with the check knocked
   out, in **`good`**, title struck through in `ink3`.
 - **Unread:** a 6 px `ink` dot in a 12 px gutter at the row's start (Attention's `caution`, and a
   read Attention row not yet Done keeps a 6 px `caution` ring, #167); unread sender and subject are
@@ -299,7 +299,7 @@ an empty line.
 
 A line opens the floating detail's card (without its grip) 8 px right of the sidebar, its title
 level with the line, over the page, which stays as it was; the line turns `sub2`. **Edit E** opens
-Calendar's editor on the item; a task's ring, or Complete on its card, completes it in place with
+Calendar's editor on the item; a task's ring, on its line or on its card (#350), completes it in place with
 "Completed Pay rent · Undo": its done check lands and its title is struck through, fading to `ink3`
 (#200), for 360 ms, then the line folds away over 180 ms, and Undo folds it back
 ([Decided while building](#decided-while-building) #106); an item that isn't a repeating event
@@ -552,8 +552,9 @@ a 110 px bar and its agenda three skeleton rows (#227), never "Nothing planned" 
   Fri", #126), reminders (the presets in one line, then each other one at its moment, #255),
   calendar (its glyph in the item's colour, #126); then **Edit E** and icon
   actions (duplicate, copy, colour, delete). A task's card draws its ring in its project's colour and
-  its project as a 9 px dot in it, has no Colour, and is struck through once done (#186). Delete stands apart after a `hair` divider and turns
-  `alert` under the pointer, a task's Complete `good` (#169).
+  its project as a 9 px dot in it, has no Colour, and is struck through once done (#186); the ring
+  beside its title completes it, its done check reopening it on Calendar (#350). Delete stands apart after a `hair` divider and turns
+  `alert` under the pointer (#169).
 - **Placement:** 8 px off its item, level with it: on its right when the item is in the grid's left
   half (the first four columns), on its left in the right half, slid inside the grid (#348). This applies to every overlay anchored to a calendar
   item, including the recurring-drop prompt. Clicked in the right pane, it sits beside that row
@@ -1827,8 +1828,8 @@ was decided; the audit itself was retired by D480.
 38. **Every attachment downloads:** each card ends in a **Download** link (12.5 `ink2`, a `sub` pill
     on hover) and the preview's head has one before ×. A card whose type has no preview is itself
     the Download link, rather than a card that does nothing (Andy, 2026-10-09; darma SV-25 D54).
-39. **A task's floating detail completes it:** among its icon actions, before Clone, a Todoist task
-    has **Complete** (a ringed check), or **Reopen** (an undo arrow) once it's done. It goes through
+39. **A task's floating detail completes it:** its ring beside the title is **Complete**, its done
+    check **Reopen** (#350, which took the ringed-check icon out of the footer). It goes through
     the same completion as the agenda's ring: pending at .5 until Todoist confirms, ⌘Z and a
     failure's Undo as #10 and #19 say. It has no key; a repeating task once done, and a task
     waiting on Todoist, show it disabled (Andy, 2026-10-09; darma SV-25 D54, D55).
@@ -2041,7 +2042,7 @@ was decided; the audit itself was retired by D480.
     the brief's Today block, where the event opened Calendar and a task line its day): every click
     that leaves a page only to show something now shows it over the page. A Today line opens the
     floating detail's card beside the sidebar, with Edit (to Calendar's editor, at
-    /calendar/item/3/edit), Complete, Delete and Open in Calendar; E and Esc go to the card first,
+    /calendar/item/3/edit), Complete (the ring beside the title, #350), Delete and Open in Calendar; E and Esc go to the card first,
     so E never trashes the open email. Tasks show by name, tomorrow's marked "Tomorrow", up to three
     before "3 more due tomorrow". Undo right after Complete waits for the Complete to reach Todoist,
     as mail's Undo does (Andy, 2026-10-10).
@@ -2617,7 +2618,7 @@ was decided; the audit itself was retired by D480.
 169. **Destructive actions warn under the pointer, affirming ones reward it, and a press lands:**
     the reader's Trash turns `alert` with a 12% `alert` fill (its key hint 16%), the floating
     detail's and the Today card's Delete and the editor's More › Delete `alert` on 14%, and a task's
-    Complete `good` on 16%; all are neutral at rest, as Delete is undoable (#76). The card's Delete
+    ring fills under the pointer (#175; the card's `good` Complete went with #350); all are neutral at rest, as Delete is undoable (#76). The card's Delete
     sits 9 px further right after a 1 × 14 px `hair` divider. Every reader tool presses as pills do
     (#150), Trash on 20% `alert` in `alert`, and the phone's Trash turns `alert` as
     it's pressed (Andy, 2026-10-11, polish audit reader-02, calflows-04).
@@ -2654,7 +2655,7 @@ was decided; the audit itself was retired by D480.
     Night and at most .55 in Light, so every swatch reads (4.2:1 or more in Light, 7.1:1 or more in
     Night, where Todoist's raw sky blue was 2.9:1 and grape 2.7:1), and its project's mark in the
     editor's line takes the same clamp. The ring holds the same colour at 14%, as a chip does. A ring
-    that completes keeps its colour under the pointer, its fill rising to 24% with an 11 px `check`
+    that completes keeps its colour under the pointer, its fill rising (to 34%, growing with a halo since #350) with an 11 px `check`
     in it, centred on the whole ring (the 1.5 px stroke included) rather than on its inside, so it sits
     true; the done glyph stays `good` (Andy, 2026-10-11, polish audit calpanes-07).
 176. **A switch that's on is `good`, and off recedes:** on is a `switchOn` track (Night `good` 58%
@@ -4327,3 +4328,17 @@ was decided; the audit itself was retired by D480.
     the label alone (too quiet), a solid high-contrast fill (a second loud bar, sticky at the top
     while today's mail scrolls) and the open email's 2 px bar (it would read as a selection); seen
     under an Attention band with mail in it, the cool band sits apart from the warm one.
+350. **A task's card completes it from its ring** (amending #39, #78, #169 and #175; Andy, 2026-11-09;
+    darma SV-242, D503). The ring beside a task's title on the floating detail, on Calendar and on the
+    Today block, is its Complete, as on the Today block's lines and the day pane's rows: under the
+    pointer it grows to 1.15, its fill rises to 34% with a 3 px halo of its colour at 16%, and the
+    11 px `check` shows; a done check that reopens grows the same with a `good` halo. Andy found the
+    old 24% fill too quiet, so this applies to every ring that completes: the Today block's lines,
+    the day pane's rows and the card. On Calendar, where a done task
+    stays on its card, its done check is Reopen; on the Today block the card closes and the line
+    folds away as before (#106). A repeating task once done, and a task waiting on Todoist, keep it
+    disabled with the tips the footer's button had; it still has no key. The footer's Complete icon
+    goes, leaving Edit, Open in Calendar, Clone, Copy, Colour and Delete. The phone's read-only card
+    is unchanged, its plain ring and its unavailable footer Complete (D275). A 16 px icon among five others was easy to miss and far from the
+    title it acted on; chosen over keeping a second control in the footer or a labelled Complete
+    beside Edit.

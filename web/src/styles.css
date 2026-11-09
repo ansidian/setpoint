@@ -110,11 +110,6 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 .today-row.on { background: var(--sub2); }
 .today-row .check { display: grid; place-items: center; width: 19px; height: 19px; margin: 0 0 0 -2px; border-radius: 999px; flex: none; }
 .today-row .check .ring { margin: 0; }
-.today-row .check .ring { transition: background-color var(--dur-fast) var(--ease); }
-@media (hover: hover) {
-  .today-row .check:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
-  .today-row .check:hover .ring > .icon { opacity: 1; }
-}
 /* A completed task's done check lands (TaskGlyph, `good`; `ring-done`, the one completion moment the
    calendar's pane and card share) with its title struck through, going ink3 over 180 ms (polish audit
    motion-04), for DONE_MOMENT_MS, out of the pointer's way so a second click completes nothing; then
@@ -161,6 +156,24 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
   width: 13px; height: 13px; border-radius: 999px; border: 1.5px solid var(--ring-shown); background: color-mix(in oklch, var(--ring-shown) 14%, transparent);
   flex: none; display: inline-block; margin: 0 3px 0 1px; position: relative; }
 .ring > .icon { position: absolute; inset: -1.5px; margin: auto; color: var(--ring-shown); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+/* A ring that completes (the Today block's lines, the day pane's rows, the card's, SV-242) answers the
+   pointer plainly: it grows to 1.15, its fill rises to 34% with a 3 px halo of its colour at 16%, and
+   its check shows (#175, #350). A disabled one doesn't answer. */
+.today-row .check .ring, .ag-task .check .ring, .fd-mark.check .ring {
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .today-row .check:hover .ring, .ag-task .check:enabled:hover .ring, .fd-mark.check:not([aria-disabled]):hover .ring {
+    background: color-mix(in oklch, var(--ring-shown) 34%, transparent); transform: scale(1.15);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring-shown) 16%, transparent); }
+  .today-row .check:hover .ring > .icon, .ag-task .check:enabled:hover .ring > .icon, .fd-mark.check:not([aria-disabled]):hover .ring > .icon { opacity: 1; }
+}
+/* A done check that reopens (the day pane's rows, Calendar's card) answers the same way in its `good`:
+   1.15 and a 3 px `good` halo at 16% (#350). */
+.ag-task .check .task-glyph.done, .fd-mark.check .task-glyph.done { border-radius: 999px; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+@media (hover: hover) {
+  .ag-task .check:enabled:hover .task-glyph.done, .fd-mark.check:not([aria-disabled]):hover .task-glyph.done {
+    transform: scale(1.15); box-shadow: 0 0 0 3px color-mix(in oklch, var(--good) 16%, transparent); }
+}
 
 .main { display: grid; grid-template-rows: var(--header) minmax(0, 1fr); min-width: 0; min-height: 0; position: relative; }
 .hd { height: var(--header); display: flex; align-items: center; gap: 12px; padding: 0 16px 0 24px; border-bottom: 1px solid var(--hair); min-width: 0; }
@@ -454,7 +467,7 @@ input { font: inherit; color: inherit; background: none; border: 0; padding: 0; 
 /* The kind is a subheading over its run, as the row has no room for its column (#237). */
 .list.all .kh { display: flex; height: 24px; flex: none; align-items: flex-end; gap: 6px; padding: 0 16px 4px 24px; color: var(--ink3); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 /* Destructive actions turn `alert` under the pointer and affirming ones `good`, both neutral at rest
-   (#169): the floating detail's Delete and Complete, the editor's More › Delete. */
+   (#169): the floating detail's Delete, the editor's More › Delete, and the phone's card's Complete. */
 .ibtn.danger:hover { background: color-mix(in oklch, var(--alert) 14%, transparent); color: var(--alert); }
 .ibtn.affirm:hover { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
 /* The app's one toast: the export's `.toast`, a 40 px pill at the top centre, in the header's band (#92), above Settings (30–31). */

@@ -420,7 +420,7 @@
 .cal-search .no-results { padding-left: 20px; }
 
 /* ---------- Every control answers the pointer (DESIGN.md › Decided while building #12) ---------- */
-.more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more, .ag-task .check .ring { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
+.more, .tk, .calrow, .mini > button, .ag-item, .ropt, .ag-empty button, .cs-more { transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), filter var(--dur-medium) var(--ease); }
 /* Items and cells are controls: the arrow, never the text cursor (DESIGN.md › Decided while building #151). */
 .ev, .tk, .cell, .wb { cursor: default; }
 /* A chip keeps its own fill (its selection turns solid on the glide's schedule), so the pointer's
@@ -438,9 +438,6 @@
 .ev:not(.ghost, .lift, .sel):active::after { background: color-mix(in oklch, var(--c, var(--cool)) 28%, transparent); }
 @media (hover: hover) {
   .ev:not(.ghost, .lift):hover::after { opacity: 1; }
-  /* A ring that completes keeps its colour, its fill rises to 24% and its check shows (#175). */
-  .ag-task .check:enabled:hover .ring { background: color-mix(in oklch, var(--ring-shown) 24%, transparent); }
-  .ag-task .check:enabled:hover .ring > .icon { opacity: 1; }
 }
 
 /* ---------- SV-181: an .ics file's review, in the right pane (D437) ---------- */

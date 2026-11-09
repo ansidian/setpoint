@@ -26,6 +26,9 @@
 .fd-mark .ring { margin: 0; }
 .fd-mark.pending { opacity: .5; }
 .fd-mark.just-done .task-glyph { animation: ring-done var(--dur-fast) var(--ease); }
+/* SV-242 (D503): with actions the ring is the task's Complete, its done check Reopen, answering the
+   pointer as every ring that completes does (styles.css, #175). */
+.fd-mark.check { padding: 0; border-radius: 999px; }
 .fd-title.done { color: var(--ink3); text-decoration: line-through; }
 .fd .card-h .spin { margin-left: 0; height: 26px; display: grid; place-items: center; animation: spin-later 0s 1s both; }
 .fd .fact-dot { width: 17px; height: 17px; display: grid; place-items: center; flex: none; margin-top: 1px; }

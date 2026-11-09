@@ -150,3 +150,73 @@ test('SV-197: on the 360 px card a read-only holiday\'s calendar line fits on on
   await expect.element(line).toBeVisible();
   expect(box('.fact.cal > span').height).toBeLessThanOrEqual(box('.fact.cal .icon').height + 4);
 });
+
+// SV-242 (D503, #350): with actions, a task's ring beside its title is its Complete, its done check
+// Reopen, through actions.complete; a done repeating task and a task waiting on Todoist keep it
+// disabled with their tips, and the footer has no Complete. Without actions (the phone's read-only
+// card, D275) the ring stays a mark and the footer keeps its unavailable Complete.
+function task(fields: Partial<ItemOut>): ItemOut {
+  return event({key: '8', id: 8, kind: 'task', title: 'Pay rent', place: null, starts_at: null, ends_at: null, due_date: '2026-10-07', project: 'Home', ...fields});
+}
+
+const WAITING = {id: 1, target: 'item', target_id: 8, kind: 'item_complete', state: 'pending', provider: 'todoist', provider_message: null, can_retry: false, can_move_back: false, previous: null, created_at: '2026-10-07T16:00:00.000Z', settled_at: null} satisfies ItemOut['command'];
+
+async function taskCard(item: ItemOut, complete: (task: ItemOut) => void) {
+  return render(
+    <div className="fd" role="dialog" aria-label={item.title} style={{position: 'relative'}}>
+      <div className="card float"><div className="fd-body"><div className="fd-layer in">
+        <DetailContent target={{item, date: '2026-10-07', calendar: CALENDAR}} timeZone={SEED_TIME_ZONE}
+          actions={{complete, clone: () => {}, copy: () => {}, remove: () => {}}} onClose={() => {}} onEdit={() => {}} />
+      </div></div></div>
+    </div>,
+  );
+}
+
+const ring = () => page.getByRole('button', {name: /^(Complete|Reopen)$/});
+const footer = () => [...document.querySelectorAll('.card-acts button')].map(button => button.getAttribute('aria-label') ?? button.textContent);
+
+test('SV-242: an open task\'s ring beside its title completes it, and the footer has no Complete', async () => {
+  const completed: string[] = [];
+  await taskCard(task({}), one => completed.push(one.title));
+  await expect.element(ring()).toHaveAccessibleName('Complete');
+  await expect.element(ring()).toHaveAttribute('data-tip', 'Complete');
+  expect(ring().element().closest('.card-h')).not.toBeNull();
+  expect(footer()).toEqual(['EditE', 'Clone', 'Copy', 'Delete']);
+  await ring().click();
+  expect(completed).toEqual(['Pay rent']);
+});
+
+test('SV-242: a done task\'s check reopens it through the same action', async () => {
+  const completed: boolean[] = [];
+  await taskCard(task({done: true, done_at: '2026-10-07T16:00:00.000Z'}), one => completed.push(one.done));
+  await expect.element(ring()).toHaveAccessibleName('Reopen');
+  await expect.element(ring()).toHaveAttribute('data-tip', 'Reopen');
+  await ring().click();
+  expect(completed).toEqual([true]);
+});
+
+test('SV-242: a done repeating task and a task waiting on Todoist keep the ring disabled, with their tips, and a click does nothing', async () => {
+  const completed: string[] = [];
+  for (const [item, tip] of [
+    [task({done: true, done_at: '2026-10-07T16:00:00.000Z', recurring: true, due_string: 'every month'}), 'Todoist has moved this repeating task on'],
+    [task({command: WAITING}), 'Waiting for Todoist'],
+  ] as const) {
+    const screen = await taskCard(item, one => completed.push(one.title));
+    await expect.element(ring()).toHaveAttribute('aria-disabled', 'true');
+    await expect.element(ring()).toHaveAttribute('data-tip', tip);
+    // The pointer won't click an aria-disabled control, so the click goes to the element itself.
+    (ring().element() as HTMLElement).click();
+    await screen.unmount();
+  }
+  expect(completed).toEqual([]);
+});
+
+test('SV-242: without actions (the phone) the ring is no button and the footer keeps its unavailable Complete', async () => {
+  await card(task({}));
+  await expect.element(page.getByText('Pay rent')).toBeVisible();
+  expect(document.querySelector('.card-h button.fd-mark')).toBeNull();
+  expect(document.querySelector('.card-h span.fd-mark .ring')).not.toBeNull();
+  const complete = page.getByRole('button', {name: 'Complete'});
+  expect(complete.element().closest('.card-acts')).not.toBeNull();
+  await expect.element(complete).toHaveAttribute('aria-disabled', 'true');
+});

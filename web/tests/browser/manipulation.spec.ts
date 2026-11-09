@@ -542,9 +542,10 @@ test('S1 (SV-25, D55): a task\'s card completes it and reopens it; ⌘Z undoes a
     await card.getByRole('button', {name: 'Clone'}).waitFor();
     assert.equal(await card.getByRole('button', {name: 'Complete'}).count(), 0);
 
+    // SV-242: the ring beside the title completes it, and its done check reopens it.
     await chip(page, '2026-10-07', 'Pay rent').click();
-    await card.getByRole('button', {name: 'Complete'}).click();
-    await card.getByRole('button', {name: 'Reopen'}).waitFor();
+    await card.locator('.card-h').getByRole('button', {name: 'Complete'}).click();
+    await card.locator('.card-h').getByRole('button', {name: 'Reopen'}).waitFor();
     await until('Pay rent done', rent, task => task.done && !task.command);
     await card.getByRole('button', {name: 'Reopen'}).click();
     await until('Pay rent open again', rent, task => !task.done && !task.command);

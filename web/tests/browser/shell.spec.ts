@@ -228,8 +228,10 @@ test('#78: the Today block names its tasks, tomorrow\'s under their own label (D
     const card = page.locator('.today-card');
     await card.locator('.fd-title', {hasText: 'Renew car registration'}).waitFor();
     assert.equal(new URL(page.url()).pathname.startsWith('/inbox/'), true);
+    // SV-242: Complete is the ring beside the title, not a footer action.
     assert.deepEqual(await card.locator('.card-acts button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label') ?? button.textContent)),
-      ['EditE', 'Complete', 'Open in Calendar', 'Delete']);
+      ['EditE', 'Open in Calendar', 'Delete']);
+    assert.equal(await card.locator('.card-h').getByRole('button', {name: 'Complete'}).count(), 1);
     // Another line moves the same card; Esc closes it and leaves the email open.
     await lines.filter({hasText: 'Dentist'}).click();
     await card.locator('.fd-title', {hasText: 'Dentist'}).waitFor();
