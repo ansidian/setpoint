@@ -1,4 +1,4 @@
-// Triage (B3): its health, the pattern prompt, rules written and learned, attention precision and
+// Triage (B3): its health, the pattern prompt, rules written and learned, and
 // Settings › AI (BRIEF.md › Triage, Health and states, Settings; DESIGN.md › Pattern prompt,
 // Settings › Mail and › Accounts, Health and states).
 //
@@ -11,7 +11,6 @@
 //   PATCH  /api/mail/rules/:id              RuleUpdateInput            RuleOut
 //   DELETE /api/mail/rules/:id              204 (a learned rule's prompt then stays quiet)
 //   PUT    /api/mail/rules/order            {rule_ids}                 RuleOut[] (written rules' order)
-//   GET    /api/mail/precision              PrecisionOut (Settings › Accounts, 30 days)
 //   GET    /api/ai                          AiOut (Settings › AI: keys set, models in use, the catalogue, 30 days of
 //                                           cost; N3: News's group and this month's usage)
 //
@@ -160,20 +159,6 @@ export interface RuleOut {
   created_at: string;
   // Emails it sorted this calendar month ("9 this month").
   matches_this_month: number;
-}
-
-/**
- * Attention precision (Settings › Accounts): of the attention mail marked Done, the share opened
- * first, over the last 30 days ("82% · 18% of attention mail was marked Done without opening").
- * `days` are the 30 local days, oldest first, for the sparkline; `precision` is null with nothing Done.
- */
-export interface PrecisionOut {
-  precision: number | null;
-  done: number;
-  opened_before_done: number;
-  from: string;
-  to: string;
-  days: {date: string; done: number; opened_before_done: number}[];
 }
 
 /** A model Settings › AI offers. */

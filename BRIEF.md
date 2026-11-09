@@ -810,7 +810,7 @@ about ntfy.
 - Each notification's click opens the exact event, task or email in Setpoint.
 - Sent: event and task reminders, Time to Leave, a source that needs reconnecting (once).
   New mail notifies by lane, each with its own switch on `setpoint-mail`: Attention mail stays
-  quiet for now (turn it on once attention precision is trusted, see Health), and FYI mail is off
+  quiet for now (turn it on once what lands in Attention is trusted), and FYI mail is off
   until turned on (SV-96). Noise and history never notify.
 
 ### The mail chip in mantel
@@ -852,9 +852,8 @@ poll), and its threshold is derived from that schedule (about twice the interval
 | **A change failed** | On the item, in place: failed with the provider's own message and Try again. It never quietly reverts. |
 | **First backfill** | Search's status line: "Indexing · 62% · showing what's indexed so far". |
 
-Settings › Accounts shows every source's last check, push status and state in one place, plus
-**attention precision**: the share of attention mail marked Done without being opened, over the
-last 30 days.
+Settings › Accounts shows every source's last check, push status and state in one place. (It
+showed attention precision too until D485: opened-before-Done sat near 100% whatever triage did.)
 
 ## Settings
 
@@ -862,7 +861,7 @@ darma's Settings: a **1040 × 720 modal** with a 220 px nav, not in the address 
 the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to Accounts).
 
 - **Accounts:** connect Gmail (Google sign-in) and iCloud (app password); reconnect; label,
-  colour, icon, order; each source's health; attention precision.
+  colour, icon, order; each source's health.
 - **Calendar:** which calendars show; home location (for Time to Leave); weather on or off.
 - **Todoist:** connection, default project.
 - **Notifications:** ntfy server and topics, reminder defaults, Time to Leave.

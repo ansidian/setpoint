@@ -1,6 +1,6 @@
 // Triage's routes (shapes and the list in `@setpoint/shared` src/api/triage.ts): its health for the
-// Unsorted line, pattern prompts and their answers, rules written and learned, attention precision
-// and Settings › AI. Mounted under /api behind the session, like the rest of the API.
+// Unsorted line, pattern prompts and their answers, rules written and learned and
+// Settings › AI. Mounted under /api behind the session, like the rest of the API.
 import {patternPromptAnswerInput, ruleInput, ruleOrderInput, ruleUpdateInput} from '@setpoint/shared';
 import type {TriageStatusOut} from '@setpoint/shared';
 import {Hono} from 'hono';
@@ -10,7 +10,7 @@ import {invalid, parse} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {triageStatus} from '../triage/health.ts';
 import {historyProgress} from '../triage/history.ts';
-import {aiOverview, answerPrompt, createRule, currentPrompts, deleteRule, listRules, precision, reorderRules, updateRule} from '../triage/learning.ts';
+import {aiOverview, answerPrompt, createRule, currentPrompts, deleteRule, listRules, reorderRules, updateRule} from '../triage/learning.ts';
 
 const id = (value: string) => parse(z.coerce.number().pipe(z.int().positive()), value);
 
@@ -36,7 +36,6 @@ export function triageApi(store: Store) {
     deleteRule(store, id(c.req.param('id')));
     return c.body(null, 204);
   });
-  api.get('/mail/precision', c => c.json(precision(store)));
   api.get('/ai', c => c.json(aiOverview(store)));
   return api;
 }

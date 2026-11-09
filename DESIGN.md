@@ -1401,9 +1401,8 @@ section's label stays under the title (#132).
   its state, led by its glyph (#219): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
   stopped, as of 9:14 PM" muted after `history` when stale, the reason in `caution` after `warning`
   on a `caution` 7% row when failing, "Needs sign-in" in `caution` with **Reconnect**; under **Sources**, Google Calendar ("Push · watch renews
-  Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way; then **Attention
-  precision**, 82%, the share of attention mail opened before Done, led by the figure (24 / 500), with
-  the 30 days as a line on a 50–100% scale (#133).
+  Oct 9"), Todoist ("Polling every 5 min") and Weather ("Every 30 min") the same way. Board 17's
+  Attention precision row is gone (#346).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
   domains, the code expiry presets, and the note that protected mail can't be moved by any rule.
 - **Notifications** (board 18b): **ntfy** ("Connected · last sent 8:02 AM", or "Failing, …" by a
@@ -1649,6 +1648,8 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 46. **No account filter** (#341): the boards with the sidebar draw each account under Inbox with
     its dot, label and unread count, and board 21 the phone's account button ("All accounts"). The
     app has neither.
+47. **No attention precision** (#346): board 17 ends Accounts with Attention precision, 82%, and
+    its sparkline. The app has neither.
 
 ## Not designed yet
 
@@ -4265,3 +4266,7 @@ was decided; the audit itself was retired by D480.
     count and Show all, ⌘K, the pickers and Calendar search. The sidebar's checkbox is `visible`, a
     quick filter over the listed ones, as before. Before this, both set the one flag, so a Google
     account's calendars switched off in Settings still sat in the sidebar unchecked.
+346. **Settings › Accounts has no attention precision** (supersedes #133 and #76's precision
+    line; Andy, 2026-11-08; darma SV-234, D485). Accounts ends after Sources. The figure counted
+    attention mail opened before Done, and opening is how an email gets judged, so it sat near 100%
+    whatever triage did and couldn't say when Attention notifications should go on.

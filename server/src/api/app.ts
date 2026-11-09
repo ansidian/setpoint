@@ -599,7 +599,7 @@ export function createApp({store, webDir = null, publicUrl = null, production = 
     return c.json({commands: markAllRead(store, input.account_id).map(presentCommand)} satisfies MarkAllReadOut);
   });
   app.get('/api/mail/indexing', c => c.json(indexing(store)));
-  // B3: triage's health, pattern prompts, rules, precision and Settings › AI (src/api/triage.ts).
+  // B3: triage's health, pattern prompts, rules and Settings › AI (src/api/triage.ts).
   app.route('/api', triageApi(store));
   app.get('/api/mail/trusted-domains', c => c.json(trustedDomains(store)));
   app.post('/api/mail/trusted-domains', async c => {

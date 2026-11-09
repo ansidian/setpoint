@@ -1,6 +1,6 @@
 // Triage as it runs (B3): durable jobs on the engine, Unsorted while it's down and re-sorted once it
 // recovers, the health line, the ledger, backfilled history, once per email, and the learning loop
-// and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, precision, AI), and
+// and its API (pattern prompts, Yes into a learned rule, No into quiet, rules, AI), and
 // new Attention and FYI mail sent by ntfy once sorted.
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
@@ -12,7 +12,7 @@ import {setSecret} from '../src/secrets/store.ts';
 import {getSettings, updateSettings} from '../src/settings.ts';
 import {isoNow} from '../src/store.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
-import {aiOverview, answerPrompt, currentPrompts, deleteRule, listRules, precision} from '../src/triage/learning.ts';
+import {aiOverview, answerPrompt, currentPrompts, deleteRule, listRules} from '../src/triage/learning.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
 import type {FakeAnswer} from './fakeModels.ts';
@@ -308,16 +308,6 @@ describe('the learning loop', () => {
     expect(currentPrompts(fresh.store)).toEqual([]);
     expect(fresh.store.db.select().from(t.patternPrompts).where(and(eq(t.patternPrompts.id, prompt!.id), eq(t.patternPrompts.answer, 'no'))).get()).toBeDefined();
   });
-
-  test('attention precision over board 09\'s history: the four digests were Done unopened', () => {
-    const {world} = triageWorldOnly();
-    // Sep 9, 16 and 23 fall in the 30 days to Oct 7; Sep 2 doesn't.
-    expect(precision(world.store)).toMatchObject({precision: 0, done: 3, opened_before_done: 0, from: '2026-09-08', to: '2026-10-07'});
-    const attention = world.store.db.select().from(t.messages).where(and(eq(t.messages.lane, 'attention'), eq(t.messages.subject, 'Final exam schedule · CS 101'))).get()!;
-    openMessage(world.store, attention.id);
-    setDone(world.store, attention.id, true);
-    expect(precision(world.store)).toMatchObject({precision: 0.25, done: 4, opened_before_done: 1});
-  });
 });
 
 function triageWorldOnly() {
@@ -326,7 +316,7 @@ function triageWorldOnly() {
 }
 
 describe('the API', () => {
-  test('prompts, answers, rules, precision, triage health and AI as F2 and F7 read them', async () => {
+  test('prompts, answers, rules, triage health and AI as F2 and F7 read them', async () => {
     const {world} = triageWorldOnly();
     const api = await signedIn(world, {triage: world.worker});
     expect((await api.send('GET', '/api/mail/triage')).body).toEqual({state: 'healthy', as_of: null, reason: null, unsorted: 0, history: {state: 'not_started', done: 0, total: 0}});
@@ -347,8 +337,6 @@ describe('the API', () => {
     const rules = (await api.send('GET', '/api/mail/rules')).body;
     expect(rules.map((rule: {origin: string}) => rule.origin)).toEqual(['written', 'written', 'learned']);
     expect((await api.send('DELETE', `/api/mail/rules/${second.id}`)).status).toBe(204);
-
-    expect((await api.send('GET', '/api/mail/precision')).body).toMatchObject({precision: 0, done: 3, opened_before_done: 0});
 
     expect((await api.send('GET', '/api/ai')).body).toMatchObject({
       keys: {anthropic: false, openai: false}, triage: {cheap: null, strong: null, history: null}, usage_30_days: {calls: 0, cost_usd: 0},

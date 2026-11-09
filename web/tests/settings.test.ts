@@ -1,11 +1,11 @@
-// Settings' words as tables: rules as sentences, attention precision, Google Calendar's sources as
+// Settings' words as tables: rules as sentences, Google Calendar's sources as
 // one row, the order moves and the presets' labels.
 import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, precisionText, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch,
-  shifts, sparkPath, sparkTitle, splitRules, taskTime, withPatch, withSender,
+  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch,
+  shifts, splitRules, taskTime, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -93,48 +93,10 @@ describe('Settings', () => {
     ['attention', null, 'attention'], ['fyi', 'money', 'fyi:money'], ['fyi', null, 'fyi:other'], ['noise', null, 'noise'], [null, null, 'fyi:other'],
   ] as const)('an email in %s %s starts a rule sending to %s', (lane, kind, destination) => expect(ruleDestination(lane, kind)).toBe(destination));
 
-  test.each([
-    // Not yet loaded: nothing to say, rather than that nothing was Done (states-01).
-    [undefined, null],
-    [{precision: null, done: 0}, {value: '—', line: 'Nothing in Attention was marked Done in the last 30 days'}],
-    [{precision: 0.82, done: 150}, {value: '82%', line: '82% of attention mail was opened before Done · last 30 days'}],
-    [{precision: 1, done: 3}, {value: '100%', line: '100% of attention mail was opened before Done · last 30 days'}],
-  ])('precision %j', (value, text) => expect(precisionText(value)).toEqual(text));
-
-  // The sparkline (the polish audit's settings-08): 180 × 32, its points 4.5 px inside the box, each day's
-  // share on a fixed 50–100% scale (under 50% on the floor), the line broken where nothing was Done.
-  const day = (date: string, done: number, opened: number) => ({date, done, opened_before_done: opened});
-  const SPARK = {width: 180, height: 32, low: 0.5};
-  test.each([
-    ['a gap, then 75%, 100% and 0% (on the floor)', [day('2026-10-05', 0, 0), day('2026-10-06', 4, 3), day('2026-10-07', 5, 5), day('2026-10-08', 5, 0)], {
-      line: 'M61.5 16 L118.5 4.5 L175.5 27.5',
-      area: 'M61.5 27.5 L61.5 16 L118.5 4.5 L175.5 27.5 L175.5 27.5 Z',
-      end: {x: 175.5, y: 27.5},
-    }],
-    ['a day with nothing Done breaks the line; a lone day is a dot, with no area', [day('2026-10-05', 1, 1), day('2026-10-06', 0, 0), day('2026-10-07', 2, 2), day('2026-10-08', 4, 4)], {
-      line: 'M4.5 4.5 h0 M118.5 4.5 L175.5 4.5',
-      area: 'M118.5 27.5 L118.5 4.5 L175.5 4.5 L175.5 27.5 Z',
-      end: {x: 175.5, y: 4.5},
-    }],
-    ['nothing Done at all: no line, no point', [day('2026-10-05', 0, 0), day('2026-10-06', 0, 0)], {line: '', area: '', end: null}],
-  ])('the sparkline: %s', (_name, days, drawn) => {
-    expect(sparkPath(days, SPARK)).toMatchObject(drawn);
-  });
-
-  test('each day\'s hover column on the sparkline runs from halfway to its neighbours', () => {
-    const spark = sparkPath([day('2026-10-05', 1, 1), day('2026-10-06', 1, 1), day('2026-10-07', 1, 1), day('2026-10-08', 1, 1)], SPARK);
-    expect(spark.columns).toEqual([{x: 0, width: 33}, {x: 33, width: 57}, {x: 90, width: 57}, {x: 147, width: 33}]);
-  });
-
   test('the month\'s AI spend, for Usage this month\'s label: Triage, Search terms, Search reading, Alfred and News together', () => {
     expect(monthTotal({triage: {cost_usd: 2.1}, search_terms: {cost_usd: 0.04}, search_reading: {cost_usd: 0.01}, alfred: {cost_usd: 0.85}, news: {cost_usd: 18.4}})).toBeCloseTo(21.4);
     expect(monthTotal({triage: {cost_usd: 0}, search_terms: {cost_usd: 0}, search_reading: {cost_usd: 0}, alfred: {cost_usd: 0}, news: {cost_usd: 0}})).toBe(0);
   });
-
-  test.each([
-    [day('2026-10-06', 11, 9), 'Tue, Oct 6 · 9 of 11 opened first'],
-    [day('2026-10-06', 0, 0), 'Tue, Oct 6 · nothing Done'],
-  ])('a day\'s title %j', (one, title) => expect(sparkTitle(one)).toBe(title));
 
   test.each([
     [[], null],

@@ -11,7 +11,6 @@ import {getCached, getJson, refreshIfShown, sendJson, setCached, updateCached} f
 import {SETTINGS_PATH} from './items.ts';
 
 export const SOURCES_PATH = '/sources';
-export const PRECISION_PATH = '/mail/precision';
 export const RULES_PATH = '/mail/rules';
 export const TRUSTED_PATH = '/mail/trusted-domains';
 export const NOTIFY_STATUS_PATH = '/notifications/status';

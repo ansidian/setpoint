@@ -1,8 +1,8 @@
 // Settings › Accounts (board 17): Connect Gmail and Connect iCloud; each mail account with its drag
 // handle (order; ↑ ↓ on the handle too), colour from darma's 11 swatches, icon, label, address, how
 // it syncs and its state, Reconnect when it needs sign-in; then the sources (Google Calendar,
-// Todoist, Weather) the same way; then attention precision with its 30-day sparkline.
-import type {AccountOut, CalendarOut, PrecisionOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
+// Todoist, Weather) the same way.
+import type {AccountOut, CalendarOut, Settings, SourceOut, TodoistProjectOut} from '@setpoint/shared';
 import {SWATCH_COLOURS} from '@setpoint/shared';
 import {useState} from 'react';
 import type {FormEvent} from 'react';
@@ -10,10 +10,10 @@ import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
-import {authorizeGmail, connectIcloud, PRECISION_PATH, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
+import {authorizeGmail, connectIcloud, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
 import type {SourceState} from '../../logic/health.ts';
-import {mergeSources, moved, precisionText, sparkPath, sparkTitle} from '../../logic/settings.ts';
+import {mergeSources, moved} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -32,8 +32,6 @@ export function AccountsPage() {
   const accounts = accountsLoad.data;
   const sourcesLoad = {path: SOURCES_PATH, ...useResource<SourceOut[]>(SOURCES_PATH)};
   const sources = sourcesLoad.data;
-  const precisionLoad = {path: PRECISION_PATH, ...useResource<PrecisionOut>(PRECISION_PATH)};
-  const precision = precisionLoad.data;
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
   const calendars = calendarsLoad.data;
   const projectsLoad = {path: TODOIST_PROJECTS_PATH, ...useResource<TodoistProjectOut[]>(TODOIST_PROJECTS_PATH)};
@@ -57,11 +55,10 @@ export function AccountsPage() {
   const todoist = sources?.find(source => source.provider === 'todoist');
   const weather = sources?.find(source => source.provider === 'weather');
   const defaultProject = projects?.find(project => project.name === settings?.todoist.default_project) ?? projects?.find(project => project.inbox);
-  const shownPrecision = precisionText(precision);
   const order = useLiveOrder(list, 'text/x-setpoint-account', ids => void reorderAccounts(ids).catch(toastFailure('Couldn\'t reorder accounts')));
 
   return (
-    <Page title="Accounts" loads={[accountsLoad, sourcesLoad, precisionLoad, calendarsLoad, projectsLoad, settingsLoad]} actions={(
+    <Page title="Accounts" loads={[accountsLoad, sourcesLoad, calendarsLoad, projectsLoad, settingsLoad]} actions={(
       <>
         <button className="btn out sm" type="button" disabled={connect.busy} onClick={() => gmail()}><Icon name="add" size={17} />Connect Gmail</button>
         <button className="btn out sm" type="button" onClick={() => setIcloud(icloud ? null : {address: ''})}><Icon name="add" size={17} />Connect iCloud</button>
@@ -93,39 +90,7 @@ export function AccountsPage() {
           </div>
         </Section>
       )}
-      <Section style={{marginTop: 18}}>
-        {!precision || !shownPrecision ? <SkeletonRows count={1} /> : <div className="set-group precision">
-          <span className="big num">{shownPrecision.value}</span>
-          <div className="lines grow">
-            <span className="t">Attention precision</span>
-            <span className="s">{shownPrecision.line}</span>
-          </div>
-          {precision.precision != null && <Sparkline days={precision.days} />}
-        </div>}
-      </Section>
     </Page>
-  );
-}
-
-const SPARK = {width: 180, height: 32, low: 0.5};
-
-/**
- * The 30 days as a line in `good` on a fixed 50–100% scale, the area under it at 14%, the latest
- * day's point ringed in the modal's colour, and a dashed reference at 80%; a day with nothing Done
- * breaks the line. Each day's column names it on hover: "Tue, Oct 6 · 9 of 11 opened first".
- */
-function Sparkline({days}: {days: PrecisionOut['days']}) {
-  const spark = sparkPath(days, SPARK);
-  return (
-    <svg className="spark" width={SPARK.width} height={SPARK.height} viewBox={`0 0 ${SPARK.width} ${SPARK.height}`} role="img" aria-label="Attention precision, last 30 days">
-      <line className="ref" x1={0} x2={SPARK.width} y1={spark.reference} y2={spark.reference} />
-      {spark.area && <path className="area" d={spark.area} />}
-      {spark.line && <path className="line" d={spark.line} />}
-      {spark.end && <circle className="end" cx={spark.end.x} cy={spark.end.y} r={3} />}
-      {days.map((day, index) => (
-        <rect key={day.date} className="day" x={spark.columns[index]!.x} y={0} width={spark.columns[index]!.width} height={SPARK.height} data-tip={sparkTitle(day)} data-tip-quick />
-      ))}
-    </svg>
   );
 }
 

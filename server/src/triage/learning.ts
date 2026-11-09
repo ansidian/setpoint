@@ -1,12 +1,11 @@
 // The learning loop over the record (decisions 27, 28; src/domain/learning.ts has the rules): pattern
 // prompts from repeated Done without opening, Yes into a learned rule and No into quiet, the rules
-// Settings › Mail lists (written and learned), attention precision for Settings › Accounts, and
-// Settings › AI's overview.
+// Settings › Mail lists (written and learned), and Settings › AI's overview.
 import {AI_MODELS} from '@setpoint/shared';
-import type {AiOut, PatternPromptOut, PrecisionOut, RuleInput, RuleOut, RuleUpdateInput} from '@setpoint/shared';
+import type {AiOut, PatternPromptOut, RuleInput, RuleOut, RuleUpdateInput} from '@setpoint/shared';
 import {and, count, eq, gte, inArray, isNotNull, sql, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
-import {attentionPrecision, patternPrompts, promptKey} from '../domain/learning.ts';
+import {patternPrompts, promptKey} from '../domain/learning.ts';
 import type {Verdict} from '../domain/learning.ts';
 import {localDay, zonedInstant} from '../domain/time.ts';
 import {organisationKey} from '../domain/triageRules.ts';
@@ -178,19 +177,7 @@ export function reorderRules(store: Store, ruleIds: number[]): RuleOut[] {
   });
 }
 
-// ---- Attention precision and Settings › AI ----
-
-/** Of the attention mail marked Done in the last 30 days, the share opened first. */
-export function precision(store: Store): PrecisionOut {
-  const rows = store.db.select({doneAt: t.messages.doneAt, opened: t.messages.openedBeforeDone}).from(t.messages)
-    .where(and(eq(t.messages.lane, 'attention'), isNotNull(t.messages.doneAt), eq(t.messages.backfill, false))).all()
-    .map(row => ({doneAt: row.doneAt!, opened: row.opened === true}));
-  const result = attentionPrecision(rows, isoNow(store), store.timeZone);
-  return {
-    precision: result.precision, done: result.done, opened_before_done: result.opened, from: result.from, to: result.to,
-    days: result.days.map(day => ({date: day.date, done: day.done, opened_before_done: day.opened})),
-  };
-}
+// ---- Settings › AI ----
 
 export function aiOverview(store: Store): AiOut {
   const keys = aiKeys(store);

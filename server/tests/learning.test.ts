@@ -1,7 +1,7 @@
-// Pattern prompts and attention precision as tables (BUILD-PLAN.md › B3 › Done when: prompts'
+// Pattern prompts as tables (BUILD-PLAN.md › B3 › Done when: prompts'
 // threshold, never for protected mail, Yes and No quieting them).
 import {describe, expect, test} from 'vitest';
-import {attentionPrecision, patternPrompts, promptKey} from '../src/domain/learning.ts';
+import {patternPrompts, promptKey} from '../src/domain/learning.ts';
 import type {Verdict} from '../src/domain/learning.ts';
 
 let next = 1;
@@ -45,34 +45,5 @@ describe('patternPrompts', () => {
   test('the most recent pattern is offered first', () => {
     const prompts = patternPrompts([...run([1, 2, 3, 4]), ...run([10, 11, 12, 13], {organisation: 'Fabrikam', type: 'confirmation'})], new Set());
     expect(prompts.map(prompt => prompt.organisation)).toEqual(['Fabrikam', 'Northwind']);
-  });
-});
-
-describe('attentionPrecision', () => {
-  const NOW = '2026-10-07T16:12:00.000Z';
-  const done = (at: string, opened: boolean) => ({doneAt: at, opened});
-
-  test('the share of attention mail opened before Done over the last 30 local days', () => {
-    const result = attentionPrecision([
-      done('2026-10-07T15:00:00.000Z', true), done('2026-10-06T20:00:00.000Z', true), done('2026-10-06T21:00:00.000Z', false),
-      done('2026-09-08T18:00:00.000Z', true),
-      // Before the window (Sep 7 Pacific is the 31st day back).
-      done('2026-09-07T18:00:00.000Z', false),
-    ], NOW, 'America/Los_Angeles');
-    expect(result).toMatchObject({precision: 0.75, done: 4, opened: 3, from: '2026-09-08', to: '2026-10-07'});
-    expect(result.days).toHaveLength(30);
-    expect(result.days[0]).toEqual({date: '2026-09-08', done: 1, opened: 1});
-    expect(result.days.at(-2)).toEqual({date: '2026-10-06', done: 2, opened: 1});
-    expect(result.days.at(-1)).toEqual({date: '2026-10-07', done: 1, opened: 1});
-  });
-
-  test('a day is the owner\'s local day: 2 AM UTC on Oct 7 is Oct 6 in Los Angeles', () => {
-    const result = attentionPrecision([done('2026-10-07T02:00:00.000Z', false)], NOW, 'America/Los_Angeles');
-    expect(result.days.at(-2)).toEqual({date: '2026-10-06', done: 1, opened: 0});
-    expect(result.precision).toBe(0);
-  });
-
-  test('nothing Done: no figure', () => {
-    expect(attentionPrecision([], NOW, 'America/Los_Angeles').precision).toBeNull();
   });
 });

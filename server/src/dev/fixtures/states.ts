@@ -11,7 +11,6 @@
 //                    9:10 AM, Weather 9:00 AM)
 //   triage-down      19a: triage down since 9:09 AM, with two emails waiting in Unsorted
 //   backfill         search's indexing line: the first backfill 62% through
-//   precision        17: 30 days of attention mail marked Done, 82% opened first
 //   mail-rules       18a: three written rules, two learned ones and 78 trusted domains
 //   ntfy             18b: ntfy set up at an `.example` server (never reached), last sent 8:02 AM,
 //                    and Home set for Time to Leave (17's Weather row names it too)
@@ -115,23 +114,6 @@ export function backfill({db}: OpenDatabase) {
   const source = mailSource(db, 'Personal');
   const state = {since: zoned('2025-10-07', '09:00'), total: 1000, fetched: 620, done: false, cursor: null, startedAt: zoned('2026-10-07', '08:30'), finishedAt: null};
   db.insert(t.syncCursors).values({sourceId: source.id, scope: 'backfill', cursor: JSON.stringify(state), updatedAt: zoned('2026-10-07', '09:11')}).run();
-}
-
-// Opened first, of five Done a day, over the 30 days to Oct 7, oldest first: 123 of 150 (82%).
-const OPENED = [3, 3, 4, 3, 3, 4, 4, 3, 4, 4, 4, 4, 4, 5, 4, 4, 4, 5, 4, 4, 5, 4, 5, 5, 4, 5, 5, 4, 5, 4];
-
-export function precision({db}: OpenDatabase) {
-  const personal = account(db, 'Personal').id;
-  const day = Date.parse(SEED_NOW);
-  db.insert(t.messages).values(OPENED.flatMap((opened, index) => Array.from({length: 5}, (_, n) => {
-    const at = new Date(day - (29 - index) * 86_400_000 - (n + 1) * 3_600_000).toISOString();
-    const id = `fixture-17-precision-${index}-${n}`;
-    return {
-      accountId: personal, providerId: id, threadId: `${id}-thread`, fromName: 'Fixture', fromAddress: 'fixture@example.com',
-      subject: 'Attention', snippet: '', bodyText: '', receivedAt: at, unread: false, lane: 'attention' as const, kind: 'other' as const,
-      doneAt: at, openedBeforeDone: n < opened,
-    };
-  }))).run();
 }
 
 const RULES: {match: RuleMatch; lane: 'attention' | 'fyi' | 'noise'; kind: 'money' | 'updates' | null; origin: 'written' | 'learned'; at: string}[] = [

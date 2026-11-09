@@ -12,7 +12,7 @@ import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
 import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
-import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, precision, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
+import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
 import {linkPlaces} from './linkPlaces.ts';
 import {timeToLeave} from './timeToLeave.ts';
@@ -55,7 +55,6 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   'checked': {board: '17', apply: checked},
   'triage-down': {board: '19a', apply: triageDown},
   'backfill': {board: 'search\'s indexing line', apply: backfill},
-  'precision': {board: '17', apply: precision},
   'mail-rules': {board: '18a', apply: mailRules},
   'ntfy': {board: '17, 18b', apply: ntfy},
   // Not a board: the phone agenda's empty weekend with its forecasts.

@@ -51,14 +51,13 @@ function providerHold() {
 }
 
 test('board 17: Settings › Accounts, Business needing sign-in and Personal stale', async () => {
-  const setpoint = await startSetpoint({fixtures: ['needs-reconnect', 'stale-personal', 'checked', 'precision', 'ntfy'], clock: 'frozen'});
+  const setpoint = await startSetpoint({fixtures: ['needs-reconnect', 'stale-personal', 'checked', 'ntfy'], clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'accounts');
     await page.locator('.settings .set-row.warn', {hasText: 'Needs sign-in'}).waitFor();
     await page.locator('.settings .state', {hasText: 'Checks stopped, as of 9:14 PM'}).waitFor();
     await page.locator('.settings [data-source="todoist"]', {hasText: 'Inbox · 3 projects'}).waitFor();
-    await page.locator('.settings .precision', {hasText: '82%'}).waitFor();
     await page.locator('.hbar.caution').waitFor();
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'Accounts');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).locator('.warn').count(), 1, 'Accounts is marked');

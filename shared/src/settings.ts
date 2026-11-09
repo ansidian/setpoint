@@ -40,7 +40,7 @@ export const settingsSchema = z.strictObject({
     }),
     // F7: the setpoint-reminders topic's switch (board 18b): reminders, Time to Leave and reconnect alerts.
     reminders: z.boolean(),
-    // Attention mail stays quiet until attention precision is trusted (BRIEF.md › ntfy).
+    // Attention mail stays quiet until what lands in Attention is trusted (BRIEF.md › ntfy).
     attention_mail: z.boolean(),
     // FYI mail on the same topic, off until turned on (SV-96).
     fyi_mail: z.boolean(),

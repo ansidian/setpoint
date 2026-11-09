@@ -81,7 +81,7 @@ test('the Inbox waits for both its answers: with the days\' held, its skeleton s
 });
 
 // Settings' own answers: every page's (settings-05 loads them all as Settings opens).
-const SETTINGS_PATHS = /^\/api\/(accounts|sources|mail\/precision|calendars|todoist\/projects|settings|mail\/rules|mail\/trusted-domains|notifications\/status|secrets|ai|security|news\/sources)$/;
+const SETTINGS_PATHS = /^\/api\/(accounts|sources|calendars|todoist\/projects|settings|mail\/rules|mail\/trusted-domains|notifications\/status|secrets|ai|security|news\/sources)$/;
 // What a page says only once it knows (states-01): each would be false of the seed while it loads.
 const FALSE_EMPTIES = ['Not connected', 'Connect Todoist', 'Not set', 'No rules yet', 'None yet', '0 domains', 'Nothing in Attention', '—', 'No sources', 'No home set'];
 

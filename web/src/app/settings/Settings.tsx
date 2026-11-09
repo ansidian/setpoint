@@ -12,7 +12,7 @@ import {prefetch, useResource} from '../../api/client.ts';
 import {CALENDARS_PATH, SETTINGS_PATH, TODOIST_PROJECTS_PATH} from '../../api/items.ts';
 import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {NEWS_SOURCES_PATH} from '../../api/news.ts';
-import {AI_PATH, NOTIFY_STATUS_PATH, PRECISION_PATH, RULES_PATH, SECRETS_PATH, SECURITY_PATH, SOURCES_PATH, TRUSTED_PATH} from '../../api/settings.ts';
+import {AI_PATH, NOTIFY_STATUS_PATH, RULES_PATH, SECRETS_PATH, SECURITY_PATH, SOURCES_PATH, TRUSTED_PATH} from '../../api/settings.ts';
 import {feedFailing} from '../../logic/news.ts';
 import {JOBS_SETTINGS_PATHS, JobsSettingsPage} from '../jobs/index.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
@@ -34,7 +34,7 @@ import './settings.css';
 
 // Every page's answers, loaded as Settings opens so a page switched to shows at once (settings-05).
 const PAGE_PATHS = [
-  ACCOUNTS_PATH, SOURCES_PATH, PRECISION_PATH, CALENDARS_PATH, TODOIST_PROJECTS_PATH, SETTINGS_PATH, RULES_PATH, TRUSTED_PATH, NOTIFY_STATUS_PATH,
+  ACCOUNTS_PATH, SOURCES_PATH, CALENDARS_PATH, TODOIST_PROJECTS_PATH, SETTINGS_PATH, RULES_PATH, TRUSTED_PATH, NOTIFY_STATUS_PATH,
   SECRETS_PATH, AI_PATH, SECURITY_PATH, NEWS_SOURCES_PATH, ...JOBS_SETTINGS_PATHS,
 ];
 // After the page opened at has asked for its own, so they come first.

@@ -98,15 +98,6 @@
 .settings .spin.hg { margin: 0; vertical-align: 0; color: var(--ink3); }
 /* Todoist's Connection row: the glyph before "Connected". */
 .settings .health-t { display: inline-flex; align-items: center; gap: 8px; }
-/* Attention precision leads with its figure, then the 30 days as a line on a 50–100% scale (#133). */
-.settings .precision { display: flex; align-items: center; gap: 20px; padding: 14px 20px 14px 16px; }
-.settings .precision .big { min-width: 64px; font-size: 24px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); }
-.settings .spark { display: block; flex: none; }
-.settings .spark .ref { stroke: var(--hair); stroke-width: 1; stroke-dasharray: 2 3; }
-.settings .spark .area { fill: color-mix(in oklch, var(--good) 14%, transparent); }
-.settings .spark .line { fill: none; stroke: var(--good); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
-.settings .spark .end { fill: var(--good); stroke: var(--modal); stroke-width: 1.5; }
-.settings .spark .day { fill: transparent; }
 :is(.settings, .cal-import) .anchor { position: relative; display: inline-flex; flex: none; }
 /* A row's menu and a select's: the app's one menu (styles.css), under its button's right edge, or
    its left with `.left`. The import review's Into select takes the same (SV-189). */
