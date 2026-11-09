@@ -5,8 +5,10 @@
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
 import type {RuleTrash} from '@setpoint/shared';
-import {moveBackCommand} from '../src/commands/index.ts';
-import {openMessage, setDone} from '../src/commands/mail.ts';
+import {confirmCommand, failCommand, moveBackCommand} from '../src/commands/index.ts';
+import {openMessage, setDone, setPinned, trashMessage} from '../src/commands/mail.ts';
+import {trashDueAt} from '../src/domain/triageRules.ts';
+import {RuleTrashScheduler} from '../src/triage/ruleTrash.ts';
 import * as t from '../src/db/schema.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {inbox} from '../src/queries/mail.ts';
@@ -203,8 +205,9 @@ describe('a written rule\'s actions (SV-236)', () => {
     [{mark_read: true, trash: 'now'}, {unread: false, trashed: true}, {kind: 'trash', payload: {mark_read: true}}],
     [{mark_read: false, trash: 'now'}, {unread: true, trashed: true}, {kind: 'trash', payload: {mark_read: false}}],
     [{mark_read: true, trash: 'never'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
-    // A delay is stored but doesn't act until SV-237.
+    // A delay only stores when it's due (SV-237); the minute pass sends the trash.
     [{mark_read: false, trash: '1d'}, {unread: true, trashed: false}, null],
+    [{mark_read: true, trash: '1h'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
   ] as const)('new mail a rule with %j sorts ends %j, by the command %j', async (actions, state, command) => {
     const {world, deliver, rule} = await withRule(actions);
     const id = deliver({...UPS, receivedAt: isoNow(world.store)});
@@ -266,6 +269,126 @@ describe('a written rule\'s actions (SV-236)', () => {
     expect(() => updateRule(world.store, learned.id, {mark_read: true})).toThrow('A learned rule only sorts');
     expect(() => updateRule(world.store, learned.id, {trash: 'now'})).toThrow('A learned rule only sorts');
     expect(listRules(world.store).find(rule => rule.id === learned.id)).toMatchObject({mark_read: false, trash: 'never'});
+  });
+});
+
+describe('a rule\'s delayed trash (SV-237)', () => {
+  const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
+  type World = Awaited<ReturnType<typeof setup>>['world'];
+  const trashes = (world: World, id: number) =>
+    world.store.db.select().from(t.commands).where(and(eq(t.commands.target, 'message'), eq(t.commands.targetId, id), eq(t.commands.kind, 'trash'))).all();
+  const row = (world: World, id: number) => inbox(world.store).groups.flatMap(group => group.rows).find(one => one.id === id);
+
+  /** A rule trashing ups.example mail `trash` after it arrives, and one email from it, sorted. */
+  async function delayed(trash: RuleTrash = '1h') {
+    const env = await setup();
+    const rule = createRule(env.world.store, {match: {from_domains: ['ups.example']}, lane: 'fyi', kind: 'deliveries', enabled: true, mark_read: false, trash});
+    env.world.advance(60_000);
+    const arrived = isoNow(env.world.store);
+    const id = env.deliver({...UPS, receivedAt: arrived});
+    await env.world.drain();
+    const pass = new RuleTrashScheduler({store: env.world.store});
+    return {...env, rule, id, arrived, pass};
+  }
+
+  test.each([
+    ['15m', 15 * 60_000], ['1h', 3_600_000], ['1d', 86_400_000], ['1w', 7 * 86_400_000],
+  ] as const)('a rule trashing %s after arrival stores that due time on the email, by the rule that sorted it, and the row shows it', async (trash, delay) => {
+    const {world, id, arrived, rule} = await delayed(trash);
+    const due = new Date(Date.parse(arrived) + delay).toISOString();
+    expect(world.message(id)).toMatchObject({trashDueAt: due, triageRuleId: rule.id, trashedAt: null});
+    expect(row(world, id)?.trash_due_at).toBe(due);
+  });
+
+  test.each([['never', null], ['now', null], ['15m', '2026-10-07T16:15:00.000Z'], ['1w', '2026-10-14T16:00:00.000Z']] as const)(
+    'Trash %s from an arrival at 16:00 is due at %s', (trash, due) => expect(trashDueAt('2026-10-07T16:00:00.000Z', trash)).toBe(due));
+
+  test('the pass leaves it until it\'s due, then trashes it once through the user\'s Trash command, the due time gone', async () => {
+    const {world, id, rule, pass} = await delayed('1h');
+    world.advance(60 * 60_000 - 1000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).toBeNull();
+    expect(trashes(world, id)).toEqual([]);
+    world.advance(1000);
+    await pass.tick();
+    expect(world.message(id)).toMatchObject({trashedAt: expect.any(String), trashDueAt: null});
+    expect(trashes(world, id)).toEqual([expect.objectContaining({state: 'pending', payload: expect.objectContaining({message_id: id, rule_id: rule.id, delayed: true})})]);
+    await pass.tick();
+    expect(trashes(world, id)).toHaveLength(1);
+  });
+
+  test('a restart catches up on everything that fell due while the server was down, however long ago', async () => {
+    const {world, id} = await delayed('15m');
+    world.advance(30 * 86_400_000);
+    await new RuleTrashScheduler({store: world.store}).tick();
+    expect(world.message(id).trashedAt).not.toBeNull();
+  });
+
+  test('pinning cancels it, and unpinning doesn\'t bring it back', async () => {
+    const {world, id, pass} = await delayed('1h');
+    setPinned(world.store, id, true);
+    expect(world.message(id).trashDueAt).toBeNull();
+    setPinned(world.store, id, false);
+    expect(world.message(id).trashDueAt).toBeNull();
+    expect(row(world, id)?.trash_due_at).toBeNull();
+    world.advance(2 * 3_600_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).toBeNull();
+  });
+
+  test('opening it and Done don\'t spare it', async () => {
+    const {world, id, pass} = await delayed('1h');
+    const open = openMessage(world.store, id)!;
+    confirmCommand(world.store, open.id);
+    setDone(world.store, id, true);
+    world.advance(3_600_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).not.toBeNull();
+  });
+
+  test('protected mail is never trashed, even with a due time on it', async () => {
+    const {world, id, pass} = await delayed('1h');
+    world.store.db.update(t.messages).set({protected: true}).where(eq(t.messages.id, id)).run();
+    world.advance(3_600_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).toBeNull();
+  });
+
+  test('an email with a change of its own waiting keeps its due time for the next pass', async () => {
+    const {world, id, pass} = await delayed('1h');
+    const open = openMessage(world.store, id)!;
+    world.advance(3_600_000);
+    await pass.tick();
+    expect(world.message(id)).toMatchObject({trashedAt: null, trashDueAt: expect.any(String)});
+    confirmCommand(world.store, open.id);
+    await pass.tick();
+    expect(world.message(id)).toMatchObject({trashedAt: expect.any(String), trashDueAt: null});
+  });
+
+  test('a trash the provider refuses fails in place and the next pass tries it again; Move back cancels it', async () => {
+    const {world, id, pass} = await delayed('1h');
+    world.advance(3_600_000);
+    await pass.tick();
+    const [sent] = trashes(world, id);
+    failCommand(world.store, sent!.id, 'Gmail is unavailable.');
+    await pass.tick();
+    expect(trashes(world, id).map(command => command.state)).toEqual(['pending']);
+    failCommand(world.store, sent!.id, 'Gmail is unavailable.');
+    moveBackCommand(world.store, sent!.id);
+    world.advance(3_600_000);
+    await pass.tick();
+    expect(world.message(id)).toMatchObject({trashedAt: null, trashDueAt: null});
+    expect(trashes(world, id).map(command => command.state)).toEqual(['reverted']);
+  });
+
+  test('the user\'s own refused trash isn\'t the pass\'s to try again', async () => {
+    const {world, deliver, pass} = await delayed('1h');
+    const id = deliver({subject: 'Hello', receivedAt: isoNow(world.store)});
+    await world.drain();
+    const own = trashMessage(world.store, id, true);
+    failCommand(world.store, own.id, 'Gmail is unavailable.');
+    await pass.tick();
+    expect(trashes(world, id).map(command => command.state)).toEqual(['failed']);
   });
 });
 

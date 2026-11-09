@@ -4291,11 +4291,17 @@ was decided; the audit itself was retired by D480.
     - **Only new mail:** actions apply to email that arrives after the rule is saved or changed,
       never to mail already there, as a rule sorts new mail. Learned rules and the defaults have no
       actions. **Protected mail is never marked read or trashed by any rule.**
-    - **The delay** counts from the email's arrival. The row shows **"Trash in 3 h"** in `ink3` in
-      the place a code's "Expires in 11 min" takes, in min, h or d, with no `caution` last minute; a
-      code row keeps its own countdown. **Pinning cancels the trash** and unpinning doesn't bring it
-      back; opening, Done or replying don't spare it. Due mail goes on the next minute's pass, and a
-      restart catches up on what fell due while it was down.
+    - **The delay** counts from the email's arrival. The row shows **`auto_delete` and "3 h"** in
+      `ink3` before the account (min, h or d, rounded up, no `caution` last minute), its tip "Trash in
+      3 h": short, so a narrow list keeps its subject, and never cut off as it would be after the
+      subject (Andy, 2026-11-08, over the words at the right or after the subject). A live code row
+      keeps its own countdown instead. The reader says **"Trash in 3 h"** with the icon under the
+      account and time, on the sender block's second line (chosen over beside the account, too tight;
+      in the toolbar after Pin; and a line of its own under the summary). The phone shows neither,
+      as it leaves out a code row's countdown (D275). **Pinning cancels the trash** and unpinning
+      doesn't bring it back; opening, Done or replying don't spare it. Due mail goes on the next
+      minute's pass, and a restart catches up on what fell due while it was down. A trash the
+      provider refuses fails in place and the pass tries it again; Move back on it cancels it.
     - **Turning off or deleting a rule** with trashes waiting asks, as a recurring event's scope
       does: **Cancel them** (default, "3 emails stay") or **Let them run** ("3 emails go to the
       trash as planned"), with Turn off or Delete ↵ and Cancel Esc. With none waiting it doesn't

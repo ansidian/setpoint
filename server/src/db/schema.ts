@@ -86,6 +86,10 @@ export const messages = sqliteTable('messages', {
   openedAt: text('opened_at'),
   // In the provider's trash: out of every view until Undo (untrash) or the provider purges it.
   trashedAt: text('trashed_at'),
+  // When a written rule's delayed trash is due (arrival plus its delay, DESIGN.md #347): the minute
+  // pass (src/triage/ruleTrash.ts) trashes it then. Pinning clears it for good, as does the pass
+  // once it sends the trash. The rule that set it is `triage_rule_id`, the rule that sorted it.
+  trashDueAt: text('trash_due_at'),
   // Whether the sender passed DMARC (B2 records it); null while unknown. Remote content loads for
   // authenticated, non-Noise senders (decision 25).
   senderAuthenticated: integer('sender_authenticated', {mode: 'boolean'}),
@@ -139,6 +143,8 @@ export const messages = sqliteTable('messages', {
   check('messages_code', sql`(${table.code} is null) = (${table.codeExpiresAt} is null)`),
   // B3.
   index('messages_triage_rule').on(table.triageRuleId),
+  // SV-237: the minute pass reads the due ones.
+  index('messages_trash_due').on(table.trashDueAt),
 ]);
 
 /** An email's attachment, previewed in the reader (PDF, image, CSV). */

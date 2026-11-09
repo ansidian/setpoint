@@ -15,7 +15,7 @@ function row(fields: Partial<MessageRowOut>): MessageRowOut {
   return {
     id: nextId++, account_id: 1, from_name: 'Sender', from_address: 'sender@example.com', organisation: null, via: null, subject: 'Subject',
     summary: null, received_at: '2026-10-07T15:00:00.000Z', unread: true, lane: 'fyi', kind: 'other', type: null, protected: false,
-    pinned: false, done: false, fact: null, code: null, attachment_count: 0, command: null, ...fields,
+    pinned: false, done: false, fact: null, code: null, trash_due_at: null, attachment_count: 0, command: null, ...fields,
   };
 }
 const group = (name: InboxGroupOut['group'], rows: MessageRowOut[], fields: Partial<InboxGroupOut> = {}): InboxGroupOut => ({

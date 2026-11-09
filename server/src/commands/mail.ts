@@ -7,6 +7,7 @@ import type {RuleTrash} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {markAllReadTargets} from '../domain/inbox.ts';
+import {trashDueAt} from '../domain/triageRules.ts';
 import {conflict, notFound} from '../errors.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -83,11 +84,13 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
  * A written rule's actions on new mail it just sorted (DESIGN.md #347), carried out as the user's own
  * Mark read and Trash are: a command, the mirror changed at once, and a refusal failed in place with
  * Try again and Move back. Trash now with Mark read is one trash command that marks it read first,
- * since an email takes one change at a time. A delayed trash (SV-237) does nothing here. Returns the
- * command, or null when there's nothing to do.
+ * since an email takes one change at a time. A delayed trash only stores when it's due, for the
+ * minute pass (ruleTrashDue). Returns the command, or null when there's nothing to send.
  */
 export function ruleActions(store: Store, messageId: number, ruleId: number, actions: {markRead: boolean; trash: RuleTrash}): CommandRow | null {
   const row = message(store, messageId);
+  const due = trashDueAt(row.receivedAt, actions.trash);
+  if (due !== null && row.pinnedAt === null) store.db.update(t.messages).set({trashDueAt: due}).where(eq(t.messages.id, row.id)).run();
   const markRead = actions.markRead && row.unread;
   const trashNow = actions.trash === 'now' && row.trashedAt === null;
   if (!markRead && !trashNow) return null;
@@ -144,12 +147,34 @@ export function setDone(store: Store, messageId: number, done: boolean): Message
   });
 }
 
-/** Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. */
+/**
+ * Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. Pinning also cancels a rule's
+ * waiting trash, and unpinning doesn't bring it back (D490).
+ */
 export function setPinned(store: Store, messageId: number, pinned: boolean): MessageRow {
   return transaction(store, () => {
     const row = message(store, messageId);
-    const updated = store.db.update(t.messages).set({pinnedAt: pinned ? row.pinnedAt ?? isoNow(store) : null}).where(eq(t.messages.id, row.id)).returning().get()!;
+    const updated = store.db.update(t.messages).set(pinned ? {pinnedAt: row.pinnedAt ?? isoNow(store), trashDueAt: null} : {pinnedAt: null})
+      .where(eq(t.messages.id, row.id)).returning().get()!;
     noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
     return updated;
+  });
+}
+
+/**
+ * A rule's delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): the user's own Trash
+ * command, sent once, so the due time goes as it's sent. Refused, changing nothing, while the email
+ * has a change of its own waiting; the due time stays for the next pass. A trash the provider
+ * refuses fails in place, and the pass tries it again (`delayed` in its payload).
+ */
+export function ruleTrashDue(store: Store, messageId: number): CommandRow {
+  const row = message(store, messageId);
+  return createCommand(store, {
+    target: 'message', kind: 'trash', sourceId: mailSourceId(store, row.accountId),
+    payload: {message_id: row.id, rule_id: row.triageRuleId, delayed: true},
+    prepare: () => {
+      store.db.update(t.messages).set({trashedAt: isoNow(store), trashDueAt: null}).where(eq(t.messages.id, row.id)).run();
+      return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
+    },
   });
 }

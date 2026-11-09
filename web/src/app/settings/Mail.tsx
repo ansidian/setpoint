@@ -5,7 +5,7 @@
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
 // with a filter, and the code expiry's presets.
 import type {Kind, Lane, RuleOut, RuleTrash, Settings, TrustedDomainOut} from '@setpoint/shared';
-import {CODE_EXPIRY_PRESETS, KINDS} from '@setpoint/shared';
+import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
@@ -26,9 +26,6 @@ import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, Switch, 
 
 // The domains shown before Show all.
 const DOMAINS_SHOWN = 11;
-
-// Only Never and Now act until delayed trash lands (SV-237); the other four are stored already.
-const TRASH_OFFERED: RuleTrash[] = ['never', 'now'];
 
 const DESTINATIONS: {value: string; label: string}[] = [
   {value: 'attention', label: 'Attention'},
@@ -219,7 +216,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
         <span className="s">Mark read</span>
         <Switch on={markRead} label="Mark read" onChange={setMarkRead} />
         <span className="s gap">Trash</span>
-        <Segmented role="radio" label="Trash" value={trash} segments={TRASH_OFFERED.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
+        <Segmented role="radio" label="Trash" value={trash} segments={RULE_TRASH.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
       </span>
       {send.line && <span className="s rule-line add" style={{color: 'var(--alert)'}} role="alert">{send.line.text}</span>}
     </form>

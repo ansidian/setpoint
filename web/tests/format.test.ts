@@ -2,7 +2,7 @@
 // Pacific).
 import {SEED_NOW, SEED_TIME_ZONE} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
-import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, expiresSoon, fullTimestamp, localDate, monthName, readerTime, startsIn, timeLeft} from '../src/logic/format.ts';
+import {addDays, age, clockTime, codeGroups, countdownChange, daysBetween, expiresIn, expiresSoon, fullTimestamp, localDate, monthName, readerTime, startsIn, timeLeft, trashLeft} from '../src/logic/format.ts';
 
 const now = Date.parse(SEED_NOW);
 const zone = SEED_TIME_ZONE;
@@ -83,6 +83,20 @@ test.each([
   ['past', '2026-10-07T16:11:00.000Z', now, 'Expired'],
 ])('expiresIn: %s', (_name, at, at_now, expected) => {
   expect(expiresIn(at, at_now)).toBe(expected);
+});
+
+// A rule's waiting trash beside auto_delete (SV-237): min, h or d, rounded up, never below a minute.
+test.each([
+  ['14 minutes', '2026-10-07T16:26:00.000Z', '14 min'],
+  ['part of a minute', '2026-10-07T16:12:20.000Z', '1 min'],
+  ['due, the pass not yet run', '2026-10-07T16:11:00.000Z', '1 min'],
+  ['59 minutes and a bit', '2026-10-07T17:11:30.000Z', '1 h'],
+  ['2 hours and 10 minutes', '2026-10-07T18:22:00.000Z', '3 h'],
+  ['23 hours', '2026-10-08T15:12:00.000Z', '23 h'],
+  ['23 and a half hours', '2026-10-08T15:42:00.000Z', '1 d'],
+  ['a week', '2026-10-14T16:12:00.000Z', '7 d'],
+])('trashLeft: %s', (_name, at, expected) => {
+  expect(trashLeft(at, now)).toBe(expected);
 });
 
 // The last minute is the soon one, drawn in `caution`.

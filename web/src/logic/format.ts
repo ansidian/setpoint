@@ -128,6 +128,19 @@ export function expiresIn(at: string, now: number): string {
   return left <= MINUTE ? `Expires in ${Math.ceil(left / 1000)} sec` : `Expires in ${Math.ceil(left / MINUTE)} min`;
 }
 
+/**
+ * How long until a rule's waiting trash (DESIGN.md #347), beside auto_delete on its row: "14 min",
+ * "3 h", "2 d", each rounded up, never below a minute (the pass takes it within the minute it falls due).
+ */
+export function trashLeft(at: string, now: number): string {
+  const left = Date.parse(at) - now;
+  const minutes = Math.max(1, Math.ceil(left / MINUTE));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.ceil(left / (60 * MINUTE));
+  if (hours < 24) return `${hours} h`;
+  return `${Math.ceil(left / (24 * 60 * MINUTE))} d`;
+}
+
 /** Whether a code is in its last minute, its countdown in seconds and `caution`. */
 export function expiresSoon(at: string, now: number): boolean {
   const left = Date.parse(at) - now;

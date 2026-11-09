@@ -81,6 +81,8 @@
   .row .subj.code-line { gap: 6px; }
   .code-line .copy { height: 30px; gap: 4px; font-size: 13px; padding: 0 10px; }
   .code-line .sum { display: none; }
+  /* As a code's countdown, a rule's "Trash in 3 h" stays off the phone's frozen row (D275). */
+  .row .trash-in { display: none; }
   .arow { padding: 8px 16px 9px 8px; }
   /* Taps, not a pointer or keys: no keyboard cursor stays behind on a row (hover fills only answer a
      pointer that hovers, styles.css). */
@@ -115,6 +117,10 @@
   .rd-meta .rd-sep, .rd-meta .to { display: none; }
   .rd-meta .account { grid-column: 3; grid-row: 1; justify-self: end; }
   .rd-meta .time { grid-column: 3; grid-row: 2; justify-self: end; }
+  /* The desktop's right column (account, time, a waiting trash) dissolves into this grid, and the
+     trash stays off the frozen phone layout as on its row (D275). */
+  .rd-meta .rd-right, .rd-meta .rd-right > div { display: contents; }
+  .rd-meta .trash-in { display: none; }
   .rd-body { padding: 16px 20px 20px; }
   /* The phone's email keeps the screen's whole width, with no room around it (D275 froze this layout). */
   .mailframe-box { padding: 0; }

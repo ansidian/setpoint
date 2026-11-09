@@ -22,7 +22,7 @@ import {markRead, markUnread, messagePath, trustDomain} from '../api/mail.ts';
 import {proposeFromMessage} from '../api/search.ts';
 import {RULES_PATH} from '../api/settings.ts';
 import {paragraphs} from '../logic/body.ts';
-import {fullTimestamp, readerTime} from '../logic/format.ts';
+import {fullTimestamp, readerTime, trashLeft} from '../logic/format.ts';
 import {factRows, hasRemoteContent, READING_PANE, readerActions, readerSummary, remoteImages, senderLine} from '../logic/reader.ts';
 import {phraseRuns, segments} from '../logic/search.ts';
 import {Icon} from '../ui/Icon.tsx';
@@ -431,8 +431,15 @@ function Head({listed, message, accounts, now, timeZone, cards, unread, onCodeCo
           </div>
           <div className="to"><span data-tip={account?.address} data-tip-quick>to you</span></div>
         </div>
-        <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
-        <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)} data-tip-quick>{readerTime(listed.received_at, now, timeZone)}</span>
+        {/* The account and time, and under them a rule's waiting trash in words, as the row shows it:
+            reading doesn't spare it, pinning does (DESIGN.md #347, D490). */}
+        <div className="rd-right">
+          <div>
+            <span className="account"><span className="dot sm" style={dotStyle(account?.colour)} />{account?.label}</span>
+            <span className="time" data-tip={fullTimestamp(listed.received_at, timeZone)} data-tip-quick>{readerTime(listed.received_at, now, timeZone)}</span>
+          </div>
+          {listed.trash_due_at && !listed.pinned && <span className="trash-in num"><Icon name="auto_delete" size={14} />Trash in {trashLeft(listed.trash_due_at, now)}</span>}
+        </div>
       </div>
       {/* A verification code lifted out of the body, with Copy and its countdown (reader-04), from the row at once. */}
       {listed.code && <CodeCard code={listed.code} onCopied={onCodeCopied} />}

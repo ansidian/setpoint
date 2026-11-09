@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
 import {deepLinkPath} from '@setpoint/shared';
 import type {AllOut, InboxOut, MailCountsOut, MessageOut, TrustedDomainOut} from '@setpoint/shared';
@@ -314,6 +315,39 @@ test('Pin and Unpin (D105): P on a day\'s row moves it to the shelf at once, Unp
     await until('it leaves the shelf', () => shelf(), rows => rows.length === 1);
     await page.locator('.rd-tools .tool:not(.active)', {hasText: 'Pin'}).waitFor();
     await until('the server unpinned it', () => setpoint.api<InboxOut>('GET', '/mail/inbox'), inbox => !inbox.groups.some(group => group.rows.some(row => row.pinned && row.subject.startsWith('Interview availability'))));
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-237: a rule\'s waiting trash shows as auto_delete and "22 h" on the row and "Trash in 22 h" under the reader\'s time; P takes both away at once, and the server forgets it', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const id = await idOf(setpoint, 'Out for delivery');
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      database.prepare('UPDATE messages SET trash_due_at = ? WHERE id = ?').run('2026-10-08T14:02:00.000Z', id);
+    } finally {
+      database.close();
+    }
+    const page = await load(setpoint);
+    const row = page.locator(`.list.all .row[data-id="${id}"]:not(.shelf)`);
+    assert.equal(await row.locator('.trash-in').textContent(), '22 h');
+    assert.equal(await row.locator('.trash-in').getAttribute('data-tip'), 'Trash in 22 h');
+    assert.deepEqual((await glyphs(row.locator('.trash-in .icon'))).map(([name]) => name), ['auto_delete']);
+    // A row with none shows none.
+    assert.equal(await page.locator('.list.all .row .trash-in').count(), 1);
+    await row.click();
+    await page.locator('.rd-subj', {hasText: 'Out for delivery'}).waitFor();
+    assert.equal(await page.locator('.rd-meta .rd-right .trash-in').textContent(), 'Trash in 22 h');
+    await page.keyboard.press('p');
+    await page.locator('.rd-tools .tool.active', {hasText: 'Unpin'}).waitFor();
+    assert.equal(await page.locator('.rd-meta .trash-in').count(), 0);
+    // The day's copy leaving for the shelf isn't the email's row any more.
+    assert.equal(await page.locator('.list.all .row:not(.leaving) .trash-in').count(), 0);
+    await until('the server forgot it', () => setpoint.api<MessageOut>('GET', `/mail/messages/${id}`), message => message.pinned && message.trash_due_at === null);
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

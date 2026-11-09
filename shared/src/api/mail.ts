@@ -43,6 +43,9 @@ export interface MessageRowOut {
   fact: string | null;
   // A verification code, and when its row leaves the Inbox ("Expires in 11 min").
   code: {value: string; expires_at: string} | null;
+  // When a written rule's delayed trash takes it ("Trash in 3 h", DESIGN.md #347); null when none
+  // waits, a pinned email's included.
+  trash_due_at: string | null;
   attachment_count: number;
   // The change waiting for its provider, or failed in place.
   command: CommandOut | null;

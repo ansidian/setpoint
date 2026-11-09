@@ -25,6 +25,7 @@ import {newsAdapters, newsReader} from './providers/news/index.ts';
 import {todoistAdapter} from './providers/todoist/index.ts';
 import {weatherAdapter} from './providers/weather/index.ts';
 import {ReminderScheduler} from './reminders/scheduler.ts';
+import {RuleTrashScheduler} from './triage/ruleTrash.ts';
 import {loadKeyring} from './secrets/crypto.ts';
 import {storeClock} from './store.ts';
 import type {Store} from './store.ts';
@@ -84,6 +85,8 @@ const newsSort = new NewsSortWorker({store, endpoints: aiEndpoints});
 const engine = new SyncEngine({store, adapters, notifier, workers: [triage, history, searchTerms, news, newsSort, jobsReader]});
 const connectors = {gmail: google ? gmailConnector(store, google, pubsub !== null) : null, icloud: icloudConnector(store, icloud)};
 const reminders = new ReminderScheduler({store, notifier});
+// A written rule's delayed trash (SV-237): a pass every minute.
+const ruleTrash = new RuleTrashScheduler({store});
 const app = createApp({
   store, webDir: config.webDir, publicUrl: config.publicUrl, production: config.production, engine, notifier, connectors,
   providers: {todoistOAuth: {client: config.todoistClient}}, triage, alfred: {endpoints: aiEndpoints}, reading: {endpoints: aiEndpoints}, news: {imagesDir: newsImages}, newsSort,
@@ -99,6 +102,7 @@ const server = serve({fetch: app.fetch, hostname: config.host, port: config.port
 engine.start();
 puller?.start();
 reminders.start();
+ruleTrash.start();
 // The weather source (Connect Gmail makes each Google account's Calendar source).
 ensureCalendarSources(store);
 // News's built-in sources and the data directory's local list (D91).
@@ -110,6 +114,7 @@ function shutdown(signal: NodeJS.Signals) {
   void puller?.stop();
   void icloud.close();
   reminders.stop();
+  ruleTrash.stop();
   server.close(() => {
     sqlite.close();
     process.exit(0);

@@ -15,7 +15,7 @@ import type {MouseEvent, ReactNode, UIEvent} from 'react';
 import {allRowLine, dayHeading, listKey, noiseKey} from '../logic/all.ts';
 import type {AllLane, DayView} from '../logic/all.ts';
 import type {Entry, Folded, FoldRules} from '../logic/fold.ts';
-import {age, clockTime, codeGroups, fullTimestamp, localDate} from '../logic/format.ts';
+import {age, clockTime, codeGroups, fullTimestamp, localDate, trashLeft} from '../logic/format.ts';
 import {codeExpired, GROUP_GLYPHS, GROUP_LABELS, groupKey, promptText, rowKey, showsPending} from '../logic/inbox.ts';
 import type {PatternPrompt} from '../logic/inbox.ts';
 import {Icon} from '../ui/Icon.tsx';
@@ -230,6 +230,12 @@ export function AllList({attention, days, shelf, lanes = true, fill = false, emp
                   {line.code ? <>{line.code.before}<span className="code">{line.code.value}</span>{line.code.after}</> : line.subject}
                 </b>
                 {line.summary && <>{' '}<span className="sum">· {line.summary}</span></>}
+              </span>
+            )}
+            {/* A rule's waiting trash, auto_delete and "4 h" before the account; a live code keeps its own countdown (DESIGN.md #347). */}
+            {row.trash_due_at && !row.pinned && !(row.code && !codeExpired(row, now)) && (
+              <span className="trash-in num" data-tip={`Trash in ${trashLeft(row.trash_due_at, now)}`} aria-label={`Trash in ${trashLeft(row.trash_due_at, now)}`}>
+                <Icon name="auto_delete" size={14} />{trashLeft(row.trash_due_at, now)}
               </span>
             )}
             {afterSubject(row)}

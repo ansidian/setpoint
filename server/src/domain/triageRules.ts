@@ -53,6 +53,18 @@ export interface RuleActions {
   since: string;
 }
 
+// A delayed trash's wait after arrival (D489).
+const TRASH_DELAY_MS: Partial<Record<RuleTrash, number>> = {'15m': 15 * 60_000, '1h': 3_600_000, '1d': 86_400_000, '1w': 7 * 86_400_000};
+
+/**
+ * When a rule's delayed trash is due: the email's arrival plus the delay (D489). Null for Never and
+ * Now, which aren't delayed.
+ */
+export function trashDueAt(receivedAt: string, trash: RuleTrash): string | null {
+  const delay = TRASH_DELAY_MS[trash];
+  return delay === undefined ? null : new Date(Date.parse(receivedAt) + delay).toISOString();
+}
+
 const lower = (value: unknown) => String(value ?? '').toLowerCase();
 
 interface Parts {

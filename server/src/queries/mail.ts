@@ -55,7 +55,7 @@ function presentRow(row: Candidate): MessageRowOut {
     subject: row.subject, summary: row.summary, received_at: row.receivedAt, unread: row.unread, lane: row.lane, kind: row.kind, type: row.type,
     protected: row.protected, pinned: row.pinnedAt !== null, done: row.doneAt !== null, fact: row.code ? null : factOf(row),
     code: row.code && row.codeExpiresAt ? {value: row.code, expires_at: row.codeExpiresAt} : null,
-    attachment_count: row.attachmentCount, command: row.command,
+    trash_due_at: row.pinnedAt === null ? row.trashDueAt : null, attachment_count: row.attachmentCount, command: row.command,
   };
 }
 
