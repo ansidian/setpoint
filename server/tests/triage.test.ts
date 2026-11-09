@@ -392,6 +392,74 @@ describe('a rule\'s delayed trash (SV-237)', () => {
   });
 });
 
+describe('turning off or deleting a rule with trashes waiting (SV-238)', () => {
+  const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
+
+  /** A rule trashing ups.example mail an hour after it arrives, three emails from it sorted, one of them pinned. */
+  async function waiting() {
+    const env = await setup();
+    const rule = createRule(env.world.store, {match: {from_domains: ['ups.example']}, lane: 'fyi', kind: 'deliveries', enabled: true, mark_read: false, trash: '1h'});
+    env.world.advance(60_000);
+    const ids = [1, 2, 3].map(n => env.deliver({...UPS, subject: `Delivered ${n}`, receivedAt: isoNow(env.world.store)}));
+    await env.world.drain();
+    setPinned(env.world.store, ids[2]!, true);
+    const pass = new RuleTrashScheduler({store: env.world.store});
+    const later = async () => {
+      env.world.advance(2 * 3_600_000);
+      await pass.tick();
+    };
+    return {...env, rule, ids, later};
+  }
+  const listed = (world: Awaited<ReturnType<typeof waiting>>['world'], id: number) => listRules(world.store).find(rule => rule.id === id);
+
+  test('each rule counts the emails it has waiting to be trashed, a pinned one not among them', async () => {
+    const {world, rule} = await waiting();
+    expect(listed(world, rule.id)?.trashes_waiting).toBe(2);
+    const other = createRule(world.store, {match: {from_domains: ['fedex.example']}, lane: 'fyi', kind: null, enabled: true, mark_read: false, trash: '1h'});
+    expect(other.trashes_waiting).toBe(0);
+  });
+
+  test('turning it off with Cancel them clears their due times, so they stay', async () => {
+    const {world, rule, ids, later} = await waiting();
+    expect(updateRule(world.store, rule.id, {enabled: false, waiting: 'cancel'})).toMatchObject({enabled: false, trashes_waiting: 0});
+    expect(ids.map(id => world.message(id).trashDueAt)).toEqual([null, null, null]);
+    await later();
+    expect(ids.map(id => world.message(id).trashedAt)).toEqual([null, null, null]);
+  });
+
+  test('turning it off with Let them run, or no answer, leaves them to go to the trash as planned', async () => {
+    for (const waitingAnswer of ['run', undefined] as const) {
+      const {world, rule, ids, later} = await waiting();
+      expect(updateRule(world.store, rule.id, {enabled: false, waiting: waitingAnswer})).toMatchObject({enabled: false, trashes_waiting: 2});
+      await later();
+      expect(ids.map(id => world.message(id).trashedAt !== null)).toEqual([true, true, false]);
+    }
+  });
+
+  test('deleting it with Cancel them clears their due times first', async () => {
+    const {world, rule, ids, later} = await waiting();
+    deleteRule(world.store, rule.id, 'cancel');
+    expect(ids.map(id => world.message(id)).map(message => [message.trashDueAt, message.triageRuleId])).toEqual([[null, null], [null, null], [null, null]]);
+    await later();
+    expect(ids.map(id => world.message(id).trashedAt)).toEqual([null, null, null]);
+  });
+
+  test('deleting it with Let them run still trashes them when due, the rule gone', async () => {
+    const {world, rule, ids, later} = await waiting();
+    deleteRule(world.store, rule.id, 'run');
+    expect(world.message(ids[0]!)).toMatchObject({trashDueAt: expect.any(String), triageRuleId: null});
+    await later();
+    expect(ids.map(id => world.message(id).trashedAt !== null)).toEqual([true, true, false]);
+  });
+
+  test('editing it leaves its waiting trashes alone, and only turning it off can answer for them', async () => {
+    const {world, rule, ids} = await waiting();
+    const before = ids.map(id => world.message(id).trashDueAt);
+    expect(updateRule(world.store, rule.id, {trash: 'never', mark_read: true}).trashes_waiting).toBe(2);
+    expect(ids.map(id => world.message(id).trashDueAt)).toEqual(before);
+  });
+});
+
 describe('new mail by ntfy', () => {
   async function notifying() {
     const fake = await fakeModels();
@@ -544,9 +612,13 @@ describe('the API', () => {
     const second = (await api.send('POST', '/api/mail/rules', {body: {match: {subject_includes: ['registrar']}, lane: 'attention'}})).body;
     expect((await api.send('PUT', '/api/mail/rules/order', {body: {rule_ids: [second.id, created.body.id]}})).body.map((rule: {id: number}) => rule.id).slice(0, 2)).toEqual([second.id, created.body.id]);
     expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {enabled: false}})).body.enabled).toBe(false);
+    // Only turning a rule off answers for its waiting trashes (D495).
+    expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {enabled: false, waiting: 'cancel'}})).body.trashes_waiting).toBe(0);
+    expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {lane: 'fyi', waiting: 'cancel'}})).status).toBe(400);
+    expect((await api.send('DELETE', `/api/mail/rules/${second.id}?waiting=later`)).status).toBe(400);
     const rules = (await api.send('GET', '/api/mail/rules')).body;
     expect(rules.map((rule: {origin: string}) => rule.origin)).toEqual(['written', 'written', 'learned']);
-    expect((await api.send('DELETE', `/api/mail/rules/${second.id}`)).status).toBe(204);
+    expect((await api.send('DELETE', `/api/mail/rules/${second.id}?waiting=cancel`)).status).toBe(204);
 
     expect((await api.send('GET', '/api/ai')).body).toMatchObject({
       keys: {anthropic: false, openai: false}, triage: {cheap: null, strong: null, history: null}, usage_30_days: {calls: 0, cost_usd: 0},

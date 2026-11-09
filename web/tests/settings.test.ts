@@ -5,7 +5,7 @@ import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
-  shifts, splitRules, taskTime, withPatch, withSender,
+  shifts, splitRules, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -69,7 +69,7 @@ describe('Settings', () => {
   ])('an email from %j gives a rule %j', (address, sender) => expect(ruleSender(address)).toEqual(sender));
 
   const rule = (id: number, match: RuleMatch, fields: Partial<RuleOut> = {}): RuleOut => ({
-    id, origin: 'written', match, lane: 'fyi', kind: 'money', position: id, enabled: true, mark_read: false, trash: 'never', imported: false, created_at: '2026-10-01T00:00:00Z', matches_this_month: 0, ...fields,
+    id, origin: 'written', match, lane: 'fyi', kind: 'money', position: id, enabled: true, mark_read: false, trash: 'never', imported: false, created_at: '2026-10-01T00:00:00Z', matches_this_month: 0, trashes_waiting: 0, ...fields,
   });
   test('the rules an email\'s sender can join: written ones on, matching on sender, not already matching it, in their order', () => {
     const rules = [
@@ -141,9 +141,18 @@ describe('Settings', () => {
   // The other rows' middles at 26, 78 and 130 (52 px rows): above the first, between, past the last.
   test.each([[0, 0], [26, 0], [27, 1], [100, 2], [131, 3]])('the pointer at %i goes to %i', (y, to) => expect(dropIndex([26, 78, 130], y)).toBe(to));
 
+  // SV-238 (D495): Turn off's and Delete's prompt for a rule's waiting trashes.
+  test.each([
+    [1, '1 email is waiting to be trashed', ['1 email stays', '1 email goes to the trash as planned']],
+    [3, '3 emails are waiting to be trashed', ['3 emails stay', '3 emails go to the trash as planned']],
+  ])('%i waiting reads %j, Cancel them first: %j', (count, title, lines) => {
+    expect(waitingTitle(count)).toBe(title);
+    expect(waitingChoices(count).map(choice => [choice.scope, choice.label, choice.line])).toEqual([['cancel', 'Cancel them', lines[0]], ['run', 'Let them run', lines[1]]]);
+  });
+
   test('written rules in their order, learned ones newest first', () => {
     const rule = (id: number, origin: 'written' | 'learned', position: number, created: string) => ({
-      id, origin, position, created_at: created, match: {from_domains: ['x.com']}, lane: 'fyi' as const, kind: null, enabled: true, mark_read: false, trash: 'never' as const, imported: false, matches_this_month: 0,
+      id, origin, position, created_at: created, match: {from_domains: ['x.com']}, lane: 'fyi' as const, kind: null, enabled: true, mark_read: false, trash: 'never' as const, imported: false, matches_this_month: 0, trashes_waiting: 0,
     });
     const {written, learned} = splitRules([rule(1, 'learned', 0, '2026-09-18'), rule(2, 'written', 1, '2026-08-01'), rule(3, 'written', 0, '2026-08-02'), rule(4, 'learned', 0, '2026-10-07')]);
     expect([written.map(one => one.id), learned.map(one => one.id)]).toEqual([[3, 2], [4, 1]]);

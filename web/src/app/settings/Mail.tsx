@@ -1,10 +1,11 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
 // rule (open and filled in when an email's Add to rule asked for a New rule from its sender, SV-160;
-// Mark read and Trash under Send to, DESIGN.md #347), the note that protected mail can't be moved,
+// Mark read and Trash under Send to, DESIGN.md #347; Turn off and Delete ask about a rule's waiting
+// trashes, SV-238), the note that protected mail can't be moved,
 // marked read or trashed by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
 // with a filter, and the code expiry's presets.
-import type {Kind, Lane, RuleOut, RuleTrash, Settings, TrustedDomainOut} from '@setpoint/shared';
+import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -12,7 +13,9 @@ import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
 import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, wordsMatch} from '../../logic/settings.ts';
+import {expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, waitingChoices, waitingTitle, wordsMatch} from '../../logic/settings.ts';
+import {placeMenu} from '../../ui/popover.ts';
+import {ScopePrompt} from '../calendar/ScopePrompt.tsx';
 import {Icon} from '../../ui/Icon.tsx';
 import {Segmented} from '../../ui/Segmented.tsx';
 import {useNow} from '../clock.ts';
@@ -112,6 +115,16 @@ function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enab
 }
 
 function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; drag: DragProps; onMove: (delta: 1 | -1) => void}) {
+  // Turn off or Delete on a rule with trashes waiting asks first (D495); with none it just happens.
+  const [ask, setAsk] = useState<'off' | 'delete' | null>(null);
+  const [waiting, setWaiting] = useState<RuleWaiting>('cancel');
+  const turnOff = (answer?: RuleWaiting) => void setRuleEnabled(rule.id, false, answer).catch(toastFailure('Couldn\'t turn the rule off'));
+  const remove = (answer?: RuleWaiting) => void deleteRule(rule.id, answer).catch(toastFailure('Couldn\'t delete the rule'));
+  const asking = (what: 'off' | 'delete', now: () => void) => {
+    if (!rule.trashes_waiting) return now();
+    setWaiting('cancel');
+    setAsk(what);
+  };
   return (
     <div className={dragging ? 'set-row one dragging' : 'set-row one'} data-rule={rule.id} draggable {...drag}>
       <button className="handle" type="button" aria-label="Move rule" onKeyDown={event => {
@@ -121,20 +134,31 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; 
       }}><Icon name="drag_indicator" /></button>
       <RuleText rule={rule} />
       <span className="when num">{rule.enabled ? matchesThisMonth(rule.matches_this_month) : 'Off'}</span>
-      <Menu label="Rule options" button={<button className="ibtn sm" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
-        {close => (
-          <>
-            <button className="menu-i" type="button" role="menuitem" onClick={() => {
-              close();
-              void setRuleEnabled(rule.id, !rule.enabled).catch(toastFailure(rule.enabled ? 'Couldn\'t turn the rule off' : 'Couldn\'t turn the rule on'));
-            }}><Icon name={rule.enabled ? 'toggle_off' : 'toggle_on'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
-            <button className="menu-i" type="button" role="menuitem" onClick={() => {
-              close();
-              void deleteRule(rule.id).catch(toastFailure('Couldn\'t delete the rule'));
-            }}><Icon name="delete" size={16} />Delete</button>
-          </>
-        )}
-      </Menu>
+      <span className="anchor">
+        <Menu label="Rule options" button={<button className="ibtn sm" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
+          {close => (
+            <>
+              <button className="menu-i" type="button" role="menuitem" onClick={() => {
+                close();
+                if (rule.enabled) asking('off', () => turnOff());
+                else void setRuleEnabled(rule.id, true).catch(toastFailure('Couldn\'t turn the rule on'));
+              }}><Icon name={rule.enabled ? 'toggle_off' : 'toggle_on'} size={16} />{rule.enabled ? 'Turn off' : 'Turn on'}</button>
+              <button className="menu-i" type="button" role="menuitem" onClick={() => {
+                close();
+                asking('delete', () => remove());
+              }}><Icon name="delete" size={16} />Delete</button>
+            </>
+          )}
+        </Menu>
+        {ask && <div ref={placeMenu} className="pop rule-ask" role="dialog" aria-label={waitingTitle(rule.trashes_waiting)}>
+          <ScopePrompt small title={waitingTitle(rule.trashes_waiting)} group="What becomes of them" choices={waitingChoices(rule.trashes_waiting)} value={waiting}
+            action={ask === 'off' ? 'Turn off' : 'Delete'} onChange={setWaiting} onCancel={() => setAsk(null)} onConfirm={() => {
+              setAsk(null);
+              if (ask === 'off') turnOff(waiting);
+              else remove(waiting);
+            }} />
+        </div>}
+      </span>
     </div>
   );
 }

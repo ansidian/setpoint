@@ -2,24 +2,27 @@
 // 14 and 15b): This event (the default), This and following, All events, each with its consequence,
 // then Move, Save or Delete ↵ and Cancel Esc. ↑ ↓ choose while it's open. The editor draws it in
 // place of its footer; a drop, a delete or a colour on the grid anchors it to the item (AnchoredCard).
+// Settings › Mail asks the same way about a rule's waiting trashes (SV-238), with its own choices.
 import type {RecurringScope} from '@setpoint/shared';
 import {useEffect, useRef} from 'react';
 import type {ScopeChoice} from '../../logic/scope.ts';
 
-interface ScopePromptProps {
+interface ScopePromptProps<Scope extends string> {
   title: string;
   // "Gym · Wed, Oct 7 → Thu, Oct 8 · 7:00 AM" on a drop.
   line?: string;
-  choices: ScopeChoice[];
-  value: RecurringScope;
+  choices: ScopeChoice<Scope>[];
+  value: Scope;
   action: string;
+  // The choices' name: "Which events".
+  group?: string;
   small?: boolean;
-  onChange: (scope: RecurringScope) => void;
+  onChange: (scope: Scope) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function ScopePrompt({title, line, choices, value, action, small = false, onChange, onConfirm, onCancel}: ScopePromptProps) {
+export function ScopePrompt<Scope extends string = RecurringScope>({title, line, choices, value, action, group = 'Which events', small = false, onChange, onConfirm, onCancel}: ScopePromptProps<Scope>) {
   // The latest handlers, for the one key listener.
   const latest = useRef({value, choices, onChange, onConfirm, onCancel});
   useEffect(() => {
@@ -50,7 +53,7 @@ export function ScopePrompt({title, line, choices, value, action, small = false,
     <>
       <div className={`scope-title${line ? ' with-line' : ''}`}>{title}</div>
       {line && <div className="ink3 num scope-line">{line}</div>}
-      <div role="radiogroup" aria-label="Which events" className="scope-choices">
+      <div role="radiogroup" aria-label={group} className="scope-choices">
         {choices.map(choice => (
           <button key={choice.scope} type="button" role="radio" aria-checked={choice.scope === value} className={`ropt${choice.scope === value ? ' on' : ''}`}
             onClick={() => onChange(choice.scope)}>

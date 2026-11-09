@@ -2,8 +2,8 @@
 // prompts from repeated Done without opening, Yes into a learned rule and No into quiet, the rules
 // Settings › Mail lists (written and learned), and Settings › AI's overview.
 import {AI_MODELS} from '@setpoint/shared';
-import type {AiOut, PatternPromptOut, RuleInput, RuleOut, RuleUpdateInput} from '@setpoint/shared';
-import {and, count, eq, gte, inArray, isNotNull, sql, sum} from 'drizzle-orm';
+import type {AiOut, PatternPromptOut, RuleInput, RuleOut, RuleUpdateInput, RuleWaiting} from '@setpoint/shared';
+import {and, count, eq, gte, inArray, isNotNull, isNull, sql, sum} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {patternPrompts, promptKey} from '../domain/learning.ts';
 import type {Verdict} from '../domain/learning.ts';
@@ -101,17 +101,29 @@ function monthStart(store: Store): string {
   return zonedInstant(`${today.slice(0, 7)}-01`, '00:00', store.timeZone);
 }
 
+// A rule's waiting trashes (SV-237): due, not yet sent, not spared by a pin.
+const waitingOf = (ruleIds: number[]) => and(inArray(t.messages.triageRuleId, ruleIds), isNotNull(t.messages.trashDueAt), isNull(t.messages.trashedAt), isNull(t.messages.pinnedAt));
+
 function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
   const ids = rows.map(row => row.id);
-  const hits = new Map(ids.length
-    ? store.db.select({id: t.messages.triageRuleId, n: count()}).from(t.messages)
-      .where(and(inArray(t.messages.triageRuleId, ids), gte(t.messages.receivedAt, monthStart(store)))).groupBy(t.messages.triageRuleId).all()
+  const perRule = (where: ReturnType<typeof and>) => new Map(ids.length
+    ? store.db.select({id: t.messages.triageRuleId, n: count()}).from(t.messages).where(where).groupBy(t.messages.triageRuleId).all()
       .map(row => [row.id!, row.n])
     : []);
+  const hits = perRule(and(inArray(t.messages.triageRuleId, ids), gte(t.messages.receivedAt, monthStart(store))));
+  const waiting = perRule(waitingOf(ids));
   return rows.map(row => ({
     id: row.id, origin: row.origin, match: row.match, lane: row.lane, kind: row.kind, position: row.position, enabled: row.enabled,
     mark_read: row.markRead, trash: row.trash, imported: row.importedFrom !== null, created_at: row.createdAt, matches_this_month: hits.get(row.id) ?? 0,
+    trashes_waiting: waiting.get(row.id) ?? 0,
   }));
+}
+
+/** Turning a rule off or deleting it with Cancel them (D495): its waiting trashes' due times go, so the emails stay. */
+function cancelWaiting(store: Store, ruleId: number) {
+  const cancelled = store.db.update(t.messages).set({trashDueAt: null}).where(waitingOf([ruleId]))
+    .returning({id: t.messages.id, accountId: t.messages.accountId}).all();
+  if (cancelled.length) noteLive(store, {type: 'mail', messages: cancelled.map(row => row.id), accounts: [...new Set(cancelled.map(row => row.accountId))], commands: []});
 }
 
 const ruleRow = (store: Store, id: number) => store.db.select().from(t.triageRules).where(eq(t.triageRules.id, id)).get();
@@ -150,18 +162,22 @@ export function updateRule(store: Store, id: number, changes: RuleUpdateInput): 
       // Its actions apply to mail arriving from now on (D493), turning it on included.
       changedAt: isoNow(store),
     }).where(eq(t.triageRules.id, id)).returning().get()!;
+    // Let them run, or no answer, leaves them: the pass doesn't need the rule on (D495).
+    if (changes.enabled === false && changes.waiting === 'cancel') cancelWaiting(store, id);
     return presentRules(store, [updated])[0]!;
   });
 }
 
 /**
  * Deletes a rule. Undoing a learned rule also says No to its prompt, so it isn't offered again the
- * moment the rule is gone.
+ * moment the rule is gone. Its waiting trashes are cancelled first if asked (D495); otherwise they
+ * keep their due times, which the pass carries out with the rule gone (the email's rule goes null).
  */
-export function deleteRule(store: Store, id: number) {
+export function deleteRule(store: Store, id: number, waiting: RuleWaiting = 'run') {
   transaction(store, () => {
     const row = ruleRow(store, id);
     if (!row) throw notFound('No such rule.');
+    if (waiting === 'cancel') cancelWaiting(store, id);
     if (row.origin === 'learned') {
       store.db.update(t.patternPrompts).set({answer: 'no', ruleId: null}).where(eq(t.patternPrompts.ruleId, id)).run();
     }

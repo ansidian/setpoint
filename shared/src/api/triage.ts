@@ -9,7 +9,7 @@
 //   GET    /api/mail/rules                  RuleOut[] (written by position, then learned, newest first)
 //   POST   /api/mail/rules                  RuleInput                  RuleOut (201; a written rule, last)
 //   PATCH  /api/mail/rules/:id              RuleUpdateInput            RuleOut
-//   DELETE /api/mail/rules/:id              204 (a learned rule's prompt then stays quiet)
+//   DELETE /api/mail/rules/:id[?waiting=cancel]  204 (a learned rule's prompt then stays quiet)
 //   PUT    /api/mail/rules/order            {rule_ids}                 RuleOut[] (written rules' order)
 //   GET    /api/ai                          AiOut (Settings › AI: keys set, models in use, the catalogue, 30 days of
 //                                           cost; N3: News's group and this month's usage)
@@ -155,6 +155,13 @@ export const ruleInput = z.strictObject({
 }).refine(rule => rule.lane !== 'noise' || rule.kind === null, 'Noise has no kind');
 export type RuleInput = z.infer<typeof ruleInput>;
 
+/**
+ * What becomes of a rule's waiting trashes when it's turned off or deleted (D495): cancel clears
+ * their due times, so the emails stay; run lets them go to the trash as planned. Left out, they run.
+ */
+export const RULE_WAITING = ['cancel', 'run'] as const;
+export type RuleWaiting = (typeof RULE_WAITING)[number];
+
 export const ruleUpdateInput = z.strictObject({
   match: ruleMatchSchema,
   lane: z.enum(LANES),
@@ -162,7 +169,10 @@ export const ruleUpdateInput = z.strictObject({
   enabled: z.boolean(),
   mark_read: z.boolean(),
   trash: z.enum(RULE_TRASH),
-}).partial().refine(changes => Object.keys(changes).length > 0, 'Nothing to change');
+  // Only with `enabled: false`; an edit leaves the waiting trashes alone.
+  waiting: z.enum(RULE_WAITING),
+}).partial().refine(changes => Object.keys(changes).length > 0, 'Nothing to change')
+  .refine(changes => changes.waiting === undefined || changes.enabled === false, 'Only turning a rule off decides its waiting trashes');
 export type RuleUpdateInput = z.infer<typeof ruleUpdateInput>;
 
 export const ruleOrderInput = z.strictObject({rule_ids: z.array(id).min(1)});
@@ -188,6 +198,8 @@ export interface RuleOut {
   created_at: string;
   // Emails it sorted this calendar month ("9 this month").
   matches_this_month: number;
+  // Emails it set to be trashed that haven't gone yet (not pinned): Turn off and Delete ask about them.
+  trashes_waiting: number;
 }
 
 /** A model Settings › AI offers. */

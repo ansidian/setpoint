@@ -1,5 +1,6 @@
 // Settings' words and small rules (DESIGN.md › Settings; boards 17, 18a, 18b), tested as tables.
-import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut, RuleTrash, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
+import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut, RuleTrash, RuleWaiting, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
+import type {ScopeChoice} from './scope.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
 
@@ -199,6 +200,17 @@ export function ruleActionWords({mark_read = false, trash = 'never'}: Partial<Pi
   ];
   return words.map(word => `, ${word}`).join('');
 }
+
+const emails = (count: number) => (count === 1 ? '1 email' : `${count} emails`);
+
+/** Turn off's and Delete's prompt for a rule with trashes waiting (D495): "3 emails are waiting to be trashed". */
+export const waitingTitle = (count: number) => `${emails(count)} ${count === 1 ? 'is' : 'are'} waiting to be trashed`;
+
+/** Its choices, Cancel them first (the default: a rule is usually turned off for catching the wrong mail). */
+export const waitingChoices = (count: number): ScopeChoice<RuleWaiting>[] => [
+  {scope: 'cancel', label: 'Cancel them', line: `${emails(count)} ${count === 1 ? 'stays' : 'stay'}`},
+  {scope: 'run', label: 'Let them run', line: `${emails(count)} ${count === 1 ? 'goes' : 'go'} to the trash as planned`},
+];
 
 /** Add rule's Send to for an email in `lane` and `kind`: where it is now ("fyi:money"), FYI · Other before triage. */
 export function ruleDestination(lane: Lane | null, kind: Kind | null): string {

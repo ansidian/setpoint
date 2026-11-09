@@ -106,7 +106,11 @@
 /* The section holding an open menu stacks over the ones after it, so their sticky labels stay under
    the menu even while a page switch's fade makes each section its own layer (a page whose answers
    were loaded as Settings opened shows at once, and can be clicked within the fade). */
-.settings .set-main > :has(.menu) { position: relative; z-index: 2; }
+.settings .set-main > :has(.menu, .rule-ask) { position: relative; z-index: 2; }
+/* Turn off's and Delete's prompt for a rule's waiting trashes (SV-238): the recurring scope prompt
+   (calendar.css's .scope-*), hung from the rule's menu button as its menu is. */
+.settings .rule-ask { position: absolute; top: calc(100% + 6px); right: 0; z-index: 2; width: 300px; padding: 6px; transform-origin: top right; }
+.settings .rule-ask[data-up] { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
 /* No room below in the page: it opens upward (ui/popover.ts). It grows from its button's corner, as
    every popover does (styles.css › Overlays arrive). */
 :is(.settings, .cal-import) .menu[data-up] { top: auto; bottom: calc(100% + 6px); }

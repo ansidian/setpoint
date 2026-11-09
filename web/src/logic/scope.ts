@@ -8,8 +8,9 @@ import type {RecurringScope} from '@setpoint/shared';
 import {dayTitle} from './calendar.ts';
 import {clockTime} from './format.ts';
 
-export interface ScopeChoice {
-  scope: RecurringScope;
+// Settings › Mail's waiting-trash prompt takes the same shape with its own choices (SV-238).
+export interface ScopeChoice<Scope extends string = RecurringScope> {
+  scope: Scope;
   label: string;
   line: string;
 }

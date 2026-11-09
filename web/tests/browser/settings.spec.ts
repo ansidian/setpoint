@@ -14,8 +14,9 @@ import http from 'node:http';
 import type {AddressInfo} from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {after} from 'node:test';
-import type {AccountOut, AiOut, CalendarOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
+import type {AccountOut, AiOut, CalendarOut, MessageOut, NewsSourcesOut, PairOut, RuleOut, SecretOut, Settings, TodoistProjectOut, TrustedDomainOut} from '@setpoint/shared';
 import type {Locator, Page} from 'playwright-core';
 import {ICONS} from '../../src/ui/glyphs.ts';
 import {choose, cleanUp, rested, startSetpoint, test, until} from './harness.ts';
@@ -342,6 +343,65 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
 
     await page.getByRole('radio', {name: '30 min'}).click();
     await settled('code expiry', () => setpoint.api<Settings>('GET', '/settings'), settings => settings.mail.code_expiry_minutes === 30);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-238 (D495): Turn off or Delete on a rule with trashes waiting asks, Cancel them first; Esc leaves the rule as it was, ↵ cancels them, Let them run keeps them', async () => {
+  const setpoint = await startSetpoint({fixtures: ['mail-rules'], clock: 'frozen'});
+  try {
+    const rules = () => setpoint.api<RuleOut[]>('GET', '/mail/rules');
+    const written = await rules();
+    const idFrom = (domain: string) => written.find(rule => rule.match.from_domains?.[0] === domain)!.id;
+    const bankId = idFrom('woodgrovebank.example');
+    const fabrikamId = idFrom('news.fabrikam.com');
+    // Three emails the bank's rule set to be trashed tomorrow, one the Fabrikam rule did.
+    const database = new DatabaseSync(path.join(setpoint.dataDir, 'setpoint.sqlite'));
+    let ids: number[] = [];
+    try {
+      database.exec('PRAGMA busy_timeout = 5000');
+      ids = database.prepare('SELECT id FROM messages WHERE trashed_at IS NULL AND pinned_at IS NULL AND protected = 0 ORDER BY id LIMIT 4').all().map(row => Number(row.id));
+      const due = database.prepare('UPDATE messages SET triage_rule_id = ?, trash_due_at = ? WHERE id = ?');
+      ids.forEach((id, index) => due.run(index < 3 ? bankId : fabrikamId, '2026-10-08T14:02:00.000Z', id));
+    } finally {
+      database.close();
+    }
+    const dueOf = async (id: number) => (await setpoint.api<MessageOut>('GET', `/mail/messages/${id}`)).trash_due_at;
+
+    const page = await setpoint.page('target');
+    await openAt(page, setpoint.base, 'mail');
+    const row = (domain: string) => page.locator('.settings .set-row', {hasText: domain});
+    const ask = page.getByRole('dialog', {name: '3 emails are waiting to be trashed'});
+    const choices = ask.getByRole('radiogroup', {name: 'What becomes of them'}).getByRole('radio');
+    await row('woodgrovebank.example').getByRole('button', {name: 'Rule options'}).click();
+    await page.getByRole('menuitem', {name: 'Turn off'}).click();
+    await ask.waitFor();
+    assert.deepEqual(await choices.allTextContents(), ['Cancel them3 emails stay', 'Let them run3 emails go to the trash as planned']);
+    assert.equal(await ask.getByRole('radio', {checked: true}).textContent(), 'Cancel them3 emails stay');
+    assert.deepEqual(await ask.getByRole('button').allTextContents(), ['Turn off↵', 'CancelEsc']);
+    // Esc leaves the rule as it was, and Settings open.
+    await page.keyboard.press('Escape');
+    await ask.waitFor({state: 'detached'});
+    await page.locator('.settings').waitFor();
+    assert.deepEqual((await rules()).filter(rule => rule.id === bankId).map(rule => [rule.enabled, rule.trashes_waiting]), [[true, 3]]);
+    // ↵ turns it off with Cancel them: the three emails stay.
+    await row('woodgrovebank.example').getByRole('button', {name: 'Rule options'}).click();
+    await page.getByRole('menuitem', {name: 'Turn off'}).click();
+    await ask.waitFor();
+    await page.keyboard.press('Enter');
+    await settled('the rule off, nothing waiting', rules, list => list.some(rule => rule.id === bankId && !rule.enabled && rule.trashes_waiting === 0));
+    assert.deepEqual(await Promise.all(ids.slice(0, 3).map(dueOf)), [null, null, null]);
+
+    // Delete with Let them run: the rule goes, its one email keeps its due time.
+    await row('news.fabrikam.com').getByRole('button', {name: 'Rule options'}).click();
+    await page.getByRole('menuitem', {name: 'Delete'}).click();
+    const one = page.getByRole('dialog', {name: '1 email is waiting to be trashed'});
+    await one.getByRole('radio', {name: 'Let them run 1 email goes to the trash as planned'}).click();
+    await one.getByRole('button', {name: 'Delete'}).click();
+    await settled('the rule gone', rules, list => !list.some(rule => rule.id === fabrikamId));
+    assert.equal(await dueOf(ids[3]!), '2026-10-08T14:02:00.000Z');
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();

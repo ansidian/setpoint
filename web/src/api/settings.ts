@@ -2,7 +2,7 @@
 // routes). Each change shows its answer at once and refreshes what else it touches; secrets are
 // write-only, so only whether one is set ever comes back.
 import type {
-  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, SecretName,
+  AccountOut, AuthMode, GmailAuthorizeOut, PairingOut, PlaceOut, ICloudConnectInput, NotificationOut, PasskeyOut, RecoveryCodesOut, RuleInput, RuleMatch, RuleOut, RuleWaiting, SecretName,
   SecurityOut, Settings, SettingsPatch, TodoistConnectOut, TrustedDomainOut,
 } from '@setpoint/shared';
 import {ACCOUNTS_PATH} from './mail.ts';
@@ -93,19 +93,21 @@ export async function createRule(input: RuleInput): Promise<RuleOut> {
   return rule;
 }
 
-export async function deleteRule(id: number): Promise<void> {
+/** Deletes a rule; `waiting` answers for its waiting trashes, if it has any (D495). */
+export async function deleteRule(id: number, waiting?: RuleWaiting): Promise<void> {
   updateCached<RuleOut[]>(RULES_PATH, list => list.filter(rule => rule.id !== id));
   try {
-    await sendJson<void>('DELETE', `/mail/rules/${id}`);
+    await sendJson<void>('DELETE', `/mail/rules/${id}${waiting ? `?waiting=${waiting}` : ''}`);
   } finally {
     refreshIfShown(RULES_PATH);
   }
 }
 
-export async function setRuleEnabled(id: number, enabled: boolean): Promise<void> {
-  updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, enabled} : rule)));
+/** Turns a rule on or off; turning it off, `waiting` answers for its waiting trashes, if it has any (D495). */
+export async function setRuleEnabled(id: number, enabled: boolean, waiting?: RuleWaiting): Promise<void> {
+  updateCached<RuleOut[]>(RULES_PATH, list => list.map(rule => (rule.id === id ? {...rule, enabled, ...(waiting === 'cancel' ? {trashes_waiting: 0} : {})} : rule)));
   try {
-    await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, {enabled});
+    await sendJson<RuleOut>('PATCH', `/mail/rules/${id}`, {enabled, ...(!enabled && waiting ? {waiting} : {})});
   } finally {
     refreshIfShown(RULES_PATH);
   }
