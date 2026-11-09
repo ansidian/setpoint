@@ -300,9 +300,16 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
 
     await page.getByRole('button', {name: 'Add rule'}).click();
     await page.locator('.settings input[name="from"]').fill('alerts.contoso.example');
+    // SV-235 (D487): "and…" adds a filter, which then leaves the menu.
+    await page.getByRole('button', {name: 'and…'}).click();
+    await page.getByRole('menuitem', {name: 'Subject doesn’t contain'}).click();
+    await page.getByRole('textbox', {name: 'Subject doesn’t contain'}).fill('digest');
+    await page.getByRole('button', {name: 'and…'}).click();
+    assert.deepEqual(await page.getByRole('menuitem').allTextContents(), ['Subject contains', 'Sender name contains', 'Sender name doesn’t contain', 'Body contains', 'Body doesn’t contain']);
+    await page.keyboard.press('Escape');
     await choose(page, 'Send to', 'FYI · Security');
     await page.getByRole('button', {name: 'Add', exact: true}).click();
-    await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.kind === 'security'));
+    await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.match.subject_excludes?.[0] === 'digest' && rule.kind === 'security'));
     await page.locator('.settings .rule', {hasText: 'alerts.contoso.example'}).waitFor();
     // A rule's menu turns it off with toggle_off and back on with toggle_on (#123).
     const added = page.locator('.settings .set-row', {hasText: 'alerts.contoso.example'});
@@ -349,7 +356,7 @@ test('S11 (SV-25, D54): Esc in an inline form (Add rule, Connect iCloud, Change 
     };
     await openAt(page, setpoint.base, 'mail');
     await page.getByRole('button', {name: 'Add rule'}).first().click();
-    await escCancels('subject', 'input[name="from"]');
+    await escCancels('from', 'input[name="from"]');
 
     await page.locator('.settings .set-nav .nav', {hasText: 'Accounts'}).click();
     await page.getByRole('button', {name: 'Connect iCloud'}).click();

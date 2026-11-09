@@ -4276,7 +4276,11 @@ was decided; the audit itself was retired by D480.
     and Add to rule (#296) keeps working.
     - **Match:** subject, sender name and body each gain **doesn't contain** beside contains. There's
       no "is exactly" or "starts with" (an anchored regex covers the rare need), and `none_includes`
-      stays as it is.
+      stays as it is. A match of exclusions alone has nothing to match. Add rule reads as a
+      sentence (D496): **If from** [domain or address], an **and** row per filter, **then send to**
+      [lane] with Add and Cancel. Filters come from an **and…** menu of six (Subject, Sender name,
+      Body, each contains or doesn't contain), each once, a row its label, one phrase and ×. Alone,
+      an exclusion reads "not named “x”", "without “x” in the subject", "not mentioning “x”".
     - **Actions:** under Send to, the rule form gains **Mark read** (a switch) and **Trash**, a
       segmented control like Code expiry's: **Never** (default) · **Now** · **15 min** · **1 hour** ·
       **1 day** · **1 week**. Either, both or neither. There's no Done (the lane decides that), pin

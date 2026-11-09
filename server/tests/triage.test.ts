@@ -331,6 +331,8 @@ describe('the API', () => {
     expect(created.body).toMatchObject({origin: 'written', match: {from_domains: ['woodgrovebank.example']}, lane: 'fyi', kind: 'money', position: 0, enabled: true, imported: false});
     expect((await api.send('POST', '/api/mail/rules', {body: {match: {from_domains: ['x.example']}, lane: 'noise', kind: 'money'}})).body.error.message).toContain('Noise has no kind');
     expect((await api.send('POST', '/api/mail/rules', {body: {match: {subject_regex: '(['}, lane: 'fyi'}})).status).toBe(400);
+    // A field's "doesn't contain" only narrows a match: on its own it has nothing to match.
+    expect((await api.send('POST', '/api/mail/rules', {body: {match: {subject_excludes: ['return'], body_excludes: ['refund']}, lane: 'noise'}})).body.error.message).toContain('A rule needs something to match');
     const second = (await api.send('POST', '/api/mail/rules', {body: {match: {subject_includes: ['registrar']}, lane: 'attention'}})).body;
     expect((await api.send('PUT', '/api/mail/rules/order', {body: {rule_ids: [second.id, created.body.id]}})).body.map((rule: {id: number}) => rule.id).slice(0, 2)).toEqual([second.id, created.body.id]);
     expect((await api.send('PATCH', `/api/mail/rules/${created.body.id}`, {body: {enabled: false}})).body.enabled).toBe(false);

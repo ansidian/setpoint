@@ -4,13 +4,13 @@
 // with a filter, and the code expiry's presets.
 import type {Kind, Lane, RuleOut, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS} from '@setpoint/shared';
-import {useState} from 'react';
+import {Fragment, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
 import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {expiryLabel, laneTag, matchesThisMonth, moved, ruleWords, senderMatch, splitRules} from '../../logic/settings.ts';
+import {expiryLabel, laneTag, matchesThisMonth, moved, ruleWords, senderMatch, splitRules, wordsMatch} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {Segmented} from '../../ui/Segmented.tsx';
 import {useNow} from '../clock.ts';
@@ -18,6 +18,7 @@ import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import {clearRuleDraft, useRuleDraft} from './store.ts';
 import type {RuleDraft} from './store.ts';
+import type {RuleFilter} from '../../logic/settings.ts';
 import type {DragProps} from './order.ts';
 import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
 
@@ -28,6 +29,13 @@ const DESTINATIONS: {value: string; label: string}[] = [
   {value: 'attention', label: 'Attention'},
   ...KINDS.map(kind => ({value: `fyi:${kind}`, label: laneTag('fyi', kind)})),
   {value: 'noise', label: 'Noise'},
+];
+
+// Add rule's filters, in the menu's order: each field's words it contains or doesn't (D487).
+const RULE_FILTERS: {key: RuleFilter; label: string}[] = [
+  {key: 'subject', label: 'Subject contains'}, {key: 'subjectNot', label: 'Subject doesn’t contain'},
+  {key: 'name', label: 'Sender name contains'}, {key: 'nameNot', label: 'Sender name doesn’t contain'},
+  {key: 'body', label: 'Body contains'}, {key: 'bodyNot', label: 'Body doesn’t contain'},
 ];
 
 export function MailPage() {
@@ -144,30 +152,62 @@ function LearnedRule({rule}: {rule: RuleOut}) {
   );
 }
 
-/** Add rule: from a domain or address, optionally with words in the subject, to a lane and kind; from an email's draft, its sender and where it is now. */
+/**
+ * Add rule, read as a sentence (D487): "If from" a domain or address, "and" each filter added from
+ * the menu (a field's words it contains or doesn't, each at most once), "then send to" a lane and
+ * kind. From an email's draft, its sender and where it is now.
+ */
 function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void}) {
   const [destination, setDestination] = useState(draft?.destination ?? 'fyi:other');
+  const [filters, setFilters] = useState<RuleFilter[]>([]);
   const send = useAttempt();
+  const left = RULE_FILTERS.filter(filter => !filters.includes(filter.key));
   return (
-    <form className="set-row ctl form" onKeyDown={escapeCancels(onDone)} onSubmit={event => {
+    <form className="set-row ctl form rule-form" onKeyDown={escapeCancels(onDone)} onSubmit={event => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       const sender = senderMatch(form.get('from')?.toString() ?? '');
-      const subject = form.get('subject')?.toString().trim();
       if (!sender) return void send.attempt(() => Promise.reject(new Error('From needs a domain such as woodgrovebank.example, or an address.')));
+      const words = wordsMatch(Object.fromEntries(filters.map(key => [key, form.get(key)?.toString()])));
       const [lane, kind] = destination.split(':') as [Lane, Kind | undefined];
-      void send.attempt(() => createRule({match: {...sender, ...(subject ? {subject_includes: [subject]} : {})}, lane, kind: kind ?? null, enabled: true}))
+      void send.attempt(() => createRule({match: {...sender, ...words}, lane, kind: kind ?? null, enabled: true}))
         .then(rule => rule && onDone());
     }}>
-      <span className="s">From</span>
-      <input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={draft?.from} autoFocus style={{width: 170}} />
-      <input className="fld" name="subject" placeholder="Subject has (optional)" aria-label="Subject has" style={{width: 170}} />
-      <Icon name="arrow_forward" size={16} />
-      <Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} />
-      <span className="grow" />
-      <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
-      <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
-      {send.line && <span className="s" style={{color: 'var(--alert)', flexBasis: '100%'}} role="alert">{send.line.text}</span>}
+      <span className="lead">If from</span>
+      <span className="rule-line"><input className="fld" name="from" placeholder="woodgrovebank.example" aria-label="From" defaultValue={draft?.from} autoFocus style={{width: 200}} /></span>
+      {filters.map(key => {
+        const label = RULE_FILTERS.find(filter => filter.key === key)!.label;
+        return (
+          <Fragment key={key}>
+            <span className="lead">and</span>
+            <span className="rule-line">
+              <span className="s filter">{label}</span>
+              <input className="fld" name={key} aria-label={label} autoFocus style={{width: 200}} />
+              <button className="ibtn sm" type="button" aria-label={`Remove ${label}`} onClick={() => setFilters(filters.filter(one => one !== key))}><Icon name="close" size={16} /></button>
+            </span>
+          </Fragment>
+        );
+      })}
+      {left.length > 0 && (
+        <span className="rule-line add">
+          <Menu label="Add a filter" align="left" button={<button className="btn quiet sm" type="button"><Icon name="add" size={16} />and…</button>}>
+            {close => left.map(filter => (
+              <button key={filter.key} className="menu-i" type="button" role="menuitem" onClick={() => {
+                close();
+                setFilters([...filters, filter.key]);
+              }}>{filter.label}</button>
+            ))}
+          </Menu>
+        </span>
+      )}
+      <span className="lead">then send to</span>
+      <span className="rule-line">
+        <Select value={destination} options={DESTINATIONS} label="Send to" onChange={setDestination} />
+        <span className="grow" />
+        <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
+        <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
+      </span>
+      {send.line && <span className="s rule-line add" style={{color: 'var(--alert)'}} role="alert">{send.line.text}</span>}
     </form>
   );
 }

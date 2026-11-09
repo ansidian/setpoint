@@ -62,12 +62,21 @@ export function ruleWords(match: RuleMatch): {text: string; bold: boolean}[] {
     add(runs.length ? ' · ' : '');
     add(TYPE_PLURALS[match.type].replace(/^./, letter => letter.toUpperCase()), true);
   }
-  if (match.from_name_includes) add(`${runs.length ? ' named ' : 'Named '}${match.from_name_includes.map(text => `“${text}”`).join(' or ')}`);
-  if (match.subject_includes) add(`${runs.length ? ' with ' : 'With '}${match.subject_includes.map(text => `“${text}”`).join(' or ')} in the subject`);
+  const quoted = (values: string[]) => values.map(text => `“${text}”`).join(' or ');
+  // A field's "doesn't contain" follows its own words as "without “return”", or stands alone with
+  // the field named when the rule has no words for that field (D487).
+  const without = (values: string[] | undefined, follows: boolean, alone: string) => {
+    if (values) add(follows ? `, without ${quoted(values)}` : `${runs.length ? ', ' : ''}${alone.replace('%', quoted(values))}`);
+  };
+  if (match.from_name_includes) add(`${runs.length ? ' named ' : 'Named '}${quoted(match.from_name_includes)}`);
+  without(match.from_name_excludes, Boolean(match.from_name_includes), runs.length ? 'not named %' : 'Not named %');
+  if (match.subject_includes) add(`${runs.length ? ' with ' : 'With '}${quoted(match.subject_includes)} in the subject`);
   if (match.subject_regex) add(`${runs.length ? ' with ' : 'With '}a subject like /${match.subject_regex}/`);
-  if (match.body_includes) add(`${runs.length ? ' mentioning ' : 'Mentioning '}${match.body_includes.map(text => `“${text}”`).join(' or ')}`);
+  without(match.subject_excludes, Boolean(match.subject_includes || match.subject_regex), runs.length ? 'without % in the subject' : 'Without % in the subject');
+  if (match.body_includes) add(`${runs.length ? ' mentioning ' : 'Mentioning '}${quoted(match.body_includes)}`);
   if (match.body_regex) add(`${runs.length ? ' with ' : 'With '}a body like /${match.body_regex}/`);
-  if (match.none_includes) add(`, not ${match.none_includes.map(text => `“${text}”`).join(' or ')}`);
+  without(match.body_excludes, Boolean(match.body_includes || match.body_regex), runs.length ? 'not mentioning %' : 'Not mentioning %');
+  if (match.none_includes) add(`, not ${quoted(match.none_includes)}`);
   return runs.filter(run => run.text);
 }
 
@@ -116,6 +125,21 @@ export function shifts(heights: number[], from: number, to: number): number[] {
 export const dropIndex = (middles: number[], y: number) => middles.filter(middle => middle < y).length;
 
 /** "From woodgrovebank.example" in Add rule: a domain or an address. */
+/** Add rule's filters: a field's words it contains, or doesn't ("Not"). */
+export type RuleFilter = 'subject' | 'subjectNot' | 'name' | 'nameNot' | 'body' | 'bodyNot';
+export type RuleWordsInput = Partial<Record<RuleFilter, string | undefined>>;
+
+/** What Add rule's filters add to the sender's match: each one's phrase, blank ones left out. */
+export function wordsMatch(input: RuleWordsInput): RuleMatch {
+  const match: RuleMatch = {};
+  const keys = {subject: 'subject_includes', subjectNot: 'subject_excludes', name: 'from_name_includes', nameNot: 'from_name_excludes', body: 'body_includes', bodyNot: 'body_excludes'} as const;
+  for (const [field, key] of Object.entries(keys) as [keyof RuleWordsInput, (typeof keys)[keyof RuleWordsInput]][]) {
+    const text = input[field]?.trim();
+    if (text) match[key] = [text];
+  }
+  return match;
+}
+
 export function senderMatch(text: string): RuleMatch | null {
   const value = text.trim().toLowerCase();
   if (/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(value)) return {from_addresses: [value]};

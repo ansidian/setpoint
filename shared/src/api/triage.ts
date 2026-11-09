@@ -107,19 +107,30 @@ const pattern = z.string().min(1).max(500).refine(value => {
  * "alerts.woodgrovebank.example"). `organisation` and `type` match what triage extracted, so a rule with either
  * applies once the model has read the email.
  */
+// The keys that only rule mail out: a match needs at least one key besides these.
+const NARROWING_KEYS = new Set(['none_includes', 'from_name_excludes', 'subject_excludes', 'body_excludes']);
+
+/** Whether a match has something to match, not only words that rule mail out. */
+export const hasPositiveKey = (match: object) => Object.entries(match).some(([key, value]) => !NARROWING_KEYS.has(key) && value !== undefined);
+
 export const ruleMatchSchema = z.strictObject({
   from_addresses: z.array(z.string().trim().toLowerCase().min(3).max(320)).min(1).max(50).optional(),
   from_domains: z.array(z.string().trim().toLowerCase().regex(/^([a-z0-9-]+\.)+[a-z]{2,63}$/, 'A domain such as woodgrovebank.example')).min(1).max(50).optional(),
   from_name_includes: phrases.optional(),
+  // A field's "doesn't contain" (D487): none of these in that field. They only narrow a match, so
+  // a match made of these alone has nothing to match.
+  from_name_excludes: phrases.optional(),
   subject_includes: phrases.optional(),
+  subject_excludes: phrases.optional(),
   subject_regex: pattern.optional(),
   body_includes: phrases.optional(),
+  body_excludes: phrases.optional(),
   body_regex: pattern.optional(),
   // None of these anywhere (sender, subject, body): v1's escape hatch for risky words.
   none_includes: phrases.optional(),
   organisation: phrase.optional(),
   type: z.enum(MESSAGE_TYPES).optional(),
-}).refine(match => Object.entries(match).some(([key, value]) => key !== 'none_includes' && value !== undefined), 'A rule needs something to match');
+}).refine(match => hasPositiveKey(match), 'A rule needs something to match');
 export type RuleMatch = z.infer<typeof ruleMatchSchema>;
 
 /** Settings › Mail's "Add rule": a written rule ("From woodgrovebank.example → FYI · Money"). Noise has no kind. */

@@ -4,7 +4,7 @@ import type {HealthOut, RuleMatch, RuleOut, SourceOut} from '@setpoint/shared';
 import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
-  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch,
+  connectFailed, connectNote, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
   shifts, splitRules, taskTime, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
@@ -35,6 +35,11 @@ describe('Settings', () => {
     [{subject_includes: ['invoice', 'receipt']}, 'With “invoice” or “receipt” in the subject'],
     [{from_name_includes: ['Payroll'], none_includes: ['urgent']}, 'Named “Payroll”, not “urgent”'],
     [{body_regex: 'order #\\d+'}, 'With a body like /order #\\d+/'],
+    [{from_domains: ['ups.com'], subject_includes: ['delivered'], subject_excludes: ['return']}, 'From **ups.com** with “delivered” in the subject, without “return”'],
+    [{from_domains: ['ups.com'], subject_excludes: ['return', 'refund']}, 'From **ups.com**, without “return” or “refund” in the subject'],
+    [{from_name_includes: ['Payroll'], from_name_excludes: ['Reminders']}, 'Named “Payroll”, without “Reminders”'],
+    [{from_domains: ['northwind.example'], from_name_excludes: ['Billing'], body_excludes: ['unsubscribe']}, 'From **northwind.example**, not named “Billing”, not mentioning “unsubscribe”'],
+    [{body_includes: ['invoice'], body_excludes: ['draft']}, 'Mentioning “invoice”, without “draft”'],
   ])('the rule %j reads %s', (match, text) => expect(ruleWords(match).map(run => (run.bold ? `**${run.text}**` : run.text)).join('')).toBe(text));
 
   test.each([
@@ -47,6 +52,11 @@ describe('Settings', () => {
     ['woodgrovebank.example', {from_domains: ['woodgrovebank.example']}], [' News.Fabrikam.com ', {from_domains: ['news.fabrikam.com']}],
     ['sam@example.com', {from_addresses: ['sam@example.com']}], ['woodgrove', null], ['', null], ['a b.com', null],
   ])('Add rule\'s From %j matches %j', (text, match) => expect(senderMatch(text)).toEqual(match));
+
+  test('Add rule\'s filters add each phrase to its key, leaving blank ones out', () => {
+    expect(wordsMatch({subject: ' delivered ', subjectNot: 'return', name: '', nameNot: 'Billing', body: undefined, bodyNot: 'unsubscribe'}))
+      .toEqual({subject_includes: ['delivered'], subject_excludes: ['return'], from_name_excludes: ['Billing'], body_excludes: ['unsubscribe']});
+  });
 
   // Add to rule (SV-160): the sender an email gives a rule, the rules it can join, and the rule with it.
   test.each([

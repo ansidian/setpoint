@@ -140,6 +140,12 @@
 .settings .fld.url { width: 300px; }
 .settings .fld.mono { font-family: var(--mono); font-size: 12.5px; }
 .settings .form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* Add rule as a sentence: "If from", an "and" per filter, "then send to", the words in a column. */
+.settings .form.rule-form { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; }
+.settings .rule-form .lead { color: var(--ink3); align-self: center; }
+.settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.settings .rule-form .rule-line.add { grid-column: 2; }
+.settings .rule-form .filter { min-width: 170px; }
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }

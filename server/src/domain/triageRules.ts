@@ -1,12 +1,14 @@
 // Matching triage rules against an email (BRIEF.md › Triage: rules first). The match shape is v1's
 // `preflight-rules.json` (harvested, SV-4): sender keys are alternatives, every other key present
-// must match too, text matches ignore case, and `none_includes` vetoes a match. v2 adds
+// must match too, text matches ignore case, and `none_includes` vetoes a match. A field's
+// `_excludes` (subject, sender name, body) vetoes it when that field has one of its words. v2 adds
 // `organisation` and `type`, which match what the model extracted, so a rule using them (every
 // learned rule) applies only after the model has read the email.
 //
 // Rules decide a lane; they never decide protection. src/domain/triagePolicy.ts applies the
 // protected class after every rule (decision 29).
 import type {Kind, Lane, MessageType, RuleMatch} from '@setpoint/shared';
+import {hasPositiveKey} from '@setpoint/shared';
 
 export interface RuleEmail {
   fromName: string;
@@ -96,6 +98,10 @@ export function matchesRule(email: RuleEmail, match: RuleMatch, extracted: Extra
   if (match.from_domains) senders.push(match.from_domains.map(lower).some(domain => parts.fromDomain === domain || parts.fromDomain.endsWith(`.${domain}`)));
   if (match.from_name_includes) senders.push(includesAny(parts.fromName, match.from_name_includes));
   if (senders.length && !senders.some(Boolean)) return false;
+  // A field's "doesn't contain" rules the email out whatever else matched.
+  if (match.from_name_excludes && includesAny(parts.fromName, match.from_name_excludes)) return false;
+  if (match.subject_excludes && includesAny(parts.subject, match.subject_excludes)) return false;
+  if (match.body_excludes && includesAny(`${parts.snippet}\n${parts.body}`, match.body_excludes)) return false;
   if (match.subject_includes && !includesAny(parts.subject, match.subject_includes)) return false;
   if (match.subject_regex && !regexMatches(parts.subject, match.subject_regex)) return false;
   if (match.body_includes && !includesAny(`${parts.snippet}\n${parts.body}`, match.body_includes)) return false;
@@ -103,7 +109,7 @@ export function matchesRule(email: RuleEmail, match: RuleMatch, extracted: Extra
   if (match.organisation !== undefined && organisationKey(extracted?.organisation ?? '') !== organisationKey(match.organisation)) return false;
   if (match.type !== undefined && extracted?.type !== match.type) return false;
   // A match needs at least one positive key (the shared schema refuses one without).
-  return Object.entries(match).some(([key, value]) => key !== 'none_includes' && value !== undefined);
+  return hasPositiveKey(match);
 }
 
 /** The first rule that fits, in the order given; rules needing a reading are skipped without one. */
