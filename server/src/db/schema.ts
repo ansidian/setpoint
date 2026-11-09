@@ -14,7 +14,7 @@ import {check, index, integer, real, sqliteTable, text, uniqueIndex, type AnySQL
 import {
   ACCOUNT_PROVIDERS, AI_PROVIDERS, AI_PURPOSES, AUTH_MODES, CALENDAR_PROVIDERS, COLOURS, COMMAND_KINDS, COMMAND_STATES,
   COMMAND_TARGETS, ITEM_KINDS, KINDS, LANES, MESSAGE_TYPES, NOTIFICATION_KINDS, NOTIFY_TOPICS, SECRET_NAMES,
-  NEWS_ADAPTERS, NEWS_SECTIONS, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
+  NEWS_ADAPTERS, NEWS_SECTIONS, RULE_TRASH, NEWS_SOURCE_KINDS, SESSION_METHODS, SOURCE_PROVIDERS, SYNC_MODES, TRANSPARENCIES, TRIAGE_SOURCES, WEATHER_CONDITIONS,
   type EmphasisOut, type ItemWhen, type NewsAdapterKey, type ProposalOut, type RuleMatch, type SearchChip, type SearchReadingFallback, type SecurityFacts,
 } from '@setpoint/shared';
 import type {ArticleNotes, NoiseReason} from '../domain/newsSorting.ts';
@@ -664,6 +664,13 @@ export const triageRules = sqliteTable('triage_rules', {
   kind: text('kind', {enum: KINDS}),
   position: integer('position').notNull(),
   enabled: integer('enabled', {mode: 'boolean'}).notNull().default(true),
+  // A written rule's actions (DESIGN.md #347): mark read, and trash now or after a delay
+  // (RULE_TRASH). Learned rules keep false and 'never'. They act on mail that arrived at or after
+  // `changed_at` (created, edited or turned on; D493). The email remembers its rule in
+  // messages.triage_rule_id.
+  markRead: integer('mark_read', {mode: 'boolean'}).notNull().default(false),
+  trash: text('trash', {enum: RULE_TRASH}).notNull().default('never'),
+  changedAt: text('changed_at'),
   // "v1:<rule name>" for a rule brought over from v1 at cutover (D412); null for every other rule.
   importedFrom: text('imported_from').unique(),
   createdAt: text('created_at').notNull(),

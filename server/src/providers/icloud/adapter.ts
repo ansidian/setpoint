@@ -364,6 +364,8 @@ export class ICloudAdapter implements SourceAdapter {
         case 'mark_unread':
           return expect(await client.messageFlagsRemove(range, [SEEN], {uid: true}), 'mark it unread');
         case 'trash': {
+          // A written rule's Trash with Mark read (DESIGN.md #347): seen first, as the user's Mark read does.
+          if (command.payload.mark_read === true) expect(await client.messageFlagsAdd(range, [SEEN], {uid: true}), 'mark it read');
           const trash = await trashMailbox(client);
           const moved = await client.messageMove(range, trash, {uid: true});
           if (!moved) throw new ProviderError('permanent', `iCloud couldn't move it to ${trash}.`);

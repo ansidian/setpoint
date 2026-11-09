@@ -308,9 +308,13 @@ test('Mail: a long list of trusted domains shows some and Show all, a rule added
     assert.deepEqual(await page.getByRole('menuitem').allTextContents(), ['Subject contains', 'Sender name contains', 'Sender name doesn’t contain', 'Body contains', 'Body doesn’t contain']);
     await page.keyboard.press('Escape');
     await choose(page, 'Send to', 'FYI · Security');
+    // Its actions under Send to (SV-236): Mark read's switch, and Trash offering Never and Now until SV-237.
+    await page.getByRole('switch', {name: 'Mark read'}).click();
+    assert.deepEqual(await page.getByRole('radiogroup', {name: 'Trash'}).getByRole('radio').allTextContents(), ['Never', 'Now']);
+    await page.getByRole('radio', {name: 'Now'}).click();
     await page.getByRole('button', {name: 'Add', exact: true}).click();
-    await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.match.subject_excludes?.[0] === 'digest' && rule.kind === 'security'));
-    await page.locator('.settings .rule', {hasText: 'alerts.contoso.example'}).waitFor();
+    await settled('the new rule', rules, list => list.some(rule => rule.match.from_domains?.[0] === 'alerts.contoso.example' && rule.match.subject_excludes?.[0] === 'digest' && rule.kind === 'security' && rule.mark_read && rule.trash === 'now'));
+    await page.locator('.settings .rule', {hasText: 'FYI · Security, mark read, trash now'}).waitFor();
     // A rule's menu turns it off with toggle_off and back on with toggle_on (#123).
     const added = page.locator('.settings .set-row', {hasText: 'alerts.contoso.example'});
     await added.getByRole('button', {name: 'Rule options'}).click();

@@ -1,8 +1,9 @@
 // Mail changes (BRIEF.md › Read state and Done; DESIGN.md › Interaction rules). Read state and
 // trash are the provider's, so they're commands: opening an unread email marks it read in Gmail or
-// iCloud (counts drop at once), Mark read / unread, Trash and its Undo, and Mark all as read (one
-// provider call per account). Done and Pin are Setpoint's own (no provider has them), so they
+// iCloud (counts drop at once), Mark read / unread, Trash and its Undo, Mark all as read (one
+// provider call per account), and a written rule's Mark read and Trash on new mail. Done and Pin are Setpoint's own (no provider has them), so they
 // change at once with no command.
+import type {RuleTrash} from '@setpoint/shared';
 import {and, eq, inArray} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
 import {markAllReadTargets} from '../domain/inbox.ts';
@@ -73,6 +74,28 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
     target: 'message', kind: trashed ? 'trash' : 'untrash', sourceId: mailSourceId(store, row.accountId), payload: {message_id: row.id},
     prepare: () => {
       store.db.update(t.messages).set({trashedAt: trashed ? isoNow(store) : null}).where(eq(t.messages.id, row.id)).run();
+      return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
+    },
+  });
+}
+
+/**
+ * A written rule's actions on new mail it just sorted (DESIGN.md #347), carried out as the user's own
+ * Mark read and Trash are: a command, the mirror changed at once, and a refusal failed in place with
+ * Try again and Move back. Trash now with Mark read is one trash command that marks it read first,
+ * since an email takes one change at a time. A delayed trash (SV-237) does nothing here. Returns the
+ * command, or null when there's nothing to do.
+ */
+export function ruleActions(store: Store, messageId: number, ruleId: number, actions: {markRead: boolean; trash: RuleTrash}): CommandRow | null {
+  const row = message(store, messageId);
+  const markRead = actions.markRead && row.unread;
+  const trashNow = actions.trash === 'now' && row.trashedAt === null;
+  if (!markRead && !trashNow) return null;
+  return createCommand(store, {
+    target: 'message', kind: trashNow ? 'trash' : 'mark_read', sourceId: mailSourceId(store, row.accountId),
+    payload: trashNow ? {message_id: row.id, mark_read: markRead, rule_id: ruleId} : {message_id: row.id, unread: false, rule_id: ruleId},
+    prepare: () => {
+      store.db.update(t.messages).set({...(markRead ? {unread: false} : {}), ...(trashNow ? {trashedAt: isoNow(store)} : {})}).where(eq(t.messages.id, row.id)).run();
       return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
     },
   });

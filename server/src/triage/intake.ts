@@ -6,6 +6,7 @@
 // re-sorted once triage is back.
 import {and, eq, inArray, isNull} from 'drizzle-orm';
 import * as t from '../db/schema.ts';
+import {ruleActions} from '../commands/mail.ts';
 import {enqueueJob} from '../sync/jobs.ts';
 import {isoNow, noteLive, transaction} from '../store.ts';
 import type {Store} from '../store.ts';
@@ -29,7 +30,10 @@ export function triageEmailOf(store: Store, message: MessageRow): TriageEmail {
 
 /**
  * Writes triage's decision to the record, once: only while the email is still Unsorted (a second
- * job for it, or a late answer, changes nothing). Returns whether it was written.
+ * job for it, or a late answer, changes nothing). Returns whether it was written. The deciding
+ * written rule's actions go with it, in the same transaction, on new mail that arrived since the
+ * rule was saved and isn't protected (DESIGN.md #347, D493). If the email already has a change of
+ * its own waiting, the actions can't queue: the whole decision is refused and the job retries.
  */
 export function applyOutcome(store: Store, messageId: number, outcome: Outcome): boolean {
   return transaction(store, () => {
@@ -39,9 +43,14 @@ export function applyOutcome(store: Store, messageId: number, outcome: Outcome):
       summary: settled.summary, keyDate: settled.keyDate, securityFacts: settled.securityFacts, protected: settled.protected,
       code: settled.code, codeExpiresAt: settled.codeExpiresAt,
       triageSource: outcome.source, triageRuleId: outcome.ruleId, triagedAt: isoNow(store),
-    }).where(and(eq(t.messages.id, messageId), isNull(t.messages.lane))).returning({accountId: t.messages.accountId}).get();
-    if (updated) noteLive(store, {type: 'mail', messages: [messageId], accounts: [updated.accountId], commands: []});
-    return updated !== undefined;
+    }).where(and(eq(t.messages.id, messageId), isNull(t.messages.lane))).returning().get();
+    if (!updated) return false;
+    noteLive(store, {type: 'mail', messages: [messageId], accounts: [updated.accountId], commands: []});
+    const {actions, ruleId} = outcome;
+    if (actions && ruleId !== null && !updated.protected && !updated.backfill && Date.parse(updated.receivedAt) >= Date.parse(actions.since)) {
+      ruleActions(store, messageId, ruleId, actions);
+    }
+    return true;
   });
 }
 

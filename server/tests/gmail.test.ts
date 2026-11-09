@@ -7,6 +7,7 @@ import {SEED_NOW} from '@setpoint/shared';
 import type {IcsReadOut} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test} from 'vitest';
+import {ruleActions} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {ICS_ERRORS} from '../src/domain/icsImport.ts';
 import {Notifier} from '../src/notify/index.ts';
@@ -345,6 +346,23 @@ describe('Gmail: recovery and Google\'s errors', () => {
     await api.send('POST', `/api/commands/${trashed.body.id}/retry`);
     await env.drain();
     expect(google.labels(ADDRESS, welcome.providerId)).toEqual(['TRASH', 'UNREAD']);
+  });
+
+  test('a written rule\'s Mark read and Trash reach Gmail as the user\'s own do, and a refusal fails in place (SV-236)', async () => {
+    const env = await connected();
+    const {w, google, api} = env;
+    const welcome = bySubject(w, 'Welcome');
+    google.inject(/POST \/gmail\/v1\/users\/me\/messages\/[^/]+\/trash/, {status: 400, body: {error: {code: 400, message: 'Invalid id value'}}});
+    const command = ruleActions(w.store, welcome.id, 1, {markRead: true, trash: 'now'})!;
+    expect(bySubject(w, 'Welcome')).toMatchObject({unread: false, trashedAt: expect.any(String)});
+    await env.drain();
+    // Read first, as Mark read does; the trash Gmail refused fails in place, still in the Inbox.
+    expect(google.labels(ADDRESS, welcome.providerId)).toEqual(['INBOX']);
+    expect((await api.send('GET', `/api/mail/messages/${welcome.id}`)).body.command).toMatchObject({kind: 'trash', state: 'failed', can_retry: true, can_move_back: true});
+    expect((await api.send('GET', '/api/mail/inbox')).body.groups.flatMap((group: {rows: {id: number}[]}) => group.rows.map(row => row.id))).toContain(welcome.id);
+    await api.send('POST', `/api/commands/${command.id}/retry`);
+    await env.drain();
+    expect(google.labels(ADDRESS, welcome.providerId)).toEqual(['TRASH']);
   });
 
   test('Connect Gmail refuses a forged or expired state, and a reconnect as another account', async () => {

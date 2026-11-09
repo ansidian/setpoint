@@ -26,7 +26,7 @@ describe('the recorded fixture set, with Anthropic\'s models faked', () => {
     const fake = await fakeModels();
     const world = triageWorld(fake.endpoints);
     setSecret(world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
-    for (const rule of FIXTURE_RULES) createRule(world.store, {...rule, enabled: true});
+    for (const rule of FIXTURE_RULES) createRule(world.store, {...rule, enabled: true, mark_read: false, trash: 'never'});
     const models = DEFAULT_TRIAGE_MODELS;
     fake.answer(request => {
       const subject = /^Subject: (.*)$/m.exec(request.input)?.[1] ?? '';

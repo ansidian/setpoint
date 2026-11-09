@@ -146,11 +146,14 @@
 .settings .rule-form .rule-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .settings .rule-form .rule-line.add { grid-column: 2; }
 .settings .rule-form .filter { min-width: 170px; }
+/* The rule form's actions under Send to (DESIGN.md #347): Mark read's switch, then Trash's presets. */
+.settings .rule-form .rule-line .gap { margin-left: 16px; }
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
 .settings .rule b { font-weight: 500; color: var(--ink); }
 .settings .rule .to { color: var(--ink3); display: grid; }
+.settings .rule .lane { display: flex; align-items: center; }
 .settings .rule.off { opacity: .5; }
 /* An empty state's action, as the agenda's "No events · New event" (DESIGN.md › Copy). Not `.empty`, the
    Inbox's centred All caught up, which would stack it in a tall box. */

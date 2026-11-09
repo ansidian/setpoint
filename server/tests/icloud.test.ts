@@ -5,6 +5,7 @@
 import {SEED_NOW} from '@setpoint/shared';
 import {and, eq, lte} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
+import {ruleActions} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {Notifier} from '../src/notify/index.ts';
 import {ICloudAdapter, icloudConnector} from '../src/providers/icloud/index.ts';
@@ -255,6 +256,17 @@ describe('iCloud: recovery', () => {
     await env.poll();
     expect(sourceList(w.store).find(row => row.id === source.id)!.health.state).toBe('healthy');
     expect(bySubject(w, 'After the drop')).toBeDefined();
+    await env.adapter.close();
+  });
+
+  test('a written rule\'s Mark read and Trash reach iCloud as the user\'s own do: seen, then Deleted Messages (SV-236)', async () => {
+    const env = await connected();
+    const {w, imap} = env;
+    const welcome = bySubject(w, 'Welcome');
+    ruleActions(w.store, welcome.id, 1, {markRead: true, trash: 'now'});
+    await env.drain();
+    expect(imap.folder(ADDRESS, 'Deleted Messages').messages.map(message => message.flags)).toEqual([new Set(['\\Seen'])]);
+    expect(w.store.db.select().from(t.commands).where(eq(t.commands.targetId, welcome.id)).get()).toMatchObject({kind: 'trash', state: 'confirmed'});
     await env.adapter.close();
   });
 

@@ -232,6 +232,13 @@
       "when": 1794112036281,
       "tag": "0032_calendar_listed",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1794185616022,
+      "tag": "0033_rule_actions",
+      "breakpoints": true
     }
   ]
 }

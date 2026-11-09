@@ -269,6 +269,8 @@ export class GmailAdapter implements SourceAdapter {
       case 'mark_unread':
         return api.modify(id, ['UNREAD'], []);
       case 'trash':
+        // A written rule's Trash with Mark read (DESIGN.md #347): read first, as the user's Mark read does.
+        if (command.payload.mark_read === true) await api.modify(id, [], ['UNREAD']);
         return api.trash(id);
       case 'untrash':
         return api.untrash(id);

@@ -110,7 +110,7 @@ function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
     : []);
   return rows.map(row => ({
     id: row.id, origin: row.origin, match: row.match, lane: row.lane, kind: row.kind, position: row.position, enabled: row.enabled,
-    imported: row.importedFrom !== null, created_at: row.createdAt, matches_this_month: hits.get(row.id) ?? 0,
+    mark_read: row.markRead, trash: row.trash, imported: row.importedFrom !== null, created_at: row.createdAt, matches_this_month: hits.get(row.id) ?? 0,
   }));
 }
 
@@ -124,13 +124,13 @@ export function listRules(store: Store): RuleOut[] {
   return presentRules(store, [...written, ...learned]);
 }
 
-/** A written rule, after every other written rule. It sorts new mail; mail already sorted stays. */
+/** A written rule, after every other written rule. It sorts and acts on new mail; mail already sorted stays. */
 export function createRule(store: Store, input: RuleInput): RuleOut {
   return transaction(store, () => {
     const last = store.db.select({position: sql<number>`max(${t.triageRules.position})`}).from(t.triageRules).where(eq(t.triageRules.origin, 'written')).get();
     const row = store.db.insert(t.triageRules).values({
       origin: 'written', match: input.match, lane: input.lane, kind: input.lane === 'noise' ? null : input.kind, enabled: input.enabled,
-      position: (last?.position ?? -1) + 1, createdAt: isoNow(store),
+      markRead: input.mark_read, trash: input.trash, position: (last?.position ?? -1) + 1, createdAt: isoNow(store), changedAt: isoNow(store),
     }).returning().get()!;
     return presentRules(store, [row])[0]!;
   });
@@ -143,8 +143,12 @@ export function updateRule(store: Store, id: number, changes: RuleUpdateInput): 
     const lane = changes.lane ?? row.lane;
     const kind = lane === 'noise' ? null : changes.kind !== undefined ? changes.kind : row.kind;
     if (changes.lane === 'noise' && changes.kind) throw invalid('Noise has no kind.');
+    if (row.origin === 'learned' && (changes.mark_read || (changes.trash && changes.trash !== 'never'))) throw invalid('A learned rule only sorts; write a rule to mark read or trash.');
     const updated = store.db.update(t.triageRules).set({
       ...(changes.match ? {match: changes.match} : {}), lane, kind, ...(changes.enabled !== undefined ? {enabled: changes.enabled} : {}),
+      ...(changes.mark_read !== undefined ? {markRead: changes.mark_read} : {}), ...(changes.trash !== undefined ? {trash: changes.trash} : {}),
+      // Its actions apply to mail arriving from now on (D493), turning it on included.
+      changedAt: isoNow(store),
     }).where(eq(t.triageRules.id, id)).returning().get()!;
     return presentRules(store, [updated])[0]!;
   });

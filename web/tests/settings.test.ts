@@ -69,7 +69,7 @@ describe('Settings', () => {
   ])('an email from %j gives a rule %j', (address, sender) => expect(ruleSender(address)).toEqual(sender));
 
   const rule = (id: number, match: RuleMatch, fields: Partial<RuleOut> = {}): RuleOut => ({
-    id, origin: 'written', match, lane: 'fyi', kind: 'money', position: id, enabled: true, imported: false, created_at: '2026-10-01T00:00:00Z', matches_this_month: 0, ...fields,
+    id, origin: 'written', match, lane: 'fyi', kind: 'money', position: id, enabled: true, mark_read: false, trash: 'never', imported: false, created_at: '2026-10-01T00:00:00Z', matches_this_month: 0, ...fields,
   });
   test('the rules an email\'s sender can join: written ones on, matching on sender, not already matching it, in their order', () => {
     const rules = [
@@ -96,6 +96,10 @@ describe('Settings', () => {
   test.each([
     [rule(2, {from_domains: ['woodgrovebank.example']}), 'From woodgrovebank.example → FYI · Money'],
     [rule(1, {from_domains: ['university.edu'], subject_includes: ['Registrar']}, {lane: 'attention', kind: null}), 'From university.edu with “Registrar” in the subject → Attention'],
+    // A written rule's actions go on after the lane (SV-236).
+    [rule(3, {from_domains: ['ups.example']}, {lane: 'noise', kind: null, mark_read: true, trash: 'now'}), 'From ups.example → Noise, mark read, trash now'],
+    [rule(4, {from_domains: ['ups.example']}, {lane: 'noise', kind: null, trash: '1d'}), 'From ups.example → Noise, trash after 1 day'],
+    [rule(5, {from_domains: ['ups.example']}, {mark_read: true}), 'From ups.example → FYI · Money, mark read'],
   ])('a rule on one line: %#', (one, line) => expect(ruleLine(one)).toBe(line));
 
   // New rule from the sender starts in the lane and group the email is in now.
@@ -139,7 +143,7 @@ describe('Settings', () => {
 
   test('written rules in their order, learned ones newest first', () => {
     const rule = (id: number, origin: 'written' | 'learned', position: number, created: string) => ({
-      id, origin, position, created_at: created, match: {from_domains: ['x.com']}, lane: 'fyi' as const, kind: null, enabled: true, imported: false, matches_this_month: 0,
+      id, origin, position, created_at: created, match: {from_domains: ['x.com']}, lane: 'fyi' as const, kind: null, enabled: true, mark_read: false, trash: 'never' as const, imported: false, matches_this_month: 0,
     });
     const {written, learned} = splitRules([rule(1, 'learned', 0, '2026-09-18'), rule(2, 'written', 1, '2026-08-01'), rule(3, 'written', 0, '2026-08-02'), rule(4, 'learned', 0, '2026-10-07')]);
     expect([written.map(one => one.id), learned.map(one => one.id)]).toEqual([[3, 2], [4, 1]]);

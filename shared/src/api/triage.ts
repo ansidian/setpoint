@@ -133,12 +133,25 @@ export const ruleMatchSchema = z.strictObject({
 }).refine(match => hasPositiveKey(match), 'A rule needs something to match');
 export type RuleMatch = z.infer<typeof ruleMatchSchema>;
 
-/** Settings › Mail's "Add rule": a written rule ("From woodgrovebank.example → FYI · Money"). Noise has no kind. */
+/**
+ * When a written rule trashes what it matches (D488, D489): never, as it arrives, or that long after
+ * it arrived. Learned rules and the shipped defaults never trash.
+ */
+export const RULE_TRASH = ['never', 'now', '15m', '1h', '1d', '1w'] as const;
+export type RuleTrash = (typeof RULE_TRASH)[number];
+
+/**
+ * Settings › Mail's "Add rule": a written rule ("From woodgrovebank.example → FYI · Money"). Noise has
+ * no kind. Its actions (`mark_read`, `trash`) apply to mail arriving after it's saved, never to
+ * protected mail (DESIGN.md #347).
+ */
 export const ruleInput = z.strictObject({
   match: ruleMatchSchema,
   lane: z.enum(LANES),
   kind: z.enum(KINDS).nullable().default(null),
   enabled: z.boolean().default(true),
+  mark_read: z.boolean().default(false),
+  trash: z.enum(RULE_TRASH).default('never'),
 }).refine(rule => rule.lane !== 'noise' || rule.kind === null, 'Noise has no kind');
 export type RuleInput = z.infer<typeof ruleInput>;
 
@@ -147,6 +160,8 @@ export const ruleUpdateInput = z.strictObject({
   lane: z.enum(LANES),
   kind: z.enum(KINDS).nullable(),
   enabled: z.boolean(),
+  mark_read: z.boolean(),
+  trash: z.enum(RULE_TRASH),
 }).partial().refine(changes => Object.keys(changes).length > 0, 'Nothing to change');
 export type RuleUpdateInput = z.infer<typeof ruleUpdateInput>;
 
@@ -165,6 +180,9 @@ export interface RuleOut {
   // Written rules' order; learned rules apply after every written one.
   position: number;
   enabled: boolean;
+  // A written rule's actions; a learned rule's are always false and 'never'.
+  mark_read: boolean;
+  trash: RuleTrash;
   // Brought over from v1 (B7's import).
   imported: boolean;
   created_at: string;

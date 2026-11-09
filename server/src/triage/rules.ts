@@ -53,6 +53,9 @@ type RuleRow = typeof t.triageRules.$inferSelect;
 
 export const ruleOf = (row: RuleRow): Rule => ({
   id: row.id, key: `${row.origin}:${row.id}`, source: row.origin, match: row.match, lane: row.lane, kind: row.kind, type: null,
+  // Only a written rule acts (D486); learned rules only sort.
+  actions: row.origin === 'written' && (row.markRead || row.trash !== 'never')
+    ? {markRead: row.markRead, trash: row.trash, since: row.changedAt ?? row.createdAt} : null,
 });
 
 /** Every enabled rule in the order triage tries them. */

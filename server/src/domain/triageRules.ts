@@ -7,7 +7,7 @@
 //
 // Rules decide a lane; they never decide protection. src/domain/triagePolicy.ts applies the
 // protected class after every rule (decision 29).
-import type {Kind, Lane, MessageType, RuleMatch} from '@setpoint/shared';
+import type {Kind, Lane, MessageType, RuleMatch, RuleTrash} from '@setpoint/shared';
 import {hasPositiveKey} from '@setpoint/shared';
 
 export interface RuleEmail {
@@ -38,6 +38,19 @@ export interface Rule {
   kind: Kind | null;
   // A shipped default may also say the type ("shipping").
   type: MessageType | null;
+  // A written rule's actions (DESIGN.md #347); null for learned rules, the defaults and a written
+  // rule without any.
+  actions?: RuleActions | null;
+}
+
+/**
+ * What a written rule does besides sorting: mark the email read, trash it (now, or after a delay,
+ * SV-237), for mail that arrived at or after `since` (when the rule was saved, edited or turned on).
+ */
+export interface RuleActions {
+  markRead: boolean;
+  trash: RuleTrash;
+  since: string;
 }
 
 const lower = (value: unknown) => String(value ?? '').toLowerCase();

@@ -16,7 +16,7 @@ import type {Lane, MessageType, Kind, TriageSource} from '@setpoint/shared';
 import {escalation, historyReading, isSure, protectedFromText, settle} from '../domain/triagePolicy.ts';
 import type {Reading, Settled} from '../domain/triagePolicy.ts';
 import {firstMatch, hasHardRisk, needsReading, ruleDecides} from '../domain/triageRules.ts';
-import type {Rule, RuleEmail} from '../domain/triageRules.ts';
+import type {Rule, RuleActions, RuleEmail} from '../domain/triageRules.ts';
 import {detectVerificationCode} from '../domain/verificationCode.ts';
 
 export type Tier = 'cheap' | 'strong';
@@ -40,6 +40,9 @@ export interface Outcome {
   source: TriageSource;
   ruleId: number | null;
   tiers: Tier[];
+  // The deciding written rule's actions, for new mail only (never the history pass's); the intake
+  // carries them out unless the email is protected or arrived before the rule was saved.
+  actions?: RuleActions | null;
 }
 
 /** No model to ask and no rule to decide: the email stays Unsorted until there is one. */
@@ -114,7 +117,7 @@ export async function triageEmail(context: PipelineContext, email: TriageEmail, 
   }
   return {
     settled: settle({lane, kind, type, reading, code, textProtected, incomplete}),
-    source, ruleId: rule?.id ?? null, tiers,
+    source, ruleId: rule?.id ?? null, tiers, actions: rule?.actions ?? null,
   };
 }
 

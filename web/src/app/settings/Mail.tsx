@@ -1,8 +1,10 @@
 // Settings › Mail (board 18a): written rules in their order (drag, or ↑ ↓ on the handle) with Add
-// rule (open and filled in when an email's Add to rule asked for a New rule from its sender, SV-160), the note that protected mail can't be moved by any rule, learned rules (from pattern
+// rule (open and filled in when an email's Add to rule asked for a New rule from its sender, SV-160;
+// Mark read and Trash under Send to, DESIGN.md #347), the note that protected mail can't be moved,
+// marked read or trashed by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
 // with a filter, and the code expiry's presets.
-import type {Kind, Lane, RuleOut, Settings, TrustedDomainOut} from '@setpoint/shared';
+import type {Kind, Lane, RuleOut, RuleTrash, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -10,7 +12,7 @@ import {useResource} from '../../api/client.ts';
 import {SETTINGS_PATH} from '../../api/items.ts';
 import {createRule, deleteRule, patchSettings, reorderRules, RULES_PATH, setRuleEnabled, TRUSTED_PATH, untrustDomain} from '../../api/settings.ts';
 import {localDate} from '../../logic/format.ts';
-import {expiryLabel, laneTag, matchesThisMonth, moved, ruleWords, senderMatch, splitRules, wordsMatch} from '../../logic/settings.ts';
+import {expiryLabel, laneTag, matchesThisMonth, moved, ruleActionWords, ruleWords, senderMatch, splitRules, TRASH_LABELS, wordsMatch} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {Segmented} from '../../ui/Segmented.tsx';
 import {useNow} from '../clock.ts';
@@ -20,10 +22,13 @@ import {clearRuleDraft, useRuleDraft} from './store.ts';
 import type {RuleDraft} from './store.ts';
 import type {RuleFilter} from '../../logic/settings.ts';
 import type {DragProps} from './order.ts';
-import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, useAttempt} from './parts.tsx';
+import {escapeCancels, Line, Menu, Page, Section, Select, SkeletonRows, Switch, useAttempt} from './parts.tsx';
 
 // The domains shown before Show all.
 const DOMAINS_SHOWN = 11;
+
+// Only Never and Now act until delayed trash lands (SV-237); the other four are stored already.
+const TRASH_OFFERED: RuleTrash[] = ['never', 'now'];
 
 const DESTINATIONS: {value: string; label: string}[] = [
   {value: 'attention', label: 'Attention'},
@@ -70,7 +75,7 @@ export function MailPage() {
           ))}
           {!written.length && !showForm && <div className="set-row one"><span className="set-empty-icon"><Icon name="rule" size={20} /></span><span className="s set-empty">No rules yet · <button type="button" onClick={() => setAdding(true)}>Add rule</button></span></div>}
         </div>}
-        <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · no rule can move it</div>
+        <div className="note"><Icon name="shield" size={16} />Protected security mail always goes to Attention · it can’t be moved, marked read or trashed by any rule</div>
       </Section>
 
       {learned.length > 0 && (
@@ -98,12 +103,13 @@ export function MailPage() {
   );
 }
 
-function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enabled'>}) {
+function RuleText({rule}: {rule: Pick<RuleOut, 'match' | 'lane' | 'kind' | 'enabled' | 'mark_read' | 'trash'>}) {
   return (
     <div className={rule.enabled ? 'rule grow' : 'rule grow off'}>
       <span className="ell">{ruleWords(rule.match).map((run, index) => (run.bold ? <b key={index}>{run.text}</b> : <span key={index}>{run.text}</span>))}</span>
       <span className="to"><Icon name="arrow_forward" size={16} /></span>
-      <span className="tag">{laneTag(rule.lane, rule.kind)}</span>
+      {/* The actions go on after the lane tag, as the sentence does: "→ Noise, mark read, trash now". */}
+      <span className="lane"><span className="tag">{laneTag(rule.lane, rule.kind)}</span>{ruleActionWords(rule)}</span>
     </div>
   );
 }
@@ -160,6 +166,8 @@ function LearnedRule({rule}: {rule: RuleOut}) {
 function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void}) {
   const [destination, setDestination] = useState(draft?.destination ?? 'fyi:other');
   const [filters, setFilters] = useState<RuleFilter[]>([]);
+  const [markRead, setMarkRead] = useState(false);
+  const [trash, setTrash] = useState<RuleTrash>('never');
   const send = useAttempt();
   const left = RULE_FILTERS.filter(filter => !filters.includes(filter.key));
   return (
@@ -170,7 +178,7 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
       if (!sender) return void send.attempt(() => Promise.reject(new Error('From needs a domain such as woodgrovebank.example, or an address.')));
       const words = wordsMatch(Object.fromEntries(filters.map(key => [key, form.get(key)?.toString()])));
       const [lane, kind] = destination.split(':') as [Lane, Kind | undefined];
-      void send.attempt(() => createRule({match: {...sender, ...words}, lane, kind: kind ?? null, enabled: true}))
+      void send.attempt(() => createRule({match: {...sender, ...words}, lane, kind: kind ?? null, enabled: true, mark_read: markRead, trash}))
         .then(rule => rule && onDone());
     }}>
       <span className="lead">If from</span>
@@ -206,6 +214,12 @@ function AddRule({draft, onDone}: {draft: RuleDraft | null; onDone: () => void})
         <span className="grow" />
         <button className="btn sm" type="submit" disabled={send.busy}>Add</button>
         <button className="btn quiet sm" type="button" onClick={onDone}>Cancel</button>
+      </span>
+      <span className="rule-line add">
+        <span className="s">Mark read</span>
+        <Switch on={markRead} label="Mark read" onChange={setMarkRead} />
+        <span className="s gap">Trash</span>
+        <Segmented role="radio" label="Trash" value={trash} segments={TRASH_OFFERED.map(value => ({value, label: TRASH_LABELS[value]}))} onChange={setTrash} />
       </span>
       {send.line && <span className="s rule-line add" style={{color: 'var(--alert)'}} role="alert">{send.line.text}</span>}
     </form>

@@ -1,5 +1,5 @@
 // Settings' words and small rules (DESIGN.md › Settings; boards 17, 18a, 18b), tested as tables.
-import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
+import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut, RuleTrash, Settings, SettingsPatch, SourceOut} from '@setpoint/shared';
 import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
 
@@ -185,7 +185,20 @@ export function withSender(match: RuleMatch, sender: RuleSender): RuleMatch {
 }
 
 /** A rule on one line, as Settings › Mail words it: "From woodgrovebank.example → FYI · Money". */
-export const ruleLine = (rule: Pick<RuleOut, 'match' | 'lane' | 'kind'>) => `${ruleWords(rule.match).map(run => run.text).join('')} → ${laneTag(rule.lane, rule.kind)}`;
+export const ruleLine = (rule: Pick<RuleOut, 'match' | 'lane' | 'kind'> & Partial<Pick<RuleOut, 'mark_read' | 'trash'>>) =>
+  `${ruleWords(rule.match).map(run => run.text).join('')} → ${laneTag(rule.lane, rule.kind)}${ruleActionWords(rule)}`;
+
+/** The rule form's Trash segments (DESIGN.md #347): "Never", "Now", "15 min", "1 hour", "1 day", "1 week". */
+export const TRASH_LABELS: Record<RuleTrash, string> = {never: 'Never', now: 'Now', '15m': '15 min', '1h': '1 hour', '1d': '1 day', '1w': '1 week'};
+
+/** What a written rule does after its lane tag: ", mark read, trash now", ", trash after 1 day", or nothing. */
+export function ruleActionWords({mark_read = false, trash = 'never'}: Partial<Pick<RuleOut, 'mark_read' | 'trash'>>): string {
+  const words = [
+    ...(mark_read ? ['mark read'] : []),
+    ...(trash === 'now' ? ['trash now'] : trash !== 'never' ? [`trash after ${TRASH_LABELS[trash]}`] : []),
+  ];
+  return words.map(word => `, ${word}`).join('');
+}
 
 /** Add rule's Send to for an email in `lane` and `kind`: where it is now ("fyi:money"), FYI · Other before triage. */
 export function ruleDestination(lane: Lane | null, kind: Kind | null): string {

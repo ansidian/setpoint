@@ -4,6 +4,8 @@
 // new Attention and FYI mail sent by ntfy once sorted.
 import {and, eq} from 'drizzle-orm';
 import {describe, expect, test, vi} from 'vitest';
+import type {RuleTrash} from '@setpoint/shared';
+import {moveBackCommand} from '../src/commands/index.ts';
 import {openMessage, setDone} from '../src/commands/mail.ts';
 import * as t from '../src/db/schema.ts';
 import {Notifier} from '../src/notify/index.ts';
@@ -12,7 +14,7 @@ import {setSecret} from '../src/secrets/store.ts';
 import {getSettings, updateSettings} from '../src/settings.ts';
 import {isoNow} from '../src/store.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
-import {aiOverview, answerPrompt, currentPrompts, deleteRule, listRules} from '../src/triage/learning.ts';
+import {aiOverview, answerPrompt, createRule, currentPrompts, deleteRule, listRules, updateRule} from '../src/triage/learning.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
 import type {FakeAnswer} from './fakeModels.ts';
@@ -181,6 +183,89 @@ describe('once per email, history, the ledger', () => {
       {model: 'claude-sonnet-5-5', input: 3000, output: 100, cached: 2000, cost: 2000 + 400 + 1000, purpose: 'triage'},
       {model: 'claude-opus-5-5', input: 1000, output: 100, cached: 0, cost: 4000 + 2000, purpose: 'triage'},
     ]);
+  });
+});
+
+describe('a written rule\'s actions (SV-236)', () => {
+  const UPS = {fromName: 'UPS', fromAddress: 'auto@ups.example', subject: 'Your package was delivered', bodyText: 'Left at front door.'};
+  const ruleCommands = (world: Awaited<ReturnType<typeof setup>>['world'], id: number) =>
+    world.store.db.select().from(t.commands).where(and(eq(t.commands.target, 'message'), eq(t.commands.targetId, id))).all();
+
+  async function withRule(actions: {mark_read: boolean; trash: RuleTrash}) {
+    const env = await setup();
+    const rule = createRule(env.world.store, {match: {from_domains: ['ups.example']}, lane: 'noise', kind: null, enabled: true, ...actions});
+    // Mail arriving after the rule was saved (D493).
+    env.world.advance(60_000);
+    return {...env, rule};
+  }
+
+  test.each([
+    [{mark_read: true, trash: 'now'}, {unread: false, trashed: true}, {kind: 'trash', payload: {mark_read: true}}],
+    [{mark_read: false, trash: 'now'}, {unread: true, trashed: true}, {kind: 'trash', payload: {mark_read: false}}],
+    [{mark_read: true, trash: 'never'}, {unread: false, trashed: false}, {kind: 'mark_read', payload: {unread: false}}],
+    // A delay is stored but doesn't act until SV-237.
+    [{mark_read: false, trash: '1d'}, {unread: true, trashed: false}, null],
+  ] as const)('new mail a rule with %j sorts ends %j, by the command %j', async (actions, state, command) => {
+    const {world, deliver, rule} = await withRule(actions);
+    const id = deliver({...UPS, receivedAt: isoNow(world.store)});
+    await world.drain();
+    const row = world.message(id);
+    expect({lane: row.lane, triageRuleId: row.triageRuleId, unread: row.unread, trashed: row.trashedAt !== null}).toEqual({lane: 'noise', triageRuleId: rule.id, ...state});
+    const commands = ruleCommands(world, id);
+    if (!command) return expect(commands).toEqual([]);
+    expect(commands).toHaveLength(1);
+    expect(commands[0]).toMatchObject({kind: command.kind, payload: {message_id: id, rule_id: rule.id, ...command.payload}, previous: {messages: [{id, unread: true, trashedAt: null}]}});
+  });
+
+  test('protected mail is never marked read or trashed by any rule', async () => {
+    const {world, deliver} = await withRule({mark_read: true, trash: 'now'});
+    const id = deliver({...UPS, subject: 'Your password was changed', receivedAt: isoNow(world.store)});
+    await world.drain();
+    expect(world.message(id)).toMatchObject({lane: 'attention', protected: true, unread: true, trashedAt: null});
+    expect(ruleCommands(world, id)).toEqual([]);
+  });
+
+  test('mail that arrived before the rule was saved, and backfilled history, are sorted but never acted on', async () => {
+    const {world, deliver, rule} = await withRule({mark_read: true, trash: 'now'});
+    const before = deliver({...UPS, receivedAt: new Date(world.store.now().getTime() - 5 * 60_000).toISOString()});
+    const history = deliver({...UPS, receivedAt: '2026-04-02T16:00:00.000Z'}, 'Jobs', true);
+    await world.drain();
+    for (const id of [before, history]) {
+      expect(world.message(id)).toMatchObject({lane: 'noise', triageRuleId: rule.id, unread: true, trashedAt: null});
+      expect(ruleCommands(world, id)).toEqual([]);
+    }
+  });
+
+  test('turning a rule on again acts only on mail from then on', async () => {
+    const {world, deliver, rule} = await withRule({mark_read: true, trash: 'never'});
+    updateRule(world.store, rule.id, {enabled: false});
+    const arrivedWhileOff = isoNow(world.store);
+    world.advance(60_000);
+    updateRule(world.store, rule.id, {enabled: true});
+    const id = deliver({...UPS, receivedAt: arrivedWhileOff});
+    await world.drain();
+    expect(world.message(id)).toMatchObject({lane: 'noise', unread: true});
+  });
+
+  test('an email with a change of its own waiting is sorted, and acted on, once that change settles', async () => {
+    const {world, deliver} = await withRule({mark_read: false, trash: 'now'});
+    const id = deliver({...UPS, receivedAt: isoNow(world.store)});
+    const open = openMessage(world.store, id)!;
+    await world.drain();
+    expect(world.message(id).lane).toBeNull();
+    moveBackCommand(world.store, open.id);
+    world.advance(10 * 60_000);
+    await world.drain();
+    expect(world.message(id)).toMatchObject({lane: 'noise', trashedAt: expect.any(String)});
+    expect(ruleCommands(world, id).map(command => command.kind)).toEqual(['open', 'trash']);
+  });
+
+  test('a learned rule only sorts: it can\'t be given actions', async () => {
+    const {world} = await setup();
+    const learned = world.store.db.insert(t.triageRules).values({origin: 'learned', match: {organisation: 'Northwind'}, lane: 'fyi', kind: 'updates', position: 0, createdAt: isoNow(world.store)}).returning().get();
+    expect(() => updateRule(world.store, learned.id, {mark_read: true})).toThrow('A learned rule only sorts');
+    expect(() => updateRule(world.store, learned.id, {trash: 'now'})).toThrow('A learned rule only sorts');
+    expect(listRules(world.store).find(rule => rule.id === learned.id)).toMatchObject({mark_read: false, trash: 'never'});
   });
 });
 
