@@ -267,7 +267,7 @@ function IcloudForm({address, onDone}: {address: string; onDone: () => void}) {
           address: form.get('address')?.toString().trim() ?? '', app_password: form.get('password')?.toString() ?? '', ...(label ? {label} : {}),
         })).then(account => account && onDone());
       }}>
-        <div className="set-row form">
+        <div className="set-row ctl form">
           <input className="fld grow" name="address" type="email" required defaultValue={address} placeholder="iCloud address" aria-label="iCloud address" autoFocus={!address} />
           <input className="fld" name="password" type="password" required placeholder="App-specific password" aria-label="App-specific password" autoComplete="off" autoFocus={!!address} />
           {!address && <input className="fld" name="label" placeholder="Label" aria-label="Label" maxLength={40} style={{width: 120}} />}

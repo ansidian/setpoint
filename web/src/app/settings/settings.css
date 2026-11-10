@@ -66,6 +66,9 @@
    own buttons, its state's and its form's: Add rule's form (D518), a rule's prompt and the pairing
    panel's Copy keep theirs. */
 .settings .set-row:not(.rule-form) > .btn.sm, .settings .set-row > :is(.state, .form) > .btn.sm { height: 30px; }
+/* A quiet one at a row's very end lands its words on the rows' 16 px edge, where an outlined one's edge
+   is (SV-253, F12). */
+.settings .set-row:not(.rule-form) > .btn.quiet:last-child, .settings .set-row > .form > .btn.quiet:last-child { margin-right: -10px; }
 /* While a row is dragged the others make room, easing (app/settings/order.ts). */
 .settings .reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
 .settings .t { color: var(--ink); }
