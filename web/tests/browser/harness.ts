@@ -428,19 +428,36 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
       });
       page.on('requestfinished', request => loading.delete(request));
       page.on('requestfailed', request => loading.delete(request));
+      // What a failed font load is told apart by, said only when one fails (SV-265): the page's font
+      // requests that failed or were answered with an error, and its navigations, in order.
+      const fontTrail: string[] = [];
+      const fontName = (request: Request) => new URL(request.url()).pathname.split('/').pop();
+      page.on('requestfailed', request => {
+        if (request.resourceType() === 'font') fontTrail.push(`${fontName(request)} failed: ${request.failure()?.errorText}`);
+      });
+      page.on('response', response => {
+        if (response.request().resourceType() === 'font' && response.status() >= 400) fontTrail.push(`${fontName(response.request())} answered ${response.status()}`);
+      });
       // A new document drops what the last one was loading, which may never say it failed.
       page.on('framenavigated', frame => {
-        if (frame === page.mainFrame()) loading.clear();
+        if (frame !== page.mainFrame()) return;
+        loading.clear();
+        fontTrail.push(`navigated to ${new URL(frame.url()).pathname}`);
       });
+      const trail = () => [
+        `font requests and navigations: ${fontTrail.join('; ')}`,
+        `server: ${server.exitCode === null && server.signalCode === null ? 'running' : `exited (${server.exitCode ?? server.signalCode})`}`,
+        `server stderr: ${errors.trim().slice(-2000) || 'none'}`,
+      ];
       const [goto, reload] = [page.goto.bind(page), page.reload.bind(page)];
       page.goto = async (...args) => {
         const response = await goto(...args);
-        await ready(page, loading);
+        await ready(page, loading, trail);
         return response;
       };
       page.reload = async (...args) => {
         const response = await reload(...args);
-        await ready(page, loading);
+        await ready(page, loading, trail);
         return response;
       };
       return page;
@@ -453,11 +470,18 @@ export async function startSetpoint({claim = true, fixtures = [], clock = 'seed'
  * Resolves once a page that just loaded is ready to read: no /api request in flight (the live
  * stream aside) across two drawn frames, so what the first answers asked for has come too, and
  * every web font loaded, so text has its real widths (SV-40). The fonts are loaded rather than
- * awaited: `document.fonts.ready` is already settled before the first text asks for them.
+ * awaited: `document.fonts.ready` is already settled before the first text asks for them. A font
+ * that fails to load still fails the check, its error carrying `trail` and each face's state, so it
+ * names its cause (SV-265: a NetworkError said only that some font request failed).
  */
-async function ready(page: Page, loading: Set<Request>) {
+async function ready(page: Page, loading: Set<Request>, trail: () => string[]) {
   await answered(page, loading, 'the page\'s first data');
-  await page.evaluate(() => Promise.all([...document.fonts].map(face => face.load())));
+  try {
+    await page.evaluate(() => Promise.all([...document.fonts].map(face => face.load())));
+  } catch (error) {
+    const faces = await page.evaluate(() => [...document.fonts].map(face => `${face.family} ${face.status}`).join(', ')).catch(() => 'unread, the page closed');
+    throw new Error([`The page's fonts didn't load: ${(error as Error).message}`, `faces: ${faces}`, ...trail()].join('\n'), {cause: error});
+  }
 }
 
 /** Resolves once `page` has no /api request in flight across two drawn frames. */
