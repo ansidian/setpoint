@@ -416,7 +416,8 @@ export type JobsUsageOut = z.infer<typeof jobsUsageSchema>;
 /**
  * Settings › AI's Jobs group (J8, board 39b, D315): its three models, fixed, shown by name (override
  * 26), why they can't run (no key) or null, and this month's usage (since local midnight on the 1st),
- * in total and in its three parts, for This month (no cap, so no meter) and Usage this month's row.
+ * in total and in its three parts, for Usage this month's row (no cap, so no meter and no row of its
+ * own, D515).
  */
 export const jobsAiSchema = z.strictObject({
   models: z.strictObject({emails: z.string(), finding: z.string(), reading: z.string()}),
