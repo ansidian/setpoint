@@ -4,7 +4,7 @@
 // trashes, SV-238), the note that protected mail can't be moved,
 // marked read or trashed by any rule, learned rules (from pattern
 // prompts) with Undo on the day they were learned and × after, the trusted remote-content domains
-// with a filter, and the code expiry's presets.
+// with a filter, and Verification codes' expiry presets.
 import type {Kind, Lane, RuleOut, RuleTrash, RuleWaiting, Settings, TrustedDomainOut} from '@setpoint/shared';
 import {CODE_EXPIRY_PRESETS, KINDS, RULE_TRASH} from '@setpoint/shared';
 import {Fragment, useState} from 'react';
@@ -88,10 +88,10 @@ export function MailPage() {
 
       <TrustedDomains domains={domains} />
 
-      <Section>
+      <Section label="Verification codes">
         {!settings ? <SkeletonRows count={1} /> : <div className="set-group">
           <div className="set-row">
-            <div className="lines grow"><span className="t">Code expiry</span><span className="s">Verification codes leave the Inbox after</span></div>
+            <div className="lines grow"><span className="t">Code expiry</span><span className="s">Codes leave the Inbox after</span></div>
             <Segmented role="radio" label="Code expiry" value={settings.mail.code_expiry_minutes}
               segments={CODE_EXPIRY_PRESETS.map(minutes => ({value: minutes, label: expiryLabel(minutes)}))}
               onChange={minutes => void save.attempt(() => patchSettings({mail: {code_expiry_minutes: minutes}}))} />
