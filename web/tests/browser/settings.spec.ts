@@ -1093,7 +1093,7 @@ const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll
   })))
   .filter(rows => rows.length > 1));
 
-test('SV-253 (F1): a group\'s rows share their sync and state columns as the modal narrows', async () => {
+test('SV-253 (F1, F2): a group\'s rows share their sync and state columns as the modal narrows, and a name, address or line cut short shows its words in a tip', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     // The modal at 992 and 820 wide (the window less its 16 px each side), where the columns give way.
@@ -1110,6 +1110,14 @@ test('SV-253 (F1): a group\'s rows share their sync and state columns as the mod
             assert.ok(Math.abs(each.state - rows[0]!.state) < 1, `${name} at ${width}: ${each.row}'s state is ${each.state} wide, ${rows[0]!.row}'s ${rows[0]!.state}`);
           }
         }
+      }
+      if (width === 852) {
+        // At 820 an address is cut; resting on it shows the whole of it.
+        await openAt(page, setpoint.base, 'accounts');
+        const address = page.locator('.settings [data-account] .lines .s').filter({hasText: 'user@studio.example.com'});
+        assert.ok(await address.evaluate(element => element.scrollWidth > element.clientWidth), 'the address is cut at 820');
+        await address.hover();
+        await page.locator('.tip[role="tooltip"]', {hasText: 'user@studio.example.com'}).waitFor();
       }
       await page.close();
     }

@@ -148,6 +148,14 @@ export const escapeCancels = (cancel: () => void) => (event: KeyboardEvent) => {
 };
 
 /**
+ * How a source's row syncs ("Gmail · Push", "Every 15 min"). Its tip repeats its words, as the row's
+ * name and line do, so it shows only while they're cut (SV-253).
+ */
+export function Prov({text}: {text: string}) {
+  return <span className="prov" data-tip={text} data-tip-quick>{text}</span>;
+}
+
+/**
  * What a source's state leads with (the polish audit's settings-01, under states-04's tones): a 7 px
  * `good` dot when checked, `history` in `ink3` when checks stopped, `warning` in `caution` when
  * failing, `sync_problem` when it needs sign-in; the shared spinner while Check now runs.

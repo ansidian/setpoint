@@ -11,7 +11,7 @@ import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {everyLine, newsSourceState, SECTION_LABELS, sourcesHeader, sourceTile} from '../../logic/news.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
-import {HealthGlyph, Page, Section, SkeletonLabel, SkeletonRows} from './parts.tsx';
+import {HealthGlyph, Page, Prov, Section, SkeletonLabel, SkeletonRows} from './parts.tsx';
 
 export function NewsSettingsPage() {
   const dataLoad = {path: NEWS_SOURCES_PATH, ...useResource<NewsSourcesOut>(NEWS_SOURCES_PATH)};
@@ -36,9 +36,9 @@ function SourceRow({source}: {source: NewsSourceOut}) {
   return (
     <div className={state.warn ? 'set-row slim news-src warn' : 'set-row slim news-src'} data-news-source={source.id}>
       <span className="aico"><Icon name={sourceTile(source)} size={16} /></span>
-      <div className="lines grow cols"><span className="t ell">{source.name}</span><span className="s ell">{source.reads}</span></div>
-      <span className="prov">{everyLine(source.interval_seconds)}</span>
-      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? undefined} data-tip-quick>
+      <div className="lines grow cols"><span className="t ell" data-tip={source.name} data-tip-quick>{source.name}</span><span className="s ell" data-tip={source.reads} data-tip-quick>{source.reads}</span></div>
+      <Prov text={everyLine(source.interval_seconds)} />
+      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? state.text} data-tip-quick>
         <HealthGlyph kind={state.kind} />
         <span className="num ell">{state.text}</span>
       </span>

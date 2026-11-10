@@ -23,7 +23,7 @@ import {useCheckNow} from '../states/checkNow.ts';
 import {toastFailure} from '../toast.ts';
 import {useLiveOrder} from './order.ts';
 import type {DragProps} from './order.ts';
-import {escapeCancels, HealthGlyph, Line, Menu, Page, Section, SkeletonRows, useAttempt} from './parts.tsx';
+import {escapeCancels, HealthGlyph, Line, Menu, Page, Prov, Section, SkeletonRows, useAttempt} from './parts.tsx';
 
 const ACCOUNT_ICONS: IconName[] = ['storefront', 'person', 'work', 'badge', 'cloud', 'mail', 'inbox', 'computer', 'group', 'lock'];
 const SOURCE_ICONS: Record<string, IconName> = {google_calendar: 'calendar_month', todoist: 'task_alt', weather: 'partly_cloudy_day'};
@@ -153,10 +153,10 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
           {rename.line && <span className="s" style={{color: 'var(--alert)'}}>{rename.line.text}</span>}
         </form>
       ) : (
-        <div className="lines grow cols"><span className="t">{account.label}</span><span className="s selectable ell">{account.address}</span></div>
+        <div className="lines grow cols"><span className="t ell" data-tip={account.label} data-tip-quick>{account.label}</span><span className="s selectable ell" data-tip={account.address} data-tip-quick>{account.address}</span></div>
       )}
-      <span className="prov">{source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'}</span>
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? undefined} data-tip-quick>
+      <Prov text={source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'} />
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? state.text} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
@@ -203,9 +203,9 @@ function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceO
   return (
     <div className={warnRow(state) ? 'set-row warn' : 'set-row'} data-source={source.provider}>
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>
-      <div className="lines grow cols"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
-      <span className="prov">{syncLine(source, timeZone())}</span>
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? undefined} data-tip-quick>
+      <div className="lines grow cols"><span className="t ell" data-tip={name} data-tip-quick>{name}</span><span className="s ell" data-tip={sub || undefined} data-tip-quick>{sub}</span></div>
+      <Prov text={syncLine(source, timeZone())} />
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? state.text} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && onReconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onReconnect}>Reconnect</button>}
@@ -236,9 +236,9 @@ function TodoistConnectRow({onConnect, busy}: {onConnect: () => void; busy: bool
   return (
     <div className="set-row" data-source="todoist">
       <span className="aico"><Icon name={SOURCE_ICONS.todoist!} size={16} /></span>
-      <div className="lines grow cols"><span className="t">Todoist</span><span className="s ell">Tasks on the calendar</span></div>
+      <div className="lines grow cols"><span className="t ell" data-tip="Todoist" data-tip-quick>Todoist</span><span className="s ell" data-tip="Tasks on the calendar" data-tip-quick>Tasks on the calendar</span></div>
       <span className="prov" />
-      <span className="state">
+      <span className="state" data-tip="Not connected" data-tip-quick>
         <span className="num ell">Not connected</span>
         <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onConnect}>Connect Todoist</button>
       </span>
