@@ -617,10 +617,13 @@ test('Mark all as read says how many it read; Undo brings the dots back at once,
     const held = new Promise<void>(resolve => {
       release = resolve;
     });
+    // Once released the route only passes the lists on, so it stays to the check's end: removing it
+    // turns the browser's interception off, which can strand whatever /api request is crossing it
+    // (SV-261). Its pages close at the end, maybe while it passes one on.
     const lists = /\/api\/mail\/(inbox|all)(\?|$)/;
     await page.route(lists, async route => {
       await held;
-      await route.continue();
+      await route.continue().catch(() => undefined);
     });
     await page.locator('.toast button', {hasText: 'Undo'}).click();
     await until('the dots are back at once', () => unreadRows.count(), count => count === before);
@@ -634,7 +637,6 @@ test('Mark all as read says how many it read; Undo brings the dots back at once,
     await until('the dots go again', () => unreadRows.count(), count => count === 5);
     release();
     await until('the server read them again', () => counts(setpoint).then(value => value.unread), value => value === 5, 5000);
-    await page.unroute(lists);
     await setpoint.idle();
     assert.equal(await unreadRows.count(), 5, 'the lists agree');
 
