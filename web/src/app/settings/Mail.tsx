@@ -261,7 +261,7 @@ function TrustedDomains({domains}: {domains: TrustedDomainOut[] | undefined}) {
     ) : undefined}>
       {!domains ? <SkeletonRows count={2} one /> : <div className="set-group">
         {/* Nothing to list is one plain line across the group, not a cell of the domains' grid. */}
-        {!matching.length ? <div className="set-row one"><span className="s">{filter ? 'No domain matches' : 'None yet · the reader’s “Always show from …” adds one'}</span></div> : (
+        {!matching.length ? <div className="set-row one">{filter ? <span className="s">No domain matches</span> : <><span className="set-empty-icon"><Icon name="image" size={20} /></span><span className="s">None yet · the reader’s “Always show from …” adds one</span></>}</div> : (
           <div className="doms">
             {shown.map(row => (
               <div key={row.domain} className="dom" data-domain={row.domain}>
