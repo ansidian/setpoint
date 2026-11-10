@@ -100,7 +100,7 @@ export function JobsSettingsPage() {
           </div>
         )}
         <Line text={choose.line?.text ?? null} tone={choose.line?.tone} />
-        <p className="note jb-note">Career mail is what triage sorts as Career. Jobs never changes how mail itself is sorted.</p>
+        <p className="note">Career mail is what triage sorts as Career. Jobs never changes how mail itself is sorted.</p>
       </Section>
 
       <Section label="History">
