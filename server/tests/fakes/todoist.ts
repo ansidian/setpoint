@@ -1,18 +1,47 @@
 // A fake Todoist on 127.0.0.1: API v1's Sync endpoint (sync tokens, full and incremental), the
-// completed-tasks list, the task endpoints, a project's update (its colour), and OAuth's token exchange. Repeating tasks move on
-// when closed, as Todoist's do, and the closed occurrence goes to the completed list. The Sync
+// completed-tasks list, the activity log, the task endpoints, a project's update (its colour), and
+// OAuth's token exchange. Repeating tasks move on when closed, as Todoist's do, and the closed
+// occurrence is only in the activity log (a `completed` event naming its day), never in the
+// completed list, which lists only tasks really checked (SV-251, seen on the user's Todoist). A due
+// change, an undo's included, is an `updated` event with the new due; the log has no `uncompleted`
+// for an undo, and its `completed` event stays. Event dates are Todoist's UTC instants, a day's due
+// its local end (23:59:59), in the user's zone (Los Angeles here). The Sync
 // endpoint takes `item_update_date_complete` with `is_forward: 0`, the undo of a repeating task's
 // completion (SV-249), and `reopen` does nothing on a task that isn't checked, as Todoist's doesn't. Errors are
 // Todoist's: 401 for a token it didn't issue (or revoked), 400 for a sync token it doesn't know,
 // 404 for a task that isn't there.
 import type {TodoistLabel, TodoistProject, TodoistTask} from '../../src/providers/todoist/api.ts';
-import {addDays} from '../../src/domain/time.ts';
+import {addDays, localDay, localTime, zonedInstant} from '../../src/domain/time.ts';
 import {fakeServer, on} from './server.ts';
 import type {FakeRequest, FakeResponse} from './server.ts';
 
 const todoistError = (status: number, error: string, tag: string): FakeResponse => ({status, body: {error, error_code: status * 10, error_extra: {}, error_tag: tag, http_code: status}});
 
 type Task = TodoistTask & {seq: number; everyDays?: number};
+
+export interface ActivityEvent {
+  id: number;
+  object_type: 'item';
+  object_id: string;
+  event_type: 'added' | 'updated' | 'completed' | 'deleted';
+  event_date: string;
+  parent_project_id: string | null;
+  parent_item_id: null;
+  initiator_id: null;
+  extra_data: Record<string, unknown>;
+}
+
+const ZONE = 'America/Los_Angeles';
+// Todoist's UTC form in the log: "2026-11-11T07:59:59.000000Z".
+const logInstant = (instant: string) => new Date(instant).toISOString().replace(/\.\d{3}Z$/, '.000000Z');
+/** A due as the log words it: the instant, a day's at its local 23:59:59. */
+function logDue(due: TodoistTask['due']): {utc: string; local: string; hasTime: boolean} | null {
+  if (!due) return null;
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(due.date);
+  const utc = day ? new Date(Date.parse(zonedInstant(due.date, '23:59', ZONE)) + 59_000).toISOString()
+    : /(?:Z|[+-]\d{2}:\d{2})$/.test(due.date) ? new Date(due.date).toISOString() : zonedInstant(due.date.slice(0, 10), due.date.slice(11, 16), ZONE);
+  return {utc: logInstant(utc), local: `${localDay(utc, ZONE)}T${localTime(utc, ZONE)}:${day ? '59' : '00'}`, hasTime: !day};
+}
 
 export async function fakeTodoist() {
   let seq = 0;
@@ -23,6 +52,8 @@ export async function fakeTodoist() {
   const projects = new Map<string, TodoistProject & {seq: number}>();
   const labels = new Map<string, TodoistLabel & {seq: number}>();
   const completed: (TodoistTask & {completed_at: string})[] = [];
+  const activities: ActivityEvent[] = [];
+  let activityIds = 5000;
   const requestIds: string[] = [];
   const refusals: Record<string, unknown>[] = [];
   let clock = () => new Date();
@@ -35,6 +66,31 @@ export async function fakeTodoist() {
     return stored;
   };
   const show = ({seq: _seq, everyDays: _every, ...task}: Task): TodoistTask => task;
+  const log = (task: TodoistTask, event_type: ActivityEvent['event_type'], extra: Record<string, unknown>) => {
+    activities.push({
+      id: (activityIds += 1), object_type: 'item', object_id: task.id, event_type, event_date: clock().toISOString(), parent_project_id: task.project_id ?? null,
+      parent_item_id: null, initiator_id: null, extra_data: {content: task.content, client: 'Setpoint test', ...extra},
+    });
+  };
+  /** A due change, as the log has it: the new due and the one before. */
+  const logDueChange = (before: TodoistTask, after: TodoistTask) => {
+    if (JSON.stringify(before.due ?? null) === JSON.stringify(after.due ?? null)) return;
+    log(after, 'updated', {due_date: logDue(after.due)?.utc ?? null, last_due_date: logDue(before.due)?.utc ?? null});
+  };
+  /**
+   * A close, from the API or Todoist's app: a repeating task moves on and its occurrence is only in
+   * the log; a one-off is checked, in the log and the completed list.
+   */
+  const close = (task: Task) => {
+    const occurrence = logDue(task.due);
+    const repeating = Boolean(task.everyDays && task.due);
+    const after = repeating ? save({...task, due: {...task.due!, date: addDays(task.due!.date.slice(0, 10), task.everyDays!) + task.due!.date.slice(10)}}) : save({...task, checked: true});
+    if (!repeating) completed.push({...show(after), completed_at: clock().toISOString()});
+    log(after, 'completed', {
+      is_recurring: repeating, has_time: occurrence?.hasTime ?? false, completed_due_date: occurrence?.utc ?? null, completed_due_date_local: occurrence?.local ?? null,
+      due_date: repeating ? logDue(after.due)?.utc ?? null : null, completed_date_source: 'due_date',
+    });
+  };
   const record = (request: FakeRequest) => {
     const id = request.headers['x-request-id'];
     if (typeof id === 'string') requestIds.push(id);
@@ -70,7 +126,7 @@ export async function fakeTodoist() {
       else if (type !== 'item_update_date_complete' || args.is_forward !== 0) status[uuid] = {error: 'Unknown command', error_code: 0, error_tag: 'UNKNOWN_COMMAND', http_code: 400, error_extra: {}};
       else if (!task || task.is_deleted) status[uuid] = {error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}};
       else {
-        save({...task, due: args.due as TodoistTask['due']});
+        logDueChange(task, save({...task, due: args.due as TodoistTask['due']}));
         status[uuid] = 'ok';
       }
     }
@@ -98,6 +154,22 @@ export async function fakeTodoist() {
       const since = request.query.get('since')!;
       const until = request.query.get('until')!;
       return {status: 200, body: {items: completed.filter(task => task.completed_at >= since && task.completed_at <= until), next_cursor: null}};
+    }),
+    // The activity log, newest first, in pages of `limit` (Todoist's cursor is opaque; here it's the
+    // offset). `date_from` is inclusive, `date_to` exclusive.
+    on('GET', /^\/api\/v1\/activities$/, request => {
+      if (!authorized(request)) return unauthorized();
+      const query = request.query;
+      const from = query.get('date_from');
+      const to = query.get('date_to');
+      const matching = activities
+        .filter(event => (!query.get('object_type') || event.object_type === query.get('object_type')) && (!query.get('event_type') || event.event_type === query.get('event_type')))
+        .filter(event => (!from || event.event_date >= new Date(from).toISOString()) && (!to || event.event_date < new Date(to).toISOString()))
+        .sort((a, b) => b.event_date.localeCompare(a.event_date) || b.id - a.id);
+      const limit = Number(query.get('limit') ?? 50);
+      const offset = Number(/^o\.(\d+)$/.exec(query.get('cursor') ?? '')?.[1] ?? 0);
+      const page = matching.slice(offset, offset + limit);
+      return {status: 200, body: {results: page, next_cursor: offset + limit < matching.length ? `o.${offset + limit}` : null}};
     }),
     on('POST', /^\/api\/v1\/projects$/, request => {
       if (!authorized(request)) return unauthorized();
@@ -134,7 +206,9 @@ export async function fakeTodoist() {
       const task = tasks.get(match[1]!);
       if (!task || task.is_deleted) return todoistError(404, 'Task not found', 'NOT_FOUND');
       const body = request.body as Record<string, unknown>;
-      return {status: 200, body: show(save({...task, ...(body.content ? {content: String(body.content)} : {}), ...(Array.isArray(body.labels) ? {labels: body.labels as string[]} : {}), due: dueFrom(body, task.due)}))};
+      const updated = save({...task, ...(body.content ? {content: String(body.content)} : {}), ...(Array.isArray(body.labels) ? {labels: body.labels as string[]} : {}), due: dueFrom(body, task.due)});
+      logDueChange(task, updated);
+      return {status: 200, body: show(updated)};
     }),
     on('POST', /^\/api\/v1\/tasks\/([^/]+)\/(close|reopen|move)$/, (request, match) => {
       if (!authorized(request)) return unauthorized();
@@ -150,10 +224,7 @@ export async function fakeTodoist() {
         if (task.checked) save({...task, checked: false});
         return {status: 204};
       }
-      completed.push({...show(task), completed_at: clock().toISOString()});
-      // A repeating task moves on to its next day; a one-off is checked.
-      if (task.everyDays && task.due) save({...task, due: {...task.due, date: addDays(task.due.date.slice(0, 10), task.everyDays)}});
-      else save({...task, checked: true});
+      close(task);
       return {status: 204};
     }),
     on('DELETE', /^\/api\/v1\/tasks\/([^/]+)$/, (request, match) => {
@@ -201,13 +272,16 @@ export async function fakeTodoist() {
     refuseCommand(error: Record<string, unknown>) {
       refusals.push(error);
     },
-    /** The user completes a task in Todoist's own app. */
-    completeInTodoist(id: string, at: Date) {
-      const task = tasks.get(id)!;
-      completed.push({...show(task), completed_at: at.toISOString()});
-      if (task.everyDays && task.due) save({...task, due: {...task.due, date: addDays(task.due.date.slice(0, 10), task.everyDays)}});
-      else save({...task, checked: true});
+    /** The user completes a task in Todoist's own app, now. */
+    completeInTodoist(id: string) {
+      close(tasks.get(id)!);
     },
+    /** The user presses Undo on Todoist's pop-up: the due goes back, an `updated` event, nothing else. */
+    undoInTodoist(id: string, due: TodoistTask['due']) {
+      const task = tasks.get(id)!;
+      logDueChange(task, save({...task, due}));
+    },
+    activities: () => [...activities],
     /** The consent page would hand this code back for this token. */
     grant(code: string, token: string) {
       codes.set(code, token);

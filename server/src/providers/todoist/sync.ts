@@ -5,23 +5,28 @@
 //
 // Completed occurrences of repeating tasks are kept (v1's tombstones, ea_completed_tasks):
 // completing one in Setpoint makes its row at once (src/commands/items.ts), and ones completed in
-// Todoist's apps are read from its completed list, which v1 had stopped reading, so they no longer
-// vanish when Todoist moves the task on. Unlike v1, a sync never prunes them for being absent;
-// they go only with their task when it's deleted.
+// Todoist's apps are read from its activity log (SV-251), so they no longer vanish when Todoist
+// moves the task on. Todoist's completed list never holds a repeating task's occurrence, only tasks
+// really checked, so one-off tasks still come from there. Unlike v1, a sync never prunes them for
+// being absent; they go with their task when it's deleted, or when the log shows the task put back
+// on their day (an Undo in Todoist's app, or SV-249's reopen).
 import {isTodoistColour} from '@setpoint/shared';
 import {and, eq, inArray, isNull, notInArray} from 'drizzle-orm';
+import {localDay} from '../../domain/time.ts';
 import {activeCommands, itemsHeldByCommands} from '../../commands/index.ts';
 import type {ItemRow} from '../../commands/itemMirror.ts';
 import * as t from '../../db/schema.ts';
 import {isoNow, noteLive, transaction} from '../../store.ts';
 import type {Store} from '../../store.ts';
 import {isSyncTokenRefused} from './api.ts';
-import type {SyncAnswer, TodoistApi, TodoistTask} from './api.ts';
+import type {SyncAnswer, TodoistActivity, TodoistApi, TodoistTask} from './api.ts';
 import {readDue} from './due.ts';
 
 const DAY = 86_400_000;
 // How far back the first look at completed tasks goes.
 export const COMPLETED_FIRST_LOOK_MS = 14 * DAY;
+// How far back the first look at the activity log goes: what Todoist's Free plan keeps (SV-251).
+export const ACTIVITY_FIRST_LOOK_MS = 7 * DAY;
 
 /** The one Todoist calendar row ("Todoist", one more toggle), made on connect. */
 export function todoistCalendar(store: Store) {
@@ -137,8 +142,10 @@ export function applySync(store: Store, answer: SyncAnswer, full: boolean) {
 }
 
 /**
- * Occurrences completed in Todoist's apps since the last look: each completed occurrence of a
- * repeating task becomes its done row on its day (once); a one-off task is marked done.
+ * Tasks completed in Todoist's apps since the last look, from its completed list: a one-off task is
+ * marked done. The list never holds a repeating task's occurrence (those come from the activity log,
+ * syncActivity); a repeating task in it was completed for good, and its last occurrence becomes its
+ * done row on its day (once).
  */
 export async function syncCompleted(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);
@@ -168,6 +175,73 @@ export async function syncCompleted(store: Store, api: TodoistApi, since: string
       } else if (row.doneAt === null) {
         store.db.update(t.items).set({doneAt}).where(eq(t.items.id, row.id)).run();
         touched.add(row.id);
+      }
+    }
+    if (touched.size) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});
+  });
+  return until;
+}
+
+/** A due in the activity log as a local day: an instant's in the user's zone, a floating time's own. */
+function logDay(value: unknown, timeZone: string): string | null {
+  if (typeof value !== 'string') return null;
+  if (/(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    const at = Date.parse(value);
+    return Number.isNaN(at) ? null : localDay(new Date(at).toISOString(), timeZone);
+  }
+  return /^\d{4}-\d{2}-\d{2}/.exec(value)?.[0] ?? null;
+}
+
+/**
+ * SV-251: occurrences of repeating tasks completed in Todoist's apps since the last look, from its
+ * activity log. A `completed` event of a repeating task names the occurrence's day
+ * (`completed_due_date_local`), which becomes its done row (once). An undo leaves that event and
+ * adds an `updated` one putting the due back, with no `uncompleted`, so an update that lands the task
+ * on a day it holds a done row for undoes it: the row goes, as does one the same look would make.
+ * Each occurrence is settled by its last event; one-off tasks are left to the completed list.
+ */
+export async function syncActivity(store: Store, api: TodoistApi, since: string | null): Promise<string> {
+  const until = isoNow(store);
+  const from = since ?? new Date(store.now().getTime() - ACTIVITY_FIRST_LOOK_MS).toISOString();
+  const events: TodoistActivity[] = [...await api.activities('completed', from, until), ...await api.activities('updated', from, until)]
+    .sort((a, b) => a.event_date.localeCompare(b.event_date) || (a.id ?? 0) - (b.id ?? 0));
+  transaction(store, () => {
+    const calendar = todoistCalendar(store);
+    const held = itemsHeldByCommands(store);
+    const ids = [...new Set(events.map(event => event.object_id))];
+    const tasks = ids.length ? store.db.select().from(t.items).where(and(eq(t.items.calendarId, calendar.id), inArray(t.items.providerId, ids), isNull(t.items.recurringItemId))).all() : [];
+    const byId = new Map(tasks.map(row => [row.providerId, row]));
+    // Each occurrence's last word: done (when, and at what time), or put back open.
+    const settled = new Map<string, {task: ItemRow; day: string; done: {at: string; dueAt: string | null} | null}>();
+    for (const event of events) {
+      const task = byId.get(event.object_id);
+      const extra = event.extra_data ?? {};
+      if (!task || held.has(task.id)) continue;
+      if (event.event_type === 'completed') {
+        if (extra.is_recurring !== true) continue;
+        const day = logDay(extra.completed_due_date_local, store.timeZone) ?? logDay(extra.completed_due_date, store.timeZone);
+        if (!day) continue;
+        const dueAt = extra.has_time === true && typeof extra.completed_due_date === 'string' && !Number.isNaN(Date.parse(extra.completed_due_date)) ? new Date(extra.completed_due_date).toISOString() : null;
+        settled.set(`${task.id}@${day}`, {task, day, done: {at: new Date(event.event_date).toISOString(), dueAt}});
+      } else if (event.event_type === 'updated') {
+        const day = logDay(extra.due_date, store.timeZone);
+        if (day) settled.set(`${task.id}@${day}`, {task, day, done: null});
+      }
+    }
+    const touched = new Set<number>();
+    for (const {task, day, done} of settled.values()) {
+      const exists = store.db.select({id: t.items.id}).from(t.items).where(and(eq(t.items.recurringItemId, task.id), eq(t.items.originalStart, day))).get();
+      if (done && !exists) {
+        const {id: _id, ...base} = task;
+        const created = store.db.insert(t.items).values({
+          ...base, providerId: `${task.providerId}@${day}`, dueDate: day, dueAt: done.dueAt, recurringItemId: task.id, originalStart: day, doneAt: done.at, cancelled: false,
+        }).returning({id: t.items.id}).get();
+        touched.add(created.id);
+        touched.add(task.id);
+      } else if (!done && exists && !held.has(exists.id)) {
+        store.db.delete(t.items).where(eq(t.items.id, exists.id)).run();
+        touched.add(exists.id);
+        touched.add(task.id);
       }
     }
     if (touched.size) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});

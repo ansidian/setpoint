@@ -18,7 +18,7 @@ import {claimProviderId} from '../../commands/itemMirror.ts';
 import {requestIdFor, TodoistApi} from './api.ts';
 import type {TodoistApiOptions, TodoistTask} from './api.ts';
 import {readDue, repeatOf, writeDue} from './due.ts';
-import {syncCompleted, syncTodoist} from './sync.ts';
+import {syncActivity, syncCompleted, syncTodoist} from './sync.ts';
 
 export type TodoistOptions = TodoistApiOptions;
 
@@ -80,6 +80,7 @@ async function poll(options: TodoistOptions, context: AdapterContext, cursor: st
   const todoist = api(options, context);
   const next = await syncTodoist(context.store, todoist, full ? null : cursor);
   writeCursor(context.store, context.source.id, 'completed', await syncCompleted(context.store, todoist, readCursor(context.store, context.source.id, 'completed')));
+  writeCursor(context.store, context.source.id, 'activity', await syncActivity(context.store, todoist, readCursor(context.store, context.source.id, 'activity')));
   return next;
 }
 

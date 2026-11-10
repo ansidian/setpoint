@@ -370,9 +370,10 @@ describe('changes through the command layer', () => {
     await run();
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(tasks('2026-10-14')).toEqual(['○ Water plants']);
-    // Its completed list names the same occurrence: still one row for Oct 7.
+    // Its activity log names the same occurrence: still one row for Oct 7.
     expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, plants.id)).all().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
-    // The resurrection guard: a stale sync showing Oct 7 open again doesn't undo it.
+    // The resurrection guard: a stale sync showing Oct 7 open again, with nothing in the log to say
+    // the task was put back there, doesn't undo it.
     todoist.put({...todoist.task('t-plants')!, due: {date: '2026-10-07', string: 'every wed', is_recurring: true}});
     w.advance(5 * 60_000);
     await run();
@@ -389,9 +390,8 @@ describe('changes through the command layer', () => {
     await world.run();
     const plants = world.task('t-plants');
     completeItem(world.w.store, plants.id, true, '2026-10-07');
-    await world.run();
-    // A poll after the close, as by the time the toast's Undo is pressed.
-    world.w.advance(5 * 60_000);
+    // The close confirmed and no poll since, as when the toast's Undo is pressed: the poll after the
+    // undo reads the close and the undo together from the activity log (SV-251).
     await world.run();
     const occurrences = () => world.w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, plants.id)).all();
     return {...world, plants, occurrences};
@@ -431,7 +431,7 @@ describe('changes through the command layer', () => {
   });
 
   test('SV-249: a reopen Todoist refuses fails in place with Todoist\'s words; Move back brings the done occurrence back', async () => {
-    const {w, todoist, run, command, task, tasks, occurrences} = await doneOccurrenceWorld();
+    const {w, todoist, run, command, tasks, occurrences} = await doneOccurrenceWorld();
     todoist.refuseCommand({error: 'Item not found', error_code: 22, error_tag: 'ITEM_NOT_FOUND', http_code: 404, error_extra: {}});
     const reopened = completeItem(w.store, occurrences()[0]!.id, false);
     await run();
@@ -443,7 +443,6 @@ describe('changes through the command layer', () => {
     moveBackCommand(w.store, reopened.id);
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(occurrences().map(row => [row.originalStart, row.doneAt !== null])).toEqual([['2026-10-07', true]]);
-    expect(task('t-plants').dueDate).toBe('2026-10-14');
     expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
   });
 
@@ -464,15 +463,126 @@ describe('changes through the command layer', () => {
     expect(task('t-plants').dueDate).toBe('2026-10-14');
   });
 
-  test('a repeating task completed in Todoist\'s own app is kept done on its day', async () => {
-    const {w, todoist, run, tasks} = await todoistWorld();
+  test('SV-249 with SV-251: a reopen after a poll has read the close is not brought back by the next poll either', async () => {
+    const {w, run, tasks, occurrences} = await doneOccurrenceWorld();
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
+    completeItem(w.store, occurrences()[0]!.id, false);
+    await run();
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(occurrences()).toEqual([]);
+  });
+
+  test('SV-251: a repeating task completed in Todoist\'s own app is kept done on its day, from its activity log; its completed list never names it', async () => {
+    const {w, todoist, run, tasks, task} = await todoistWorld();
     await run();
     w.advance(10 * 60_000);
-    todoist.completeInTodoist('t-plants', w.store.now());
+    const completedAt = w.store.now().toISOString();
+    todoist.completeInTodoist('t-plants');
+    expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
     w.advance(5 * 60_000);
     await run();
     expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
     expect(tasks('2026-10-14')).toEqual(['○ Water plants']);
+    const occurrence = w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).get()!;
+    expect(occurrence).toMatchObject({originalStart: '2026-10-07', dueDate: '2026-10-07', dueAt: null, doneAt: completedAt});
+    const read = todoist.requests.filter(request => request.path === '/api/v1/activities');
+    expect(read.map(request => [request.query.get('object_type'), request.query.get('event_type')])).toContainEqual(['item', 'completed']);
+    // Once: later polls make no second row.
+    w.advance(5 * 60_000);
+    await run();
+    expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toHaveLength(1);
+  });
+
+  test('SV-251: a timed occurrence is kept on its local day with its time; a one-off completed in the app is done from the completed list, once', async () => {
+    const {w, todoist, run, tasks, task} = await todoistWorld();
+    // 09:00 in Los Angeles, a floating time as Todoist sends it.
+    todoist.put({id: 't-standup', content: 'Standup', project_id: 'inbox', due: {date: '2026-10-07T09:00:00', string: 'every day at 9am', is_recurring: true}, everyDays: 1});
+    await run();
+    todoist.completeInTodoist('t-standup');
+    todoist.completeInTodoist('t-rent');
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '● Pay rent', '● Standup', '○ Water plants']);
+    expect(tasks('2026-10-08')).toEqual(['○ Standup']);
+    const standup = w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-standup').id)).all();
+    expect(standup.map(row => [row.originalStart, row.dueAt])).toEqual([['2026-10-07', '2026-10-07T16:00:00.000Z']]);
+    // The one-off made no occurrence row of its own.
+    expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-rent').id)).all()).toEqual([]);
+  });
+
+  test('SV-251: the first look reads a week of the activity log, every page', async () => {
+    const {w, todoist, run, tasks} = await todoistWorld();
+    const DAY = 86_400_000;
+    // Completed in the app before Setpoint first looks: Oct 7's eight days before, past what
+    // Todoist's Free plan keeps and the first look, and Oct 14's within the week.
+    todoist.completeInTodoist('t-plants');
+    w.advance(DAY);
+    todoist.completeInTodoist('t-plants');
+    w.advance(7 * DAY - 60 * 60_000);
+    // A busy week: more completions than one page holds, newer than Oct 14's.
+    for (let close = 0; close < 230; close += 1) todoist.completeInTodoist('t-call');
+    w.advance(60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Pay rent']);
+    expect(tasks('2026-10-14')).toEqual(['● Water plants']);
+    expect(tasks('2026-10-21')).toEqual(['○ Water plants']);
+    const reads = todoist.requests.filter(request => request.path === '/api/v1/activities' && request.query.get('event_type') === 'completed');
+    expect(reads[0]!.query.get('date_from')).toBe(new Date(w.store.now().getTime() - 7 * DAY).toISOString());
+    expect(reads.map(request => request.query.get('cursor'))).toEqual([null, 'o.200']);
+  });
+
+  test('SV-251: Undo on Todoist\'s pop-up puts the occurrence back open, whether the poll read the completion before it or with it', async () => {
+    const {w, todoist, engine, source, run, tasks, task} = await todoistWorld();
+    await run();
+    const oct7 = {date: '2026-10-07', string: 'every wed', is_recurring: true};
+    // Completed and undone between two polls: no done row is made.
+    todoist.completeInTodoist('t-plants');
+    w.advance(3_000);
+    todoist.undoInTodoist('t-plants', oct7);
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toEqual([]);
+    // Completed, a poll (a webhook's) makes the done row, then Undo: the next poll takes it away.
+    todoist.completeInTodoist('t-plants');
+    w.advance(2_000);
+    engine.pushed(source.id);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
+    w.advance(3_000);
+    todoist.undoInTodoist('t-plants', oct7);
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '○ Water plants']);
+    expect(tasks('2026-10-14')).toEqual([]);
+    expect(w.store.db.select().from(t.items).where(eq(t.items.recurringItemId, task('t-plants').id)).all()).toEqual([]);
+    // And completed again for real, it's done again.
+    w.advance(60_000);
+    todoist.completeInTodoist('t-plants');
+    w.advance(5 * 60_000);
+    await run();
+    expect(tasks('2026-10-07')).toEqual(['○ Call Mom', '○ Pay rent', '● Water plants']);
+  });
+
+  test('SV-251: with a later occurrence completed in Todoist\'s app, Reopen is offered on that one, not the one completed here', async () => {
+    const {w, todoist, run, task, day, occurrences} = await doneOccurrenceWorld();
+    w.advance(7 * 24 * 60 * 60_000);
+    await run();
+    todoist.completeInTodoist('t-plants');
+    w.advance(5 * 60_000);
+    await run();
+    expect(occurrences().map(row => row.originalStart).sort()).toEqual(['2026-10-07', '2026-10-14']);
+    expect(day('2026-10-07').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: false});
+    expect(day('2026-10-14').find(item => item.title === 'Water plants')).toMatchObject({done: true, can_reopen: true});
+    const latest = occurrences().find(row => row.originalStart === '2026-10-14')!;
+    completeItem(w.store, latest.id, false);
+    await run();
+    expect(todoist.task('t-plants')!.due!.date).toBe('2026-10-14');
+    expect(task('t-plants').dueDate).toBe('2026-10-14');
   });
 
   test('delete; a task already gone in Todoist counts as deleted; a failure keeps Todoist\'s words', async () => {

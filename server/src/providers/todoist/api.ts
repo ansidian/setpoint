@@ -1,7 +1,7 @@
 // Todoist's unified API (v1, as v1 used) over plain fetch: the Sync endpoint for the mirror (and,
-// SV-249, a repeating task's undo, a Sync command), the
-// completed-tasks list for occurrences completed in Todoist's own apps, and the task endpoints for
-// changes. Errors carry Todoist's own words; 401 and 403 mean the connection was revoked (v1 never
+// SV-249, a repeating task's undo, a Sync command), the completed-tasks list for one-off tasks
+// completed in Todoist's own apps, the activity log for a repeating task's occurrences completed
+// there (SV-251), and the task endpoints for changes. Errors carry Todoist's own words; 401 and 403 mean the connection was revoked (v1 never
 // treated them so, see SV-6), 429 waits.
 import {createHash} from 'node:crypto';
 import {kindOfStatus, ProviderError} from '../../sync/errors.ts';
@@ -49,6 +49,16 @@ export interface SyncAnswer {
   items?: TodoistTask[];
   projects?: TodoistProject[];
   labels?: TodoistLabel[];
+}
+
+/** One activity log event (GET /api/v1/activities); `extra_data` holds what changed. */
+export interface TodoistActivity {
+  id?: number | null;
+  object_type: string;
+  object_id: string;
+  event_type: string;
+  event_date: string;
+  extra_data?: Record<string, unknown> | null;
 }
 
 export interface TodoistApiOptions extends HttpOptions {
@@ -121,6 +131,20 @@ export class TodoistApi {
       cursor = page?.next_cursor ?? undefined;
     } while (cursor);
     return tasks;
+  }
+
+  /** A task event type's activity log entries in [since, until), every page (SV-251). */
+  async activities(eventType: 'completed' | 'updated', since: string, until: string): Promise<TodoistActivity[]> {
+    const events: TodoistActivity[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await this.call<{results?: TodoistActivity[]; next_cursor?: string | null}>('GET', 'activities', {
+        query: {object_type: 'item', event_type: eventType, date_from: since, date_to: until, limit: '200', cursor},
+      });
+      events.push(...(page?.results ?? []));
+      cursor = page?.next_cursor ?? undefined;
+    } while (cursor);
+    return events;
   }
 
   createProject(name: string, requestId: string): Promise<TodoistProject> {
