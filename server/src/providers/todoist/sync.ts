@@ -224,7 +224,8 @@ function logDay(value: unknown, timeZone: string): string | null {
  * (`completed_due_date_local`), which becomes its done row (once). An undo leaves that event and
  * adds an `updated` one putting the due back, with no `uncompleted`, so an update that lands the task
  * on a day it holds a done row for undoes it: the row goes, as does one the same look would make.
- * Each occurrence is settled by its last event; one-off tasks are left to the completed list.
+ * Each occurrence is settled by its last event; one-off tasks are left to the completed list. A look
+ * that left a held task's event alone ends where it began, so the next one reads it again (SV-260).
  */
 export async function syncActivity(store: Store, api: TodoistApi, since: string | null): Promise<string> {
   const until = isoNow(store);
@@ -232,7 +233,7 @@ export async function syncActivity(store: Store, api: TodoistApi, since: string 
   const from = since && since > earliest ? since : earliest;
   const events: TodoistActivity[] = [...await api.activities('completed', from, until), ...await api.activities('updated', from, until)]
     .sort((a, b) => Date.parse(a.event_date) - Date.parse(b.event_date) || (a.id ?? 0) - (b.id ?? 0));
-  transaction(store, () => {
+  const skipped = transaction(store, () => {
     const calendar = todoistCalendar(store);
     const held = itemsHeldByCommands(store);
     const ids = [...new Set(events.map(event => event.object_id))];
@@ -240,10 +241,15 @@ export async function syncActivity(store: Store, api: TodoistApi, since: string 
     const byId = new Map(tasks.map(row => [row.providerId, row]));
     // Each occurrence's last word: done (when, and at what time), or put back open.
     const settled = new Map<string, {task: ItemRow; day: string; done: {at: string; dueAt: string | null} | null}>();
+    let skipped = false;
     for (const event of events) {
       const task = byId.get(event.object_id);
       const extra = extraOf(event);
-      if (!task || held.has(task.id)) continue;
+      if (!task) continue;
+      if (held.has(task.id)) {
+        skipped = true;
+        continue;
+      }
       if (event.event_type === 'completed') {
         if (extra.is_recurring !== true) continue;
         const day = logDay(extra.completed_due_date_local, store.timeZone) ?? logDay(extra.completed_due_date, store.timeZone);
@@ -265,13 +271,16 @@ export async function syncActivity(store: Store, api: TodoistApi, since: string 
         }).returning({id: t.items.id}).get();
         touched.add(created.id);
         touched.add(task.id);
-      } else if (!done && exists && !held.has(exists.id)) {
+      } else if (!done && exists && held.has(exists.id)) {
+        skipped = true;
+      } else if (!done && exists) {
         store.db.delete(t.items).where(eq(t.items.id, exists.id)).run();
         touched.add(exists.id);
         touched.add(task.id);
       }
     }
     if (touched.size) noteLive(store, {type: 'items', items: [...touched].sort((a, b) => a - b), calendars: [calendar.id], commands: []});
+    return skipped;
   });
-  return until;
+  return skipped ? from : until;
 }
