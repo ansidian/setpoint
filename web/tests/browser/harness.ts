@@ -44,8 +44,6 @@ export const zoomAt = (width: number): number => viewport.zoom.reduce<number>((z
 export const ZOOM = zoomAt(SIZES.target.width);
 /** A length in the page's pixels to the nearest half: at a fractional zoom the browser snaps boxes and computed lengths to the device's pixels. */
 export const pagePx = (windowPx: number, zoom = ZOOM): number => Math.round(windowPx / zoom * 2) / 2;
-/** A computed length ('1px') to the nearest half pixel, as its stylesheet wrote it. */
-export const nearPx = (value: string): string => `${Math.round(parseFloat(value) * 2) / 2}px`;
 
 export const PASSWORD = 'browser checks only';
 

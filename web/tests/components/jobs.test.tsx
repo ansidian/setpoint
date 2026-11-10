@@ -965,38 +965,19 @@ test('SV-220: the menu a pane row gets is the table row\'s without Not this post
   expect(ids(rowMenu(row, [row], TODAY, on, true))).toEqual(full.filter((id, index) => !['not-this-posting', 'look-up'].includes(id) && index !== full.indexOf('look-up') + 1));
 });
 
-/** WCAG's contrast between two computed `rgb()` colours. */
-function contrast(a: string, b: string): number {
-  const luminance = (value: string) => {
-    const [r, g, bl] = value.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(channel => {
-      const c = channel / 255;
-      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
-  };
-  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (high! + 0.05) / (low! + 0.05);
-}
-
 test('SV-220: every status a row can name reads at 4.5:1 on the list\'s panel, in Night and in Light (the sweep caught Light\'s Offer)', async () => {
   const sides = (['applied', 'in_process', 'offer', 'rejected', 'withdrawn', 'ghosted'] as const);
-  await render(<ol className="nd-list">{sides.map((to, index) => <li key={to}><MoveRow move={{...MOVE, application_id: index + 1, from: null, to}} timeZone={ZONE} today={TODAY} onOpen={() => {}} onMenu={() => {}} /></li>)}</ol>);
-  const sRgb = (value: string) => {
-    const context = document.createElement('canvas').getContext('2d')!;
-    context.fillStyle = value;
-    context.fillRect(0, 0, 1, 1);
-    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-    return `rgb(${r}, ${g}, ${b})`;
-  };
+  const moving = still();
+  await render(<div style={{background: 'var(--panel)'}}><ol className="nd-list">{sides.map((to, index) => <li key={to}><MoveRow move={{...MOVE, application_id: index + 1, from: null, to}} timeZone={ZONE} today={TODAY} onOpen={() => {}} onMenu={() => {}} /></li>)}</ol></div>);
   try {
     for (const theme of ['night', 'light'] as const) {
       applyTheme(document.documentElement, theme);
-      const panel = sRgb(colour('var(--panel)'));
-      const ratios = [...document.querySelectorAll<HTMLElement>('.jd-change > .sl')].map(side => contrast(sRgb(getComputedStyle(side).color), panel));
+      const ratios = [...document.querySelectorAll<HTMLElement>('.jd-change > .sl')].map(side => contrastOf(side));
       expect(ratios.filter(ratio => ratio < 4.5), theme).toEqual([]);
     }
   } finally {
     applyTheme(document.documentElement, 'night');
+    moving();
   }
 });
 
