@@ -25,7 +25,7 @@ async function load(setpoint: Setpoint, path = '/inbox'): Promise<Page> {
   return page;
 }
 
-test('the views: Unread\'s red badge and Attention\'s count, Tab and Shift-Tab stepping them and wrapping; the sidebar is the badge alone and the title counts unread', async () => {
+test('the views: Unread\'s red badge and Attention\'s count, Tab and Shift-Tab stepping them; the sidebar is the badge alone and the title counts unread', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await load(setpoint);
@@ -35,13 +35,15 @@ test('the views: Unread\'s red badge and Attention\'s count, Tab and Shift-Tab s
     assert.deepEqual(await page.locator('.nav:has-text("Inbox") .num').allTextContents(), ['19']);
     assert.equal(await page.locator('.nav:has-text("Inbox") .ubadge').count(), 1);
     await until('the title counts unread', () => page.title(), title => title === '(19) Inbox');
-    // Tab steps to the next view, wrapping past Noise; Shift-Tab goes back.
-    for (const [key, view] of [['Tab', 'unread'], ['Tab', 'attention'], ['Tab', 'fyi'], ['Tab', 'noise'], ['Tab', null], ['Shift+Tab', 'noise']] as const) {
+    // Tab steps to the next view; Shift-Tab goes back (the wrap is components/segmented.test.tsx's).
+    for (const [key, view] of [['Tab', 'unread'], ['Shift+Tab', null]] as const) {
       await page.keyboard.press(key);
       await until(`${key} to ${view ?? 'all'}`, async () => viewOf(page), now => now === view);
     }
-    assert.equal(await on(page), 'Noise');
+    assert.equal(await on(page), 'All');
     // 1 goes back to All; the sidebar's Inbox does from any view.
+    await page.locator('.hd .ib-views button', {hasText: 'Noise'}).click();
+    await until('Noise', async () => viewOf(page), now => now === 'noise');
     await page.keyboard.press('1');
     await until('1 opens All', async () => viewOf(page), now => now === null);
     await page.locator('.hd .ib-views button', {hasText: 'FYI'}).click();

@@ -426,18 +426,15 @@ test('paging lands on the month it went to, N N N chaining on to January; Month 
   }
 });
 
-test('SV-211: Tab and Shift-Tab step Month | Week from anywhere, wrapping; in the editor Tab is its own', async () => {
+test('SV-211: Tab and Shift-Tab step Month | Week from anywhere; in the editor Tab is its own', async () => {
   const setpoint = await startSetpoint();
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/calendar`);
     await page.locator('.cal-month').waitFor();
     assert.equal(await page.locator('.hd .seg').getAttribute('data-tip'), 'Tab · ⇧Tab');
+    // One step each way turns stepping on; the wrap is components/segmented.test.tsx's.
     await page.keyboard.press('Tab');
-    await page.locator('.cal-week').waitFor();
-    await page.keyboard.press('Tab');
-    await page.locator('.cal-month').waitFor();
-    await page.keyboard.press('Shift+Tab');
     await page.locator('.cal-week').waitFor();
     await page.keyboard.press('Shift+Tab');
     await page.locator('.cal-month').waitFor();
