@@ -1,5 +1,6 @@
 // Settings › Calendar (not drawn; DESIGN.md › Settings' row pattern, BRIEF.md › Settings): which
 // calendars show and each Google calendar's colour (SV-20, written to Google), Home for Time to Leave and the forecast (a place, with its coordinates),
+// Time to Leave's switch and Buffer, under Home since it leaves from there (D513),
 // Todoist's projects with their colours (SV-25, written to Todoist) and the default project for a task
 // with none (D514: Settings has no Todoist page; its connection is Accounts › Sources' row), weather
 // on or off, the forecast's Pirate Weather key (the weather source's credential, D16) and the Google
@@ -14,11 +15,12 @@ import {findPlace, patchSettings, SECRETS_PATH, setSourceKey, SOURCES_PATH} from
 import {todoistConnected} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
-import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Switch, useAttempt} from './parts.tsx';
+import {Line, Menu, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt} from './parts.tsx';
 import {KeyRow, SecretRow} from './Ai.tsx';
 import {openSettings} from './store.ts';
 
 const INBOX = '';
+const BUFFER_STEP = 5;
 export function CalendarPage() {
   const calendarsLoad = {path: CALENDARS_PATH, ...useResource<CalendarOut[]>(CALENDARS_PATH)};
   const calendars = calendarsLoad.data;
@@ -33,6 +35,7 @@ export function CalendarPage() {
   const projects = projectsLoad.data;
   const save = useAttempt();
   const saveProject = useAttempt();
+  const saveLeave = useAttempt();
   const [editingHome, setEditingHome] = useState(false);
   const home = settings?.calendar.home ?? null;
 
@@ -59,7 +62,10 @@ export function CalendarPage() {
         </div>}
       </Section>
 
-      {/* Time to Leave's group comes here, between Home and Todoist (D513). */}
+      <Section label="Time to Leave">
+        {!settings ? <SkeletonRows count={2} /> : <TimeToLeave settings={settings} change={patch => void saveLeave.attempt(() => patchSettings(patch))} />}
+        <Line text={saveLeave.line?.text ?? null} tone={saveLeave.line?.tone} />
+      </Section>
 
       <Section label="Todoist">
         {/* Whether it's connected is said only once it's known (states-01). */}
@@ -101,6 +107,28 @@ export function CalendarPage() {
         <Line text={save.line?.text ?? null} tone={save.line?.tone} />
       </Section>
     </Page>
+  );
+}
+
+/**
+ * Time to Leave (D513, moved from Notifications): its switch, which needs Home and says so without
+ * one (UX #13), and the buffer, in 5 min steps from 0 to 120. It leaves from Home, the group above.
+ */
+function TimeToLeave({settings, change}: {settings: Settings; change: (patch: Parameters<typeof patchSettings>[0]) => void}) {
+  const leave = settings.time_to_leave;
+  const home = settings.calendar.home;
+  return (
+    <div className="set-group">
+      <Row title="Time to Leave" sub={home ? `Live routes from ${home.label}` : 'Set Home first'}>
+        <Switch on={leave.enabled && !!home} disabled={!home} label="Time to Leave" onChange={on => change({time_to_leave: {enabled: on}})} />
+      </Row>
+      <Row title="Buffer" kind="ctl">
+        <Stepper value={`${leave.buffer_minutes} min`} label="Buffer" onStep={delta => {
+          const next = Math.min(120, Math.max(0, leave.buffer_minutes + delta * BUFFER_STEP));
+          if (next !== leave.buffer_minutes) change({time_to_leave: {buffer_minutes: next}});
+        }} />
+      </Row>
+    </div>
   );
 }
 

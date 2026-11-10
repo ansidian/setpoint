@@ -1,6 +1,6 @@
 // Settings › Notifications (board 18b): ntfy's state with Send test, its Server and Token, the topics in
-// mono with their switches, the reminder defaults, Time to Leave (leaving from Home, set in
-// Calendar, with a buffer) and Alerts (Reconnect alerts, once per source), every group labelled.
+// mono with their switches, the reminder defaults and Alerts (Reconnect alerts, once per source),
+// every group labelled. Time to Leave's group is on Calendar, under Home (D513).
 import type {NotifyStatusOut, SecretOut, Settings} from '@setpoint/shared';
 import {useState} from 'react';
 import {timeZone} from '../../api/auth.ts';
@@ -13,10 +13,8 @@ import {motion} from '../../tokens.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
 import {SecretRow} from './Ai.tsx';
-import {Line, Page, Row, Section, Select, SkeletonRows, Stepper, Switch, useAttempt, useFlash} from './parts.tsx';
-import {openSettings} from './store.ts';
+import {Line, Page, Row, Section, Select, SkeletonRows, Switch, useAttempt, useFlash} from './parts.tsx';
 
-const BUFFER_STEP = 5;
 // How long Send test's check stays after a test went, and the Server field's after a save (settings-07).
 const SENT_MS = 2000;
 const SAVED_MS = 1500;
@@ -43,18 +41,16 @@ export function NotificationsPage() {
       <Page title="Notifications" loads={[settingsLoad, statusLoad, secretsLoad]}>
         <Section label="ntfy" style={{marginTop: 0}}><SkeletonRows count={4} /></Section>
         <Section label="Reminder defaults"><SkeletonRows count={2} one /></Section>
-        <Section style={{marginTop: 22}}><SkeletonRows count={3} /></Section>
-        <Section><SkeletonRows count={1} /></Section>
+        <Section label="Alerts"><SkeletonRows count={1} /></Section>
       </Page>
     );
   }
-  const {notifications: ntfy, reminders, time_to_leave: leave} = settings;
+  const {notifications: ntfy, reminders} = settings;
   const change = (patch: Parameters<typeof patchSettings>[0]) => void save.attempt(() => patchSettings(patch));
 
-  // What the switches need before they can do anything: a server for ntfy's topics, Home for Time to
-  // Leave. Without it a switch shows off and can't be turned on, and says what's missing (UX #13).
+  // What the switches need before they can do anything: a server for ntfy's topics. Without it a
+  // switch shows off and can't be turned on, and says what's missing (UX #13).
   const noServer = !ntfy.ntfy_server;
-  const noHome = !settings.calendar.home;
   // ntfy failing is a source struggling: `caution`, as every failing source is (states-04).
   const state = !status ? null : !status.configured ? {dot: 'okdot off', text: 'Not set up'}
     : status.last_error ? {dot: 'okdot warn', text: `Failing, ${status.last_error}`}
@@ -110,25 +106,6 @@ export function NotificationsPage() {
           <Row title="Tasks" kind="ctl">
             <Select value={reminders.task_time ?? NONE} label="Task reminders" onChange={time => change({reminders: {task_time: time || null}})}
               options={[{value: NONE, label: 'None'}, ...[...new Set([...TASK_TIMES, reminders.task_time ?? TASK_TIMES[0]!])].sort().map(time => ({value: time, label: taskTime(time)}))]} />
-          </Row>
-        </div>
-      </Section>
-
-      <Section label="Time to Leave">
-        <div className="set-group">
-          <Row title="Time to Leave" sub={noHome ? 'Set Home first' : `Live routes from ${settings.calendar.home!.label}`}>
-            <Switch on={leave.enabled && !noHome} disabled={noHome} label="Time to Leave" onChange={on => change({time_to_leave: {enabled: on}})} />
-          </Row>
-          <Row title="Leave from" kind="ctl">
-            <button className="btn quiet sm" type="button" style={{paddingRight: 4}} onClick={() => openSettings('calendar')}>
-              {settings.calendar.home ? `${settings.calendar.home.label} · set in Calendar` : 'Not set · set in Calendar'}<Icon name="chevron_right" size={16} />
-            </button>
-          </Row>
-          <Row title="Buffer" kind="ctl">
-            <Stepper value={`${leave.buffer_minutes} min`} label="Buffer" onStep={delta => {
-              const next = Math.min(120, Math.max(0, leave.buffer_minutes + delta * BUFFER_STEP));
-              if (next !== leave.buffer_minutes) change({time_to_leave: {buffer_minutes: next}});
-            }} />
           </Row>
         </div>
       </Section>

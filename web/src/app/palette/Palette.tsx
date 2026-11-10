@@ -32,10 +32,10 @@ const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'
 const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'accounts', keywords: 'gmail google icloud todoist reconnect connect'},
   {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
-  {page: 'calendar', keywords: 'calendars home todoist projects tasks weather forecast maps places'},
+  {page: 'calendar', keywords: 'calendars home time to leave buffer todoist projects tasks weather forecast maps places'},
   {page: 'news', keywords: 'sources feeds airnow'},
   {page: 'jobs', keywords: 'applications history reads'},
-  {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
+  {page: 'notifications', keywords: 'ntfy reminders alerts'},
   {page: 'ai', keywords: 'keys models anthropic claude alfred usage cap'},
   {page: 'appearance', keywords: 'theme'},
   {page: 'security', keywords: 'password passkeys recovery codes'},

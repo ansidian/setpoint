@@ -575,7 +575,7 @@ export function Editor({open, calendars, today, timeZone, dayItems, handed, onPr
   const fallbackCalendar = google.find(calendar => calendar.visible)?.id ?? google[0]?.id ?? null;
   const eventDefault = settings?.reminders.event_minutes_before ?? null;
   // Time to Leave's chip says how it leaves, or that Settings has it off (SV-31).
-  const leaveTitle = settings && !settings.time_to_leave.enabled ? 'Time to Leave is off in Settings › Notifications'
+  const leaveTitle = settings && !settings.time_to_leave.enabled ? 'Time to Leave is off in Settings › Calendar'
     : `Leave by live routes from Home, with a ${settings?.time_to_leave.buffer_minutes ?? 5} min buffer`;
   const defaultReminders = useMemo(() => (open.kind === 'event' && eventDefault !== null ? [eventDefault] : []), [open.kind, eventDefault]);
   // What a dated task without a time counts its reminders from (D288).

@@ -1461,10 +1461,12 @@ section's label stays under the title (#132).
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
   `setpoint-mail`: Attention mail · Off for now; then **FYI mail**, to the same topic, off,
   [Decided while building](#decided-while-building) #252), **Reminder defaults** (Events 10 min before; Tasks
-  9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49), **Time to Leave** (live routes; leave from Home, set in Calendar; a 5 min
-  buffer; on for the events given it, #86) and **Alerts** (Reconnect alerts, once per source), every
-  group labelled (#135).
-- **Calendar** (not drawn): **Calendars**, **Home**, **Todoist** (each project's colour, #28, then
+  9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49) and
+  **Alerts** (Reconnect alerts, once per source), every group labelled (#135). Time to Leave's group
+  is on Calendar (#358).
+- **Calendar** (not drawn): **Calendars**, **Home**, **Time to Leave** (its switch, "Live routes
+  from Home", or "Set Home first", off and disabled, without one; a 5 min Buffer; on for the events
+  given it, #86, #358), **Todoist** (each project's colour, #28, then
   Default project; while Todoist isn't connected, "Not connected" with **Connect in Accounts**) and
   **Weather and places** (#69); the page scrolls (#356).
 - **AI, Appearance, Security** follow the same row pattern ([BRIEF.md ›
@@ -1709,6 +1711,9 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 49. **Settings has no Todoist page** (#356): where a board's Settings nav lists Todoist (17, 18a,
     18b, 30a, 30b, 39a), the app's doesn't; its projects and default project are on Calendar, its
     connection on Accounts' Todoist row.
+50. **Time to Leave is on Settings › Calendar** (#358): board 18b draws its group on Notifications,
+    with a "Leave from" row; the app's is under Calendar's Home, its switch and Buffer, and
+    Notifications ends with Reminder defaults and Alerts.
 
 ## Not designed yet
 
@@ -4521,3 +4526,14 @@ was decided; the audit itself was retired by D480.
     ↑ ↓ in the nav walk the nine pages in this order as one list, wrapping at the ends, and ⌘K's
     Settings entries come in it too. Jobs stays in the nav whether it's on or off, as before (its
     switch is on its page). Decided for Andy overnight: the gap's 14 px, the sections' gap.
+358. **Time to Leave's settings are on Settings › Calendar** (amending Settings' Notifications and
+    Calendar, #135 and board 18b; Andy, 2026-11-09; darma SV-253, D513): a **Time to Leave** group
+    under Home, before Todoist, with its switch ("Live routes from Home") and Buffer (5 min steps, 0
+    to 120), as Notifications had them. The "Leave from" row is gone, since Home is the group above;
+    without Home the switch is off and disabled and says "Set Home first" (UX #13). Notifications
+    keeps ntfy, Reminder defaults and Alerts, so #135's "Time to Leave" label is Calendar's now.
+    ⌘K's Settings › Calendar takes "time to leave buffer", and the editor's Time to Leave chip, while
+    it's off, says "Time to Leave is off in Settings › Calendar". Decided for Andy overnight: its rows
+    keep Notifications' heights (the switch row's two lines leave it at 57.42 px, as Weather's and
+    every two-line Settings row with a switch is today, not changed here), and its save errors show
+    under its own group.

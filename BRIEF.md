@@ -868,9 +868,9 @@ the sidebar and ⌘K, and openable straight to a page (a reconnect link goes to 
 
 - **Accounts:** connect Gmail (Google sign-in) and iCloud (app password); reconnect; label,
   colour, icon, order; each source's health.
-- **Calendar:** which calendars show; home location (for Time to Leave); weather on or off.
+- **Calendar:** which calendars show; home location; Time to Leave and its buffer; weather on or off.
 - **Todoist:** connection, default project.
-- **Notifications:** ntfy server and topics, reminder defaults, Time to Leave.
+- **Notifications:** ntfy server and topics, reminder defaults, alerts.
 - **Mail:** rules (written and learned; written ones can mark read and trash), trusted
   remote-content domains, the code expiry.
 - **AI:** the Anthropic key (write-only), the triage and Alfred models; after 2.0, News's

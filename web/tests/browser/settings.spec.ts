@@ -523,7 +523,7 @@ async function fakeNtfy() {
   return {url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, published, close: () => new Promise(resolve => server.close(resolve))};
 }
 
-test('Notifications: the server and its token, Send test reaching a fake ntfy, the switches, the defaults and the buffer', async () => {
+test('Notifications: the server and its token, Send test reaching a fake ntfy, the switches and the defaults; Time to Leave is on Calendar (D513)', async () => {
   const ntfy = await fakeNtfy();
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -532,15 +532,15 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     const settings = () => setpoint.api<Settings>('GET', '/settings');
     await page.locator('.settings .set-label', {hasText: 'Not set up'}).waitFor();
     // With no server, the topics' switches can't work: off and disabled, saying what's missing, and no
-    // Send test; Time to Leave waits for Home the same way (UX #13).
+    // Send test (UX #13). Time to Leave's group isn't here: it's on Calendar (D513).
     for (const name of ['setpoint-reminders', 'setpoint-mail', 'FYI mail', 'Reconnect alerts']) {
       const toggle = page.getByRole('switch', {name});
       assert.deepEqual([await toggle.isDisabled(), await toggle.getAttribute('aria-checked')], [true, 'false'], name);
     }
     assert.equal(await page.locator('.settings .set-row', {hasText: 'setpoint-reminders'}).locator('.s').textContent(), 'Set a server first');
     assert.equal(await page.getByRole('button', {name: 'Send test'}).count(), 0);
-    assert.equal(await page.getByRole('switch', {name: 'Time to Leave'}).isDisabled(), true);
-    assert.equal(await page.locator('.settings .set-row', {hasText: 'Time to Leave'}).locator('.s').textContent(), 'Set Home first');
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents().then(labels => labels.map(label => label.split(/Not set up/)[0])), ['ntfy', 'Reminder defaults', 'Alerts']);
+    assert.equal(await page.getByRole('switch', {name: 'Time to Leave'}).count(), 0);
     await page.locator('.settings input[aria-label="ntfy server"]').fill(ntfy.url);
     await page.keyboard.press('Enter');
     await settled('the server', settings, value => value.notifications.ntfy_server === ntfy.url);
@@ -569,16 +569,11 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
 
     await choose(page, 'Event reminders', '30 min before');
     await choose(page, 'Task reminders', '8:00 AM on the due day');
-    await page.getByRole('group', {name: 'Buffer'}).getByRole('button', {name: 'More'}).click();
-    await settled('defaults and buffer', settings, value => value.reminders.event_minutes_before === 30 && value.reminders.task_time === '08:00' && value.time_to_leave.buffer_minutes === 10);
-    await page.locator('.settings .stepper .v', {hasText: '10 min'}).waitFor();
+    await settled('defaults', settings, value => value.reminders.event_minutes_before === 30 && value.reminders.task_time === '08:00');
     // Each default offers None (D49).
     await choose(page, 'Event reminders', 'None');
     await choose(page, 'Task reminders', 'None');
     await settled('reminder defaults at None', settings, value => value.reminders.event_minutes_before === null && value.reminders.task_time === null);
-
-    await page.getByRole('button', {name: /Not set · set in Calendar/}).click();
-    await page.locator('.settings .set-title', {hasText: 'Calendar'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
@@ -641,7 +636,7 @@ test('Send test (the polish audit\'s states-11, settings-07): it shows it\'s sen
   }
 });
 
-test('Calendar and Appearance: a calendar unlisted, Home set with its coordinates, Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
+test('Calendar and Appearance: a calendar unlisted, Home set with its coordinates, Time to Leave waiting for Home then on with its buffer (D513), Todoist\'s default project, weather off, Light; Todoist reconnects from Accounts', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
@@ -649,8 +644,13 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     const settings = () => setpoint.api<Settings>('GET', '/settings');
     // Every group has its label.
     await page.getByRole('switch', {name: 'Show Classes'}).waitFor();
-    // Todoist's projects and default project are a section here (D514).
-    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Home', 'Todoist', 'Weather and places']);
+    // Time to Leave's group is here, under Home (D513), and Todoist's projects and default project are a section (D514).
+    assert.deepEqual(await page.locator('.settings .set-label').allTextContents(), ['Calendars', 'Home', 'Time to Leave', 'Todoist', 'Weather and places']);
+    // Without Home, Time to Leave can't work: off and disabled, saying what's missing (UX #13).
+    const leave = page.getByRole('switch', {name: 'Time to Leave'});
+    const leaveRow = page.locator('.settings .set-row', {has: leave});
+    assert.deepEqual([await leave.isDisabled(), await leave.getAttribute('aria-checked')], [true, 'false']);
+    assert.equal(await leaveRow.locator('.s').textContent(), 'Set Home first');
 
     await page.getByRole('switch', {name: 'Show Classes'}).click();
     await settled('Classes hidden', () => setpoint.api<CalendarOut[]>('GET', '/calendars'), list => list.find(calendar => calendar.name === 'Classes')?.listed === false);
@@ -661,6 +661,17 @@ test('Calendar and Appearance: a calendar unlisted, Home set with its coordinate
     const home = await settled('Home', settings, value => value.calendar.home !== null);
     assert.deepEqual(home.calendar.home, {label: 'Home', address: '845 Example St, Los Angeles', lat: 34.1478, lng: -118.1445});
     await page.locator('.settings .set-row', {hasText: '845 Example St, Los Angeles'}).waitFor();
+    // With Home, Time to Leave says where it leaves from and shows on, as it's kept; it turns off and
+    // back on, and the buffer steps by 5 min.
+    await leaveRow.locator('.s', {hasText: /^Live routes from Home$/}).waitFor();
+    assert.deepEqual([home.time_to_leave, await leave.isDisabled(), await leave.getAttribute('aria-checked')], [{enabled: true, buffer_minutes: 5}, false, 'true']);
+    await leave.click();
+    await settled('Time to Leave off', settings, value => !value.time_to_leave.enabled);
+    await page.locator('.settings [role="switch"][aria-label="Time to Leave"][aria-checked="false"]').waitFor();
+    await leave.click();
+    await page.getByRole('group', {name: 'Buffer'}).getByRole('button', {name: 'More'}).click();
+    await settled('Time to Leave on, buffer', settings, value => value.time_to_leave.enabled && value.time_to_leave.buffer_minutes === 10);
+    await page.locator('.settings .stepper .v', {hasText: '10 min'}).waitFor();
 
     await choose(page, 'Default project', 'School');
     await settled('default project', settings, value => value.todoist.default_project === 'School');

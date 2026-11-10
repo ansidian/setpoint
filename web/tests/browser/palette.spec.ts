@@ -154,13 +154,13 @@ test('Go to, Appearance, and typing finds the commands that only have a key', as
   }
 });
 
-test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, "projects" Calendar (D514)', async () => {
+test('UX #20: typing what a Settings section holds finds it: "rules" opens Mail, "ntfy" Notifications, "keys" AI, "projects" and "buffer" Calendar (D514, D513)', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await page.goto(`${setpoint.base}/inbox`);
     await page.locator('.list .row').first().waitFor();
-    for (const [typed, section] of [['rules', 'Mail'], ['ntfy', 'Notifications'], ['keys', 'AI'], ['passkeys', 'Security'], ['projects', 'Calendar']] as const) {
+    for (const [typed, section] of [['rules', 'Mail'], ['ntfy', 'Notifications'], ['keys', 'AI'], ['passkeys', 'Security'], ['projects', 'Calendar'], ['buffer', 'Calendar']] as const) {
       await page.keyboard.press('Meta+k');
       await page.keyboard.type(typed);
       assert.deepEqual(await items(page), [`Settings › ${section}`], typed);
