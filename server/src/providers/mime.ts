@@ -1,6 +1,8 @@
 // One email's RFC 822 source, parsed for the message record: Gmail's `format=raw` and IMAP's
 // BODY[] go through the same parser (mailparser, as v1's reader did), so charsets, transfer
 // encodings and HTML-only mail decode the same way for both providers.
+import {convert} from 'html-to-text';
+import type {HtmlToTextOptions} from 'html-to-text';
 import {simpleParser} from 'mailparser';
 import type {ParsedMail, ParsedMailAttachment} from 'mailparser';
 import {evaluateGmailSenderAuthentication, evaluateICloudSenderAuthentication} from '../domain/senderAuthentication.ts';
@@ -40,6 +42,38 @@ function isInline(attachment: ParsedMailAttachment): boolean {
 
 const squash = (text: string) => text.replace(/\s+/g, ' ').trim();
 
+// mailparser's own conversion of HTML-only mail (its nesting limit), except that an image leaves
+// only its alt text: html-to-text's default writes its address too, and an embedded `data:` image's
+// address can fill the whole stored text (SV-250).
+const HTML_TEXT_OPTIONS: HtmlToTextOptions = {
+  limits: {maxDepth: 1000},
+  formatters: {
+    imageAlt: (element, _walk, builder) => {
+      const alt = element.attribs?.alt?.trim();
+      if (alt) builder.addInline(alt, {noWordTransform: true});
+    },
+  },
+  selectors: [{selector: 'img', format: 'imageAlt'}],
+};
+
+/** The text of an HTML-only email; empty when its HTML can't be converted, as mailparser leaves it. */
+function htmlText(html: string): string {
+  try {
+    return convert(html, HTML_TEXT_OPTIONS).trim();
+  } catch {
+    return '';
+  }
+}
+
+/** What the record keeps of a body's text: its first 20,000 characters, and the snippet. */
+function storedText(text: string): {text: string; snippet: string} {
+  const trimmed = text.trim();
+  return {
+    text: trimmed.length > BODY_TEXT_MAX_CHARS ? `${trimmed.slice(0, BODY_TEXT_MAX_CHARS)}…` : trimmed,
+    snippet: squash(trimmed).slice(0, SNIPPET_CHARS),
+  };
+}
+
 /**
  * v1's fallback for a message the parser can't take: the header block read line by line and the
  * rest kept as text, so one malformed email still lands in the record rather than stopping sync.
@@ -73,7 +107,7 @@ const attachmentId = (attachment: ParsedMailAttachment, index: number) => attach
 
 async function parsedSource(source: Buffer): Promise<ParsedMail> {
   try {
-    return await simpleParser(source, {skipTextToHtml: true});
+    return await simpleParser(source, {skipHtmlToText: true, skipTextToHtml: true});
   } catch {
     return naiveParse(source);
   }
@@ -94,8 +128,10 @@ export async function attachmentFromSource(source: Buffer, id: string): Promise<
 export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
   const parsed = await parsedSource(source);
   const from = parsed.from?.value?.[0];
-  const text = (parsed.text ?? '').trim();
   const html = typeof parsed.html === 'string' && parsed.html ? parsed.html : null;
+  // mailparser leaves an HTML-only email's text empty (skipHtmlToText): Setpoint makes it.
+  const parsedText = (parsed.text ?? '').trim();
+  const {text, snippet} = storedText(parsedText || !html ? parsedText : htmlText(html));
   const references = Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : [];
   const attachments = (parsed.attachments ?? []).flatMap((attachment, index) => isInline(attachment) ? [] : [{
     providerId: attachmentId(attachment, index),
@@ -108,9 +144,9 @@ export async function parseEmail(source: Buffer): Promise<ParsedEmail> {
     fromName: from?.name?.trim() || '',
     fromAddress: (from?.address ?? '').trim().toLowerCase(),
     subject: parsed.subject?.trim() || '(no subject)',
-    text: text.length > BODY_TEXT_MAX_CHARS ? `${text.slice(0, BODY_TEXT_MAX_CHARS)}…` : text,
+    text,
     html: html && html.length <= BODY_HTML_MAX_CHARS ? html : null,
-    snippet: squash(text).slice(0, SNIPPET_CHARS),
+    snippet,
     date: parsed.date && Number.isFinite(parsed.date.getTime()) ? parsed.date.toISOString() : null,
     rfc822Id: parsed.messageId ?? null,
     threadRoot: references[0] ?? parsed.inReplyTo ?? null,

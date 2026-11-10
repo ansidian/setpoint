@@ -184,6 +184,20 @@ describe('MIME parsing', () => {
     expect(email.html).toContain('<table>');
     expect(email.fromName).toBe('');
   });
+
+  test('an HTML-only email\'s embedded image leaves its alt text, never its data address (SV-250)', async () => {
+    const image = 'iVBORw0KGgo'.padEnd(32_000, 'A');
+    const email = await parseEmail(Buffer.from([
+      'From: hr@contosocounty.example', 'Subject: Application status', 'Date: Mon, 09 Nov 2026 23:28:00 +0000', 'Content-Type: text/html; charset=utf-8', '',
+      `<div><img alt=" Contoso County seal " src="data:image/png;base64,${image}"></div><p>Thank you for applying for Park Ranger II. We will not be moving forward.</p>`, '',
+    ].join('\r\n')));
+    expect(email.text).toContain('Thank you for applying for Park Ranger II. We will not be moving forward.');
+    expect(email.text).toContain('Contoso County seal');
+    expect(email.text).not.toContain('data:');
+    expect(email.text).not.toContain('[');
+    expect(email.snippet).toContain('Thank you for applying');
+    expect(email.html).toContain('data:image/png;base64,');
+  });
 });
 
 describe('the backfill\'s progress', () => {
