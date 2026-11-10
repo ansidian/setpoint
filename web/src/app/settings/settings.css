@@ -38,9 +38,12 @@
 @keyframes set-head-edge { to { box-shadow: 0 1px 0 var(--hair); } }
 .settings .set-title { font-size: 18px; font-weight: 500; letter-spacing: -.01em; margin: 0; }
 .settings .set-x { position: fixed; top: 24px; right: 20px; z-index: 4; }
-/* A section's label stays under the title while its rows scroll by (News's 62 sources). */
-.settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--modal); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
+/* A section's label stays under the title while its rows scroll by (News's 62 sources). Its right side
+   takes the rows' 16 px, so what it holds there (ntfy's state, Mail's count and Filter, AI's total)
+   ends on the controls under it; a quiet button there lands its words on that edge (SV-253, F5). */
+.settings .set-label { position: sticky; top: 40px; z-index: 1; background: var(--modal); height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); flex: none; }
 .settings .set-label .r { margin-left: auto; display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.settings .set-label .r > .btn.quiet:last-child { margin-right: -10px; }
 .settings .set-sec { flex: none; }
 .settings .set-sec + .set-sec { margin-top: 14px; }
 /* The group doesn't clip, so a row's menu shows whole over what follows (darma SV-21); its first and
