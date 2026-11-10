@@ -125,7 +125,7 @@ test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 
       sources.sections.map(({section, sources: list}) => `${{local: 'Local', tech: 'Tech', ai: 'AI', general: 'General'}[section]} ${list.length}`));
     // FOX 11 says it's failing, and why; the rest say when they were checked.
     assert.equal(await fox.locator('.state').textContent(), 'Failing, 404 since 6:02 AM');
-    assert.equal(await fox.locator('.state').getAttribute('data-tip'), '404 Not Found');
+    assert.equal(await fox.locator('.state').getAttribute('data-tip'), 'Failing, 404 since 6:02 AM, 404 Not Found', 'its words, then why');
     const ktla = page.locator('.settings .news-src', {hasText: 'KTLA'});
     assert.deepEqual(await ktla.evaluate(element => [element.querySelector('.t')?.textContent, element.querySelector('.s')?.textContent, element.querySelector('.prov')?.textContent, element.querySelector('.state')?.textContent]),
       ['KTLA · Local news', 'Feed, summary only', 'Every 15 min', 'Checked 9:10 AM']);
@@ -1093,7 +1093,7 @@ const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll
   })))
   .filter(rows => rows.length > 1));
 
-test('SV-253 (F1, F2): a group\'s rows share their sync and state columns as the modal narrows, and a name, address or line cut short shows its words in a tip', async () => {
+test('SV-253 (F1, F2): a group\'s rows share their sync and state columns as the modal narrows, and a name, address, line or state cut short shows its words in a tip', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     // The modal at 992 and 820 wide (the window less its 16 px each side), where the columns give way.
@@ -1118,6 +1118,11 @@ test('SV-253 (F1, F2): a group\'s rows share their sync and state columns as the
         assert.ok(await address.evaluate(element => element.scrollWidth > element.clientWidth), 'the address is cut at 820');
         await address.hover();
         await page.locator('.tip[role="tooltip"]', {hasText: 'user@studio.example.com'}).waitFor();
+        // A failing state cut there names itself in its tip, its reason after.
+        await openAt(page, setpoint.base, 'news');
+        const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'}).locator('.state');
+        assert.ok(await fox.locator('.ell').evaluate(element => element.scrollWidth > element.clientWidth), 'FOX 11\'s state is cut at 820');
+        assert.ok((await fox.getAttribute('data-tip'))!.startsWith((await fox.textContent())!), 'FOX 11\'s tip starts with its words');
       }
       await page.close();
     }

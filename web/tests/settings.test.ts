@@ -5,7 +5,7 @@ import {DEFAULT_SETTINGS} from '@setpoint/shared';
 import {describe, expect, test} from 'vitest';
 import {
   connectFailed, connectNote, todoistConnected, dropIndex, expiryLabel, usageLine, laneTag, matchesThisMonth, mergeSources, monthTotal, minutesBefore, moved, placed, ruleDestination, ruleLine, rulesToAddTo, ruleSender, ruleWords, senderMatch, wordsMatch,
-  shifts, splitRules, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
+  shifts, splitRules, stateTip, taskTime, waitingChoices, waitingTitle, withPatch, withSender,
 } from '../src/logic/settings.ts';
 
 const health = (fields: Partial<HealthOut>): HealthOut => ({state: 'healthy', as_of: null, reason: null, last_check_at: null, ...fields});
@@ -191,4 +191,13 @@ describe('usageLine: Settings › AI\'s 30 days, saying what it counts', () => {
   ])('%s', (_, usage, expected) => {
     expect(usageLine(usage)).toBe(expected);
   });
+});
+
+describe('a source\'s state names itself in its tip, its reason after', () => {
+  test.each([
+    ['Checked 9:10 AM', null, 'Checked 9:10 AM'],
+    ['Needs sign-in', 'Token has been expired or revoked. (invalid_grant)', 'Needs sign-in, Token has been expired or revoked. (invalid_grant)'],
+    ['Failing, 404 since 6:02 AM', '404 Not Found', 'Failing, 404 since 6:02 AM, 404 Not Found'],
+    ['Gmail answered 503.', 'Gmail answered 503.', 'Gmail answered 503.'],
+  ])('%s with %s', (words, reason, tip) => expect(stateTip(words, reason)).toBe(tip));
 });

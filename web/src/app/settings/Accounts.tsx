@@ -14,7 +14,7 @@ import {ACCOUNTS_PATH} from '../../api/mail.ts';
 import {authorizeGmail, connectIcloud, connectTodoist, reorderAccounts, SOURCES_PATH, updateAccount} from '../../api/settings.ts';
 import {sourceState, syncLine} from '../../logic/health.ts';
 import type {SourceState} from '../../logic/health.ts';
-import {mergeSources, moved, todoistConnected} from '../../logic/settings.ts';
+import {mergeSources, moved, stateTip, todoistConnected} from '../../logic/settings.ts';
 import type {IconName} from '../../ui/glyphs.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {dotStyle} from '../accounts.ts';
@@ -156,7 +156,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
         <div className="lines grow cols"><span className="t ell" data-tip={account.label} data-tip-quick>{account.label}</span><span className="s selectable ell" data-tip={account.address} data-tip-quick>{account.address}</span></div>
       )}
       <Prov text={source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'} />
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? state.text} data-tip-quick>
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? stateTip(state.text, account.health.reason)} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
@@ -205,7 +205,7 @@ function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceO
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>
       <div className="lines grow cols"><span className="t ell" data-tip={name} data-tip-quick>{name}</span><span className="s ell" data-tip={sub || undefined} data-tip-quick>{sub}</span></div>
       <Prov text={syncLine(source, timeZone())} />
-      <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? state.text} data-tip-quick>
+      <span className={stateClass(state, check.failed)} data-tip={check.text ?? stateTip(state.text, source.health.reason)} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && onReconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onReconnect}>Reconnect</button>}

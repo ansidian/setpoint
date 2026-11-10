@@ -4581,7 +4581,8 @@ was decided; the audit itself was retired by D480.
     200 on News. On Accounts the state gives way at half the sync's rate. On News the sync is 96 px
     (its words are never wider than "Every 30 min", 76) and holds, and only the state gives way. A
     cut name, address, line, sync or state shows its words in the shared tip, and only while cut; a
-    state with a reason keeps the reason. Measured in Night at 1040, 992 and 820:
+    state with a reason says its words, then the reason after a comma ("Failing, 404 since 6:02 AM,
+    404 Not Found"), unless the reason already says them. Measured in Night at 1040, 992 and 820:
     - **Accounts' Mail:** sync started at 3 places at 992 and 4 at 820, as far as 22 px apart. It now
       starts at one, and the state is 214, 214 and 151 wide.
     - **Accounts' Sources:** Google Calendar's sync started 39 px right of the others at 1040. It now

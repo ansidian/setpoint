@@ -9,6 +9,7 @@ import {timeZone} from '../../api/auth.ts';
 import {useResource} from '../../api/client.ts';
 import {NEWS_SOURCES_PATH} from '../../api/news.ts';
 import {everyLine, newsSourceState, SECTION_LABELS, sourcesHeader, sourceTile} from '../../logic/news.ts';
+import {stateTip} from '../../logic/settings.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {useNow} from '../clock.ts';
 import {HealthGlyph, Page, Prov, Section, SkeletonLabel, SkeletonRows} from './parts.tsx';
@@ -38,7 +39,7 @@ function SourceRow({source}: {source: NewsSourceOut}) {
       <span className="aico"><Icon name={sourceTile(source)} size={16} /></span>
       <div className="lines grow cols"><span className="t ell" data-tip={source.name} data-tip-quick>{source.name}</span><span className="s ell" data-tip={source.reads} data-tip-quick>{source.reads}</span></div>
       <Prov text={everyLine(source.interval_seconds)} />
-      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? state.text} data-tip-quick>
+      <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={stateTip(state.text, state.title)} data-tip-quick>
         <HealthGlyph kind={state.kind} />
         <span className="num ell">{state.text}</span>
       </span>

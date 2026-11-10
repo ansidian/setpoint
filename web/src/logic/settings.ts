@@ -3,6 +3,7 @@ import type {HealthOut, HealthState, Kind, Lane, MessageType, RuleMatch, RuleOut
 import type {ScopeChoice} from './scope.ts';
 import type {IconName} from '../ui/glyphs.ts';
 import type {SettingsPage} from './route.ts';
+import {repeats} from './tip.ts';
 
 /** Settings' pages as its nav names them, each with its glyph; ⌘K's "Settings › Mail" carries the same (#123). */
 export const SETTINGS_NAV: Record<SettingsPage, {label: string; icon: IconName}> = {
@@ -81,6 +82,12 @@ export function ruleWords(match: RuleMatch): {text: string; bold: boolean}[] {
 }
 
 /** "2 this month", "None this month". */
+/**
+ * A source's state's tip (SV-253): its words, then its reason after a comma unless they already say
+ * it, so the words cut at the narrow modal can still be read: "Needs sign-in, Token has been expired".
+ */
+export const stateTip = (words: string, reason: string | null | undefined) => (reason && !repeats(words, reason) ? `${words}, ${reason}` : words);
+
 export const matchesThisMonth = (count: number) => (count ? `${count} this month` : 'None this month');
 
 /** Written rules in their order, then learned ones, newest first (as GET /api/mail/rules answers). */
