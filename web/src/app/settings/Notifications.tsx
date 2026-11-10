@@ -90,7 +90,8 @@ export function NotificationsPage() {
           <Row title={ntfy.topics.mail} sub={noServer ? 'Set a server first' : ntfy.attention_mail ? 'Attention mail' : 'Attention mail · Off for now'} mono>
             <Switch on={ntfy.attention_mail && !noServer} disabled={noServer} label={ntfy.topics.mail} onChange={on => change({notifications: {attention_mail: on}})} />
           </Row>
-          <Row title="FYI mail">
+          {/* Like its siblings, it says what's missing without a server; with one, no second line (D517). */}
+          <Row title="FYI mail" sub={noServer ? 'Set a server first' : undefined}>
             <Switch on={ntfy.fyi_mail && !noServer} disabled={noServer} label="FYI mail" onChange={on => change({notifications: {fyi_mail: on}})} />
           </Row>
         </div>

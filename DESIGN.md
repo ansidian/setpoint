@@ -1437,9 +1437,11 @@ key (New event, New task, Mark all as read).
 ## Settings
 
 A **1040 × 720 modal** (radius 26, modal shadow, `scrim` behind), not in the address bar, with a
-**220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16; switches are 34 ×
-20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3` (#176), the knob
-stretching toward its travel as it's pressed (#151). A reconnect link opens it at Accounts. While a
+**220 px nav** on `panel`. Rows are 52 px minimum inside `sub` groups of radius 16, a row's title and
+line in whole-pixel line boxes (18 and 17 px) so every row and label lands on a whole pixel (#360);
+switches are 34 × 20, on a `switchOn` track with a `switchKnobOn` knob, off an `ink3` knob on `sub3`
+(#176), the knob stretching toward its travel as it's pressed (#151). A reconnect link opens it at
+Accounts. While a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
 section's label stays under the title (#132).
 
@@ -1460,7 +1462,8 @@ section's label stays under the title (#132).
   Server, Token ([Decided while building](#decided-while-building) #82)), the
   topics in mono (`setpoint-reminders`: Reminders · Time to Leave · Reconnect alerts;
   `setpoint-mail`: Attention mail · Off for now; then **FYI mail**, to the same topic, off,
-  [Decided while building](#decided-while-building) #252), **Reminder defaults** (Events 10 min before; Tasks
+  [Decided while building](#decided-while-building) #252, with no second line once a server is set and
+  "Set a server first" until one is, as each switch says, #360), **Reminder defaults** (Events 10 min before; Tasks
   9:00 AM on the due day, as the sample sets them; each offers None, a fresh install's default, D49) and
   **Alerts** (Reconnect alerts, once per source), every group labelled (#135). Time to Leave's group
   is on Calendar (#358).
@@ -4535,5 +4538,17 @@ was decided; the audit itself was retired by D480.
     ⌘K's Settings › Calendar takes "time to leave buffer", and the editor's Time to Leave chip, while
     it's off, says "Time to Leave is off in Settings › Calendar". Decided for Andy overnight: its rows
     keep Notifications' heights (the switch row's two lines leave it at 57.42 px, as Weather's and
-    every two-line Settings row with a switch is today, not changed here), and its save errors show
-    under its own group.
+    every two-line Settings row with a switch is today, not changed here; #360 made it 58), and its
+    save errors show under its own group.
+360. **FYI mail says "Set a server first" without a server, and every row lands on whole pixels**
+    (amending #252 and Settings' rows; Andy, 2026-11-09; darma SV-253, D517): while ntfy has no
+    server, FYI mail's row says "Set a server first" under its title, as `setpoint-reminders`,
+    `setpoint-mail` and Reconnect alerts do (UX #13); with a server it has no second line, as #252
+    drew it. #252's reason holds through both: a row's title and line now take whole-pixel line
+    boxes, 18 px for the title (13 px, mono 12.5) and 17 for the line (12.5), the nearest to the 1.35
+    they had, which left a two-line row 36.42 px of text (57.42 px, mono 56.75, a `ctl` row 51.42).
+    So FYI mail is 57 px without a server and 52 with one; the topic rows 58, Reconnect alerts 57,
+    Token 52 (it was 51.42). Measured on every page at 1040, Notifications and AI at 992 and 820 too: no row or
+    label is off a whole pixel, and nothing clips or overflows; two-line rows grew 0.58 px each (mono
+    1.25), so News's 65 rows run 37 px longer. Decided for Andy overnight: every two-line row, not
+    just FYI mail's, since Token and the topic rows above it were fractional too, and 18 / 17 px.

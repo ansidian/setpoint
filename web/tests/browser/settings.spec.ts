@@ -538,6 +538,9 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
       assert.deepEqual([await toggle.isDisabled(), await toggle.getAttribute('aria-checked')], [true, 'false'], name);
     }
     assert.equal(await page.locator('.settings .set-row', {hasText: 'setpoint-reminders'}).locator('.s').textContent(), 'Set a server first');
+    // FYI mail says so too; with a server it has no second line (D517).
+    const fyi = page.locator('.settings .set-row', {has: page.getByRole('switch', {name: 'FYI mail'})});
+    assert.equal(await fyi.locator('.s').textContent(), 'Set a server first');
     assert.equal(await page.getByRole('button', {name: 'Send test'}).count(), 0);
     assert.deepEqual(await page.locator('.settings .set-label').allTextContents().then(labels => labels.map(label => label.split(/Not set up/)[0])), ['ntfy', 'Reminder defaults', 'Alerts']);
     assert.equal(await page.getByRole('switch', {name: 'Time to Leave'}).count(), 0);
@@ -545,6 +548,7 @@ test('Notifications: the server and its token, Send test reaching a fake ntfy, t
     await page.keyboard.press('Enter');
     await settled('the server', settings, value => value.notifications.ntfy_server === ntfy.url);
     await until('the switches work', () => page.getByRole('switch', {name: 'setpoint-reminders'}).isDisabled(), disabled => !disabled);
+    assert.equal(await fyi.locator('.s').count(), 0);
 
     // The token is write-only, like an AI key, and goes with each publish.
     const token = page.locator('.settings [data-secret="ntfy_token"]');
