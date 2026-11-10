@@ -26,6 +26,7 @@
 //   PATCH  /api/jobs/applications/:id                   jobsEditInput (the title in place, the company from More, the JD's location)
 //   POST   /api/jobs/applications/:id/status            jobsStatusInput (Set status; null is Let emails decide)
 //   POST   /api/jobs/applications/:id/merge             jobsMergeInput (Merge with…: the other comes into this one)
+//   POST   /api/jobs/applications/:id/pin               jobsPinInput (Pin or Unpin: the Pinned shelf, SV-243)
 //   POST   /api/jobs/applications/:id/not-this-posting  the JD goes, its other candidates offered
 //   POST   /api/jobs/applications/:id/not-an-application  hidden, its emails blocked (decision 67)
 //   DELETE /api/jobs/applications/:id                   forgotten, so a later email can make it again
@@ -106,6 +107,8 @@ export const applicationRowSchema = z.strictObject({
   // Made by Track this, so Applied is its email's date (decision 69, D323).
   first_seen_in_email: z.boolean(),
   jd: jdSummarySchema,
+  // On the Pinned shelf since then (SV-243, D504), newest first; null when it isn't pinned.
+  pinned_at: instant.nullable(),
 });
 export type ApplicationRowOut = z.infer<typeof applicationRowSchema>;
 
@@ -454,6 +457,9 @@ export const jobsAssignInput = z.strictObject({application: id});
 export const jobsMoveInput = z.strictObject({application: id});
 /** Merge with…: the other application, which comes into this one with all its emails. */
 export const jobsMergeInput = z.strictObject({other: id});
+
+/** Pin or Unpin (SV-243): on the table's Pinned shelf, or back in its place. */
+export const jobsPinInput = z.strictObject({pinned: z.boolean()});
 
 /** The title in place, or the company from More (decision 58): set by hand, and kept. */
 export const jobsEditInput = z.strictObject({

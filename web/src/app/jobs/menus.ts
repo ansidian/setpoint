@@ -128,6 +128,7 @@ export function statusMenu(row: Pick<ApplicationRowOut, 'status' | 'status_set_b
 }
 
 export interface CorrectionActions {
+  pin: () => void;
   editCompany: () => void;
   editTitle: () => void;
   setStatus: (status: JobStatus | null) => void;
@@ -139,7 +140,7 @@ export interface CorrectionActions {
 }
 
 /**
- * More's list (35b, 300 wide), which a row's right-click shares: the two edits, Set status ›, Merge
+ * More's list (35b, 300 wide), which a row's right-click shares: Pin or Unpin `P` (SV-243), the two edits, Set status ›, Merge
  * with… ›; Not this posting and Look up the JD again; then the two that remove it, each saying how
  * it differs (D321). Condensed (the Jobs pane's rows, SV-220) leaves out the JD's two.
  */
@@ -151,7 +152,10 @@ export function moreEntries(row: ApplicationRowOut, rows: ApplicationRowOut[], t
       title: saved ? 'Not this posting first: a saved JD is never replaced' : row.jd.state === 'looking' ? 'Looking for the posting' : undefined, run: on.lookUpAgain},
     {kind: 'sep'},
   ];
+  const pinned = row.pinned_at !== null;
   return [
+    {kind: 'item', id: 'pin', icon: pinned ? 'keep_off' : 'keep', label: pinned ? 'Unpin' : 'Pin', hint: condensed ? undefined : 'P', run: on.pin},
+    {kind: 'sep'},
     {kind: 'item', id: 'company', icon: 'edit', label: 'Edit company', run: on.editCompany},
     {kind: 'item', id: 'title', icon: 'edit_note', label: 'Edit title', run: on.editTitle},
     {kind: 'item', id: 'status', icon: 'radio_button_checked', label: 'Set status', submenu: () => statusMenu(row, {set: on.setStatus})},

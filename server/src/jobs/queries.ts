@@ -73,6 +73,7 @@ function loadRows(store: Store) {
       step: application.status === 'in_process' ? application.step : null, step_at: application.status === 'in_process' ? application.stepAt : null,
       ghosted: isGhosted(application.status, last, now, store.timeZone), days_without_email: daysWithoutEmail(last, now, store.timeZone),
       reapplied_from: from ? link(from) : null, first_seen_in_email: application.firstSeenInEmail, jd: jdOf(application),
+      pinned_at: application.pinnedAt,
     };
   };
   return {db, now, applications, byId, postings, candidates, link, rowOf};

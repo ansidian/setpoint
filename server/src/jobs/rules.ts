@@ -58,6 +58,13 @@ export function countsByStatus(applications: {status: JobStatus; ghosted: boolea
 export const isClosed = (status: JobStatus) => status === 'rejected' || status === 'withdrawn';
 
 /**
+ * A pin goes when the status becomes Rejected or Withdrawn (D505); Ghosted, a flag, never touches it.
+ * One pinned while already closed stays, as the user chose.
+ */
+export const unpinOnClose = (before: {status: JobStatus}, status: JobStatus): {pinnedAt?: null} =>
+  (!isClosed(before.status) && isClosed(status) ? {pinnedAt: null} : {});
+
+/**
  * Splits a company's other applications for the detail (D306): earlier, closed ones are Applied
  * before (a re-application's earlier one among them); the rest, open or later, are Also at.
  * Both newest first.

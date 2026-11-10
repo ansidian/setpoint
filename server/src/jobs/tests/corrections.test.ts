@@ -465,6 +465,84 @@ describe('a status set by hand (D322, D365)', () => {
   });
 });
 
+describe('a pin (SV-243, D504, D505)', () => {
+  const litware = (s: Setup) => s.id('Litware', 'QA Engineer');
+  const pinnedAt = (s: Setup, id: number) => jobsPage(s.store).rows.find(row => row.id === id)!.pinned_at;
+
+  test('Pin and Unpin: the row carries when it was pinned, pinning again keeps that, and Undo puts each back', async () => {
+    const s = await setup();
+    const id = litware(s);
+    const before = s.dump();
+    const pin = await s.send('POST', `/applications/${id}/pin`, {pinned: true});
+    const at = pinnedAt(s, id);
+    expect(at).toBe(s.store.now().toISOString());
+    s.w.advance(60_000);
+    await s.send('POST', `/applications/${id}/pin`, {pinned: true});
+    expect(pinnedAt(s, id)).toBe(at);
+    const unpin = await s.send('POST', `/applications/${id}/pin`, {pinned: false});
+    expect(pinnedAt(s, id)).toBeNull();
+    await s.undo(unpin);
+    expect(pinnedAt(s, id)).toBe(at);
+    await s.undo(pin);
+    expect(s.dump()).toEqual(before);
+  });
+
+  test.each<[string, JobStatus, boolean]>([
+    ['Rejected by hand unpins it', 'rejected', false],
+    ['Withdrawn by hand unpins it', 'withdrawn', false],
+    ['Offer by hand leaves it', 'offer', true],
+  ])('%s, and Undo brings the pin back with the status', async (_, status, stays) => {
+    const s = await setup();
+    const id = litware(s);
+    await s.send('POST', `/applications/${id}/pin`, {pinned: true});
+    const at = pinnedAt(s, id);
+    const change = await s.send('POST', `/applications/${id}/status`, {status});
+    expect(pinnedAt(s, id)).toBe(stays ? at : null);
+    await s.undo(change);
+    expect(s.application(id)).toMatchObject({status: 'in_process', pinnedAt: at});
+  });
+
+  test('one pinned while already closed stays pinned when it closes another way', async () => {
+    const s = await setup();
+    const id = litware(s);
+    await s.send('POST', `/applications/${id}/status`, {status: 'rejected'});
+    await s.send('POST', `/applications/${id}/pin`, {pinned: true});
+    await s.send('POST', `/applications/${id}/status`, {status: 'withdrawn'});
+    expect(pinnedAt(s, id)).not.toBeNull();
+  });
+
+  test.each<[string, Reading, boolean]>([
+    ['a rejection by email unpins it', {event: 'rejection', company: 'Litware', title: 'QA Engineer'}, false],
+    ['a quiet email leaves it', {event: 'form', company: 'Litware', title: 'QA Engineer'}, true],
+  ])('%s', async (_, reading, stays) => {
+    const s = await setup();
+    const id = litware(s);
+    await s.send('POST', `/applications/${id}/pin`, {pinned: true});
+    await s.newEmail('Litware QA Engineer', reading);
+    expect(s.application(id)!.pinnedAt === null).toBe(!stays);
+  });
+
+  test.each<[string, boolean, boolean]>([
+    ['the other pinned: the merged one takes its pin', false, true],
+    ['both pinned: the earlier pin', true, true],
+    ['this one pinned: kept', true, false],
+  ])('a merge, %s, and Undo puts both back', async (_, pinThis, pinOther) => {
+    const s = await setup();
+    const keep = s.id('Humongous Insurance', 'Software Engineer II, Claims');
+    const other = s.id('Humongous Insurance', 'Software Engineer II (Java)');
+    // The other is pinned first when both are, so its pin is the earlier.
+    if (pinOther) await s.send('POST', `/applications/${other}/pin`, {pinned: true});
+    s.w.advance(60_000);
+    if (pinThis) await s.send('POST', `/applications/${keep}/pin`, {pinned: true});
+    const expected = pinOther ? s.application(other)!.pinnedAt : s.application(keep)!.pinnedAt;
+    const before = s.dump();
+    const change = await s.send('POST', `/applications/${keep}/merge`, {other});
+    expect(s.application(keep)!.pinnedAt).toBe(expected);
+    await s.undo(change);
+    expect(s.dump()).toEqual(before);
+  });
+});
+
 describe('the routes refuse what doesn\'t fit', () => {
   test.each<[string, (s: Setup) => [method: 'POST' | 'PATCH' | 'DELETE', path: string, body?: unknown], number]>([
     ['an application that isn\'t there', () => ['PATCH', '/applications/9999', {title: 'X'}], 404],

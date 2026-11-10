@@ -277,6 +277,21 @@ const text = (a: string | null, b: string | null) => (a ?? '￿').localeCompare(
  */
 export const nextSort = (sort: Sort, key: SortKey): Sort => (sort.key === key ? {key, down: !sort.down} : {key, down: key === 'applied'});
 
+/**
+ * The Pinned shelf (SV-243, D504): every pinned application, newest pin first, whatever the sort and
+ * under every filter; the table below leaves them out.
+ */
+export const shelfOf = <T extends ApplicationRowOut>(rows: readonly T[]): T[] =>
+  rows.filter(row => row.pinned_at !== null).sort((a, b) => b.pinned_at!.localeCompare(a.pinned_at!) || b.id - a.id);
+
+/**
+ * The shelf from every row and the table from the filter's, by the sort, a pinned row on the shelf
+ * only; J / K go through the shelf, then the table.
+ */
+export function shelfAndTable(rows: readonly ApplicationRowOut[], filtered: readonly ApplicationRowOut[], sort: Sort) {
+  return {shelf: shelfOf(rows), table: sortRows(filtered.filter(row => row.pinned_at === null), sort)};
+}
+
 /** Rows in the table's order; ties go newest first, so a sort never shuffles equal rows. */
 export function sortRows<T extends ApplicationRowOut>(rows: readonly T[], sort: Sort): T[] {
   const newest = (a: T, b: T) => b.applied_at.localeCompare(a.applied_at) || b.id - a.id;

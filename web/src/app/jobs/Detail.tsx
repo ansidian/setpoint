@@ -113,6 +113,11 @@ export function Detail({id, row, accounts, now, timeZone, today, leaving, arrive
         ) : detail?.jd.state === 'looking' && firstEmail !== null && (
           <button className="tool" type="button" onClick={() => onEmail(firstEmail)}><Icon name="mail" />Open email</button>
         )}
+        {shown && actions && (
+          <button className={shown.pinned_at ? 'tool active' : 'tool'} type="button" data-hint="p" aria-pressed={shown.pinned_at !== null} onClick={actions.pin}>
+            <Icon name={shown.pinned_at ? 'keep-fill' : 'keep'} />{shown.pinned_at ? 'Unpin' : 'Pin'}<span className="kbd">P</span>
+          </button>
+        )}
         <span className="grow" />
         <button className="ibtn" type="button" aria-label="Previous application" disabled={!canStep.previous} onClick={() => onStep(-1)}><Icon name="keyboard_arrow_up" /></button>
         <button className="ibtn" type="button" aria-label="Next application" disabled={!canStep.next} onClick={() => onStep(1)}><Icon name="keyboard_arrow_down" /></button>

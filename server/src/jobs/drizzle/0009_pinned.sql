@@ -1,0 +1,1 @@
+ALTER TABLE `jobs_applications` ADD `pinned_at` text;

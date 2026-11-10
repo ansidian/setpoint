@@ -9,14 +9,14 @@ import type {Context} from 'hono';
 import {Hono} from 'hono';
 import {z} from 'zod';
 import {
-  jobsAssignInput, jobsCheckInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPasteInput, jobsPickInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
+  jobsAssignInput, jobsCheckInput, jobsEditInput, jobsMailInput, jobsMergeInput, jobsMoveInput, jobsPasteInput, jobsPickInput, jobsPinInput, jobsSearchInput, jobsSettingsPatchInput, jobsStatusInput, jobsUndoDismissInput,
 } from '@setpoint/shared';
 import type {JobsChangeOut, JobsCheckOut, JobsDismissedOut, JobsUndoneOut} from '@setpoint/shared';
 import {conflict, invalid, notFound, parse, unauthorized} from '../errors.ts';
 import type {Store} from '../store.ts';
 import {requestLookup, stopLookup} from './lookup.ts';
 import {
-  deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, pastePosting, setStatus,
+  deleteApplication, editApplication, mergeApplications, moveEvent, notAboutThis, notAnApplication, notThisPosting, pastePosting, setPinned, setStatus,
 } from './corrections.ts';
 import {assignItem, dismissFromHistory, noneOfThese, notAJob, pickCandidate, trackItem, undoDismissFromHistory} from './needsYou.ts';
 import {jobsAi} from './models.ts';
@@ -83,6 +83,7 @@ export function jobsApi(store: Store) {
   // The corrections (J6, decision 58): each sticks (stick.ts), and each has Undo.
   api.patch('/jobs/applications/:id', async c => c.json(change(editApplication(store, id(c.req.param('id')), parse(jobsEditInput, await body(c))))));
   api.post('/jobs/applications/:id/status', async c => c.json(change(setStatus(store, id(c.req.param('id')), parse(jobsStatusInput, await body(c)).status))));
+  api.post('/jobs/applications/:id/pin', async c => c.json(change(setPinned(store, id(c.req.param('id')), parse(jobsPinInput, await body(c)).pinned))));
   api.post('/jobs/applications/:id/merge', async c => c.json(change(mergeApplications(store, id(c.req.param('id')), parse(jobsMergeInput, await body(c)).other))));
   api.post('/jobs/applications/:id/not-this-posting', c => c.json(change(notThisPosting(store, id(c.req.param('id'))))));
   api.post('/jobs/applications/:id/not-an-application', c => c.json(change(notAnApplication(store, id(c.req.param('id'))))));

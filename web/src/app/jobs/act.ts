@@ -11,7 +11,7 @@ import {undoChange} from './api.ts';
 export interface Said {
   // What it did: "Set to Rejected".
   done: string;
-  tone?: Extract<ToastTone, 'done' | 'gone'>;
+  tone?: Extract<ToastTone, 'done' | 'gone' | 'pinned'>;
   // What failed, should it: "Couldn't set the status".
   failed: string;
   // After Undo has put things back (an item folding back in, a row coming back).

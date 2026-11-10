@@ -10,11 +10,11 @@
 // given; the page around them, its keys and the server are jobs.spec.ts's and jobsStates.spec.ts's.
 // This file imports Jobs's folder, so it's one of Jobs's wiring points (server/src/jobs/README.md).
 import type {
-  ApplicationOut, JdCandidateOut, JobMoveOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobWeekOut, NeedsYouItemOut, PostingOut,
+  ApplicationOut, ApplicationRowOut, JdCandidateOut, JobMoveOut, JobCountsOut, JobsHistoryOut, JobsMailApplicationOut, JobsMailMessageOut, JobsReadingOut, JobStatus, JobWeekOut, NeedsYouItemOut, PostingOut,
 } from '@setpoint/shared';
 import {MAX_PASTED_CHARS, PASTED_TOO_LONG} from '@setpoint/shared';
 import {createRef, useRef, useState} from 'react';
-import {expect, test, vi} from 'vitest';
+import {describe, expect, test, vi} from 'vitest';
 import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 import {ApiFailure} from '../../src/api/client.ts';
@@ -36,6 +36,8 @@ import {PerWeek} from '../../src/app/jobs/PerWeek.tsx';
 import {StatusFilter} from '../../src/app/jobs/StatusFilter.tsx';
 import type {Filter} from '../../src/app/jobs/words.ts';
 import {moveDay, movementFoot, moveSide} from '../../src/app/jobs/words.ts';
+import {shelfAndTable} from '../../src/app/jobs/words.ts';
+import type {Sort} from '../../src/app/jobs/words.ts';
 import {appliedStanding, foundBy, foundShort, fromHistorySetting, hasReading, historyLine, historySetting, historyShare, jdCell, pickWords, readingLine, recedes} from '../../src/app/jobs/words.ts';
 import {appliedStanding as chipStanding, closes as chipCloses} from '../../../extension/src/words.ts';
 import {colour} from './colour.ts';
@@ -563,7 +565,7 @@ const NORTHWIND: JobsMailApplicationOut = {id: 7, company: 'Northwind Talent', t
 /** Northwind's detail, as GET /api/jobs/applications/7 answers it, with its JD or where the JD stands. */
 const detailOf = (posting: PostingOut | null, jd: Partial<ApplicationOut['jd']> = {}): ApplicationOut => ({
   ...NORTHWIND, platform: 'Greenhouse', account_id: 4, applied_at: '2026-10-01T18:26:00.000Z', status_set_by: 'email', status_set_at: '2026-10-07T14:12:00.000Z',
-  step: 'Pick a 30-minute interview slot this week', step_at: '2026-10-07T14:12:00.000Z', days_without_email: 0, reapplied_from: null, first_seen_in_email: false,
+  step: 'Pick a 30-minute interview slot this week', step_at: '2026-10-07T14:12:00.000Z', days_without_email: 0, reapplied_from: null, first_seen_in_email: false, pinned_at: null,
   jd: {state: posting ? 'found' : 'none', source: posting?.source ?? null, platform: posting?.platform ?? null, found_at: posting?.found_at ?? null, candidates: 0, looked_at: null, link: posting?.link ?? null, stopped: false, ...jd},
   posting, candidates: [], timeline: [], applied_before: [], also_at: [], hand_set: [],
 });
@@ -954,12 +956,12 @@ test('SV-220: a row reads the company, "Applied → Rejected", the day and the r
 test('SV-220: the menu a pane row gets is the table row\'s without Not this posting and Look up the JD again', () => {
   const row = detailOf(null);
   const on = {
-    editCompany: () => {}, editTitle: () => {}, setStatus: () => {}, merge: () => {}, notThisPosting: () => {}, lookUpAgain: () => {}, notAnApplication: () => {}, remove: () => {},
+    pin: () => {}, editCompany: () => {}, editTitle: () => {}, setStatus: () => {}, merge: () => {}, notThisPosting: () => {}, lookUpAgain: () => {}, notAnApplication: () => {}, remove: () => {},
     open: () => {}, openPosting: () => {}, copy: () => {},
   };
   const ids = (spec: MenuSpec) => spec.entries.map(entry => (entry.kind === 'item' ? entry.id : entry.kind));
   const full = ids(rowMenu(row, [row], TODAY, on));
-  expect(full).toEqual(['open', 'sep', 'company', 'title', 'status', 'merge', 'sep', 'not-this-posting', 'look-up', 'sep', 'not-an-application', 'delete', 'sep', 'copy']);
+  expect(full).toEqual(['open', 'sep', 'pin', 'sep', 'company', 'title', 'status', 'merge', 'sep', 'not-this-posting', 'look-up', 'sep', 'not-an-application', 'delete', 'sep', 'copy']);
   expect(ids(rowMenu(row, [row], TODAY, on, true))).toEqual(full.filter((id, index) => !['not-this-posting', 'look-up'].includes(id) && index !== full.indexOf('look-up') + 1));
 });
 
@@ -1010,4 +1012,56 @@ test('SV-220: the table\'s Offer reads at 4.5:1 on an open row, in Night and in 
     applyTheme(document.documentElement, 'night');
     moving();
   }
+});
+
+// ---- The Pinned shelf (SV-243, D504, #355): what's on it and in what order, and what's left to the table ----
+
+/** A row as the table reads it: its company, applied day, status and pin; the rest doesn't matter here. */
+const shelfRow = (id: number, company: string, applied: string, status: JobStatus, pinned: string | null = null) => ({
+  id, company, title: 'Developer', applied_at: `2026-${applied}T12:00:00.000Z`, applied_on: `2026-${applied}`, status, ghosted: false,
+  jd: {state: 'found'}, pinned_at: pinned === null ? null : `2026-10-07T${pinned}:00.000Z`,
+}) as unknown as ApplicationRowOut;
+
+const ROWS = [
+  shelfRow(1, 'Alpine Ski House', '10-01', 'applied', '09:00'),
+  shelfRow(2, 'Fabrikam', '10-05', 'applied'),
+  shelfRow(3, 'Litware', '09-20', 'rejected', '11:00'),
+  shelfRow(4, 'Contoso', '09-28', 'offer'),
+  shelfRow(5, 'Northwind', '10-03', 'in_process', '10:00'),
+  shelfRow(6, 'Trey Research', '09-25', 'rejected'),
+];
+
+const shelfNames = (rows: ApplicationRowOut[]) => rows.map(each => each.company);
+const NEWEST: Sort = {key: 'applied', down: true};
+
+describe('the shelf: every pinned row, newest pin first, whatever the filter and the sort', () => {
+  test.each<[string, (each: ApplicationRowOut) => boolean, Sort]>([
+    ['All, newest first', () => true, NEWEST],
+    ['Offer, which holds none of them', each => each.status === 'offer', NEWEST],
+    ['Rejected, by company', each => each.status === 'rejected', {key: 'company', down: false}],
+    ['Applied, by status', each => each.status === 'applied', {key: 'status', down: true}],
+  ])('%s', (_, filter, sort) => {
+    expect(shelfNames(shelfAndTable(ROWS, ROWS.filter(filter), sort).shelf)).toEqual(['Litware', 'Northwind', 'Alpine Ski House']);
+  });
+
+  test('pinned at the same moment, the later id first, so the order never shuffles', () => {
+    const same = [shelfRow(7, 'Coho Winery', '10-01', 'applied', '09:00'), shelfRow(8, 'Wingtip Toys', '10-02', 'applied', '09:00')];
+    expect(shelfNames(shelfAndTable(same, same, NEWEST).shelf)).toEqual(['Wingtip Toys', 'Coho Winery']);
+  });
+
+  test('nothing pinned: no shelf', () => {
+    const none = ROWS.map(each => ({...each, pinned_at: null}));
+    expect(shelfAndTable(none, none, NEWEST).shelf).toEqual([]);
+  });
+});
+
+describe('the table: the filter\'s rows by the sort, a pinned row on the shelf only', () => {
+  test.each<[string, (each: ApplicationRowOut) => boolean, Sort, string[]]>([
+    ['All, newest first', () => true, NEWEST, ['Fabrikam', 'Contoso', 'Trey Research']],
+    ['All, by company', () => true, {key: 'company', down: false}, ['Contoso', 'Fabrikam', 'Trey Research']],
+    ['Rejected', each => each.status === 'rejected', NEWEST, ['Trey Research']],
+    ['In process, its one row pinned', each => each.status === 'in_process', NEWEST, []],
+  ])('%s', (_, filter, sort, table) => {
+    expect(shelfNames(shelfAndTable(ROWS, ROWS.filter(filter), sort).table)).toEqual(table);
+  });
 });

@@ -9,6 +9,8 @@
 // posting, a row's and an event's right-click), each with its toast and Undo, reaching the server.
 // SV-140: a pick Jobs can't read, and Paste the posting after a failed pick and after No JD found.
 // SV-170: Paste the posting while it's looked up stops the lookup, and the JD's location set in place.
+// SV-243: the Pinned shelf, by P, a right-click, More and the detail's tool, under every filter and
+// sort, J / K through it, Unpin, a close taking a pin off and Undo putting it back.
 // D401: an item's email opening where the detail sits, and Esc leaving the item unanswered. D402: an
 // application's email opening from Assign to…, the menu staying beside it. SV-220: the empty pane's
 // recent movement, a hand move landing in it, its row's condensed menu and a row opening its detail.
@@ -508,8 +510,8 @@ test('Look it up on Trey Research: No JD found becomes the lookup under way, in 
     const pane = page.locator('.jb-pane');
     await pane.locator('.jb-nojd').waitFor();
     assert.equal(await pane.locator('.jb-nojd').textContent(), 'No JD found · Breezy and a web search had nothing for it on Oct 1Look it upPaste the posting');
-    // No posting link: no Open posting.
-    assert.equal(await pane.locator('.rd-tools .tool').count(), 0);
+    // No posting link: no Open posting, Pin the one tool (SV-243).
+    assert.deepEqual(await pane.locator('.rd-tools .tool').allTextContents(), ['PinP']);
     await pane.getByRole('button', {name: 'Look it up'}).click();
     await pane.locator('.jb-src.looking').waitFor();
     assert.equal(await pane.locator('.jb-src.looking').textContent(), 'Looking for the posting…Breezy, then the platforms, then searchPaste the posting');
@@ -1190,7 +1192,7 @@ test('Merge with… (35b): More\'s submenu, its field focused, the company\'s ot
     const more = page.getByRole('menu', {name: 'More'});
     await more.waitFor();
     assert.deepEqual(await more.getByRole('menuitem').allTextContents(), [
-      'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
+      'PinP', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
       'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again',
     ]);
     // A saved JD is never replaced: Look up the JD again waits for Not this posting.
@@ -1300,6 +1302,117 @@ test('Not an application, Delete and Not this posting (35b): the row folds away 
   }
 });
 
+const shelf = (page: Page) => page.locator('.jb-scroll .jb-tr.shelf[data-application] .co').allTextContents();
+const table = (page: Page) => page.locator('.jb-scroll .jb-tr:not(.shelf)[data-application] .co').allTextContents();
+
+test('SV-243: P pins the row under the cursor onto the shelf under the headings, newest first, under every filter and sort and not in the table; J goes through it; Unpin', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const fabrikam = await applicationId(setpoint, 'Fabrikam', 'Data Analyst');
+    const relecloud = await applicationId(setpoint, 'Relecloud', 'Support Engineer');
+    await page.goto(`${setpoint.base}/jobs`);
+    await row(page, fabrikam).waitFor();
+    // Nothing pinned, no shelf.
+    assert.equal(await page.locator('.jb-pin-h').count(), 0);
+    await page.mouse.move(290, 28);
+    const cursor = () => page.locator('.jb-scroll .cur').evaluateAll(all => all.map(one => (one as HTMLElement).dataset.key));
+    for (let index = 0; index < 4; index += 1) await page.keyboard.press('j');
+    await until('the first row', cursor, keys => keys[0] === `r:${fabrikam}`);
+    await page.keyboard.press('p');
+    await until('Fabrikam on the shelf', () => shelf(page), names => names.join() === 'Fabrikam');
+    await until('the toast', () => toast(page).textContent(), text => text === 'PinnedUndo');
+    assert.equal(await page.locator('.jb-pin-h').textContent(), 'Pinned');
+    assert.equal((await table(page)).includes('Fabrikam'), false, 'on the shelf only');
+    // The server's clock is frozen, so the next pin would share this one's time: this one an hour earlier.
+    jobsChange(setpoint, `UPDATE jobs_applications SET pinned_at = '2026-10-07T15:00:00.000Z' WHERE id = ${fabrikam}`);
+    // Then Relecloud, the next in the table: the newest pin first.
+    await page.keyboard.press('j');
+    await until('Relecloud under the cursor', cursor, keys => keys[0] === `r:${relecloud}`);
+    await page.keyboard.press('p');
+    await until('both, the newest first', () => shelf(page), names => names.join() === 'Relecloud,Fabrikam');
+    // The shelf, then the table: below the headings, J goes from its last row to the table's first.
+    const order = await page.locator('.jb-scroll').evaluate(scroll => [...scroll.children].map(child => child.className.split(' ')[0] ?? '').filter(name => /jb-th|jb-pin/.test(name)));
+    assert.deepEqual(order, ['jb-th', 'jb-pin-h', 'jb-pin-end']);
+    await until('Relecloud still under the cursor', cursor, keys => keys[0] === `r:${relecloud}`);
+    await page.keyboard.press('j');
+    await until('the shelf\'s next', cursor, keys => keys[0] === `r:${fabrikam}`);
+    await page.keyboard.press('j');
+    const first = (await table(page))[0]!;
+    await until('the table\'s first', () => page.locator('.jb-scroll .jb-tr.cur .co').textContent(), name => name === first);
+    // Every filter and every sort keep the shelf as it is; the filter's counts don't move.
+    const counts = await page.locator('.hd .jb-status button').allTextContents();
+    await page.locator('.hd .jb-status button', {hasText: 'Offer'}).click();
+    await until('Offer\'s one row', () => table(page), names => names.join() === 'Woodgrove Bank');
+    assert.equal((await shelf(page)).join(), 'Relecloud,Fabrikam');
+    await page.locator('.jb-th .h[data-column="company"]').click();
+    await page.locator('.hd .jb-status button', {hasText: 'All'}).click();
+    await until('All by company', () => table(page), names => names.length > 50 && names[0] === 'A. Datum Corporation');
+    assert.equal((await shelf(page)).join(), 'Relecloud,Fabrikam');
+    assert.deepEqual(await page.locator('.hd .jb-status button').allTextContents(), counts);
+    // Unpin, from the shelf's own button: back in the table.
+    await row(page, relecloud).hover();
+    await row(page, relecloud).getByRole('button', {name: 'Unpin'}).click();
+    await until('Fabrikam alone', () => shelf(page), names => names.join() === 'Fabrikam');
+    await until('Relecloud back in the table', () => table(page), names => names.includes('Relecloud'));
+    await until('the toast', () => toast(page).textContent(), text => text === 'UnpinnedUndo');
+    assert.equal((await setpoint.api<JobsPageOut>('GET', '/jobs')).rows.filter(each => each.pinned_at !== null).length, 1);
+    // Search shows what matched, with no shelf.
+    await page.keyboard.press('/');
+    await page.keyboard.type('fabrikam');
+    await until('its result', () => page.locator('.jb-scroll .jb-tr[data-application] .co').allTextContents(), names => names.join() === 'Fabrikam');
+    assert.equal(await page.locator('.jb-pin-h').count(), 0);
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-243: Pin from a right-click, the detail\'s tool, More and P with it open; Set to Rejected takes it off the shelf and Undo brings it back (D505)', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page('target');
+    const relecloud = await applicationId(setpoint, 'Relecloud', 'Support Engineer');
+    await page.goto(`${setpoint.base}/jobs`);
+    const target = row(page, relecloud);
+    const box = (await rested(() => target.boundingBox()))!;
+    await page.mouse.click(box.x + 60, box.y + box.height / 2, {button: 'right'});
+    await page.getByRole('menu', {name: 'Relecloud · Support Engineer'}).getByRole('menuitem', {name: 'Pin'}).click();
+    await until('on the shelf', () => shelf(page), names => names.join() === 'Relecloud');
+
+    // Open, its tool says Unpin, and unpins.
+    await row(page, relecloud).click();
+    const pane = page.locator('.jb-pane');
+    const tool = pane.locator('.rd-tools .tool[data-hint="p"]');
+    await until('the tool', () => tool.textContent(), text => text === 'UnpinP');
+    await tool.click();
+    await until('off the shelf', () => page.locator('.jb-pin-h').count(), count => count === 0);
+    await until('the tool', () => tool.textContent(), text => text === 'PinP');
+    // P with it open pins it again; More offers Unpin.
+    await page.keyboard.press('p');
+    await until('on the shelf again', () => shelf(page), names => names.join() === 'Relecloud');
+    await pane.getByRole('button', {name: 'More'}).click();
+    const more = page.getByRole('menu', {name: 'More'});
+    assert.equal((await more.getByRole('menuitem').allTextContents())[0], 'UnpinP');
+    await page.keyboard.press('Escape');
+    await more.waitFor({state: 'detached'});
+
+    // Rejected by hand: off the shelf, back in its place; Undo brings the pin back with the status.
+    await pane.locator('.jb-stchip').click();
+    await page.getByRole('menu', {name: 'Set status'}).getByRole('menuitem', {name: 'Rejected'}).click();
+    await until('the toast', () => toast(page).textContent(), text => text === 'Set to RejectedUndo');
+    await holdToast(page);
+    await until('off the shelf', () => page.locator('.jb-pin-h').count(), count => count === 0);
+    await until('in the table', () => table(page), names => names.includes('Relecloud'));
+    await undo(page);
+    await until('on the shelf again', () => shelf(page), names => names.join() === 'Relecloud');
+    assert.equal((await setpoint.api<ApplicationOut>('GET', `/jobs/applications/${relecloud}`)).status, 'applied');
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 test('a row\'s right-click (#268): its actions at the pointer, the cursor on it and nothing opened; Copy company and role; Edit title opens it with the field', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
@@ -1313,7 +1426,7 @@ test('a row\'s right-click (#268): its actions at the pointer, the cursor on it 
     const menu = page.getByRole('menu', {name: 'Northwind Talent · Software Engineer I'});
     await menu.waitFor();
     assert.deepEqual(await menu.getByRole('menuitem').allTextContents(), [
-      'Open↵', 'Open postingO', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
+      'Open↵', 'Open postingO', 'PinP', 'Edit company', 'Edit title', 'Set status', 'Merge with…', 'Not this posting', 'Look up the JD again',
       'Not an applicationHides it · its emails never make one again', 'DeleteForgets it · a later email can make it again', 'Copy company and role', 'Copy posting link',
     ]);
     // At the pointer; the cursor on the row, and the row not opened.

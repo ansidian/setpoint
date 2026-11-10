@@ -15,7 +15,7 @@ import type {SizedColumn} from '../../logic/jobColumns.ts';
 import {zoomOf} from '../calendar/geometry.ts';
 import {setColumnWidth, useColumnWidths} from './columns.ts';
 import {Icon} from '../../ui/Icon.tsx';
-import {foldIn, foldOut, useFold} from '../fold.ts';
+import {foldRef, useFold} from '../fold.ts';
 import {Marked} from '../search/Search.tsx';
 import {appliedWord, jdCell, markLabel, markOf, marks, nextSort, recedes, setByYou, statusStep, titleOf} from './words.ts';
 import type {Sort, SortKey} from './words.ts';
@@ -150,7 +150,7 @@ export interface RowState {
   moved: boolean;
 }
 
-export function Row({row, state, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu}: {
+export function Row({row, state, query, line, now, timeZone, today, fold = null, onPoint, onClick, onMenu, onUnpin}: {
   row: ApplicationRowOut;
   state: RowState;
   // Search's query, to highlight what it matched; and the JD line a match only there quotes.
@@ -163,6 +163,8 @@ export function Row({row, state, query, line, now, timeZone, today, fold = null,
   onPoint: (key: string) => void;
   onClick: (id: number) => void;
   onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
+  // On the Pinned shelf: Unpin over its end under the pointer, as the Inbox's shelf (SV-243).
+  onUnpin?: (row: ApplicationRowOut) => void;
 }) {
   const key = rowKey(row.id);
   const leaving = fold === 'out';
@@ -170,10 +172,10 @@ export function Row({row, state, query, line, now, timeZone, today, fold = null,
   const step = statusStep(row, today);
   const jd = jdCell(row.jd, now, timeZone);
   const text = (value: string) => (query ? <Marked parts={marks(value, query)} /> : value);
-  const classes = ['jb-tr', line !== undefined && 'two', recedes(row) && 'recedes', state.cursor && 'cur', state.open && 'open', state.landed && 'landed', state.moved && 'moved']
+  const classes = ['jb-tr', line !== undefined && 'two', recedes(row) && 'recedes', onUnpin && 'shelf', state.cursor && 'cur', state.open && 'open', state.landed && 'landed', state.moved && 'moved']
     .filter(Boolean).join(' ');
   return (
-    <div ref={leaving ? foldOut : fold === 'in' ? foldIn : undefined} className={leaving ? `${classes} leaving` : classes} data-key={leaving ? undefined : key}
+    <div ref={foldRef(fold, 0, fold === 'in' && Boolean(onUnpin))} className={leaving ? `${classes} leaving` : classes} data-key={leaving ? undefined : key}
       data-application={leaving ? undefined : row.id} aria-hidden={leaving || undefined}
       onMouseMove={() => !leaving && !state.cursor && onPoint(key)} onClick={() => !leaving && onClick(row.id)}
       onContextMenu={leaving || !onMenu ? undefined : event => onMenu(row, event)}>
@@ -192,10 +194,72 @@ export function Row({row, state, query, line, now, timeZone, today, fold = null,
       <span className="jd" data-tip={jd?.title ?? jd?.text}>
         {jd && (jd.spin ? <span className="spin"><Icon name={jd.icon} size={16} /></span> : <Icon name={jd.icon} size={16} />)}
       </span>
+      {onUnpin && !leaving && (
+        <span className="hact">
+          <button className="unpin" type="button" onClick={event => {
+            event.stopPropagation();
+            onUnpin(row);
+          }}><Icon name="keep_off" size={15} />Unpin</button>
+        </span>
+      )}
       {line !== undefined && (
         <span className="snip" data-tip={line}><span className="lab">Full posting · </span>“{query ? <Marked parts={marks(line, query)} /> : line}”</span>
       )}
     </div>
+  );
+}
+
+type Part = {kind: 'label'} | {kind: 'end'} | {kind: 'row'; row: ApplicationRowOut; shelf: boolean};
+const shelfKey = (id: number) => `p:${id}`;
+
+/**
+ * The table's rows under the Pinned shelf (SV-243, D504, #355), as one list that folds as the Inbox's
+ * does: under the headings "Pinned" with its pin, the pinned rows as the table's own (its columns and
+ * widths), a divider, then the rest; nothing of the shelf with nothing pinned. A shelf row has its own
+ * key, so Pin folds the row out of the table and onto the shelf, where it lands holding `sub3`
+ * (foldInLanding); Unpin and Undo fold it back. The label and the divider fold with the shelf.
+ */
+export function TableRows({shelf, rows, rowState, onUnpin, ...rest}: {
+  shelf: ApplicationRowOut[];
+  rows: ApplicationRowOut[];
+  rowState: (row: ApplicationRowOut) => RowState;
+  query: string | null;
+  now: number;
+  timeZone: string;
+  today: string;
+  onPoint: (key: string) => void;
+  onClick: (id: number) => void;
+  onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
+  onUnpin: (row: ApplicationRowOut) => void;
+}) {
+  const entries = useMemo((): Entry<Part>[] => [
+    ...(shelf.length ? [
+      {key: 'pin-h', id: null, item: {kind: 'label'}} as const,
+      ...shelf.map((row): Entry<Part> => ({key: shelfKey(row.id), id: row.id, item: {kind: 'row', row, shelf: true}})),
+      {key: 'pin-end', id: null, item: {kind: 'end'}} as const,
+    ] : []),
+    ...rows.map((row): Entry<Part> => ({key: rowKey(row.id), id: row.id, item: {kind: 'row', row, shelf: false}})),
+  ], [shelf, rows]);
+  // What folds out: the shelf's own (its label, divider and rows: Unpin, a close), a row moving between
+  // the shelf and the table, and a row a correction takes away. Rows leaving for a filter simply go.
+  const rules = useMemo((): FoldRules<Part> => {
+    const here = new Set(entries.flatMap(entry => (entry.id === null ? [] : [entry.id])));
+    return {
+      folds: entry => entry.id === null || entry.key.startsWith('p:') || here.has(entry.id) || takenAway.has(entry.id),
+      arrives: () => true,
+    };
+  }, [entries]);
+  const folded = useFold(entries, rules);
+  // The divider comes and goes with the label, which folds in with the shelf's first row.
+  const labelFold = folded.find(entry => entry.key === 'pin-h')?.fold ?? null;
+  return (
+    <>
+      {folded.map(({key, item, fold}) => {
+        if (item.kind === 'label') return <div key={key} ref={foldRef(fold)} className="jb-pin-h"><Icon name="keep" size={14} />Pinned</div>;
+        if (item.kind === 'end') return <div key={key} ref={foldRef(fold ?? (labelFold === 'in' ? 'in' : null))} className="jb-pin-end" />;
+        return <Row key={key} row={item.row} state={rowState(item.row)} fold={fold} onUnpin={item.shelf ? onUnpin : undefined} {...rest} />;
+      })}
+    </>
   );
 }
 
@@ -211,6 +275,7 @@ export function Rows({rows, lines, rowState, ...rest}: {
   onPoint: (key: string) => void;
   onClick: (id: number) => void;
   onMenu?: (row: ApplicationRowOut, event: ReactMouseEvent<HTMLElement>) => void;
+  onUnpin?: (row: ApplicationRowOut) => void;
 }) {
   const entries = useMemo(() => rows.map((row): Entry<ApplicationRowOut> => ({key: rowKey(row.id), id: row.id, item: row})), [rows]);
   const shown = useFold(entries, ROW_FOLDS);

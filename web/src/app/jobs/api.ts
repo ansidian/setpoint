@@ -72,6 +72,7 @@ export const trackItem = (item: number) => change('POST', `/jobs/needs-you/${ite
 export const notAJob = (item: number) => change('POST', `/jobs/needs-you/${item}/not-a-job`);
 export const editApplication = (id: number, edit: JobsEdit) => change('PATCH', applicationPath(id), edit);
 export const setStatus = (id: number, status: JobStatus | null) => change('POST', `${applicationPath(id)}/status`, {status});
+export const setPinned = (id: number, pinned: boolean) => change('POST', `${applicationPath(id)}/pin`, {pinned});
 export const mergeWith = (id: number, other: number) => change('POST', `${applicationPath(id)}/merge`, {other}, [other]);
 export const notThisPosting = (id: number) => change('POST', `${applicationPath(id)}/not-this-posting`);
 export const notAnApplication = (id: number) => change('POST', `${applicationPath(id)}/not-an-application`, undefined, [id]);

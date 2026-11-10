@@ -64,6 +64,13 @@
       "when": 1793750391874,
       "tag": "0008_check_token",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794278402795,
+      "tag": "0009_pinned",
+      "breakpoints": true
     }
   ]
 }

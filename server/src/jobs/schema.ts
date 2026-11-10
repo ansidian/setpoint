@@ -57,6 +57,8 @@ export const jobsApplications = sqliteTable('jobs_applications', {
   jdLookupStoppedAt: text('jd_lookup_stopped_at'),
   // Its lookup was started by the history pass's end (J4): what it's unsure of goes to From history.
   jdLookupFromHistory: integer('jd_lookup_from_history', {mode: 'boolean'}).notNull().default(false),
+  // Pinned to the table's Pinned shelf (SV-243, D504), newest first; cleared when it closes (D505).
+  pinnedAt: text('pinned_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 }, table => [

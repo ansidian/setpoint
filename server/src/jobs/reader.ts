@@ -36,7 +36,7 @@ import {announceHistory, finishHistory, HISTORY_KEY, resumeHistory} from './hist
 import {historyRow, historyStatus, historyWindow} from './historyState.ts';
 import {LOOKUP_KEY_PREFIX, lookUpJd, PASTED_KEY_PREFIX, queueDueLookups, readPasted} from './lookup.ts';
 import {readWindow, recordReadFailure, recordReadSuccess} from './readerState.ts';
-import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey} from './rules.ts';
+import {EVENT_OF_EMAIL, planEmail, sameCompany, titleKey, unpinOnClose} from './rules.ts';
 import type {Plan, ReadMatchEmail} from './rules.ts';
 import * as j from './schema.ts';
 import {blockedEmails, emailSetsStatus, knownApplications, setByHand, stillLooking} from './stick.ts';
@@ -144,6 +144,7 @@ export function applyReading(store: Store, email: JobsEmail, reading: EmailReadi
         if (plan.status) {
           Object.assign(changes, {
             status: plan.status, statusSetBy: 'email', statusSetAt: at,
+            ...unpinOnClose(db.select({status: j.jobsApplications.status}).from(j.jobsApplications).where(eq(j.jobsApplications.id, plan.applicationId)).get()!, plan.status),
             step: plan.status === 'in_process' ? reading!.line ?? email.summary : null, stepAt: plan.status === 'in_process' ? at : null,
           });
           // An email that sets a status wins over one set by hand (decision 68, D322): stick.ts's one exception.

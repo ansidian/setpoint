@@ -12,9 +12,12 @@
 // application in its Assign to… opens that application's first email there (D402). Held here rather
 // than in the address: it's a look at an email, and nothing comes back to it on a reload.
 //
-// Keys: `J` / `K` move through Needs you's items and then the table's rows (with an application open,
+// The Pinned shelf (SV-243, D504) sits under the headings, newest pin first under every filter and
+// sort; search replaces it with the table, a pinned application found among the results.
+//
+// Keys: `J` / `K` move through Needs you's items, the shelf's rows and then the table's (with an application open,
 // they open the next and previous one; with an item's email open, the next and previous email of its
-// list); Enter opens; `O` opens the posting; `/` searches; Esc folds an unfolded posting, then closes
+// list); Enter opens; `P` pins or unpins the open application, else the one under the cursor; `O` opens the posting; `/` searches; Esc folds an unfolded posting, then closes
 // the detail or the email (in a narrow window, Back), then clears the query, then leaves search. `4` is
 // the shell's (App.tsx).
 //
@@ -52,7 +55,7 @@ import {showToast, toastFailure} from '../toast.ts';
 import {act} from './act.ts';
 import {
   applicationPath, deleteApplication, editApplication, JOBS_PATH, lookUp, mergeWith, moveEvent, noneOfThese, notAboutThis, notAnApplication, notThisPosting,
-  pickCandidate, searchPath, setStatus,
+  pickCandidate, searchPath, setPinned, setStatus,
 } from './api.ts';
 import {EmptyPaneButton, useEmptyPane} from '../EmptyPane.tsx';
 import type {PaneTrouble} from '../EmptyPane.tsx';
@@ -70,8 +73,8 @@ import {needKey, NeedsYou} from './NeedsYou.tsx';
 import {PerWeek} from './PerWeek.tsx';
 import {StatusFilter} from './StatusFilter.tsx';
 import {JobsLines, JobsOff} from './States.tsx';
-import {HeaderRow, rowKey, Rows, takenAway} from './Table.tsx';
-import {DEFAULT_SORT, pickWords, readingLine, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
+import {HeaderRow, rowKey, Rows, TableRows, takenAway} from './Table.tsx';
+import {DEFAULT_SORT, pickWords, readingLine, shelfAndTable, sortRows, STATUS_LABELS, tabTitle, titleOf} from './words.ts';
 import type {Filter, Sort} from './words.ts';
 import {useListFade} from '../../ui/Segmented.tsx';
 import './jobs.css';
@@ -167,13 +170,14 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // Memoized, so the table's rows (and their folds) change only when the page's answer or the filter does.
   const filtered = useMemo(() => rows.filter(row => matches(row, filter) || held.has(row.id)), [rows, filter, held]);
   if (filter !== 'all' && (hold.filter !== filter || filtered.some(row => !held.has(row.id)))) setHold({filter, ids: new Set(filtered.map(row => row.id))});
-  const table = useMemo(() => sortRows(filtered, sort), [filtered, sort]);
+  // Pinned ones are on the shelf, under every filter, and not again in the table.
+  const {shelf, table} = useMemo(() => shelfAndTable(rows, filtered, sort), [rows, filtered, sort]);
 
   // What J / K move through: Needs you's items, then the rows; in search, its results in order.
   const corRows = useMemo(() => (results ? sortRows(results.company_or_role, sort) : []), [results, sort]);
   const jdRows = useMemo(() => (results ? sortRows(results.in_jd.map(each => each.row), sort) : []), [results, sort]);
   const lines = useMemo(() => new Map(results?.in_jd.map(each => [each.row.id, each.line]) ?? []), [results]);
-  const shownRows = !enabled ? [] : results ? [...corRows, ...jdRows] : table;
+  const shownRows = !enabled ? [] : results ? [...corRows, ...jdRows] : [...shelf, ...table];
   const needs = !q && page?.enabled ? page.needs_you : [];
   const keys = [...needs.map(item => needKey(item.id)), ...shownRows.map(row => rowKey(row.id))];
 
@@ -276,6 +280,11 @@ export function JobsPage({route}: {route: JobsRoute}) {
   const posting = useRef<FullPostingHandle>(null);
   const postingLink = () => document.querySelector<HTMLAnchorElement>('.jb-pane .rd-tools a[data-hint="o"]')?.href ?? null;
 
+  /** Pin or Unpin (SV-243): `P`, the menus, the detail's tool and the shelf's Unpin. */
+  const togglePin = (row: ApplicationRowOut) => void act(() => setPinned(row.id, row.pinned_at === null), row.pinned_at === null
+    ? {done: 'Pinned', tone: 'pinned', failed: 'Couldn\'t pin it'}
+    : {done: 'Unpinned', failed: 'Couldn\'t unpin it'});
+
   // Attached again with each render, before any key can come (as News's are).
   useLayoutEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -300,6 +309,14 @@ export function JobsPage({route}: {route: JobsRoute}) {
       if (plainKey(event, 'j')) move(1);
       else if (plainKey(event, 'k')) move(-1);
       else if (plainKey(event, 'Enter') && cursor?.startsWith('r:') && keys.includes(cursor)) run(() => openAt(Number(cursor.slice(2))));
+      else if (plainKey(event, 'p') && enabled && reading === null) {
+        const id = open ?? (cursor?.startsWith('r:') && keys.includes(cursor) ? Number(cursor.slice(2)) : null);
+        const row = id === null ? undefined : rows.find(each => each.id === id) ?? (detail?.id === id ? detail : undefined);
+        if (row) {
+          echoKey('p');
+          run(() => togglePin(row));
+        }
+      }
       else if (plainKey(event, 'Enter') && cursor?.startsWith('n:') && !(event.target instanceof Element && event.target.closest('.acts'))) {
         const item = needs.find(each => needKey(each.id) === cursor);
         if (item && item.message_id !== null) run(() => read(item));
@@ -343,6 +360,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
     setEditing({id: row.id, field});
   };
   const correctionsFor = (row: ApplicationRowOut): CorrectionActions => ({
+    pin: () => togglePin(row),
     editCompany: () => edit(row, 'company'),
     editTitle: () => edit(row, 'title'),
     setStatus: status => void act(() => setStatus(row.id, status), {
@@ -464,7 +482,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
                   {jdRows.length > 0 && <div className={corRows.length ? 'gh' : 'gh sr'}><Icon name="description" size={14} />In a job description <span className="n">{jdRows.length}</span></div>}
                   <Rows rows={jdRows} lines={lines} {...rowProps} />
                 </>
-              ) : <Rows rows={table} {...rowProps} />}
+              ) : <TableRows shelf={shelf} rows={table} {...rowProps} onUnpin={togglePin} />}
             </div>
           )}
         </section>

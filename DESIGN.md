@@ -1129,10 +1129,22 @@ desktop and keeps it (D325).
   order; a row that's landed moves only by a sort.
 - **A re-application** (D305) is its own row, Applied with "· Re-applied"; the earlier one keeps its
   own closed row at its date (Relecloud, Oct 6 and Jul 22).
+- **The Pinned shelf** (#355; D504, D505): under the headings and above the first row, a 28 px
+  "Pinned" label (12 / 500 `ink3`, a 14 px `keep` in `sun`, its text in line with Company), the
+  pinned applications as ordinary rows in the table's columns and widths, then a 6 px `sub2` divider
+  with `hair` below. Newest pin first whatever the sort, and the whole shelf under every filter; a
+  pinned application is on the shelf only, and still counts under its status in the filter. Under the
+  pointer a shelf row's JD glyph gives way to **Unpin** (`keep_off`, the Inbox shelf's pill). With
+  nothing pinned there's no label and no shelf. Pinned, a row folds out of the table and onto the
+  shelf, landing in `sub3` and letting it go over 260 ms, as the Inbox's does (inbox-09); Unpin, a
+  close and Undo fold it back, and the label and divider fold in and out with the shelf (180 ms).
+  Search replaces it with the table: a pinned
+  application is found among the results like any other. No cap and no count (D314).
 
 ### The application's detail
 
-- **Tools** (48 px): **Open posting** `O` (`open_in_new`, the JD's link), then a spacer, previous,
+- **Tools** (48 px): **Open posting** `O` (`open_in_new`, the JD's link), **Pin** `P` (`keep`; pinned,
+  **Unpin** with `keep-fill` on the active tool's fill, #355), then a spacer, previous,
   next and More (30 px icon buttons). With no posting link there's no Open posting: 34c draws **Open
   email** (`mail`) there while the JD is looked up, and 38b nothing once none was found.
 - **Opening** (32): the pane takes its 680 px at once and its content slides in 12 px from the right
@@ -1243,6 +1255,7 @@ with Undo for 6 seconds and #147's glyph (override 36).
   for the same small field as the company's, 240 wide, with "Enter to save · Esc" beside it.
   Emptied and saved, the location goes. The toast says "Location set" or "Location removed".
 - **More** (35b, 300 wide) grows from its top-right corner:
+  - **Pin** (`keep`) or **Unpin** (`keep_off`) with `P`, then a divider (#355)
   - **Edit company** (`edit`), **Edit title** (`edit_note`), **Set status** (`radio_button_checked`)
     and **Merge with…** (`merge`), the last two with a `chevron_right` submenu
   - a divider, then **Not this posting** (`link_off`) and **Look up the JD again** (`manage_search`)
@@ -1275,7 +1288,7 @@ with Undo for 6 seconds and #147's glyph (override 36).
   status is set by hand, a divider and **Let emails decide** (`mail`) end the menu: the status goes
   back to what the emails make it, and the `edit` goes.
 - **A right-click** on a row (#248, #268) opens its actions at the pointer, moving the cursor to it
-  without opening it: **Open** ↵, **Open posting** O when there's a link, More's list (Edit company
+  without opening it: **Open** ↵, **Open posting** O when there's a link, More's list (Pin first; Edit company
   and Edit title open the application with that field in edit), then **Copy company and role** and
   **Copy posting link**. On a timeline event it opens the event's ··· menu.
 
@@ -1391,8 +1404,9 @@ Offer). A theme switch has no motion of its own (#291).
 
 ### Keys and behaviour
 
-- **Keys:** `4` Jobs; `J` / `K` move, through Needs you's items and then the table's rows; Enter
-  opens the application, or an item's email; ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
+- **Keys:** `4` Jobs; `J` / `K` move, through Needs you's items, the Pinned shelf's rows and then the
+  table's, as one list; Enter opens the application, or an item's email; `P` pins or unpins the open
+  application, else the one under the cursor (#355); ↑ ↓ choose a candidate and Enter picks it; Space on Full posting unfolds
   it; `/` searches Jobs; `O` opens the posting's link; Tab / Shift-Tab step the status filter,
   wrapping from Withdrawn to All, as News's views (#317), the table fading in quickly. Esc goes from the title's field, a menu, the
   full posting or (in a narrow window) the detail back a step, then closes the pane; in search, it
@@ -4456,3 +4470,20 @@ was decided; the audit itself was retired by D480.
     is left. Andy chose it over the rail showing events only, tasks only or one count for both, and over
     an event's bar and a task's ring side by side in 56 px. Resting on the slot doesn't bring the
     sidebar out, so it can be clicked.
+355. **Jobs can be pinned to a shelf over the table** (amending The table, The application's detail,
+    Corrections and Keys; Andy, 2026-11-09; darma SV-243, D504, D505). A best lead had nowhere to stay
+    in sight. **Pin** (`P`, the row's right-click, More, and a tool beside Open posting) puts an
+    application on a Pinned shelf under the column headings, above the first row: a small "Pinned"
+    label with the `keep` glyph in `sun`, the pinned rows as ordinary rows sharing the table's columns
+    and dragged widths, then a divider. Newest pin first whatever the sort, and the whole shelf under
+    every filter; a pinned row is on the shelf only, still counted under its status, and J / K and
+    Enter go through the shelf and the table as one list. Needs you stays above the headings. Search
+    replaces the shelf with the table, as it replaces the table, so a query reads as one list of what
+    matched. The rows move as the Inbox's do: out of the table and onto the shelf, landing in `sub3`,
+    and back. Pin and Unpin say so in the toast with Undo, the Inbox's `keep` glyph on Pinned; a shelf
+    row offers Unpin under the pointer. A pin goes on its own when the status becomes Rejected or
+    Withdrawn, by hand or by an email, and the row goes back to its place; Undo on a status set by hand
+    brings the pin back. Ghosted, a guess from silence, leaves it. A job pinned while already closed
+    stays pinned, as the user chose it. Merging keeps the pin if either had one, from the earlier pin.
+    No cap and no count (D314). Chosen over pinned rows sorting first in the filtered table and over a
+    gutter mark alone.

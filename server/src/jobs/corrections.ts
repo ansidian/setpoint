@@ -16,6 +16,8 @@
 // - Not this posting: the JD goes and its link is turned down; the other candidates are offered again,
 //   or it's No JD found.
 // - Paste the posting: the user's copy is the JD, read afterwards (SV-140).
+// - Pin and Unpin (SV-243, D504): on the table's Pinned shelf or off it. A pin goes when the status
+//   becomes Rejected or Withdrawn, by hand or by an email (D505), and Undo brings it back with the status.
 // A merge, a move or an event taken off settles the status from the emails again, unless the user set it.
 import {isQuietJobEvent, MAX_PASTED_CHARS, PASTED_TOO_LONG, STATUS_OF_JOB_EVENT} from '@setpoint/shared';
 import type {JobEventKind, JobHandField, JobStatus, JobsEdit} from '@setpoint/shared';
@@ -26,7 +28,7 @@ import type {Store} from '../store.ts';
 import {jobsDb} from './db.ts';
 import {savePasted} from './lookup.ts';
 import {MIN_POSTING_CHARS, plainToMarkdown} from './markdown.ts';
-import {statusAfter, statusFromEvents, titleKey} from './rules.ts';
+import {statusAfter, statusFromEvents, titleKey, unpinOnClose} from './rules.ts';
 import * as j from './schema.ts';
 import {addAlias, emailSetsStatus, rejectLinks, rejectedLinks, setByHand} from './stick.ts';
 import {beginUndo, keepUndo} from './undo.ts';
@@ -88,7 +90,7 @@ function writeEmailsStatus(store: Store, applicationId: number, now: string) {
   const application = applicationOf(store, applicationId);
   const events = db.select().from(j.jobsEvents).where(eq(j.jobsEvents.applicationId, applicationId)).orderBy(asc(j.jobsEvents.at), asc(j.jobsEvents.id)).all();
   const made = statusFromEvents(application.appliedAt, events);
-  db.update(j.jobsApplications).set({...made, statusSetBy: 'email', updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
+  db.update(j.jobsApplications).set({...made, ...unpinOnClose(application, made.status), statusSetBy: 'email', updatedAt: now}).where(eq(j.jobsApplications.id, applicationId)).run();
 }
 
 /**
@@ -140,9 +142,19 @@ export function setStatus(store: Store, id: number, status: JobStatus | null): C
     // In process set by hand keeps the step its email gave it, if it had one.
     const keepStep = status === 'in_process' && application.status === 'in_process';
     db.update(j.jobsApplications).set({
-      status, statusSetBy: 'user', statusSetAt: now, step: keepStep ? application.step : null, stepAt: keepStep ? application.stepAt : null, updatedAt: now,
+      status, ...unpinOnClose(application, status), statusSetBy: 'user', statusSetAt: now, step: keepStep ? application.step : null, stepAt: keepStep ? application.stepAt : null, updatedAt: now,
     }).where(eq(j.jobsApplications.id, id)).run();
     markByHand(store, id, 'status', now);
+    return {application: id};
+  });
+}
+
+/** POST /api/jobs/applications/:id/pin: Pin or Unpin (SV-243); pinning again keeps its place on the shelf. */
+export function setPinned(store: Store, id: number, pinned: boolean): Change {
+  return corrected(store, {applications: [id]}, now => {
+    const application = applicationOf(store, id);
+    const pinnedAt = pinned ? application.pinnedAt ?? now : null;
+    jobsDb(store.sqlite).update(j.jobsApplications).set({pinnedAt, updatedAt: now}).where(eq(j.jobsApplications.id, id)).run();
     return {application: id};
   });
 }
@@ -173,6 +185,9 @@ export function mergeApplications(store: Store, id: number, otherId: number): Ch
     // A re-application of the other is now one of this, unless it's this one.
     db.update(j.jobsApplications).set({reappliedFromId: id}).where(eq(j.jobsApplications.reappliedFromId, otherId)).run();
     if (application.reappliedFromId === otherId || application.reappliedFromId === id) db.update(j.jobsApplications).set({reappliedFromId: null}).where(eq(j.jobsApplications.id, id)).run();
+    // Pinned if either was, from the earlier pin (D505).
+    const pins = [application.pinnedAt, other.pinnedAt].filter((at): at is string => at !== null).sort();
+    if (pins[0] !== application.pinnedAt) db.update(j.jobsApplications).set({pinnedAt: pins[0] ?? null}).where(eq(j.jobsApplications.id, id)).run();
     // Applied is the earlier of the two.
     if (other.appliedAt < application.appliedAt) db.update(j.jobsApplications).set({appliedAt: other.appliedAt}).where(eq(j.jobsApplications.id, id)).run();
     db.delete(j.jobsApplications).where(eq(j.jobsApplications.id, otherId)).run();
