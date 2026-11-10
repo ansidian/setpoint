@@ -12,7 +12,7 @@ import {busySaturday} from './busySaturday.ts';
 import {failedChange, noDinner} from './calendarChanges.ts';
 import {codeExpiring, coffeeHtml, lastYear, ledgerAudit, newDigest, newsletterHtml, recoveryHtml, positionedHtml, stitchedHtml, viewportHtml} from './mailBoards.ts';
 import {newsAiDown, newsCapped, newsFirstRun, newsQuietTech, newsStaleAi} from './newsStates.ts';
-import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, triageDown} from './states.ts';
+import {backfill, checked, failingWeather, failingWork, mailRules, needsReconnect, ntfy, staleIcloud, stalePersonal, staleTodoist, todoistOff, triageDown} from './states.ts';
 import {freeReview} from './freeReview.ts';
 import {linkPlaces} from './linkPlaces.ts';
 import {timeToLeave} from './timeToLeave.ts';
@@ -52,6 +52,8 @@ export const FIXTURES: Record<string, {board: string; apply: (database: OpenData
   // SV-20: the calendar's own stale and failing lines.
   'stale-todoist': {board: '19b', apply: staleTodoist},
   'failing-weather': {board: 'calendar checks', apply: failingWeather},
+  // Not a board: Todoist not connected, for Accounts' row and Calendar's section (SV-255, D514).
+  'todoist-off': {board: 'settings checks', apply: todoistOff},
   'checked': {board: '17', apply: checked},
   'triage-down': {board: '19a', apply: triageDown},
   'backfill': {board: 'search\'s indexing line', apply: backfill},

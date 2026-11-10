@@ -1084,11 +1084,12 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
   }
 });
 
-test('SV-253 (F3, D518): Add rule at the narrow modal stays inside its group with a filter and every Trash choice, and Settings doesn\'t scroll sideways', async () => {
+// The modal at 820 wide (the window less its 16 px each side), where the Trash control ran past the group,
+// and at 608, the narrowest the desktop layout makes it (a 640 px window), where the form is one column (SV-256).
+for (const width of [852, 640]) test(`SV-253 (F3, D518), SV-256: Add rule in a ${width} px window stays inside its group with a filter and every Trash choice, and Settings doesn't scroll sideways`, async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
-    // The modal at 820 wide (the window less its 16 px each side), where the Trash control ran past the group.
-    const page = await setpoint.page({width: 852, height: 760});
+    const page = await setpoint.page({width, height: 760});
     await openAt(page, setpoint.base, 'mail');
     await page.locator('.settings .set-label').getByRole('button', {name: 'Add rule'}).click();
     await page.getByRole('button', {name: 'and…'}).click();
@@ -1109,6 +1110,34 @@ test('SV-253 (F3, D518): Add rule at the narrow modal stays inside its group wit
       assert.deepEqual(fit.past, [], `with ${choice}, nothing in Add rule passes the group's edge`);
       assert.equal(fit.sideways, 0, `with ${choice}, Settings doesn't scroll sideways`);
     }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
+test('SV-255 (D514): Todoist not connected says so on Accounts with Connect Todoist, which says why it can\'t here, and on Calendar with a way to Accounts', async () => {
+  const setpoint = await startSetpoint({fixtures: ['todoist-off'], clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 1280, height: 800});
+    await openAt(page, setpoint.base, 'accounts');
+    const row = page.locator('.settings [data-source="todoist"]');
+    await row.getByText('Not connected').waitFor();
+    // The dev run has no Todoist app, so Connect Todoist asks the server and says why under Sources.
+    await row.getByRole('button', {name: 'Connect Todoist'}).click();
+    await page.locator('.settings .line.failed').waitFor();
+    // Its menu offers Connect Todoist, and no Reconnect while there's nothing to reconnect.
+    await page.getByRole('button', {name: 'Todoist options'}).click();
+    await page.getByRole('menuitem', {name: 'Connect Todoist'}).waitFor();
+    assert.equal(await page.getByRole('menuitem', {name: 'Reconnect'}).count(), 0);
+    await page.keyboard.press('Escape');
+
+    // Calendar's Todoist section has no projects to show: it says so and leads to Accounts.
+    await page.locator('.settings .set-nav .nav', {hasText: 'Calendar'}).click();
+    const section = page.locator('.settings .set-sec').filter({has: page.locator('.set-label', {hasText: /^Todoist$/})});
+    await section.getByText('Not connected').waitFor();
+    await section.getByRole('button', {name: 'Connect in Accounts'}).click();
+    await page.locator('.settings [data-source="todoist"]').getByRole('button', {name: 'Connect Todoist'}).waitFor();
     assert.deepEqual(setpoint.pageErrors, []);
   } finally {
     await setpoint.stop();
