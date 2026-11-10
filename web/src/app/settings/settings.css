@@ -61,6 +61,10 @@
 .settings .t { color: var(--ink); }
 .settings .s { color: var(--ink3); font-size: 12.5px; }
 .settings .lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* A row's two lines take whole-pixel line boxes, the nearest to 1.35, so a two-line row and every
+   sticky label under it land on whole pixels (D517); 1.35 left them at 36.42 px. */
+.settings .lines > .t, .settings .lines > .topic { line-height: 18px; }
+.settings .lines > .s { line-height: 17px; }
 .settings .line { margin: 0; padding: 6px 4px 0; color: var(--ink3); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
 .settings .line.failed { color: var(--alert); }
 .settings .line.caution { color: var(--caution); }
