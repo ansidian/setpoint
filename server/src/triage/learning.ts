@@ -101,8 +101,10 @@ function monthStart(store: Store): string {
   return zonedInstant(`${today.slice(0, 7)}-01`, '00:00', store.timeZone);
 }
 
-// A rule's waiting trashes (SV-237): due, not yet sent, not spared by a pin.
-const waitingOf = (ruleIds: number[]) => and(inArray(t.messages.triageRuleId, ruleIds), isNotNull(t.messages.trashDueAt), isNull(t.messages.trashedAt), isNull(t.messages.pinnedAt));
+// A rule's waiting trashes (SV-237): due, not yet sent, not spared by a pin, and the rule's own time,
+// not a code's earlier expiry (SV-252).
+const waitingOf = (ruleIds: number[]) => and(inArray(t.messages.triageRuleId, ruleIds), isNotNull(t.messages.trashDueAt), isNull(t.messages.trashedAt), isNull(t.messages.pinnedAt),
+  sql`not (${t.messages.codeTrash} and ${t.messages.trashDueAt} = ${t.messages.codeExpiresAt})`);
 
 function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
   const ids = rows.map(row => row.id);
@@ -119,9 +121,12 @@ function presentRules(store: Store, rows: RuleRow[]): RuleOut[] {
   }));
 }
 
-/** Turning a rule off or deleting it with Cancel them (D495): its waiting trashes' due times go, so the emails stay. */
+/**
+ * Turning a rule off or deleting it with Cancel them (D495): its waiting trashes' due times go, so the
+ * emails stay; a code email's goes back to its code's later expiry (SV-252).
+ */
 function cancelWaiting(store: Store, ruleId: number) {
-  const cancelled = store.db.update(t.messages).set({trashDueAt: null}).where(waitingOf([ruleId]))
+  const cancelled = store.db.update(t.messages).set({trashDueAt: sql`case when ${t.messages.codeTrash} then ${t.messages.codeExpiresAt} end`}).where(waitingOf([ruleId]))
     .returning({id: t.messages.id, accountId: t.messages.accountId}).all();
   if (cancelled.length) noteLive(store, {type: 'mail', messages: cancelled.map(row => row.id), accounts: [...new Set(cancelled.map(row => row.accountId))], commands: []});
 }

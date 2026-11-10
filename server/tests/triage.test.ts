@@ -16,6 +16,7 @@ import {setSecret} from '../src/secrets/store.ts';
 import {getSettings, updateSettings} from '../src/settings.ts';
 import {isoNow} from '../src/store.ts';
 import {upsertMessages} from '../src/sync/mailMirror.ts';
+import {rereadCodes} from '../src/triage/codes.ts';
 import {aiOverview, answerPrompt, createRule, currentPrompts, deleteRule, listRules, updateRule} from '../src/triage/learning.ts';
 import {FAKE_KEYS, fakeModels} from './fakeModels.ts';
 import {fakeNtfy} from './fakeNtfy.ts';
@@ -457,6 +458,164 @@ describe('turning off or deleting a rule with trashes waiting (SV-238)', () => {
     const before = ids.map(id => world.message(id).trashDueAt);
     expect(updateRule(world.store, rule.id, {trash: 'never', mark_read: true}).trashes_waiting).toBe(2);
     expect(ids.map(id => world.message(id).trashDueAt)).toEqual(before);
+  });
+});
+
+// A delayed trash's payload without the touched ids: what sent it.
+const cause = ({touched: _touched, ...payload}: Record<string, unknown>) => payload;
+
+describe('a verification code\'s trash at its expiry (SV-252)', () => {
+  type World = Awaited<ReturnType<typeof setup>>['world'];
+  const CODE = {fromName: 'Contoso', fromAddress: 'no-reply@contoso.example', subject: 'Your sign-in code is 482913', bodyText: 'Enter 482913 to sign in.'};
+  const trashes = (world: World, id: number) =>
+    world.store.db.select().from(t.commands).where(and(eq(t.commands.target, 'message'), eq(t.commands.targetId, id), eq(t.commands.kind, 'trash'))).all();
+  const row = (world: World, id: number) => inbox(world.store).groups.flatMap(group => group.rows).find(one => one.id === id);
+
+  /** New mail with a code, sorted by the model as a code email, and the minute pass. */
+  async function coded(changes: Parameters<World['fetched']>[0] = {}, answer: Record<string, unknown> = {}) {
+    const env = await setup();
+    setSecret(env.world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    env.fake.answer(() => decision({kind: 'security', type: 'verification_code', organisation: 'Contoso', ...answer}));
+    const arrived = isoNow(env.world.store);
+    const id = env.deliver({...CODE, receivedAt: arrived, ...changes});
+    await env.world.drain();
+    const expires = new Date(Date.parse(arrived) + 15 * 60_000).toISOString();
+    return {...env, id, arrived, expires, pass: new RuleTrashScheduler({store: env.world.store})};
+  }
+
+  test('new mail with a code row is due for the trash at its code\'s expiry, and the row says so', async () => {
+    const {world, id, expires} = await coded();
+    expect(world.message(id)).toMatchObject({code: '482913', codeExpiresAt: expires, codeTrash: true, trashDueAt: expires});
+    expect(row(world, id)).toMatchObject({code: {value: '482913', expires_at: expires}, trash_due_at: expires});
+  });
+
+  test('the pass trashes it at expiry, once, as a code\'s trash with no rule, leaving it unread', async () => {
+    const {world, id, pass} = await coded();
+    world.advance(15 * 60_000 - 1000);
+    await pass.tick();
+    expect(trashes(world, id)).toEqual([]);
+    world.advance(1000);
+    await pass.tick();
+    expect(world.message(id)).toMatchObject({trashedAt: expect.any(String), trashDueAt: null, unread: true});
+    const [sent] = trashes(world, id);
+    expect(cause(sent!.payload)).toEqual({message_id: id, code: true, delayed: true});
+    await pass.tick();
+    expect(trashes(world, id)).toHaveLength(1);
+  });
+
+  test('a restart catches up on a code that expired while the server was down, and a refused trash is tried again', async () => {
+    const {world, id} = await coded();
+    world.advance(86_400_000);
+    const pass = new RuleTrashScheduler({store: world.store});
+    await pass.tick();
+    const [sent] = trashes(world, id);
+    expect(sent).toMatchObject({state: 'pending'});
+    failCommand(world.store, sent!.id, 'Gmail is unavailable.');
+    await pass.tick();
+    expect(trashes(world, id).map(command => command.state)).toEqual(['pending']);
+  });
+
+  test('an email the model typed as a code email but with no code found is never trashed', async () => {
+    const {world, id, pass} = await coded({subject: 'Verify your email address', bodyText: 'Open the link to verify your email.'});
+    expect(world.message(id)).toMatchObject({type: 'verification_code', code: null, codeTrash: false, trashDueAt: null});
+    world.advance(86_400_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).toBeNull();
+  });
+
+  test('protected mail with a code in it is never a code row and never trashed', async () => {
+    const {world, id, pass} = await coded({subject: 'Your password was changed', bodyText: 'Your password was changed. If this wasn\'t you, use code 482913.'});
+    expect(world.message(id)).toMatchObject({protected: true, code: null, codeTrash: false, trashDueAt: null});
+    world.advance(86_400_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt).toBeNull();
+  });
+
+  test('backfilled history and mail sorted after its code expired keep their code but are never trashed', async () => {
+    const env = await setup();
+    setSecret(env.world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    env.fake.answer(() => decision({kind: 'security', type: 'verification_code', organisation: 'Contoso'}));
+    const history = env.deliver({...CODE, receivedAt: '2026-04-02T16:00:00.000Z'}, 'Jobs', true);
+    // Triage was down past the code's expiry: its row was never in the Inbox to be seen.
+    const late = env.deliver({...CODE, receivedAt: new Date(env.world.store.now().getTime() - 20 * 60_000).toISOString()});
+    await env.world.drain();
+    for (const id of [history, late]) expect(env.world.message(id)).toMatchObject({code: '482913', codeTrash: false, trashDueAt: null});
+    await new RuleTrashScheduler({store: env.world.store}).tick();
+    for (const id of [history, late]) expect(env.world.message(id).trashedAt).toBeNull();
+  });
+
+  test.each([
+    ['before', 5 * 60_000, true],
+    ['after', 20 * 60_000, false],
+  ] as const)('pinned, then unpinned %s it expires: trashed at the original expiry is %s', async (_when, unpinAt, trashed) => {
+    const {world, id, expires, pass} = await coded();
+    setPinned(world.store, id, true);
+    expect(world.message(id).trashDueAt).toBeNull();
+    expect(row(world, id)?.trash_due_at ?? null).toBeNull();
+    world.advance(unpinAt);
+    setPinned(world.store, id, false);
+    expect(world.message(id).trashDueAt).toBe(trashed ? expires : null);
+    world.advance(86_400_000);
+    await pass.tick();
+    expect(world.message(id).trashedAt !== null).toBe(trashed);
+  });
+
+  test('changing the Code expiry later doesn\'t move a code already waiting', async () => {
+    const {world, id, expires} = await coded();
+    updateSettings(world.store, {mail: {code_expiry_minutes: 60}});
+    expect(world.message(id).trashDueAt).toBe(expires);
+  });
+
+  test('reading it again and finding no code takes its trash away', async () => {
+    const {world, id} = await coded();
+    world.store.db.update(t.messages).set({subject: 'Welcome to Contoso', snippet: '', bodyText: 'Glad to have you.'}).where(eq(t.messages.id, id)).run();
+    rereadCodes(world.store, {apply: true});
+    expect(world.message(id)).toMatchObject({code: null, codeTrash: false, trashDueAt: null});
+  });
+});
+
+describe('a code email a written rule also trashes later (SV-252)', () => {
+  const CODE = {fromName: 'Contoso', fromAddress: 'no-reply@contoso.example', subject: 'Your sign-in code is 482913', bodyText: 'Enter 482913 to sign in.'};
+
+  async function both(trash: RuleTrash, expiryMinutes = 15) {
+    const env = await setup();
+    setSecret(env.world.store, 'anthropic_api_key', FAKE_KEYS.anthropic);
+    updateSettings(env.world.store, {mail: {code_expiry_minutes: expiryMinutes}});
+    const rule = createRule(env.world.store, {match: {from_domains: ['contoso.example']}, lane: 'fyi', kind: 'security', enabled: true, mark_read: false, trash});
+    env.world.advance(60_000);
+    const arrived = isoNow(env.world.store);
+    const id = env.deliver({...CODE, receivedAt: arrived});
+    await env.world.drain();
+    const at = (minutes: number) => new Date(Date.parse(arrived) + minutes * 60_000).toISOString();
+    return {...env, rule, id, at, pass: new RuleTrashScheduler({store: env.world.store})};
+  }
+
+  test('a rule trashing an hour later: the code\'s earlier expiry wins, and the rule counts none waiting', async () => {
+    const {world, rule, id, at, pass} = await both('1h');
+    expect(world.message(id)).toMatchObject({triageRuleId: rule.id, codeTrash: true, trashDueAt: at(15)});
+    expect(listRules(world.store).find(one => one.id === rule.id)?.trashes_waiting).toBe(0);
+    updateRule(world.store, rule.id, {enabled: false, waiting: 'cancel'});
+    expect(world.message(id).trashDueAt).toBe(at(15));
+    world.advance(15 * 60_000);
+    await pass.tick();
+    expect(cause(world.store.db.select().from(t.commands).where(and(eq(t.commands.targetId, id), eq(t.commands.kind, 'trash'))).get()!.payload))
+      .toEqual({message_id: id, code: true, delayed: true});
+  });
+
+  test('a rule trashing 15 min later with codes kept an hour: the rule\'s earlier time wins, and cancelling it hands back to the code\'s expiry', async () => {
+    const {world, rule, id, at} = await both('15m', 60);
+    expect(world.message(id)).toMatchObject({codeTrash: true, trashDueAt: at(15)});
+    expect(listRules(world.store).find(one => one.id === rule.id)?.trashes_waiting).toBe(1);
+    updateRule(world.store, rule.id, {enabled: false, waiting: 'cancel'});
+    expect(world.message(id).trashDueAt).toBe(at(60));
+  });
+
+  test('the rule\'s earlier trash, when it runs, names the rule', async () => {
+    const {world, rule, id, pass} = await both('15m', 60);
+    world.advance(15 * 60_000);
+    await pass.tick();
+    expect(cause(world.store.db.select().from(t.commands).where(and(eq(t.commands.targetId, id), eq(t.commands.kind, 'trash'))).get()!.payload))
+      .toEqual({message_id: id, rule_id: rule.id, delayed: true});
   });
 });
 

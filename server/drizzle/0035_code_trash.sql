@@ -1,0 +1,1 @@
+ALTER TABLE `messages` ADD `code_trash` integer DEFAULT false NOT NULL;

@@ -43,7 +43,9 @@ export function rereadCodes(store: Store, {apply}: {apply: boolean}): CodeReport
       const email = {id: row.id, fromAddress: row.fromAddress, subject: row.subject};
       if ((found?.code ?? null) !== row.code) {
         report.changes.push({...email, before: row.code, after: found?.code ?? null});
-        writes.push(() => store.db.update(t.messages).set({code: found?.code ?? null, codeExpiresAt: found?.expiresAt ?? null})
+        // No code any more: not a code row, so not the code's trash either (SV-252).
+        const untrash = !found && row.codeTrash ? {codeTrash: false, ...(row.trashDueAt === row.codeExpiresAt ? {trashDueAt: null} : {})} : {};
+        writes.push(() => store.db.update(t.messages).set({code: found?.code ?? null, codeExpiresAt: found?.expiresAt ?? null, ...untrash})
           .where(and(eq(t.messages.id, row.id), isNotNull(t.messages.lane))).run());
       }
       if (row.type === 'verification_code' && !found) report.missing.push(email);

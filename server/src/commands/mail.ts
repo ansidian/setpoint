@@ -80,6 +80,9 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
   });
 }
 
+// A code's trash and a rule's delayed trash on the same email: the earlier one is due (SV-252).
+const earlier = (a: string | null, b: string | null) => (a === null ? b : b === null ? a : a < b ? a : b);
+
 /**
  * A written rule's actions on new mail it just sorted (DESIGN.md #347), carried out as the user's own
  * Mark read and Trash are: a command, the mirror changed at once, and a refusal failed in place with
@@ -89,8 +92,8 @@ export function trashMessage(store: Store, messageId: number, trashed: boolean):
  */
 export function ruleActions(store: Store, messageId: number, ruleId: number, actions: {markRead: boolean; trash: RuleTrash}): CommandRow | null {
   const row = message(store, messageId);
-  const due = trashDueAt(row.receivedAt, actions.trash);
-  if (due !== null && row.pinnedAt === null) store.db.update(t.messages).set({trashDueAt: due}).where(eq(t.messages.id, row.id)).run();
+  const due = earlier(row.trashDueAt, trashDueAt(row.receivedAt, actions.trash));
+  if (due !== null && due !== row.trashDueAt && row.pinnedAt === null) store.db.update(t.messages).set({trashDueAt: due}).where(eq(t.messages.id, row.id)).run();
   const markRead = actions.markRead && row.unread;
   const trashNow = actions.trash === 'now' && row.trashedAt === null;
   if (!markRead && !trashNow) return null;
@@ -148,13 +151,16 @@ export function setDone(store: Store, messageId: number, done: boolean): Message
 }
 
 /**
- * Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. Pinning also cancels a rule's
- * waiting trash, and unpinning doesn't bring it back (D490).
+ * Pin (`P`) keeps an email on the Pinned shelf until it's unpinned. Pinning also cancels a waiting
+ * trash. Unpinning doesn't bring a rule's back (D490), but brings a code's back at its original
+ * expiry while the code is live; unpinned after it, the email stays (D511).
  */
 export function setPinned(store: Store, messageId: number, pinned: boolean): MessageRow {
   return transaction(store, () => {
     const row = message(store, messageId);
-    const updated = store.db.update(t.messages).set(pinned ? {pinnedAt: row.pinnedAt ?? isoNow(store), trashDueAt: null} : {pinnedAt: null})
+    const codeLive = row.codeTrash && row.trashedAt === null && row.codeExpiresAt !== null && row.codeExpiresAt > isoNow(store);
+    const updated = store.db.update(t.messages)
+      .set(pinned ? {pinnedAt: row.pinnedAt ?? isoNow(store), trashDueAt: null} : {pinnedAt: null, ...(codeLive && row.pinnedAt !== null ? {trashDueAt: row.codeExpiresAt} : {})})
       .where(eq(t.messages.id, row.id)).returning().get()!;
     noteLive(store, {type: 'mail', messages: [row.id], accounts: [row.accountId], commands: []});
     return updated;
@@ -162,16 +168,18 @@ export function setPinned(store: Store, messageId: number, pinned: boolean): Mes
 }
 
 /**
- * A rule's delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): the user's own Trash
- * command, sent once, so the due time goes as it's sent. Refused, changing nothing, while the email
- * has a change of its own waiting; the due time stays for the next pass. A trash the provider
- * refuses fails in place, and the pass tries it again (`delayed` in its payload).
+ * A delayed trash, now due (the minute pass, src/triage/ruleTrash.ts): a rule's or a code's (SV-252),
+ * the user's own Trash command, sent once, so the due time goes as it's sent. Its payload says which:
+ * `code` when the due time is the code's expiry, else the rule's `rule_id`. Refused, changing nothing,
+ * while the email has a change of its own waiting; the due time stays for the next pass. A trash the
+ * provider refuses fails in place, and the pass tries it again (`delayed` in its payload).
  */
 export function ruleTrashDue(store: Store, messageId: number): CommandRow {
   const row = message(store, messageId);
+  const byCode = row.codeTrash && row.trashDueAt === row.codeExpiresAt;
   return createCommand(store, {
     target: 'message', kind: 'trash', sourceId: mailSourceId(store, row.accountId),
-    payload: {message_id: row.id, rule_id: row.triageRuleId, delayed: true},
+    payload: byCode ? {message_id: row.id, code: true, delayed: true} : {message_id: row.id, rule_id: row.triageRuleId, delayed: true},
     prepare: () => {
       store.db.update(t.messages).set({trashedAt: isoNow(store), trashDueAt: null}).where(eq(t.messages.id, row.id)).run();
       return {targetId: row.id, previous: before(row), touched: {messages: [row.id], accounts: [row.accountId]}};
