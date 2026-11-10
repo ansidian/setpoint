@@ -327,3 +327,22 @@
 .settings .pairing .s.soon { color: var(--caution); }
 .settings .pairing .again { color: var(--ink2); }
 .settings .pairing .again:hover, .settings .pairing .again:focus-visible { color: var(--ink); }
+
+/* The narrowest windows of the compact tier (640 to 739 px, a modal of 608 to 707) can't hold a source's
+   name, sync and state side by side: the sync column goes, News's name gives way to 120 px as Accounts'
+   does, and the state keeps what's left, its words in its tip. AI's rows put a model's name or the
+   month's meter under their words rather than squeezing them (SV-258). */
+@media (min-width: 640px) and (max-width: 739px) {
+  .settings .set-row > .prov { display: none; }
+  .settings .news-src .lines.cols { min-width: 120px; }
+  .settings .lines.cols ~ .state { flex-shrink: 1; }
+  .settings .set-row:has(> :is(.val, .meter)) { flex-wrap: wrap; row-gap: 6px; }
+  .settings .set-row:has(> :is(.val, .meter)) > :is(.lines, .t) { flex-basis: 100%; }
+  .settings .set-row:has(> .meter) > .t { line-height: 18px; }
+  .settings .set-row > :is(.val, .amount) { line-height: 17px; }
+  /* Accounts' two Connect buttons fit the head beside its title and ×, without their + glyphs. */
+  .settings .set-head .btn.sm { padding-inline: 6px; }
+  .settings .set-head .btn.sm > .icon { display: none; }
+  /* An account's row has room for its state's glyph only; its words are in its tip. */
+  .settings .set-row:has(> .handle) > .state > .ell { display: none; }
+}

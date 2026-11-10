@@ -1144,6 +1144,32 @@ test('SV-255 (D514): Todoist not connected says so on Accounts with Connect Todo
   }
 });
 
+test('SV-258: in a 640 px window, the narrowest the desktop layout allows, no Settings page scrolls sideways or runs a row past its group', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    const page = await setpoint.page({width: 640, height: 760});
+    await openAt(page, setpoint.base, 'accounts');
+    for (const name of ['Accounts', 'Mail', 'Calendar', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security']) {
+      // "AI" is also in "Mail", so a page is found by how its name starts.
+      await page.locator('.settings .set-nav .nav', {hasText: new RegExp(`^${name}`)}).click();
+      await page.locator('.settings .set-title', {hasText: new RegExp(`^${name}`)}).waitFor();
+      await page.locator('.settings .set-main .set-row').first().waitFor();
+      const fit = await rested(() => page.locator('.settings .set-main').evaluate(main => ({
+        sideways: main.scrollWidth - main.clientWidth,
+        past: [...main.querySelectorAll('.set-group')].flatMap(group => {
+          const edge = group.getBoundingClientRect().right;
+          return [...group.querySelectorAll('*')].filter(each => each.getBoundingClientRect().width > 0 && each.getBoundingClientRect().right > edge + 0.5).map(each => each.textContent || each.className);
+        }),
+      })));
+      assert.equal(fit.sideways, 0, `${name} doesn't scroll sideways`);
+      assert.deepEqual(fit.past, [], `nothing on ${name} passes its group's edge`);
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});
+
 /** Each Settings group's rows with a sync column: where each row's sync starts and how wide its state is. */
 const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll(groups => groups
   .map(group => [...group.querySelectorAll(':scope > .set-row')].filter(row => row.querySelector('.prov')).map(row => ({

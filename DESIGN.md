@@ -4701,3 +4701,14 @@ was decided; the audit itself was retired by D480.
     its two lines and its presets side by side (a window under about 800 px), the presets drop under
     the words, left-aligned, and the row is 93 px; it was squeezing "Code expiry" onto two lines, 143
     px at 640. At 852 and wider it's 57 as before.
+366. **Settings in the compact tier's narrowest windows, 640 to 739 px** (a modal of 608 to 707;
+    amending #361's columns; decided for Andy, 2026-11-10; darma SV-258, D530): a 328 px group can't
+    hold a source's name, sync and state side by side, so there the **sync column goes** on Accounts
+    and News, News's name gives way to 120 px as Accounts' does, and the state keeps what's left, cut
+    words in its tip (#361). An **account's row** shows its state's glyph alone (the dot, or the
+    caution or failing glyph, and Reconnect when it needs sign-in), its words in the tip. The head's
+    **Connect Gmail** and **Connect iCloud** lose their + glyphs and take 6 px of padding, clear of
+    the ×. On **AI**, a row with a fixed model name or the month's meter puts it under its words. No
+    page scrolls sideways and no row passes its group; from 740 up nothing changes. Before, News
+    scrolled sideways by 22 px and Accounts by 8, an account's state was a 20 px "C…", and AI's
+    "Finding the JD" row was 155 px with its words 82 px wide.
