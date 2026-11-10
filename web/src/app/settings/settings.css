@@ -187,6 +187,9 @@
 .settings .rule-form .pair { display: flex; align-items: center; gap: 8px; }
 .settings .rule-form .pair > .s { white-space: nowrap; }
 .settings .rule-form .ends { margin-left: auto; }
+/* Add and Cancel are an inline form's, 30 px with Cancel's words 16 px in, as D516's rows have them. */
+.settings .rule-form .ends > .btn.sm { height: 30px; }
+.settings .rule-form .ends > .btn.quiet:last-child { margin-right: -10px; }
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
