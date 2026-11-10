@@ -365,7 +365,8 @@ no Unread or All to choose between, and going to the Inbox always opens it, in A
   MacBook Pro · Los Angeles"); protected mail keeps its subject in `alert` 500. A **code** row,
   wherever it is, shows the code (Geist Mono, two groups of three), a **Copy** button and "Expires in
   11 min" in `ink3` until it expires, 15 minutes after arrival (Settings › Mail sets this); then the
-  code is inside the subject (#309). A copy the browser refuses says "Couldn't copy it" ([Decided
+  code is inside the subject (#309). New mail with a code row **goes to the provider's trash when the
+  code expires** (#369): the row keeps its one countdown, with no "Trash in" marker, and Pin spares it. A copy the browser refuses says "Couldn't copy it" ([Decided
   while building](#decided-while-building) #109).
 - **Loading:** until the list's first answers, its skeleton (#225): a day under its heading, and
   three more rows at the foot while the next page loads.
@@ -1467,8 +1468,8 @@ section's label stays under the title (#132).
   A group's rows share their sync and state columns, which give way before the name (120 px) as the
   modal narrows, the state at half the sync's rate; cut words show in a tip (#361).
 - **Mail** (board 18a): written rules, learned rules (from pattern prompts), trusted remote-content
-  domains, the code expiry presets under **Verification codes** ("Codes leave the Inbox after", #135,
-  #363), and the note that protected mail can't be moved, marked read or trashed by any rule (a
+  domains, the code expiry presets under **Verification codes** ("Codes are trashed after", #135,
+  #363, #369), and the note that protected mail can't be moved, marked read or trashed by any rule (a
   written rule's actions, [Decided while building](#decided-while-building) #347). Trusted domains'
   label shows the count and Filter only once there are more than the 11 shown before Show all, and
   its empty line leads with `image` (#363, D520). A group's note is 34 px at least and grows by whole
@@ -1747,7 +1748,7 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     rows' controls, where the boards end it 4 px in.
 54. **Mail's code expiry is labelled "Verification codes"** (#363): board 18a draws the group with no
     label and the line "Verification codes leave the Inbox after"; the app's group is labelled and its
-    line reads "Codes leave the Inbox after". The board's 78 domains show the count and Filter as the
+    line reads "Codes are trashed after" (#369). The board's 78 domains show the count and Filter as the
     app does; with 11 or fewer the app's label has neither.
 
 ## Not designed yet
@@ -4394,7 +4395,7 @@ was decided; the audit itself was retired by D480.
       segmented control like Code expiry's: **Never** (default) · **Now** · **15 min** · **1 hour** ·
       **1 day** · **1 week**. Either, both or neither. There's no Done (the lane decides that), pin
       or archive yet. Both reach the provider: Gmail's read state and trash, iCloud's seen flag and
-      Trash.
+      Trash. A code email's own trash at its expiry (#369) is the one provider change no rule asks for.
     - **Words:** the rule's sentence (#90) goes on after the lane tag: "From ups.com with “delivered”
       in the subject, without “return” → Noise, mark read, trash after 1 day". "Trash now" when Now.
     - **Only new mail:** actions apply to email that arrives after the rule is saved or changed,
@@ -4732,3 +4733,17 @@ was decided; the audit itself was retired by D480.
     in the 640 tier, shows the whole of it in its tip; in the full modal the rule stays one line, only
     its sender gives way, with the same tip. Before, at the 820 modal the sender cut to "From
     wingtip…" with no tip, and at 640 it was gone and the lane tag cut to "FYI · Deliveri".
+369. **A verification code's email is trashed when its code expires** (amending #309 and #363; Andy,
+    2026-11-09 and 2026-11-10; darma SV-252, D511, D533–D536): new mail with a code row goes to the
+    provider's trash at the code's expiry, by the minute pass a rule's delayed trash uses (#347), in
+    place of only leaving the Inbox. The code row is the condition: an email typed a code email with
+    no code found, protected mail, history, and mail sorted only after its code expired are never
+    trashed, nor are codes from before the change. **Pin spares it**; unpinning before the code
+    expires puts the trash back at the original expiry, unpinning after it leaves the email (a rule's
+    trash never comes back, #347). A rule's own delay on the same email: the earlier wins. Changing
+    Code expiry doesn't move codes already waiting, and the trash doesn't mark the email read. The
+    **row** keeps its one countdown, "Expires in 11 min", with no "Trash in" marker; the **reader**
+    says `auto_delete` **"Trash when the code expires"** under the account and time, rather than a
+    second countdown above the code card's (chosen over "Trash in 28 min"); when a rule's earlier
+    delay is due it says the rule's "Trash in …". Settings › Mail's line reads **"Codes are trashed
+    after"** (the board's "Verification codes leave the Inbox after", the app's short form kept).

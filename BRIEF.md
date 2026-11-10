@@ -215,8 +215,9 @@ he asked for), and hiding it would train him to miss the rest. So:
 1. **Routine alerts are cheap to check, not hidden.** They sit in the **Security** group with
    the decisive fact on the row: "New sign-in · MacBook Pro · Los Angeles", "Access granted ·
    Claude". "That was me" takes a second, without opening anything.
-2. **Codes are temporary.** A verification code shows on its row with Copy; the email gets out of
-   the way about 15 minutes after it arrives. Never Attention.
+2. **Codes are temporary.** A verification code shows on its row with Copy; about 15 minutes after
+   it arrives (the code's expiry, Settings › Mail) the email goes to the provider's trash, unless
+   it's pinned. Never Attention.
 3. **Protected mail always goes to Attention** and no rule or prompt can move it: password,
    recovery or two-step changes; an account being deleted or locked; "critical" alerts; "was this
    you?" from a device or place Andy doesn't use; money leaving an account.
