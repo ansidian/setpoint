@@ -190,6 +190,8 @@
 /* Add and Cancel are an inline form's, 30 px with Cancel's words 16 px in, as D516's rows have them. */
 .settings .rule-form .ends > .btn.sm { height: 30px; }
 .settings .rule-form .ends > .btn.quiet:last-child { margin-right: -10px; }
+/* Its error line takes a whole-pixel line box, so the form stays on whole pixels when it shows. */
+.settings .rule-form > [role="alert"] { line-height: 17px; }
 
 /* Mail (board 18a). */
 .settings .rule { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink2); white-space: nowrap; overflow: hidden; }
