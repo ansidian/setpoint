@@ -28,14 +28,14 @@ import './palette.css';
 
 const THEME_ICONS = {system: 'contrast', light: 'light_mode', night: 'dark_mode'} as const;
 
-// Settings' sections, found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#123).
+// Settings' sections in the nav's order (D512), found by typing what they hold ("rules", "ntfy", "keys"; UX #20), each with its nav's glyph (#123).
 const SETTINGS_SECTIONS: {page: SettingsPage; keywords: string}[] = [
   {page: 'accounts', keywords: 'gmail google icloud todoist reconnect connect'},
-  {page: 'calendar', keywords: 'calendars home todoist projects tasks weather forecast maps places'},
-  {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
   {page: 'mail', keywords: 'rules domains trusted codes expiry triage'},
+  {page: 'calendar', keywords: 'calendars home todoist projects tasks weather forecast maps places'},
   {page: 'news', keywords: 'sources feeds airnow'},
   {page: 'jobs', keywords: 'applications history reads'},
+  {page: 'notifications', keywords: 'ntfy reminders time to leave buffer alerts'},
   {page: 'ai', keywords: 'keys models anthropic claude alfred usage cap'},
   {page: 'appearance', keywords: 'theme'},
   {page: 'security', keywords: 'password passkeys recovery codes'},

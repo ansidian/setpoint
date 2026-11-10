@@ -99,15 +99,23 @@ const computed = (page: Page, property: 'color' | 'background', value: string) =
   return out;
 }, [property, value] as const);
 
-test('board 30a: Settings › News, between Mail and AI, its warning glyph while FOX 11 fails; sources by section, read-only', async () => {
+test('board 30a: Settings › News, after Calendar, its warning glyph while FOX 11 fails; sources by section, read-only', async () => {
   const setpoint = await startSetpoint({clock: 'frozen'});
   try {
     const page = await setpoint.page('target');
     await openAt(page, setpoint.base, 'news');
     const fox = page.locator('.settings .news-src', {hasText: 'FOX 11'});
     await fox.waitFor();
-    // Jobs (J8) comes between News and AI; its page is jobsStates.spec.ts's.
-    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Calendar', 'Notifications', 'Mail', 'News', 'Jobs', 'AI', 'Appearance', 'Security', 'Sign out']);
+    // The nav's three groups (D512): Accounts · Mail, Calendar, News, Jobs (J8; its page is
+    // jobsStates.spec.ts's) · Notifications, AI, Appearance, Security, a gap before each group's first.
+    assert.deepEqual(await page.locator('.settings .set-nav .nav').allTextContents(), ['Accounts', 'Mail', 'Calendar', 'News', 'Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Sign out']);
+    assert.deepEqual(await page.locator('.settings .set-nav .nav.gap').allTextContents(), ['Mail', 'Notifications']);
+    // ↑ ↓ walk the nav in its order, wrapping at the ends, all the way round to News.
+    await page.locator('.settings .set-nav .nav.on').focus();
+    for (const [key, next] of [...['Jobs', 'Notifications', 'AI', 'Appearance', 'Security', 'Accounts', 'Mail', 'Calendar', 'News'].map(name => ['ArrowDown', name]), ['ArrowUp', 'Calendar'], ['ArrowDown', 'News']]) {
+      await page.keyboard.press(key!);
+      await page.locator('.settings .set-nav .nav.on', {hasText: new RegExp(`^${next}$`)}).waitFor();
+    }
     assert.equal(await page.locator('.settings .set-nav .nav.on').textContent(), 'News');
     assert.equal(await page.locator('.settings .set-nav .nav', {hasText: 'News'}).locator('.warn').count(), 1, 'News carries the warning glyph');
     // The head's counts, then one group per section with its count, and no Keys group (#97).
@@ -207,9 +215,10 @@ test('the modal: ⌘, and the sidebar open it over the page, not in the address 
     const currentFill = async () => current.evaluate(nav => [nav.textContent, document.activeElement === nav]);
     await until('Accounts marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Accounts', true]));
     // ↓ in the nav changes page; keys inside never reach the page (2 would go to Calendar, J would move a cursor).
+    // ↓ from Accounts is Mail, the middle group's first (D512).
     await page.keyboard.press('ArrowDown');
-    await page.locator('.settings .set-title', {hasText: 'Calendar'}).waitFor();
-    await until('Calendar marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Calendar', true]));
+    await page.locator('.settings .set-title', {hasText: 'Mail'}).waitFor();
+    await until('Mail marked, with the keys on it', currentFill, now => JSON.stringify(now) === JSON.stringify(['Mail', true]));
     await page.keyboard.press('1');
     assert.equal(new URL(page.url()).pathname, '/calendar');
 

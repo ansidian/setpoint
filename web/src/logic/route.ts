@@ -17,7 +17,9 @@
 import {ITEM_KINDS, NEWS_SECTIONS} from '@setpoint/shared';
 import type {ItemKind, NewsSection} from '@setpoint/shared';
 
-export const SETTINGS_PAGES = ['accounts', 'calendar', 'notifications', 'mail', 'news', 'jobs', 'ai', 'appearance', 'security'] as const;
+/** Settings' nav in its three groups, in the sidebar's order (D512); ↑ ↓ walk them as one list. */
+export const SETTINGS_GROUPS = [['accounts'], ['mail', 'calendar', 'news', 'jobs'], ['notifications', 'ai', 'appearance', 'security']] as const;
+export const SETTINGS_PAGES = SETTINGS_GROUPS.flat();
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 export type Compose = {kind: ItemKind; message: number | null; upcoming?: number};

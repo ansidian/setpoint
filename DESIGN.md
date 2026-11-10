@@ -1373,7 +1373,7 @@ off, or removed, both stay empty. The Inbox's counts never change for them (D313
 
 ### Jobs in Settings
 
-- The nav adds **Jobs** (`work`) between News and AI.
+- The nav adds **Jobs** (`work`) after News, ending the middle group (#357).
 - **Jobs** (39a): the header adds "62 applications" in `ink3` 12.5.
   - A first group, one row: **Jobs**, "Builds applications from their confirmation emails and keeps
     each JD as it was", and its switch (the knob travelling 120 ms, stretching while pressed, #151).
@@ -1443,7 +1443,7 @@ stretching toward its travel as it's pressed (#151). A reconnect link opens it a
 page scrolls, its title and × stay at the top, a `hair` line under them once it has scrolled, and a
 section's label stays under the title (#132).
 
-- **Nav:** Accounts, Calendar, Notifications, Mail, News (after 2.0, [News in Settings](#news-in-settings)), Jobs (after News, [Jobs in Settings](#jobs-in-settings)), AI, Appearance, Security.
+- **Nav:** three groups, 14 px between them, in the sidebar's order (#357): Accounts · Mail, Calendar, News (after 2.0, [News in Settings](#news-in-settings)), Jobs (after News, [Jobs in Settings](#jobs-in-settings)) · Notifications, AI, Appearance, Security. ↑ ↓ walk them as one list, wrapping at the ends.
 - **Accounts** (board 17): **Connect Gmail** and **Connect iCloud**; under **Mail**, each account with
   drag handle, icon, label, address, how it syncs ("Gmail · Push", "iCloud · IMAP every 2 min") and
   its state, led by its glyph (#219): "Checked 9:11 AM" after a `good` dot when healthy, "Checks
@@ -1625,7 +1625,7 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
 22. **Times say their day** (Copy): 25's "first reported 6:12 AM" of a Monday story reads "first
     reported Mon 6:12 AM", and 28's "Tue" ages read "Yesterday" on a Wednesday, as All's rows do.
 23. **Also in this story lists every other source** (The story pane), FOX 11 too (26b lists four).
-24. **Settings' nav lists News between Mail and AI** (News in Settings) on 17, 18a and 18b, which
+24. **Settings' nav lists News after Calendar** (News in Settings, #357) on 17, 18a and 18b, which
     predate it, with its `caution` warning glyph while a feed fails (the seed's FOX 11 does).
 25. **Settings › AI keeps the Settings row pattern** (Settings: rows 52 px at least, 48 with a
     control; only Settings › News's are 44, as News in Settings says), where 30b draws every row at
@@ -1674,7 +1674,7 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     away (Dismiss all, Not an application, Delete), which no board draws.
 37. **The boards from before Jobs draw it as it now is** (J8, as override 24 did for News): on 01–31
     the sidebar lists **Jobs** (`work`) under News with its Needs you count in `ink2` (the seed's 3),
-    and on 17, 18a, 18b, 30a and 30b Settings' nav lists **Jobs** between News and AI.
+    and on 17, 18a, 18b, 30a and 30b Settings' nav lists **Jobs** after News (#357).
 38. **Board 06's chips are a reading's** (#280): the organisation's is its whole name, "Org Northwind
     Talent", highlighted whole in the row; the results line has no "newest first", since chips keep
     the words' order. The field, chips and rows are otherwise as drawn. "6 more emails match your
@@ -1703,7 +1703,10 @@ stories, or other numbers than the seed's, the app shows the seed's (D3); those 
     app has neither.
 47. **No attention precision** (#346): board 17 ends Accounts with Attention precision, 82%, and
     its sparkline. The app has neither.
-48. **Settings has no Todoist page** (#356): where a board's Settings nav lists Todoist (17, 18a,
+48. **Settings' nav is three groups** (#357): every board draws it as one flat list, Accounts,
+    Calendar, Todoist, Notifications, Mail first; the app's runs Accounts · Mail, Calendar, News,
+    Jobs · Notifications, AI, Appearance, Security, a gap between the groups.
+49. **Settings has no Todoist page** (#356): where a board's Settings nav lists Todoist (17, 18a,
     18b, 30a, 30b, 39a), the app's doesn't; its projects and default project are on Calendar, its
     connection on Accounts' Todoist row.
 
@@ -4511,3 +4514,10 @@ was decided; the audit itself was retired by D480.
     /settings/todoist link opens Accounts. ⌘K's Settings › Accounts and Settings › Calendar take the
     word "todoist", Calendar also "projects tasks". Decided for Andy overnight: the one section label
     over two groups, the not-connected rows' words, and the return's address.
+357. **Settings' nav is three groups, in the sidebar's order** (amending Settings' Nav, News in
+    Settings, Jobs in Settings and overrides 24 and 37; Andy, 2026-11-09; darma SV-253, D512): Accounts ·
+    Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security, the first page of the second
+    and third groups 14 px under the one before (the rows' 2 px gap besides), with no rule or label.
+    ↑ ↓ in the nav walk the nine pages in this order as one list, wrapping at the ends, and ⌘K's
+    Settings entries come in it too. Jobs stays in the nav whether it's on or off, as before (its
+    switch is on its page). Decided for Andy overnight: the gap's 14 px, the sections' gap.

@@ -21,6 +21,8 @@
 /* The nav's own glyph colours (ink3, ink on the current page) stop at the mark, which stays caution (#123). */
 .settings .set-nav .nav .warn .icon { color: inherit; }
 .settings .set-nav .foot { margin-top: auto; }
+/* The nav's three groups, a gap between them (D512). */
+.settings .set-nav .nav.gap { margin-top: 14px; }
 
 /* Its 1 px transparent top and bottom keep what scrolls by inside the modal's ring rather than over it. */
 .settings .set-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; padding: 19px 28px 23px 32px; border-block: 1px solid transparent; position: relative; overflow-y: auto; scroll-timeline: --setmain y; }

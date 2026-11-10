@@ -1,5 +1,6 @@
 // Settings (DESIGN.md › Settings; boards 17, 18a, 18b, 30a, 30b, 39a): a 1040 × 720 modal over the page,
-// the scrim behind, not in the address bar. The 220 px nav holds the pages, Accounts marked while a
+// the scrim behind, not in the address bar. The 220 px nav holds the pages in three groups with a gap
+// between them (D512: Accounts · Mail, Calendar, News, Jobs · Notifications, AI, Appearance, Security), Accounts marked while a
 // source needs sign-in and News while a feed fails, and Sign out at its foot. ↑ ↓ in the nav change page; Esc closes the
 // topmost thing (a menu first, then Settings); keys inside never reach the page under it, and
 // focus goes back where it was. Opening it loads every page's answers, so a page switched to shows
@@ -16,7 +17,7 @@ import {AI_PATH, NOTIFY_STATUS_PATH, RULES_PATH, SECRETS_PATH, SECURITY_PATH, SO
 import {feedFailing} from '../../logic/news.ts';
 import {JOBS_SETTINGS_PATHS, JobsSettingsPage} from '../jobs/index.ts';
 import {SETTINGS_NAV} from '../../logic/settings.ts';
-import {SETTINGS_PAGES} from '../../logic/route.ts';
+import {SETTINGS_GROUPS, SETTINGS_PAGES} from '../../logic/route.ts';
 import type {SettingsPage} from '../../logic/route.ts';
 import {useFocusReturn} from '../../ui/focusReturn.ts';
 import {Icon} from '../../ui/Icon.tsx';
@@ -95,14 +96,14 @@ function Open({page}: {page: SettingsPage}) {
       <div className="settings" ref={modal} role="dialog" aria-modal="true" aria-label="Settings" tabIndex={-1} onKeyDown={onKeyDown}>
         <nav className="set-nav" aria-label="Settings pages" onKeyDown={onNavKey}>
           <div className="set-navtitle">Settings</div>
-          {SETTINGS_PAGES.map(name => (
-            <button key={name} type="button" className={name === page ? 'nav on' : 'nav'} aria-current={name === page ? 'page' : undefined} onClick={() => openSettings(name)}>
+          {SETTINGS_GROUPS.flatMap((group, at) => group.map((name, index) => (
+            <button key={name} type="button" className={['nav', name === page && 'on', at > 0 && index === 0 && 'gap'].filter(Boolean).join(' ')} aria-current={name === page ? 'page' : undefined} onClick={() => openSettings(name)}>
               <Icon name={SETTINGS_NAV[name].icon} />
               <span className="grow">{SETTINGS_NAV[name].label}</span>
               {name === 'accounts' && reconnect && <span className="warn" role="img" aria-label="An account needs sign-in" data-tip="An account needs sign-in"><Icon name="sync_problem" size={16} /></span>}
               {name === 'news' && failing && <span className="warn" role="img" aria-label="A feed is failing" data-tip="A feed is failing"><Icon name="warning" size={16} /></span>}
             </button>
-          ))}
+          )))}
           <button type="button" className="nav foot" onClick={() => {
             closeSettings();
             askSignOut();
