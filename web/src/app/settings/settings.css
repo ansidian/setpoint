@@ -59,6 +59,10 @@
 .settings .set-row:last-child { border-bottom: 0; }
 .settings .set-row.one { min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
 .settings .set-row.ctl { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
+/* A row ending in presets (Mail's Code expiry) keeps its words whole: where the modal is too narrow for
+   both, the presets drop under them rather than squeezing the title onto two lines (SV-256). */
+.settings .set-row:has(> .seg) { flex-wrap: wrap; row-gap: 8px; }
+.settings .set-row:has(> .seg) > .lines { flex: 1 0 auto; }
 .settings .set-row.warn { background: color-mix(in oklch, var(--caution) 7%, transparent); }
 .settings .set-row.dragging { opacity: .5; }
 /* A button at a row's end is 30 px, the height of the selects and stepper beside it (D516); the shared

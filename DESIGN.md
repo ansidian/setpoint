@@ -4697,3 +4697,7 @@ was decided; the audit itself was retired by D480.
     keep the last line's right end. Nothing passes the group and Settings doesn't scroll sideways down
     to 640; the form, with one filter, is 314 px at 851, 342 at 720 and 394 at 640, on whole pixels.
     At 852 and wider it's #364's.
+    Mail's **Code expiry** row keeps its words whole the same way: where the modal is too narrow for
+    its two lines and its presets side by side (a window under about 800 px), the presets drop under
+    the words, left-aligned, and the row is 93 px; it was squeezing "Code expiry" onto two lines, 143
+    px at 640. At 852 and wider it's 57 as before.
