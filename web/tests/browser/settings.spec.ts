@@ -1083,3 +1083,38 @@ test('menus: Sources\' last row (Weather · Check now), the last account\'s and 
     await setpoint.stop();
   }
 });
+
+/** Each Settings group's rows with a sync column: where each row's sync starts and how wide its state is. */
+const columns = (page: Page) => page.locator('.settings .set-group').evaluateAll(groups => groups
+  .map(group => [...group.querySelectorAll(':scope > .set-row')].filter(row => row.querySelector('.prov')).map(row => ({
+    row: row.textContent!.slice(0, 24),
+    sync: row.querySelector('.prov')!.getBoundingClientRect().left,
+    state: row.querySelector('.state')!.getBoundingClientRect().width,
+  })))
+  .filter(rows => rows.length > 1));
+
+test('SV-253 (F1): a group\'s rows share their sync and state columns as the modal narrows', async () => {
+  const setpoint = await startSetpoint({clock: 'frozen'});
+  try {
+    // The modal at 992 and 820 wide (the window less its 16 px each side), where the columns give way.
+    for (const width of [1024, 852]) {
+      const page = await setpoint.page({width, height: 760});
+      for (const [name, ready] of [['accounts', '.settings [data-source="weather"]'], ['news', '.settings .news-src']] as const) {
+        await openAt(page, setpoint.base, name);
+        await page.locator(ready).first().waitFor();
+        const groups = await rested(() => columns(page));
+        assert.ok(groups.length > 0, `${name} has groups with columns`);
+        for (const rows of groups) {
+          for (const each of rows) {
+            assert.ok(Math.abs(each.sync - rows[0]!.sync) < 1, `${name} at ${width}: ${each.row}'s sync starts at ${each.sync}, ${rows[0]!.row}'s at ${rows[0]!.sync}`);
+            assert.ok(Math.abs(each.state - rows[0]!.state) < 1, `${name} at ${width}: ${each.row}'s state is ${each.state} wide, ${rows[0]!.row}'s ${rows[0]!.state}`);
+          }
+        }
+      }
+      await page.close();
+    }
+    assert.deepEqual(setpoint.pageErrors, []);
+  } finally {
+    await setpoint.stop();
+  }
+});

@@ -139,7 +139,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
       </Menu>
       <span className="aico"><Icon name={account.icon as IconName} size={16} /></span>
       {renaming ? (
-        <form className="lines grow" onSubmit={(event: FormEvent) => {
+        <form className="lines grow cols" onSubmit={(event: FormEvent) => {
           event.preventDefault();
           const label = new FormData(event.currentTarget as HTMLFormElement).get('label')?.toString().trim() ?? '';
           if (!label || label === account.label) return setRenaming(false);
@@ -153,7 +153,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
           {rename.line && <span className="s" style={{color: 'var(--alert)'}}>{rename.line.text}</span>}
         </form>
       ) : (
-        <div className="lines grow"><span className="t">{account.label}</span><span className="s selectable ell">{account.address}</span></div>
+        <div className="lines grow cols"><span className="t">{account.label}</span><span className="s selectable ell">{account.address}</span></div>
       )}
       <span className="prov">{source ? syncLine(source, timeZone()) : account.provider === 'gmail' ? 'Gmail' : 'iCloud'}</span>
       <span className={stateClass(state, check.failed)} data-tip={check.text ?? account.health.reason ?? undefined} data-tip-quick>
@@ -203,7 +203,7 @@ function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceO
   return (
     <div className={warnRow(state) ? 'set-row warn' : 'set-row'} data-source={source.provider}>
       <span className="aico"><Icon name={SOURCE_ICONS[source.provider] ?? 'sync_problem'} size={16} /></span>
-      <div className="lines grow"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
+      <div className="lines grow cols"><span className="t">{name}</span><span className="s ell">{sub}</span></div>
       <span className="prov">{syncLine(source, timeZone())}</span>
       <span className={stateClass(state, check.failed)} data-tip={check.text ?? source.health.reason ?? undefined} data-tip-quick>
         <HealthGlyph kind={check.failed ? 'failing' : state.kind} checking={check.checking} />
@@ -236,7 +236,7 @@ function TodoistConnectRow({onConnect, busy}: {onConnect: () => void; busy: bool
   return (
     <div className="set-row" data-source="todoist">
       <span className="aico"><Icon name={SOURCE_ICONS.todoist!} size={16} /></span>
-      <div className="lines grow"><span className="t">Todoist</span><span className="s ell">Tasks on the calendar</span></div>
+      <div className="lines grow cols"><span className="t">Todoist</span><span className="s ell">Tasks on the calendar</span></div>
       <span className="prov" />
       <span className="state">
         <span className="num ell">Not connected</span>

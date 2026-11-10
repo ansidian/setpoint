@@ -36,7 +36,7 @@ function SourceRow({source}: {source: NewsSourceOut}) {
   return (
     <div className={state.warn ? 'set-row slim news-src warn' : 'set-row slim news-src'} data-news-source={source.id}>
       <span className="aico"><Icon name={sourceTile(source)} size={16} /></span>
-      <div className="lines grow"><span className="t ell">{source.name}</span><span className="s ell">{source.reads}</span></div>
+      <div className="lines grow cols"><span className="t ell">{source.name}</span><span className="s ell">{source.reads}</span></div>
       <span className="prov">{everyLine(source.interval_seconds)}</span>
       <span className={state.tone === 'caution' ? 'state caution' : state.kind === 'stale' ? 'state stale' : 'state'} data-tip={state.title ?? undefined} data-tip-quick>
         <HealthGlyph kind={state.kind} />
