@@ -56,6 +56,11 @@
 .settings .set-row.ctl { min-height: 48px; padding-top: 7px; padding-bottom: 7px; }
 .settings .set-row.warn { background: color-mix(in oklch, var(--caution) 7%, transparent); }
 .settings .set-row.dragging { opacity: .5; }
+/* A button at a row's end is 30 px, the height of the selects and stepper beside it (D516); the shared
+   `.btn.sm` stays 26 elsewhere, as do a label's buttons and the head's Connect buttons. Only the row's
+   own buttons, its state's and its form's: Add rule's form (D518), a rule's prompt and the pairing
+   panel's Copy keep theirs. */
+.settings .set-row:not(.rule-form) > .btn.sm, .settings .set-row > :is(.state, .form) > .btn.sm { height: 30px; }
 /* While a row is dragged the others make room, easing (app/settings/order.ts). */
 .settings .reordering > [data-order] { transition: transform var(--dur-medium) var(--ease), opacity var(--dur-fast) var(--ease); }
 .settings .t { color: var(--ink); }

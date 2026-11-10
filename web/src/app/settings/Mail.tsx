@@ -135,7 +135,7 @@ function WrittenRule({rule, drag: {dragging, ...drag}, onMove}: {rule: RuleOut; 
       <RuleText rule={rule} />
       <span className="when num">{rule.enabled ? matchesThisMonth(rule.matches_this_month) : 'Off'}</span>
       <span className="anchor">
-        <Menu label="Rule options" button={<button className="ibtn sm" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
+        <Menu label="Rule options" button={<button className="ibtn" type="button" aria-label="Rule options"><Icon name="more_horiz" /></button>}>
           {close => (
             <>
               <button className="menu-i" type="button" role="menuitem" onClick={() => {

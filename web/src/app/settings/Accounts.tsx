@@ -161,7 +161,7 @@ function AccountRow({account, source, now, drag: {dragging, ...drag}, onMove, on
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} onClick={onReconnect}>Reconnect</button>}
       </span>
-      <Menu label={`${account.label} options`} button={<button className="ibtn sm" type="button" aria-label={`${account.label} options`}><Icon name="more_horiz" /></button>}>
+      <Menu label={`${account.label} options`} button={<button className="ibtn" type="button" aria-label={`${account.label} options`}><Icon name="more_horiz" /></button>}>
         {close => (
           <>
             <button className="menu-i" type="button" role="menuitem" onClick={() => {
@@ -210,7 +210,7 @@ function SourceRow({source, name, sub, now, onReconnect, busy}: {source: SourceO
         <span className="num ell">{check.text ?? state.text}</span>
         {state.reconnect && onReconnect && <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onReconnect}>Reconnect</button>}
       </span>
-      <Menu label={`${name} options`} button={<button className="ibtn sm" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>
+      <Menu label={`${name} options`} button={<button className="ibtn" type="button" aria-label={`${name} options`}><Icon name="more_horiz" /></button>}>
         {close => (
           <>
             <button className="menu-i" type="button" role="menuitem" onClick={() => {
@@ -242,7 +242,7 @@ function TodoistConnectRow({onConnect, busy}: {onConnect: () => void; busy: bool
         <span className="num ell">Not connected</span>
         <button className="btn sm" type="button" style={{marginLeft: 4}} disabled={busy} onClick={onConnect}>Connect Todoist</button>
       </span>
-      <Menu label="Todoist options" button={<button className="ibtn sm" type="button" aria-label="Todoist options"><Icon name="more_horiz" /></button>}>
+      <Menu label="Todoist options" button={<button className="ibtn" type="button" aria-label="Todoist options"><Icon name="more_horiz" /></button>}>
         {close => (
           <button className="menu-i" type="button" role="menuitem" disabled={busy} onClick={() => {
             close();
