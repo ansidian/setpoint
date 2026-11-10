@@ -1133,8 +1133,9 @@ desktop and keeps it (D325).
   own closed row at its date (Relecloud, Oct 6 and Jul 22).
 - **The Pinned shelf** (#355; D504, D505): under the headings and above the first row, a 28 px
   "Pinned" label (12 / 500 `ink3`, a 14 px `keep` in `sun`, its text in line with Company), the
-  pinned applications as ordinary rows in the table's columns and widths, then a 6 px `sub2` divider
-  with `hair` below. Newest pin first whatever the sort, and the whole shelf under every filter; a
+  pinned applications as ordinary rows in the table's columns and widths, then a 6 px hatched
+  divider (`panel` with 45° stripes, 1 px of `ink3` at 35% every 4 px) with `hair` below (D532,
+  #367). Newest pin first whatever the sort, and the whole shelf under every filter; a
   pinned application is on the shelf only, and still counts under its status in the filter. Under the
   pointer a shelf row's JD glyph gives way to **Unpin** (`keep_off`, the Inbox shelf's pill). With
   nothing pinned there's no label and no shelf. Pinned, a row folds out of the table and onto the
@@ -4712,3 +4713,11 @@ was decided; the audit itself was retired by D480.
     page scrolls sideways and no row passes its group; from 740 up nothing changes. Before, News
     scrolled sideways by 22 px and Accounts by 8, an account's state was a 20 px "C…", and AI's
     "Finding the JD" row was 155 px with its words 82 px wide.
+367. **The Pinned shelf's divider is a hatched band** (amending #355; Andy, 2026-11-10; darma SV-259,
+    D531, D532, amending D504): the 6 px divider that ends the Jobs shelf is `panel` with 45° stripes,
+    1 px of `ink3` at 35% every 4 px, and `hair` below, in place of a `sub2` band. A row's hover, J / K
+    cursor and open fills are `sub`, `sub2` and `sub3`, so the flat band read as part of a highlighted
+    row above or below it, the highlight looking 6 px too tall and the divider gone; a pattern can't be
+    taken for a row's fill. Chosen over no fill (a double rule that read as two lines), one line with a
+    gap, a 2 px line and a plain `panel` band, none of which read as a divider, and over a `hair`
+    hatch (nearly gone in Night) and a 10 px band (loud).

@@ -559,10 +559,11 @@
 /* Ghosted leans toward `ink` in Light (`--textTint`) to read at 4.5:1 on `panel`, as Offer does everywhere. */
 .jd-change > .sl.ghost { color: color-mix(in oklch, var(--sunGlyph) var(--textTint), var(--ink)); font-weight: 500; }
 
-/* The Pinned shelf (SV-243, D504): a small label with the pin in `sun`, the pinned rows as the table's own, then a divider before the rest. */
+/* The Pinned shelf (SV-243, D504): a small label with the pin in `sun`, the pinned rows as the table's own, then a divider before the rest.
+   The divider is a 6 px hatched band, `ink3` stripes on `panel` (D532): a row's hover, cursor and open fills are flat colours on the `sub` ramp, so a flat band read as part of a highlighted row beside it, and a pattern can't. */
 .jb-pin-h { height: 28px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-bottom: 1px solid var(--hair); color: var(--ink3); font-size: 12px; font-weight: 500; }
 .jb-pin-h > .icon { color: var(--sun); }
-.jb-pin-end { height: 6px; flex: none; background: var(--sub2); border-bottom: 1px solid var(--hair); }
+.jb-pin-end { height: 6px; flex: none; background: var(--panel) repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink3) 35%, transparent) 0 1px, transparent 1px 4px); border-bottom: 1px solid var(--hair); }
 /* A shelf row's Unpin takes its end under the pointer (the Inbox's, board 10). */
 .jb-tr > .hact { position: absolute; right: 12px; top: 6px; display: none; overflow: visible; }
 @media (hover: hover) { .jb-tr.shelf:hover > .hact { display: flex; } .jb-tr.shelf:hover > .jd { visibility: hidden; } }
