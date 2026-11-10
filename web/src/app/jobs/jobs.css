@@ -124,11 +124,36 @@
 /* ---------- The table (D309, D314) ---------- */
 /* Its columns beside the detail, which is always there (board 32; SV-217): no Platform, and JD as a
    glyph named in its tip. */
-.jb-tbl { --cols: 12px 156px minmax(0, 1fr) 60px 214px 18px; --gap: 12px; }
+/* Company, Applied and Status take the widths dragged or fitted at their edges (SV-246, D508), kept in
+   `--w-co`, `--w-ap` and `--w-st` on `.jb-col` for any row to read; past what the window has room
+   for they give way to their floors (each its heading sorted) before Role goes under 120. Applied
+   starts at 80 so "APPLIED ↓" fits. Under 600 px the fractions apply and the dragged widths don't. */
+.jb-tbl { --cols: 12px minmax(86px, var(--w-co, 156px)) minmax(120px, 1fr) minmax(76px, var(--w-ap, 80px)) minmax(70px, var(--w-st, 214px)) 18px; --gap: 12px; }
 @container jbcol (max-width: 599.98px) {
-  .jb-tbl { --cols: 12px minmax(0, 1fr) minmax(0, 1fr) 52px minmax(0, 1.2fr) 18px; --gap: 10px; }
+  .jb-tbl { --cols: 12px minmax(0, 1fr) minmax(0, 1fr) 76px minmax(0, 1.2fr) 18px; --gap: 10px; }
   .jb-th .h { max-width: calc(100% + 6px); overflow: hidden; text-overflow: ellipsis; }
+  .jb-th .h[data-column="jd"] { max-width: none; }
+  .jb-edge { display: none; }
 }
+/* A column's edge, the reading pane's (.pane-edge): a 10 px band on the line between two columns, an
+   accent line and its grip under the pointer. Company's is on its right, Applied's and Status's on
+   their left. */
+.jb-edge { position: absolute; grid-row: 1 / 2; top: 0; bottom: 0; width: 10px; cursor: col-resize; z-index: 1; touch-action: none; outline: none; }
+.jb-edge.company { grid-column: 2 / 3; right: calc(var(--gap) / -2 - 5px); }
+.jb-edge.applied { grid-column: 4 / 5; left: calc(var(--gap) / -2 - 5px); }
+.jb-edge.status { grid-column: 5 / 6; left: calc(var(--gap) / -2 - 5px); }
+.jb-edge::before { content: ""; position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--accent); opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+.jb-edge .grip { position: absolute; left: 0; top: 50%; width: 10px; height: 22px; margin-top: -11px; border-radius: 999px; background: var(--cardOn); box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; pointer-events: none;
+  opacity: 0; transform: scale(.7); transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+.jb-edge .grip > i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+:is(.jb-edge:hover, .jb-edge.dragging, .jb-edge:focus-visible)::before { opacity: 1; }
+:is(.jb-edge:hover, .jb-edge.dragging, .jb-edge:focus-visible) .grip { opacity: 1; transform: none; transition-duration: var(--dur-fast), var(--dur-medium); }
+.jb-edge:hover::before, .jb-edge:hover .grip { transition-delay: 80ms; }
+.jb-edge.dragging::before, .jb-edge.dragging .grip { transition-delay: 0s; }
+/* A fit reads each cell at its content's own width, Status's note on one line, for the moment it measures (Table.tsx). */
+.jb-tbl.measuring .jb-tr > span { width: max-content; }
+.jb-tbl.measuring .jb-tr .st-t { flex: none; display: block; overflow: visible; white-space: nowrap; }
 .jb-th, .jb-tr { display: grid; grid-template-columns: var(--cols); column-gap: var(--gap); align-items: center; padding: 0 16px 0 12px; flex: none; }
 .jb-th { height: 30px; background: var(--panel); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3);
   position: sticky; top: 0; z-index: 2; }
@@ -137,6 +162,8 @@
 @media (hover: hover) { .jb-th .h:hover { background: var(--sub); color: var(--ink2); } }
 .jb-th .h:active { background: var(--sub3); color: var(--ink); transition-duration: var(--dur-press); }
 .jb-th .h.on { color: var(--ink2); }
+/* JD's heading lines up on its column's right, so sorted ("JD ↓") it reaches back into the gap rather than past the row. */
+.jb-th .h[data-column="jd"] { justify-self: end; margin: 0 -6px 0 0; }
 .jb-tr { grid-template-rows: 35px auto; border-bottom: 1px solid var(--hair); color: var(--ink2); position: relative; cursor: default; transition: background-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .jb-tr:hover { background: var(--sub); } }
 .jb-tr.cur { background: var(--sub2); }

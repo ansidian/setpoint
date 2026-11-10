@@ -1057,13 +1057,17 @@ desktop and keeps it (D325).
 ### The table
 
 - **Columns,** beside the detail, which is always there (32; [Decided while
-  building](#decided-while-building) #328): a 12 px gutter | Company 156 | Role | Applied 60 | Status
-  214 | JD 18, 12 apart, padding 0 16 0 12. There's no Platform column, and JD is a glyph alone.
+  building](#decided-while-building) #328, #353): a 12 px gutter | Company 156 | Role | Applied 80 |
+  Status 214 | JD 18, 12 apart, padding 0 16 0 12. There's no Platform column, and JD is a glyph
+  alone. Company, Applied and Status start at those widths and size by their headings' edges
+  (#353); Role takes what's left, at least 120, and the gutter and JD stay put. Under a 600 px
+  column the fractions apply (12 | 1fr | 1fr | 76 | 1.2fr | 18, 10 apart) and dragged widths don't.
 - **The header row** (30 px, `panel`, `hair` above and below, 11.5 uppercase .08em `ink3`): each
   label is a 22 px target (padding 0 6, radius 6; `sub` and `ink2` under the pointer, `sub3`
   pressed). A click sorts by it and a second flips it; the sorted label is `ink2` with a 14 px
   `arrow_downward` or `arrow_upward`. Newest first by Applied, by default (D314). JD's tooltip is
-  "Job description".
+  "Job description". JD's heading sits on its column's right, so sorted it reaches back into the gap
+  rather than past the row. A right-click on the headings offers **Reset column widths** (#353).
 - **A row** is 36 px, `hair` below, or 54 when its status's note wraps (#283):
   - Company in `ink`, Role in `ink2`, Applied in `ink2` 12.5 tabular
     ("Today", "Oct 6", "Feb 9"), each ending in an ellipsis. The 12 px gutter stays empty.
@@ -4096,7 +4100,8 @@ was decided; the audit itself was retired by D480.
     and close goes with the column), and the sender is always a quarter of the row (#240). The 1480
     line (`listRowMax`, `--row-end`, #283) is gone: rows and the header run to the pane on every
     screen. Jobs's table always has the columns beside the detail (no Platform, JD a glyph named
-    in its tip, Re-applied without the earlier one's end) and nothing re-lays. News's headline wrap
+    in its tip, Re-applied without the earlier one's end) and nothing re-lays (but for the widths
+    its columns are dragged to, #353). News's headline wrap
     (#128) and large lead (#127) stay, since they follow the list's own width.
 329. **A narrow window shows the empty pane from a header button** (amending Compact; Andy,
     2026-11-06; darma SV-217, D464). Under the compact tier an open item still covers the list. With
@@ -4388,3 +4393,19 @@ was decided; the audit itself was retired by D480.
     done task keeping its place. Tasks have no duration, so it's a start alone. Chosen over a time
     label with tasks kept below the event, and, on the day pane, over one merged list. The phone's
     agenda is unchanged (D275).
+353. **The Jobs table's columns size by their edges** (amending The table and #328; Andy,
+    2026-11-09; darma SV-246, D508). A sorted "APPLIED ↓" ran into "STATUS", Applied being 60, so
+    Applied starts at 80, a sorted JD heading lines up on its column's right, and the narrow layout's
+    Applied is 76, not 52, so no sorted heading is clipped or collides. Company, Applied and Status
+    each have an edge in the header row, the reading pane's (#327): a 10 px band on the line
+    between two columns with the `accent` line and grip under the pointer, ← → by 16 px when
+    focused, `separator` to a screen reader. Company's is its right edge; Applied's and Status's are
+    their left, since Role, taking what's left, sits before them, so each edge follows the pointer.
+    A double-click on an edge fits its column to its longest content among the rows Jobs has
+    loaded, its heading sorted with its arrow included, and Status's note read on one line. No
+    column goes narrower than its heading sorted (Company 86, Applied 76, Status 70), and a drag or
+    a fit stops where Role would go under 120; a window too narrow for what was kept squeezes the
+    three toward those floors before Role goes under 120. The widths are kept by this browser, as
+    the reading pane's, and every row reads them from the one place; nothing sizes itself on load.
+    A right-click on the headings offers **Reset column widths**. Under a 600 px column the edges
+    go and the fractions apply. Chosen over columns that fit themselves on load.

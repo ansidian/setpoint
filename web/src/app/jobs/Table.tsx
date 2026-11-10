@@ -7,9 +7,13 @@
 // (Merge with…'s other, Not an application, Delete) folds out over 180 ms, and folds back on Undo; a
 // right-click opens its actions at the pointer (#268).
 import type {ApplicationRowOut} from '@setpoint/shared';
-import type {MouseEvent as ReactMouseEvent} from 'react';
-import {useMemo} from 'react';
+import type {KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent} from 'react';
+import {useMemo, useRef, useState} from 'react';
 import type {Entry, FoldRules} from '../../logic/fold.ts';
+import {COLUMN, COLUMN_STEP, fitWidth, resizeTo} from '../../logic/jobColumns.ts';
+import type {SizedColumn} from '../../logic/jobColumns.ts';
+import {zoomOf} from '../calendar/geometry.ts';
+import {setColumnWidth, useColumnWidths} from './columns.ts';
 import {Icon} from '../../ui/Icon.tsx';
 import {foldIn, foldOut, useFold} from '../fold.ts';
 import {Marked} from '../search/Search.tsx';
@@ -35,19 +39,105 @@ const COLUMNS: {key: SortKey; label: string; title?: string}[] = [
   {key: 'jd', label: 'JD', title: 'Job description'},
 ];
 
-export function HeaderRow({sort, first, onSort}: {sort: Sort; first: boolean; onSort: (sort: Sort) => void}) {
+export function HeaderRow({sort, first, onSort, onMenu}: {sort: Sort; first: boolean; onSort: (sort: Sort) => void; onMenu?: (event: ReactMouseEvent<HTMLElement>) => void}) {
   return (
-    <div className={first ? 'jb-th first' : 'jb-th'}>
+    <div className={first ? 'jb-th first' : 'jb-th'} onContextMenu={onMenu}>
       <span />
       {COLUMNS.map(column => {
         const on = sort.key === column.key;
         return (
-          <button key={column.key} type="button" className={on ? 'h on' : 'h'} data-tip={column.title}
+          <button key={column.key} type="button" className={on ? 'h on' : 'h'} data-tip={column.title} data-column={column.key}
             data-sort={on ? (sort.down ? 'down' : 'up') : undefined} onClick={() => onSort(nextSort(sort, column.key))}>
             {column.label}{on && <Icon name={sort.down ? 'arrow_downward' : 'arrow_upward'} size={14} />}
           </button>
         );
       })}
+      {EDGES.map(column => <ColumnEdge key={column} column={column} />)}
+    </div>
+  );
+}
+
+// The columns that size, with the cell each row draws them in. Company's edge is its right, against
+// Role; Applied's and Status's are their left, since Role takes what's left and they sit to its right.
+const EDGES: SizedColumn[] = ['company', 'applied', 'status'];
+const CELL: Record<SizedColumn, string> = {company: '.co', applied: '.ap', status: '.st'};
+const NAME: Record<SizedColumn, string> = {company: 'Company', applied: 'Applied', status: 'Status'};
+const TRACK: Record<SizedColumn, number> = {company: 1, applied: 3, status: 4};
+const ROLE_TRACK = 2;
+// A heading's arrow (14 px after a 3 px gap) when it isn't the sorted one; and the 6 px of its button
+// that sit out in the gap before its column.
+const ARROW = 17;
+const BLEED = 6;
+
+/** The header row's columns as drawn, in the page's pixels: [gutter, Company, Role, Applied, Status, JD]. */
+const tracks = (header: Element) => getComputedStyle(header).gridTemplateColumns.split(' ').map(parseFloat);
+
+/**
+ * The widest cell of `column` among the rows the table has, and its heading sorted; Status measured on
+ * one line, as it would be with room (the note wraps only for want of it).
+ */
+function measure(header: HTMLElement, column: SizedColumn): {cells: number[]; heading: number} {
+  const table = header.closest('.jb-tbl') ?? header.parentElement!;
+  const button = header.querySelector<HTMLElement>(`.h[data-column="${column}"]`);
+  const heading = button ? button.scrollWidth + (button.classList.contains('on') ? 0 : ARROW) - BLEED : 0;
+  table.classList.add('measuring');
+  const cells = [...table.querySelectorAll<HTMLElement>(`.jb-tr[data-application] > ${CELL[column]}`)].map(cell => cell.scrollWidth);
+  table.classList.remove('measuring');
+  return {cells, heading};
+}
+
+/**
+ * A sizing column's edge in the header row, the reading pane's (PaneEdge): dragged, or ← → by 16 px
+ * when focused, and its grip under the pointer. A double-click fits the column to its longest content
+ * among the rows the table has, its heading and sort arrow included (D508). Widths go from what's
+ * drawn, not what's kept, so a column the window has squeezed moves from where it is.
+ */
+function ColumnEdge({column}: {column: SizedColumn}) {
+  const widths = useColumnWidths();
+  const drag = useRef<{x: number; width: number; role: number; zoom: number} | null>(null);
+  const [dragging, setDragging] = useState(false);
+  // Away from Role widens it: right for Company, left for the two after Role.
+  const sign = column === 'company' ? 1 : -1;
+  const drawn = (edge: HTMLElement) => {
+    const each = tracks(edge.parentElement!);
+    return {width: each[TRACK[column]] ?? widths[column], role: each[ROLE_TRACK] ?? 0};
+  };
+  const end = () => {
+    drag.current = null;
+    setDragging(false);
+  };
+  const onKey = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const {width, role} = drawn(event.currentTarget);
+    const step = (event.key === 'ArrowRight' ? COLUMN_STEP : -COLUMN_STEP) * sign;
+    setColumnWidth(column, resizeTo(column, width + step, width, role));
+  };
+  return (
+    <div className={dragging ? `jb-edge ${column} dragging` : `jb-edge ${column}`} role="separator" aria-orientation="vertical"
+      aria-label={`Resize the ${NAME[column]} column`} tabIndex={0} aria-valuenow={widths[column]} aria-valuemin={COLUMN[column].min}
+      onPointerDown={event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const {width, role} = drawn(event.currentTarget);
+        drag.current = {x: event.clientX, width, role, zoom: zoomOf(event.currentTarget)};
+        setDragging(true);
+      }}
+      onPointerMove={event => {
+        const at = drag.current;
+        if (at) setColumnWidth(column, resizeTo(column, at.width + sign * Math.round((event.clientX - at.x) / at.zoom), at.width, at.role));
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={event => {
+        const header = event.currentTarget.parentElement!;
+        const {cells, heading} = measure(header, column);
+        const {width, role} = drawn(event.currentTarget);
+        setColumnWidth(column, resizeTo(column, fitWidth(column, cells, heading), width, role));
+      }}
+      onKeyDown={onKey}>
+      <span className="grip"><i /><i /><i /></span>
     </div>
   );
 }

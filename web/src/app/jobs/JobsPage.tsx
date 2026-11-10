@@ -60,7 +60,8 @@ import {JobsDay, PANE_PATHS} from './JobsDay.tsx';
 import {openSettings} from '../settings/store.ts';
 import {JobsMenu} from './Menu.tsx';
 import type {MenuAnchor, MenuSpec} from './Menu.tsx';
-import {rowMenu} from './menus.ts';
+import {columnVars, resetColumnWidths, useColumnWidths} from './columns.ts';
+import {headingMenu, rowMenu} from './menus.ts';
 import type {CorrectionActions} from './menus.ts';
 import {Detail} from './Detail.tsx';
 import type {FullPostingHandle} from './FullPosting.tsx';
@@ -328,6 +329,7 @@ export function JobsPage({route}: {route: JobsRoute}) {
   // Another application opened: no field in edit.
   if (editing && editing.id !== open) setEditing(null);
   const [rowMenuOpen, setRowMenuOpen] = useState<{spec: MenuSpec; anchor: MenuAnchor} | null>(null);
+  const columnWidths = useColumnWidths();
   /** A row a correction takes away folds out; refused, it stays, and once gone it's forgotten. */
   const takeAway = (id: number, send: () => ReturnType<typeof act>) => {
     takenAway.add(id);
@@ -397,6 +399,13 @@ export function JobsPage({route}: {route: JobsRoute}) {
     });
   };
 
+  // The headings' right-click (D508): Reset column widths, at the pointer, as a row's menu opens.
+  const onHeadingMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!takesContextMenu(event, event.currentTarget)) return;
+    event.preventDefault();
+    setRowMenuOpen({anchor: {point: {x: event.clientX / zoom(), y: event.clientY / zoom()}}, spec: headingMenu({reset: resetColumnWidths})});
+  };
+
   const onPoint = (key: string) => key !== cursor && setCursor(key);
   const rowState = (row: ApplicationRowOut) => ({
     cursor: cursor === rowKey(row.id), open: open === row.id, landed: seen.landed.has(row.id) || seen.moved.has(row.id), moved: seen.moved.has(row.id),
@@ -436,14 +445,14 @@ export function JobsPage({route}: {route: JobsRoute}) {
         )}
       </header>
       <div className="content">
-        <section className="jb-col" aria-label={q ? `Applications matching ${q}` : 'Applications'}>
+        <section className="jb-col" style={columnVars(columnWidths)} aria-label={q ? `Applications matching ${q}` : 'Applications'}>
           {page?.enabled && !q && <JobsLines page={page} now={now} timeZone={zone} />}
           {!page ? (failed ? <LoadFailed what="Jobs" loads={[load]} /> : <TableSkeleton />) : !page.enabled ? <JobsOff /> : (
             <div className="jb-scroll jb-tbl" ref={scroller}>
               <NeedsYou items={page.needs_you} history={page.from_history} rows={rows} accounts={accounts} cursor={cursor} folded={Boolean(q)} now={now} timeZone={zone}
                 unfoldHistory={historyAsks.count} reading={reading} onPoint={onPoint} onOpen={openAt}
                 onRead={item => (item.id === reading?.item && reading.of === null ? setReading(null) : read(item))} onLook={lookAt} />
-              <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} />
+              <HeaderRow sort={sort} first={!page.needs_you.length && !page.from_history.length || Boolean(q)} onSort={setSort} onMenu={onHeadingMenu} />
               {results ? (
                 <>
                   {corRows.length > 0 ? (

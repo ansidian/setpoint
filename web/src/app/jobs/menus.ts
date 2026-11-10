@@ -66,6 +66,11 @@ export function searchApplications(label: string, rows: ApplicationRowOut[], {ex
   };
 }
 
+/** A right-click on the table's headings (SV-246, D508): the widths back to where they start. */
+export function headingMenu(on: {reset: () => void}): MenuSpec {
+  return {label: 'Columns', width: 220, entries: [{kind: 'item', id: 'reset-widths', icon: 'undo', label: 'Reset column widths', run: on.reset}]};
+}
+
 /**
  * Assign to… (34a, 312 wide): the company's applications first under its name, then Another
  * application… and Not about a job. Each application offers its email beside it (D402).
